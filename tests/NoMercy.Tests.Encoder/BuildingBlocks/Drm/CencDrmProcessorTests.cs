@@ -26,16 +26,16 @@ public class CencDrmProcessorTests
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static byte[] FakeKeyId() =>
-        Enumerable.Range(0, 16).Select(i => (byte)(0x10 + i)).ToArray();
+        Enumerable.Range(start: 0, count: 16).Select(selector: i => (byte)(0x10 + i)).ToArray();
 
     private static byte[] FakeKey() =>
-        Enumerable.Range(0, 16).Select(i => (byte)(0xA0 + i)).ToArray();
+        Enumerable.Range(start: 0, count: 16).Select(selector: i => (byte)(0xA0 + i)).ToArray();
 
-    private static CencKeyEntry SdEntry() => new("SD", FakeKeyId(), FakeKey());
+    private static CencKeyEntry SdEntry() => new(Label: "SD", KeyId: FakeKeyId(), Key: FakeKey());
 
     private static DrmConfig CencConfig(IReadOnlyList<CencKeyEntry>? keys = null) =>
         new(
-            DrmMethod.Cenc,
+            Method: DrmMethod.Cenc,
             KeyUri: "https://license.example/widevine",
             CencKeys: keys ?? [SdEntry()]
         );
@@ -54,7 +54,7 @@ public class CencDrmProcessorTests
         };
         IProcessRunner processRunner =
             runner
-            ?? Mock.Of<IProcessRunner>(r =>
+            ?? Mock.Of<IProcessRunner>(predicate: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -63,10 +63,10 @@ public class CencDrmProcessorTests
                 ) == Task.FromResult(new ProcessResult(0, "", "", TimeSpan.Zero))
             );
         return new(
-            opts,
-            processRunner,
-            NullLogger<CencDrmProcessor>.Instance,
-            MakeStorage()
+            options: opts,
+            processRunner: processRunner,
+            logger: NullLogger<CencDrmProcessor>.Instance,
+            storage: MakeStorage()
         );
     }
 
@@ -77,67 +77,67 @@ public class CencDrmProcessorTests
     {
         CencKeyEntry entry = SdEntry();
         CencStreamDescriptor descriptor = new(
-            "/out/video.mp4",
-            "video",
-            "/out/video_enc.mp4",
-            "SD"
+            InputPath: "/out/video.mp4",
+            StreamType: "video",
+            OutputPath: "/out/video_enc.mp4",
+            DrmLabel: "SD"
         );
 
         List<string> args = CencDrmProcessor.BuildPackagerArguments(
-            [descriptor],
-            [entry],
-            "/out/manifest.mpd"
+            streamDescriptors: [descriptor],
+            keys: [entry],
+            mpdOutputPath: "/out/manifest.mpd"
         );
 
-        args.Should().Contain("--enable_raw_key_encryption");
-        args.Should().Contain("--mpd_output");
-        args.Should().Contain("/out/manifest.mpd");
+        args.Should().Contain(expected: "--enable_raw_key_encryption");
+        args.Should().Contain(expected: "--mpd_output");
+        args.Should().Contain(expected: "/out/manifest.mpd");
     }
 
     [Fact]
     public void BuildPackagerArguments_KeysFlag_HasCorrectHexFormat()
     {
-        CencKeyEntry entry = new("HD", new byte[16], new byte[16]);
-        CencStreamDescriptor descriptor = new("/in.mp4", "video", "/out.mp4", "HD");
+        CencKeyEntry entry = new(Label: "HD", KeyId: new byte[16], Key: new byte[16]);
+        CencStreamDescriptor descriptor = new(InputPath: "/in.mp4", StreamType: "video", OutputPath: "/out.mp4", DrmLabel: "HD");
 
         List<string> args = CencDrmProcessor.BuildPackagerArguments(
-            [descriptor],
-            [entry],
-            "/manifest.mpd"
+            streamDescriptors: [descriptor],
+            keys: [entry],
+            mpdOutputPath: "/manifest.mpd"
         );
 
         // --keys must be followed by the label:key_id:key triple
-        int keysIndex = args.IndexOf("--keys");
-        keysIndex.Should().BeGreaterThanOrEqualTo(0, "--keys flag must be present");
+        int keysIndex = args.IndexOf(item: "--keys");
+        keysIndex.Should().BeGreaterThanOrEqualTo(expected: 0, because: "--keys flag must be present");
 
-        string keySpec = args[keysIndex + 1];
-        keySpec.Should().StartWith("label=HD:");
-        keySpec.Should().Contain(":key_id=");
-        keySpec.Should().Contain(":key=");
+        string keySpec = args[index: keysIndex + 1];
+        keySpec.Should().StartWith(expected: "label=HD:");
+        keySpec.Should().Contain(expected: ":key_id=");
+        keySpec.Should().Contain(expected: ":key=");
         // 16 zero bytes → 32 zero hex chars
-        keySpec.Should().Contain("key_id=00000000000000000000000000000000");
-        keySpec.Should().Contain(":key=00000000000000000000000000000000");
+        keySpec.Should().Contain(expected: "key_id=00000000000000000000000000000000");
+        keySpec.Should().Contain(expected: ":key=00000000000000000000000000000000");
     }
 
     [Fact]
     public void BuildPackagerArguments_StreamSpec_ForwardSlashes()
     {
         CencStreamDescriptor descriptor = new(
-            @"C:\out\video.mp4",
-            "video",
-            @"C:\out\video_enc.mp4",
-            "SD"
+            InputPath: @"C:\out\video.mp4",
+            StreamType: "video",
+            OutputPath: @"C:\out\video_enc.mp4",
+            DrmLabel: "SD"
         );
 
         List<string> args = CencDrmProcessor.BuildPackagerArguments(
-            [descriptor],
-            [SdEntry()],
-            "/manifest.mpd"
+            streamDescriptors: [descriptor],
+            keys: [SdEntry()],
+            mpdOutputPath: "/manifest.mpd"
         );
 
-        string spec = args[0];
-        spec.Should().NotContain("\\", "shaka-packager requires forward slashes");
-        spec.Should().StartWith("in=C:/out/video.mp4");
+        string spec = args[index: 0];
+        spec.Should().NotContain(unexpected: "\\", because: "shaka-packager requires forward slashes");
+        spec.Should().StartWith(expected: "in=C:/out/video.mp4");
     }
 
     [Fact]
@@ -145,19 +145,19 @@ public class CencDrmProcessorTests
     {
         List<CencKeyEntry> keys =
         [
-            new("SD", FakeKeyId(), FakeKey()),
-            new("HD", FakeKeyId(), FakeKey()),
+            new(Label: "SD", KeyId: FakeKeyId(), Key: FakeKey()),
+            new(Label: "HD", KeyId: FakeKeyId(), Key: FakeKey()),
         ];
-        CencStreamDescriptor descriptor = new("/v.mp4", "video", "/v_enc.mp4", "SD");
+        CencStreamDescriptor descriptor = new(InputPath: "/v.mp4", StreamType: "video", OutputPath: "/v_enc.mp4", DrmLabel: "SD");
 
         List<string> args = CencDrmProcessor.BuildPackagerArguments(
-            [descriptor],
-            keys,
-            "/manifest.mpd"
+            streamDescriptors: [descriptor],
+            keys: keys,
+            mpdOutputPath: "/manifest.mpd"
         );
 
-        int count = args.Count(a => a == "--keys");
-        count.Should().Be(2, "one --keys flag per key entry");
+        int count = args.Count(predicate: a => a == "--keys");
+        count.Should().Be(expected: 2, because: "one --keys flag per key entry");
     }
 
     // ── PrepareAsync — must be a no-op for CENC ───────────────────────────
@@ -169,28 +169,28 @@ public class CencDrmProcessorTests
         DrmConfig config = CencConfig();
 
         DrmArtifact artifact = await sut.PrepareAsync(
-            "/tmp/drm-test",
-            config,
-            CancellationToken.None
+            outputDirectory: "/tmp/drm-test",
+            config: config,
+            ct: CancellationToken.None
         );
 
-        artifact.KeyInfoFilePath.Should().BeEmpty("CENC pre-encode prep is a no-op");
+        artifact.KeyInfoFilePath.Should().BeEmpty(because: "CENC pre-encode prep is a no-op");
         artifact.KeyFilePath.Should().BeEmpty();
         artifact.Key.Should().BeEmpty();
         artifact.Iv.Should().BeEmpty();
-        artifact.KeyUri.Should().Be(config.KeyUri);
+        artifact.KeyUri.Should().Be(expected: config.KeyUri);
     }
 
     [Fact]
     public async Task PrepareAsync_WrongMethod_ThrowsArgumentException()
     {
         CencDrmProcessor sut = BuildSut();
-        DrmConfig wrongConfig = new(DrmMethod.Aes128, KeyUri: "http://k");
+        DrmConfig wrongConfig = new(Method: DrmMethod.Aes128, KeyUri: "http://k");
 
         Func<Task> act = () =>
-            sut.PrepareAsync("/tmp/drm-test", wrongConfig, CancellationToken.None);
+            sut.PrepareAsync(outputDirectory: "/tmp/drm-test", config: wrongConfig, ct: CancellationToken.None);
 
-        await act.Should().ThrowAsync<ArgumentException>().WithMessage("*CENC only*");
+        await act.Should().ThrowAsync<ArgumentException>().WithMessage(expectedWildcardPattern: "*CENC only*");
     }
 
     // ── PackageAsync error paths ───────────────────────────────────────────
@@ -206,23 +206,23 @@ public class CencDrmProcessorTests
             ShakaPackagerPathOverride = null,
         };
         CencDrmProcessor sut = new(
-            opts,
-            Mock.Of<IProcessRunner>(),
-            NullLogger<CencDrmProcessor>.Instance,
-            MakeStorage()
+            options: opts,
+            processRunner: Mock.Of<IProcessRunner>(),
+            logger: NullLogger<CencDrmProcessor>.Instance,
+            storage: MakeStorage()
         );
 
         Func<Task> act = () =>
             sut.PackageAsync(
-                "/tmp",
-                [new("/v.mp4", "video", "/v_enc.mp4", "SD")],
-                CencConfig(),
-                "/manifest.mpd",
-                CancellationToken.None
+                outputDirectory: "/tmp",
+                streamDescriptors: [new(InputPath: "/v.mp4", StreamType: "video", OutputPath: "/v_enc.mp4", DrmLabel: "SD")],
+                config: CencConfig(),
+                mpdOutputPath: "/manifest.mpd",
+                ct: CancellationToken.None
             );
 
         // GetShakaPackagerPath throws InvalidOperationException when nothing is found.
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*shaka-packager*");
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage(expectedWildcardPattern: "*shaka-packager*");
     }
 
     [Fact]
@@ -230,7 +230,7 @@ public class CencDrmProcessorTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -238,40 +238,40 @@ public class CencDrmProcessorTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(new ProcessResult(1, "", "Fatal: bad key", TimeSpan.Zero));
+            .ReturnsAsync(value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "Fatal: bad key", Duration: TimeSpan.Zero));
 
         CencDrmProcessor sut = BuildSut(runner: runner.Object);
 
         Func<Task> act = () =>
             sut.PackageAsync(
-                "/tmp",
-                [new("/v.mp4", "video", "/v_enc.mp4", "SD")],
-                CencConfig(),
-                "/tmp/manifest.mpd",
-                CancellationToken.None
+                outputDirectory: "/tmp",
+                streamDescriptors: [new(InputPath: "/v.mp4", StreamType: "video", OutputPath: "/v_enc.mp4", DrmLabel: "SD")],
+                config: CencConfig(),
+                mpdOutputPath: "/tmp/manifest.mpd",
+                ct: CancellationToken.None
             );
 
         await act.Should()
             .ThrowAsync<InvalidOperationException>()
-            .WithMessage("*shaka-packager exited with code 1*");
+            .WithMessage(expectedWildcardPattern: "*shaka-packager exited with code 1*");
     }
 
     [Fact]
     public async Task PackageAsync_NoCencKeys_ThrowsArgumentException()
     {
         CencDrmProcessor sut = BuildSut();
-        DrmConfig noKeys = new(DrmMethod.Cenc, KeyUri: "https://lic.example", CencKeys: []);
+        DrmConfig noKeys = new(Method: DrmMethod.Cenc, KeyUri: "https://lic.example", CencKeys: []);
 
         Func<Task> act = () =>
             sut.PackageAsync(
-                "/tmp",
-                [new("/v.mp4", "video", "/v_enc.mp4", "SD")],
-                noKeys,
-                "/tmp/manifest.mpd",
-                CancellationToken.None
+                outputDirectory: "/tmp",
+                streamDescriptors: [new(InputPath: "/v.mp4", StreamType: "video", OutputPath: "/v_enc.mp4", DrmLabel: "SD")],
+                config: noKeys,
+                mpdOutputPath: "/tmp/manifest.mpd",
+                ct: CancellationToken.None
             );
 
-        await act.Should().ThrowAsync<ArgumentException>().WithMessage("*CencKeys*");
+        await act.Should().ThrowAsync<ArgumentException>().WithMessage(expectedWildcardPattern: "*CencKeys*");
     }
 
     // ── CencStreamDescriptor ─────────────────────────────────────────────
@@ -280,15 +280,15 @@ public class CencDrmProcessorTests
     public void CencStreamDescriptor_ToPackagerSpec_ReturnsCorrectFormat()
     {
         CencStreamDescriptor descriptor = new(
-            "/out/video.mp4",
-            "video",
-            "/out/video_enc.mp4",
-            "HD"
+            InputPath: "/out/video.mp4",
+            StreamType: "video",
+            OutputPath: "/out/video_enc.mp4",
+            DrmLabel: "HD"
         );
 
         string spec = descriptor.ToPackagerSpec();
 
-        spec.Should().Be("in=/out/video.mp4,stream=video,output=/out/video_enc.mp4,drm_label=HD");
+        spec.Should().Be(expected: "in=/out/video.mp4,stream=video,output=/out/video_enc.mp4,drm_label=HD");
     }
 
     // ── Integration: real shaka-packager end-to-end ─────────────────────────
@@ -302,25 +302,26 @@ public class CencDrmProcessorTests
     {
         string? packagerPath =
             NoMercyFfmpegProbe.ResolveShakaPackagerPath()
-            ?? (File.Exists(AppFiles.ShakaPackagerPath) ? AppFiles.ShakaPackagerPath : null);
+            ?? (File.Exists(path: AppFiles.ShakaPackagerPath) ? AppFiles.ShakaPackagerPath : null);
         Skip.If(
-            packagerPath is null,
-            "shaka-packager binary not present — set SHAKA_PACKAGER_PATH or run the "
-                + "server binaries step (downloads it alongside ffmpeg)."
+            condition: packagerPath is null,
+            reason: "shaka-packager binary not present — set SHAKA_PACKAGER_PATH or run the "
+                    + "server binaries step (downloads it alongside ffmpeg)."
         );
 
         string? ffmpegPath = ResolveFfmpegForFixture();
-        Skip.If(ffmpegPath is null, "ffmpeg not resolvable for fixture generation.");
+        Skip.If(condition: ffmpegPath is null, reason: "ffmpeg not resolvable for fixture generation.");
 
-        string tmpDir = Path.Combine(Path.GetTempPath(), $"cenc-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tmpDir);
+        string tmpDir = Path.Combine(path1: Path.GetTempPath(), path2: $"cenc-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: tmpDir);
 
         try
         {
             // 1) Generate a tiny fragmented mp4 the packager can ingest.
-            string inputMp4 = Path.Combine(tmpDir, "input.mp4");
+            string inputMp4 = Path.Combine(path1: tmpDir, path2: "input.mp4");
             await RunProcessAsync(
-                ffmpegPath!,
+                fileName: ffmpegPath!,
+                args:
                 [
                     "-y",
                     "-f",
@@ -336,53 +337,53 @@ public class CencDrmProcessorTests
                     inputMp4,
                 ]
             );
-            File.Exists(inputMp4).Should().BeTrue("ffmpeg must produce the input clip");
+            File.Exists(path: inputMp4).Should().BeTrue(because: "ffmpeg must produce the input clip");
 
             // 2) Package it with real CENC raw-key encryption via the processor.
             //    The packager writes real files, so storage.Exists must reflect the
             //    real filesystem (not the always-false default mock).
             EncoderOptions opts = new() { ShakaPackagerPathOverride = packagerPath };
-            IStorage storage = Mock.Of<IStorage>(s => s.Exists(It.IsAny<string>()) == false);
-            Mock.Get(storage).Setup(s => s.Exists(It.IsAny<string>())).Returns<string>(File.Exists);
+            IStorage storage = Mock.Of<IStorage>(predicate: s => s.Exists(It.IsAny<string>()) == false);
+            Mock.Get(mocked: storage).Setup(expression: s => s.Exists(It.IsAny<string>())).Returns<string>(valueFunction: File.Exists);
             CencDrmProcessor processor = new(
-                opts,
-                new ProcessRunner(NullLogger<ProcessRunner>.Instance),
-                NullLogger<CencDrmProcessor>.Instance,
-                storage
+                options: opts,
+                processRunner: new ProcessRunner(logger: NullLogger<ProcessRunner>.Instance),
+                logger: NullLogger<CencDrmProcessor>.Instance,
+                storage: storage
             );
 
-            string manifestPath = Path.Combine(tmpDir, "manifest.mpd");
+            string manifestPath = Path.Combine(path1: tmpDir, path2: "manifest.mpd");
             CencStreamDescriptor descriptor = new(
-                inputMp4,
-                "video",
-                Path.Combine(tmpDir, "video_enc.mp4"),
-                "SD"
+                InputPath: inputMp4,
+                StreamType: "video",
+                OutputPath: Path.Combine(path1: tmpDir, path2: "video_enc.mp4"),
+                DrmLabel: "SD"
             );
 
             string resultManifest = await processor.PackageAsync(
-                tmpDir,
-                [descriptor],
-                CencConfig(),
-                manifestPath,
-                CancellationToken.None
+                outputDirectory: tmpDir,
+                streamDescriptors: [descriptor],
+                config: CencConfig(),
+                mpdOutputPath: manifestPath,
+                ct: CancellationToken.None
             );
 
             // 3) A real MPD with ContentProtection must have been produced.
-            File.Exists(resultManifest).Should().BeTrue("packager must produce the MPD");
-            string mpd = await File.ReadAllTextAsync(resultManifest);
-            mpd.Should().Contain("<MPD", "output must be a DASH manifest");
-            mpd.Should().Contain("ContentProtection", "CENC encryption must be signalled");
+            File.Exists(path: resultManifest).Should().BeTrue(because: "packager must produce the MPD");
+            string mpd = await File.ReadAllTextAsync(path: resultManifest);
+            mpd.Should().Contain(expected: "<MPD", because: "output must be a DASH manifest");
+            mpd.Should().Contain(expected: "ContentProtection", because: "CENC encryption must be signalled");
         }
         finally
         {
-            Directory.Delete(tmpDir, recursive: true);
+            Directory.Delete(path: tmpDir, recursive: true);
         }
     }
 
     private static string? ResolveFfmpegForFixture()
     {
         string candidate = AppFiles.FfmpegPath;
-        if (File.Exists(candidate))
+        if (File.Exists(path: candidate))
             return candidate;
         return NoMercyFfmpegProbe.ResolveFfmpegPath();
     }
@@ -398,13 +399,13 @@ public class CencDrmProcessorTests
             RedirectStandardError = true,
         };
         foreach (string arg in args)
-            psi.ArgumentList.Add(arg);
+            psi.ArgumentList.Add(item: arg);
 
-        using Process process = Process.Start(psi)!;
+        using Process process = Process.Start(startInfo: psi)!;
         string stderr = await process.StandardError.ReadToEndAsync();
         await process.StandardOutput.ReadToEndAsync();
         await process.WaitForExitAsync();
         if (process.ExitCode != 0)
-            throw new InvalidOperationException($"{fileName} failed: {stderr}");
+            throw new InvalidOperationException(message: $"{fileName} failed: {stderr}");
     }
 }

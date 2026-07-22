@@ -22,23 +22,23 @@ public class CacheControllerTests : IDisposable
 
     public CacheControllerTests()
     {
-        _testCacheDir = Path.Combine(Path.GetTempPath(), $"CacheControllerTest_{Guid.NewGuid():N}");
+        _testCacheDir = Path.Combine(path1: Path.GetTempPath(), path2: $"CacheControllerTest_{Guid.NewGuid():N}");
 
-        Directory.CreateDirectory(_testCacheDir);
+        Directory.CreateDirectory(path: _testCacheDir);
 
         LocalStorageDriver driver = new();
         // Scope to the system temp root so both _testCacheDir and any
         // nonExistent sibling paths (also under temp) pass the allowlist check.
-        StoragePathGuard guard = new([Path.GetTempPath()], driver);
-        IStorage storage = new LocalStorage(driver, guard);
-        CacheController.Initialize(storage);
+        StoragePathGuard guard = new(allowedRoots: [Path.GetTempPath()], driver: driver);
+        IStorage storage = new LocalStorage(driver: driver, guard: guard);
+        CacheController.Initialize(storage: storage);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(_testCacheDir))
+        if (Directory.Exists(path: _testCacheDir))
         {
-            Directory.Delete(_testCacheDir, recursive: true);
+            Directory.Delete(path: _testCacheDir, recursive: true);
         }
     }
 
@@ -51,40 +51,40 @@ public class CacheControllerTests : IDisposable
 
         for (int i = 0; i < 5; i++)
         {
-            string filePath = Path.Combine(_testCacheDir, $"file_{i}.txt");
+            string filePath = Path.Combine(path1: _testCacheDir, path2: $"file_{i}.txt");
             byte[] data = new byte[200];
-            Array.Fill(data, (byte)'A');
-            File.WriteAllBytes(filePath, data);
+            Array.Fill(array: data, value: (byte)'A');
+            File.WriteAllBytes(path: filePath, bytes: data);
 
             // PruneCache orders by StorageEntry.LastModified, which the facade
             // derives from File.GetLastWriteTimeUtc. Stagger write times so the
             // oldest-first deletion order is deterministic.
-            File.SetLastWriteTimeUtc(filePath, DateTime.UtcNow.AddMinutes(-10 + i));
-            createdFiles.Add(filePath);
+            File.SetLastWriteTimeUtc(path: filePath, lastWriteTimeUtc: DateTime.UtcNow.AddMinutes(value: -10 + i));
+            createdFiles.Add(item: filePath);
         }
 
         // Act: prune with 500-byte limit
-        CacheController.PruneCache(_testCacheDir, maxSizeBytes: 500);
+        CacheController.PruneCache(cachePath: _testCacheDir, maxSizeBytes: 500);
 
         // Assert: oldest files deleted, newest kept
         // Total was 1000, limit is 500, so at least 3 files should be deleted
         // (each 200 bytes: delete 3 => 400 remaining <= 500)
-        string[] remaining = Directory.GetFiles(_testCacheDir);
-        long remainingSize = remaining.Sum(f => new FileInfo(f).Length);
+        string[] remaining = Directory.GetFiles(path: _testCacheDir);
+        long remainingSize = remaining.Sum(selector: f => new FileInfo(fileName: f).Length);
 
         Assert.True(
-            remainingSize <= 500,
-            $"Remaining cache size {remainingSize} exceeds limit of 500 bytes"
+            condition: remainingSize <= 500,
+            userMessage: $"Remaining cache size {remainingSize} exceeds limit of 500 bytes"
         );
 
         // The oldest files (file_0, file_1, file_2) should be deleted
-        Assert.False(File.Exists(createdFiles[0]), "Oldest file should be deleted");
-        Assert.False(File.Exists(createdFiles[1]), "Second oldest file should be deleted");
-        Assert.False(File.Exists(createdFiles[2]), "Third oldest file should be deleted");
+        Assert.False(condition: File.Exists(path: createdFiles[index: 0]), userMessage: "Oldest file should be deleted");
+        Assert.False(condition: File.Exists(path: createdFiles[index: 1]), userMessage: "Second oldest file should be deleted");
+        Assert.False(condition: File.Exists(path: createdFiles[index: 2]), userMessage: "Third oldest file should be deleted");
 
         // Newest files should remain
-        Assert.True(File.Exists(createdFiles[3]), "Newer file should be kept");
-        Assert.True(File.Exists(createdFiles[4]), "Newest file should be kept");
+        Assert.True(condition: File.Exists(path: createdFiles[index: 3]), userMessage: "Newer file should be kept");
+        Assert.True(condition: File.Exists(path: createdFiles[index: 4]), userMessage: "Newest file should be kept");
     }
 
     [Fact]
@@ -93,34 +93,34 @@ public class CacheControllerTests : IDisposable
         // Arrange: create 2 files, each 100 bytes, total = 200 bytes
         for (int i = 0; i < 2; i++)
         {
-            string filePath = Path.Combine(_testCacheDir, $"file_{i}.txt");
+            string filePath = Path.Combine(path1: _testCacheDir, path2: $"file_{i}.txt");
             byte[] data = new byte[100];
-            File.WriteAllBytes(filePath, data);
+            File.WriteAllBytes(path: filePath, bytes: data);
         }
 
         // Act: prune with 500-byte limit (under limit)
-        CacheController.PruneCache(_testCacheDir, maxSizeBytes: 500);
+        CacheController.PruneCache(cachePath: _testCacheDir, maxSizeBytes: 500);
 
         // Assert: all files remain
-        Assert.Equal(2, Directory.GetFiles(_testCacheDir).Length);
+        Assert.Equal(expected: 2, actual: Directory.GetFiles(path: _testCacheDir).Length);
     }
 
     [Fact]
     public void PruneCache_HandlesEmptyDirectory()
     {
         // Act & Assert: should not throw
-        CacheController.PruneCache(_testCacheDir, maxSizeBytes: 500);
+        CacheController.PruneCache(cachePath: _testCacheDir, maxSizeBytes: 500);
 
-        Assert.Empty(Directory.GetFiles(_testCacheDir));
+        Assert.Empty(collection: Directory.GetFiles(path: _testCacheDir));
     }
 
     [Fact]
     public void PruneCache_HandlesNonExistentDirectory()
     {
-        string nonExistent = Path.Combine(Path.GetTempPath(), $"NonExistent_{Guid.NewGuid():N}");
+        string nonExistent = Path.Combine(path1: Path.GetTempPath(), path2: $"NonExistent_{Guid.NewGuid():N}");
 
         // Act & Assert: should not throw
-        CacheController.PruneCache(nonExistent, maxSizeBytes: 500);
+        CacheController.PruneCache(cachePath: nonExistent, maxSizeBytes: 500);
     }
 
     [Fact]
@@ -128,19 +128,19 @@ public class CacheControllerTests : IDisposable
     {
         string url = "https://api.themoviedb.org/3/movie/123";
 
-        string hash1 = CacheController.GenerateFileName(url);
-        string hash2 = CacheController.GenerateFileName(url);
+        string hash1 = CacheController.GenerateFileName(url: url);
+        string hash2 = CacheController.GenerateFileName(url: url);
 
-        Assert.Equal(hash1, hash2);
-        Assert.NotEmpty(hash1);
+        Assert.Equal(expected: hash1, actual: hash2);
+        Assert.NotEmpty(collection: hash1);
     }
 
     [Fact]
     public void GenerateFileName_ReturnsDifferentHashForDifferentUrls()
     {
-        string hash1 = CacheController.GenerateFileName("https://api.example.com/a");
-        string hash2 = CacheController.GenerateFileName("https://api.example.com/b");
+        string hash1 = CacheController.GenerateFileName(url: "https://api.example.com/a");
+        string hash2 = CacheController.GenerateFileName(url: "https://api.example.com/b");
 
-        Assert.NotEqual(hash1, hash2);
+        Assert.NotEqual(expected: hash1, actual: hash2);
     }
 }

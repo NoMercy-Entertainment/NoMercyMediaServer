@@ -37,7 +37,7 @@ public class FfmpegCommandBuilder
 
     public FfmpegCommandBuilder AddInput(InputOptions input)
     {
-        _inputs.Add(input);
+        _inputs.Add(item: input);
         return this;
     }
 
@@ -49,7 +49,7 @@ public class FfmpegCommandBuilder
 
     public FfmpegCommandBuilder AddOutput(OutputOptions output)
     {
-        _outputs.Add(output);
+        _outputs.Add(item: output);
         return this;
     }
 
@@ -66,28 +66,28 @@ public class FfmpegCommandBuilder
 
         // Global options
         if (_globalOptions.Overwrite)
-            args.Add("-y");
+            args.Add(item: "-y");
         if (_globalOptions.HideBanner)
-            args.Add("-hide_banner");
+            args.Add(item: "-hide_banner");
         if (_globalOptions.ProgressPipe)
         {
-            args.Add("-progress");
-            args.Add("pipe:1");
+            args.Add(item: "-progress");
+            args.Add(item: "pipe:1");
         }
         if (_globalOptions.Threads.HasValue)
         {
-            args.Add("-threads");
-            args.Add(_globalOptions.Threads.Value.ToString());
+            args.Add(item: "-threads");
+            args.Add(item: _globalOptions.Threads.Value.ToString());
         }
         if (_globalOptions.ProbeSizeBytes.HasValue)
         {
-            args.Add("-probesize");
-            args.Add(_globalOptions.ProbeSizeBytes.Value.ToString());
+            args.Add(item: "-probesize");
+            args.Add(item: _globalOptions.ProbeSizeBytes.Value.ToString());
         }
         if (_globalOptions.AnalyzeDurationUs.HasValue)
         {
-            args.Add("-analyzeduration");
-            args.Add(_globalOptions.AnalyzeDurationUs.Value.ToString());
+            args.Add(item: "-analyzeduration");
+            args.Add(item: _globalOptions.AnalyzeDurationUs.Value.ToString());
         }
 
         // Profile-level custom args — global escape hatch, emitted before inputs.
@@ -95,12 +95,12 @@ public class FfmpegCommandBuilder
         {
             foreach (KeyValuePair<string, string> flag in _globalExtraFlags)
             {
-                args.Add(flag.Key);
+                args.Add(item: flag.Key);
                 // An empty value marks a bare boolean flag (e.g. "-an") — emitting
                 // it anyway adds a stray empty argv token ffmpeg treats as an
                 // unmapped output URL.
                 if (flag.Value.Length > 0)
-                    args.Add(flag.Value);
+                    args.Add(item: flag.Value);
             }
         }
 
@@ -109,37 +109,37 @@ public class FfmpegCommandBuilder
         {
             if (input.HwAccelDevice is not null)
             {
-                args.Add("-hwaccel");
-                args.Add(input.HwAccelDevice);
+                args.Add(item: "-hwaccel");
+                args.Add(item: input.HwAccelDevice);
             }
             if (input.HwAccelOutputFormat is not null)
             {
-                args.Add("-hwaccel_output_format");
-                args.Add(input.HwAccelOutputFormat);
+                args.Add(item: "-hwaccel_output_format");
+                args.Add(item: input.HwAccelOutputFormat);
             }
             if (input.SeekTo.HasValue)
             {
-                args.Add("-ss");
+                args.Add(item: "-ss");
                 args.Add(
-                    input.SeekTo.Value.TotalSeconds.ToString("F3", CultureInfo.InvariantCulture)
+                    item: input.SeekTo.Value.TotalSeconds.ToString(format: "F3", provider: CultureInfo.InvariantCulture)
                 );
             }
             if (input.Duration.HasValue)
             {
-                args.Add("-t");
+                args.Add(item: "-t");
                 args.Add(
-                    input.Duration.Value.TotalSeconds.ToString("F3", CultureInfo.InvariantCulture)
+                    item: input.Duration.Value.TotalSeconds.ToString(format: "F3", provider: CultureInfo.InvariantCulture)
                 );
             }
-            args.Add("-i");
-            args.Add(input.FilePath);
+            args.Add(item: "-i");
+            args.Add(item: input.FilePath);
         }
 
         // Filter complex
         if (_filterComplex is not null)
         {
-            args.Add("-filter_complex");
-            args.Add(_filterComplex);
+            args.Add(item: "-filter_complex");
+            args.Add(item: _filterComplex);
         }
 
         // Outputs
@@ -147,84 +147,84 @@ public class FfmpegCommandBuilder
         {
             foreach (string map in output.MapStreams ?? [])
             {
-                args.Add("-map");
-                args.Add(map);
+                args.Add(item: "-map");
+                args.Add(item: map);
             }
             if (output.VideoCodec is not null)
             {
-                args.Add("-c:v");
-                args.Add(output.VideoCodec);
+                args.Add(item: "-c:v");
+                args.Add(item: output.VideoCodec);
             }
             if (output.AudioCodec is not null)
             {
-                args.Add("-c:a");
-                args.Add(output.AudioCodec);
+                args.Add(item: "-c:a");
+                args.Add(item: output.AudioCodec);
             }
             if (output.SubtitleCodec is not null)
             {
-                args.Add("-c:s");
-                args.Add(output.SubtitleCodec);
+                args.Add(item: "-c:s");
+                args.Add(item: output.SubtitleCodec);
             }
             if (output.Preset is not null)
             {
-                args.Add("-preset");
-                args.Add(output.Preset);
+                args.Add(item: "-preset");
+                args.Add(item: output.Preset);
             }
             if (output.Profile is not null)
             {
-                args.Add("-profile:v");
-                args.Add(output.Profile);
+                args.Add(item: "-profile:v");
+                args.Add(item: output.Profile);
             }
             if (output.Level is not null)
             {
-                args.Add("-level");
-                args.Add(output.Level);
+                args.Add(item: "-level");
+                args.Add(item: output.Level);
             }
             if (output.PixelFormat is not null)
             {
-                args.Add("-pix_fmt");
-                args.Add(output.PixelFormat);
+                args.Add(item: "-pix_fmt");
+                args.Add(item: output.PixelFormat);
             }
             if (output.Crf.HasValue)
             {
-                args.Add("-crf");
-                args.Add(output.Crf.Value.ToString());
+                args.Add(item: "-crf");
+                args.Add(item: output.Crf.Value.ToString());
             }
             if (output.VideoBitrateKbps.HasValue)
             {
-                args.Add("-b:v");
-                args.Add($"{output.VideoBitrateKbps.Value}k");
+                args.Add(item: "-b:v");
+                args.Add(item: $"{output.VideoBitrateKbps.Value}k");
             }
             if (output.AudioBitrateKbps.HasValue)
             {
-                args.Add("-b:a");
-                args.Add($"{output.AudioBitrateKbps.Value}k");
+                args.Add(item: "-b:a");
+                args.Add(item: $"{output.AudioBitrateKbps.Value}k");
             }
             if (output.AudioChannels is not null)
             {
-                args.Add("-ac");
-                args.Add(output.AudioChannels);
+                args.Add(item: "-ac");
+                args.Add(item: output.AudioChannels);
             }
             if (output.AudioSampleRate.HasValue)
             {
-                args.Add("-ar");
-                args.Add(output.AudioSampleRate.Value.ToString());
+                args.Add(item: "-ar");
+                args.Add(item: output.AudioSampleRate.Value.ToString());
             }
             if (output.KeyframeInterval.HasValue)
             {
-                args.Add("-g");
-                args.Add(output.KeyframeInterval.Value.ToString());
+                args.Add(item: "-g");
+                args.Add(item: output.KeyframeInterval.Value.ToString());
             }
             if (output.ExtraFlags is not null)
             {
                 foreach (KeyValuePair<string, string> flag in output.ExtraFlags)
                 {
-                    args.Add(flag.Key);
+                    args.Add(item: flag.Key);
                     // An empty value marks a bare boolean flag (e.g. "-an") — emitting
                     // it anyway adds a stray empty argv token ffmpeg treats as an
                     // unmapped output URL.
                     if (flag.Value.Length > 0)
-                        args.Add(flag.Value);
+                        args.Add(item: flag.Value);
                 }
             }
 
@@ -233,21 +233,21 @@ public class FfmpegCommandBuilder
             // to the URL that follows it.
             if (output.StripSourceMetadata)
             {
-                args.Add("-map_metadata");
-                args.Add("-1");
+                args.Add(item: "-map_metadata");
+                args.Add(item: "-1");
             }
 
             foreach (OutputStreamTag tag in output.StreamMetadata ?? [])
             {
-                args.Add($"-metadata:{tag.StreamSpecifier}");
+                args.Add(item: $"-metadata:{tag.StreamSpecifier}");
                 // Unlike ExtraFlags, an empty value is meaningful here: "key=" tells
                 // ffmpeg to drop the tag the source stream carried.
-                args.Add($"{tag.Key}={tag.Value}");
+                args.Add(item: $"{tag.Key}={tag.Value}");
             }
 
-            args.Add(output.FilePath);
+            args.Add(item: output.FilePath);
         }
 
-        return new(ffmpegPath, args.ToArray(), workingDirectory);
+        return new(Executable: ffmpegPath, Arguments: args.ToArray(), WorkingDirectory: workingDirectory);
     }
 }

@@ -23,21 +23,13 @@ public class VendoredMovieDetectorTests
 {
     // filename, title, year, season(-1 = null), episode(-1 = null), isSeries, isSpecial
     [Theory]
-    [InlineData("Inception.2010.1080p.BluRay.x264.mkv", "Inception", "2010", -1, -1, false, false)]
-    [InlineData("Normal.People.S01E04.1080p.mkv", "Normal People", null, 1, 4, true, false)]
-    [InlineData("The.Grand.Tour.S04.E04.1080p.mkv", "The Grand Tour", null, 4, 4, true, false)]
-    [InlineData("Top Gear 17x03 HDTV.mp4", "Top Gear", null, 17, 3, true, false)]
-    [InlineData(
-        "Scenes.from.a.Marriage.1973.E01.mkv",
-        "Scenes from a Marriage",
-        "1973",
-        -1,
-        1,
-        true,
-        false
-    )]
-    [InlineData("The.Legend.of.1900.1998.mkv", "The Legend of 1900", "1998", -1, -1, false, false)]
-    [InlineData("Sherlock.S01.Special.mkv", "Sherlock", null, 1, -1, true, true)]
+    [InlineData(data: ["Inception.2010.1080p.BluRay.x264.mkv", "Inception", "2010", -1, -1, false, false])]
+    [InlineData(data: ["Normal.People.S01E04.1080p.mkv", "Normal People", null, 1, 4, true, false])]
+    [InlineData(data: ["The.Grand.Tour.S04.E04.1080p.mkv", "The Grand Tour", null, 4, 4, true, false])]
+    [InlineData(data: ["Top Gear 17x03 HDTV.mp4", "Top Gear", null, 17, 3, true, false])]
+    [InlineData(data: ["Scenes.from.a.Marriage.1973.E01.mkv", "Scenes from a Marriage", "1973", -1, 1, true, false])]
+    [InlineData(data: ["The.Legend.of.1900.1998.mkv", "The Legend of 1900", "1998", -1, -1, false, false])]
+    [InlineData(data: ["Sherlock.S01.Special.mkv", "Sherlock", null, 1, -1, true, true])]
     public void GetInfo_ParsesCanonicalCorpus(
         string fileName,
         string expectedTitle,
@@ -48,49 +40,49 @@ public class VendoredMovieDetectorTests
         bool expectedIsSpecial
     )
     {
-        MovieFile result = new MovieDetector().GetInfo(fileName);
+        MovieFile result = new MovieDetector().GetInfo(filePath: fileName);
 
         result.IsSuccess.Should().BeTrue();
-        result.Title.Should().Be(expectedTitle);
-        result.Year.Should().Be(expectedYear);
-        result.IsSeries.Should().Be(expectedIsSeries);
-        result.IsSpecialEpisode.Should().Be(expectedIsSpecial);
+        result.Title.Should().Be(expected: expectedTitle);
+        result.Year.Should().Be(expected: expectedYear);
+        result.IsSeries.Should().Be(expected: expectedIsSeries);
+        result.IsSpecialEpisode.Should().Be(expected: expectedIsSpecial);
 
         if (expectedSeason < 0)
             result.Season.Should().BeNull();
         else
-            result.Season.Should().Be(expectedSeason);
+            result.Season.Should().Be(expected: expectedSeason);
 
         if (expectedEpisode < 0)
             result.Episode.Should().BeNull();
         else
-            result.Episode.Should().Be(expectedEpisode);
+            result.Episode.Should().Be(expected: expectedEpisode);
     }
 
     [Fact]
     public void GetInfo_ExtractsImdbIdAfterYear()
     {
-        MovieFile result = new MovieDetector().GetInfo("Batman Begins (2005) {imdb-tt0372784}.mkv");
+        MovieFile result = new MovieDetector().GetInfo(filePath: "Batman Begins (2005) {imdb-tt0372784}.mkv");
 
-        result.Title.Should().Be("Batman Begins");
-        result.Year.Should().Be("2005");
-        result.ImdbId.Should().Be("tt0372784");
+        result.Title.Should().Be(expected: "Batman Begins");
+        result.Year.Should().Be(expected: "2005");
+        result.ImdbId.Should().Be(expected: "tt0372784");
         result.IsSeries.Should().BeFalse();
     }
 
     [Fact]
     public void Episode_SetterKeepsEpisodesCollectionConsistent()
     {
-        MovieFile file = new("Show.S01E02.mkv") { Episode = 7 };
+        MovieFile file = new(filePath: "Show.S01E02.mkv") { Episode = 7 };
 
-        file.Episode.Should().Be(7);
-        file.Episodes.Should().ContainSingle().Which.Should().Be(7);
+        file.Episode.Should().Be(expected: 7);
+        file.Episodes.Should().ContainSingle().Which.Should().Be(expected: 7);
     }
 
     [Fact]
     public void GetInfo_Throws_OnNullOrWhitespace()
     {
-        Action act = () => new MovieDetector().GetInfo("   ");
+        Action act = () => new MovieDetector().GetInfo(filePath: "   ");
         act.Should().Throw<ArgumentException>();
     }
 }

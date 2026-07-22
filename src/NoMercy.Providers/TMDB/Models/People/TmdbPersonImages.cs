@@ -16,6 +16,6 @@ namespace NoMercy.Providers.TMDB.Models.People;
 
 public class TmdbPersonImages
 {
-    [JsonProperty("profiles")]
+    [JsonProperty(propertyName: "profiles")]
     public TmdbProfile[] Profiles { get; set; } = [];
 }

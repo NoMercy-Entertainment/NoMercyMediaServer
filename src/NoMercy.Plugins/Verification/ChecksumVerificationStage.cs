@@ -20,13 +20,13 @@ public class ChecksumVerificationStage : IPluginVerificationStage
 
     public (PluginStageOutcome Outcome, string? Message) Evaluate(PluginVerificationContext context)
     {
-        if (string.IsNullOrWhiteSpace(context.ExpectedChecksum))
+        if (string.IsNullOrWhiteSpace(value: context.ExpectedChecksum))
             return (PluginStageOutcome.Pass, null);
 
-        byte[] bytes = File.ReadAllBytes(context.AssemblyPath);
-        string actual = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+        byte[] bytes = File.ReadAllBytes(path: context.AssemblyPath);
+        string actual = Convert.ToHexString(inArray: SHA256.HashData(source: bytes)).ToLowerInvariant();
 
-        if (string.Equals(actual, context.ExpectedChecksum, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(a: actual, b: context.ExpectedChecksum, comparisonType: StringComparison.OrdinalIgnoreCase))
             return (PluginStageOutcome.Trust, null);
 
         return (

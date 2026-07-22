@@ -57,7 +57,7 @@ public class HardwareInitializationService(
     /// </summary>
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        DetectionTask = Task.Run(() => RunDetectionAsync(cancellationToken), cancellationToken);
+        DetectionTask = Task.Run(function: () => RunDetectionAsync(ct: cancellationToken), cancellationToken: cancellationToken);
         return Task.CompletedTask;
     }
 
@@ -70,15 +70,15 @@ public class HardwareInitializationService(
         // for the entire server lifetime.
         if (phaseTracker is not null)
         {
-            logger.LogInformation("Hardware detection waiting for BootStage.All (server ready)...");
-            await phaseTracker.WhenReachedAsync(BootStage.All, ct).ConfigureAwait(false);
-            logger.LogInformation("BootStage.All reached — starting hardware probe");
+            logger.LogInformation(message: "Hardware detection waiting for BootStage.All (server ready)...");
+            await phaseTracker.WhenReachedAsync(stage: BootStage.All, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
+            logger.LogInformation(message: "BootStage.All reached — starting hardware probe");
         }
 
         if (ct.IsCancellationRequested)
             return;
 
-        logger.LogInformation("Starting hardware detection...");
+        logger.LogInformation(message: "Starting hardware detection...");
 
         try
         {
@@ -87,12 +87,12 @@ public class HardwareInitializationService(
             // still-being-replaced binary) returns an empty set that downstream would
             // misread as "software-only host". After MaxProbeRetries the server falls
             // back to CPU-only so a genuinely GPU-less host still works.
-            await ProbeWithRetryAsync(ct).ConfigureAwait(false);
+            await ProbeWithRetryAsync(ct: ct).ConfigureAwait(continueOnCapturedContext: false);
 
             IReadOnlyList<GpuDevice> gpus = await hardwareDetector
-                .DetectGpusAsync(ct)
-                .ConfigureAwait(false);
-            int cpuCores = await hardwareDetector.DetectCpuCoreCountAsync(ct).ConfigureAwait(false);
+                .DetectGpusAsync(ct: ct)
+                .ConfigureAwait(continueOnCapturedContext: false);
+            int cpuCores = await hardwareDetector.DetectCpuCoreCountAsync(ct: ct).ConfigureAwait(continueOnCapturedContext: false);
 
             // No GPU of any vendor was detected, so every hardware-encoder init
             // probe would only spawn ffmpeg to fail on a missing device/driver.
@@ -105,44 +105,44 @@ public class HardwareInitializationService(
             if (gpus.Count == 0)
             {
                 logger.LogDebug(
-                    "No GPU detected — skipping hardware-encoder init probe (software-only host)"
+                    message: "No GPU detected — skipping hardware-encoder init probe (software-only host)"
                 );
                 usableHardwareEncoders = new HashSet<string>();
             }
             else
             {
-                usableHardwareEncoders = await ProbeUsableHardwareEncodersAsync(ct)
-                    .ConfigureAwait(false);
+                usableHardwareEncoders = await ProbeUsableHardwareEncodersAsync(ct: ct)
+                    .ConfigureAwait(continueOnCapturedContext: false);
             }
 
-            Capabilities = new HardwareCapabilities(gpus, cpuCores, usableHardwareEncoders);
+            Capabilities = new HardwareCapabilities(Gpus: gpus, CpuCores: cpuCores, UsableHardwareEncoders: usableHardwareEncoders);
             IsReady = true;
 
             System.Text.StringBuilder summary = new();
-            summary.Append("Hardware detection complete - encoder ready:");
+            summary.Append(value: "Hardware detection complete - encoder ready:");
             summary.Append(
-                $"\n  FFmpeg : {ffmpegCapabilities.AvailableEncoders.Count} encoders, "
-                    + $"{ffmpegCapabilities.AvailableFilters.Count} filters"
+                handler: $"\n  FFmpeg : {ffmpegCapabilities.AvailableEncoders.Count} encoders, "
+                         + $"{ffmpegCapabilities.AvailableFilters.Count} filters"
             );
-            summary.Append($"\n  CPU    : {cpuCores} cores");
+            summary.Append(handler: $"\n  CPU    : {cpuCores} cores");
             if (gpus.Count == 0)
-                summary.Append("\n  GPU    : none (software-only)");
+                summary.Append(value: "\n  GPU    : none (software-only)");
             else
                 foreach (GpuDevice gpu in gpus)
                     summary.Append(
-                        $"\n  GPU    : {gpu.Vendor} {gpu.Name} "
-                            + $"({gpu.VramMb}MB VRAM, max {gpu.MaxEncoderSessions} sessions)"
+                        handler: $"\n  GPU    : {gpu.Vendor} {gpu.Name} "
+                                 + $"({gpu.VramMb}MB VRAM, max {gpu.MaxEncoderSessions} sessions)"
                     );
             summary.Append(
-                usableHardwareEncoders.Count == 0
+                value: usableHardwareEncoders.Count == 0
                     ? "\n  HW init probe : no hardware encoders usable (software-only)"
-                    : $"\n  HW init probe : usable [{string.Join(", ", usableHardwareEncoders)}]"
+                    : $"\n  HW init probe : usable [{string.Join(separator: ", ", values: usableHardwareEncoders)}]"
             );
-            logger.LogInformation("{HardwareSummary}", summary.ToString());
+            logger.LogInformation(message: "{HardwareSummary}", args: summary.ToString());
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Hardware detection failed — software-only fallback");
+            logger.LogError(exception: ex, message: "Hardware detection failed — software-only fallback");
             Capabilities = new HardwareCapabilities(Gpus: [], CpuCores: Environment.ProcessorCount);
             IsReady = true;
         }
@@ -155,42 +155,40 @@ public class HardwareInitializationService(
         try
         {
             DriverChangeResult driverResult = await driverChangeDetector
-                .DetectAndPersistAsync(ct)
-                .ConfigureAwait(false);
+                .DetectAndPersistAsync(ct: ct)
+                .ConfigureAwait(continueOnCapturedContext: false);
 
             if (driverResult.IsFirstBoot)
             {
                 logger.LogInformation(
-                    "Driver fingerprint: first boot (hash {Hash}) — initial calibration deferred to benchmark service",
-                    driverResult.CurrentHash
+                    message: "Driver fingerprint: first boot (hash {Hash}) — initial calibration deferred to benchmark service",
+                    args: driverResult.CurrentHash
                 );
             }
             else if (driverResult.Changed)
             {
                 logger.LogWarning(
-                    "GPU driver change detected (prev={Prev}, curr={Curr}) — queuing benchmark recalibration",
-                    driverResult.PreviousHash,
-                    driverResult.CurrentHash
+                    message: "GPU driver change detected (prev={Prev}, curr={Curr}) — queuing benchmark recalibration", args: [driverResult.PreviousHash, driverResult.CurrentHash]
                 );
-                benchmarkJobTracker.Start(Array.Empty<VideoCodecType>(), Array.Empty<int>());
+                benchmarkJobTracker.Start(codecs: Array.Empty<VideoCodecType>(), resolutions: Array.Empty<int>());
             }
             else
             {
                 logger.LogInformation(
-                    "Driver fingerprint unchanged (hash {Hash})",
-                    driverResult.CurrentHash
+                    message: "Driver fingerprint unchanged (hash {Hash})",
+                    args: driverResult.CurrentHash
                 );
             }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogWarning(
-                ex,
-                "Driver fingerprint check failed — continuing without recalibration trigger"
+                exception: ex,
+                message: "Driver fingerprint check failed — continuing without recalibration trigger"
             );
         }
 
-        phaseTracker?.MarkComplete(BootStage.Hardware);
+        phaseTracker?.MarkComplete(stage: BootStage.Hardware);
     }
 
     /// <summary>
@@ -213,21 +211,21 @@ public class HardwareInitializationService(
         try
         {
             IReadOnlyList<string> candidates = ffmpegCapabilities
-                .AvailableEncoders.Where(encoderName =>
-                    GpuEncoderTokens.VendorForEncoderName(encoderName) is not null
+                .AvailableEncoders.Where(predicate: encoderName =>
+                    GpuEncoderTokens.VendorForEncoderName(ffmpegEncoderName: encoderName) is not null
                 )
                 .ToList();
 
             if (candidates.Count == 0)
                 return new HashSet<string>();
 
-            return await hardwareEncoderProbe.ProbeAsync(candidates, ct).ConfigureAwait(false);
+            return await hardwareEncoderProbe.ProbeAsync(candidateHardwareEncoders: candidates, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogWarning(
-                ex,
-                "Hardware encoder init probe failed — no hardware encoders usable (software-only)"
+                exception: ex,
+                message: "Hardware encoder init probe failed — no hardware encoders usable (software-only)"
             );
             return new HashSet<string>();
         }
@@ -248,7 +246,7 @@ public class HardwareInitializationService(
 
             try
             {
-                await ffmpegCapabilities.ProbeAsync(ct).ConfigureAwait(false);
+                await ffmpegCapabilities.ProbeAsync(ct: ct).ConfigureAwait(continueOnCapturedContext: false);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -256,13 +254,10 @@ public class HardwareInitializationService(
                     throw;
 
                 logger.LogWarning(
-                    ex,
-                    "ffmpeg probe failed (attempt {Attempt}/{Max}), retrying in {DelayMs}ms",
-                    attempt + 1,
-                    MaxProbeRetries,
-                    probeRetryDelayMs
+                    exception: ex,
+                    message: "ffmpeg probe failed (attempt {Attempt}/{Max}), retrying in {DelayMs}ms", args: [attempt + 1, MaxProbeRetries, probeRetryDelayMs]
                 );
-                await Task.Delay(probeRetryDelayMs, ct).ConfigureAwait(false);
+                await Task.Delay(millisecondsDelay: probeRetryDelayMs, cancellationToken: ct).ConfigureAwait(continueOnCapturedContext: false);
                 continue;
             }
 
@@ -272,19 +267,16 @@ public class HardwareInitializationService(
             if (attempt == MaxProbeRetries)
             {
                 logger.LogWarning(
-                    "ffmpeg -encoders returned empty set after {Max} attempt(s) — proceeding with CPU-only capabilities",
-                    MaxProbeRetries + 1
+                    message: "ffmpeg -encoders returned empty set after {Max} attempt(s) — proceeding with CPU-only capabilities",
+                    args: MaxProbeRetries + 1
                 );
                 return;
             }
 
             logger.LogWarning(
-                "ffmpeg -encoders returned empty set (attempt {Attempt}/{Max}), retrying in {DelayMs}ms",
-                attempt + 1,
-                MaxProbeRetries,
-                probeRetryDelayMs
+                message: "ffmpeg -encoders returned empty set (attempt {Attempt}/{Max}), retrying in {DelayMs}ms", args: [attempt + 1, MaxProbeRetries, probeRetryDelayMs]
             );
-            await Task.Delay(probeRetryDelayMs, ct).ConfigureAwait(false);
+            await Task.Delay(millisecondsDelay: probeRetryDelayMs, cancellationToken: ct).ConfigureAwait(continueOnCapturedContext: false);
         }
     }
 

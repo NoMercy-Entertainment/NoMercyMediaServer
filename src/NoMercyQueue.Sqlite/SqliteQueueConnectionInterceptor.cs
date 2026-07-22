@@ -18,7 +18,7 @@ internal class SqliteQueueConnectionInterceptor : DbConnectionInterceptor
 {
     public override void ConnectionOpened(DbConnection connection, ConnectionEndEventData eventData)
     {
-        ApplyPragmas(connection);
+        ApplyPragmas(connection: connection);
     }
 
     public override async Task ConnectionOpenedAsync(
@@ -27,7 +27,7 @@ internal class SqliteQueueConnectionInterceptor : DbConnectionInterceptor
         CancellationToken cancellationToken = default
     )
     {
-        ApplyPragmas(connection);
+        ApplyPragmas(connection: connection);
         await Task.CompletedTask;
     }
 

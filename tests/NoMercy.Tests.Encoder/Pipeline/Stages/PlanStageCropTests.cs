@@ -34,20 +34,20 @@ public class PlanStageCropTests
     public async Task AutoDetectCropOff_DetectorNotInvoked()
     {
         Mock<ICropDetector> detector = new();
-        PlanStage stage = BuildStage(detector.Object);
+        PlanStage stage = BuildStage(cropDetector: detector.Object);
 
         EncodingProfile profile = BuildProfile(autoDetectCrop: false);
-        OutputPlan plan = await RunPlan(stage, profile);
+        OutputPlan plan = await RunPlan(stage: stage, profile: profile);
 
         detector.Verify(
-            d =>
+            expression: d =>
                 d.DetectAsync(
                     It.IsAny<string>(),
                     It.IsAny<Guid?>(),
                     It.IsAny<bool?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Never
+            times: Times.Never
         );
         plan.VideoOutputs[0].CropFilter.Should().BeNull();
     }
@@ -57,7 +57,7 @@ public class PlanStageCropTests
     {
         Mock<ICropDetector> detector = new();
         detector
-            .Setup(d =>
+            .Setup(expression: d =>
                 d.DetectAsync(
                     It.IsAny<string>(),
                     It.IsAny<Guid?>(),
@@ -65,24 +65,24 @@ public class PlanStageCropTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(new CropResult(Width: 1920, Height: 800, X: 0, Y: 140, ShouldCrop: true));
+            .ReturnsAsync(value: new CropResult(Width: 1920, Height: 800, X: 0, Y: 140, ShouldCrop: true));
 
-        PlanStage stage = BuildStage(detector.Object);
+        PlanStage stage = BuildStage(cropDetector: detector.Object);
         EncodingProfile profile = BuildProfile(autoDetectCrop: true);
 
-        OutputPlan plan = await RunPlan(stage, profile);
+        OutputPlan plan = await RunPlan(stage: stage, profile: profile);
 
-        plan.VideoOutputs.Should().HaveCountGreaterThan(0);
-        plan.VideoOutputs[0].CropFilter.Should().Be("1920:800:0:140");
+        plan.VideoOutputs.Should().HaveCountGreaterThan(expected: 0);
+        plan.VideoOutputs[0].CropFilter.Should().Be(expected: "1920:800:0:140");
         detector.Verify(
-            d =>
+            expression: d =>
                 d.DetectAsync(
                     It.IsAny<string>(),
                     It.IsAny<Guid?>(),
                     It.IsAny<bool?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Once
+            times: Times.Once
         );
     }
 
@@ -91,7 +91,7 @@ public class PlanStageCropTests
     {
         Mock<ICropDetector> detector = new();
         detector
-            .Setup(d =>
+            .Setup(expression: d =>
                 d.DetectAsync(
                     It.IsAny<string>(),
                     It.IsAny<Guid?>(),
@@ -99,12 +99,12 @@ public class PlanStageCropTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(new CropResult(0, 0, 0, 0, ShouldCrop: false));
+            .ReturnsAsync(value: new CropResult(Width: 0, Height: 0, X: 0, Y: 0, ShouldCrop: false));
 
-        PlanStage stage = BuildStage(detector.Object);
+        PlanStage stage = BuildStage(cropDetector: detector.Object);
         EncodingProfile profile = BuildProfile(autoDetectCrop: true);
 
-        OutputPlan plan = await RunPlan(stage, profile);
+        OutputPlan plan = await RunPlan(stage: stage, profile: profile);
 
         plan.VideoOutputs[0].CropFilter.Should().BeNull();
     }
@@ -114,7 +114,7 @@ public class PlanStageCropTests
     {
         Mock<ICropDetector> detector = new();
         detector
-            .Setup(d =>
+            .Setup(expression: d =>
                 d.DetectAsync(
                     It.IsAny<string>(),
                     It.IsAny<Guid?>(),
@@ -122,12 +122,12 @@ public class PlanStageCropTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ThrowsAsync(new InvalidOperationException("boom"));
+            .ThrowsAsync(exception: new InvalidOperationException(message: "boom"));
 
-        PlanStage stage = BuildStage(detector.Object);
+        PlanStage stage = BuildStage(cropDetector: detector.Object);
         EncodingProfile profile = BuildProfile(autoDetectCrop: true);
 
-        OutputPlan plan = await RunPlan(stage, profile);
+        OutputPlan plan = await RunPlan(stage: stage, profile: profile);
 
         plan.VideoOutputs[0].CropFilter.Should().BeNull();
     }
@@ -140,7 +140,7 @@ public class PlanStageCropTests
         // (which would disable stream-copy on every rung it touches).
         Mock<ICropDetector> detector = new();
         detector
-            .Setup(d =>
+            .Setup(expression: d =>
                 d.DetectAsync(
                     It.IsAny<string>(),
                     It.IsAny<Guid?>(),
@@ -148,10 +148,10 @@ public class PlanStageCropTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(new CropResult(Width: 1920, Height: 1000, X: 0, Y: 40, ShouldCrop: true));
+            .ReturnsAsync(value: new CropResult(Width: 1920, Height: 1000, X: 0, Y: 40, ShouldCrop: true));
 
-        PlanStage stage = BuildStage(detector.Object);
-        OutputPlan plan = await RunPlan(stage, BuildProfile(autoDetectCrop: true));
+        PlanStage stage = BuildStage(cropDetector: detector.Object);
+        OutputPlan plan = await RunPlan(stage: stage, profile: BuildProfile(autoDetectCrop: true));
 
         plan.VideoOutputs[0].CropFilter.Should().BeNull();
     }
@@ -164,7 +164,7 @@ public class PlanStageCropTests
         // re-encode.
         Mock<ICropDetector> detector = new();
         detector
-            .Setup(d =>
+            .Setup(expression: d =>
                 d.DetectAsync(
                     It.IsAny<string>(),
                     It.IsAny<Guid?>(),
@@ -173,13 +173,13 @@ public class PlanStageCropTests
                 )
             )
             .ReturnsAsync(
-                new CropResult(Width: 1700, Height: 1080, X: 110, Y: 0, ShouldCrop: true)
+                value: new CropResult(Width: 1700, Height: 1080, X: 110, Y: 0, ShouldCrop: true)
             );
 
-        PlanStage stage = BuildStage(detector.Object);
-        OutputPlan plan = await RunPlan(stage, BuildProfile(autoDetectCrop: true));
+        PlanStage stage = BuildStage(cropDetector: detector.Object);
+        OutputPlan plan = await RunPlan(stage: stage, profile: BuildProfile(autoDetectCrop: true));
 
-        plan.VideoOutputs[0].CropFilter.Should().Be("1700:1080:110:0");
+        plan.VideoOutputs[0].CropFilter.Should().Be(expected: "1700:1080:110:0");
     }
 
     [Fact]
@@ -190,7 +190,7 @@ public class PlanStageCropTests
         bool? capturedHdr = null;
         Mock<ICropDetector> detector = new();
         detector
-            .Setup(d =>
+            .Setup(expression: d =>
                 d.DetectAsync(
                     It.IsAny<string>(),
                     It.IsAny<Guid?>(),
@@ -198,12 +198,12 @@ public class PlanStageCropTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Callback((string _, Guid? _, bool? isHdr, CancellationToken _) => capturedHdr = isHdr)
-            .ReturnsAsync(new CropResult(0, 0, 0, 0, ShouldCrop: false));
+            .Callback(action: (string _, Guid? _, bool? isHdr, CancellationToken _) => capturedHdr = isHdr)
+            .ReturnsAsync(value: new CropResult(Width: 0, Height: 0, X: 0, Y: 0, ShouldCrop: false));
 
-        PlanStage stage = BuildStage(detector.Object);
-        ValidateInput input = new(BuildHdrMedia(), BuildProfile(autoDetectCrop: true));
-        await stage.ExecuteAsync(input, EncodingContext.Create(), CancellationToken.None);
+        PlanStage stage = BuildStage(cropDetector: detector.Object);
+        ValidateInput input = new(Media: BuildHdrMedia(), Profile: BuildProfile(autoDetectCrop: true));
+        await stage.ExecuteAsync(input: input, context: EncodingContext.Create(), ct: CancellationToken.None);
 
         capturedHdr.Should().BeTrue();
     }
@@ -211,15 +211,15 @@ public class PlanStageCropTests
     private static PlanStage BuildStage(ICropDetector cropDetector)
     {
         Mock<IHardwareCapabilities> hardware = new();
-        hardware.Setup(h => h.HasGpu).Returns(false);
-        hardware.Setup(h => h.CpuCores).Returns(8);
-        hardware.Setup(h => h.Gpus).Returns([]);
-        hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
-        hardware.Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>())).Returns((GpuDevice?)null);
+        hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
+        hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
+        hardware.Setup(expression: h => h.Gpus).Returns(value: []);
+        hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
+        hardware.Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>())).Returns(value: (GpuDevice?)null);
 
         Mock<ICodecResolver> codecResolver = new();
         codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<IHardwareCapabilities>(),
@@ -227,7 +227,7 @@ public class PlanStageCropTests
                 )
             )
             .Returns(
-                new ResolvedCodec(
+                value: new ResolvedCodec(
                     FfmpegEncoderName: "libx264",
                     EncoderInfo: new(
                         FfmpegName: "libx264",
@@ -235,7 +235,7 @@ public class PlanStageCropTests
                         Presets: ["medium"],
                         Profiles: ["high"],
                         Levels: ["4.1"],
-                        QualityRange: new(0, 51, 23),
+                        QualityRange: new(Min: 0, Max: 51, Default: 23),
                         SupportedRateControl: [RateControlMode.Crf],
                         Supports10Bit: false,
                         SupportsHdr: false,
@@ -249,26 +249,26 @@ public class PlanStageCropTests
             );
 
         return new(
-            new(),
-            new(),
-            new(),
-            codecResolver.Object,
-            hardware.Object,
-            new TonemapSelector(),
-            new Mock<IFfmpegCapabilities>().Object,
-            new AbrLadderGenerator(),
-            cropDetector,
-            NullLogger<PlanStage>.Instance
+            graphBuilder: new(),
+            groupingStrategy: new(),
+            costEstimator: new(),
+            codecResolver: codecResolver.Object,
+            hardware: hardware.Object,
+            tonemapSelector: new TonemapSelector(),
+            ffmpegCapabilities: new Mock<IFfmpegCapabilities>().Object,
+            abrLadderGenerator: new AbrLadderGenerator(),
+            cropDetector: cropDetector,
+            logger: NullLogger<PlanStage>.Instance
         );
     }
 
     private static async Task<OutputPlan> RunPlan(PlanStage stage, EncodingProfile profile)
     {
-        ValidateInput input = new(BuildMedia(), profile);
+        ValidateInput input = new(Media: BuildMedia(), Profile: profile);
         EncodingContext context = EncodingContext.Create();
-        StageResult result = await stage.ExecuteAsync(input, context, CancellationToken.None);
+        StageResult result = await stage.ExecuteAsync(input: input, context: context, ct: CancellationToken.None);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
         return success.Value.OutputPlan;
     }
 
@@ -276,7 +276,7 @@ public class PlanStageCropTests
         new(
             FilePath: "/media/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(90),
+            Duration: TimeSpan.FromMinutes(minutes: 90),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 4_000_000_000,
             VideoStreams:
@@ -305,7 +305,7 @@ public class PlanStageCropTests
         new(
             FilePath: "/media/test-hdr.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(90),
+            Duration: TimeSpan.FromMinutes(minutes: 90),
             OverallBitRateKbps: 40000,
             FileSizeBytes: 20_000_000_000,
             VideoStreams:

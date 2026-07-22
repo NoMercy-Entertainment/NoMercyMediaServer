@@ -32,71 +32,71 @@ namespace NoMercy.Api.DTOs.Playlists;
 public record PlaylistItemCardDto
 {
     /// <summary>The PlaylistItem's own id — pass this to DELETE /items/{itemId} and PUT /items/order.</summary>
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public string Id { get; set; } = string.Empty;
 
     /// <summary>movie | tv | episode | special.</summary>
-    [JsonProperty("kind")]
+    [JsonProperty(propertyName: "kind")]
     public string Kind { get; set; } = string.Empty;
 
     /// <summary>The underlying Movie/Tv/Episode/Special id, stringified (types vary by kind).</summary>
-    [JsonProperty("media_id")]
+    [JsonProperty(propertyName: "media_id")]
     public string MediaId { get; set; } = string.Empty;
 
-    [JsonProperty("order")]
+    [JsonProperty(propertyName: "order")]
     public int Order { get; set; }
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty("overview")]
+    [JsonProperty(propertyName: "overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty("poster")]
+    [JsonProperty(propertyName: "poster")]
     public string? Poster { get; set; }
 
-    [JsonProperty("backdrop")]
+    [JsonProperty(propertyName: "backdrop")]
     public string? Backdrop { get; set; }
 
-    [JsonProperty("color_palette")]
+    [JsonProperty(propertyName: "color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty("year")]
+    [JsonProperty(propertyName: "year")]
     public int? Year { get; set; }
 
     /// <summary>Runtime in seconds, when known.</summary>
-    [JsonProperty("duration")]
+    [JsonProperty(propertyName: "duration")]
     public int? Duration { get; set; }
 
     /// <summary>The item's detail-page link (e.g. /movie/123, /tv/1399).</summary>
-    [JsonProperty("link")]
+    [JsonProperty(propertyName: "link")]
     public Uri Link { get; set; } = null!;
 
     /// <summary>The watch/play link — present only when the item currently has playable media.</summary>
-    [JsonProperty("play_link")]
+    [JsonProperty(propertyName: "play_link")]
     public Uri? PlayLink { get; set; }
 
     public static PlaylistItemCardDto From(PlaylistItem item) =>
         item.Kind switch
         {
-            PlaylistItemKind.Movie => FromMovie(item),
-            PlaylistItemKind.Tv => FromTv(item),
-            PlaylistItemKind.Episode => FromEpisode(item),
-            PlaylistItemKind.Special => FromSpecial(item),
+            PlaylistItemKind.Movie => FromMovie(item: item),
+            PlaylistItemKind.Tv => FromTv(item: item),
+            PlaylistItemKind.Episode => FromEpisode(item: item),
+            PlaylistItemKind.Special => FromSpecial(item: item),
             _ => throw new ArgumentOutOfRangeException(
-                nameof(item),
-                item.Kind,
-                "Unknown PlaylistItemKind"
+                paramName: nameof(item),
+                actualValue: item.Kind,
+                message: "Unknown PlaylistItemKind"
             ),
         };
 
     private static PlaylistItemCardDto FromMovie(PlaylistItem item)
     {
         Movie movie =
-            item.Movie ?? throw new InvalidOperationException("PlaylistItem.Movie not loaded");
+            item.Movie ?? throw new InvalidOperationException(message: "PlaylistItem.Movie not loaded");
         string? title = movie.Translations.FirstOrDefault()?.Title;
         string? overview = movie.Translations.FirstOrDefault()?.Overview;
-        bool playable = movie.VideoFiles.Any(v => v.Folder != null);
+        bool playable = movie.VideoFiles.Any(predicate: v => v.Folder != null);
 
         return new()
         {
@@ -104,23 +104,23 @@ public record PlaylistItemCardDto
             Kind = PlaylistItemKind.Movie.ToWireString(),
             MediaId = movie.Id.ToString(),
             Order = item.Order,
-            Title = !string.IsNullOrEmpty(title) ? title : movie.Title,
-            Overview = !string.IsNullOrEmpty(overview) ? overview : movie.Overview,
+            Title = !string.IsNullOrEmpty(value: title) ? title : movie.Title,
+            Overview = !string.IsNullOrEmpty(value: overview) ? overview : movie.Overview,
             Poster = movie.Poster,
             Backdrop = movie.Backdrop,
             ColorPalette = movie.ColorPalette,
             Year = movie.ReleaseDate.ParseYear(),
             Duration = movie
-                .VideoFiles.FirstOrDefault(v => v.Folder != null)
+                .VideoFiles.FirstOrDefault(predicate: v => v.Folder != null)
                 ?.Duration?.ToSeconds(),
-            Link = new($"/movie/{movie.Id}", UriKind.Relative),
-            PlayLink = playable ? new($"/movie/{movie.Id}/watch", UriKind.Relative) : null,
+            Link = new(uriString: $"/movie/{movie.Id}", uriKind: UriKind.Relative),
+            PlayLink = playable ? new(uriString: $"/movie/{movie.Id}/watch", uriKind: UriKind.Relative) : null,
         };
     }
 
     private static PlaylistItemCardDto FromTv(PlaylistItem item)
     {
-        Tv tv = item.Tv ?? throw new InvalidOperationException("PlaylistItem.Tv not loaded");
+        Tv tv = item.Tv ?? throw new InvalidOperationException(message: "PlaylistItem.Tv not loaded");
         string? title = tv.Translations.FirstOrDefault()?.Title;
         string? overview = tv.Translations.FirstOrDefault()?.Overview;
 
@@ -130,28 +130,28 @@ public record PlaylistItemCardDto
             Kind = PlaylistItemKind.Tv.ToWireString(),
             MediaId = tv.Id.ToString(),
             Order = item.Order,
-            Title = !string.IsNullOrEmpty(title) ? title : tv.Title,
-            Overview = !string.IsNullOrEmpty(overview) ? overview : tv.Overview,
+            Title = !string.IsNullOrEmpty(value: title) ? title : tv.Title,
+            Overview = !string.IsNullOrEmpty(value: overview) ? overview : tv.Overview,
             Poster = tv.Poster,
             Backdrop = tv.Backdrop,
             ColorPalette = tv.ColorPalette,
             Year = tv.FirstAirDate.ParseYear(),
-            Link = new($"/tv/{tv.Id}", UriKind.Relative),
+            Link = new(uriString: $"/tv/{tv.Id}", uriKind: UriKind.Relative),
             // Whether the show currently has a playable episode isn't loaded on this
             // read path (GetPlaylistItemsAsync doesn't Include Tv.Episodes), so this
             // mirrors NmCardDto(UserData)'s continue-watching Tv branch: always link
             // to the show's watch route and let it resolve the next episode.
-            PlayLink = new($"/tv/{tv.Id}/watch", UriKind.Relative),
+            PlayLink = new(uriString: $"/tv/{tv.Id}/watch", uriKind: UriKind.Relative),
         };
     }
 
     private static PlaylistItemCardDto FromEpisode(PlaylistItem item)
     {
         Episode episode =
-            item.Episode ?? throw new InvalidOperationException("PlaylistItem.Episode not loaded");
+            item.Episode ?? throw new InvalidOperationException(message: "PlaylistItem.Episode not loaded");
         string? title = episode.Translations.FirstOrDefault()?.Title;
         string? overview = episode.Translations.FirstOrDefault()?.Overview;
-        bool playable = episode.VideoFiles.Any(v => v.Folder != null);
+        bool playable = episode.VideoFiles.Any(predicate: v => v.Folder != null);
 
         return new()
         {
@@ -159,19 +159,19 @@ public record PlaylistItemCardDto
             Kind = PlaylistItemKind.Episode.ToWireString(),
             MediaId = episode.Id.ToString(),
             Order = item.Order,
-            Title = !string.IsNullOrEmpty(title) ? title : episode.Title.OrEmpty(),
-            Overview = !string.IsNullOrEmpty(overview) ? overview : episode.Overview,
+            Title = !string.IsNullOrEmpty(value: title) ? title : episode.Title.OrEmpty(),
+            Overview = !string.IsNullOrEmpty(value: overview) ? overview : episode.Overview,
             Backdrop = episode.Still,
             ColorPalette = episode.ColorPalette,
             Year = episode.AirDate.ParseYear(),
             Duration = episode
-                .VideoFiles.FirstOrDefault(v => v.Folder != null)
+                .VideoFiles.FirstOrDefault(predicate: v => v.Folder != null)
                 ?.Duration?.ToSeconds(),
-            Link = new($"/tv/{episode.TvId}", UriKind.Relative),
+            Link = new(uriString: $"/tv/{episode.TvId}", uriKind: UriKind.Relative),
             PlayLink = playable
                 ? new(
-                    $"/tv/{episode.TvId}/watch?season={episode.SeasonNumber}&episode={episode.EpisodeNumber}",
-                    UriKind.Relative
+                    uriString: $"/tv/{episode.TvId}/watch?season={episode.SeasonNumber}&episode={episode.EpisodeNumber}",
+                    uriKind: UriKind.Relative
                 )
                 : null,
         };
@@ -180,7 +180,7 @@ public record PlaylistItemCardDto
     private static PlaylistItemCardDto FromSpecial(PlaylistItem item)
     {
         Special special =
-            item.Special ?? throw new InvalidOperationException("PlaylistItem.Special not loaded");
+            item.Special ?? throw new InvalidOperationException(message: "PlaylistItem.Special not loaded");
 
         return new()
         {
@@ -193,8 +193,8 @@ public record PlaylistItemCardDto
             Poster = special.Poster,
             Backdrop = special.Backdrop,
             ColorPalette = special.ColorPalette,
-            Link = new($"/specials/{special.Id}", UriKind.Relative),
-            PlayLink = new($"/specials/{special.Id}/watch", UriKind.Relative),
+            Link = new(uriString: $"/specials/{special.Id}", uriKind: UriKind.Relative),
+            PlayLink = new(uriString: $"/specials/{special.Id}/watch", uriKind: UriKind.Relative),
         };
     }
 }

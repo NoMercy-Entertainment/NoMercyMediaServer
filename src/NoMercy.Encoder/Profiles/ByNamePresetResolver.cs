@@ -47,10 +47,10 @@ public class ByNamePresetResolver : INamePresetResolver
     public EncodingProfile Resolve(PresetResolveRequest request, INamePresetLookup lookup)
     {
         // Top of the chain first, then walk down applying child overrides.
-        List<PresetResolveRequest> chain = BuildChain(request, lookup);
+        List<PresetResolveRequest> chain = BuildChain(leaf: request, lookup: lookup);
 
         // Start with the root preset as the base profile.
-        EncodingProfile profile = DeserializeProfile(chain[0]);
+        EncodingProfile profile = DeserializeProfile(request: chain[index: 0]);
 
         // Overlay each descendant. Record-level replacement; preset authors
         // who want to keep a parent field simply omit it from their JSON.
@@ -59,7 +59,7 @@ public class ByNamePresetResolver : INamePresetResolver
         // fields untouched.
         for (int i = 1; i < chain.Count; i++)
         {
-            JsonConvert.PopulateObject(chain[i].ProfileJson, profile);
+            JsonConvert.PopulateObject(value: chain[index: i].ProfileJson, target: profile);
         }
 
         return profile;
@@ -71,26 +71,26 @@ public class ByNamePresetResolver : INamePresetResolver
     )
     {
         List<PresetResolveRequest> reversed = [leaf];
-        HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase) { leaf.Name };
+        HashSet<string> seen = new(comparer: StringComparer.OrdinalIgnoreCase) { leaf.Name };
 
         PresetResolveRequest current = leaf;
         while (current.ParentName is string parent)
         {
-            if (!seen.Add(parent))
+            if (!seen.Add(item: parent))
                 throw new InvalidOperationException(
-                    $"[{EncoderRuleId.ParentIdCycle}] Preset inheritance cycle detected at '{parent}'"
+                    message: $"[{EncoderRuleId.ParentIdCycle}] Preset inheritance cycle detected at '{parent}'"
                 );
 
             if (reversed.Count >= MaxInheritanceDepth)
                 throw new InvalidOperationException(
-                    $"Preset inheritance chain exceeds {MaxInheritanceDepth} levels"
+                    message: $"Preset inheritance chain exceeds {MaxInheritanceDepth} levels"
                 );
 
             PresetResolveRequest? parentPreset =
-                lookup.FindByName(parent)
-                ?? throw new InvalidOperationException($"Parent preset '{parent}' not found");
+                lookup.FindByName(name: parent)
+                ?? throw new InvalidOperationException(message: $"Parent preset '{parent}' not found");
 
-            reversed.Add(parentPreset);
+            reversed.Add(item: parentPreset);
             current = parentPreset;
         }
 
@@ -102,12 +102,12 @@ public class ByNamePresetResolver : INamePresetResolver
     private static EncodingProfile DeserializeProfile(PresetResolveRequest request)
     {
         EncodingProfile? profile = JsonConvert.DeserializeObject<EncodingProfile>(
-            request.ProfileJson
+            value: request.ProfileJson
         );
 
         if (profile is null)
             throw new InvalidOperationException(
-                $"Preset '{request.Name}' has an empty or invalid ProfileJson"
+                message: $"Preset '{request.Name}' has an empty or invalid ProfileJson"
             );
 
         return profile;

@@ -53,7 +53,7 @@ public interface ISourceFetcher
 public sealed class NullSourceFetcher : ISourceFetcher
 {
     public Task<string> EnsureLocalAsync(EncodeTask task, CancellationToken ct) =>
-        Task.FromResult(task.InputPath ?? string.Empty);
+        Task.FromResult(result: task.InputPath ?? string.Empty);
 
     public Task ReleaseAsync(EncodeTask task) => Task.CompletedTask;
 }

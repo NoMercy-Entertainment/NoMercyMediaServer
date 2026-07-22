@@ -22,10 +22,10 @@ using NoMercy.Database.Models.Users;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 
 [ApiController]
-[Tags("Dashboard Server Activity")]
-[ApiVersion(1.0)]
+[Tags(tags: "Dashboard Server Activity")]
+[ApiVersion(version: 1.0)]
 [Authorize]
-[Route("api/v{version:apiVersion}/dashboard/activity", Order = 10)]
+[Route(template: "api/v{version:apiVersion}/dashboard/activity", Order = 10)]
 public class ServerActivityController(IActivityRepository activityRepository) : BaseController
 {
     [HttpGet]
@@ -36,19 +36,19 @@ public class ServerActivityController(IActivityRepository activityRepository) : 
         int skip = request.Skip ?? 0;
 
         List<ActivityLog> activityLogs = await activityRepository.GetPagedAsync(
-            request.Category,
-            request.UserId,
-            request.DeviceId,
-            request.MediaId,
-            request.From,
-            request.To,
-            request.Success,
-            skip,
-            take
+            category: request.Category,
+            userId: request.UserId,
+            deviceId: request.DeviceId,
+            mediaId: request.MediaId,
+            from: request.From,
+            to: request.To,
+            success: request.Success,
+            skip: skip,
+            take: take
         );
 
         ServerActivityDto[] activityDtos = activityLogs
-            .Select(activityLog => new ServerActivityDto
+            .Select(selector: activityLog => new ServerActivityDto
             {
                 Id = activityLog.Id,
                 Category = activityLog.Category,
@@ -68,7 +68,7 @@ public class ServerActivityController(IActivityRepository activityRepository) : 
             .ToArray();
 
         return Ok(
-            new StatusResponseDto<ServerActivityDto[]> { Status = "ok", Data = activityDtos }
+            value: new StatusResponseDto<ServerActivityDto[]> { Status = "ok", Data = activityDtos }
         );
     }
 
@@ -76,7 +76,7 @@ public class ServerActivityController(IActivityRepository activityRepository) : 
     [Authorize(Policy = "MediaAccess")]
     public IActionResult Create()
     {
-        return Ok(new PlaceholderResponse { Data = [] });
+        return Ok(value: new PlaceholderResponse { Data = [] });
     }
 
     [HttpDelete]
@@ -86,7 +86,7 @@ public class ServerActivityController(IActivityRepository activityRepository) : 
         [FromQuery] DateTime? before
     )
     {
-        int deleted = await activityRepository.DeleteAsync(category, before);
-        return Ok(new StatusResponseDto<object> { Status = "ok", Data = new { deleted } });
+        int deleted = await activityRepository.DeleteAsync(category: category, before: before);
+        return Ok(value: new StatusResponseDto<object> { Status = "ok", Data = new { deleted } });
     }
 }

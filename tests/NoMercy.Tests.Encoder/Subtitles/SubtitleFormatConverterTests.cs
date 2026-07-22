@@ -21,40 +21,40 @@ public class SubtitleFormatConverterTests
     [Fact]
     public void SrtToVtt_PrependsWebVttHeader()
     {
-        string vtt = SubtitleFormatConverter.SrtToVtt(SampleSrt);
+        string vtt = SubtitleFormatConverter.SrtToVtt(srtContent: SampleSrt);
 
-        vtt.Should().StartWith("WEBVTT\n\n");
+        vtt.Should().StartWith(expected: "WEBVTT\n\n");
     }
 
     [Fact]
     public void SrtToVtt_RewritesCommaMillisecondSeparatorToPeriod()
     {
-        string vtt = SubtitleFormatConverter.SrtToVtt(SampleSrt);
+        string vtt = SubtitleFormatConverter.SrtToVtt(srtContent: SampleSrt);
 
-        vtt.Should().Contain("00:00:01.000 --> 00:00:04.000");
-        vtt.Should().Contain("00:00:05.500 --> 00:00:07.250");
-        vtt.Should().NotContain(",000");
-        vtt.Should().NotContain(",500");
+        vtt.Should().Contain(expected: "00:00:01.000 --> 00:00:04.000");
+        vtt.Should().Contain(expected: "00:00:05.500 --> 00:00:07.250");
+        vtt.Should().NotContain(unexpected: ",000");
+        vtt.Should().NotContain(unexpected: ",500");
     }
 
     [Fact]
     public void SrtToVtt_PreservesCueNumbersAndPayloadText()
     {
-        string vtt = SubtitleFormatConverter.SrtToVtt(SampleSrt);
+        string vtt = SubtitleFormatConverter.SrtToVtt(srtContent: SampleSrt);
 
-        vtt.Should().Contain("Hello, world!");
-        vtt.Should().Contain("Second line.");
+        vtt.Should().Contain(expected: "Hello, world!");
+        vtt.Should().Contain(expected: "Second line.");
         // Cue index lines pass through untouched.
-        vtt.Should().Contain("\n1\n");
-        vtt.Should().Contain("\n2\n");
+        vtt.Should().Contain(expected: "\n1\n");
+        vtt.Should().Contain(expected: "\n2\n");
     }
 
     [Fact]
     public void SrtToVtt_NormalizesCrLfLineEndingsToLf()
     {
-        string vtt = SubtitleFormatConverter.SrtToVtt(SampleSrt);
+        string vtt = SubtitleFormatConverter.SrtToVtt(srtContent: SampleSrt);
 
-        vtt.Should().NotContain("\r\n");
+        vtt.Should().NotContain(unexpected: "\r\n");
     }
 
     [Fact]
@@ -62,10 +62,10 @@ public class SubtitleFormatConverterTests
     {
         string srtWithBom = "﻿" + SampleSrt;
 
-        string vtt = SubtitleFormatConverter.SrtToVtt(srtWithBom);
+        string vtt = SubtitleFormatConverter.SrtToVtt(srtContent: srtWithBom);
 
-        vtt.Should().StartWith("WEBVTT");
-        vtt.Should().NotContain("﻿");
+        vtt.Should().StartWith(expected: "WEBVTT");
+        vtt.Should().NotContain(unexpected: "﻿");
     }
 
     [Fact]
@@ -73,8 +73,8 @@ public class SubtitleFormatConverterTests
     {
         const string srt = "1\n00:00:01,000 --> 00:00:02,000\nHi, there, friend.\n";
 
-        string vtt = SubtitleFormatConverter.SrtToVtt(srt);
+        string vtt = SubtitleFormatConverter.SrtToVtt(srtContent: srt);
 
-        vtt.Should().Contain("Hi, there, friend.");
+        vtt.Should().Contain(expected: "Hi, there, friend.");
     }
 }

@@ -20,10 +20,10 @@ using NoMercy.Database.Models.Media;
 namespace NoMercy.Api.Controllers.V1.Media;
 
 [ApiController]
-[Tags("Media Content Segments")]
-[ApiVersion(1.0)]
+[Tags(tags: "Media Content Segments")]
+[ApiVersion(version: 1.0)]
 [Authorize]
-[Route("api/v{version:apiVersion}/content-segments")]
+[Route(template: "api/v{version:apiVersion}/content-segments")]
 public class ContentSegmentsController(IContentSegmentRepository repository) : BaseController
 {
     /// <summary>
@@ -39,15 +39,15 @@ public class ContentSegmentsController(IContentSegmentRepository repository) : B
         [FromQuery] ContentSegmentType? type = null
     )
     {
-        pageSize = Math.Clamp(pageSize, 1, 500);
+        pageSize = Math.Clamp(value: pageSize, min: 1, max: 500);
         if (pageIndex < 0)
             pageIndex = 0;
 
-        List<ContentSegment> segments = await repository.ListAsync(pageSize, pageIndex, type);
+        List<ContentSegment> segments = await repository.ListAsync(pageSize: pageSize, pageIndex: pageIndex, filterType: type);
         int total = await repository.GetTotalCountAsync();
 
         return Ok(
-            new
+            value: new
             {
                 data = segments,
                 meta = new
@@ -55,28 +55,28 @@ public class ContentSegmentsController(IContentSegmentRepository repository) : B
                     total,
                     pageSize,
                     pageIndex,
-                    totalPages = (int)Math.Ceiling((double)total / pageSize),
+                    totalPages = (int)Math.Ceiling(a: (double)total / pageSize),
                 },
             }
         );
     }
 
-    [HttpGet("episode/{episodeId:int}")]
+    [HttpGet(template: "episode/{episodeId:int}")]
     [ResponseCache(Duration = 60)]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> GetByEpisode(int episodeId)
     {
-        List<ContentSegment> segments = await repository.GetForEpisodeAsync(episodeId);
-        return Ok(new { data = segments });
+        List<ContentSegment> segments = await repository.GetForEpisodeAsync(episodeId: episodeId);
+        return Ok(value: new { data = segments });
     }
 
-    [HttpGet("movie/{movieId:int}")]
+    [HttpGet(template: "movie/{movieId:int}")]
     [ResponseCache(Duration = 60)]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> GetByMovie(int movieId)
     {
-        List<ContentSegment> segments = await repository.GetForMovieAsync(movieId);
-        return Ok(new { data = segments });
+        List<ContentSegment> segments = await repository.GetForMovieAsync(movieId: movieId);
+        return Ok(value: new { data = segments });
     }
 
     [HttpPost]
@@ -84,13 +84,13 @@ public class ContentSegmentsController(IContentSegmentRepository repository) : B
     public async Task<IActionResult> Create([FromBody] CreateContentSegmentRequest request)
     {
         if (request.EndSeconds <= request.StartSeconds)
-            return BadRequestResponse("end_seconds must be greater than start_seconds");
+            return BadRequestResponse(detail: "end_seconds must be greater than start_seconds");
 
         if (!request.EpisodeId.HasValue && !request.MovieId.HasValue)
-            return BadRequestResponse("Either episode_id or movie_id must be set");
+            return BadRequestResponse(detail: "Either episode_id or movie_id must be set");
 
         if (request is { EpisodeId: not null, MovieId: not null })
-            return BadRequestResponse("Provide exactly one of episode_id / movie_id, not both");
+            return BadRequestResponse(detail: "Provide exactly one of episode_id / movie_id, not both");
 
         ContentSegment segment = new()
         {
@@ -103,23 +103,23 @@ public class ContentSegmentsController(IContentSegmentRepository repository) : B
             Confidence = request.Confidence ?? 1.0,
         };
 
-        ContentSegment saved = await repository.CreateAsync(segment);
-        return Ok(saved);
+        ContentSegment saved = await repository.CreateAsync(segment: segment);
+        return Ok(value: saved);
     }
 
-    [HttpPut("{id}")]
+    [HttpPut(template: "{id}")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Update(
         string id,
         [FromBody] UpdateContentSegmentRequest request
     )
     {
-        if (!Ulid.TryParse(id, out Ulid segmentId))
-            return BadRequestResponse("Invalid segment id");
+        if (!Ulid.TryParse(base32: id, ulid: out Ulid segmentId))
+            return BadRequestResponse(detail: "Invalid segment id");
 
         ContentSegment? updated = await repository.UpdateAsync(
-            segmentId,
-            seg =>
+            id: segmentId,
+            apply: seg =>
             {
                 if (request.SegmentType.HasValue)
                     seg.SegmentType = request.SegmentType.Value;
@@ -136,36 +136,36 @@ public class ContentSegmentsController(IContentSegmentRepository repository) : B
         );
 
         if (updated is null)
-            return NotFoundResponse("Content segment not found");
+            return NotFoundResponse(detail: "Content segment not found");
 
-        return Ok(updated);
+        return Ok(value: updated);
     }
 
-    [HttpDelete("{id}")]
+    [HttpDelete(template: "{id}")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Delete(string id)
     {
-        if (!Ulid.TryParse(id, out Ulid segmentId))
-            return BadRequestResponse("Invalid segment id");
+        if (!Ulid.TryParse(base32: id, ulid: out Ulid segmentId))
+            return BadRequestResponse(detail: "Invalid segment id");
 
-        bool deleted = await repository.DeleteAsync(segmentId);
-        return deleted ? NoContent() : NotFoundResponse("Content segment not found");
+        bool deleted = await repository.DeleteAsync(id: segmentId);
+        return deleted ? NoContent() : NotFoundResponse(detail: "Content segment not found");
     }
 }
 
 public record CreateContentSegmentRequest(
-    [property: JsonProperty("segment_type")] ContentSegmentType SegmentType,
-    [property: JsonProperty("start_seconds")] double StartSeconds,
-    [property: JsonProperty("end_seconds")] double EndSeconds,
-    [property: JsonProperty("episode_id")] int? EpisodeId = null,
-    [property: JsonProperty("movie_id")] int? MovieId = null,
-    [property: JsonProperty("source")] string? Source = null,
-    [property: JsonProperty("confidence")] double? Confidence = null
+    [property: JsonProperty(propertyName: "segment_type")] ContentSegmentType SegmentType,
+    [property: JsonProperty(propertyName: "start_seconds")] double StartSeconds,
+    [property: JsonProperty(propertyName: "end_seconds")] double EndSeconds,
+    [property: JsonProperty(propertyName: "episode_id")] int? EpisodeId = null,
+    [property: JsonProperty(propertyName: "movie_id")] int? MovieId = null,
+    [property: JsonProperty(propertyName: "source")] string? Source = null,
+    [property: JsonProperty(propertyName: "confidence")] double? Confidence = null
 );
 
 public record UpdateContentSegmentRequest(
-    [property: JsonProperty("segment_type")] ContentSegmentType? SegmentType = null,
-    [property: JsonProperty("start_seconds")] double? StartSeconds = null,
-    [property: JsonProperty("end_seconds")] double? EndSeconds = null,
-    [property: JsonProperty("confidence")] double? Confidence = null
+    [property: JsonProperty(propertyName: "segment_type")] ContentSegmentType? SegmentType = null,
+    [property: JsonProperty(propertyName: "start_seconds")] double? StartSeconds = null,
+    [property: JsonProperty(propertyName: "end_seconds")] double? EndSeconds = null,
+    [property: JsonProperty(propertyName: "confidence")] double? Confidence = null
 );

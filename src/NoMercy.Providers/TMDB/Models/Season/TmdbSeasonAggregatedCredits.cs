@@ -16,12 +16,12 @@ namespace NoMercy.Providers.TMDB.Models.Season;
 
 public class TmdbSeasonAggregatedCredits
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("cast")]
+    [JsonProperty(propertyName: "cast")]
     public TmdbTmdbAggregatedCast[] Cast { get; set; } = [];
 
-    [JsonProperty("crew")]
+    [JsonProperty(propertyName: "crew")]
     public TmdbTmdbAggregatedCrew[] Crew { get; set; } = [];
 }

@@ -17,7 +17,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Media;
 
-[Trait("Category", "Collections")]
+[Trait(name: "Category", value: "Collections")]
 public class CollectionResponseItemDtoTests
 {
     [Fact]
@@ -54,10 +54,10 @@ public class CollectionResponseItemDtoTests
             },
         };
 
-        CollectionResponseItemDto dto = new(appends);
+        CollectionResponseItemDto dto = new(tmdbCollectionAppends: appends);
 
-        Assert.Equal("De Matrix Collectie", dto.Title);
-        Assert.Equal("Nederlandse samenvatting.", dto.Overview);
+        Assert.Equal(expected: "De Matrix Collectie", actual: dto.Title);
+        Assert.Equal(expected: "Nederlandse samenvatting.", actual: dto.Overview);
     }
 
     [Fact]
@@ -80,9 +80,9 @@ public class CollectionResponseItemDtoTests
             Translations = new() { Translations = [] },
         };
 
-        CollectionResponseItemDto dto = new(appends);
+        CollectionResponseItemDto dto = new(tmdbCollectionAppends: appends);
 
-        Assert.Equal("The Matrix Collection", dto.Title);
-        Assert.Equal("English overview.", dto.Overview);
+        Assert.Equal(expected: "The Matrix Collection", actual: dto.Title);
+        Assert.Equal(expected: "English overview.", actual: dto.Overview);
     }
 }

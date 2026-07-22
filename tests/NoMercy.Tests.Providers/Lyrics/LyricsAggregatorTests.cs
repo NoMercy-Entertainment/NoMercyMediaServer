@@ -32,8 +32,8 @@ namespace NoMercy.Tests.Providers.Lyrics;
 /// match never beats a slower correct one once both branches race, and a
 /// provider that never answers can't stall the whole resolve.
 /// </summary>
-[Collection("HttpClientProvider")]
-[Trait("Category", "Unit")]
+[Collection(name: "HttpClientProvider")]
+[Trait(name: "Category", value: "Unit")]
 public class LyricsAggregatorTests : IDisposable
 {
     private ServiceProvider? _serviceProvider;
@@ -49,10 +49,10 @@ public class LyricsAggregatorTests : IDisposable
         Logger.LogEmitted -= OnLogEmitted;
         HttpClientProvider.Reset();
         _serviceProvider?.Dispose();
-        GC.SuppressFinalize(this);
+        GC.SuppressFinalize(obj: this);
     }
 
-    private void OnLogEmitted(LogEntry entry) => _logs.Add(entry);
+    private void OnLogEmitted(LogEntry entry) => _logs.Add(item: entry);
 
     private static Track MakeTrack(string title, string artist, string album, int durationSeconds)
     {
@@ -60,7 +60,7 @@ public class LyricsAggregatorTests : IDisposable
         {
             Id = Guid.NewGuid(),
             Name = title,
-            Duration = TimeSpan.FromSeconds(durationSeconds).ToString(@"hh\:mm\:ss"),
+            Duration = TimeSpan.FromSeconds(seconds: durationSeconds).ToString(format: @"hh\:mm\:ss"),
             ArtistTrack = [new() { Artist = new() { Name = artist } }],
             AlbumTrack = [new() { Album = new() { Name = album } }],
         };
@@ -79,19 +79,19 @@ public class LyricsAggregatorTests : IDisposable
         ServiceCollection services = new();
         services
             .AddHttpClient(
-                HttpClientNames.Lrclib,
-                client => client.BaseAddress = new("https://lrclib.net/api/")
+                name: HttpClientNames.Lrclib,
+                configureClient: client => client.BaseAddress = new(uriString: "https://lrclib.net/api/")
             )
-            .ConfigurePrimaryHttpMessageHandler(() => lrclibHandler);
+            .ConfigurePrimaryHttpMessageHandler(configureHandler: () => lrclibHandler);
         services
             .AddHttpClient(
-                HttpClientNames.MusixMatch,
-                client => client.BaseAddress = new("https://apic-desktop.musixmatch.com/ws/1.1/")
+                name: HttpClientNames.MusixMatch,
+                configureClient: client => client.BaseAddress = new(uriString: "https://apic-desktop.musixmatch.com/ws/1.1/")
             )
-            .ConfigurePrimaryHttpMessageHandler(() => musixmatchHandler);
+            .ConfigurePrimaryHttpMessageHandler(configureHandler: () => musixmatchHandler);
 
         _serviceProvider = services.BuildServiceProvider();
-        HttpClientProvider.Initialize(_serviceProvider.GetRequiredService<IHttpClientFactory>());
+        HttpClientProvider.Initialize(factory: _serviceProvider.GetRequiredService<IHttpClientFactory>());
     }
 
     private sealed class ScriptedHandler(
@@ -101,18 +101,18 @@ public class LyricsAggregatorTests : IDisposable
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken
-        ) => respond(request);
+        ) => respond(arg: request);
     }
 
-    private static HttpResponseMessage NotFound() => new(HttpStatusCode.NotFound);
+    private static HttpResponseMessage NotFound() => new(statusCode: HttpStatusCode.NotFound);
 
     private static HttpResponseMessage OkJson<T>(T body) =>
-        new(HttpStatusCode.OK)
+        new(statusCode: HttpStatusCode.OK)
         {
             Content = new StringContent(
-                JsonConvert.SerializeObject(body, JsonHelper.Settings),
-                Encoding.UTF8,
-                "application/json"
+                content: JsonConvert.SerializeObject(value: body, settings: JsonHelper.Settings),
+                encoding: Encoding.UTF8,
+                mediaType: "application/json"
             ),
         };
 
@@ -179,18 +179,18 @@ public class LyricsAggregatorTests : IDisposable
     [Fact]
     public async Task SearchLyrics_LrclibGetSyncedHit_ShortCircuitsAndLogsWinner()
     {
-        string title = Unique("Title");
-        string artist = Unique("Artist");
-        Track track = MakeTrack(title, artist, "Album", 300);
+        string title = Unique(label: "Title");
+        string artist = Unique(label: "Artist");
+        Track track = MakeTrack(title: title, artist: artist, album: "Album", durationSeconds: 300);
 
         int musixmatchCalls = 0;
         ConfigureHttp(
-            new ScriptedHandler(request =>
+            lrclibHandler: new ScriptedHandler(respond: request =>
             {
-                if (request.RequestUri!.AbsolutePath.EndsWith("/get"))
+                if (request.RequestUri!.AbsolutePath.EndsWith(value: "/get"))
                     return Task.FromResult(
-                        OkJson(
-                            new LrclibSongResult
+                        result: OkJson(
+                            body: new LrclibSongResult
                             {
                                 TrackName = title,
                                 ArtistName = artist,
@@ -199,27 +199,27 @@ public class LyricsAggregatorTests : IDisposable
                             }
                         )
                     );
-                return Task.FromResult(NotFound());
+                return Task.FromResult(result: NotFound());
             }),
-            new ScriptedHandler(_ =>
+            musixmatchHandler: new ScriptedHandler(respond: _ =>
             {
-                Interlocked.Increment(ref musixmatchCalls);
-                return Task.FromResult(NotFound());
+                Interlocked.Increment(location: ref musixmatchCalls);
+                return Task.FromResult(result: NotFound());
             })
         );
 
-        LyricsFetchResult result = await new LyricsAggregator().SearchLyrics(track);
+        LyricsFetchResult result = await new LyricsAggregator().SearchLyrics(track: track);
 
         result.IsTransientError.Should().BeFalse();
         result.Lines.Should().NotBeNull();
-        result.Winner.Should().Be("Lrclib-get");
+        result.Winner.Should().Be(expected: "Lrclib-get");
         musixmatchCalls
             .Should()
-            .Be(0, "a synced /get hit is authoritative and must skip Musixmatch entirely");
+            .Be(expected: 0, because: "a synced /get hit is authoritative and must skip Musixmatch entirely");
 
         _logs
             .Should()
-            .Contain(entry =>
+            .Contain(predicate: entry =>
                 entry.Type == "lyrics"
                 && entry.Message.Contains("via Lrclib-get")
                 && entry.Message.Contains("synced=True")
@@ -229,21 +229,22 @@ public class LyricsAggregatorTests : IDisposable
     [Fact]
     public async Task SearchLyrics_RaceRejectsWrongSongEvenWhenItArrivesFirst()
     {
-        string title = Unique("Title");
-        string artist = Unique("Artist");
-        Track track = MakeTrack(title, artist, "Album", 300);
+        string title = Unique(label: "Title");
+        string artist = Unique(label: "Artist");
+        Track track = MakeTrack(title: title, artist: artist, album: "Album", durationSeconds: 300);
 
         ConfigureHttp(
-            new ScriptedHandler(request =>
+            lrclibHandler: new ScriptedHandler(respond: request =>
             {
-                if (request.RequestUri!.AbsolutePath.EndsWith("/get"))
-                    return Task.FromResult(NotFound());
+                if (request.RequestUri!.AbsolutePath.EndsWith(value: "/get"))
+                    return Task.FromResult(result: NotFound());
 
                 // /search answers immediately with a completely different song.
                 // A race that just took "whichever finished first" would let
                 // this win; PickBest must reject it on title/artist score.
                 return Task.FromResult(
-                    OkJson<LrclibSongResult[]>([
+                    result: OkJson<LrclibSongResult[]>(body:
+                    [
                         new()
                         {
                             TrackName = "Some Other Song Entirely",
@@ -254,59 +255,59 @@ public class LyricsAggregatorTests : IDisposable
                     ])
                 );
             }),
-            new ScriptedHandler(async _ =>
+            musixmatchHandler: new ScriptedHandler(respond: async _ =>
             {
                 // Musixmatch is slower but has the real match. If arrival order
                 // decided the winner, the fast wrong Lrclib result above would
                 // already have won by the time this responds.
-                await Task.Delay(TimeSpan.FromMilliseconds(75));
-                return OkJson(SubtitleResponse(title, artist, 300, 1.0));
+                await Task.Delay(delay: TimeSpan.FromMilliseconds(milliseconds: 75));
+                return OkJson(body: SubtitleResponse(title: title, artist: artist, durationSeconds: 300, lineTimestamp: 1.0));
             })
         );
 
-        LyricsFetchResult result = await new LyricsAggregator().SearchLyrics(track);
+        LyricsFetchResult result = await new LyricsAggregator().SearchLyrics(track: track);
 
         result.IsTransientError.Should().BeFalse();
         result.Lines.Should().NotBeNull();
-        result.Lines!.Single().Text.Should().Be("line one");
-        result.Winner.Should().Be("Musixmatch-tight");
+        result.Lines!.Single().Text.Should().Be(expected: "line one");
+        result.Winner.Should().Be(expected: "Musixmatch-tight");
     }
 
     [Fact]
     public async Task SearchLyrics_ProviderTimeout_DoesNotHangAndIsTransient()
     {
-        string title = Unique("Title");
-        string artist = Unique("Artist");
-        Track track = MakeTrack(title, artist, "Album", 300);
+        string title = Unique(label: "Title");
+        string artist = Unique(label: "Artist");
+        Track track = MakeTrack(title: title, artist: artist, album: "Album", durationSeconds: 300);
 
         ConfigureHttp(
-            new ScriptedHandler(request =>
+            lrclibHandler: new ScriptedHandler(respond: request =>
             {
-                if (request.RequestUri!.AbsolutePath.EndsWith("/get"))
-                    return Task.FromResult(NotFound());
-                return Task.FromResult(OkJson<LrclibSongResult[]>([]));
+                if (request.RequestUri!.AbsolutePath.EndsWith(value: "/get"))
+                    return Task.FromResult(result: NotFound());
+                return Task.FromResult(result: OkJson<LrclibSongResult[]>(body: []));
             }),
             // Musixmatch never answers. Real code has no per-provider
             // CancellationToken threaded into the HTTP call, so this keeps
             // "running" in the background for the life of the test process --
             // exactly the scenario the aggregator's WaitAsync bound exists for.
-            new ScriptedHandler(async _ =>
+            musixmatchHandler: new ScriptedHandler(respond: async _ =>
             {
-                await Task.Delay(TimeSpan.FromSeconds(30));
+                await Task.Delay(delay: TimeSpan.FromSeconds(seconds: 30));
                 return NotFound();
             })
         );
 
-        LyricsAggregator aggregator = new(TimeSpan.FromMilliseconds(150));
+        LyricsAggregator aggregator = new(providerTimeout: TimeSpan.FromMilliseconds(milliseconds: 150));
         Stopwatch stopwatch = Stopwatch.StartNew();
 
-        LyricsFetchResult result = await aggregator.SearchLyrics(track);
+        LyricsFetchResult result = await aggregator.SearchLyrics(track: track);
 
         stopwatch.Stop();
         // Generous bound: proves the 30s hang was abandoned, not a tight perf
         // assertion. The shared per-provider Queue rate limiter (1 req/s) may
         // add a little real queueing delay from other tests in this process.
-        stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10));
+        stopwatch.Elapsed.Should().BeLessThan(expected: TimeSpan.FromSeconds(seconds: 10));
         result.IsTransientError.Should().BeTrue();
         result.Lines.Should().BeNull();
     }

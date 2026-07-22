@@ -31,7 +31,7 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
     public ILoggerFactory LoggerFactory { get; set; } = null!;
 
     [JsonIgnore]
-    private ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
+    private ILogger Log => field ??= LoggerFactory.CreateLogger(type: GetType());
 
     public string QueueName => "import";
     public int Priority => 5;
@@ -101,23 +101,23 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
         if (Library is null)
             return;
 
-        await using MediaScan mediaScan = new(storageDriver);
+        await using MediaScan mediaScan = new(driver: storageDriver);
         IEnumerable<MediaFolderExtend> mediaFolder = await mediaScan
             .EnableFileListing()
             .DisableRegexFilter()
-            .Process(Folder, 20);
+            .Process(rootFolder: Folder, depth: 20);
 
         foreach (MediaFolderExtend list in mediaFolder)
         {
-            Log.LogInformation("Music {Path}: Processing", list.Path);
+            Log.LogInformation(message: "Music {Path}: Processing", args: list.Path);
 
             MusicLogic music = new(
-                _musicLogicLogger,
-                Library,
-                list,
-                _mediaContextFactory,
-                StorageFactory,
-                AudioFingerprinter
+                logger: _musicLogicLogger,
+                library: Library,
+                listPath: list,
+                mediaContextFactory: _mediaContextFactory,
+                storageFactory: StorageFactory,
+                audioFingerprinter: AudioFingerprinter
             );
             await music.Process();
         }

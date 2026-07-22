@@ -65,14 +65,14 @@ public abstract class TwoPassStrategyBase(
         {
             VideoOutputPlan video = plan.VideoOutputs[i];
             tasks.Add(
-                new(
+                item: new(
                     TaskId: $"{groupTag}-pass1-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Pass1,
                     OutputIndex: i,
-                    Resources: TaskResourceHelper.ForVideoOutput(video),
-                    EstimatedCostUnits: EstimateVideoCost(video),
+                    Resources: TaskResourceHelper.ForVideoOutput(video: video),
+                    EstimatedCostUnits: EstimateVideoCost(video: video),
                     Label: $"pass1 {video.Width}p {video.EncoderName}"
                 )
             );
@@ -82,14 +82,14 @@ public abstract class TwoPassStrategyBase(
         {
             VideoOutputPlan video = plan.VideoOutputs[i];
             tasks.Add(
-                new(
+                item: new(
                     TaskId: $"{groupTag}-pass2-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Pass2,
                     OutputIndex: i,
-                    Resources: TaskResourceHelper.ForVideoOutput(video),
-                    EstimatedCostUnits: EstimateVideoCost(video),
+                    Resources: TaskResourceHelper.ForVideoOutput(video: video),
+                    EstimatedCostUnits: EstimateVideoCost(video: video),
                     StatsFilePath: null,
                     Label: $"pass2 {video.Width}p {video.EncoderName}"
                 )
@@ -100,13 +100,13 @@ public abstract class TwoPassStrategyBase(
         {
             AudioOutputPlan audio = plan.AudioOutputs[i];
             tasks.Add(
-                new(
+                item: new(
                     TaskId: $"{groupTag}-audio-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Audio,
                     OutputIndex: i,
-                    Resources: TaskResourceHelper.CpuOnly(1),
+                    Resources: TaskResourceHelper.CpuOnly(cpuThreads: 1),
                     EstimatedCostUnits: 1,
                     Label: $"{audio.Language ?? "und"} {audio.EncoderName}"
                 )
@@ -117,13 +117,13 @@ public abstract class TwoPassStrategyBase(
         {
             SubtitleOutputPlan sub = plan.SubtitleOutputs[i];
             tasks.Add(
-                new(
+                item: new(
                     TaskId: $"{groupTag}-sub-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Subtitle,
                     OutputIndex: i,
-                    Resources: TaskResourceHelper.CpuOnly(1),
+                    Resources: TaskResourceHelper.CpuOnly(cpuThreads: 1),
                     EstimatedCostUnits: 1,
                     Label: $"sub {sub.Language ?? "und"}"
                 )
@@ -133,13 +133,13 @@ public abstract class TwoPassStrategyBase(
         if (plan.Thumbnails is not null)
         {
             tasks.Add(
-                new(
+                item: new(
                     TaskId: $"{groupTag}-thumbs",
                     ParentJobId: 0,
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Thumbnails,
                     OutputIndex: 0,
-                    Resources: TaskResourceHelper.CpuOnly(1),
+                    Resources: TaskResourceHelper.CpuOnly(cpuThreads: 1),
                     EstimatedCostUnits: 1,
                     Label: "thumbnails"
                 )
@@ -151,15 +151,15 @@ public abstract class TwoPassStrategyBase(
             int count = plan.Chapters.Count;
             for (int i = 0; i < count; i++)
             {
-                ChapterInfo chapter = plan.Chapters[i];
+                ChapterInfo chapter = plan.Chapters[index: i];
                 tasks.Add(
-                    new(
+                    item: new(
                         TaskId: $"{groupTag}-chapter-{i}",
                         ParentJobId: 0,
                         GroupTag: groupTag,
                         Kind: EncodeTaskKind.Chapters,
                         OutputIndex: i,
-                        Resources: TaskResourceHelper.CpuOnly(1),
+                        Resources: TaskResourceHelper.CpuOnly(cpuThreads: 1),
                         EstimatedCostUnits: 1,
                         Label: $"chapter still {i + 1}/{count} @ {chapter.Start.TotalSeconds:F0}s"
                     )
@@ -168,7 +168,7 @@ public abstract class TwoPassStrategyBase(
         }
 
         if (tasks.Count == 0)
-            return [IEncodingStrategy.WholeTask(groupTag)];
+            return [IEncodingStrategy.WholeTask(groupTag: groupTag)];
 
         return tasks.ToArray();
     }
@@ -198,18 +198,18 @@ public abstract class TwoPassStrategyBase(
         // sets Options.Pass explicitly so each child runs exactly one pass.
         // Only the legacy inline path (Options.Pass == null) runs both passes.
         if (request.Options?.Pass == EncodingPass.One)
-            return await RunSinglePassOneAsync(request, effectiveStorage, progress, ct);
+            return await RunSinglePassOneAsync(request: request, effectiveStorage: effectiveStorage, progress: progress, ct: ct);
 
         if (request.Options?.Pass == EncodingPass.Two)
-            return await RunSinglePassTwoAsync(request, effectiveStorage, progress, ct);
+            return await RunSinglePassTwoAsync(request: request, effectiveStorage: effectiveStorage, progress: progress, ct: ct);
 
         try
         {
             EncodingResult result = await EncodeInternalAsync(
-                request,
-                effectiveStorage,
-                progress,
-                ct
+                request: request,
+                stor: effectiveStorage,
+                progress: progress,
+                ct: ct
             );
 
             if (!result.Success)
@@ -219,8 +219,8 @@ public abstract class TwoPassStrategyBase(
                 // state. The crash checkpoint written by ExecuteStage is intentionally
                 // left intact so the orphan-recovery path can re-queue with resume.
                 DeletePartialOutput(
-                    request.OutputDirectory,
-                    effectiveStorage,
+                    outputDirectory: request.OutputDirectory,
+                    stor: effectiveStorage,
                     preserveCheckpoint: true
                 );
             }
@@ -232,10 +232,10 @@ public abstract class TwoPassStrategyBase(
             // User cancelled — delete the checkpoint so there is no stale
             // resume point. Also remove any partial output the encode wrote.
             // Both operations are best-effort: log and continue on error.
-            await DeleteCheckpointOnCancelAsync(request.OutputDirectory);
+            await DeleteCheckpointOnCancelAsync(outputDirectory: request.OutputDirectory);
             DeletePartialOutput(
-                request.OutputDirectory,
-                effectiveStorage,
+                outputDirectory: request.OutputDirectory,
+                stor: effectiveStorage,
                 preserveCheckpoint: false
             );
             throw;
@@ -255,12 +255,12 @@ public abstract class TwoPassStrategyBase(
     )
     {
         string statsFilePath =
-            request.Options?.StatsFilePath ?? ResolveStatsFilePath(request, effectiveStorage);
+            request.Options?.StatsFilePath ?? ResolveStatsFilePath(request: request, stor: effectiveStorage);
 
         int variantIndex = request.Options?.Pass1VariantIndex ?? 0;
         string stageName = $"Pass 1 variant {variantIndex}";
 
-        progress?.OnStageStarted(stageName);
+        progress?.OnStageStarted(stageName: stageName);
 
         EncodingRequest pass1Request = request with
         {
@@ -272,10 +272,10 @@ public abstract class TwoPassStrategyBase(
             },
         };
 
-        EncodingResult result = await encoder.EncodeAsync(pass1Request, progress, ct);
+        EncodingResult result = await encoder.EncodeAsync(request: pass1Request, progress: progress, ct: ct);
 
         if (result.Success)
-            progress?.OnStageCompleted(stageName, result.Duration);
+            progress?.OnStageCompleted(stageName: stageName, duration: result.Duration);
 
         return result;
     }
@@ -293,9 +293,9 @@ public abstract class TwoPassStrategyBase(
     )
     {
         string statsFilePath =
-            request.Options?.StatsFilePath ?? ResolveStatsFilePath(request, effectiveStorage);
+            request.Options?.StatsFilePath ?? ResolveStatsFilePath(request: request, stor: effectiveStorage);
 
-        progress?.OnStageStarted("Pass 2");
+        progress?.OnStageStarted(stageName: "Pass 2");
 
         EncodingRequest pass2Request = request with
         {
@@ -306,12 +306,12 @@ public abstract class TwoPassStrategyBase(
             },
         };
 
-        EncodingResult result = await encoder.EncodeAsync(pass2Request, progress, ct);
+        EncodingResult result = await encoder.EncodeAsync(request: pass2Request, progress: progress, ct: ct);
 
         if (result.Success)
         {
-            progress?.OnStageCompleted("Pass 2", result.Duration);
-            DeleteStatsFiles(statsFilePath, effectiveStorage);
+            progress?.OnStageCompleted(stageName: "Pass 2", duration: result.Duration);
+            DeleteStatsFiles(statsFilePath: statsFilePath, stor: effectiveStorage);
         }
 
         return result;
@@ -321,14 +321,14 @@ public abstract class TwoPassStrategyBase(
     {
         try
         {
-            await checkpointStore.DeleteAsync(outputDirectory);
+            await checkpointStore.DeleteAsync(outputDirectory: outputDirectory);
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                ex,
-                "Failed to delete checkpoint after cancellation for {OutputDirectory}",
-                outputDirectory
+                exception: ex,
+                message: "Failed to delete checkpoint after cancellation for {OutputDirectory}",
+                args: outputDirectory
             );
         }
     }
@@ -337,32 +337,32 @@ public abstract class TwoPassStrategyBase(
     {
         try
         {
-            if (!stor.Exists(outputDirectory))
+            if (!stor.Exists(path: outputDirectory))
                 return;
 
             foreach (
-                StorageEntry entry in stor.List(outputDirectory, "*", recursive: true)
-                    .Where(e => !e.IsDirectory)
-                    .Where(e =>
+                StorageEntry entry in stor.List(path: outputDirectory, pattern: "*", recursive: true)
+                    .Where(predicate: e => !e.IsDirectory)
+                    .Where(predicate: e =>
                         !preserveCheckpoint
-                        || !Path.GetFileName(e.Path)
+                        || !Path.GetFileName(path: e.Path)
                             .Equals(
-                                CheckpointFileNames.FileName,
-                                StringComparison.OrdinalIgnoreCase
+                                value: CheckpointFileNames.FileName,
+                                comparisonType: StringComparison.OrdinalIgnoreCase
                             )
                     )
             )
             {
                 try
                 {
-                    stor.Delete(entry.Path);
+                    stor.Delete(path: entry.Path);
                 }
                 catch (Exception ex)
                 {
                     logger.LogWarning(
-                        ex,
-                        "Failed to delete partial output file {File} after cancellation",
-                        entry.Path
+                        exception: ex,
+                        message: "Failed to delete partial output file {File} after cancellation",
+                        args: entry.Path
                     );
                 }
             }
@@ -370,9 +370,9 @@ public abstract class TwoPassStrategyBase(
         catch (Exception ex)
         {
             logger.LogWarning(
-                ex,
-                "Failed to enumerate partial output for deletion after cancellation in {OutputDirectory}",
-                outputDirectory
+                exception: ex,
+                message: "Failed to enumerate partial output for deletion after cancellation in {OutputDirectory}",
+                args: outputDirectory
             );
         }
     }
@@ -384,26 +384,23 @@ public abstract class TwoPassStrategyBase(
         CancellationToken ct
     )
     {
-        string statsFilePath = ResolveStatsFilePath(request, stor);
-        VideoOutput[] profileVideoOutputs = PlanStageHelpers.EnumerateVideo(request.Profile);
-        int variantCount = Math.Max(1, profileVideoOutputs.Length);
+        string statsFilePath = ResolveStatsFilePath(request: request, stor: stor);
+        VideoOutput[] profileVideoOutputs = PlanStageHelpers.EnumerateVideo(profile: request.Profile);
+        int variantCount = Math.Max(val1: 1, val2: profileVideoOutputs.Length);
 
-        JobCheckpoint? checkpoint = await checkpointStore.LoadAsync(request.OutputDirectory, ct);
+        JobCheckpoint? checkpoint = await checkpointStore.LoadAsync(outputDirectory: request.OutputDirectory, ct: ct);
         bool pass1AlreadyDone =
             checkpoint is { Pass1Completed: true }
-            && !string.IsNullOrEmpty(checkpoint.StatsFilePath)
-            && AllVariantStatsPresent(checkpoint.StatsFilePath!, variantCount, stor);
+            && !string.IsNullOrEmpty(value: checkpoint.StatsFilePath)
+            && AllVariantStatsPresent(basePath: checkpoint.StatsFilePath!, variantCount: variantCount, stor: stor);
 
         if (pass1AlreadyDone)
         {
             statsFilePath = checkpoint!.StatsFilePath!;
-            progress?.OnStageStarted("Pass 1 (resumed from checkpoint)");
-            progress?.OnStageCompleted("Pass 1 (resumed from checkpoint)", TimeSpan.Zero);
+            progress?.OnStageStarted(stageName: "Pass 1 (resumed from checkpoint)");
+            progress?.OnStageCompleted(stageName: "Pass 1 (resumed from checkpoint)", duration: TimeSpan.Zero);
             logger.LogInformation(
-                "Resuming 2-pass encode for {Input} — pass 1 already done at {Stats} ({Variants} variants)",
-                request.InputPath,
-                statsFilePath,
-                variantCount
+                message: "Resuming 2-pass encode for {Input} — pass 1 already done at {Stats} ({Variants} variants)", args: [request.InputPath, statsFilePath, variantCount]
             );
         }
         else
@@ -417,7 +414,7 @@ public abstract class TwoPassStrategyBase(
                     variantCount == 1
                         ? "Pass 1"
                         : $"Pass 1 variant {variantIndex + 1}/{variantCount}";
-                progress?.OnStageStarted(stageName);
+                progress?.OnStageStarted(stageName: stageName);
 
                 EncodingRequest pass1Request = request with
                 {
@@ -429,25 +426,22 @@ public abstract class TwoPassStrategyBase(
                     },
                 };
 
-                EncodingResult pass1Result = await encoder.EncodeAsync(pass1Request, progress, ct);
+                EncodingResult pass1Result = await encoder.EncodeAsync(request: pass1Request, progress: progress, ct: ct);
                 if (!pass1Result.Success)
                 {
                     logger.LogWarning(
-                        "Pass 1 variant {Index} failed for {Input}: {Message}",
-                        variantIndex,
-                        request.InputPath,
-                        pass1Result.Error?.Message
+                        message: "Pass 1 variant {Index} failed for {Input}: {Message}", args: [variantIndex, request.InputPath, pass1Result.Error?.Message]
                     );
                     return pass1Result;
                 }
 
-                progress?.OnStageCompleted(stageName, pass1Result.Duration);
+                progress?.OnStageCompleted(stageName: stageName, duration: pass1Result.Duration);
             }
 
-            await SaveCheckpointAsync(request, statsFilePath, ct);
+            await SaveCheckpointAsync(request: request, statsFilePath: statsFilePath, ct: ct);
         }
 
-        progress?.OnStageStarted("Pass 2");
+        progress?.OnStageStarted(stageName: "Pass 2");
         EncodingRequest pass2Request = request with
         {
             Options = (request.Options ?? new EncodingOptions()) with
@@ -457,30 +451,28 @@ public abstract class TwoPassStrategyBase(
             },
         };
 
-        EncodingResult pass2Result = await encoder.EncodeAsync(pass2Request, progress, ct);
+        EncodingResult pass2Result = await encoder.EncodeAsync(request: pass2Request, progress: progress, ct: ct);
         if (!pass2Result.Success)
         {
             logger.LogWarning(
-                "Pass 2 failed for {Input}: {Message}",
-                request.InputPath,
-                pass2Result.Error?.Message
+                message: "Pass 2 failed for {Input}: {Message}", args: [request.InputPath, pass2Result.Error?.Message]
             );
             return pass2Result;
         }
 
-        progress?.OnStageCompleted("Pass 2", pass2Result.Duration);
+        progress?.OnStageCompleted(stageName: "Pass 2", duration: pass2Result.Duration);
 
-        await checkpointStore.DeleteAsync(request.OutputDirectory, ct);
-        DeleteStatsFiles(statsFilePath, stor);
+        await checkpointStore.DeleteAsync(outputDirectory: request.OutputDirectory, ct: ct);
+        DeleteStatsFiles(statsFilePath: statsFilePath, stor: stor);
 
         return pass2Result;
     }
 
     private static string ResolveStatsFilePath(EncodingRequest request, IStorage stor)
     {
-        string statsDir = Path.Combine(request.OutputDirectory, ".2pass");
-        stor.CreateDirectory(statsDir);
-        return Path.Combine(statsDir, "x264");
+        string statsDir = Path.Combine(path1: request.OutputDirectory, path2: ".2pass");
+        stor.CreateDirectory(path: statsDir);
+        return Path.Combine(path1: statsDir, path2: "x264");
     }
 
     private async Task SaveCheckpointAsync(
@@ -490,7 +482,7 @@ public abstract class TwoPassStrategyBase(
     )
     {
         JobCheckpoint checkpoint = new(
-            JobId: $"{Path.GetFileNameWithoutExtension(request.InputPath)}-2pass-{Format}",
+            JobId: $"{Path.GetFileNameWithoutExtension(path: request.InputPath)}-2pass-{Format}",
             InputPath: request.InputPath,
             OutputDirectory: request.OutputDirectory,
             CompletedGroupIndices: [],
@@ -500,27 +492,27 @@ public abstract class TwoPassStrategyBase(
             LastCompletedSegment: -1,
             EncodeMode: "TwoPass"
         );
-        await checkpointStore.SaveAsync(checkpoint, ct);
+        await checkpointStore.SaveAsync(checkpoint: checkpoint, ct: ct);
     }
 
     private void DeleteStatsFiles(string statsFilePath, IStorage stor)
     {
-        string? dir = Path.GetDirectoryName(statsFilePath);
-        if (dir is null || !stor.Exists(dir))
+        string? dir = Path.GetDirectoryName(path: statsFilePath);
+        if (dir is null || !stor.Exists(path: dir))
             return;
 
-        string baseName = Path.GetFileName(statsFilePath);
+        string baseName = Path.GetFileName(path: statsFilePath);
         // Covers every variant's output — x264 writes {base}_v{i}-0.log and
         // {base}_v{i}-0.log.mbtree. `{baseName}_v*` matches all of them.
         foreach (
-            string file in stor.List(dir, $"{baseName}_v*", recursive: false)
-                .Where(e => !e.IsDirectory)
-                .Select(e => e.Path)
+            string file in stor.List(path: dir, pattern: $"{baseName}_v*", recursive: false)
+                .Where(predicate: e => !e.IsDirectory)
+                .Select(selector: e => e.Path)
         )
         {
             try
             {
-                stor.Delete(file);
+                stor.Delete(path: file);
             }
             catch (Exception)
             {
@@ -540,7 +532,7 @@ public abstract class TwoPassStrategyBase(
         {
             string variantBase = $"{basePath}_v{i}";
             // x264 writes {variantBase}-0.log — that's the signal we look for.
-            if (!stor.Exists($"{variantBase}-0.log"))
+            if (!stor.Exists(path: $"{variantBase}-0.log"))
                 return false;
         }
         return true;

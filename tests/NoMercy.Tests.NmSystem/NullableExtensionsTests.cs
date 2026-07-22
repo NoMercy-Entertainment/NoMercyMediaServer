@@ -13,7 +13,7 @@ using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Tests.NmSystem;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class NullableExtensionsTests
 {
     [Fact]
@@ -21,7 +21,7 @@ public class NullableExtensionsTests
     {
         string? value = "test";
         string result = value.OrEmpty();
-        result.Should().Be("test");
+        result.Should().Be(expected: "test");
     }
 
     [Fact]
@@ -29,7 +29,7 @@ public class NullableExtensionsTests
     {
         string? value = null;
         string result = value.OrEmpty();
-        result.Should().Be(string.Empty);
+        result.Should().Be(expected: string.Empty);
     }
 
     [Fact]
@@ -37,7 +37,7 @@ public class NullableExtensionsTests
     {
         int[]? value = [1, 2, 3];
         int[] result = value.OrEmpty();
-        result.Should().Equal(1, 2, 3);
+        result.Should().Equal(elements: [1, 2, 3]);
     }
 
     [Fact]
@@ -53,7 +53,7 @@ public class NullableExtensionsTests
     {
         List<string>? value = ["a", "b"];
         List<string> result = value.OrEmpty();
-        result.Should().Equal("a", "b");
+        result.Should().Equal(expected: ["a", "b"]);
     }
 
     [Fact]
@@ -69,7 +69,7 @@ public class NullableExtensionsTests
     {
         IEnumerable<int>? value = new[] { 1, 2, 3 };
         IEnumerable<int> result = value.OrEmpty();
-        result.Should().Equal(1, 2, 3);
+        result.Should().Equal(elements: [1, 2, 3]);
     }
 
     [Fact]
@@ -85,7 +85,7 @@ public class NullableExtensionsTests
     {
         string? value = "test";
         string? result = value.OrNull();
-        result.Should().Be("test");
+        result.Should().Be(expected: "test");
     }
 
     [Fact]
@@ -121,13 +121,13 @@ public class NullableExtensionsTests
     }
 
     [Theory]
-    [InlineData("a")]
-    [InlineData("  a  ")]
-    [InlineData("abc")]
+    [InlineData(data: "a")]
+    [InlineData(data: "  a  ")]
+    [InlineData(data: "abc")]
     public void OrNull_WithNonWhitespaceString_ReturnsString(string value)
     {
         string? input = value;
         string? result = input.OrNull();
-        result.Should().Be(value);
+        result.Should().Be(expected: value);
     }
 }

@@ -21,41 +21,41 @@ public partial class MusicRepository
 
     public async Task<List<Album>> GetLatestAlbums(CancellationToken ct = default)
     {
-        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
         return await mediaContext
             .Albums.AsNoTracking()
-            .Where(album => !string.IsNullOrEmpty(album.Cover) && album.AlbumTrack.Any())
-            .Include(album => album.AlbumTrack)
-                .ThenInclude(albumTrack => albumTrack.Track)
-            .OrderByDescending(album => album.CreatedAt)
-            .ThenBy(album => album.Id)
-            .ToListAsync(ct);
+            .Where(predicate: album => !string.IsNullOrEmpty(album.Cover) && album.AlbumTrack.Any())
+            .Include(navigationPropertyPath: album => album.AlbumTrack)
+                .ThenInclude(navigationPropertyPath: albumTrack => albumTrack.Track)
+            .OrderByDescending(keySelector: album => album.CreatedAt)
+            .ThenBy(keySelector: album => album.Id)
+            .ToListAsync(cancellationToken: ct);
     }
 
     public async Task<List<Artist>> GetLatestArtists(CancellationToken ct = default)
     {
-        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
         return await mediaContext
             .Artists.AsNoTracking()
-            .Where(artist => !string.IsNullOrEmpty(artist.Cover) && artist.ArtistTrack.Any())
-            .Include(artist => artist.Images.Where(image => image.Type == "thumb"))
-            .Include(artist => artist.ArtistTrack)
-                .ThenInclude(artistTrack => artistTrack.Track)
-            .OrderByDescending(artist => artist.CreatedAt)
-            .ThenBy(artist => artist.Id)
-            .ToListAsync(ct);
+            .Where(predicate: artist => !string.IsNullOrEmpty(artist.Cover) && artist.ArtistTrack.Any())
+            .Include(navigationPropertyPath: artist => artist.Images.Where(image => image.Type == "thumb"))
+            .Include(navigationPropertyPath: artist => artist.ArtistTrack)
+                .ThenInclude(navigationPropertyPath: artistTrack => artistTrack.Track)
+            .OrderByDescending(keySelector: artist => artist.CreatedAt)
+            .ThenBy(keySelector: artist => artist.Id)
+            .ToListAsync(cancellationToken: ct);
     }
 
     public async Task<List<MusicGenre>> GetLatestGenres(CancellationToken ct = default)
     {
-        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
         return await mediaContext
             .MusicGenres.AsNoTracking()
-            .Where(genre => genre.MusicGenreTracks.Any())
-            .Include(genre => genre.MusicGenreTracks)
-            .OrderByDescending(genre => genre.MusicGenreTracks.Count)
-            .ThenBy(genre => genre.Id)
-            .ToListAsync(ct);
+            .Where(predicate: genre => genre.MusicGenreTracks.Any())
+            .Include(navigationPropertyPath: genre => genre.MusicGenreTracks)
+            .OrderByDescending(keySelector: genre => genre.MusicGenreTracks.Count)
+            .ThenBy(keySelector: genre => genre.Id)
+            .ToListAsync(cancellationToken: ct);
     }
 
     public async Task<List<ArtistTrack>> GetFavoriteArtistAsync(
@@ -63,16 +63,16 @@ public partial class MusicRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
         return await mediaContext
             .MusicPlays.AsNoTracking()
-            .Where(musicPlay => musicPlay.UserId == userId)
-            .Include(musicPlay => musicPlay.Track)
-                .ThenInclude(track => track.ArtistTrack)
-                    .ThenInclude(artistTrack => artistTrack.Artist)
-                        .ThenInclude(artist => artist.Images.Where(image => image.Type == "thumb"))
-            .SelectMany(p => p.Track.ArtistTrack)
-            .ToListAsync(ct);
+            .Where(predicate: musicPlay => musicPlay.UserId == userId)
+            .Include(navigationPropertyPath: musicPlay => musicPlay.Track)
+                .ThenInclude(navigationPropertyPath: track => track.ArtistTrack)
+                    .ThenInclude(navigationPropertyPath: artistTrack => artistTrack.Artist)
+                        .ThenInclude(navigationPropertyPath: artist => artist.Images.Where(image => image.Type == "thumb"))
+            .SelectMany(selector: p => p.Track.ArtistTrack)
+            .ToListAsync(cancellationToken: ct);
     }
 
     public async Task<List<AlbumTrack>> GetFavoriteAlbumAsync(
@@ -80,15 +80,15 @@ public partial class MusicRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
         return await mediaContext
             .MusicPlays.AsNoTracking()
-            .Where(musicPlay => musicPlay.UserId == userId)
-            .Include(musicPlay => musicPlay.Track)
-                .ThenInclude(track => track.AlbumTrack)
-                    .ThenInclude(albumTrack => albumTrack.Album)
-            .SelectMany(p => p.Track.AlbumTrack)
-            .ToListAsync(ct);
+            .Where(predicate: musicPlay => musicPlay.UserId == userId)
+            .Include(navigationPropertyPath: musicPlay => musicPlay.Track)
+                .ThenInclude(navigationPropertyPath: track => track.AlbumTrack)
+                    .ThenInclude(navigationPropertyPath: albumTrack => albumTrack.Album)
+            .SelectMany(selector: p => p.Track.AlbumTrack)
+            .ToListAsync(cancellationToken: ct);
     }
 
     public async Task<List<PlaylistTrack>> GetFavoritePlaylistAsync(
@@ -96,17 +96,17 @@ public partial class MusicRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
         return await mediaContext
             .MusicPlays.AsNoTracking()
-            .Where(musicPlay =>
+            .Where(predicate: musicPlay =>
                 musicPlay.Track.PlaylistTrack.All(pt => pt.Playlist.UserId == userId)
             )
-            .Include(musicPlay => musicPlay.Track)
-                .ThenInclude(track => track.PlaylistTrack)
-                    .ThenInclude(playlistTrack => playlistTrack.Playlist)
-            .SelectMany(p => p.Track.PlaylistTrack)
-            .ToListAsync(ct);
+            .Include(navigationPropertyPath: musicPlay => musicPlay.Track)
+                .ThenInclude(navigationPropertyPath: track => track.PlaylistTrack)
+                    .ThenInclude(navigationPropertyPath: playlistTrack => playlistTrack.Playlist)
+            .SelectMany(selector: p => p.Track.PlaylistTrack)
+            .ToListAsync(cancellationToken: ct);
     }
 
     public async Task<List<ArtistUser>> GetFavoriteArtists(
@@ -114,16 +114,16 @@ public partial class MusicRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
         return await mediaContext
             .ArtistUser.AsNoTracking()
-            .Where(artistUser => artistUser.UserId == userId)
-            .Include(artistUser => artistUser.Artist)
-                .ThenInclude(artist => artist.ArtistTrack)
-                    .ThenInclude(artistTrack => artistTrack.Track)
-            .Include(artistUser => artistUser.Artist)
-                .ThenInclude(artist => artist.Images.Where(image => image.Type == "thumb"))
-            .ToListAsync(ct);
+            .Where(predicate: artistUser => artistUser.UserId == userId)
+            .Include(navigationPropertyPath: artistUser => artistUser.Artist)
+                .ThenInclude(navigationPropertyPath: artist => artist.ArtistTrack)
+                    .ThenInclude(navigationPropertyPath: artistTrack => artistTrack.Track)
+            .Include(navigationPropertyPath: artistUser => artistUser.Artist)
+                .ThenInclude(navigationPropertyPath: artist => artist.Images.Where(image => image.Type == "thumb"))
+            .ToListAsync(cancellationToken: ct);
     }
 
     public async Task<List<AlbumUser>> GetFavoriteAlbums(
@@ -131,14 +131,14 @@ public partial class MusicRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
         return await mediaContext
             .AlbumUser.AsNoTracking()
-            .Where(albumUser => albumUser.UserId == userId)
-            .Include(albumUser => albumUser.Album)
-                .ThenInclude(album => album.AlbumTrack)
-                    .ThenInclude(albumTrack => albumTrack.Track)
-            .ToListAsync(ct);
+            .Where(predicate: albumUser => albumUser.UserId == userId)
+            .Include(navigationPropertyPath: albumUser => albumUser.Album)
+                .ThenInclude(navigationPropertyPath: album => album.AlbumTrack)
+                    .ThenInclude(navigationPropertyPath: albumTrack => albumTrack.Track)
+            .ToListAsync(cancellationToken: ct);
     }
 
     #endregion
@@ -150,17 +150,17 @@ public partial class MusicRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
         return await mediaContext
             .TrackUser.AsNoTracking()
-            .Where(trackUser => trackUser.UserId == userId)
-            .Include(trackUser => trackUser.Track)
-                .ThenInclude(track => track.ArtistTrack)
-                    .ThenInclude(artistTrack => artistTrack.Artist)
-            .Include(trackUser => trackUser.Track)
-                .ThenInclude(track => track.AlbumTrack)
-                    .ThenInclude(albumTrack => albumTrack.Album)
-            .ToListAsync(ct);
+            .Where(predicate: trackUser => trackUser.UserId == userId)
+            .Include(navigationPropertyPath: trackUser => trackUser.Track)
+                .ThenInclude(navigationPropertyPath: track => track.ArtistTrack)
+                    .ThenInclude(navigationPropertyPath: artistTrack => artistTrack.Artist)
+            .Include(navigationPropertyPath: trackUser => trackUser.Track)
+                .ThenInclude(navigationPropertyPath: track => track.AlbumTrack)
+                    .ThenInclude(navigationPropertyPath: albumTrack => albumTrack.Album)
+            .ToListAsync(cancellationToken: ct);
     }
 
     public async Task<List<ArtistTrack>> GetArtistTracksForCollectionAsync(
@@ -168,12 +168,12 @@ public partial class MusicRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
         return await mediaContext
             .ArtistTrack.AsNoTracking()
-            .Where(artistTrack => artistIds.Contains(artistTrack.ArtistId))
-            .Include(artistTrack => artistTrack.Track)
-            .ToListAsync(ct);
+            .Where(predicate: artistTrack => artistIds.Contains(artistTrack.ArtistId))
+            .Include(navigationPropertyPath: artistTrack => artistTrack.Track)
+            .ToListAsync(cancellationToken: ct);
     }
 
     #endregion
@@ -185,20 +185,20 @@ public partial class MusicRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
         return await mediaContext
             .MusicGenres.AsNoTracking()
-            .Where(genre => genre.MusicGenreTracks.Any())
-            .OrderByDescending(genre => genre.MusicGenreTracks.Count())
-            .ThenBy(genre => genre.Id)
-            .Select(genre => new MusicGenreCardDto
+            .Where(predicate: genre => genre.MusicGenreTracks.Any())
+            .OrderByDescending(keySelector: genre => genre.MusicGenreTracks.Count())
+            .ThenBy(keySelector: genre => genre.Id)
+            .Select(selector: genre => new MusicGenreCardDto
             {
                 Id = genre.Id,
                 Name = genre.Name,
                 TrackCount = genre.MusicGenreTracks.Count(),
             })
-            .Take(take)
-            .ToListAsync(ct);
+            .Take(count: take)
+            .ToListAsync(cancellationToken: ct);
     }
 
     #endregion
@@ -210,21 +210,21 @@ public partial class MusicRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
         return await mediaContext
             .MusicPlays.AsNoTracking()
-            .Where(mp => mp.UserId == userId)
-            .SelectMany(mp => mp.Track.ArtistTrack)
-            .GroupBy(at => new
+            .Where(predicate: mp => mp.UserId == userId)
+            .SelectMany(selector: mp => mp.Track.ArtistTrack)
+            .GroupBy(keySelector: at => new
             {
                 at.Artist.Id,
                 at.Artist.Name,
                 at.Artist.Cover,
                 ColorPalette = at.Artist._colorPalette ?? string.Empty,
             })
-            .OrderByDescending(g => g.Count())
-            .ThenBy(g => g.Key.Id)
-            .Select(g => new TopMusicItemDto
+            .OrderByDescending(keySelector: g => g.Count())
+            .ThenBy(keySelector: g => g.Key.Id)
+            .Select(selector: g => new TopMusicItemDto
             {
                 Id = g.Key.Id.ToString(),
                 Name = g.Key.Name,
@@ -232,7 +232,7 @@ public partial class MusicRepository
                 ColorPalette = g.Key.ColorPalette,
                 Type = "artist",
             })
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultAsync(cancellationToken: ct);
     }
 
     public async Task<TopMusicItemDto?> GetTopAlbumAsync(
@@ -240,21 +240,21 @@ public partial class MusicRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
         return await mediaContext
             .MusicPlays.AsNoTracking()
-            .Where(mp => mp.UserId == userId)
-            .SelectMany(mp => mp.Track.AlbumTrack)
-            .GroupBy(at => new
+            .Where(predicate: mp => mp.UserId == userId)
+            .SelectMany(selector: mp => mp.Track.AlbumTrack)
+            .GroupBy(keySelector: at => new
             {
                 at.Album.Id,
                 at.Album.Name,
                 at.Album.Cover,
                 ColorPalette = at.Album._colorPalette ?? string.Empty,
             })
-            .OrderByDescending(g => g.Count())
-            .ThenBy(g => g.Key.Id)
-            .Select(g => new TopMusicItemDto
+            .OrderByDescending(keySelector: g => g.Count())
+            .ThenBy(keySelector: g => g.Key.Id)
+            .Select(selector: g => new TopMusicItemDto
             {
                 Id = g.Key.Id.ToString(),
                 Name = g.Key.Name,
@@ -262,7 +262,7 @@ public partial class MusicRepository
                 ColorPalette = g.Key.ColorPalette,
                 Type = "album",
             })
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultAsync(cancellationToken: ct);
     }
 
     public async Task<TopMusicItemDto?> GetTopPlaylistAsync(
@@ -270,22 +270,22 @@ public partial class MusicRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
         return await mediaContext
             .MusicPlays.AsNoTracking()
-            .Where(mp => mp.Track.PlaylistTrack.Any(pt => pt.Playlist.UserId == userId))
-            .SelectMany(mp => mp.Track.PlaylistTrack)
-            .Where(pt => pt.Playlist.UserId == userId)
-            .GroupBy(pt => new
+            .Where(predicate: mp => mp.Track.PlaylistTrack.Any(pt => pt.Playlist.UserId == userId))
+            .SelectMany(selector: mp => mp.Track.PlaylistTrack)
+            .Where(predicate: pt => pt.Playlist.UserId == userId)
+            .GroupBy(keySelector: pt => new
             {
                 pt.Playlist.Id,
                 pt.Playlist.Name,
                 pt.Playlist.Cover,
                 ColorPalette = pt.Playlist._colorPalette ?? string.Empty,
             })
-            .OrderByDescending(g => g.Count())
-            .ThenBy(g => g.Key.Id)
-            .Select(g => new TopMusicItemDto
+            .OrderByDescending(keySelector: g => g.Count())
+            .ThenBy(keySelector: g => g.Key.Id)
+            .Select(selector: g => new TopMusicItemDto
             {
                 Id = g.Key.Id.ToString(),
                 Name = g.Key.Name,
@@ -293,7 +293,7 @@ public partial class MusicRepository
                 ColorPalette = g.Key.ColorPalette,
                 Type = "playlist",
             })
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultAsync(cancellationToken: ct);
     }
 
     #endregion
@@ -307,59 +307,59 @@ public partial class MusicRepository
     {
         // Run 3 groups in parallel — each group gets its own DbContext
         Task<(TopMusicItemDto?, TopMusicItemDto?, TopMusicItemDto?)> topTask = Task.Run(
-            async () =>
+            function: async () =>
             {
-                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-                TopMusicItemDto? artist = await GetTopArtistQuery(ctx, userId)
-                    .FirstOrDefaultAsync(ct);
-                TopMusicItemDto? album = await GetTopAlbumQuery(ctx, userId)
-                    .FirstOrDefaultAsync(ct);
-                TopMusicItemDto? playlist = await GetTopPlaylistQuery(ctx, userId)
-                    .FirstOrDefaultAsync(ct);
+                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+                TopMusicItemDto? artist = await GetTopArtistQuery(ctx: ctx, userId: userId)
+                    .FirstOrDefaultAsync(cancellationToken: ct);
+                TopMusicItemDto? album = await GetTopAlbumQuery(ctx: ctx, userId: userId)
+                    .FirstOrDefaultAsync(cancellationToken: ct);
+                TopMusicItemDto? playlist = await GetTopPlaylistQuery(ctx: ctx, userId: userId)
+                    .FirstOrDefaultAsync(cancellationToken: ct);
                 return (artist, album, playlist);
             },
-            ct
+            cancellationToken: ct
         );
 
         Task<(List<ArtistCardDto>, List<AlbumCardDto>, List<PlaylistCardDto>)> favoritesTask =
             Task.Run(
-                async () =>
+                function: async () =>
                 {
-                    await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-                    List<ArtistCardDto> artists = await GetFavoriteArtistCardsQuery(ctx, userId)
-                        .Take(36)
-                        .ToListAsync(ct);
-                    List<AlbumCardDto> albums = await GetFavoriteAlbumCardsQuery(ctx, userId)
-                        .Take(36)
-                        .ToListAsync(ct);
-                    List<PlaylistCardDto> playlists = await GetPlaylistCardsQuery(ctx, userId)
-                        .Take(36)
-                        .ToListAsync(ct);
+                    await using MediaContext ctx = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+                    List<ArtistCardDto> artists = await GetFavoriteArtistCardsQuery(ctx: ctx, userId: userId)
+                        .Take(count: 36)
+                        .ToListAsync(cancellationToken: ct);
+                    List<AlbumCardDto> albums = await GetFavoriteAlbumCardsQuery(ctx: ctx, userId: userId)
+                        .Take(count: 36)
+                        .ToListAsync(cancellationToken: ct);
+                    List<PlaylistCardDto> playlists = await GetPlaylistCardsQuery(ctx: ctx, userId: userId)
+                        .Take(count: 36)
+                        .ToListAsync(cancellationToken: ct);
                     return (artists, albums, playlists);
                 },
-                ct
+                cancellationToken: ct
             );
 
         Task<(List<ArtistCardDto>, List<MusicGenreCardDto>, List<AlbumCardDto>)> latestTask =
             Task.Run(
-                async () =>
+                function: async () =>
                 {
-                    await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-                    List<ArtistCardDto> artists = await GetLatestArtistCardsQuery(ctx)
-                        .Take(36)
-                        .ToListAsync(ct);
-                    List<MusicGenreCardDto> genres = await GetLatestGenreCardsQuery(ctx)
-                        .Take(36)
-                        .ToListAsync(ct);
-                    List<AlbumCardDto> albums = await GetLatestAlbumCardsQuery(ctx)
-                        .Take(36)
-                        .ToListAsync(ct);
+                    await using MediaContext ctx = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+                    List<ArtistCardDto> artists = await GetLatestArtistCardsQuery(ctx: ctx)
+                        .Take(count: 36)
+                        .ToListAsync(cancellationToken: ct);
+                    List<MusicGenreCardDto> genres = await GetLatestGenreCardsQuery(ctx: ctx)
+                        .Take(count: 36)
+                        .ToListAsync(cancellationToken: ct);
+                    List<AlbumCardDto> albums = await GetLatestAlbumCardsQuery(ctx: ctx)
+                        .Take(count: 36)
+                        .ToListAsync(cancellationToken: ct);
                     return (artists, genres, albums);
                 },
-                ct
+                cancellationToken: ct
             );
 
-        await Task.WhenAll(topTask, favoritesTask, latestTask);
+        await Task.WhenAll(tasks: [topTask, favoritesTask, latestTask]);
 
         (TopMusicItemDto? topArtist, TopMusicItemDto? topAlbum, TopMusicItemDto? topPlaylist) =
             topTask.Result;
@@ -394,18 +394,18 @@ public partial class MusicRepository
     {
         return ctx
             .MusicPlays.AsNoTracking()
-            .Where(mp => mp.UserId == userId)
-            .SelectMany(mp => mp.Track.ArtistTrack)
-            .GroupBy(at => new
+            .Where(predicate: mp => mp.UserId == userId)
+            .SelectMany(selector: mp => mp.Track.ArtistTrack)
+            .GroupBy(keySelector: at => new
             {
                 at.Artist.Id,
                 at.Artist.Name,
                 at.Artist.Cover,
                 ColorPalette = at.Artist._colorPalette ?? string.Empty,
             })
-            .OrderByDescending(g => g.Count())
-            .ThenBy(g => g.Key.Id)
-            .Select(g => new TopMusicItemDto
+            .OrderByDescending(keySelector: g => g.Count())
+            .ThenBy(keySelector: g => g.Key.Id)
+            .Select(selector: g => new TopMusicItemDto
             {
                 Id = g.Key.Id.ToString(),
                 Name = g.Key.Name,
@@ -419,18 +419,18 @@ public partial class MusicRepository
     {
         return ctx
             .MusicPlays.AsNoTracking()
-            .Where(mp => mp.UserId == userId)
-            .SelectMany(mp => mp.Track.AlbumTrack)
-            .GroupBy(at => new
+            .Where(predicate: mp => mp.UserId == userId)
+            .SelectMany(selector: mp => mp.Track.AlbumTrack)
+            .GroupBy(keySelector: at => new
             {
                 at.Album.Id,
                 at.Album.Name,
                 at.Album.Cover,
                 ColorPalette = at.Album._colorPalette ?? string.Empty,
             })
-            .OrderByDescending(g => g.Count())
-            .ThenBy(g => g.Key.Id)
-            .Select(g => new TopMusicItemDto
+            .OrderByDescending(keySelector: g => g.Count())
+            .ThenBy(keySelector: g => g.Key.Id)
+            .Select(selector: g => new TopMusicItemDto
             {
                 Id = g.Key.Id.ToString(),
                 Name = g.Key.Name,
@@ -444,19 +444,19 @@ public partial class MusicRepository
     {
         return ctx
             .MusicPlays.AsNoTracking()
-            .Where(mp => mp.Track.PlaylistTrack.Any(pt => pt.Playlist.UserId == userId))
-            .SelectMany(mp => mp.Track.PlaylistTrack)
-            .Where(pt => pt.Playlist.UserId == userId)
-            .GroupBy(pt => new
+            .Where(predicate: mp => mp.Track.PlaylistTrack.Any(pt => pt.Playlist.UserId == userId))
+            .SelectMany(selector: mp => mp.Track.PlaylistTrack)
+            .Where(predicate: pt => pt.Playlist.UserId == userId)
+            .GroupBy(keySelector: pt => new
             {
                 pt.Playlist.Id,
                 pt.Playlist.Name,
                 pt.Playlist.Cover,
                 ColorPalette = pt.Playlist._colorPalette ?? string.Empty,
             })
-            .OrderByDescending(g => g.Count())
-            .ThenBy(g => g.Key.Id)
-            .Select(g => new TopMusicItemDto
+            .OrderByDescending(keySelector: g => g.Count())
+            .ThenBy(keySelector: g => g.Key.Id)
+            .Select(selector: g => new TopMusicItemDto
             {
                 Id = g.Key.Id.ToString(),
                 Name = g.Key.Name,
@@ -473,8 +473,8 @@ public partial class MusicRepository
     {
         return ctx
             .ArtistUser.AsNoTracking()
-            .Where(artistUser => artistUser.UserId == userId)
-            .Select(artistUser => new ArtistCardDto
+            .Where(predicate: artistUser => artistUser.UserId == userId)
+            .Select(selector: artistUser => new ArtistCardDto
             {
                 Id = artistUser.Artist.Id,
                 Name = artistUser.Artist.Name,
@@ -499,8 +499,8 @@ public partial class MusicRepository
     {
         return ctx
             .AlbumUser.AsNoTracking()
-            .Where(albumUser => albumUser.UserId == userId)
-            .Select(albumUser => new AlbumCardDto
+            .Where(predicate: albumUser => albumUser.UserId == userId)
+            .Select(selector: albumUser => new AlbumCardDto
             {
                 Id = albumUser.Album.Id,
                 Name = albumUser.Album.Name,
@@ -519,8 +519,8 @@ public partial class MusicRepository
     {
         return ctx
             .Playlists.AsNoTracking()
-            .Where(playlist => playlist.UserId == userId)
-            .Select(playlist => new PlaylistCardDto
+            .Where(predicate: playlist => playlist.UserId == userId)
+            .Select(selector: playlist => new PlaylistCardDto
             {
                 Id = playlist.Id,
                 Name = playlist.Name,
@@ -535,10 +535,10 @@ public partial class MusicRepository
     {
         return ctx
             .Artists.AsNoTracking()
-            .Where(artist => !string.IsNullOrEmpty(artist.Cover) && artist.ArtistTrack.Any())
-            .OrderByDescending(artist => artist.CreatedAt)
-            .ThenBy(artist => artist.Id)
-            .Select(artist => new ArtistCardDto
+            .Where(predicate: artist => !string.IsNullOrEmpty(artist.Cover) && artist.ArtistTrack.Any())
+            .OrderByDescending(keySelector: artist => artist.CreatedAt)
+            .ThenBy(keySelector: artist => artist.Id)
+            .Select(selector: artist => new ArtistCardDto
             {
                 Id = artist.Id,
                 Name = artist.Name,
@@ -560,10 +560,10 @@ public partial class MusicRepository
     {
         return ctx
             .MusicGenres.AsNoTracking()
-            .Where(genre => genre.MusicGenreTracks.Any())
-            .OrderByDescending(genre => genre.MusicGenreTracks.Count())
-            .ThenBy(genre => genre.Id)
-            .Select(genre => new MusicGenreCardDto
+            .Where(predicate: genre => genre.MusicGenreTracks.Any())
+            .OrderByDescending(keySelector: genre => genre.MusicGenreTracks.Count())
+            .ThenBy(keySelector: genre => genre.Id)
+            .Select(selector: genre => new MusicGenreCardDto
             {
                 Id = genre.Id,
                 Name = genre.Name,
@@ -575,10 +575,10 @@ public partial class MusicRepository
     {
         return ctx
             .Albums.AsNoTracking()
-            .Where(album => !string.IsNullOrEmpty(album.Cover) && album.AlbumTrack.Any())
-            .OrderByDescending(album => album.CreatedAt)
-            .ThenBy(album => album.Id)
-            .Select(album => new AlbumCardDto
+            .Where(predicate: album => !string.IsNullOrEmpty(album.Cover) && album.AlbumTrack.Any())
+            .OrderByDescending(keySelector: album => album.CreatedAt)
+            .ThenBy(keySelector: album => album.Id)
+            .Select(selector: album => new AlbumCardDto
             {
                 Id = album.Id,
                 Name = album.Name,

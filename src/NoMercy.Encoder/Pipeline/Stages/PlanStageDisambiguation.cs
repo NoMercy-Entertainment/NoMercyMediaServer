@@ -54,12 +54,12 @@ internal static class PlanStageDisambiguation
     )
     {
         IEnumerable<IGrouping<AudioGroupKey, IndexedAudioPlan>> groups = plans
-            .Select((plan, idx) => new IndexedAudioPlan(plan, idx))
-            .GroupBy(entry => new AudioGroupKey(
-                entry.Plan.Language ?? "und",
-                entry.Plan.CodecToken,
-                entry.Plan.SegmentNameTemplate,
-                entry.Plan.PlaylistNameTemplate
+            .Select(selector: (plan, idx) => new IndexedAudioPlan(Plan: plan, Index: idx))
+            .GroupBy(keySelector: entry => new AudioGroupKey(
+                Language: entry.Plan.Language ?? "und",
+                CodecToken: entry.Plan.CodecToken,
+                SegmentTemplate: entry.Plan.SegmentNameTemplate,
+                PlaylistTemplate: entry.Plan.PlaylistNameTemplate
             ));
 
         AudioOutputPlan[] result = plans.ToArray();
@@ -70,14 +70,14 @@ internal static class PlanStageDisambiguation
 
             foreach (IndexedAudioPlan entry in group)
             {
-                int sourceIndex = ParseAudioSourceIndex(entry.Plan.MapLabel);
+                int sourceIndex = ParseAudioSourceIndex(mapLabel: entry.Plan.MapLabel);
                 string suffix = $"_{sourceIndex}";
                 result[entry.Index] = entry.Plan with
                 {
-                    SegmentNameTemplate = AppendToTemplate(entry.Plan.SegmentNameTemplate, suffix),
+                    SegmentNameTemplate = AppendToTemplate(template: entry.Plan.SegmentNameTemplate, suffix: suffix),
                     PlaylistNameTemplate = AppendToTemplate(
-                        entry.Plan.PlaylistNameTemplate,
-                        suffix
+                        template: entry.Plan.PlaylistNameTemplate,
+                        suffix: suffix
                     ),
                 };
             }
@@ -96,13 +96,13 @@ internal static class PlanStageDisambiguation
     public static VideoOutputPlan[] DisambiguateVideo(IReadOnlyList<VideoOutputPlan> plans)
     {
         IEnumerable<IGrouping<VideoGroupKey, IndexedVideoPlan>> groups = plans
-            .Select((plan, idx) => new IndexedVideoPlan(plan, idx))
-            .GroupBy(entry => new VideoGroupKey(
-                entry.Plan.Width,
-                entry.Plan.Height,
-                entry.Plan.IsHdrOutput,
-                entry.Plan.SegmentNameTemplate,
-                entry.Plan.PlaylistNameTemplate
+            .Select(selector: (plan, idx) => new IndexedVideoPlan(Plan: plan, Index: idx))
+            .GroupBy(keySelector: entry => new VideoGroupKey(
+                Width: entry.Plan.Width,
+                Height: entry.Plan.Height,
+                IsHdrOutput: entry.Plan.IsHdrOutput,
+                SegmentTemplate: entry.Plan.SegmentNameTemplate,
+                PlaylistTemplate: entry.Plan.PlaylistNameTemplate
             ));
 
         VideoOutputPlan[] result = plans.ToArray();
@@ -113,13 +113,13 @@ internal static class PlanStageDisambiguation
 
             foreach (IndexedVideoPlan entry in group)
             {
-                string suffix = $"_{CodecFamilyClassifier.FamilyToken(entry.Plan.EncoderName)}";
+                string suffix = $"_{CodecFamilyClassifier.FamilyToken(encoderName: entry.Plan.EncoderName)}";
                 result[entry.Index] = entry.Plan with
                 {
-                    SegmentNameTemplate = AppendToTemplate(entry.Plan.SegmentNameTemplate, suffix),
+                    SegmentNameTemplate = AppendToTemplate(template: entry.Plan.SegmentNameTemplate, suffix: suffix),
                     PlaylistNameTemplate = AppendToTemplate(
-                        entry.Plan.PlaylistNameTemplate,
-                        suffix
+                        template: entry.Plan.PlaylistNameTemplate,
+                        suffix: suffix
                     ),
                 };
             }
@@ -137,13 +137,13 @@ internal static class PlanStageDisambiguation
     /// collide on the .m4s segment files since they live in the same dir.
     /// </summary>
     private static string AppendToTemplate(string template, string suffix) =>
-        string.Join('/', template.Split('/').Select(segment => segment + suffix));
+        string.Join(separator: '/', values: template.Split(separator: '/').Select(selector: segment => segment + suffix));
 
     private static int ParseAudioSourceIndex(string mapLabel)
     {
         // MapLabel is "0:a:N" for audio streams. Pull N; fall back to 0 on
         // unexpected shapes so we still produce a unique-per-call suffix.
-        int lastColon = mapLabel.LastIndexOf(':');
-        return lastColon >= 0 && int.TryParse(mapLabel[(lastColon + 1)..], out int idx) ? idx : 0;
+        int lastColon = mapLabel.LastIndexOf(value: ':');
+        return lastColon >= 0 && int.TryParse(s: mapLabel[(lastColon + 1)..], result: out int idx) ? idx : 0;
     }
 }

@@ -44,9 +44,9 @@ public static class BlueprintIdentityFactory
                 Year: episode.Year
             ),
             _ => throw new ArgumentOutOfRangeException(
-                nameof(media),
-                media.Type,
-                $"No blueprint identity mapping for media type '{media.Type}'."
+                paramName: nameof(media),
+                actualValue: media.Type,
+                message: $"No blueprint identity mapping for media type '{media.Type}'."
             ),
         };
 }

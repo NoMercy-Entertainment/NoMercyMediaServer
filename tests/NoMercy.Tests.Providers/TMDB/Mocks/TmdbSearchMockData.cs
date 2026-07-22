@@ -44,7 +44,7 @@ public static class TmdbSearchMockData
                     OriginalTitle = "Inception",
                     Overview =
                         "A thief who steals corporate secrets through the use of dream-sharing technology...",
-                    ReleaseDate = DateTime.Parse("2010-07-16"),
+                    ReleaseDate = DateTime.Parse(s: "2010-07-16"),
                     PosterPath = "/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg",
                     BackdropPath = "/s3TBrRGB1iav7gFOCNx3H31MoES.jpg",
                     VoteAverage = 8.3,
@@ -61,7 +61,7 @@ public static class TmdbSearchMockData
                     OriginalTitle = "Inception: The Cobol Job",
                     Overview =
                         "This Inception prequel unfolds courtesy of a beautiful Motion Comic...",
-                    ReleaseDate = DateTime.Parse("2010-12-07"),
+                    ReleaseDate = DateTime.Parse(s: "2010-12-07"),
                     PosterPath = "/jS71fcCxTaXSKnz6c11lJr4bFr6.jpg",
                     BackdropPath = null,
                     VoteAverage = 7.4,
@@ -94,7 +94,7 @@ public static class TmdbSearchMockData
                     OriginalName = "Breaking Bad",
                     Overview =
                         "When Walter White, a New Mexico chemistry teacher, is diagnosed with Stage III cancer...",
-                    FirstAirDate = DateTime.Parse("2008-01-20"),
+                    FirstAirDate = DateTime.Parse(s: "2008-01-20"),
                     PosterPath = "/ggFHVNu6YYI5L9pCfOacjizRGt.jpg",
                     BackdropPath = "/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg",
                     VoteAverage = 8.9,
@@ -111,7 +111,7 @@ public static class TmdbSearchMockData
                     Name = "Better Call Saul",
                     OriginalName = "Better Call Saul",
                     Overview = "Six years before Saul Goodman meets Walter White...",
-                    FirstAirDate = DateTime.Parse("2015-02-08"),
+                    FirstAirDate = DateTime.Parse(s: "2015-02-08"),
                     PosterPath = "/fC2HDm5t0kHl7mTm7jxMR31j7Qa.jpg",
                     BackdropPath = "/9faGSFi5jam6pDWGNd0p8JcJgXQ.jpg",
                     VoteAverage = 8.7,

@@ -29,20 +29,20 @@ public static class CodecFamilyClassifier
     /// </summary>
     public static VideoCodecType? ClassifyVideo(string encoderName)
     {
-        if (string.IsNullOrWhiteSpace(encoderName))
+        if (string.IsNullOrWhiteSpace(value: encoderName))
             return null;
 
         string lower = encoderName.ToLowerInvariant();
 
-        if (lower == "copy" || lower.Contains("passthrough"))
+        if (lower == "copy" || lower.Contains(value: "passthrough"))
             return VideoCodecType.Copy;
-        if (lower.Contains("264") || lower.Contains("avc") || lower.Contains("h264"))
+        if (lower.Contains(value: "264") || lower.Contains(value: "avc") || lower.Contains(value: "h264"))
             return VideoCodecType.H264;
-        if (lower.Contains("265") || lower.Contains("hevc"))
+        if (lower.Contains(value: "265") || lower.Contains(value: "hevc"))
             return VideoCodecType.H265;
-        if (lower.Contains("av1") || lower.Contains("aom") || lower.Contains("svtav1"))
+        if (lower.Contains(value: "av1") || lower.Contains(value: "aom") || lower.Contains(value: "svtav1"))
             return VideoCodecType.Av1;
-        if (lower.Contains("vp9") || lower.Contains("libvpx"))
+        if (lower.Contains(value: "vp9") || lower.Contains(value: "libvpx"))
             return VideoCodecType.Vp9;
 
         return null;
@@ -54,30 +54,30 @@ public static class CodecFamilyClassifier
     /// </summary>
     public static AudioCodecType? ClassifyAudio(string encoderName)
     {
-        if (string.IsNullOrWhiteSpace(encoderName))
+        if (string.IsNullOrWhiteSpace(value: encoderName))
             return null;
 
         string lower = encoderName.ToLowerInvariant();
 
-        if (lower == "copy" || lower.Contains("passthrough"))
+        if (lower == "copy" || lower.Contains(value: "passthrough"))
             return AudioCodecType.Copy;
-        if (lower.Contains("aac") || lower.Contains("fdk"))
+        if (lower.Contains(value: "aac") || lower.Contains(value: "fdk"))
             return AudioCodecType.Aac;
-        if (lower.Contains("opus"))
+        if (lower.Contains(value: "opus"))
             return AudioCodecType.Opus;
-        if (lower.Contains("flac"))
+        if (lower.Contains(value: "flac"))
             return AudioCodecType.Flac;
-        if (lower.Contains("eac3") || lower.Contains("e-ac3"))
+        if (lower.Contains(value: "eac3") || lower.Contains(value: "e-ac3"))
             return AudioCodecType.Eac3;
-        if (lower.Contains("ac3") || lower.Contains("dolby"))
+        if (lower.Contains(value: "ac3") || lower.Contains(value: "dolby"))
             return AudioCodecType.Ac3;
-        if (lower.Contains("mp3") || lower.Contains("lame"))
+        if (lower.Contains(value: "mp3") || lower.Contains(value: "lame"))
             return AudioCodecType.Mp3;
-        if (lower.Contains("vorbis"))
+        if (lower.Contains(value: "vorbis"))
             return AudioCodecType.Vorbis;
-        if (lower.Contains("truehd"))
+        if (lower.Contains(value: "truehd"))
             return AudioCodecType.TrueHd;
-        if (lower.Contains("dts") || lower.Contains("dca"))
+        if (lower.Contains(value: "dts") || lower.Contains(value: "dca"))
             return AudioCodecType.Dts;
 
         return null;
@@ -89,7 +89,7 @@ public static class CodecFamilyClassifier
     /// encoder name when no family matches.
     /// </summary>
     public static string FamilyToken(string encoderName) =>
-        ClassifyVideo(encoderName) switch
+        ClassifyVideo(encoderName: encoderName) switch
         {
             VideoCodecType.H264 => "avc",
             VideoCodecType.H265 => "hevc",

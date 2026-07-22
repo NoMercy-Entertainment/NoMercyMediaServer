@@ -25,10 +25,10 @@ public class UlidRouteConstraint : IRouteConstraint
         RouteDirection routeDirection
     )
     {
-        if (!values.TryGetValue(routeKey, out object? routeValue))
+        if (!values.TryGetValue(key: routeKey, value: out object? routeValue))
             return false;
 
-        string? parameterValueString = Convert.ToString(routeValue, CultureInfo.InvariantCulture);
-        return Ulid.TryParse(parameterValueString, out _);
+        string? parameterValueString = Convert.ToString(value: routeValue, provider: CultureInfo.InvariantCulture);
+        return Ulid.TryParse(base32: parameterValueString, ulid: out _);
     }
 }

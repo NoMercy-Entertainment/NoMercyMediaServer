@@ -14,7 +14,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Media;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class AlphaBucketTests
 {
     // 【Oshi No Ko】 -> TitleSort "oshi.no.ko" -> must land under "O", never "#".
@@ -23,44 +23,44 @@ public class AlphaBucketTests
     [Fact]
     public void Matches_OshiNoKo_LandsUnderO_NotHash()
     {
-        Assert.True(AlphaBucket.Matches("oshi.no.ko", "O"));
-        Assert.False(AlphaBucket.Matches("oshi.no.ko", "#"));
+        Assert.True(condition: AlphaBucket.Matches(titleSort: "oshi.no.ko", bucket: "O"));
+        Assert.False(condition: AlphaBucket.Matches(titleSort: "oshi.no.ko", bucket: "#"));
     }
 
     [Theory]
-    [InlineData("matrix", "M")]
-    [InlineData("inception", "I")]
-    [InlineData("zelda", "Z")]
+    [InlineData(data: ["matrix", "M"])]
+    [InlineData(data: ["inception", "I"])]
+    [InlineData(data: ["zelda", "Z"])]
     public void Matches_LetterBucket_IsCaseInsensitive(string titleSort, string bucket)
     {
-        Assert.True(AlphaBucket.Matches(titleSort, bucket));
-        Assert.True(AlphaBucket.Matches(titleSort.ToUpperInvariant(), bucket.ToLowerInvariant()));
+        Assert.True(condition: AlphaBucket.Matches(titleSort: titleSort, bucket: bucket));
+        Assert.True(condition: AlphaBucket.Matches(titleSort: titleSort.ToUpperInvariant(), bucket: bucket.ToLowerInvariant()));
     }
 
     [Theory]
-    [InlineData("1408")] // starts with a digit
-    [InlineData("3.body.problem")]
-    [InlineData("...and.justice.for.all")] // starts with punctuation
+    [InlineData(data: "1408")] // starts with a digit
+    [InlineData(data: "3.body.problem")]
+    [InlineData(data: "...and.justice.for.all")] // starts with punctuation
     public void Matches_NonLetterPrefix_LandsUnderHash(string titleSort)
     {
-        Assert.True(AlphaBucket.Matches(titleSort, "#"));
+        Assert.True(condition: AlphaBucket.Matches(titleSort: titleSort, bucket: "#"));
 
         foreach (string bucket in AlphaBucket.Buckets)
         {
             if (bucket == "#")
                 continue;
 
-            Assert.False(AlphaBucket.Matches(titleSort, bucket));
+            Assert.False(condition: AlphaBucket.Matches(titleSort: titleSort, bucket: bucket));
         }
     }
 
     [Theory]
-    [InlineData(null)]
-    [InlineData("")]
+    [InlineData(data: null)]
+    [InlineData(data: "")]
     public void Matches_EmptyTitleSort_LandsUnderHashOnly(string? titleSort)
     {
-        Assert.True(AlphaBucket.Matches(titleSort, "#"));
-        Assert.False(AlphaBucket.Matches(titleSort, "A"));
+        Assert.True(condition: AlphaBucket.Matches(titleSort: titleSort, bucket: "#"));
+        Assert.False(condition: AlphaBucket.Matches(titleSort: titleSort, bucket: "A"));
     }
 
     [Fact]
@@ -81,11 +81,11 @@ public class AlphaBucketTests
             int hits = 0;
             foreach (string bucket in AlphaBucket.Buckets)
             {
-                if (AlphaBucket.Matches(titleSort, bucket))
+                if (AlphaBucket.Matches(titleSort: titleSort, bucket: bucket))
                     hits++;
             }
 
-            Assert.Equal(1, hits);
+            Assert.Equal(expected: 1, actual: hits);
         }
     }
 }

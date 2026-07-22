@@ -20,7 +20,7 @@ namespace NoMercy.Tests.Networking;
 /// RefreshLibraryDto's QueryKey must default to an empty (not null) array so
 /// the client's TanStack Query cache-invalidation payload is always iterable.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class NotifyAndRefreshLibraryDtoTests
 {
     [Fact]
@@ -28,9 +28,9 @@ public sealed class NotifyAndRefreshLibraryDtoTests
     {
         NotifyDto dto = new();
 
-        Assert.Equal(string.Empty, dto.Title);
-        Assert.Equal(string.Empty, dto.Message);
-        Assert.Equal(string.Empty, dto.Type);
+        Assert.Equal(expected: string.Empty, actual: dto.Title);
+        Assert.Equal(expected: string.Empty, actual: dto.Message);
+        Assert.Equal(expected: string.Empty, actual: dto.Type);
     }
 
     [Fact]
@@ -43,9 +43,9 @@ public sealed class NotifyAndRefreshLibraryDtoTests
             Type = "success",
         };
 
-        Assert.Equal("Import complete", dto.Title);
-        Assert.Equal("Spirited Away was added to your library", dto.Message);
-        Assert.Equal("success", dto.Type);
+        Assert.Equal(expected: "Import complete", actual: dto.Title);
+        Assert.Equal(expected: "Spirited Away was added to your library", actual: dto.Message);
+        Assert.Equal(expected: "success", actual: dto.Type);
     }
 
     [Fact]
@@ -53,8 +53,8 @@ public sealed class NotifyAndRefreshLibraryDtoTests
     {
         RefreshLibraryDto dto = new();
 
-        Assert.NotNull(dto.QueryKey);
-        Assert.Empty(dto.QueryKey);
+        Assert.NotNull(@object: dto.QueryKey);
+        Assert.Empty(collection: dto.QueryKey);
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public sealed class NotifyAndRefreshLibraryDtoTests
     {
         RefreshLibraryDto dto = new() { QueryKey = ["movies", 129, null] };
 
-        Assert.Equal(3, dto.QueryKey.Length);
+        Assert.Equal(expected: 3, actual: dto.QueryKey.Length);
         Assert.Equal("movies", dto.QueryKey[0]);
         Assert.Equal(129, dto.QueryKey[1]);
         Assert.Null(dto.QueryKey[2]);

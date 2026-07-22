@@ -35,10 +35,10 @@ public class QueueWorkerIsProcessingJobTests
     public void Newly_constructed_worker_is_not_processing_a_job()
     {
         (_, IQueueContext adapter) = TestQueueContextFactory.CreateInMemoryContextWithAdapter();
-        JobQueue jobQueue = new(adapter, maxAttempts: 5);
+        JobQueue jobQueue = new(context: adapter, maxAttempts: 5);
 
-        QueueWorker worker = new(jobQueue, name: "encoder");
+        QueueWorker worker = new(queue: jobQueue, name: "encoder");
 
-        Assert.False(worker.IsProcessingJob);
+        Assert.False(condition: worker.IsProcessingJob);
     }
 }

@@ -31,16 +31,16 @@ public class SubtitleExtractorTests
     [Fact]
     public void ResolveOutput_Subrip_ProducesWebVtt()
     {
-        SubtitleOutputPlan plan = MakePlan(0, "eng");
-        SubtitleStreamInfo stream = MakeStream(0, "subrip", "eng");
+        SubtitleOutputPlan plan = MakePlan(sourceIndex: 0, language: "eng");
+        SubtitleStreamInfo stream = MakeStream(index: 0, codec: "subrip", language: "eng");
 
-        SubtitleOutputInfo info = _extractor.ResolveOutput(plan, stream, OutputDir, MediaTitle);
+        SubtitleOutputInfo info = _extractor.ResolveOutput(plan: plan, stream: stream, outputDirectory: OutputDir, mediaTitle: MediaTitle);
 
-        info.Extension.Should().Be("vtt");
-        info.FfmpegCodec.Should().Be("webvtt");
+        info.Extension.Should().Be(expected: "vtt");
+        info.FfmpegCodec.Should().Be(expected: "webvtt");
         info.IsBitmap.Should().BeFalse();
-        info.OutputPath.Should().Contain("subtitles");
-        info.OutputPath.Should().EndWith(".vtt");
+        info.OutputPath.Should().Contain(expected: "subtitles");
+        info.OutputPath.Should().EndWith(expected: ".vtt");
     }
 
     // ------------------------------------------------------------------
@@ -50,13 +50,13 @@ public class SubtitleExtractorTests
     [Fact]
     public void ResolveOutput_Ass_StaysAsAss()
     {
-        SubtitleOutputPlan plan = MakePlan(0, "eng");
-        SubtitleStreamInfo stream = MakeStream(0, "ass", "eng");
+        SubtitleOutputPlan plan = MakePlan(sourceIndex: 0, language: "eng");
+        SubtitleStreamInfo stream = MakeStream(index: 0, codec: "ass", language: "eng");
 
-        SubtitleOutputInfo info = _extractor.ResolveOutput(plan, stream, OutputDir, MediaTitle);
+        SubtitleOutputInfo info = _extractor.ResolveOutput(plan: plan, stream: stream, outputDirectory: OutputDir, mediaTitle: MediaTitle);
 
-        info.Extension.Should().Be("ass");
-        info.FfmpegCodec.Should().Be("ass");
+        info.Extension.Should().Be(expected: "ass");
+        info.FfmpegCodec.Should().Be(expected: "ass");
         info.IsBitmap.Should().BeFalse();
     }
 
@@ -67,13 +67,13 @@ public class SubtitleExtractorTests
     [Fact]
     public void ResolveOutput_Ssa_StaysAsAss()
     {
-        SubtitleOutputPlan plan = MakePlan(0, "eng");
-        SubtitleStreamInfo stream = MakeStream(0, "ssa", "eng");
+        SubtitleOutputPlan plan = MakePlan(sourceIndex: 0, language: "eng");
+        SubtitleStreamInfo stream = MakeStream(index: 0, codec: "ssa", language: "eng");
 
-        SubtitleOutputInfo info = _extractor.ResolveOutput(plan, stream, OutputDir, MediaTitle);
+        SubtitleOutputInfo info = _extractor.ResolveOutput(plan: plan, stream: stream, outputDirectory: OutputDir, mediaTitle: MediaTitle);
 
-        info.Extension.Should().Be("ass");
-        info.FfmpegCodec.Should().Be("ass");
+        info.Extension.Should().Be(expected: "ass");
+        info.FfmpegCodec.Should().Be(expected: "ass");
     }
 
     // ------------------------------------------------------------------
@@ -84,13 +84,13 @@ public class SubtitleExtractorTests
     [Fact]
     public void ResolveOutput_DvdSubtitle_ProducesIdxFile()
     {
-        SubtitleOutputPlan plan = MakePlan(0, "eng");
-        SubtitleStreamInfo stream = MakeStream(0, "dvd_subtitle", "eng");
+        SubtitleOutputPlan plan = MakePlan(sourceIndex: 0, language: "eng");
+        SubtitleStreamInfo stream = MakeStream(index: 0, codec: "dvd_subtitle", language: "eng");
 
-        SubtitleOutputInfo info = _extractor.ResolveOutput(plan, stream, OutputDir, MediaTitle);
+        SubtitleOutputInfo info = _extractor.ResolveOutput(plan: plan, stream: stream, outputDirectory: OutputDir, mediaTitle: MediaTitle);
 
-        info.Extension.Should().Be("idx");
-        info.FfmpegCodec.Should().Be("copy");
+        info.Extension.Should().Be(expected: "idx");
+        info.FfmpegCodec.Should().Be(expected: "copy");
         info.IsBitmap.Should().BeTrue();
     }
 
@@ -101,13 +101,13 @@ public class SubtitleExtractorTests
     [Fact]
     public void ResolveOutput_PgsSubtitle_ProducesMksFile()
     {
-        SubtitleOutputPlan plan = MakePlan(0, "eng");
-        SubtitleStreamInfo stream = MakeStream(0, "hdmv_pgs_subtitle", "eng");
+        SubtitleOutputPlan plan = MakePlan(sourceIndex: 0, language: "eng");
+        SubtitleStreamInfo stream = MakeStream(index: 0, codec: "hdmv_pgs_subtitle", language: "eng");
 
-        SubtitleOutputInfo info = _extractor.ResolveOutput(plan, stream, OutputDir, MediaTitle);
+        SubtitleOutputInfo info = _extractor.ResolveOutput(plan: plan, stream: stream, outputDirectory: OutputDir, mediaTitle: MediaTitle);
 
-        info.Extension.Should().Be("mks");
-        info.FfmpegCodec.Should().Be("copy");
+        info.Extension.Should().Be(expected: "mks");
+        info.FfmpegCodec.Should().Be(expected: "copy");
         info.IsBitmap.Should().BeTrue();
     }
 
@@ -121,7 +121,7 @@ public class SubtitleExtractorTests
     [Fact]
     public void ResolveOutput_PropagatesPlanVariant_ForSign()
     {
-        SubtitleOutputPlan plan = MakePlan(0, "eng") with { Variant = "sign" };
+        SubtitleOutputPlan plan = MakePlan(sourceIndex: 0, language: "eng") with { Variant = "sign" };
         SubtitleStreamInfo stream = new(
             Index: 0,
             Codec: "subrip",
@@ -130,9 +130,9 @@ public class SubtitleExtractorTests
             IsForced: true
         );
 
-        SubtitleOutputInfo info = _extractor.ResolveOutput(plan, stream, OutputDir, MediaTitle);
+        SubtitleOutputInfo info = _extractor.ResolveOutput(plan: plan, stream: stream, outputDirectory: OutputDir, mediaTitle: MediaTitle);
 
-        info.Variant.Should().Be("sign");
+        info.Variant.Should().Be(expected: "sign");
     }
 
     [Fact]
@@ -141,15 +141,15 @@ public class SubtitleExtractorTests
         // Second English track in the source — PlanStage promotes the first
         // to "full" and demotes peers to "alt". The extractor must honour
         // that decision, not re-classify and collide both back to "full".
-        SubtitleOutputPlan plan = MakePlan(1, "eng") with
+        SubtitleOutputPlan plan = MakePlan(sourceIndex: 1, language: "eng") with
         {
             Variant = "alt",
         };
-        SubtitleStreamInfo stream = MakeStream(1, "subrip", "eng");
+        SubtitleStreamInfo stream = MakeStream(index: 1, codec: "subrip", language: "eng");
 
-        SubtitleOutputInfo info = _extractor.ResolveOutput(plan, stream, OutputDir, MediaTitle);
+        SubtitleOutputInfo info = _extractor.ResolveOutput(plan: plan, stream: stream, outputDirectory: OutputDir, mediaTitle: MediaTitle);
 
-        info.Variant.Should().Be("alt");
+        info.Variant.Should().Be(expected: "alt");
     }
 
     // ------------------------------------------------------------------
@@ -159,12 +159,12 @@ public class SubtitleExtractorTests
     [Fact]
     public void ResolveOutput_OutputPath_UsesSubtitlesDirectory()
     {
-        SubtitleOutputPlan plan = MakePlan(0, "eng");
-        SubtitleStreamInfo stream = MakeStream(0, "subrip", "eng");
+        SubtitleOutputPlan plan = MakePlan(sourceIndex: 0, language: "eng");
+        SubtitleStreamInfo stream = MakeStream(index: 0, codec: "subrip", language: "eng");
 
-        SubtitleOutputInfo info = _extractor.ResolveOutput(plan, stream, OutputDir, MediaTitle);
+        SubtitleOutputInfo info = _extractor.ResolveOutput(plan: plan, stream: stream, outputDirectory: OutputDir, mediaTitle: MediaTitle);
 
-        info.OutputPath.Should().StartWith("subtitles/");
+        info.OutputPath.Should().StartWith(expected: "subtitles/");
     }
 
     // ------------------------------------------------------------------
@@ -174,12 +174,12 @@ public class SubtitleExtractorTests
     [Fact]
     public void ResolveOutput_LanguageFromStream_NotPlan()
     {
-        SubtitleOutputPlan plan = MakePlan(0, "und");
-        SubtitleStreamInfo stream = MakeStream(0, "subrip", "fra");
+        SubtitleOutputPlan plan = MakePlan(sourceIndex: 0, language: "und");
+        SubtitleStreamInfo stream = MakeStream(index: 0, codec: "subrip", language: "fra");
 
-        SubtitleOutputInfo info = _extractor.ResolveOutput(plan, stream, OutputDir, MediaTitle);
+        SubtitleOutputInfo info = _extractor.ResolveOutput(plan: plan, stream: stream, outputDirectory: OutputDir, mediaTitle: MediaTitle);
 
-        info.Language.Should().Be("fra");
+        info.Language.Should().Be(expected: "fra");
     }
 
     // ------------------------------------------------------------------
@@ -189,13 +189,13 @@ public class SubtitleExtractorTests
     [Fact]
     public void ResolvePlaylistUri_TextSubtitle_VttExtension()
     {
-        SubtitleOutputPlan plan = MakePlan(0, "eng");
-        SubtitleStreamInfo stream = MakeStream(0, "subrip", "eng");
+        SubtitleOutputPlan plan = MakePlan(sourceIndex: 0, language: "eng");
+        SubtitleStreamInfo stream = MakeStream(index: 0, codec: "subrip", language: "eng");
 
-        string uri = _extractor.ResolvePlaylistUri(plan, stream, MediaTitle);
+        string uri = _extractor.ResolvePlaylistUri(plan: plan, stream: stream, mediaTitle: MediaTitle);
 
-        uri.Should().EndWith(".vtt");
-        uri.Should().Contain("subtitles/");
+        uri.Should().EndWith(expected: ".vtt");
+        uri.Should().Contain(expected: "subtitles/");
     }
 
     // ------------------------------------------------------------------

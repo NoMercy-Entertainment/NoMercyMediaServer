@@ -22,7 +22,7 @@ using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class DiContextInjectionTests : IDisposable
 {
     private readonly string _dbName = Guid.NewGuid().ToString();
@@ -30,36 +30,36 @@ public class DiContextInjectionTests : IDisposable
 
     public DiContextInjectionTests()
     {
-        _keepAliveConnection = new($"DataSource={_dbName};Mode=Memory;Cache=Shared");
+        _keepAliveConnection = new(connectionString: $"DataSource={_dbName};Mode=Memory;Cache=Shared");
         _keepAliveConnection.Open();
         _keepAliveConnection.CreateFunction(
-            "normalize_search",
-            (string? input) => input?.NormalizeSearch() ?? string.Empty
+            name: "normalize_search",
+            function: (string? input) => input?.NormalizeSearch() ?? string.Empty
         );
 
         using MediaContext seedContext = CreateContext();
         seedContext.Database.EnsureCreated();
-        SeedMusicData(seedContext);
+        SeedMusicData(context: seedContext);
     }
 
     private MediaContext CreateContext()
     {
-        SqliteConnection connection = new($"DataSource={_dbName};Mode=Memory;Cache=Shared");
+        SqliteConnection connection = new(connectionString: $"DataSource={_dbName};Mode=Memory;Cache=Shared");
         connection.Open();
         connection.CreateFunction(
-            "normalize_search",
-            (string? input) => input?.NormalizeSearch() ?? string.Empty
+            name: "normalize_search",
+            function: (string? input) => input?.NormalizeSearch() ?? string.Empty
         );
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(
-                connection,
-                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+                connection: connection,
+                sqliteOptionsAction: o => o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery)
             )
-            .AddInterceptors(new SqliteNormalizeSearchInterceptor())
+            .AddInterceptors(interceptors: new SqliteNormalizeSearchInterceptor())
             .Options;
 
-        TestMediaContext context = new(options);
+        TestMediaContext context = new(options: options);
         return context;
     }
 
@@ -67,12 +67,12 @@ public class DiContextInjectionTests : IDisposable
     {
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(
-                $"DataSource={_dbName};Mode=Memory;Cache=Shared",
-                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+                connectionString: $"DataSource={_dbName};Mode=Memory;Cache=Shared",
+                sqliteOptionsAction: o => o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery)
             )
-            .AddInterceptors(new SqliteNormalizeSearchInterceptor())
+            .AddInterceptors(interceptors: new SqliteNormalizeSearchInterceptor())
             .Options;
-        return new TestDbContextFactory(options);
+        return new TestDbContextFactory(options: options);
     }
 
     private static void SeedMusicData(MediaContext context)
@@ -86,7 +86,7 @@ public class DiContextInjectionTests : IDisposable
             Allowed = true,
             Manage = true,
         };
-        context.Users.Add(user);
+        context.Users.Add(entity: user);
 
         Library musicLibrary = new()
         {
@@ -95,8 +95,8 @@ public class DiContextInjectionTests : IDisposable
             Type = "music",
             Order = 1,
         };
-        context.Libraries.Add(musicLibrary);
-        context.LibraryUser.Add(new(SeedConstants.MovieLibraryId, SeedConstants.UserId));
+        context.Libraries.Add(entity: musicLibrary);
+        context.LibraryUser.Add(entity: new(libraryId: SeedConstants.MovieLibraryId, userId: SeedConstants.UserId));
 
         Driver systemLocalDriver = new()
         {
@@ -107,7 +107,7 @@ public class DiContextInjectionTests : IDisposable
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow,
         };
-        context.Drivers.Add(systemLocalDriver);
+        context.Drivers.Add(entity: systemLocalDriver);
 
         Folder musicFolder = new()
         {
@@ -115,12 +115,12 @@ public class DiContextInjectionTests : IDisposable
             Path = "/media/music",
             DriverId = Driver.SystemLocalDriverId,
         };
-        context.Folders.Add(musicFolder);
-        context.FolderLibrary.Add(new(SeedConstants.MovieFolderId, SeedConstants.MovieLibraryId));
+        context.Folders.Add(entity: musicFolder);
+        context.FolderLibrary.Add(entity: new(folderId: SeedConstants.MovieFolderId, libraryId: SeedConstants.MovieLibraryId));
 
         Artist artist = new()
         {
-            Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            Id = Guid.Parse(input: "11111111-1111-1111-1111-111111111111"),
             Name = "Test Artist",
             TitleSort = "test artist",
             Description = "A test artist",
@@ -129,11 +129,11 @@ public class DiContextInjectionTests : IDisposable
             LibraryId = SeedConstants.MovieLibraryId,
             FolderId = SeedConstants.MovieFolderId,
         };
-        context.Artists.Add(artist);
+        context.Artists.Add(entity: artist);
 
         Album album = new()
         {
-            Id = Guid.Parse("22222222-2222-2222-2222-222222222222"),
+            Id = Guid.Parse(input: "22222222-2222-2222-2222-222222222222"),
             Name = "Test Album",
             Description = "A test album",
             Cover = "/test-album.jpg",
@@ -144,13 +144,13 @@ public class DiContextInjectionTests : IDisposable
             FolderId = SeedConstants.MovieFolderId,
             LibraryFolder = null!,
         };
-        context.Albums.Add(album);
+        context.Albums.Add(entity: album);
 
         context.SaveChanges();
 
         Track track = new()
         {
-            Id = Guid.Parse("33333333-3333-3333-3333-333333333333"),
+            Id = Guid.Parse(input: "33333333-3333-3333-3333-333333333333"),
             Name = "Test Track",
             TrackNumber = 1,
             DiscNumber = 1,
@@ -160,54 +160,54 @@ public class DiContextInjectionTests : IDisposable
             HostFolder = "/media/music/Test Artist/Test Album",
             FolderId = SeedConstants.MovieFolderId,
         };
-        context.Tracks.Add(track);
+        context.Tracks.Add(entity: track);
 
         context.SaveChanges();
 
         context.ArtistTrack.Add(
-            new()
+            entity: new()
             {
-                ArtistId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
-                TrackId = Guid.Parse("33333333-3333-3333-3333-333333333333"),
+                ArtistId = Guid.Parse(input: "11111111-1111-1111-1111-111111111111"),
+                TrackId = Guid.Parse(input: "33333333-3333-3333-3333-333333333333"),
             }
         );
         context.AlbumTrack.Add(
-            new()
+            entity: new()
             {
-                AlbumId = Guid.Parse("22222222-2222-2222-2222-222222222222"),
-                TrackId = Guid.Parse("33333333-3333-3333-3333-333333333333"),
+                AlbumId = Guid.Parse(input: "22222222-2222-2222-2222-222222222222"),
+                TrackId = Guid.Parse(input: "33333333-3333-3333-3333-333333333333"),
             }
         );
         context.AlbumArtist.Add(
-            new()
+            entity: new()
             {
-                AlbumId = Guid.Parse("22222222-2222-2222-2222-222222222222"),
-                ArtistId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+                AlbumId = Guid.Parse(input: "22222222-2222-2222-2222-222222222222"),
+                ArtistId = Guid.Parse(input: "11111111-1111-1111-1111-111111111111"),
             }
         );
         context.ArtistLibrary.Add(
-            new(Guid.Parse("11111111-1111-1111-1111-111111111111"), SeedConstants.MovieLibraryId)
+            entity: new(artistId: Guid.Parse(input: "11111111-1111-1111-1111-111111111111"), libraryId: SeedConstants.MovieLibraryId)
         );
         context.AlbumLibrary.Add(
-            new(Guid.Parse("22222222-2222-2222-2222-222222222222"), SeedConstants.MovieLibraryId)
+            entity: new(albumId: Guid.Parse(input: "22222222-2222-2222-2222-222222222222"), libraryId: SeedConstants.MovieLibraryId)
         );
 
         Playlist playlist = new()
         {
-            Id = Guid.Parse("44444444-4444-4444-4444-444444444444"),
+            Id = Guid.Parse(input: "44444444-4444-4444-4444-444444444444"),
             Name = "Test Playlist",
             Description = "A test playlist",
             UserId = SeedConstants.UserId,
         };
-        context.Playlists.Add(playlist);
+        context.Playlists.Add(entity: playlist);
 
         context.SaveChanges();
 
         context.PlaylistTrack.Add(
-            new()
+            entity: new()
             {
-                PlaylistId = Guid.Parse("44444444-4444-4444-4444-444444444444"),
-                TrackId = Guid.Parse("33333333-3333-3333-3333-333333333333"),
+                PlaylistId = Guid.Parse(input: "44444444-4444-4444-4444-444444444444"),
+                TrackId = Guid.Parse(input: "33333333-3333-3333-3333-333333333333"),
             }
         );
 
@@ -218,55 +218,55 @@ public class DiContextInjectionTests : IDisposable
     public async Task MusicRepository_UsesInjectedFactory_NotNewInstance()
     {
         // Verify MusicRepository queries use the injected factory by checking data is accessible
-        MusicRepository repository = new(CreateFactory());
+        MusicRepository repository = new(contextFactory: CreateFactory());
 
-        List<Guid> artistIds = await repository.SearchArtistIdsAsync("test");
-        Assert.Single(artistIds);
-        Assert.Equal(Guid.Parse("11111111-1111-1111-1111-111111111111"), artistIds[0]);
+        List<Guid> artistIds = await repository.SearchArtistIdsAsync(normalizedQuery: "test");
+        Assert.Single(collection: artistIds);
+        Assert.Equal(expected: Guid.Parse(input: "11111111-1111-1111-1111-111111111111"), actual: artistIds[index: 0]);
     }
 
     [Fact]
     public async Task MusicRepository_SearchAlbumIds_UsesInjectedFactory()
     {
-        MusicRepository repository = new(CreateFactory());
+        MusicRepository repository = new(contextFactory: CreateFactory());
 
-        List<Guid> albumIds = await repository.SearchAlbumIdsAsync("test");
-        Assert.Single(albumIds);
-        Assert.Equal(Guid.Parse("22222222-2222-2222-2222-222222222222"), albumIds[0]);
+        List<Guid> albumIds = await repository.SearchAlbumIdsAsync(normalizedQuery: "test");
+        Assert.Single(collection: albumIds);
+        Assert.Equal(expected: Guid.Parse(input: "22222222-2222-2222-2222-222222222222"), actual: albumIds[index: 0]);
     }
 
     [Fact]
     public async Task MusicRepository_SearchTrackIds_UsesInjectedFactory()
     {
-        MusicRepository repository = new(CreateFactory());
+        MusicRepository repository = new(contextFactory: CreateFactory());
 
-        List<Guid> trackIds = await repository.SearchTrackIdsAsync("test");
-        Assert.Single(trackIds);
-        Assert.Equal(Guid.Parse("33333333-3333-3333-3333-333333333333"), trackIds[0]);
+        List<Guid> trackIds = await repository.SearchTrackIdsAsync(normalizedQuery: "test");
+        Assert.Single(collection: trackIds);
+        Assert.Equal(expected: Guid.Parse(input: "33333333-3333-3333-3333-333333333333"), actual: trackIds[index: 0]);
     }
 
     [Fact]
     public async Task MusicRepository_SearchPlaylistIds_UsesInjectedFactory()
     {
-        MusicRepository repository = new(CreateFactory());
+        MusicRepository repository = new(contextFactory: CreateFactory());
 
-        List<Guid> playlistIds = await repository.SearchPlaylistIdsAsync("test");
-        Assert.Single(playlistIds);
-        Assert.Equal(Guid.Parse("44444444-4444-4444-4444-444444444444"), playlistIds[0]);
+        List<Guid> playlistIds = await repository.SearchPlaylistIdsAsync(normalizedQuery: "test");
+        Assert.Single(collection: playlistIds);
+        Assert.Equal(expected: Guid.Parse(input: "44444444-4444-4444-4444-444444444444"), actual: playlistIds[index: 0]);
     }
 
     [Fact]
     public async Task MusicRepository_GetArtistAsync_UsesInjectedFactory()
     {
-        MusicRepository repository = new(CreateFactory());
+        MusicRepository repository = new(contextFactory: CreateFactory());
 
         Artist? artist = await repository.GetArtistAsync(
-            SeedConstants.UserId,
-            Guid.Parse("11111111-1111-1111-1111-111111111111")
+            userId: SeedConstants.UserId,
+            id: Guid.Parse(input: "11111111-1111-1111-1111-111111111111")
         );
 
-        Assert.NotNull(artist);
-        Assert.Equal("Test Artist", artist.Name);
+        Assert.NotNull(@object: artist);
+        Assert.Equal(expected: "Test Artist", actual: artist.Name);
     }
 
     [Fact]
@@ -274,29 +274,29 @@ public class DiContextInjectionTests : IDisposable
     {
         // Simulate IDbContextFactory behavior: each factory call returns a distinct context
         // that can be used safely on different threads
-        Task<int> task1 = Task.Run(() =>
+        Task<int> task1 = Task.Run(function: () =>
         {
             using MediaContext context = CreateContext();
             return context.Artists.Count();
         });
 
-        Task<int> task2 = Task.Run(() =>
+        Task<int> task2 = Task.Run(function: () =>
         {
             using MediaContext context = CreateContext();
             return context.Albums.Count();
         });
 
-        Task<int> task3 = Task.Run(() =>
+        Task<int> task3 = Task.Run(function: () =>
         {
             using MediaContext context = CreateContext();
             return context.Tracks.Count();
         });
 
-        await Task.WhenAll(task1, task2, task3);
+        await Task.WhenAll(tasks: [task1, task2, task3]);
 
-        Assert.Equal(1, await task1);
-        Assert.Equal(1, await task2);
-        Assert.Equal(1, await task3);
+        Assert.Equal(expected: 1, actual: await task1);
+        Assert.Equal(expected: 1, actual: await task2);
+        Assert.Equal(expected: 1, actual: await task3);
     }
 
     [Fact]
@@ -306,37 +306,37 @@ public class DiContextInjectionTests : IDisposable
         // (proves it reads from the injected factory, not a global/static one)
         string isolatedDb = Guid.NewGuid().ToString();
         await using SqliteConnection isolatedConn = new(
-            $"DataSource={isolatedDb};Mode=Memory;Cache=Shared"
+            connectionString: $"DataSource={isolatedDb};Mode=Memory;Cache=Shared"
         );
         isolatedConn.Open();
         isolatedConn.CreateFunction(
-            "normalize_search",
-            (string? input) => input?.NormalizeSearch() ?? string.Empty
+            name: "normalize_search",
+            function: (string? input) => input?.NormalizeSearch() ?? string.Empty
         );
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(
-                $"DataSource={isolatedDb};Mode=Memory;Cache=Shared",
-                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+                connectionString: $"DataSource={isolatedDb};Mode=Memory;Cache=Shared",
+                sqliteOptionsAction: o => o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery)
             )
-            .AddInterceptors(new SqliteNormalizeSearchInterceptor())
+            .AddInterceptors(interceptors: new SqliteNormalizeSearchInterceptor())
             .Options;
-        using (TestMediaContext initContext = new(options))
+        using (TestMediaContext initContext = new(options: options))
         {
             await initContext.Database.EnsureCreatedAsync();
         }
 
-        MusicRepository repository = new(new TestDbContextFactory(options));
+        MusicRepository repository = new(contextFactory: new TestDbContextFactory(options: options));
 
-        List<Guid> artistIds = await repository.SearchArtistIdsAsync("test");
-        List<Guid> albumIds = await repository.SearchAlbumIdsAsync("test");
-        List<Guid> trackIds = await repository.SearchTrackIdsAsync("test");
-        List<Guid> playlistIds = await repository.SearchPlaylistIdsAsync("test");
+        List<Guid> artistIds = await repository.SearchArtistIdsAsync(normalizedQuery: "test");
+        List<Guid> albumIds = await repository.SearchAlbumIdsAsync(normalizedQuery: "test");
+        List<Guid> trackIds = await repository.SearchTrackIdsAsync(normalizedQuery: "test");
+        List<Guid> playlistIds = await repository.SearchPlaylistIdsAsync(normalizedQuery: "test");
 
-        Assert.Empty(artistIds);
-        Assert.Empty(albumIds);
-        Assert.Empty(trackIds);
-        Assert.Empty(playlistIds);
+        Assert.Empty(collection: artistIds);
+        Assert.Empty(collection: albumIds);
+        Assert.Empty(collection: trackIds);
+        Assert.Empty(collection: playlistIds);
     }
 
     public void Dispose()

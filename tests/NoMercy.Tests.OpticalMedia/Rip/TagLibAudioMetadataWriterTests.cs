@@ -27,7 +27,7 @@ namespace NoMercy.Tests.OpticalMedia.Rip;
 /// The minimal FLAC byte sequence below contains a valid STREAMINFO block
 /// (44100 Hz, stereo, 16-bit, 0 samples) so TagLib# accepts it as a FLAC.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class TagLibAudioMetadataWriterTests : IDisposable
 {
     // Minimal valid FLAC: fLaC marker + STREAMINFO metadata block (34 bytes).
@@ -35,31 +35,31 @@ public class TagLibAudioMetadataWriterTests : IDisposable
     // sample_rate=44100, channels=2, bits=16, total_samples=0, md5=zeros.
     // 0x80 block-type byte = last-metadata-block (1) + type STREAMINFO (0).
     private static readonly byte[] MinimalFlacBytes = Convert.FromBase64String(
-        "ZkxhQ4AAACIQABAAAAAAAAAACsRC8AAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        s: "ZkxhQ4AAACIQABAAAAAAAAAACsRC8AAAAAAAAAAAAAAAAAAAAAAAAAAA"
     );
 
     private readonly string _tempFlac;
 
     public TagLibAudioMetadataWriterTests()
     {
-        _tempFlac = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}.flac");
-        System.IO.File.WriteAllBytes(_tempFlac, MinimalFlacBytes);
+        _tempFlac = Path.Combine(path1: Path.GetTempPath(), path2: $"test_{Guid.NewGuid():N}.flac");
+        System.IO.File.WriteAllBytes(path: _tempFlac, bytes: MinimalFlacBytes);
     }
 
     public void Dispose()
     {
-        if (System.IO.File.Exists(_tempFlac))
-            System.IO.File.Delete(_tempFlac);
-        GC.SuppressFinalize(this);
+        if (System.IO.File.Exists(path: _tempFlac))
+            System.IO.File.Delete(path: _tempFlac);
+        GC.SuppressFinalize(obj: this);
     }
 
     private async Task WriteAndReopenAsync(AudioMetadata metadata, Action<Tag> assertions)
     {
         TagLibAudioMetadataWriter writer = new();
-        await writer.WriteTagsAsync(_tempFlac, metadata, CancellationToken.None);
+        await writer.WriteTagsAsync(filePath: _tempFlac, metadata: metadata, ct: CancellationToken.None);
 
-        using TagLib.File tagFile = TagLib.File.Create(_tempFlac);
-        assertions(tagFile.Tag);
+        using TagLib.File tagFile = TagLib.File.Create(path: _tempFlac);
+        assertions(obj: tagFile.Tag);
     }
 
     private static AudioMetadata BasicMetadata(
@@ -96,8 +96,8 @@ public class TagLibAudioMetadataWriterTests : IDisposable
     public async Task WriteTagsAsync_Title_RoundTrips()
     {
         await WriteAndReopenAsync(
-            BasicMetadata(title: "My Song"),
-            tag => tag.Title.Should().Be("My Song")
+            metadata: BasicMetadata(title: "My Song"),
+            assertions: tag => tag.Title.Should().Be(expected: "My Song")
         );
     }
 
@@ -105,8 +105,8 @@ public class TagLibAudioMetadataWriterTests : IDisposable
     public async Task WriteTagsAsync_Artist_RoundTrips()
     {
         await WriteAndReopenAsync(
-            BasicMetadata(artist: "David Bowie"),
-            tag => tag.FirstPerformer.Should().Be("David Bowie")
+            metadata: BasicMetadata(artist: "David Bowie"),
+            assertions: tag => tag.FirstPerformer.Should().Be(expected: "David Bowie")
         );
     }
 
@@ -114,8 +114,8 @@ public class TagLibAudioMetadataWriterTests : IDisposable
     public async Task WriteTagsAsync_AlbumArtist_RoundTrips()
     {
         await WriteAndReopenAsync(
-            BasicMetadata(albumArtist: "Various Artists"),
-            tag => tag.FirstAlbumArtist.Should().Be("Various Artists")
+            metadata: BasicMetadata(albumArtist: "Various Artists"),
+            assertions: tag => tag.FirstAlbumArtist.Should().Be(expected: "Various Artists")
         );
     }
 
@@ -123,35 +123,35 @@ public class TagLibAudioMetadataWriterTests : IDisposable
     public async Task WriteTagsAsync_Album_RoundTrips()
     {
         await WriteAndReopenAsync(
-            BasicMetadata(album: "Ziggy Stardust"),
-            tag => tag.Album.Should().Be("Ziggy Stardust")
+            metadata: BasicMetadata(album: "Ziggy Stardust"),
+            assertions: tag => tag.Album.Should().Be(expected: "Ziggy Stardust")
         );
     }
 
     [Fact]
     public async Task WriteTagsAsync_TrackNumber_RoundTrips()
     {
-        await WriteAndReopenAsync(BasicMetadata(trackNumber: 7), tag => tag.Track.Should().Be(7));
+        await WriteAndReopenAsync(metadata: BasicMetadata(trackNumber: 7), assertions: tag => tag.Track.Should().Be(expected: 7));
     }
 
     [Fact]
     public async Task WriteTagsAsync_DiscNumber_RoundTrips()
     {
-        await WriteAndReopenAsync(BasicMetadata(discNumber: 2), tag => tag.Disc.Should().Be(2));
+        await WriteAndReopenAsync(metadata: BasicMetadata(discNumber: 2), assertions: tag => tag.Disc.Should().Be(expected: 2));
     }
 
     [Fact]
     public async Task WriteTagsAsync_Year_RoundTrips()
     {
-        await WriteAndReopenAsync(BasicMetadata(year: 1972), tag => tag.Year.Should().Be(1972));
+        await WriteAndReopenAsync(metadata: BasicMetadata(year: 1972), assertions: tag => tag.Year.Should().Be(expected: 1972));
     }
 
     [Fact]
     public async Task WriteTagsAsync_Genre_RoundTrips()
     {
         await WriteAndReopenAsync(
-            BasicMetadata(genre: "Glam Rock"),
-            tag => tag.FirstGenre.Should().Be("Glam Rock")
+            metadata: BasicMetadata(genre: "Glam Rock"),
+            assertions: tag => tag.FirstGenre.Should().Be(expected: "Glam Rock")
         );
     }
 
@@ -159,8 +159,8 @@ public class TagLibAudioMetadataWriterTests : IDisposable
     public async Task WriteTagsAsync_MusicBrainzTrackId_RoundTrips()
     {
         await WriteAndReopenAsync(
-            BasicMetadata(trackId: "abc-123-def"),
-            tag => tag.MusicBrainzTrackId.Should().Be("abc-123-def")
+            metadata: BasicMetadata(trackId: "abc-123-def"),
+            assertions: tag => tag.MusicBrainzTrackId.Should().Be(expected: "abc-123-def")
         );
     }
 
@@ -168,8 +168,8 @@ public class TagLibAudioMetadataWriterTests : IDisposable
     public async Task WriteTagsAsync_MusicBrainzReleaseId_RoundTrips()
     {
         await WriteAndReopenAsync(
-            BasicMetadata(releaseId: "rel-456-ghi"),
-            tag => tag.MusicBrainzReleaseId.Should().Be("rel-456-ghi")
+            metadata: BasicMetadata(releaseId: "rel-456-ghi"),
+            assertions: tag => tag.MusicBrainzReleaseId.Should().Be(expected: "rel-456-ghi")
         );
     }
 
@@ -180,28 +180,28 @@ public class TagLibAudioMetadataWriterTests : IDisposable
     {
         // Write a 1x1 JPEG to a temp file and feed it as the cover source.
         byte[] tinyJpeg = Convert.FromBase64String(
-            "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkS"
-                + "Ew8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJ"
-                + "CQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy"
-                + "MjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/"
-                + "EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/"
-                + "aAAwDAQACEQMRAD8AJQAB/9k="
+            s: "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkS"
+               + "Ew8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJ"
+               + "CQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy"
+               + "MjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/"
+               + "EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/"
+               + "aAAwDAQACEQMRAD8AJQAB/9k="
         );
-        string jpegPath = Path.Combine(Path.GetTempPath(), $"cover_{Guid.NewGuid():N}.jpg");
-        await System.IO.File.WriteAllBytesAsync(jpegPath, tinyJpeg);
+        string jpegPath = Path.Combine(path1: Path.GetTempPath(), path2: $"cover_{Guid.NewGuid():N}.jpg");
+        await System.IO.File.WriteAllBytesAsync(path: jpegPath, bytes: tinyJpeg);
 
         try
         {
             AlbumArtSource source = new(FilePath: jpegPath, Url: null, Type: AlbumArtType.Front);
             await WriteAndReopenAsync(
-                BasicMetadata(coverArt: source),
-                tag => tag.Pictures.Should().HaveCount(1, "one picture should be embedded")
+                metadata: BasicMetadata(coverArt: source),
+                assertions: tag => tag.Pictures.Should().HaveCount(expected: 1, because: "one picture should be embedded")
             );
         }
         finally
         {
-            if (System.IO.File.Exists(jpegPath))
-                System.IO.File.Delete(jpegPath);
+            if (System.IO.File.Exists(path: jpegPath))
+                System.IO.File.Delete(path: jpegPath);
         }
     }
 
@@ -210,9 +210,9 @@ public class TagLibAudioMetadataWriterTests : IDisposable
     {
         Func<Task> act = () =>
             new TagLibAudioMetadataWriter().WriteTagsAsync(
-                _tempFlac,
-                BasicMetadata(coverArt: null),
-                CancellationToken.None
+                filePath: _tempFlac,
+                metadata: BasicMetadata(coverArt: null),
+                ct: CancellationToken.None
             );
 
         await act.Should().NotThrowAsync();
@@ -223,13 +223,13 @@ public class TagLibAudioMetadataWriterTests : IDisposable
     [Fact]
     public async Task WriteTagsAsync_NullYear_SetsYearZero()
     {
-        await WriteAndReopenAsync(BasicMetadata(year: null), tag => tag.Year.Should().Be(0));
+        await WriteAndReopenAsync(metadata: BasicMetadata(year: null), assertions: tag => tag.Year.Should().Be(expected: 0));
     }
 
     [Fact]
     public async Task WriteTagsAsync_NullGenre_SetsEmptyGenres()
     {
-        await WriteAndReopenAsync(BasicMetadata(genre: null), tag => tag.Genres.Should().BeEmpty());
+        await WriteAndReopenAsync(metadata: BasicMetadata(genre: null), assertions: tag => tag.Genres.Should().BeEmpty());
     }
 
     // ── Cover art from URL — real loopback HTTP server, no HttpClient mock ─
@@ -244,15 +244,15 @@ public class TagLibAudioMetadataWriterTests : IDisposable
     public async Task WriteTagsAsync_CoverArt_FromUrl_DownloadsAndEmbedsPicture()
     {
         byte[] tinyJpeg = Convert.FromBase64String(
-            "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkS"
-                + "Ew8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJ"
-                + "CQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy"
-                + "MjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/"
-                + "EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/"
-                + "aAAwDAQACEQMRAD8AJQAB/9k="
+            s: "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkS"
+               + "Ew8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJ"
+               + "CQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy"
+               + "MjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/"
+               + "EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/"
+               + "aAAwDAQACEQMRAD8AJQAB/9k="
         );
 
-        await using LoopbackHttpServer server = await LoopbackHttpServer.StartAsync(tinyJpeg);
+        await using LoopbackHttpServer server = await LoopbackHttpServer.StartAsync(responseBody: tinyJpeg);
 
         AlbumArtSource source = new(
             FilePath: null,
@@ -260,8 +260,8 @@ public class TagLibAudioMetadataWriterTests : IDisposable
             Type: AlbumArtType.Front
         );
         await WriteAndReopenAsync(
-            BasicMetadata(coverArt: source),
-            tag => tag.Pictures.Should().HaveCount(1, "the downloaded cover must be embedded")
+            metadata: BasicMetadata(coverArt: source),
+            assertions: tag => tag.Pictures.Should().HaveCount(expected: 1, because: "the downloaded cover must be embedded")
         );
     }
 
@@ -277,8 +277,8 @@ public class TagLibAudioMetadataWriterTests : IDisposable
         );
 
         await WriteAndReopenAsync(
-            BasicMetadata(coverArt: source),
-            tag => tag.Pictures.Should().BeEmpty("a failed cover download must degrade, not throw")
+            metadata: BasicMetadata(coverArt: source),
+            assertions: tag => tag.Pictures.Should().BeEmpty(because: "a failed cover download must degrade, not throw")
         );
     }
 
@@ -286,14 +286,14 @@ public class TagLibAudioMetadataWriterTests : IDisposable
     public async Task WriteTagsAsync_CoverArt_FilePathSetButMissing_AndNoUrl_EmbedsNoPicture()
     {
         AlbumArtSource source = new(
-            FilePath: Path.Combine(Path.GetTempPath(), $"missing_{Guid.NewGuid():N}.jpg"),
+            FilePath: Path.Combine(path1: Path.GetTempPath(), path2: $"missing_{Guid.NewGuid():N}.jpg"),
             Url: null,
             Type: AlbumArtType.Front
         );
 
         await WriteAndReopenAsync(
-            BasicMetadata(coverArt: source),
-            tag => tag.Pictures.Should().BeEmpty()
+            metadata: BasicMetadata(coverArt: source),
+            assertions: tag => tag.Pictures.Should().BeEmpty()
         );
     }
 
@@ -314,21 +314,21 @@ public class TagLibAudioMetadataWriterTests : IDisposable
         {
             _listener = listener;
             Port = ((IPEndPoint)listener.LocalEndpoint).Port;
-            _acceptLoop = AcceptOnceAsync(body, _cts.Token);
+            _acceptLoop = AcceptOnceAsync(body: body, ct: _cts.Token);
         }
 
         public static Task<LoopbackHttpServer> StartAsync(byte[] responseBody)
         {
-            TcpListener listener = new(IPAddress.Loopback, 0);
+            TcpListener listener = new(localaddr: IPAddress.Loopback, port: 0);
             listener.Start();
-            return Task.FromResult(new LoopbackHttpServer(listener, responseBody));
+            return Task.FromResult(result: new LoopbackHttpServer(listener: listener, body: responseBody));
         }
 
         private async Task AcceptOnceAsync(byte[] body, CancellationToken ct)
         {
             try
             {
-                using TcpClient client = await _listener.AcceptTcpClientAsync(ct);
+                using TcpClient client = await _listener.AcceptTcpClientAsync(cancellationToken: ct);
                 await using NetworkStream stream = client.GetStream();
 
                 // Drain the request (headers terminated by CRLFCRLF) without
@@ -337,12 +337,12 @@ public class TagLibAudioMetadataWriterTests : IDisposable
                 int total = 0;
                 while (!ct.IsCancellationRequested)
                 {
-                    int read = await stream.ReadAsync(buffer.AsMemory(total), ct);
+                    int read = await stream.ReadAsync(buffer: buffer.AsMemory(start: total), cancellationToken: ct);
                     if (read == 0)
                         break;
                     total += read;
-                    string soFar = Encoding.ASCII.GetString(buffer, 0, total);
-                    if (soFar.Contains("\r\n\r\n", StringComparison.Ordinal))
+                    string soFar = Encoding.ASCII.GetString(bytes: buffer, index: 0, count: total);
+                    if (soFar.Contains(value: "\r\n\r\n", comparisonType: StringComparison.Ordinal))
                         break;
                 }
 
@@ -352,10 +352,10 @@ public class TagLibAudioMetadataWriterTests : IDisposable
                     + $"Content-Length: {body.Length}\r\n"
                     + "Connection: close\r\n"
                     + "\r\n";
-                byte[] headerBytes = Encoding.ASCII.GetBytes(headers);
-                await stream.WriteAsync(headerBytes, ct);
-                await stream.WriteAsync(body, ct);
-                await stream.FlushAsync(ct);
+                byte[] headerBytes = Encoding.ASCII.GetBytes(s: headers);
+                await stream.WriteAsync(buffer: headerBytes, cancellationToken: ct);
+                await stream.WriteAsync(buffer: body, cancellationToken: ct);
+                await stream.FlushAsync(cancellationToken: ct);
             }
             catch (OperationCanceledException)
             {

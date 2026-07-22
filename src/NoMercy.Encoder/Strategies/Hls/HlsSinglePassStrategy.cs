@@ -43,7 +43,7 @@ public class HlsSinglePassStrategy(
     IEncoder encoder,
     ILogger<HlsSinglePassStrategy> logger,
     IStorage storage
-) : SinglePassStrategyBase(encoder, logger, storage)
+) : SinglePassStrategyBase(encoder: encoder, logger: logger, storage: storage)
 {
     public override OutputFormat Format => OutputFormat.Hls;
 
@@ -58,14 +58,14 @@ public class HlsSinglePassStrategy(
             string hdr = video.IsHdrOutput ? " HDR" : string.Empty;
 
             tasks.Add(
-                new(
+                item: new(
                     TaskId: $"{groupTag}-video-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Video,
                     OutputIndex: i,
-                    Resources: TaskResourceHelper.ForVideoOutput(video),
-                    EstimatedCostUnits: EstimateVideoCost(video),
+                    Resources: TaskResourceHelper.ForVideoOutput(video: video),
+                    EstimatedCostUnits: EstimateVideoCost(video: video),
                     Label: $"{resolution}{hdr} {video.EncoderName}",
                     VideoWidth: video.Width,
                     VideoEncoderName: video.EncoderName
@@ -79,13 +79,13 @@ public class HlsSinglePassStrategy(
             string lang = audio.Language ?? "und";
 
             tasks.Add(
-                new(
+                item: new(
                     TaskId: $"{groupTag}-audio-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Audio,
                     OutputIndex: i,
-                    Resources: TaskResourceHelper.CpuOnly(1),
+                    Resources: TaskResourceHelper.CpuOnly(cpuThreads: 1),
                     EstimatedCostUnits: 1,
                     Label: $"{lang} {audio.EncoderName} {audio.Channels}ch"
                 )
@@ -98,13 +98,13 @@ public class HlsSinglePassStrategy(
             string lang = sub.Language ?? "und";
 
             tasks.Add(
-                new(
+                item: new(
                     TaskId: $"{groupTag}-sub-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Subtitle,
                     OutputIndex: i,
-                    Resources: TaskResourceHelper.CpuOnly(1),
+                    Resources: TaskResourceHelper.CpuOnly(cpuThreads: 1),
                     EstimatedCostUnits: 1,
                     Label: $"sub {lang} {sub.OutputCodec}"
                 )
@@ -114,13 +114,13 @@ public class HlsSinglePassStrategy(
         if (plan.Thumbnails is not null)
         {
             tasks.Add(
-                new(
+                item: new(
                     TaskId: $"{groupTag}-thumbs",
                     ParentJobId: 0,
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Thumbnails,
                     OutputIndex: 0,
-                    Resources: TaskResourceHelper.CpuOnly(1),
+                    Resources: TaskResourceHelper.CpuOnly(cpuThreads: 1),
                     EstimatedCostUnits: 1,
                     Label: $"thumbnails {plan.Thumbnails.Width}x{plan.Thumbnails.Height}"
                 )
@@ -132,15 +132,15 @@ public class HlsSinglePassStrategy(
             int count = plan.Chapters.Count;
             for (int i = 0; i < count; i++)
             {
-                ChapterInfo chapter = plan.Chapters[i];
+                ChapterInfo chapter = plan.Chapters[index: i];
                 tasks.Add(
-                    new(
+                    item: new(
                         TaskId: $"{groupTag}-chapter-{i}",
                         ParentJobId: 0,
                         GroupTag: groupTag,
                         Kind: EncodeTaskKind.Chapters,
                         OutputIndex: i,
-                        Resources: TaskResourceHelper.CpuOnly(1),
+                        Resources: TaskResourceHelper.CpuOnly(cpuThreads: 1),
                         EstimatedCostUnits: 1,
                         Label: $"chapter still {i + 1}/{count} @ {chapter.Start.TotalSeconds:F0}s"
                     )
@@ -149,7 +149,7 @@ public class HlsSinglePassStrategy(
         }
 
         if (tasks.Count == 0)
-            return [IEncodingStrategy.WholeTask(groupTag)];
+            return [IEncodingStrategy.WholeTask(groupTag: groupTag)];
 
         return tasks.ToArray();
     }

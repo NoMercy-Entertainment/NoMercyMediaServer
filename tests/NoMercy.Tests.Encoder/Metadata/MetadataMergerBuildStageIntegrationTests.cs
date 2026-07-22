@@ -37,13 +37,13 @@ public class MetadataMergerBuildStageIntegrationTests
 
     private static BuildStage CreateStage(IMetadataInjector injector, IMetadataMerger merger) =>
         new(
-            new() { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
-            new FontExtractor(TestStorageFactory.CreateLocal()),
-            new SubtitleExtractor(),
-            OutputStrategyFactoryTestHelper.Create(),
-            [],
-            NullLogger<BuildStage>.Instance,
-            TestStorageFactory.CreateLocal(),
+            options: new() { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
+            fontExtractor: new FontExtractor(storage: TestStorageFactory.CreateLocal()),
+            subtitleExtractor: new SubtitleExtractor(),
+            outputStrategyFactory: OutputStrategyFactoryTestHelper.Create(),
+            drmProcessors: [],
+            logger: NullLogger<BuildStage>.Instance,
+            storage: TestStorageFactory.CreateLocal(),
             metadataInjector: injector,
             metadataMerger: merger
         );
@@ -59,8 +59,8 @@ public class MetadataMergerBuildStageIntegrationTests
                     GroupId: "g0",
                     Nodes:
                     [
-                        new("decode_0", OperationType.Decode, [], new()),
-                        new("encode_0", OperationType.Encode, ["decode_0"], new()),
+                        new(Id: "decode_0", Operation: OperationType.Decode, DependsOn: [], Parameters: new()),
+                        new(Id: "encode_0", Operation: OperationType.Encode, DependsOn: ["decode_0"], Parameters: new()),
                     ],
                     DeviceId: null,
                     GpuSlotsRequired: 0,
@@ -69,7 +69,7 @@ public class MetadataMergerBuildStageIntegrationTests
                     Priority: 1
                 ),
             ],
-            EstimatedTotalDuration: TimeSpan.FromMinutes(90),
+            EstimatedTotalDuration: TimeSpan.FromMinutes(minutes: 90),
             OutputPlan: new(
                 Format: OutputFormat.Mkv,
                 VideoOutputs:
@@ -110,7 +110,7 @@ public class MetadataMergerBuildStageIntegrationTests
         new(
             FilePath: "/movies/fight_club.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(139),
+            Duration: TimeSpan.FromMinutes(minutes: 139),
             OverallBitRateKbps: 20000,
             FileSizeBytes: 20_000_000_000,
             VideoStreams:
@@ -161,7 +161,7 @@ public class MetadataMergerBuildStageIntegrationTests
 
         CapturingMetadataInjector injector = new();
         MetadataMerger merger = new();
-        BuildStage stage = CreateStage(injector, merger);
+        BuildStage stage = CreateStage(injector: injector, merger: merger);
 
         // DB track: language=eng (should be overridden by source), explicit title
         TrackMetadata dbTrack = new(
@@ -200,13 +200,13 @@ public class MetadataMergerBuildStageIntegrationTests
 
         ExecutionPlan plan = BuildCopyMkvPlan();
         BuildInput input = new(
-            plan,
-            "/movies/fight_club.mkv",
-            "/tmp/nmtest-output/fc",
-            "Fight Club.NoMercy"
+            Plan: plan,
+            InputPath: "/movies/fight_club.mkv",
+            OutputDirectory: "/tmp/nmtest-output/fc",
+            MediaTitle: "Fight Club.NoMercy"
         );
 
-        StageResult result = await stage.ExecuteAsync(input, context, default);
+        StageResult result = await stage.ExecuteAsync(input: input, context: context, ct: default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
 
@@ -215,10 +215,10 @@ public class MetadataMergerBuildStageIntegrationTests
         IReadOnlyList<TrackMetadata> tracks = injector.CapturedContext!.Tracks;
 
         tracks.Should().ContainSingle();
-        TrackMetadata merged = tracks[0];
-        merged.Language.Should().Be("jpn", "source language must win over DB language");
-        merged.Title.Should().Be("Japanese TrueHD 7.1", "DB title must win when non-empty");
-        merged.IsDefault.Should().BeTrue("DB IsDefault wins");
+        TrackMetadata merged = tracks[index: 0];
+        merged.Language.Should().Be(expected: "jpn", because: "source language must win over DB language");
+        merged.Title.Should().Be(expected: "Japanese TrueHD 7.1", because: "DB title must win when non-empty");
+        merged.IsDefault.Should().BeTrue(because: "DB IsDefault wins");
     }
 
     // -----------------------------------------------------------------------

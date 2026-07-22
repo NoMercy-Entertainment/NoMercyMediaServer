@@ -48,21 +48,21 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
         // Prefer the embedded Blu-ray title (bdmt_*.xml) over the raw volume label.
         string? querySource = disc.DiscTitle ?? disc.DiscLabel;
 
-        if (string.IsNullOrWhiteSpace(querySource))
+        if (string.IsNullOrWhiteSpace(value: querySource))
         {
             logger.LogInformation(
-                "VideoDiscIdentifier skipped — disc has no label or embedded title (type={Type})",
-                disc.Type
+                message: "VideoDiscIdentifier skipped — disc has no label or embedded title (type={Type})",
+                args: disc.Type
             );
             return NeedsManual();
         }
 
-        string fullQuery = NormalizeLabel(querySource);
-        if (string.IsNullOrWhiteSpace(fullQuery))
+        string fullQuery = NormalizeLabel(label: querySource);
+        if (string.IsNullOrWhiteSpace(value: fullQuery))
         {
             logger.LogInformation(
-                "VideoDiscIdentifier skipped — normalised query is empty (raw={Raw})",
-                querySource
+                message: "VideoDiscIdentifier skipped — normalised query is empty (raw={Raw})",
+                args: querySource
             );
             return NeedsManual();
         }
@@ -70,29 +70,27 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
         int discDurationSec = disc.MainTitleDurationSec;
 
         List<DiscCandidate> all = [];
-        all.AddRange(await SearchAsync(fullQuery, MediaType.Movie, ct, discDurationSec));
-        all.AddRange(await SearchAsync(fullQuery, MediaType.TvShow, ct, discDurationSec));
+        all.AddRange(collection: await SearchAsync(query: fullQuery, type: MediaType.Movie, ct: ct, discDurationSec: discDurationSec));
+        all.AddRange(collection: await SearchAsync(query: fullQuery, type: MediaType.TvShow, ct: ct, discDurationSec: discDurationSec));
 
         if (all.Count == 0)
         {
-            string firstWord = fullQuery.Split(' ', 2)[0];
-            if (!firstWord.Equals(fullQuery, StringComparison.OrdinalIgnoreCase))
+            string firstWord = fullQuery.Split(separator: ' ', count: 2)[0];
+            if (!firstWord.Equals(value: fullQuery, comparisonType: StringComparison.OrdinalIgnoreCase))
             {
                 logger.LogInformation(
-                    "VideoDiscIdentifier fallback '{Query}' → '{FirstWord}'",
-                    fullQuery,
-                    firstWord
+                    message: "VideoDiscIdentifier fallback '{Query}' → '{FirstWord}'", args: [fullQuery, firstWord]
                 );
-                all.AddRange(await SearchAsync(firstWord, MediaType.Movie, ct, discDurationSec));
-                all.AddRange(await SearchAsync(firstWord, MediaType.TvShow, ct, discDurationSec));
+                all.AddRange(collection: await SearchAsync(query: firstWord, type: MediaType.Movie, ct: ct, discDurationSec: discDurationSec));
+                all.AddRange(collection: await SearchAsync(query: firstWord, type: MediaType.TvShow, ct: ct, discDurationSec: discDurationSec));
             }
         }
 
         if (all.Count == 0)
         {
             logger.LogInformation(
-                "VideoDiscIdentifier found no TMDB candidates for '{Query}'",
-                fullQuery
+                message: "VideoDiscIdentifier found no TMDB candidates for '{Query}'",
+                args: fullQuery
             );
             return NeedsManual();
         }
@@ -103,7 +101,7 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
         {
             if (
                 candidate.Source == "tmdb"
-                && !string.IsNullOrEmpty(candidate.StableId)
+                && !string.IsNullOrEmpty(value: candidate.StableId)
                 && discDurationSec > 0
             )
             {
@@ -111,30 +109,25 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
                 // the StableId and checking back against results from SearchAsync.
                 // We use the SeasonNumber field as the TV discriminator.
                 DiscCandidate enriched = await TryResolveEpisodeAsync(
-                    candidate,
-                    discDurationSec,
-                    ct
+                    candidate: candidate,
+                    discDurationSec: discDurationSec,
+                    ct: ct
                 );
-                resolved.Add(enriched);
+                resolved.Add(item: enriched);
             }
             else
             {
-                resolved.Add(candidate);
+                resolved.Add(item: candidate);
             }
         }
 
-        DiscCandidate[] ranked = resolved.OrderByDescending(c => c.Confidence).ToArray();
+        DiscCandidate[] ranked = resolved.OrderByDescending(keySelector: c => c.Confidence).ToArray();
 
         double topConfidence = ranked.Length > 0 ? ranked[0].Confidence : 0;
         bool autoApply = topConfidence >= AutoApplyThreshold;
 
         logger.LogInformation(
-            "VideoDiscIdentifier '{Query}' (duration={Sec}s): {Count} candidates, topConfidence={Conf:F4}, autoApply={Auto}",
-            fullQuery,
-            discDurationSec,
-            ranked.Length,
-            topConfidence,
-            autoApply
+            message: "VideoDiscIdentifier '{Query}' (duration={Sec}s): {Count} candidates, topConfidence={Conf:F4}, autoApply={Auto}", args: [fullQuery, discDurationSec, ranked.Length, topConfidence, autoApply]
         );
 
         return new(
@@ -157,19 +150,16 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
         {
             return type switch
             {
-                MediaType.Movie => await SearchMoviesAsync(query, discDurationSec),
-                MediaType.TvShow => await SearchTvShowsAsync(query, discDurationSec),
+                MediaType.Movie => await SearchMoviesAsync(query: query, discDurationSec: discDurationSec),
+                MediaType.TvShow => await SearchTvShowsAsync(query: query, discDurationSec: discDurationSec),
                 _ => [],
             };
         }
         catch (Exception ex)
         {
             logger.LogInformation(
-                ex,
-                "TMDB search failed for {Type} '{Query}': {Message}",
-                type,
-                query,
-                ex.Message
+                exception: ex,
+                message: "TMDB search failed for {Type} '{Query}': {Message}", args: [type, query, ex.Message]
             );
             return [];
         }
@@ -185,26 +175,23 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
         CancellationToken ct
     )
     {
-        if (string.IsNullOrWhiteSpace(query))
+        if (string.IsNullOrWhiteSpace(value: query))
             return [];
 
         try
         {
             return type switch
             {
-                MediaType.Movie => (await SearchMoviesAsync(query, discDurationSec: 0)).ToArray(),
-                MediaType.TvShow => (await SearchTvShowsAsync(query, discDurationSec: 0)).ToArray(),
+                MediaType.Movie => (await SearchMoviesAsync(query: query, discDurationSec: 0)).ToArray(),
+                MediaType.TvShow => (await SearchTvShowsAsync(query: query, discDurationSec: 0)).ToArray(),
                 _ => [],
             };
         }
         catch (Exception ex)
         {
             logger.LogInformation(
-                ex,
-                "TMDB manual search failed for {Type} '{Query}': {Message}",
-                type,
-                query,
-                ex.Message
+                exception: ex,
+                message: "TMDB manual search failed for {Type} '{Query}': {Message}", args: [type, query, ex.Message]
             );
             return [];
         }
@@ -216,30 +203,30 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
     )
     {
         TmdbSearchClient client = new();
-        TmdbPaginatedResponse<TmdbMovie>? response = await client.Movie(query);
+        TmdbPaginatedResponse<TmdbMovie>? response = await client.Movie(query: query);
         if (response?.Results is null || response.Results.Count == 0)
             return [];
 
         List<DiscCandidate> matches = [];
         int rank = 0;
-        foreach (TmdbMovie movie in response.Results.Take(MaxCandidatesPerType))
+        foreach (TmdbMovie movie in response.Results.Take(count: MaxCandidatesPerType))
         {
-            int? runtimeMin = await FetchMovieRuntimeAsync(movie.Id);
+            int? runtimeMin = await FetchMovieRuntimeAsync(movieId: movie.Id);
             double confidence = BlendConfidence(
-                query,
-                movie.Title ?? movie.OriginalTitle ?? "",
-                rank,
-                discDurationSec,
-                runtimeMin
+                query: query,
+                candidate: movie.Title ?? movie.OriginalTitle ?? "",
+                rank: rank,
+                discDurationSec: discDurationSec,
+                runtimeMin: runtimeMin
             );
             matches.Add(
-                new(
+                item: new(
                     Source: "tmdb",
-                    StableId: movie.Id.ToString(CultureInfo.InvariantCulture),
+                    StableId: movie.Id.ToString(provider: CultureInfo.InvariantCulture),
                     Title: movie.Title ?? movie.OriginalTitle ?? string.Empty,
-                    Year: ParseYear(movie.ReleaseDate),
-                    PosterUrl: PosterUrl(movie.PosterPath),
-                    BackdropUrl: BackdropUrl(movie.BackdropPath),
+                    Year: ParseYear(date: movie.ReleaseDate),
+                    PosterUrl: PosterUrl(posterPath: movie.PosterPath),
+                    BackdropUrl: BackdropUrl(backdropPath: movie.BackdropPath),
                     Confidence: confidence,
                     Type: MediaType.Movie
                 )
@@ -255,30 +242,30 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
     )
     {
         TmdbSearchClient client = new();
-        TmdbPaginatedResponse<TmdbTvShow>? response = await client.TvShow(query);
+        TmdbPaginatedResponse<TmdbTvShow>? response = await client.TvShow(query: query);
         if (response?.Results is null || response.Results.Count == 0)
             return [];
 
         List<DiscCandidate> matches = [];
         int rank = 0;
-        foreach (TmdbTvShow show in response.Results.Take(MaxCandidatesPerType))
+        foreach (TmdbTvShow show in response.Results.Take(count: MaxCandidatesPerType))
         {
-            int? episodeRunMin = await FetchTvEpisodeRunTimeAsync(show.Id);
+            int? episodeRunMin = await FetchTvEpisodeRunTimeAsync(showId: show.Id);
             double confidence = BlendConfidence(
-                query,
-                show.Name ?? show.OriginalName ?? "",
-                rank,
-                discDurationSec,
-                episodeRunMin
+                query: query,
+                candidate: show.Name ?? show.OriginalName ?? "",
+                rank: rank,
+                discDurationSec: discDurationSec,
+                runtimeMin: episodeRunMin
             );
             matches.Add(
-                new(
+                item: new(
                     Source: "tmdb",
-                    StableId: show.Id.ToString(CultureInfo.InvariantCulture),
+                    StableId: show.Id.ToString(provider: CultureInfo.InvariantCulture),
                     Title: show.Name ?? show.OriginalName ?? string.Empty,
-                    Year: ParseYear(show.FirstAirDate),
-                    PosterUrl: PosterUrl(show.PosterPath),
-                    BackdropUrl: BackdropUrl(show.BackdropPath),
+                    Year: ParseYear(date: show.FirstAirDate),
+                    PosterUrl: PosterUrl(posterPath: show.PosterPath),
+                    BackdropUrl: BackdropUrl(backdropPath: show.BackdropPath),
                     Confidence: confidence,
                     Type: MediaType.TvShow
                 )
@@ -312,12 +299,12 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
         CancellationToken ct
     )
     {
-        if (!int.TryParse(candidate.StableId, out int showId))
+        if (!int.TryParse(s: candidate.StableId, result: out int showId))
             return candidate;
 
         try
         {
-            TmdbTvClient tvClient = new(showId);
+            TmdbTvClient tvClient = new(id: showId);
             TmdbTvShowDetails? showDetails = await tvClient.Details();
             if (showDetails?.Seasons is null || showDetails.Seasons.Count == 0)
                 return candidate;
@@ -332,11 +319,11 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
             int bestEpisodeCount = 1;
             double bestDelta = double.MaxValue;
 
-            foreach (TmdbSeason season in showDetails.Seasons.Where(s => s.SeasonNumber > 0))
+            foreach (TmdbSeason season in showDetails.Seasons.Where(predicate: s => s.SeasonNumber > 0))
             {
                 ct.ThrowIfCancellationRequested();
 
-                TmdbSeasonClient seasonClient = new(showId, season.SeasonNumber);
+                TmdbSeasonClient seasonClient = new(tvId: showId, seasonNumber: season.SeasonNumber);
                 TmdbSeasonDetails? seasonDetails = await seasonClient.Details();
                 if (seasonDetails?.Episodes is null || seasonDetails.Episodes.Length == 0)
                     continue;
@@ -348,7 +335,7 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
                 for (int epIdx = 1; epIdx <= episodeCount; epIdx++)
                 {
                     double expectedSec = epIdx * showRunSec;
-                    double delta = Math.Abs(discDurationSec - expectedSec);
+                    double delta = Math.Abs(value: discDurationSec - expectedSec);
                     if (delta < bestDelta)
                     {
                         bestDelta = delta;
@@ -362,11 +349,7 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
                 return candidate;
 
             logger.LogInformation(
-                "TV episode resolution for show {Id}: best match S{Season}, {Count} episode(s) on disc (delta={Delta:F1}s)",
-                showId,
-                bestSeasonNumber,
-                bestEpisodeCount,
-                bestDelta
+                message: "TV episode resolution for show {Id}: best match S{Season}, {Count} episode(s) on disc (delta={Delta:F1}s)", args: [showId, bestSeasonNumber, bestEpisodeCount, bestDelta]
             );
 
             // EpisodeNumber = 1 always (first episode on the disc);
@@ -380,10 +363,8 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
         catch (Exception ex)
         {
             logger.LogInformation(
-                ex,
-                "Episode resolution failed for show {Id}: {Message}",
-                showId,
-                ex.Message
+                exception: ex,
+                message: "Episode resolution failed for show {Id}: {Message}", args: [showId, ex.Message]
             );
             return candidate;
         }
@@ -393,7 +374,7 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
     {
         try
         {
-            TmdbMovieClient client = new(movieId);
+            TmdbMovieClient client = new(id: movieId);
             TmdbMovieDetails? details = await client.Details();
             return details?.Runtime > 0 ? details.Runtime : null;
         }
@@ -407,7 +388,7 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
     {
         try
         {
-            TmdbTvClient client = new(showId);
+            TmdbTvClient client = new(id: showId);
             TmdbTvShowDetails? details = await client.Details();
             int? firstRuntime = details?.EpisodeRunTime?.FirstOrDefault();
             return firstRuntime is { } runtime and > 0 ? runtime : null;
@@ -432,19 +413,19 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
         int? runtimeMin
     )
     {
-        double similarity = NormalizedSimilarity(query, candidate);
-        double rankPenalty = Math.Max(0, 1.0 - (rank * 0.1));
+        double similarity = NormalizedSimilarity(a: query, b: candidate);
+        double rankPenalty = Math.Max(val1: 0, val2: 1.0 - (rank * 0.1));
         double strScore = similarity * rankPenalty;
 
         if (discDurationSec <= 0 || runtimeMin is null or 0)
-            return Math.Round(strScore, 4);
+            return Math.Round(value: strScore, digits: 4);
 
         double runtimeSec = runtimeMin.Value * 60.0;
-        double durDelta = Math.Abs(discDurationSec - runtimeSec);
-        double durScore = 1.0 - Math.Clamp(durDelta / runtimeSec, 0.0, 1.0);
+        double durDelta = Math.Abs(value: discDurationSec - runtimeSec);
+        double durScore = 1.0 - Math.Clamp(value: durDelta / runtimeSec, min: 0.0, max: 1.0);
 
         double blended = (0.6 * strScore) + (0.4 * durScore);
-        return Math.Round(blended, 4);
+        return Math.Round(value: blended, digits: 4);
     }
 
     /// <summary>
@@ -454,25 +435,25 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
     /// </summary>
     internal static string NormalizeLabel(string label)
     {
-        string spaced = label.Replace('_', ' ').Replace('.', ' ').Replace('-', ' ');
-        spaced = MultiSpaceRegex().Replace(spaced, " ").Trim();
-        spaced = DiscSuffixRegex().Replace(spaced, "").Trim();
+        string spaced = label.Replace(oldChar: '_', newChar: ' ').Replace(oldChar: '.', newChar: ' ').Replace(oldChar: '-', newChar: ' ');
+        spaced = MultiSpaceRegex().Replace(input: spaced, replacement: " ").Trim();
+        spaced = DiscSuffixRegex().Replace(input: spaced, replacement: "").Trim();
         return spaced;
     }
 
     private static double NormalizedSimilarity(string a, string b)
     {
         HashSet<string> aTokens = new(
-            a.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            collection: a.ToLowerInvariant().Split(separator: ' ', options: StringSplitOptions.RemoveEmptyEntries)
         );
         HashSet<string> bTokens = new(
-            b.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            collection: b.ToLowerInvariant().Split(separator: ' ', options: StringSplitOptions.RemoveEmptyEntries)
         );
         if (aTokens.Count == 0 || bTokens.Count == 0)
             return 0;
 
-        int intersection = aTokens.Intersect(bTokens).Count();
-        int union = aTokens.Union(bTokens).Count();
+        int intersection = aTokens.Intersect(second: bTokens).Count();
+        int union = aTokens.Union(second: bTokens).Count();
         return union == 0 ? 0 : (double)intersection / union;
     }
 
@@ -480,14 +461,14 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
 
     private static string? PosterUrl(string? posterPath)
     {
-        if (string.IsNullOrEmpty(posterPath))
+        if (string.IsNullOrEmpty(value: posterPath))
             return null;
         return $"{TmdbImageClient.ImageBaseUrl}w500{posterPath}";
     }
 
     private static string? BackdropUrl(string? backdropPath)
     {
-        if (string.IsNullOrEmpty(backdropPath))
+        if (string.IsNullOrEmpty(value: backdropPath))
             return null;
         return $"{TmdbImageClient.ImageBaseUrl}w1280{backdropPath}";
     }
@@ -501,9 +482,9 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
             NeedsManualAssignment: true
         );
 
-    [GeneratedRegex(@"\s+")]
+    [GeneratedRegex(pattern: @"\s+")]
     private static partial Regex MultiSpaceRegex();
 
-    [GeneratedRegex(@"(\s+|^)disc\s*\d+\s*$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(pattern: @"(\s+|^)disc\s*\d+\s*$", options: RegexOptions.IgnoreCase)]
     private static partial Regex DiscSuffixRegex();
 }

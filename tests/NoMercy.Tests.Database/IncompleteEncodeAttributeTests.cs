@@ -22,8 +22,8 @@ public class IncompleteEncodeAttributeTests
     {
         IEnumerable<PrimaryKeyAttribute> attrs =
             typeof(IncompleteEncode).GetCustomAttributes<PrimaryKeyAttribute>();
-        bool found = attrs.Any(pk => pk.PropertyNames.Contains(nameof(IncompleteEncode.Id)));
-        Assert.True(found, "IncompleteEncode must have [PrimaryKey(nameof(Id))]");
+        bool found = attrs.Any(predicate: pk => pk.PropertyNames.Contains(value: nameof(IncompleteEncode.Id)));
+        Assert.True(condition: found, userMessage: "IncompleteEncode must have [PrimaryKey(nameof(Id))]");
     }
 
     [Fact]
@@ -31,14 +31,14 @@ public class IncompleteEncodeAttributeTests
     {
         IEnumerable<IndexAttribute> attrs =
             typeof(IncompleteEncode).GetCustomAttributes<IndexAttribute>();
-        bool found = attrs.Any(ix =>
+        bool found = attrs.Any(predicate: ix =>
             ix.IsUnique
-            && ix.PropertyNames.Contains(nameof(IncompleteEncode.MediaId))
-            && ix.PropertyNames.Contains(nameof(IncompleteEncode.FolderId))
+            && ix.PropertyNames.Contains(value: nameof(IncompleteEncode.MediaId))
+            && ix.PropertyNames.Contains(value: nameof(IncompleteEncode.FolderId))
         );
         Assert.True(
-            found,
-            "IncompleteEncode must have a unique composite [Index] on MediaId + FolderId"
+            condition: found,
+            userMessage: "IncompleteEncode must have a unique composite [Index] on MediaId + FolderId"
         );
     }
 }

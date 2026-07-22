@@ -25,10 +25,10 @@ public class PluginRegistryTests
             Id = id,
             Name = "Test",
             Description = string.Empty,
-            Version = new(1, 0, 0),
+            Version = new(major: 1, minor: 0, build: 0),
             Status = PluginStatus.Active,
         };
-        return new(info, null, null);
+        return new(info: info, instance: null, loadContext: null);
     }
 
     [Fact]
@@ -36,13 +36,13 @@ public class PluginRegistryTests
     {
         PluginRegistry registry = new();
         Guid id = Guid.NewGuid();
-        LoadedPlugin plugin = MakePlugin(id);
+        LoadedPlugin plugin = MakePlugin(id: id);
 
-        registry[id] = plugin;
+        registry[id: id] = plugin;
 
-        registry.TryGetValue(id, out LoadedPlugin? found).Should().BeTrue();
-        found.Should().BeSameAs(plugin);
-        registry.Values.Should().ContainSingle().Which.Should().BeSameAs(plugin);
+        registry.TryGetValue(id: id, plugin: out LoadedPlugin? found).Should().BeTrue();
+        found.Should().BeSameAs(expected: plugin);
+        registry.Values.Should().ContainSingle().Which.Should().BeSameAs(expected: plugin);
     }
 
     [Fact]
@@ -50,11 +50,11 @@ public class PluginRegistryTests
     {
         PluginRegistry registry = new();
         Guid id = Guid.NewGuid();
-        registry[id] = MakePlugin(id);
+        registry[id: id] = MakePlugin(id: id);
 
-        registry.TryRemove(id, out LoadedPlugin? removed).Should().BeTrue();
+        registry.TryRemove(id: id, plugin: out LoadedPlugin? removed).Should().BeTrue();
         removed.Should().NotBeNull();
-        registry.TryGetValue(id, out _).Should().BeFalse();
+        registry.TryGetValue(id: id, plugin: out _).Should().BeFalse();
         registry.Values.Should().BeEmpty();
     }
 
@@ -63,15 +63,15 @@ public class PluginRegistryTests
     {
         PluginRegistry registry = new();
 
-        registry.TryGetValue(Guid.NewGuid(), out _).Should().BeFalse();
+        registry.TryGetValue(id: Guid.NewGuid(), plugin: out _).Should().BeFalse();
     }
 
     [Fact]
     public void Clear_RemovesEverything()
     {
         PluginRegistry registry = new();
-        registry[Guid.NewGuid()] = MakePlugin(Guid.NewGuid());
-        registry[Guid.NewGuid()] = MakePlugin(Guid.NewGuid());
+        registry[id: Guid.NewGuid()] = MakePlugin(id: Guid.NewGuid());
+        registry[id: Guid.NewGuid()] = MakePlugin(id: Guid.NewGuid());
 
         registry.Clear();
 
@@ -93,27 +93,27 @@ public class PluginRegistryTests
 
         DisposalTrackingPlugin oldInstance = new();
         string dummyPath = Path.Combine(
-            Path.GetTempPath(),
-            $"nm-registry-test-{Guid.NewGuid():N}.dll"
+            path1: Path.GetTempPath(),
+            path2: $"nm-registry-test-{Guid.NewGuid():N}.dll"
         );
-        File.WriteAllBytes(dummyPath, []);
-        PluginLoadContext oldContext = new(dummyPath);
+        File.WriteAllBytes(path: dummyPath, bytes: []);
+        PluginLoadContext oldContext = new(pluginPath: dummyPath);
         bool oldContextUnloaded = false;
         oldContext.Unloading += _ => oldContextUnloaded = true;
 
-        registry[id] = new(MakeInfo(id), oldInstance, oldContext);
+        registry[id: id] = new(info: MakeInfo(id: id), instance: oldInstance, loadContext: oldContext);
 
-        LoadedPlugin newLoaded = new(MakeInfo(id), new DisposalTrackingPlugin(), null);
-        registry[id] = newLoaded;
+        LoadedPlugin newLoaded = new(info: MakeInfo(id: id), instance: new DisposalTrackingPlugin(), loadContext: null);
+        registry[id: id] = newLoaded;
 
         oldInstance.WasDisposed.Should().BeTrue();
         oldContextUnloaded.Should().BeTrue();
-        registry.TryGetValue(id, out LoadedPlugin? current).Should().BeTrue();
-        current.Should().BeSameAs(newLoaded);
+        registry.TryGetValue(id: id, plugin: out LoadedPlugin? current).Should().BeTrue();
+        current.Should().BeSameAs(expected: newLoaded);
 
         try
         {
-            File.Delete(dummyPath);
+            File.Delete(path: dummyPath);
         }
         catch
         {
@@ -127,10 +127,10 @@ public class PluginRegistryTests
         PluginRegistry registry = new();
         Guid id = Guid.NewGuid();
         DisposalTrackingPlugin instance = new();
-        LoadedPlugin loaded = new(MakeInfo(id), instance, null);
+        LoadedPlugin loaded = new(info: MakeInfo(id: id), instance: instance, loadContext: null);
 
-        registry[id] = loaded;
-        registry[id] = loaded; // idempotent re-set of the exact same object
+        registry[id: id] = loaded;
+        registry[id: id] = loaded; // idempotent re-set of the exact same object
 
         instance.WasDisposed.Should().BeFalse();
     }
@@ -144,9 +144,9 @@ public class PluginRegistryTests
         // null reference.
         PluginRegistry registry = new();
         Guid id = Guid.NewGuid();
-        registry[id] = new(MakeInfo(id), null, null);
+        registry[id: id] = new(info: MakeInfo(id: id), instance: null, loadContext: null);
 
-        Action act = () => registry[id] = new(MakeInfo(id), new DisposalTrackingPlugin(), null);
+        Action act = () => registry[id: id] = new(info: MakeInfo(id: id), instance: new DisposalTrackingPlugin(), loadContext: null);
 
         act.Should().NotThrow();
     }
@@ -160,25 +160,25 @@ public class PluginRegistryTests
         ConcurrentBag<DisposalTrackingPlugin> instances = new();
 
         Parallel.For(
-            0,
-            concurrentWriters,
-            i =>
+            fromInclusive: 0,
+            toExclusive: concurrentWriters,
+            body: i =>
             {
                 DisposalTrackingPlugin instance = new();
-                instances.Add(instance);
-                registry[id] = new(MakeInfo(id), instance, null);
+                instances.Add(item: instance);
+                registry[id: id] = new(info: MakeInfo(id: id), instance: instance, loadContext: null);
             }
         );
 
-        int disposedCount = instances.Count(i => i.WasDisposed);
+        int disposedCount = instances.Count(predicate: i => i.WasDisposed);
         disposedCount
             .Should()
             .Be(
-                concurrentWriters - 1,
-                "every superseded entry must be disposed exactly once, and the surviving one must not be"
+                expected: concurrentWriters - 1,
+                because: "every superseded entry must be disposed exactly once, and the surviving one must not be"
             );
 
-        registry.TryGetValue(id, out LoadedPlugin? current).Should().BeTrue();
+        registry.TryGetValue(id: id, plugin: out LoadedPlugin? current).Should().BeTrue();
         DisposalTrackingPlugin survivor = (DisposalTrackingPlugin)current!.Instance!;
         survivor.WasDisposed.Should().BeFalse();
     }
@@ -189,7 +189,7 @@ public class PluginRegistryTests
             Id = id,
             Name = "Test",
             Description = string.Empty,
-            Version = new(1, 0, 0),
+            Version = new(major: 1, minor: 0, build: 0),
             Status = PluginStatus.Active,
         };
 
@@ -200,7 +200,7 @@ public class PluginRegistryTests
         public string Name => "DisposalTracker";
         public string Description => string.Empty;
         public Guid Id => Guid.NewGuid();
-        public Version Version => new(1, 0, 0);
+        public Version Version => new(major: 1, minor: 0, build: 0);
 
         public void Initialize(IPluginContext context) { }
 

@@ -56,48 +56,48 @@ public class Aes128HlsDrmProcessor(IStorage storage) : IDrmProcessor
     {
         if (config.Method != DrmMethod.Aes128)
             throw new ArgumentException(
-                $"This processor handles AES-128 only, got {config.Method}",
-                nameof(config)
+                message: $"This processor handles AES-128 only, got {config.Method}",
+                paramName: nameof(config)
             );
 
-        if (string.IsNullOrWhiteSpace(config.KeyUri))
-            throw new ArgumentException("DrmConfig.KeyUri is required", nameof(config));
+        if (string.IsNullOrWhiteSpace(value: config.KeyUri))
+            throw new ArgumentException(message: "DrmConfig.KeyUri is required", paramName: nameof(config));
 
-        byte[] key = config.Key ?? RandomNumberGenerator.GetBytes(16);
+        byte[] key = config.Key ?? RandomNumberGenerator.GetBytes(count: 16);
         if (key.Length != 16)
             throw new ArgumentException(
-                $"AES-128 key must be 16 bytes, got {key.Length}",
-                nameof(config)
+                message: $"AES-128 key must be 16 bytes, got {key.Length}",
+                paramName: nameof(config)
             );
 
-        byte[] iv = config.Iv ?? RandomNumberGenerator.GetBytes(16);
+        byte[] iv = config.Iv ?? RandomNumberGenerator.GetBytes(count: 16);
         if (iv.Length != 16)
             throw new ArgumentException(
-                $"AES-128 IV must be 16 bytes, got {iv.Length}",
-                nameof(config)
+                message: $"AES-128 IV must be 16 bytes, got {iv.Length}",
+                paramName: nameof(config)
             );
 
         string tempDirectory = Path.Combine(
-            StoragePaths.TempRoot,
-            "drm-keys",
-            Guid.NewGuid().ToString("N")
+            path1: StoragePaths.TempRoot,
+            path2: "drm-keys",
+            path3: Guid.NewGuid().ToString(format: "N")
         );
-        storage.CreateDirectory(tempDirectory);
+        storage.CreateDirectory(path: tempDirectory);
 
-        string keyFilePath = Path.Combine(tempDirectory, KeyFileName);
-        string keyInfoPath = Path.Combine(tempDirectory, KeyInfoFileName);
+        string keyFilePath = Path.Combine(path1: tempDirectory, path2: KeyFileName);
+        string keyInfoPath = Path.Combine(path1: tempDirectory, path2: KeyInfoFileName);
 
-        await DrmKeyStore.StoreKeyAsync(config.KeyUri, key, iv, ct).ConfigureAwait(false);
-        await storage.WriteAsync(keyFilePath, key, ct).ConfigureAwait(false);
+        await DrmKeyStore.StoreKeyAsync(keyUri: config.KeyUri, key: key, iv: iv, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
+        await storage.WriteAsync(path: keyFilePath, bytes: key, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
 
         // ffmpeg accepts forward slashes everywhere; normalizing keeps tests
         // stable on Windows where Path.Combine yields backslashes.
-        string keyFileForwardSlash = keyFilePath.Replace('\\', '/');
+        string keyFileForwardSlash = keyFilePath.Replace(oldChar: '\\', newChar: '/');
         string keyInfoContent =
-            $"{config.KeyUri}\n{keyFileForwardSlash}\n{Convert.ToHexString(iv).ToLowerInvariant()}\n";
+            $"{config.KeyUri}\n{keyFileForwardSlash}\n{Convert.ToHexString(inArray: iv).ToLowerInvariant()}\n";
         await storage
-            .WriteAsync(keyInfoPath, Encoding.UTF8.GetBytes(keyInfoContent), ct)
-            .ConfigureAwait(false);
+            .WriteAsync(path: keyInfoPath, bytes: Encoding.UTF8.GetBytes(s: keyInfoContent), ct: ct)
+            .ConfigureAwait(continueOnCapturedContext: false);
 
         return new(
             KeyInfoFilePath: keyInfoPath,

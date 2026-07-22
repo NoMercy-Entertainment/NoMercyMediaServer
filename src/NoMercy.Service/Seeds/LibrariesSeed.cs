@@ -31,18 +31,18 @@ public static class LibrariesSeed
         IStorageDriver storageDriver
     )
     {
-        if (!storage.Exists(AppFiles.LibrariesSeedFile))
+        if (!storage.Exists(path: AppFiles.LibrariesSeedFile))
             return;
-        Logger.Setup("Adding Libraries", LogEventLevel.Verbose);
+        Logger.Setup(message: "Adding Libraries", level: LogEventLevel.Verbose);
 
         List<LibrarySeedDto> librarySeed =
             storage
-                .ReadAllTextAsync(AppFiles.LibrariesSeedFile, CancellationToken.None)
+                .ReadAllTextAsync(path: AppFiles.LibrariesSeedFile, ct: CancellationToken.None)
                 .Result.FromJson<List<LibrarySeedDto>>()
             ?? [];
 
         List<Library> libraries = librarySeed
-            .Select(librarySeedDto => new Library
+            .Select(selector: librarySeedDto => new Library
             {
                 Id = librarySeedDto.Id,
                 AutoRefreshInterval = librarySeedDto.AutoRefreshInterval,
@@ -62,10 +62,10 @@ public static class LibrariesSeed
         try
         {
             await dbContext
-                .Libraries.UpsertRange(libraries)
-                .On(v => new { v.Id })
+                .Libraries.UpsertRange(entities: libraries)
+                .On(match: v => new { v.Id })
                 .WhenMatched(
-                    (vs, vi) =>
+                    updater: (vs, vi) =>
                         new()
                         {
                             Id = vi.Id,
@@ -86,30 +86,30 @@ public static class LibrariesSeed
         }
         catch (Exception e)
         {
-            Logger.Setup(e.Message, LogEventLevel.Fatal);
+            Logger.Setup(message: e.Message, level: LogEventLevel.Fatal);
         }
 
-        if (!storage.Exists(AppFiles.FolderRootsSeedFile))
+        if (!storage.Exists(path: AppFiles.FolderRootsSeedFile))
             return;
-        Logger.Setup("Adding Folder Roots", LogEventLevel.Verbose);
+        Logger.Setup(message: "Adding Folder Roots", level: LogEventLevel.Verbose);
 
         Folder[] folders =
             storage
-                .ReadAllTextAsync(AppFiles.FolderRootsSeedFile, CancellationToken.None)
+                .ReadAllTextAsync(path: AppFiles.FolderRootsSeedFile, ct: CancellationToken.None)
                 .Result.FromJson<Folder[]>()
             ?? [];
 
         try
         {
             await dbContext
-                .Folders.UpsertRange(folders)
-                .On(v => new { v.Id })
-                .WhenMatched((vs, vi) => new() { Id = vi.Id, Path = vi.Path })
+                .Folders.UpsertRange(entities: folders)
+                .On(match: v => new { v.Id })
+                .WhenMatched(updater: (vs, vi) => new() { Id = vi.Id, Path = vi.Path })
                 .RunAsync();
         }
         catch (Exception e)
         {
-            Logger.Setup(e.Message, LogEventLevel.Fatal);
+            Logger.Setup(message: e.Message, level: LogEventLevel.Fatal);
         }
 
         // Register seeded folders with the middleware so they can serve files
@@ -120,7 +120,7 @@ public static class LibrariesSeed
         {
             try
             {
-                DynamicStaticFilesMiddleware.AddFolder(folder.Id, folder.DriverId, folder.Path);
+                DynamicStaticFilesMiddleware.AddFolder(folderId: folder.Id, driverId: folder.DriverId, subPath: folder.Path);
             }
             catch (Exception ex)
                 when (ex
@@ -131,31 +131,31 @@ public static class LibrariesSeed
                 )
             {
                 Logger.Setup(
-                    $"[FolderRegistration] folder {folder.Id} not registered — '{folder.Path}': {ex.Message}",
-                    LogEventLevel.Warning
+                    message: $"[FolderRegistration] folder {folder.Id} not registered — '{folder.Path}': {ex.Message}",
+                    level: LogEventLevel.Warning
                 );
             }
         }
 
-        await UserCache.Current.RefreshFolderIdsAsync(dbContext);
+        await UserCache.Current.RefreshFolderIdsAsync(context: dbContext);
 
         List<FolderLibrary> libraryFolders = [];
 
         foreach (LibrarySeedDto library in librarySeed)
         foreach (FolderSeedDto folder in library.Folders)
-            libraryFolders.Add(new(folder.Id, library.Id));
+            libraryFolders.Add(item: new(folderId: folder.Id, libraryId: library.Id));
 
         try
         {
             await dbContext
-                .FolderLibrary.UpsertRange(libraryFolders)
-                .On(v => new { v.FolderId, v.LibraryId })
-                .WhenMatched((vs, vi) => new() { FolderId = vi.FolderId, LibraryId = vi.LibraryId })
+                .FolderLibrary.UpsertRange(entities: libraryFolders)
+                .On(match: v => new { v.FolderId, v.LibraryId })
+                .WhenMatched(updater: (vs, vi) => new() { FolderId = vi.FolderId, LibraryId = vi.LibraryId })
                 .RunAsync();
         }
         catch (Exception e)
         {
-            Logger.Setup(e.Message, LogEventLevel.Fatal);
+            Logger.Setup(message: e.Message, level: LogEventLevel.Fatal);
         }
     }
 }

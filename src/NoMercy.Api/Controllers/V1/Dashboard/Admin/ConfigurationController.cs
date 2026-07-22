@@ -31,10 +31,10 @@ using Configuration = NoMercy.Database.Models.Common.Configuration;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 
 [ApiController]
-[Tags("Dashboard Configuration")]
-[ApiVersion(1.0)]
+[Tags(tags: "Dashboard Configuration")]
+[ApiVersion(version: 1.0)]
 [Authorize]
-[Route("api/v{version:apiVersion}/dashboard/configuration", Order = 10)]
+[Route(template: "api/v{version:apiVersion}/dashboard/configuration", Order = 10)]
 public class ConfigurationController(
     AppDbContext appContext,
     QueueRunner queueRunner,
@@ -49,7 +49,7 @@ public class ConfigurationController(
     public IActionResult Index()
     {
         return Ok(
-            new ConfigDto
+            value: new ConfigDto
             {
                 Data = new()
                 {
@@ -75,7 +75,7 @@ public class ConfigurationController(
     [NonAction]
     private string DeviceName()
     {
-        Configuration? device = appContext.Configuration.FirstOrDefault(device =>
+        Configuration? device = appContext.Configuration.FirstOrDefault(predicate: device =>
             device.Key == "serverName"
         );
         return device?.Value ?? Environment.MachineName;
@@ -96,29 +96,29 @@ public class ConfigurationController(
         string key = $"{queueName}Runners";
         await appContext
             .Configuration.Upsert(
-                new()
+                entity: new()
                 {
                     Key = key,
                     Value = count.ToString(),
                     ModifiedBy = userId,
                 }
             )
-            .On(configuration => configuration.Key)
-            .WhenMatched((_, configuration) => new()
+            .On(match: configuration => configuration.Key)
+            .WhenMatched(updater: (_, configuration) => new()
             {
                 Value = configuration.Value, 
                 ModifiedBy = configuration.ModifiedBy
             })
             .RunAsync();
 
-        await queueRunner.SetWorkerCount(queueName, count, userId);
+        await queueRunner.SetWorkerCount(name: queueName, max: count, userId: userId);
     }
 
     [HttpPost]
     [Authorize(Policy = "Moderator")]
     public IActionResult Store()
     {
-        return Ok(new PlaceholderResponse { Data = [] });
+        return Ok(value: new PlaceholderResponse { Data = [] });
     }
 
     [HttpPatch]
@@ -134,21 +134,21 @@ public class ConfigurationController(
             runtimeSettings.InternalServerPort = request.InternalServerPort;
             await appContext
                 .Configuration.Upsert(
-                    new()
+                    entity: new()
                     {
                         Key = "internalPort",
                         Value = request.InternalServerPort.ToString(),
                         ModifiedBy = userId,
                     }
                 )
-                .On(configuration => configuration.Key)
-                .WhenMatched((o, configuration) => new()
+                .On(match: configuration => configuration.Key)
+                .WhenMatched(updater: (o, configuration) => new()
                 {
                     Value = configuration.Value, 
                     ModifiedBy = configuration.ModifiedBy
                 })
                 .RunAsync();
-            changes.Add(("internalPort", oldPort, request.InternalServerPort));
+            changes.Add(item: ("internalPort", oldPort, request.InternalServerPort));
         }
 
         if (request.ExternalServerPort != 0)
@@ -157,93 +157,93 @@ public class ConfigurationController(
             runtimeSettings.ExternalServerPort = request.ExternalServerPort;
             await appContext
                 .Configuration.Upsert(
-                    new()
+                    entity: new()
                     {
                         Key = "externalPort",
                         Value = request.ExternalServerPort.ToString(),
                         ModifiedBy = userId,
                     }
                 )
-                .On(configuration => configuration.Key)
-                .WhenMatched((o, configuration) => new()
+                .On(match: configuration => configuration.Key)
+                .WhenMatched(updater: (o, configuration) => new()
                 {
                     Value = configuration.Value, 
                     ModifiedBy = configuration.ModifiedBy
                 })
                 .RunAsync();
-            changes.Add(("externalPort", oldPort, request.ExternalServerPort));
+            changes.Add(item: ("externalPort", oldPort, request.ExternalServerPort));
         }
 
         if (request.LibraryWorkers is not null)
         {
             int oldCount = runtimeSettings.LibraryWorkers.Value;
             int newCount = (int)request.LibraryWorkers;
-            runtimeSettings.LibraryWorkers = new(runtimeSettings.LibraryWorkers.Key, newCount);
-            await PersistWorkerCount(runtimeSettings.LibraryWorkers.Key, newCount, userId);
-            changes.Add((runtimeSettings.LibraryWorkers.Key, oldCount, newCount));
+            runtimeSettings.LibraryWorkers = new(key: runtimeSettings.LibraryWorkers.Key, value: newCount);
+            await PersistWorkerCount(queueName: runtimeSettings.LibraryWorkers.Key, count: newCount, userId: userId);
+            changes.Add(item: (runtimeSettings.LibraryWorkers.Key, oldCount, newCount));
         }
 
         if (request.ImportWorkers is not null)
         {
             int oldCount = runtimeSettings.ImportWorkers.Value;
             int newCount = (int)request.ImportWorkers;
-            runtimeSettings.ImportWorkers = new(runtimeSettings.ImportWorkers.Key, newCount);
-            await PersistWorkerCount(runtimeSettings.ImportWorkers.Key, newCount, userId);
-            changes.Add((runtimeSettings.ImportWorkers.Key, oldCount, newCount));
+            runtimeSettings.ImportWorkers = new(key: runtimeSettings.ImportWorkers.Key, value: newCount);
+            await PersistWorkerCount(queueName: runtimeSettings.ImportWorkers.Key, count: newCount, userId: userId);
+            changes.Add(item: (runtimeSettings.ImportWorkers.Key, oldCount, newCount));
         }
 
         if (request.ExtrasWorkers is not null)
         {
             int oldCount = runtimeSettings.ExtrasWorkers.Value;
             int newCount = (int)request.ExtrasWorkers;
-            runtimeSettings.ExtrasWorkers = new(runtimeSettings.ExtrasWorkers.Key, newCount);
-            await PersistWorkerCount(runtimeSettings.ExtrasWorkers.Key, newCount, userId);
-            changes.Add((runtimeSettings.ExtrasWorkers.Key, oldCount, newCount));
+            runtimeSettings.ExtrasWorkers = new(key: runtimeSettings.ExtrasWorkers.Key, value: newCount);
+            await PersistWorkerCount(queueName: runtimeSettings.ExtrasWorkers.Key, count: newCount, userId: userId);
+            changes.Add(item: (runtimeSettings.ExtrasWorkers.Key, oldCount, newCount));
         }
 
         if (request.EncoderWorkers is not null)
         {
             int oldCount = runtimeSettings.EncoderWorkers.Value;
             int newCount = (int)request.EncoderWorkers;
-            runtimeSettings.EncoderWorkers = new(runtimeSettings.EncoderWorkers.Key, newCount);
-            await PersistWorkerCount(runtimeSettings.EncoderWorkers.Key, newCount, userId);
-            changes.Add((runtimeSettings.EncoderWorkers.Key, oldCount, newCount));
+            runtimeSettings.EncoderWorkers = new(key: runtimeSettings.EncoderWorkers.Key, value: newCount);
+            await PersistWorkerCount(queueName: runtimeSettings.EncoderWorkers.Key, count: newCount, userId: userId);
+            changes.Add(item: (runtimeSettings.EncoderWorkers.Key, oldCount, newCount));
         }
 
         if (request.CronWorkers is not null)
         {
             int oldCount = runtimeSettings.CronWorkers.Value;
             int newCount = (int)request.CronWorkers;
-            runtimeSettings.CronWorkers = new(runtimeSettings.CronWorkers.Key, newCount);
-            await PersistWorkerCount(runtimeSettings.CronWorkers.Key, newCount, userId);
-            changes.Add((runtimeSettings.CronWorkers.Key, oldCount, newCount));
+            runtimeSettings.CronWorkers = new(key: runtimeSettings.CronWorkers.Key, value: newCount);
+            await PersistWorkerCount(queueName: runtimeSettings.CronWorkers.Key, count: newCount, userId: userId);
+            changes.Add(item: (runtimeSettings.CronWorkers.Key, oldCount, newCount));
         }
 
         if (request.ImageWorkers is not null)
         {
             int oldCount = runtimeSettings.ImageWorkers.Value;
             int newCount = (int)request.ImageWorkers;
-            runtimeSettings.ImageWorkers = new(runtimeSettings.ImageWorkers.Key, newCount);
-            await PersistWorkerCount(runtimeSettings.ImageWorkers.Key, newCount, userId);
-            changes.Add((runtimeSettings.ImageWorkers.Key, oldCount, newCount));
+            runtimeSettings.ImageWorkers = new(key: runtimeSettings.ImageWorkers.Key, value: newCount);
+            await PersistWorkerCount(queueName: runtimeSettings.ImageWorkers.Key, count: newCount, userId: userId);
+            changes.Add(item: (runtimeSettings.ImageWorkers.Key, oldCount, newCount));
         }
 
         if (request.FileWorkers is not null)
         {
             int oldCount = runtimeSettings.FileWorkers.Value;
             int newCount = (int)request.FileWorkers;
-            runtimeSettings.FileWorkers = new(runtimeSettings.FileWorkers.Key, newCount);
-            await PersistWorkerCount(runtimeSettings.FileWorkers.Key, newCount, userId);
-            changes.Add((runtimeSettings.FileWorkers.Key, oldCount, newCount));
+            runtimeSettings.FileWorkers = new(key: runtimeSettings.FileWorkers.Key, value: newCount);
+            await PersistWorkerCount(queueName: runtimeSettings.FileWorkers.Key, count: newCount, userId: userId);
+            changes.Add(item: (runtimeSettings.FileWorkers.Key, oldCount, newCount));
         }
 
         if (request.MusicWorkers is not null)
         {
             int oldCount = runtimeSettings.MusicWorkers.Value;
             int newCount = (int)request.MusicWorkers;
-            runtimeSettings.MusicWorkers = new(runtimeSettings.MusicWorkers.Key, newCount);
-            await PersistWorkerCount(runtimeSettings.MusicWorkers.Key, newCount, userId);
-            changes.Add((runtimeSettings.MusicWorkers.Key, oldCount, newCount));
+            runtimeSettings.MusicWorkers = new(key: runtimeSettings.MusicWorkers.Key, value: newCount);
+            await PersistWorkerCount(queueName: runtimeSettings.MusicWorkers.Key, count: newCount, userId: userId);
+            changes.Add(item: (runtimeSettings.MusicWorkers.Key, oldCount, newCount));
         }
 
         if (request.Swagger is not null)
@@ -252,16 +252,16 @@ public class ConfigurationController(
             runtimeSettings.Swagger = (bool)request.Swagger;
             await appContext
                 .Configuration.Upsert(
-                    new()
+                    entity: new()
                     {
                         Key = "swagger",
                         Value = runtimeSettings.Swagger.ToString(),
                         ModifiedBy = User.UserId(),
                     }
                 )
-                .On(configuration => configuration.Key)
+                .On(match: configuration => configuration.Key)
                 .WhenMatched(
-                    (o, configuration) =>
+                    updater: (o, configuration) =>
                         new()
                         {
                             Value = runtimeSettings.Swagger.ToString(),
@@ -269,7 +269,7 @@ public class ConfigurationController(
                         }
                 )
                 .RunAsync();
-            changes.Add(("swagger", oldSwagger, (bool)request.Swagger));
+            changes.Add(item: ("swagger", oldSwagger, (bool)request.Swagger));
         }
 
         if (request.UseSynthesizedDns is not null)
@@ -278,16 +278,16 @@ public class ConfigurationController(
             runtimeSettings.UseSynthesizedDns = (bool)request.UseSynthesizedDns;
             await appContext
                 .Configuration.Upsert(
-                    new()
+                    entity: new()
                     {
                         Key = "UseSynthesizedDns",
                         Value = runtimeSettings.UseSynthesizedDns.ToString(),
                         ModifiedBy = userId,
                     }
                 )
-                .On(configuration => configuration.Key)
+                .On(match: configuration => configuration.Key)
                 .WhenMatched(
-                    (o, configuration) =>
+                    updater: (o, configuration) =>
                         new()
                         {
                             Value = runtimeSettings.UseSynthesizedDns.ToString(),
@@ -296,7 +296,7 @@ public class ConfigurationController(
                 )
                 .RunAsync();
             changes.Add(
-                ("UseSynthesizedDns", oldUseSynthesizedDns, (bool)request.UseSynthesizedDns)
+                item: ("UseSynthesizedDns", oldUseSynthesizedDns, (bool)request.UseSynthesizedDns)
             );
         }
 
@@ -306,21 +306,21 @@ public class ConfigurationController(
             runtimeSettings.AllowAdultContent = request.AllowAdultContent;
             await appContext
                 .Configuration.Upsert(
-                    new()
+                    entity: new()
                     {
                         Key = "allowAdultContent",
                         Value = runtimeSettings.ShowAdultContent.ToString(),
                         ModifiedBy = userId,
                     }
                 )
-                .On(configuration => configuration.Key)
-                .WhenMatched((o, configuration) => new()
+                .On(match: configuration => configuration.Key)
+                .WhenMatched(updater: (o, configuration) => new()
                 {
                     Value = configuration.Value, 
                     ModifiedBy = configuration.ModifiedBy
                 })
                 .RunAsync();
-            changes.Add(("allowAdultContent", oldAllowAdult, (bool)request.AllowAdultContent));
+            changes.Add(item: ("allowAdultContent", oldAllowAdult, (bool)request.AllowAdultContent));
         }
 
         if (request.ServerName is not null)
@@ -328,23 +328,23 @@ public class ConfigurationController(
             string oldName = DeviceName();
             await appContext
                 .Configuration.Upsert(
-                    new()
+                    entity: new()
                     {
                         Key = "serverName",
                         Value = request.ServerName,
                         ModifiedBy = User.UserId(),
                     }
                 )
-                .On(configuration => configuration.Key)
+                .On(match: configuration => configuration.Key)
                 .WhenMatched(
-                    (o, configuration) => new()
+                    updater: (o, configuration) => new()
                     {
                         Value = request.ServerName, 
                         ModifiedBy = configuration.ModifiedBy
                     }
                 )
                 .RunAsync();
-            changes.Add(("serverName", oldName, request.ServerName));
+            changes.Add(item: ("serverName", oldName, request.ServerName));
         }
 
         foreach ((string key, object? oldVal, object? newVal) in changes)
@@ -352,8 +352,8 @@ public class ConfigurationController(
             try
             {
                 await activityLogger.LogConfigurationAsync(
-                    "config.server_changed",
-                    userId,
+                    type: "config.server_changed",
+                    userId: userId,
                     deviceId: Ulid.Empty,
                     configKey: key,
                     oldValue: oldVal,
@@ -362,12 +362,12 @@ public class ConfigurationController(
             }
             catch (Exception ex)
             {
-                logger.LogWarning("Failed to log config change: {Message}", ex.Message);
+                logger.LogWarning(message: "Failed to log config change: {Message}", args: ex.Message);
             }
         }
 
         return Ok(
-            new StatusResponseDto<string>
+            value: new StatusResponseDto<string>
             {
                 Message = "Configuration updated successfully",
                 Status = "success",
@@ -377,7 +377,7 @@ public class ConfigurationController(
     }
 
     [HttpGet]
-    [Route("languages")]
+    [Route(template: "languages")]
     [ResponseCache(Duration = 3600)]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> Languages()
@@ -385,8 +385,8 @@ public class ConfigurationController(
         List<Language> languages = await languageRepository.GetLanguagesAsync();
 
         return Ok(
-            languages
-                .Select(language => new LanguageDto
+            value: languages
+                .Select(selector: language => new LanguageDto
                 {
                     Id = language.Id,
                     Iso6391 = language.Iso6391,
@@ -398,7 +398,7 @@ public class ConfigurationController(
     }
 
     [HttpGet]
-    [Route("countries")]
+    [Route(template: "countries")]
     [ResponseCache(Duration = 3600)]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> Countries()
@@ -406,8 +406,8 @@ public class ConfigurationController(
         List<Country> countries = await languageRepository.GetCountriesAsync();
 
         return Ok(
-            countries
-                .Select(country => new CountryDto
+            value: countries
+                .Select(selector: country => new CountryDto
                 {
                     Name = country.EnglishName,
                     Code = country.Iso31661,

@@ -25,13 +25,13 @@ public sealed class InMemoryStorageDriverStub : IStorageDriver
 {
     private readonly Dictionary<string, byte[]> _files = new();
 
-    public bool FileExists(string path) => _files.ContainsKey(path);
+    public bool FileExists(string path) => _files.ContainsKey(key: path);
 
     public bool DirectoryExists(string path) => throw new NotSupportedException();
 
     public void CreateDirectory(string path) => throw new NotSupportedException();
 
-    public void DeleteFile(string path) => _files.Remove(path);
+    public void DeleteFile(string path) => _files.Remove(key: path);
 
     public void DeleteDirectory(string path, bool recursive) => throw new NotSupportedException();
 
@@ -45,16 +45,16 @@ public sealed class InMemoryStorageDriverStub : IStorageDriver
 
     public Stream OpenRead(string path)
     {
-        if (!_files.TryGetValue(path, out byte[]? bytes))
-            throw new FileNotFoundException(path);
-        return new MemoryStream(bytes, writable: false);
+        if (!_files.TryGetValue(key: path, value: out byte[]? bytes))
+            throw new FileNotFoundException(message: path);
+        return new MemoryStream(buffer: bytes, writable: false);
     }
 
     public Stream OpenWrite(string path, bool overwrite)
     {
-        if (!overwrite && _files.ContainsKey(path))
-            throw new IOException($"'{path}' already exists.");
-        return new CaptureOnDisposeStream(bytes => _files[path] = bytes);
+        if (!overwrite && _files.ContainsKey(key: path))
+            throw new IOException(message: $"'{path}' already exists.");
+        return new CaptureOnDisposeStream(onDispose: bytes => _files[key: path] = bytes);
     }
 
     public void MoveFile(string source, string destination) => throw new NotSupportedException();
@@ -87,8 +87,8 @@ public sealed class InMemoryStorageDriverStub : IStorageDriver
         protected override void Dispose(bool disposing)
         {
             if (disposing)
-                onDispose(ToArray());
-            base.Dispose(disposing);
+                onDispose(obj: ToArray());
+            base.Dispose(disposing: disposing);
         }
     }
 }

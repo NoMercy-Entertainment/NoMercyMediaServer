@@ -35,28 +35,28 @@ public class TonemapSelectorTests
         // libplacebo is the top of the priority stack — always win when
         // present, even if tonemap_opencl is also available.
         Mock<IFfmpegCapabilities> ffmpeg = new();
-        ffmpeg.Setup(f => f.HasFilter("libplacebo")).Returns(true);
-        ffmpeg.Setup(f => f.HasFilter("tonemap_opencl")).Returns(true);
+        ffmpeg.Setup(expression: f => f.HasFilter("libplacebo")).Returns(value: true);
+        ffmpeg.Setup(expression: f => f.HasFilter("tonemap_opencl")).Returns(value: true);
 
-        TonemapStrategy result = _selector.SelectBest(NullHardware(), ffmpeg.Object);
+        TonemapStrategy result = _selector.SelectBest(hardware: NullHardware(), ffmpeg: ffmpeg.Object);
 
-        result.Method.Should().Be(TonemapMethod.Libplacebo);
+        result.Method.Should().Be(expected: TonemapMethod.Libplacebo);
         result.IsGpuAccelerated.Should().BeTrue();
-        result.FfmpegFilterChain.Should().Contain("libplacebo=tonemapping=hable");
+        result.FfmpegFilterChain.Should().Contain(expected: "libplacebo=tonemapping=hable");
     }
 
     [Fact]
     public void SelectBest_NoLibplaceboButOpencl_PicksOpencl()
     {
         Mock<IFfmpegCapabilities> ffmpeg = new();
-        ffmpeg.Setup(f => f.HasFilter("libplacebo")).Returns(false);
-        ffmpeg.Setup(f => f.HasFilter("tonemap_opencl")).Returns(true);
+        ffmpeg.Setup(expression: f => f.HasFilter("libplacebo")).Returns(value: false);
+        ffmpeg.Setup(expression: f => f.HasFilter("tonemap_opencl")).Returns(value: true);
 
-        TonemapStrategy result = _selector.SelectBest(NullHardware(), ffmpeg.Object);
+        TonemapStrategy result = _selector.SelectBest(hardware: NullHardware(), ffmpeg: ffmpeg.Object);
 
-        result.Method.Should().Be(TonemapMethod.TonemapOpencl);
+        result.Method.Should().Be(expected: TonemapMethod.TonemapOpencl);
         result.IsGpuAccelerated.Should().BeTrue();
-        result.FfmpegFilterChain.Should().Contain("tonemap_opencl=tonemap=hable");
+        result.FfmpegFilterChain.Should().Contain(expected: "tonemap_opencl=tonemap=hable");
     }
 
     [Fact]
@@ -66,14 +66,14 @@ public class TonemapSelectorTests
         // chain is longer (linearize → gbrpf32le → tonemap → back to yuv420p)
         // because zscale has to do color-space conversion explicitly.
         Mock<IFfmpegCapabilities> ffmpeg = new();
-        ffmpeg.Setup(f => f.HasFilter(It.IsAny<string>())).Returns(false);
+        ffmpeg.Setup(expression: f => f.HasFilter(It.IsAny<string>())).Returns(value: false);
 
-        TonemapStrategy result = _selector.SelectBest(NullHardware(), ffmpeg.Object);
+        TonemapStrategy result = _selector.SelectBest(hardware: NullHardware(), ffmpeg: ffmpeg.Object);
 
-        result.Method.Should().Be(TonemapMethod.ZscaleTonemap);
+        result.Method.Should().Be(expected: TonemapMethod.ZscaleTonemap);
         result.IsGpuAccelerated.Should().BeFalse();
-        result.FfmpegFilterChain.Should().Contain("zscale=t=linear");
-        result.FfmpegFilterChain.Should().Contain("tonemap=tonemap=hable");
+        result.FfmpegFilterChain.Should().Contain(expected: "zscale=t=linear");
+        result.FfmpegFilterChain.Should().Contain(expected: "tonemap=tonemap=hable");
     }
 
     [Fact]
@@ -81,9 +81,9 @@ public class TonemapSelectorTests
     {
         // FfmpegCapabilities hasn't been probed yet — can't know what's
         // available. Safe default is CPU zscale which always works.
-        TonemapStrategy result = _selector.SelectBest(NullHardware(), ffmpeg: null);
+        TonemapStrategy result = _selector.SelectBest(hardware: NullHardware(), ffmpeg: null);
 
-        result.Method.Should().Be(TonemapMethod.ZscaleTonemap);
+        result.Method.Should().Be(expected: TonemapMethod.ZscaleTonemap);
         result.IsGpuAccelerated.Should().BeFalse();
     }
 
@@ -95,26 +95,26 @@ public class TonemapSelectorTests
         // step means the encoder gets a HDR-tagged or 10-bit buffer and
         // either rejects it or produces wrong colors.
         Mock<IFfmpegCapabilities> libplacebo = new();
-        libplacebo.Setup(f => f.HasFilter("libplacebo")).Returns(true);
+        libplacebo.Setup(expression: f => f.HasFilter("libplacebo")).Returns(value: true);
 
         Mock<IFfmpegCapabilities> opencl = new();
-        opencl.Setup(f => f.HasFilter("libplacebo")).Returns(false);
-        opencl.Setup(f => f.HasFilter("tonemap_opencl")).Returns(true);
+        opencl.Setup(expression: f => f.HasFilter("libplacebo")).Returns(value: false);
+        opencl.Setup(expression: f => f.HasFilter("tonemap_opencl")).Returns(value: true);
 
-        TonemapStrategy placeboResult = _selector.SelectBest(NullHardware(), libplacebo.Object);
-        TonemapStrategy openclResult = _selector.SelectBest(NullHardware(), opencl.Object);
-        TonemapStrategy zscaleResult = _selector.SelectBest(NullHardware(), ffmpeg: null);
+        TonemapStrategy placeboResult = _selector.SelectBest(hardware: NullHardware(), ffmpeg: libplacebo.Object);
+        TonemapStrategy openclResult = _selector.SelectBest(hardware: NullHardware(), ffmpeg: opencl.Object);
+        TonemapStrategy zscaleResult = _selector.SelectBest(hardware: NullHardware(), ffmpeg: null);
 
-        placeboResult.FfmpegFilterChain.Should().Contain("format=yuv420p");
+        placeboResult.FfmpegFilterChain.Should().Contain(expected: "format=yuv420p");
         // OpenCL uses nv12 (GPU-native) not yuv420p — check it ends in nv12.
-        openclResult.FfmpegFilterChain.Should().Contain("format=nv12");
-        zscaleResult.FfmpegFilterChain.Should().EndWith("format=yuv420p");
+        openclResult.FfmpegFilterChain.Should().Contain(expected: "format=nv12");
+        zscaleResult.FfmpegFilterChain.Should().EndWith(expected: "format=yuv420p");
     }
 
     private static IHardwareCapabilities NullHardware()
     {
         Mock<IHardwareCapabilities> hw = new();
-        hw.Setup(h => h.Gpus).Returns([]);
+        hw.Setup(expression: h => h.Gpus).Returns(value: []);
         return hw.Object;
     }
 }

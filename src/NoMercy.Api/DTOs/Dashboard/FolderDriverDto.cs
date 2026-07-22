@@ -15,15 +15,15 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record DriverMetadataDto
 {
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty("display_name")]
+    [JsonProperty(propertyName: "display_name")]
     public string DisplayName { get; set; } = string.Empty;
 
-    [JsonProperty("available")]
+    [JsonProperty(propertyName: "available")]
     public bool Available { get; set; }
 
-    [JsonProperty("config_schema")]
+    [JsonProperty(propertyName: "config_schema")]
     public Dictionary<string, string> ConfigSchema { get; set; } = new();
 }

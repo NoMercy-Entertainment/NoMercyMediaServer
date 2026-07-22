@@ -30,7 +30,7 @@ public static class CacheController
     // call Prune on every Write, scanning thousands of JSON files thousands of
     // times under the file-lock-held section. Throttle to at most once a
     // minute and fire-and-forget so writes return immediately.
-    private static readonly TimeSpan _pruneInterval = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan _pruneInterval = TimeSpan.FromMinutes(minutes: 1);
     private static long _lastPruneTicksUtc = DateTime.MinValue.Ticks;
     private static int _pruneInFlight;
 
@@ -44,7 +44,7 @@ public static class CacheController
     private static IStorage Storage =>
         _storage
         ?? throw new InvalidOperationException(
-            "CacheController has not been initialized. Call CacheController.Initialize() at startup."
+            message: "CacheController has not been initialized. Call CacheController.Initialize() at startup."
         );
 
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> FileLocks = new();
@@ -56,7 +56,7 @@ public static class CacheController
             PruneLocks();
         }
 
-        return FileLocks.GetOrAdd(path, _ => new(1, 1));
+        return FileLocks.GetOrAdd(key: path, valueFactory: _ => new(initialCount: 1, maxCount: 1));
     }
 
     private static void PruneLocks()
@@ -65,7 +65,7 @@ public static class CacheController
         {
             if (entry.Value.CurrentCount == 1)
             {
-                if (FileLocks.TryRemove(entry.Key, out SemaphoreSlim? removed))
+                if (FileLocks.TryRemove(key: entry.Key, value: out SemaphoreSlim? removed))
                 {
                     removed.Dispose();
                 }
@@ -75,15 +75,15 @@ public static class CacheController
 
     public static string GenerateFileName(string url)
     {
-        return CreateMd5(url);
+        return CreateMd5(input: url);
     }
 
     private static string CreateMd5(string input)
     {
-        byte[] inputBytes = Encoding.ASCII.GetBytes(input);
-        byte[] hashBytes = MD5.HashData(inputBytes);
+        byte[] inputBytes = Encoding.ASCII.GetBytes(s: input);
+        byte[] hashBytes = MD5.HashData(source: inputBytes);
 
-        return Convert.ToHexString(hashBytes);
+        return Convert.ToHexString(inArray: hashBytes);
     }
 
     public static async Task<(bool Found, T? Value)> ReadAsync<T>(string url, bool xml = false)
@@ -94,30 +94,30 @@ public static class CacheController
         if (_storage is null)
             return (false, default);
 
-        string fullname = Path.Combine(AppFiles.ApiCachePath, GenerateFileName(url));
-        SemaphoreSlim fileLock = GetLock(fullname);
+        string fullname = Path.Combine(path1: AppFiles.ApiCachePath, path2: GenerateFileName(url: url));
+        SemaphoreSlim fileLock = GetLock(path: fullname);
         await fileLock.WaitAsync();
 
         try
         {
             IStorage storage = Storage;
 
-            if (!storage.Exists(fullname))
+            if (!storage.Exists(path: fullname))
             {
                 return (false, default);
             }
 
             // invalidate cache after 1 day of last write time
-            if (storage.LastModified(fullname) < DateTimeOffset.UtcNow.AddDays(-1))
+            if (storage.LastModified(path: fullname) < DateTimeOffset.UtcNow.AddDays(days: -1))
             {
-                storage.Delete(fullname);
+                storage.Delete(path: fullname);
                 return (false, default);
             }
 
             T? data;
             try
             {
-                string d = Encoding.UTF8.GetString(storage.Read(fullname));
+                string d = Encoding.UTF8.GetString(bytes: storage.Read(path: fullname));
                 data = xml ? d.FromXml<T>() : d.FromJson<T>();
             }
             catch (Exception)
@@ -149,8 +149,8 @@ public static class CacheController
         if (_storage is null)
             return;
 
-        string fullname = Path.Combine(AppFiles.ApiCachePath, GenerateFileName(url));
-        SemaphoreSlim fileLock = GetLock(fullname);
+        string fullname = Path.Combine(path1: AppFiles.ApiCachePath, path2: GenerateFileName(url: url));
+        SemaphoreSlim fileLock = GetLock(path: fullname);
 
         for (int retry = 0; retry <= 10; retry++)
         {
@@ -158,7 +158,7 @@ public static class CacheController
 
             try
             {
-                await Storage.WriteAllTextAsync(fullname, data, CancellationToken.None);
+                await Storage.WriteAllTextAsync(path: fullname, contents: data, ct: CancellationToken.None);
                 MaybeSchedulePrune();
                 return;
             }
@@ -168,30 +168,30 @@ public static class CacheController
                 fileLock.Release();
             }
 
-            await Task.Delay(50 * (retry + 1));
+            await Task.Delay(millisecondsDelay: 50 * (retry + 1));
         }
 
-        Logger.App($"CacheController: Failed to write {fullname}");
+        Logger.App(message: $"CacheController: Failed to write {fullname}");
     }
 
     internal static void PruneCache()
     {
-        PruneCache(AppFiles.ApiCachePath, MaxCacheSizeBytes);
+        PruneCache(cachePath: AppFiles.ApiCachePath, maxSizeBytes: MaxCacheSizeBytes);
     }
 
     private static void MaybeSchedulePrune()
     {
         long now = DateTime.UtcNow.Ticks;
-        long last = Interlocked.Read(ref _lastPruneTicksUtc);
-        if (new TimeSpan(now - last) < _pruneInterval)
+        long last = Interlocked.Read(location: ref _lastPruneTicksUtc);
+        if (new TimeSpan(ticks: now - last) < _pruneInterval)
             return;
 
         // Single-flight: only one Prune at a time.
-        if (Interlocked.CompareExchange(ref _pruneInFlight, 1, 0) != 0)
+        if (Interlocked.CompareExchange(location1: ref _pruneInFlight, value: 1, comparand: 0) != 0)
             return;
 
-        Interlocked.Exchange(ref _lastPruneTicksUtc, now);
-        _ = Task.Run(() =>
+        Interlocked.Exchange(location1: ref _lastPruneTicksUtc, value: now);
+        _ = Task.Run(action: () =>
         {
             try
             {
@@ -203,7 +203,7 @@ public static class CacheController
             }
             finally
             {
-                Interlocked.Exchange(ref _pruneInFlight, 0);
+                Interlocked.Exchange(location1: ref _pruneInFlight, value: 0);
             }
         });
     }
@@ -218,7 +218,7 @@ public static class CacheController
         IReadOnlyList<StorageEntry> entries;
         try
         {
-            entries = storage.List(cachePath, pattern: null, recursive: false);
+            entries = storage.List(path: cachePath, pattern: null, recursive: false);
         }
         catch (DirectoryNotFoundException)
         {
@@ -226,11 +226,11 @@ public static class CacheController
         }
 
         StorageEntry[] files = entries
-            .Where(e => !e.IsDirectory)
-            .OrderBy(e => e.LastModified)
+            .Where(predicate: e => !e.IsDirectory)
+            .OrderBy(keySelector: e => e.LastModified)
             .ToArray();
 
-        long totalSize = files.Sum(f => f.SizeBytes);
+        long totalSize = files.Sum(selector: f => f.SizeBytes);
 
         foreach (StorageEntry file in files)
         {
@@ -240,7 +240,7 @@ public static class CacheController
             try
             {
                 totalSize -= file.SizeBytes;
-                storage.Delete(file.Path);
+                storage.Delete(path: file.Path);
             }
             catch (Exception)
             {

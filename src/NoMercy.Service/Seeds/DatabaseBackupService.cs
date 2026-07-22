@@ -29,7 +29,7 @@ namespace NoMercy.Service.Seeds;
 public static class DatabaseBackupService
 {
     /// <summary>Directory under which timestamped backup files are written.</summary>
-    public static string BackupRoot { get; set; } = Path.Combine(AppFiles.DataPath, "backups");
+    public static string BackupRoot { get; set; } = Path.Combine(path1: AppFiles.DataPath, path2: "backups");
 
     /// <summary>Number of backup files to retain per database. Oldest are pruned first.</summary>
     public static int RetainCount { get; set; } = 5;
@@ -47,7 +47,7 @@ public static class DatabaseBackupService
         if (pendingMigrationCount == 0)
             return false;
 
-        return BackupNow(dbPath, $"{pendingMigrationCount} pending migration(s)");
+        return BackupNow(dbPath: dbPath, reason: $"{pendingMigrationCount} pending migration(s)");
     }
 
     /// <summary>
@@ -61,20 +61,20 @@ public static class DatabaseBackupService
     /// </summary>
     public static bool BackupNow(string dbPath, string reason)
     {
-        if (!File.Exists(dbPath))
+        if (!File.Exists(path: dbPath))
             return false;
 
         try
         {
-            Directory.CreateDirectory(BackupRoot);
+            Directory.CreateDirectory(path: BackupRoot);
 
-            string dbName = Path.GetFileNameWithoutExtension(dbPath);
-            string timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+            string dbName = Path.GetFileNameWithoutExtension(path: dbPath);
+            string timestamp = DateTime.UtcNow.ToString(format: "yyyyMMddHHmmss");
             string backupFileName = $"{dbName}.{timestamp}.db";
-            string backupPath = Path.Combine(BackupRoot, backupFileName);
+            string backupPath = Path.Combine(path1: BackupRoot, path2: backupFileName);
 
-            if (File.Exists(backupPath))
-                throw new IOException($"Backup file already exists: {backupPath}");
+            if (File.Exists(path: backupPath))
+                throw new IOException(message: $"Backup file already exists: {backupPath}");
 
             // SQLite's online-backup API (not File.Copy) so a database running in
             // WAL mode is captured consistently — a plain file copy only sees the
@@ -91,26 +91,26 @@ public static class DatabaseBackupService
             // the process's lifetime would leak an open handle on the backup
             // file, keeping it locked against deletion/pruning/manual access on
             // Windows.
-            using (SqliteConnection source = new($"Data Source={dbPath}; Pooling=False;"))
-            using (SqliteConnection destination = new($"Data Source={backupPath}; Pooling=False;"))
+            using (SqliteConnection source = new(connectionString: $"Data Source={dbPath}; Pooling=False;"))
+            using (SqliteConnection destination = new(connectionString: $"Data Source={backupPath}; Pooling=False;"))
             {
                 source.Open();
                 destination.Open();
-                source.BackupDatabase(destination);
+                source.BackupDatabase(destination: destination);
             }
 
-            Logger.Setup($"Database backup created: {backupFileName} ({reason})");
+            Logger.Setup(message: $"Database backup created: {backupFileName} ({reason})");
 
-            PruneOldBackups(dbName);
+            PruneOldBackups(dbName: dbName);
 
             return true;
         }
         catch (Exception ex)
         {
             Logger.Setup(
-                $"WARNING: Could not back up database '{Path.GetFileName(dbPath)}' — {ex.Message}. "
-                    + "If this coincides with an upgrade, restore from a manual backup.",
-                LogEventLevel.Warning
+                message: $"WARNING: Could not back up database '{Path.GetFileName(path: dbPath)}' — {ex.Message}. "
+                         + "If this coincides with an upgrade, restore from a manual backup.",
+                level: LogEventLevel.Warning
             );
             return false;
         }
@@ -125,25 +125,25 @@ public static class DatabaseBackupService
         try
         {
             string[] existing = Directory
-                .GetFiles(BackupRoot, $"{dbName}.*.db")
-                .OrderBy(filePath => filePath)
+                .GetFiles(path: BackupRoot, searchPattern: $"{dbName}.*.db")
+                .OrderBy(keySelector: filePath => filePath)
                 .ToArray();
 
             int toDelete = existing.Length - RetainCount;
             for (int idx = 0; idx < toDelete; idx++)
             {
-                File.Delete(existing[idx]);
+                File.Delete(path: existing[idx]);
                 Logger.Setup(
-                    $"Pruned old backup: {Path.GetFileName(existing[idx])}",
-                    LogEventLevel.Verbose
+                    message: $"Pruned old backup: {Path.GetFileName(path: existing[idx])}",
+                    level: LogEventLevel.Verbose
                 );
             }
         }
         catch (Exception ex)
         {
             Logger.Setup(
-                $"WARNING: Backup pruning failed for '{dbName}': {ex.Message}",
-                LogEventLevel.Warning
+                message: $"WARNING: Backup pruning failed for '{dbName}': {ex.Message}",
+                level: LogEventLevel.Warning
             );
         }
     }

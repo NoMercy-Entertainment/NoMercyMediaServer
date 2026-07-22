@@ -30,38 +30,38 @@ public class Mp4OutputStrategy(IStorage storage, IFfmpegExecutor? ffmpegExecutor
         string outputDirectory
     )
     {
-        string outputPath = Path.Combine(outputDirectory, "output.mp4");
+        string outputPath = Path.Combine(path1: outputDirectory, path2: "output.mp4");
         List<string> mapStreams = [];
 
         foreach (VideoOutputPlan video in plan.VideoOutputs)
-            mapStreams.Add(video.MapLabel);
+            mapStreams.Add(item: video.MapLabel);
 
         foreach (AudioOutputPlan audio in plan.AudioOutputs)
             if (audio.Action is StreamAction.Copy or StreamAction.Transcode)
-                mapStreams.Add(audio.MapLabel);
+                mapStreams.Add(item: audio.MapLabel);
 
         VideoOutputPlan? primaryVideo = plan.VideoOutputs.Length > 0 ? plan.VideoOutputs[0] : null;
         AudioOutputPlan? primaryAudio = plan.AudioOutputs.Length > 0 ? plan.AudioOutputs[0] : null;
 
-        Dictionary<string, string> extraFlags = new() { ["-movflags"] = "+faststart" };
+        Dictionary<string, string> extraFlags = new() { [key: "-movflags"] = "+faststart" };
 
         // Dolby Vision HEVC must be tagged dvh1 in MP4 so players recognize
         // the DV profile. Without this, QuickTime/Apple TV play as HDR10.
         if (plan.PreserveDolbyVision && primaryVideo is not null)
         {
-            extraFlags["-tag:v"] = "dvh1";
+            extraFlags[key: "-tag:v"] = "dvh1";
         }
 
         if (
             primaryAudio?.Action == StreamAction.Transcode
-            && !string.IsNullOrEmpty(primaryAudio.AudioFilter)
+            && !string.IsNullOrEmpty(value: primaryAudio.AudioFilter)
         )
         {
-            extraFlags["-af"] = primaryAudio.AudioFilter;
+            extraFlags[key: "-af"] = primaryAudio.AudioFilter;
         }
 
         builder.AddOutput(
-            new(
+            output: new(
                 FilePath: outputPath,
                 VideoCodec: primaryVideo?.EncoderName,
                 AudioCodec: primaryAudio?.Action == StreamAction.Copy
@@ -94,19 +94,19 @@ public class Mp4OutputStrategy(IStorage storage, IFfmpegExecutor? ffmpegExecutor
         // encodes land as .m4a (the convention music players expect);
         // video-bearing encodes stay .mp4.
         string extension = plan.VideoOutputs.Length == 0 ? ".m4a" : ".mp4";
-        string sourcePath = Path.Combine(outputDirectory, "output.mp4");
-        string targetPath = Path.Combine(outputDirectory, $"{mediaTitle}{extension}");
+        string sourcePath = Path.Combine(path1: outputDirectory, path2: "output.mp4");
+        string targetPath = Path.Combine(path1: outputDirectory, path2: $"{mediaTitle}{extension}");
 
-        if (storage.Exists(sourcePath) && sourcePath != targetPath)
+        if (storage.Exists(path: sourcePath) && sourcePath != targetPath)
         {
-            storage.Delete(targetPath);
-            storage.Move(sourcePath, targetPath);
+            storage.Delete(path: targetPath);
+            storage.Move(from: sourcePath, to: targetPath);
         }
 
         // Embed chapter metadata when chapters are present and an executor is available.
         if (plan.Chapters is { Count: > 0 } chapters && ffmpegExecutor is not null)
         {
-            await EmbedChaptersAsync(outputDirectory, targetPath, chapters, ct);
+            await EmbedChaptersAsync(outputDirectory: outputDirectory, mp4Path: targetPath, chapters: chapters, ct: ct);
         }
     }
 
@@ -121,32 +121,32 @@ public class Mp4OutputStrategy(IStorage storage, IFfmpegExecutor? ffmpegExecutor
         CancellationToken ct
     )
     {
-        string ffmetaPath = Path.Combine(outputDirectory, ".chapters.ffmeta");
+        string ffmetaPath = Path.Combine(path1: outputDirectory, path2: ".chapters.ffmeta");
         string tempPath = mp4Path + ".chapters.tmp.mp4";
 
         // Build ffmetadata content
         StringBuilder sb = new();
-        sb.AppendLine(";FFMETADATA1");
+        sb.AppendLine(value: ";FFMETADATA1");
         sb.AppendLine();
 
         for (int i = 0; i < chapters.Count; i++)
         {
-            ChapterInfo chapter = chapters[i];
+            ChapterInfo chapter = chapters[index: i];
             int startMs = (int)chapter.Start.TotalMilliseconds;
             int endMs =
                 i + 1 < chapters.Count
-                    ? (int)chapters[i + 1].Start.TotalMilliseconds
+                    ? (int)chapters[index: i + 1].Start.TotalMilliseconds
                     : (int)chapter.End.TotalMilliseconds;
 
-            sb.AppendLine("[CHAPTER]");
-            sb.AppendLine("TIMEBASE=1/1000");
-            sb.AppendLine($"START={startMs}");
-            sb.AppendLine($"END={endMs}");
-            sb.AppendLine($"title={chapter.Title ?? $"Chapter {i + 1}"}");
+            sb.AppendLine(value: "[CHAPTER]");
+            sb.AppendLine(value: "TIMEBASE=1/1000");
+            sb.AppendLine(handler: $"START={startMs}");
+            sb.AppendLine(handler: $"END={endMs}");
+            sb.AppendLine(handler: $"title={chapter.Title ?? $"Chapter {i + 1}"}");
             sb.AppendLine();
         }
 
-        await storage.WriteAsync(ffmetaPath, Encoding.UTF8.GetBytes(sb.ToString()), ct);
+        await storage.WriteAsync(path: ffmetaPath, bytes: Encoding.UTF8.GetBytes(s: sb.ToString()), ct: ct);
 
         // Re-mux: copy all streams + inject chapter metadata from ffmeta file
         FfmpegCommand remuxCmd = new(
@@ -169,18 +169,18 @@ public class Mp4OutputStrategy(IStorage storage, IFfmpegExecutor? ffmpegExecutor
             WorkingDirectory: outputDirectory
         );
 
-        await ffmpegExecutor!.ExecuteAsync(remuxCmd, TimeSpan.Zero, ct: ct);
+        await ffmpegExecutor!.ExecuteAsync(command: remuxCmd, inputDuration: TimeSpan.Zero, ct: ct);
 
         // Swap temp → final
-        if (storage.Exists(tempPath))
+        if (storage.Exists(path: tempPath))
         {
-            storage.Delete(mp4Path);
-            storage.Move(tempPath, mp4Path);
+            storage.Delete(path: mp4Path);
+            storage.Move(from: tempPath, to: mp4Path);
         }
 
         // Clean up ffmeta sidecar
-        if (storage.Exists(ffmetaPath))
-            storage.Delete(ffmetaPath);
+        if (storage.Exists(path: ffmetaPath))
+            storage.Delete(path: ffmetaPath);
     }
 
     public string[] GetOutputSubdirectories(OutputPlan plan) => [];

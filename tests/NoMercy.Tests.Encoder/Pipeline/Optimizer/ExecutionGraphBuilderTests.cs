@@ -88,7 +88,7 @@ public class ExecutionGraphBuilderTests
         new(Index: 3, Codec: "subrip", Language: "fra", IsDefault: false, IsForced: false);
 
     private static ChapterInfo Chapter =>
-        new(TimeSpan.Zero, TimeSpan.FromMinutes(90), "Main Feature");
+        new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(minutes: 90), Title: "Main Feature");
 
     private static MediaInfo MakeMedia(
         IReadOnlyList<VideoStreamInfo>? video = null,
@@ -99,7 +99,7 @@ public class ExecutionGraphBuilderTests
         new(
             FilePath: "/media/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(90),
+            Duration: TimeSpan.FromMinutes(minutes: 90),
             OverallBitRateKbps: 10000,
             FileSizeBytes: 8_000_000_000,
             VideoStreams: video ?? [],
@@ -163,7 +163,7 @@ public class ExecutionGraphBuilderTests
             Presets: ["fast", "medium", "slow"],
             Profiles: [],
             Levels: [],
-            QualityRange: new(0, 51, 23),
+            QualityRange: new(Min: 0, Max: 51, Default: 23),
             SupportedRateControl: [RateControlMode.Crf],
             Supports10Bit: false,
             SupportsHdr: false,
@@ -175,7 +175,7 @@ public class ExecutionGraphBuilderTests
     private static ResolvedCodec H264Software =>
         new(
             FfmpegEncoderName: "libx264",
-            EncoderInfo: MakeEncoderInfo("libx264", false),
+            EncoderInfo: MakeEncoderInfo(name: "libx264", isHw: false),
             Device: null,
             DefaultRateControl: RateControlMode.Crf
         );
@@ -183,13 +183,13 @@ public class ExecutionGraphBuilderTests
     private static ResolvedCodec H264Nvenc =>
         new(
             FfmpegEncoderName: "h264_nvenc",
-            EncoderInfo: MakeEncoderInfo("h264_nvenc", true),
+            EncoderInfo: MakeEncoderInfo(name: "h264_nvenc", isHw: true),
             Device: new(
-                GpuVendor.Nvidia,
-                "RTX 4090",
-                24576,
-                12,
-                [VideoCodecType.H264, VideoCodecType.H265, VideoCodecType.Av1]
+                Vendor: GpuVendor.Nvidia,
+                Name: "RTX 4090",
+                VramMb: 24576,
+                MaxEncoderSessions: 12,
+                SupportedCodecs: [VideoCodecType.H264, VideoCodecType.H265, VideoCodecType.Av1]
             ),
             DefaultRateControl: RateControlMode.Cq
         );
@@ -204,12 +204,12 @@ public class ExecutionGraphBuilderTests
         MediaInfo media = MakeMedia(video: [Sdr1080p], subs: []);
         EncodingProfile profile = SingleOutputProfile;
 
-        List<ExecutionNode> nodes = Builder.BuildGraph(media, profile, [H264Software]);
+        List<ExecutionNode> nodes = Builder.BuildGraph(media: media, profile: profile, resolvedVideoCodecs: [H264Software]);
 
-        nodes.Should().Contain(n => n.Operation == OperationType.Decode);
-        nodes.Should().Contain(n => n.Operation == OperationType.Encode);
-        nodes.Should().NotContain(n => n.Operation == OperationType.Tonemap);
-        nodes.Should().NotContain(n => n.Operation == OperationType.Split);
+        nodes.Should().Contain(predicate: n => n.Operation == OperationType.Decode);
+        nodes.Should().Contain(predicate: n => n.Operation == OperationType.Encode);
+        nodes.Should().NotContain(predicate: n => n.Operation == OperationType.Tonemap);
+        nodes.Should().NotContain(predicate: n => n.Operation == OperationType.Split);
     }
 
     [Fact]
@@ -218,9 +218,9 @@ public class ExecutionGraphBuilderTests
         MediaInfo media = MakeMedia(video: [Sdr1080p], subs: []);
         EncodingProfile profile = SingleOutputProfile;
 
-        List<ExecutionNode> nodes = Builder.BuildGraph(media, profile, [H264Software]);
+        List<ExecutionNode> nodes = Builder.BuildGraph(media: media, profile: profile, resolvedVideoCodecs: [H264Software]);
 
-        nodes.Should().NotContain(n => n.Operation == OperationType.Scale);
+        nodes.Should().NotContain(predicate: n => n.Operation == OperationType.Scale);
     }
 
     [Fact]
@@ -229,12 +229,12 @@ public class ExecutionGraphBuilderTests
         MediaInfo media = MakeMedia(video: [Sdr1080p], subs: []);
         EncodingProfile profile = SingleOutputProfile;
 
-        List<ExecutionNode> nodes = Builder.BuildGraph(media, profile, [H264Software]);
+        List<ExecutionNode> nodes = Builder.BuildGraph(media: media, profile: profile, resolvedVideoCodecs: [H264Software]);
 
-        ExecutionNode encode = nodes.Single(n => n.Operation == OperationType.Encode);
-        encode.Parameters["encoder"].Should().Be("libx264");
-        encode.Parameters["crf"].Should().Be("23");
-        encode.Parameters["preset"].Should().Be("fast");
+        ExecutionNode encode = nodes.Single(predicate: n => n.Operation == OperationType.Encode);
+        encode.Parameters[key: "encoder"].Should().Be(expected: "libx264");
+        encode.Parameters[key: "crf"].Should().Be(expected: "23");
+        encode.Parameters[key: "preset"].Should().Be(expected: "fast");
     }
 
     [Fact]
@@ -317,19 +317,19 @@ public class ExecutionGraphBuilderTests
 
         ResolvedCodec[] resolvedCodecs =
         [
-            new("hevc_nvenc", MakeEncoderInfo("hevc_nvenc", true), null, RateControlMode.Cq),
-            new("hevc_nvenc", MakeEncoderInfo("hevc_nvenc", true), null, RateControlMode.Cq),
-            new("hevc_nvenc", MakeEncoderInfo("hevc_nvenc", true), null, RateControlMode.Cq),
+            new(FfmpegEncoderName: "hevc_nvenc", EncoderInfo: MakeEncoderInfo(name: "hevc_nvenc", isHw: true), Device: null, DefaultRateControl: RateControlMode.Cq),
+            new(FfmpegEncoderName: "hevc_nvenc", EncoderInfo: MakeEncoderInfo(name: "hevc_nvenc", isHw: true), Device: null, DefaultRateControl: RateControlMode.Cq),
+            new(FfmpegEncoderName: "hevc_nvenc", EncoderInfo: MakeEncoderInfo(name: "hevc_nvenc", isHw: true), Device: null, DefaultRateControl: RateControlMode.Cq),
         ];
 
         MediaInfo media = MakeMedia(video: [Hdr4K]);
-        List<ExecutionNode> nodes = Builder.BuildGraph(media, profile, resolvedCodecs);
+        List<ExecutionNode> nodes = Builder.BuildGraph(media: media, profile: profile, resolvedVideoCodecs: resolvedCodecs);
 
-        nodes.Should().Contain(n => n.Operation == OperationType.Decode);
-        nodes.Should().Contain(n => n.Operation == OperationType.Tonemap);
-        nodes.Should().Contain(n => n.Operation == OperationType.Split);
-        nodes.Count(n => n.Operation == OperationType.Scale).Should().Be(3);
-        nodes.Count(n => n.Operation == OperationType.Encode).Should().Be(3);
+        nodes.Should().Contain(predicate: n => n.Operation == OperationType.Decode);
+        nodes.Should().Contain(predicate: n => n.Operation == OperationType.Tonemap);
+        nodes.Should().Contain(predicate: n => n.Operation == OperationType.Split);
+        nodes.Count(predicate: n => n.Operation == OperationType.Scale).Should().Be(expected: 3);
+        nodes.Count(predicate: n => n.Operation == OperationType.Encode).Should().Be(expected: 3);
     }
 
     [Fact]
@@ -345,12 +345,12 @@ public class ExecutionGraphBuilderTests
             Subtitles: []
         );
 
-        List<ExecutionNode> nodes = Builder.BuildGraph(media, profile, []);
+        List<ExecutionNode> nodes = Builder.BuildGraph(media: media, profile: profile, resolvedVideoCodecs: []);
 
-        nodes.Should().Contain(n => n.Operation == OperationType.AudioDecode);
-        nodes.Should().Contain(n => n.Operation == OperationType.AudioEncode);
-        nodes.Should().NotContain(n => n.Operation == OperationType.Decode);
-        nodes.Should().NotContain(n => n.Operation == OperationType.Encode);
+        nodes.Should().Contain(predicate: n => n.Operation == OperationType.AudioDecode);
+        nodes.Should().Contain(predicate: n => n.Operation == OperationType.AudioEncode);
+        nodes.Should().NotContain(predicate: n => n.Operation == OperationType.Decode);
+        nodes.Should().NotContain(predicate: n => n.Operation == OperationType.Encode);
     }
 
     [Fact]
@@ -374,18 +374,18 @@ public class ExecutionGraphBuilderTests
             Subtitles: [subOutput, subOutput]
         );
 
-        List<ExecutionNode> nodes = Builder.BuildGraph(media, profile, [H264Software]);
+        List<ExecutionNode> nodes = Builder.BuildGraph(media: media, profile: profile, resolvedVideoCodecs: [H264Software]);
 
-        IEnumerable<ExecutionNode> subNodes = nodes.Where(n =>
+        IEnumerable<ExecutionNode> subNodes = nodes.Where(predicate: n =>
             n.Operation == OperationType.SubtitleExtract
         );
-        subNodes.Should().HaveCount(2);
+        subNodes.Should().HaveCount(expected: 2);
 
         // Subtitle nodes must have no dependencies on video nodes
-        ExecutionNode decodeNode = nodes.Single(n => n.Operation == OperationType.Decode);
+        ExecutionNode decodeNode = nodes.Single(predicate: n => n.Operation == OperationType.Decode);
         foreach (ExecutionNode subNode in subNodes)
         {
-            subNode.DependsOn.Should().NotContain(decodeNode.Id);
+            subNode.DependsOn.Should().NotContain(unexpected: decodeNode.Id);
         }
     }
 
@@ -404,11 +404,11 @@ public class ExecutionGraphBuilderTests
             Thumbnails: thumbnails
         );
 
-        List<ExecutionNode> nodes = Builder.BuildGraph(media, profile, [H264Software]);
+        List<ExecutionNode> nodes = Builder.BuildGraph(media: media, profile: profile, resolvedVideoCodecs: [H264Software]);
 
-        ExecutionNode thumbNode = nodes.Single(n => n.Operation == OperationType.ThumbnailCapture);
-        thumbNode.Parameters["width"].Should().Be("320");
-        thumbNode.Parameters["interval"].Should().Be("10");
+        ExecutionNode thumbNode = nodes.Single(predicate: n => n.Operation == OperationType.ThumbnailCapture);
+        thumbNode.Parameters[key: "width"].Should().Be(expected: "320");
+        thumbNode.Parameters[key: "interval"].Should().Be(expected: "10");
     }
 
     [Fact]
@@ -417,9 +417,9 @@ public class ExecutionGraphBuilderTests
         MediaInfo media = MakeMedia(video: [Sdr1080p]);
         EncodingProfile profile = SingleOutputProfile;
 
-        List<ExecutionNode> nodes = Builder.BuildGraph(media, profile, [H264Software]);
+        List<ExecutionNode> nodes = Builder.BuildGraph(media: media, profile: profile, resolvedVideoCodecs: [H264Software]);
 
-        nodes.Should().NotContain(n => n.Operation == OperationType.ThumbnailCapture);
+        nodes.Should().NotContain(predicate: n => n.Operation == OperationType.ThumbnailCapture);
     }
 
     [Fact]
@@ -428,9 +428,9 @@ public class ExecutionGraphBuilderTests
         MediaInfo media = MakeMedia(video: [Sdr1080p], chapters: [Chapter]);
         EncodingProfile profile = SingleOutputProfile;
 
-        List<ExecutionNode> nodes = Builder.BuildGraph(media, profile, [H264Software]);
+        List<ExecutionNode> nodes = Builder.BuildGraph(media: media, profile: profile, resolvedVideoCodecs: [H264Software]);
 
-        nodes.Should().Contain(n => n.Operation == OperationType.ChapterExtract);
+        nodes.Should().Contain(predicate: n => n.Operation == OperationType.ChapterExtract);
     }
 
     [Fact]
@@ -439,9 +439,9 @@ public class ExecutionGraphBuilderTests
         MediaInfo media = MakeMedia(video: [Sdr1080p], chapters: []);
         EncodingProfile profile = SingleOutputProfile;
 
-        List<ExecutionNode> nodes = Builder.BuildGraph(media, profile, [H264Software]);
+        List<ExecutionNode> nodes = Builder.BuildGraph(media: media, profile: profile, resolvedVideoCodecs: [H264Software]);
 
-        nodes.Should().NotContain(n => n.Operation == OperationType.ChapterExtract);
+        nodes.Should().NotContain(predicate: n => n.Operation == OperationType.ChapterExtract);
     }
 
     [Fact]
@@ -467,12 +467,12 @@ public class ExecutionGraphBuilderTests
             Video: SingleOutput1080pH264,
             Audio: [DefaultAudioOutput],
             Subtitles: [subOutput, subOutput],
-            Thumbnails: new(320, 10)
+            Thumbnails: new(Width: 320, IntervalSeconds: 10)
         );
 
-        List<ExecutionNode> nodes = Builder.BuildGraph(media, profile, [H264Software]);
+        List<ExecutionNode> nodes = Builder.BuildGraph(media: media, profile: profile, resolvedVideoCodecs: [H264Software]);
 
-        IEnumerable<string> ids = nodes.Select(n => n.Id);
+        IEnumerable<string> ids = nodes.Select(selector: n => n.Id);
         ids.Should().OnlyHaveUniqueItems();
     }
 
@@ -516,8 +516,8 @@ public class ExecutionGraphBuilderTests
             Subtitles: []
         );
 
-        List<ExecutionNode> nodes = Builder.BuildGraph(media, profile, [H264Software]);
+        List<ExecutionNode> nodes = Builder.BuildGraph(media: media, profile: profile, resolvedVideoCodecs: [H264Software]);
 
-        nodes.Should().Contain(n => n.Operation == OperationType.Scale);
+        nodes.Should().Contain(predicate: n => n.Operation == OperationType.Scale);
     }
 }

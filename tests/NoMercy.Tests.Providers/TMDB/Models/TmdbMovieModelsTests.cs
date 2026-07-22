@@ -29,29 +29,29 @@ public class TmdbMovieModelsTests
         TmdbMovieDetails originalMovie = TmdbMovieMockData.GetSampleMovieDetails();
 
         // Act
-        string json = JsonConvert.SerializeObject(originalMovie);
-        TmdbMovieDetails? deserializedMovie = JsonConvert.DeserializeObject<TmdbMovieDetails>(json);
+        string json = JsonConvert.SerializeObject(value: originalMovie);
+        TmdbMovieDetails? deserializedMovie = JsonConvert.DeserializeObject<TmdbMovieDetails>(value: json);
 
         // Assert
         deserializedMovie.Should().NotBeNull();
-        deserializedMovie!.Id.Should().Be(originalMovie.Id);
-        deserializedMovie.Title.Should().Be(originalMovie.Title);
-        deserializedMovie.OriginalTitle.Should().Be(originalMovie.OriginalTitle);
-        deserializedMovie.Overview.Should().Be(originalMovie.Overview);
-        deserializedMovie.Adult.Should().Be(originalMovie.Adult);
-        deserializedMovie.Budget.Should().Be(originalMovie.Budget);
-        deserializedMovie.Revenue.Should().Be(originalMovie.Revenue);
-        deserializedMovie.Runtime.Should().Be(originalMovie.Runtime);
-        deserializedMovie.Status.Should().Be(originalMovie.Status);
-        deserializedMovie.Tagline.Should().Be(originalMovie.Tagline);
-        deserializedMovie.ReleaseDate.Should().Be(originalMovie.ReleaseDate);
-        deserializedMovie.OriginalLanguage.Should().Be(originalMovie.OriginalLanguage);
-        deserializedMovie.Popularity.Should().Be(originalMovie.Popularity);
-        deserializedMovie.VoteAverage.Should().Be(originalMovie.VoteAverage);
-        deserializedMovie.VoteCount.Should().Be(originalMovie.VoteCount);
-        deserializedMovie.Video.Should().Be(originalMovie.Video);
-        deserializedMovie.ImdbId.Should().Be(originalMovie.ImdbId);
-        deserializedMovie.Homepage.Should().Be(originalMovie.Homepage);
+        deserializedMovie!.Id.Should().Be(expected: originalMovie.Id);
+        deserializedMovie.Title.Should().Be(expected: originalMovie.Title);
+        deserializedMovie.OriginalTitle.Should().Be(expected: originalMovie.OriginalTitle);
+        deserializedMovie.Overview.Should().Be(expected: originalMovie.Overview);
+        deserializedMovie.Adult.Should().Be(expected: originalMovie.Adult);
+        deserializedMovie.Budget.Should().Be(expected: originalMovie.Budget);
+        deserializedMovie.Revenue.Should().Be(expected: originalMovie.Revenue);
+        deserializedMovie.Runtime.Should().Be(expected: originalMovie.Runtime);
+        deserializedMovie.Status.Should().Be(expected: originalMovie.Status);
+        deserializedMovie.Tagline.Should().Be(expected: originalMovie.Tagline);
+        deserializedMovie.ReleaseDate.Should().Be(expected: originalMovie.ReleaseDate);
+        deserializedMovie.OriginalLanguage.Should().Be(expected: originalMovie.OriginalLanguage);
+        deserializedMovie.Popularity.Should().Be(expected: originalMovie.Popularity);
+        deserializedMovie.VoteAverage.Should().Be(expected: originalMovie.VoteAverage);
+        deserializedMovie.VoteCount.Should().Be(expected: originalMovie.VoteCount);
+        deserializedMovie.Video.Should().Be(expected: originalMovie.Video);
+        deserializedMovie.ImdbId.Should().Be(expected: originalMovie.ImdbId);
+        deserializedMovie.Homepage.Should().Be(expected: originalMovie.Homepage);
     }
 
     [Fact]
@@ -61,18 +61,18 @@ public class TmdbMovieModelsTests
         TmdbMovieDetails minimalMovie = TmdbMovieMockData.GetMinimalMovieDetails();
 
         // Act
-        string json = JsonConvert.SerializeObject(minimalMovie);
-        TmdbMovieDetails? deserializedMovie = JsonConvert.DeserializeObject<TmdbMovieDetails>(json);
+        string json = JsonConvert.SerializeObject(value: minimalMovie);
+        TmdbMovieDetails? deserializedMovie = JsonConvert.DeserializeObject<TmdbMovieDetails>(value: json);
 
         // Assert
         deserializedMovie.Should().NotBeNull();
-        deserializedMovie!.Id.Should().Be(minimalMovie.Id);
-        deserializedMovie.Title.Should().Be(minimalMovie.Title);
-        deserializedMovie.OriginalTitle.Should().Be(minimalMovie.OriginalTitle);
-        deserializedMovie.Adult.Should().Be(minimalMovie.Adult);
-        deserializedMovie.Status.Should().Be(minimalMovie.Status);
-        deserializedMovie.ReleaseDate.Should().Be(minimalMovie.ReleaseDate);
-        deserializedMovie.OriginalLanguage.Should().Be(minimalMovie.OriginalLanguage);
+        deserializedMovie!.Id.Should().Be(expected: minimalMovie.Id);
+        deserializedMovie.Title.Should().Be(expected: minimalMovie.Title);
+        deserializedMovie.OriginalTitle.Should().Be(expected: minimalMovie.OriginalTitle);
+        deserializedMovie.Adult.Should().Be(expected: minimalMovie.Adult);
+        deserializedMovie.Status.Should().Be(expected: minimalMovie.Status);
+        deserializedMovie.ReleaseDate.Should().Be(expected: minimalMovie.ReleaseDate);
+        deserializedMovie.OriginalLanguage.Should().Be(expected: minimalMovie.OriginalLanguage);
     }
 
     [Fact]
@@ -82,16 +82,16 @@ public class TmdbMovieModelsTests
         TmdbMovieCredits originalCredits = TmdbMovieMockData.GetSampleMovieCredits();
 
         // Act
-        string json = JsonConvert.SerializeObject(originalCredits);
+        string json = JsonConvert.SerializeObject(value: originalCredits);
         TmdbMovieCredits? deserializedCredits = JsonConvert.DeserializeObject<TmdbMovieCredits>(
-            json
+            value: json
         );
 
         // Assert
         deserializedCredits.Should().NotBeNull();
-        deserializedCredits!.Id.Should().Be(originalCredits.Id);
-        deserializedCredits.Cast.Should().HaveCount(originalCredits.Cast.Length);
-        deserializedCredits.Crew.Should().HaveCount(originalCredits.Crew.Length);
+        deserializedCredits!.Id.Should().Be(expected: originalCredits.Id);
+        deserializedCredits.Cast.Should().HaveCount(expected: originalCredits.Cast.Length);
+        deserializedCredits.Crew.Should().HaveCount(expected: originalCredits.Crew.Length);
 
         // Verify cast data
         for (int i = 0; i < originalCredits.Cast.Length; i++)
@@ -99,16 +99,16 @@ public class TmdbMovieModelsTests
             TmdbCast originalCast = originalCredits.Cast[i];
             TmdbCast deserializedCast = deserializedCredits.Cast[i];
 
-            deserializedCast.Id.Should().Be(originalCast.Id);
-            deserializedCast.Name.Should().Be(originalCast.Name);
-            deserializedCast.Character.Should().Be(originalCast.Character);
-            deserializedCast.Order.Should().Be(originalCast.Order);
-            deserializedCast.CreditId.Should().Be(originalCast.CreditId);
-            deserializedCast.Gender.Should().Be(originalCast.Gender);
-            deserializedCast.KnownForDepartment.Should().Be(originalCast.KnownForDepartment);
-            deserializedCast.OriginalName.Should().Be(originalCast.OriginalName);
-            deserializedCast.Popularity.Should().Be(originalCast.Popularity);
-            deserializedCast.ProfilePath.Should().Be(originalCast.ProfilePath);
+            deserializedCast.Id.Should().Be(expected: originalCast.Id);
+            deserializedCast.Name.Should().Be(expected: originalCast.Name);
+            deserializedCast.Character.Should().Be(expected: originalCast.Character);
+            deserializedCast.Order.Should().Be(expected: originalCast.Order);
+            deserializedCast.CreditId.Should().Be(expected: originalCast.CreditId);
+            deserializedCast.Gender.Should().Be(expected: originalCast.Gender);
+            deserializedCast.KnownForDepartment.Should().Be(expected: originalCast.KnownForDepartment);
+            deserializedCast.OriginalName.Should().Be(expected: originalCast.OriginalName);
+            deserializedCast.Popularity.Should().Be(expected: originalCast.Popularity);
+            deserializedCast.ProfilePath.Should().Be(expected: originalCast.ProfilePath);
         }
 
         // Verify crew data
@@ -117,16 +117,16 @@ public class TmdbMovieModelsTests
             TmdbCrew originalCrew = originalCredits.Crew[i];
             TmdbCrew deserializedCrew = deserializedCredits.Crew[i];
 
-            deserializedCrew.Id.Should().Be(originalCrew.Id);
-            deserializedCrew.Name.Should().Be(originalCrew.Name);
-            deserializedCrew.Job.Should().Be(originalCrew.Job);
-            deserializedCrew.Department.Should().Be(originalCrew.Department);
-            deserializedCrew.CreditId.Should().Be(originalCrew.CreditId);
-            deserializedCrew.Gender.Should().Be(originalCrew.Gender);
-            deserializedCrew.KnownForDepartment.Should().Be(originalCrew.KnownForDepartment);
-            deserializedCrew.OriginalName.Should().Be(originalCrew.OriginalName);
-            deserializedCrew.Popularity.Should().Be(originalCrew.Popularity);
-            deserializedCrew.ProfilePath.Should().Be(originalCrew.ProfilePath);
+            deserializedCrew.Id.Should().Be(expected: originalCrew.Id);
+            deserializedCrew.Name.Should().Be(expected: originalCrew.Name);
+            deserializedCrew.Job.Should().Be(expected: originalCrew.Job);
+            deserializedCrew.Department.Should().Be(expected: originalCrew.Department);
+            deserializedCrew.CreditId.Should().Be(expected: originalCrew.CreditId);
+            deserializedCrew.Gender.Should().Be(expected: originalCrew.Gender);
+            deserializedCrew.KnownForDepartment.Should().Be(expected: originalCrew.KnownForDepartment);
+            deserializedCrew.OriginalName.Should().Be(expected: originalCrew.OriginalName);
+            deserializedCrew.Popularity.Should().Be(expected: originalCrew.Popularity);
+            deserializedCrew.ProfilePath.Should().Be(expected: originalCrew.ProfilePath);
         }
     }
 
@@ -137,17 +137,17 @@ public class TmdbMovieModelsTests
         TmdbMovieExternalIds originalExternalIds = TmdbMovieMockData.GetSampleMovieExternalIds();
 
         // Act
-        string json = JsonConvert.SerializeObject(originalExternalIds);
+        string json = JsonConvert.SerializeObject(value: originalExternalIds);
         TmdbMovieExternalIds? deserializedExternalIds =
-            JsonConvert.DeserializeObject<TmdbMovieExternalIds>(json);
+            JsonConvert.DeserializeObject<TmdbMovieExternalIds>(value: json);
 
         // Assert
         deserializedExternalIds.Should().NotBeNull();
-        deserializedExternalIds!.Id.Should().Be(originalExternalIds.Id);
-        deserializedExternalIds.ImdbId.Should().Be(originalExternalIds.ImdbId);
-        deserializedExternalIds.FacebookId.Should().Be(originalExternalIds.FacebookId);
-        deserializedExternalIds.InstagramId.Should().Be(originalExternalIds.InstagramId);
-        deserializedExternalIds.TwitterId.Should().Be(originalExternalIds.TwitterId);
+        deserializedExternalIds!.Id.Should().Be(expected: originalExternalIds.Id);
+        deserializedExternalIds.ImdbId.Should().Be(expected: originalExternalIds.ImdbId);
+        deserializedExternalIds.FacebookId.Should().Be(expected: originalExternalIds.FacebookId);
+        deserializedExternalIds.InstagramId.Should().Be(expected: originalExternalIds.InstagramId);
+        deserializedExternalIds.TwitterId.Should().Be(expected: originalExternalIds.TwitterId);
     }
 
     [Fact]
@@ -157,42 +157,42 @@ public class TmdbMovieModelsTests
         TmdbMovieAppends originalAppends = TmdbMovieMockData.GetSampleMovieAppends();
 
         // Act
-        string json = JsonConvert.SerializeObject(originalAppends);
+        string json = JsonConvert.SerializeObject(value: originalAppends);
         TmdbMovieAppends? deserializedAppends = JsonConvert.DeserializeObject<TmdbMovieAppends>(
-            json
+            value: json
         );
 
         // Assert
         deserializedAppends.Should().NotBeNull();
-        deserializedAppends!.Id.Should().Be(originalAppends.Id);
-        deserializedAppends.Title.Should().Be(originalAppends.Title);
-        deserializedAppends.OriginalTitle.Should().Be(originalAppends.OriginalTitle);
+        deserializedAppends!.Id.Should().Be(expected: originalAppends.Id);
+        deserializedAppends.Title.Should().Be(expected: originalAppends.Title);
+        deserializedAppends.OriginalTitle.Should().Be(expected: originalAppends.OriginalTitle);
 
         // Verify nested objects
         deserializedAppends.Credits.Should().NotBeNull();
-        deserializedAppends.Credits!.Id.Should().Be(originalAppends.Credits!.Id);
+        deserializedAppends.Credits!.Id.Should().Be(expected: originalAppends.Credits!.Id);
 
         deserializedAppends.ExternalIds.Should().NotBeNull();
-        deserializedAppends.ExternalIds!.Id.Should().Be(originalAppends.ExternalIds!.Id);
+        deserializedAppends.ExternalIds!.Id.Should().Be(expected: originalAppends.ExternalIds!.Id);
     }
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(int.MaxValue)]
-    [InlineData(int.MinValue)]
+    [InlineData(data: 0)]
+    [InlineData(data: -1)]
+    [InlineData(data: int.MaxValue)]
+    [InlineData(data: int.MinValue)]
     public void TmdbMovieDetails_WithVariousIds_HandlesCorrectly(int movieId)
     {
         // Arrange
-        TmdbMovieDetails movie = TmdbMovieMockData.GenerateMovieWithId(movieId);
+        TmdbMovieDetails movie = TmdbMovieMockData.GenerateMovieWithId(id: movieId);
 
         // Act
-        string json = JsonConvert.SerializeObject(movie);
-        TmdbMovieDetails? deserializedMovie = JsonConvert.DeserializeObject<TmdbMovieDetails>(json);
+        string json = JsonConvert.SerializeObject(value: movie);
+        TmdbMovieDetails? deserializedMovie = JsonConvert.DeserializeObject<TmdbMovieDetails>(value: json);
 
         // Assert
         deserializedMovie.Should().NotBeNull();
-        deserializedMovie!.Id.Should().Be(movieId);
+        deserializedMovie!.Id.Should().Be(expected: movieId);
     }
 
     [Fact]
@@ -220,13 +220,13 @@ public class TmdbMovieModelsTests
 
         // Act
         TmdbMovieDetails? deserializedMovie = JsonConvert.DeserializeObject<TmdbMovieDetails>(
-            movieJson
+            value: movieJson
         );
 
         // Assert
         deserializedMovie.Should().NotBeNull();
-        deserializedMovie!.Id.Should().Be(12345);
-        deserializedMovie.Title.Should().Be("Test Movie");
+        deserializedMovie!.Id.Should().Be(expected: 12345);
+        deserializedMovie.Title.Should().Be(expected: "Test Movie");
         deserializedMovie.Overview.Should().BeNull();
         deserializedMovie.Tagline.Should().BeNull();
         deserializedMovie.Homepage.Should().BeNull();
@@ -250,20 +250,20 @@ public class TmdbMovieModelsTests
 
         // Act
         TmdbMovieCredits? deserializedCredits = JsonConvert.DeserializeObject<TmdbMovieCredits>(
-            creditsJson
+            value: creditsJson
         );
 
         // Assert
         deserializedCredits.Should().NotBeNull();
-        deserializedCredits!.Id.Should().Be(12345);
+        deserializedCredits!.Id.Should().Be(expected: 12345);
         deserializedCredits.Cast.Should().BeEmpty();
         deserializedCredits.Crew.Should().BeEmpty();
     }
 
     [Theory]
-    [InlineData("1990-05-15")]
-    [InlineData("2024-12-31")]
-    [InlineData("2000-02-29")] // Leap year
+    [InlineData(data: "1990-05-15")]
+    [InlineData(data: "2024-12-31")]
+    [InlineData(data: "2000-02-29")] // Leap year
     public void TmdbMovieDetails_WithVariousReleaseDates_ParsesCorrectly(string dateString)
     {
         // Arrange
@@ -281,12 +281,12 @@ public class TmdbMovieModelsTests
 
         // Act
         TmdbMovieDetails? deserializedMovie = JsonConvert.DeserializeObject<TmdbMovieDetails>(
-            movieJson
+            value: movieJson
         );
 
         // Assert
         deserializedMovie.Should().NotBeNull();
         deserializedMovie!.ReleaseDate.Should().NotBeNull();
-        deserializedMovie.ReleaseDate!.Value.ToString("yyyy-MM-dd").Should().Be(dateString);
+        deserializedMovie.ReleaseDate!.Value.ToString(format: "yyyy-MM-dd").Should().Be(expected: dateString);
     }
 }

@@ -38,30 +38,30 @@ public class PluginLoaderDisposalTests : IDisposable
     public PluginLoaderDisposalTests()
     {
         _tempPluginsDir = Path.Combine(
-            Path.GetTempPath(),
-            "nomercy-loader-disposal-" + Guid.NewGuid().ToString("N")
+            path1: Path.GetTempPath(),
+            path2: "nomercy-loader-disposal-" + Guid.NewGuid().ToString(format: "N")
         );
-        Directory.CreateDirectory(_tempPluginsDir);
+        Directory.CreateDirectory(path: _tempPluginsDir);
 
-        _echoPluginDir = Path.Combine(_tempPluginsDir, "Echo");
-        Directory.CreateDirectory(_echoPluginDir);
+        _echoPluginDir = Path.Combine(path1: _tempPluginsDir, path2: "Echo");
+        Directory.CreateDirectory(path: _echoPluginDir);
 
-        _markerPath = Path.Combine(_tempPluginsDir, "disposed.marker");
+        _markerPath = Path.Combine(path1: _tempPluginsDir, path2: "disposed.marker");
 
         _eventBus = new();
         _manager = new(
-            _eventBus,
-            new MinimalServiceProvider(),
-            NullLogger<PluginManager>.Instance,
-            _tempPluginsDir,
-            TestStorageHelper.CreateStorage(_tempPluginsDir),
-            TestStorageHelper.CreateBackend()
+            eventBus: _eventBus,
+            serviceProvider: new MinimalServiceProvider(),
+            logger: NullLogger<PluginManager>.Instance,
+            pluginsPath: _tempPluginsDir,
+            storage: TestStorageHelper.CreateStorage(rootPath: _tempPluginsDir),
+            driver: TestStorageHelper.CreateBackend()
         );
     }
 
     public void Dispose()
     {
-        Environment.SetEnvironmentVariable(DisposalMarkerEnvVar, null);
+        Environment.SetEnvironmentVariable(variable: DisposalMarkerEnvVar, value: null);
 
         _manager.Dispose();
 
@@ -71,8 +71,8 @@ public class PluginLoaderDisposalTests : IDisposable
 
         try
         {
-            if (Directory.Exists(_tempPluginsDir))
-                Directory.Delete(_tempPluginsDir, recursive: true);
+            if (Directory.Exists(path: _tempPluginsDir))
+                Directory.Delete(path: _tempPluginsDir, recursive: true);
         }
         catch (Exception) { }
     }
@@ -80,38 +80,32 @@ public class PluginLoaderDisposalTests : IDisposable
     private static string GetEchoPluginBinDir()
     {
         string testBinDir = Path.GetDirectoryName(
-            typeof(PluginLoaderDisposalTests).Assembly.Location
+            path: typeof(PluginLoaderDisposalTests).Assembly.Location
         )!;
-        string repoRoot = Path.GetFullPath(Path.Combine(testBinDir, "..", "..", "..", "..", ".."));
+        string repoRoot = Path.GetFullPath(path: Path.Combine(paths: [testBinDir, "..", "..", "..", "..", ".."]));
         // Mirror the test's own build configuration + TFM so this works under
         // both Debug (local) and Release (CI coverage).
-        string tfm = Path.GetFileName(testBinDir);
-        string configuration = Path.GetFileName(Path.GetDirectoryName(testBinDir)!);
-        return Path.Combine(
-            repoRoot,
-            "tests",
-            "NoMercy.Plugin.Samples.Echo",
-            "bin",
-            configuration,
-            tfm
+        string tfm = Path.GetFileName(path: testBinDir);
+        string configuration = Path.GetFileName(path: Path.GetDirectoryName(path: testBinDir)!);
+        return Path.Combine(paths: [repoRoot, "tests", "NoMercy.Plugin.Samples.Echo", "bin", configuration, tfm]
         );
     }
 
     private void StageEchoPlugin(bool autoEnabled)
     {
         string binDir = GetEchoPluginBinDir();
-        string dllSrc = Path.Combine(binDir, "NoMercy.Plugin.Samples.Echo.dll");
+        string dllSrc = Path.Combine(path1: binDir, path2: "NoMercy.Plugin.Samples.Echo.dll");
 
-        if (!File.Exists(dllSrc))
+        if (!File.Exists(path: dllSrc))
             throw new FileNotFoundException(
-                $"Echo plugin DLL not found at '{dllSrc}'. Build NoMercy.Plugin.Samples.Echo first."
+                message: $"Echo plugin DLL not found at '{dllSrc}'. Build NoMercy.Plugin.Samples.Echo first."
             );
 
-        foreach (string file in Directory.EnumerateFiles(binDir, "*.dll"))
-            File.Copy(file, Path.Combine(_echoPluginDir, Path.GetFileName(file)), overwrite: true);
+        foreach (string file in Directory.EnumerateFiles(path: binDir, searchPattern: "*.dll"))
+            File.Copy(sourceFileName: file, destFileName: Path.Combine(path1: _echoPluginDir, path2: Path.GetFileName(path: file)), overwrite: true);
 
-        foreach (string file in Directory.EnumerateFiles(binDir, "*.deps.json"))
-            File.Copy(file, Path.Combine(_echoPluginDir, Path.GetFileName(file)), overwrite: true);
+        foreach (string file in Directory.EnumerateFiles(path: binDir, searchPattern: "*.deps.json"))
+            File.Copy(sourceFileName: file, destFileName: Path.Combine(path1: _echoPluginDir, path2: Path.GetFileName(path: file)), overwrite: true);
 
         // A custom manifest (not the repo's committed plugin.json) so this
         // test controls autoEnabled independently of every other Echo-staging
@@ -126,42 +120,42 @@ public class PluginLoaderDisposalTests : IDisposable
               "autoEnabled": {{(autoEnabled ? "true" : "false")}}
             }
             """;
-        File.WriteAllText(Path.Combine(_echoPluginDir, "plugin.json"), manifestJson);
+        File.WriteAllText(path: Path.Combine(path1: _echoPluginDir, path2: "plugin.json"), contents: manifestJson);
     }
 
     [Fact]
     public async Task LoadPluginsFromDirectoryAsync_NonAutoEnabledPlugin_DisposesConstructedInstance()
     {
-        Environment.SetEnvironmentVariable(DisposalMarkerEnvVar, _markerPath);
+        Environment.SetEnvironmentVariable(variable: DisposalMarkerEnvVar, value: _markerPath);
         StageEchoPlugin(autoEnabled: false);
 
         await _manager.LoadPluginsFromDirectoryAsync();
 
         IReadOnlyList<PluginInfo> installed = _manager.GetInstalledPlugins();
         installed.Should().ContainSingle();
-        installed[0].Status.Should().Be(PluginStatus.Disabled);
+        installed[index: 0].Status.Should().Be(expected: PluginStatus.Disabled);
 
         // Prior to the fix, the constructed-but-never-stored instance was
         // simply discarded — Dispose() never ran and this marker never
         // appeared.
-        File.Exists(_markerPath).Should().BeTrue();
+        File.Exists(path: _markerPath).Should().BeTrue();
     }
 
     [Fact]
     public async Task LoadPluginsFromDirectoryAsync_AutoEnabledPlugin_DoesNotDisposeActiveInstance()
     {
-        Environment.SetEnvironmentVariable(DisposalMarkerEnvVar, _markerPath);
+        Environment.SetEnvironmentVariable(variable: DisposalMarkerEnvVar, value: _markerPath);
         StageEchoPlugin(autoEnabled: true);
 
         await _manager.LoadPluginsFromDirectoryAsync();
 
         IReadOnlyList<PluginInfo> installed = _manager.GetInstalledPlugins();
         installed.Should().ContainSingle();
-        installed[0].Status.Should().Be(PluginStatus.Active);
+        installed[index: 0].Status.Should().Be(expected: PluginStatus.Active);
 
         // An active plugin's instance is stored and stays live — the fix
         // must only dispose the instance when it is NOT going to be stored.
-        File.Exists(_markerPath).Should().BeFalse();
+        File.Exists(path: _markerPath).Should().BeFalse();
     }
 
     private sealed class MinimalServiceProvider : IServiceProvider

@@ -23,81 +23,81 @@ public static class AppFiles
     public static readonly string AppDataPath =
         Environment.OSVersion.Platform == PlatformID.Unix
             ? Path.Combine(
-                Environment.GetEnvironmentVariable("HOME") ?? "/home/current",
-                ".local/share"
+                path1: Environment.GetEnvironmentVariable(variable: "HOME") ?? "/home/current",
+                path2: ".local/share"
             )
-            : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            : Environment.GetFolderPath(folder: Environment.SpecialFolder.LocalApplicationData);
 
     // An explicit NOMERCY_APP_PATH override lets each process (notably each
     // parallel test assembly) use a fully isolated app-data root — its own
     // database, cache and logs — so concurrent test processes never collide
     // on shared on-disk state. Unset in production, so behaviour is unchanged.
     public static string AppPath =>
-        Environment.GetEnvironmentVariable("NOMERCY_APP_PATH") is { Length: > 0 } appPathOverride
+        Environment.GetEnvironmentVariable(variable: "NOMERCY_APP_PATH") is { Length: > 0 } appPathOverride
             ? appPathOverride
-        : Config.IsTest ? Path.Combine(AppDataPath, "NoMercy_test")
-        : Config.IsDev ? Path.Combine(AppDataPath, "NoMercy_dev")
-        : Path.Combine(AppDataPath, "NoMercy");
+        : Config.IsTest ? Path.Combine(path1: AppDataPath, path2: "NoMercy_test")
+        : Config.IsDev ? Path.Combine(path1: AppDataPath, path2: "NoMercy_dev")
+        : Path.Combine(path1: AppDataPath, path2: "NoMercy");
 
     // ── Config ───────────────────────────────────────────────────────────
 
-    public static string ConfigPath => Path.Combine(AppPath, "config");
+    public static string ConfigPath => Path.Combine(path1: AppPath, path2: "config");
 
-    [Obsolete("Tokens are now stored encrypted in app.db. Kept for migration detection only.")]
-    public static string TokenFile => Path.Combine(ConfigPath, "token.json");
-    public static string AuthKeysFile => Path.Combine(ConfigPath, "auth_keys.json");
-    public static string JwksCacheFile => Path.Combine(ConfigPath, "jwks_cache.json");
-    public static string ApiKeysFile => Path.Combine(ConfigPath, "api_keys.json");
-    public static string TraySettingsFile => Path.Combine(ConfigPath, "tray_settings.json");
+    [Obsolete(message: "Tokens are now stored encrypted in app.db. Kept for migration detection only.")]
+    public static string TokenFile => Path.Combine(path1: ConfigPath, path2: "token.json");
+    public static string AuthKeysFile => Path.Combine(path1: ConfigPath, path2: "auth_keys.json");
+    public static string JwksCacheFile => Path.Combine(path1: ConfigPath, path2: "jwks_cache.json");
+    public static string ApiKeysFile => Path.Combine(path1: ConfigPath, path2: "api_keys.json");
+    public static string TraySettingsFile => Path.Combine(path1: ConfigPath, path2: "tray_settings.json");
 
-    public static string SeedsPath => Path.Combine(ConfigPath, "seeds");
-    public static string FolderRootsSeedFile => Path.Combine(SeedsPath, "folderRoots.jsonc");
-    public static string LibrariesSeedFile => Path.Combine(SeedsPath, "libraries.jsonc");
+    public static string SeedsPath => Path.Combine(path1: ConfigPath, path2: "seeds");
+    public static string FolderRootsSeedFile => Path.Combine(path1: SeedsPath, path2: "folderRoots.jsonc");
+    public static string LibrariesSeedFile => Path.Combine(path1: SeedsPath, path2: "libraries.jsonc");
     public static string EncoderProfilesSeedFile =>
-        Path.Combine(SeedsPath, "encoderProfiles.jsonc");
+        Path.Combine(path1: SeedsPath, path2: "encoderProfiles.jsonc");
     public static string EncodingPresetsSeedFile =>
-        Path.Combine(SeedsPath, "encodingPresets.jsonc");
+        Path.Combine(path1: SeedsPath, path2: "encodingPresets.jsonc");
 
     // ── Data & Logs ──────────────────────────────────────────────────────
 
-    public static string DataPath => Path.Combine(AppPath, "data");
-    public static string LogPath => Path.Combine(AppPath, "log");
+    public static string DataPath => Path.Combine(path1: AppPath, path2: "data");
+    public static string LogPath => Path.Combine(path1: AppPath, path2: "log");
 
     // AES-128 HLS DRM keys, protected at rest via DataProtection (see
     // NoMercy.NmSystem.Security.DrmKeyStore). Never served as static files —
     // outside CachePath/TranscodePath so it can never land in a published
     // transcode output.
-    public static string DrmKeysPath => Path.Combine(DataPath, "drm_keys");
+    public static string DrmKeysPath => Path.Combine(path1: DataPath, path2: "drm_keys");
 
     // ── Cache ────────────────────────────────────────────────────────────
 
-    public static string CachePath => Path.Combine(AppPath, "cache");
-    public static string ApiCachePath => Path.Combine(CachePath, "api");
-    public static string TempPath => Path.Combine(CachePath, "temp");
-    public static string TranscodePath => Path.Combine(CachePath, "transcode");
-    public static string EncoderCachePath => Path.Combine(CachePath, "encoder");
-    public static string ImagesPath => Path.Combine(CachePath, "images");
-    public static string MusicImagesPath => Path.Combine(ImagesPath, "music");
-    public static string TempImagesPath => Path.Combine(ImagesPath, "temp");
+    public static string CachePath => Path.Combine(path1: AppPath, path2: "cache");
+    public static string ApiCachePath => Path.Combine(path1: CachePath, path2: "api");
+    public static string TempPath => Path.Combine(path1: CachePath, path2: "temp");
+    public static string TranscodePath => Path.Combine(path1: CachePath, path2: "transcode");
+    public static string EncoderCachePath => Path.Combine(path1: CachePath, path2: "encoder");
+    public static string ImagesPath => Path.Combine(path1: CachePath, path2: "images");
+    public static string MusicImagesPath => Path.Combine(path1: ImagesPath, path2: "music");
+    public static string TempImagesPath => Path.Combine(path1: ImagesPath, path2: "temp");
 
     // Encoder hardware speed-index cache. Stores per-encoder/codec/resolution
     // FPS measurements so reboots reuse the calibration instead of redoing
     // 20+ minutes of synthetic encodes on every start.
     public static string SpeedIndexCachePath =>
-        Path.Combine(CachePath, "encoder", "speed_index.json");
+        Path.Combine(path1: CachePath, path2: "encoder", path3: "speed_index.json");
 
     // ── Browser ──────────────────────────────────────────────────────────
 
-    public static string BrowserPath => Path.Combine(AppPath, "browser");
+    public static string BrowserPath => Path.Combine(path1: AppPath, path2: "browser");
 
     // ── Plugins ──────────────────────────────────────────────────────────
 
-    public static string PluginsPath => Path.Combine(AppPath, "plugins");
-    public static string PluginConfigPath => Path.Combine(PluginsPath, "configurations");
+    public static string PluginsPath => Path.Combine(path1: AppPath, path2: "plugins");
+    public static string PluginConfigPath => Path.Combine(path1: PluginsPath, path2: "configurations");
 
     // ── Binaries (standalone NoMercy executables for auto-update) ────────
 
-    public static string BinariesPath => Path.Combine(AppPath, "binaries");
+    public static string BinariesPath => Path.Combine(path1: AppPath, path2: "binaries");
 
     /// <summary>
     /// Path for external dependencies (FFmpeg, cloudflared, yt-dlp, etc.).
@@ -108,81 +108,81 @@ public static class AppFiles
     {
         get
         {
-            string? installDir = Environment.GetEnvironmentVariable("NOMERCY_INSTALL_DIR");
-            if (!string.IsNullOrEmpty(installDir))
-                return Path.Combine(installDir, "binaries");
+            string? installDir = Environment.GetEnvironmentVariable(variable: "NOMERCY_INSTALL_DIR");
+            if (!string.IsNullOrEmpty(value: installDir))
+                return Path.Combine(path1: installDir, path2: "binaries");
             return BinariesPath;
         }
     }
 
-    public static string FfmpegFolder => Path.Combine(DependenciesPath, "ffmpeg");
-    public static string FfmpegPath => Path.Combine(FfmpegFolder, "ffmpeg" + Info.ExecSuffix);
-    public static string FfProbePath => Path.Combine(FfmpegFolder, "ffprobe" + Info.ExecSuffix);
-    public static string FfPlayPath => Path.Combine(FfmpegFolder, "ffplay" + Info.ExecSuffix);
+    public static string FfmpegFolder => Path.Combine(path1: DependenciesPath, path2: "ffmpeg");
+    public static string FfmpegPath => Path.Combine(path1: FfmpegFolder, path2: "ffmpeg" + Info.ExecSuffix);
+    public static string FfProbePath => Path.Combine(path1: FfmpegFolder, path2: "ffprobe" + Info.ExecSuffix);
+    public static string FfPlayPath => Path.Combine(path1: FfmpegFolder, path2: "ffplay" + Info.ExecSuffix);
 
     // shaka-packager lives alongside ffmpeg so EncoderOptions resolves it as the
     // "packager" sibling of the ffmpeg path for CENC/raw-key DRM packaging.
     public static string ShakaPackagerPath =>
-        Path.Combine(FfmpegFolder, "packager" + Info.ExecSuffix);
+        Path.Combine(path1: FfmpegFolder, path2: "packager" + Info.ExecSuffix);
 
-    public static string YtdlpPath => Path.Combine(DependenciesPath, "yt-dlp" + Info.ExecSuffix);
+    public static string YtdlpPath => Path.Combine(path1: DependenciesPath, path2: "yt-dlp" + Info.ExecSuffix);
 
-    public static string TesseractFolder => Path.Combine(DependenciesPath, "tesseract");
-    public static string TesseractModelsFolder => Path.Combine(TesseractFolder, "tessdata");
+    public static string TesseractFolder => Path.Combine(path1: DependenciesPath, path2: "tesseract");
+    public static string TesseractModelsFolder => Path.Combine(path1: TesseractFolder, path2: "tessdata");
 
     public static string WhisperModel { get; set; } = "ggml-large-v3";
 
     // The model ships inside the ffmpeg/ subfolder alongside ffmpeg.exe and the
     // libbluray jars — the build output puts everything ffmpeg-runtime there.
-    public static string WhisperModelPath => Path.Combine(FfmpegFolder, WhisperModel + ".bin");
+    public static string WhisperModelPath => Path.Combine(path1: FfmpegFolder, path2: WhisperModel + ".bin");
 
     public static string CloudflareDPath =>
-        Path.Combine(DependenciesPath, "cloudflared" + Info.ExecSuffix);
+        Path.Combine(path1: DependenciesPath, path2: "cloudflared" + Info.ExecSuffix);
 
     public static string ServerExePath =>
-        Path.Combine(BinariesPath, "NoMercyMediaServer" + Info.ExecSuffix);
-    public static string AppExePath => Path.Combine(BinariesPath, "NoMercyApp" + Info.ExecSuffix);
+        Path.Combine(path1: BinariesPath, path2: "NoMercyMediaServer" + Info.ExecSuffix);
+    public static string AppExePath => Path.Combine(path1: BinariesPath, path2: "NoMercyApp" + Info.ExecSuffix);
     public static string LauncherExePath =>
-        Path.Combine(BinariesPath, "NoMercyLauncher" + Info.ExecSuffix);
-    public static string CliExePath => Path.Combine(BinariesPath, "nomercy" + Info.ExecSuffix);
+        Path.Combine(path1: BinariesPath, path2: "NoMercyLauncher" + Info.ExecSuffix);
+    public static string CliExePath => Path.Combine(path1: BinariesPath, path2: "nomercy" + Info.ExecSuffix);
     public static string ServerTempExePath =>
-        Path.Combine(BinariesPath, "NoMercyMediaServer_temp" + Info.ExecSuffix);
+        Path.Combine(path1: BinariesPath, path2: "NoMercyMediaServer_temp" + Info.ExecSuffix);
     public static string LauncherTempExePath =>
-        Path.Combine(BinariesPath, "NoMercyLauncher_temp" + Info.ExecSuffix);
+        Path.Combine(path1: BinariesPath, path2: "NoMercyLauncher_temp" + Info.ExecSuffix);
     public static string CliTempExePath =>
-        Path.Combine(BinariesPath, "nomercy_temp" + Info.ExecSuffix);
+        Path.Combine(path1: BinariesPath, path2: "nomercy_temp" + Info.ExecSuffix);
 
     // ── Security ─────────────────────────────────────────────────────────
 
-    public static string SecurityPath => Path.Combine(AppPath, "security");
+    public static string SecurityPath => Path.Combine(path1: AppPath, path2: "security");
 
-    public static string CertPath => Path.Combine(SecurityPath, "certs");
+    public static string CertPath => Path.Combine(path1: SecurityPath, path2: "certs");
 
-    [Obsolete("Certs are now stored encrypted in app.db. Kept for migration detection only.")]
-    public static string CertFile => Path.Combine(CertPath, "cert.pem");
+    [Obsolete(message: "Certs are now stored encrypted in app.db. Kept for migration detection only.")]
+    public static string CertFile => Path.Combine(path1: CertPath, path2: "cert.pem");
 
-    [Obsolete("Certs are now stored encrypted in app.db. Kept for migration detection only.")]
-    public static string KeyFile => Path.Combine(CertPath, "key.pem");
+    [Obsolete(message: "Certs are now stored encrypted in app.db. Kept for migration detection only.")]
+    public static string KeyFile => Path.Combine(path1: CertPath, path2: "key.pem");
 
-    [Obsolete("Certs are now stored encrypted in app.db. Kept for migration detection only.")]
-    public static string CaFile => Path.Combine(CertPath, "ca.pem");
+    [Obsolete(message: "Certs are now stored encrypted in app.db. Kept for migration detection only.")]
+    public static string CaFile => Path.Combine(path1: CertPath, path2: "ca.pem");
 
-    public static string SecretsPath => Path.Combine(SecurityPath, "secrets");
-    public static string SecretsStore => Path.Combine(SecretsPath, "secrets.bin");
-    public static string SecretsKey => Path.Combine(SecretsPath, "secrets.key");
+    public static string SecretsPath => Path.Combine(path1: SecurityPath, path2: "secrets");
+    public static string SecretsStore => Path.Combine(path1: SecretsPath, path2: "secrets.bin");
+    public static string SecretsKey => Path.Combine(path1: SecretsPath, path2: "secrets.key");
 
     // ── Misc ─────────────────────────────────────────────────────────────
 
     public static string AppIcon =>
-        Path.Combine(Directory.GetCurrentDirectory(), "Assets/icon" + Info.IconSuffix);
+        Path.Combine(path1: Directory.GetCurrentDirectory(), path2: "Assets/icon" + Info.IconSuffix);
 
-    public static string MediaDatabase => Path.Combine(DataPath, "media.db");
-    public static string QueueDatabase => Path.Combine(DataPath, "queue.db");
-    public static string AppDatabase => Path.Combine(DataPath, "app.db");
+    public static string MediaDatabase => Path.Combine(path1: DataPath, path2: "media.db");
+    public static string QueueDatabase => Path.Combine(path1: DataPath, path2: "queue.db");
+    public static string AppDatabase => Path.Combine(path1: DataPath, path2: "app.db");
 
     // ── DataProtection keys ─────────────────────────────────────────────
 
-    public static string DataProtectionKeysDir => Path.Combine(DataPath, "keys");
+    public static string DataProtectionKeysDir => Path.Combine(path1: DataPath, path2: "keys");
 
     // ── Directory management ─────────────────────────────────────────────
 
@@ -219,18 +219,18 @@ public static class AppFiles
 
     public static Task CreateAppFolders()
     {
-        if (!Directory.Exists(AppPath))
-            Directory.CreateDirectory(AppPath);
+        if (!Directory.Exists(path: AppPath))
+            Directory.CreateDirectory(path: AppPath);
 
         MigrateOldPaths();
 
         // DataProtection keys need restrictive permissions (700, not 755)
-        if (!Directory.Exists(DataProtectionKeysDir))
+        if (!Directory.Exists(path: DataProtectionKeysDir))
         {
-            Directory.CreateDirectory(DataProtectionKeysDir);
+            Directory.CreateDirectory(path: DataProtectionKeysDir);
             if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
             {
-                DirectoryInfo keysDir = new(DataProtectionKeysDir)
+                DirectoryInfo keysDir = new(path: DataProtectionKeysDir)
                 {
                     UnixFileMode =
                         UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute,
@@ -238,14 +238,14 @@ public static class AppFiles
             }
         }
 
-        foreach (string path in AllPaths().Where(path => !Directory.Exists(path)))
+        foreach (string path in AllPaths().Where(predicate: path => !Directory.Exists(path: path)))
         {
-            Logger.Setup($"Creating directory: {path}", LogEventLevel.Verbose);
-            Directory.CreateDirectory(path);
+            Logger.Setup(message: $"Creating directory: {path}", level: LogEventLevel.Verbose);
+            Directory.CreateDirectory(path: path);
             if (Environment.OSVersion.Platform == PlatformID.Unix)
             {
                 // Set appropriate Unix permissions (755)
-                DirectoryInfo dirInfo = new(path);
+                DirectoryInfo dirInfo = new(path: path);
                 if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
                 {
                     dirInfo.UnixFileMode =
@@ -261,9 +261,9 @@ public static class AppFiles
         }
 
         // app.db should have 600 permissions (owner read/write only — contains secrets)
-        if (File.Exists(AppDatabase) && (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()))
+        if (File.Exists(path: AppDatabase) && (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()))
         {
-            File.SetUnixFileMode(AppDatabase, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            File.SetUnixFileMode(path: AppDatabase, mode: UnixFileMode.UserRead | UnixFileMode.UserWrite);
         }
 
         return Task.CompletedTask;
@@ -271,37 +271,37 @@ public static class AppFiles
 
     private static void MigrateOldPaths()
     {
-        string oldRoot = Path.Combine(AppPath, "root");
-        if (!Directory.Exists(oldRoot))
+        string oldRoot = Path.Combine(path1: AppPath, path2: "root");
+        if (!Directory.Exists(path: oldRoot))
             return;
 
-        Logger.Setup("Migrating legacy folder structure...");
+        Logger.Setup(message: "Migrating legacy folder structure...");
 
         // root/binaries → binaries
-        MigrateDirectory(Path.Combine(oldRoot, "binaries"), BinariesPath);
+        MigrateDirectory(oldPath: Path.Combine(path1: oldRoot, path2: "binaries"), newPath: BinariesPath);
 
         // root/certs → security/certs
-        MigrateDirectory(Path.Combine(oldRoot, "certs"), CertPath);
+        MigrateDirectory(oldPath: Path.Combine(path1: oldRoot, path2: "certs"), newPath: CertPath);
 
         // root/secrets → security/secrets
-        MigrateDirectory(Path.Combine(oldRoot, "secrets"), SecretsPath);
+        MigrateDirectory(oldPath: Path.Combine(path1: oldRoot, path2: "secrets"), newPath: SecretsPath);
 
         // cache/apiData → cache/api
-        MigrateDirectory(Path.Combine(CachePath, "apiData"), ApiCachePath);
+        MigrateDirectory(oldPath: Path.Combine(path1: CachePath, path2: "apiData"), newPath: ApiCachePath);
 
         // config seed files → config/seeds/
-        Directory.CreateDirectory(SeedsPath);
-        MigrateFile(Path.Combine(ConfigPath, "folderRootsSeed.jsonc"), FolderRootsSeedFile);
-        MigrateFile(Path.Combine(ConfigPath, "librariesSeed.jsonc"), LibrariesSeedFile);
-        MigrateFile(Path.Combine(ConfigPath, "encoderProfilesSeed.jsonc"), EncoderProfilesSeedFile);
+        Directory.CreateDirectory(path: SeedsPath);
+        MigrateFile(oldPath: Path.Combine(path1: ConfigPath, path2: "folderRootsSeed.jsonc"), newPath: FolderRootsSeedFile);
+        MigrateFile(oldPath: Path.Combine(path1: ConfigPath, path2: "librariesSeed.jsonc"), newPath: LibrariesSeedFile);
+        MigrateFile(oldPath: Path.Combine(path1: ConfigPath, path2: "encoderProfilesSeed.jsonc"), newPath: EncoderProfilesSeedFile);
 
         // Clean up empty root directory
         try
         {
-            if (Directory.Exists(oldRoot) && !Directory.EnumerateFileSystemEntries(oldRoot).Any())
+            if (Directory.Exists(path: oldRoot) && !Directory.EnumerateFileSystemEntries(path: oldRoot).Any())
             {
-                Directory.Delete(oldRoot);
-                Logger.Setup("Removed empty legacy root/ directory");
+                Directory.Delete(path: oldRoot);
+                Logger.Setup(message: "Removed empty legacy root/ directory");
             }
         }
         catch
@@ -309,26 +309,26 @@ public static class AppFiles
             // Best-effort cleanup
         }
 
-        Logger.Setup("Migration complete");
+        Logger.Setup(message: "Migration complete");
     }
 
     private static void MigrateDirectory(string oldPath, string newPath)
     {
         try
         {
-            if (!Directory.Exists(oldPath))
+            if (!Directory.Exists(path: oldPath))
                 return;
 
-            if (Directory.Exists(newPath) && Directory.EnumerateFileSystemEntries(newPath).Any())
+            if (Directory.Exists(path: newPath) && Directory.EnumerateFileSystemEntries(path: newPath).Any())
                 return;
 
-            Directory.CreateDirectory(Path.GetDirectoryName(newPath)!);
-            Directory.Move(oldPath, newPath);
-            Logger.Setup($"Migrated {oldPath} → {newPath}");
+            Directory.CreateDirectory(path: Path.GetDirectoryName(path: newPath)!);
+            Directory.Move(sourceDirName: oldPath, destDirName: newPath);
+            Logger.Setup(message: $"Migrated {oldPath} → {newPath}");
         }
         catch (Exception ex)
         {
-            Logger.Setup($"Failed to migrate {oldPath}: {ex.Message}", LogEventLevel.Warning);
+            Logger.Setup(message: $"Failed to migrate {oldPath}: {ex.Message}", level: LogEventLevel.Warning);
         }
     }
 
@@ -336,16 +336,16 @@ public static class AppFiles
     {
         try
         {
-            if (!File.Exists(oldPath) || File.Exists(newPath))
+            if (!File.Exists(path: oldPath) || File.Exists(path: newPath))
                 return;
 
-            Directory.CreateDirectory(Path.GetDirectoryName(newPath)!);
-            File.Move(oldPath, newPath);
-            Logger.Setup($"Migrated {oldPath} → {newPath}");
+            Directory.CreateDirectory(path: Path.GetDirectoryName(path: newPath)!);
+            File.Move(sourceFileName: oldPath, destFileName: newPath);
+            Logger.Setup(message: $"Migrated {oldPath} → {newPath}");
         }
         catch (Exception ex)
         {
-            Logger.Setup($"Failed to migrate {oldPath}: {ex.Message}", LogEventLevel.Warning);
+            Logger.Setup(message: $"Failed to migrate {oldPath}: {ex.Message}", level: LogEventLevel.Warning);
         }
     }
 }

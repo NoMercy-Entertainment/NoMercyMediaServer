@@ -18,28 +18,28 @@ namespace NoMercy.NmSystem.Dto;
 
 public class LogEntry
 {
-    [JsonProperty("type")]
-    [JsonPropertyName("Type")]
+    [JsonProperty(propertyName: "type")]
+    [JsonPropertyName(name: "Type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty("color")]
-    [JsonPropertyName("Color")]
+    [JsonProperty(propertyName: "color")]
+    [JsonPropertyName(name: "Color")]
     public string Color { get; set; } = string.Empty;
 
-    [JsonProperty("threadId")]
-    [JsonPropertyName("ThreadId")]
+    [JsonProperty(propertyName: "threadId")]
+    [JsonPropertyName(name: "ThreadId")]
     public int ThreadId { get; set; }
 
-    [JsonProperty("time")]
-    [JsonPropertyName("@t")]
+    [JsonProperty(propertyName: "time")]
+    [JsonPropertyName(name: "@t")]
     public DateTime Time { get; set; }
 
     [System.Text.Json.Serialization.JsonIgnore]
     public dynamic LogMessage { get; set; } = default!;
 
     [NotMapped]
-    [JsonProperty("message")]
-    [JsonPropertyName("Message")]
+    [JsonProperty(propertyName: "message")]
+    [JsonPropertyName(name: "Message")]
     public string Message
     {
         get => LogMessage;
@@ -50,11 +50,11 @@ public class LogEntry
     public LogEventLevel LogLevel { get; set; }
 
     [NotMapped]
-    [JsonProperty("level")]
-    [JsonPropertyName("Level")]
+    [JsonProperty(propertyName: "level")]
+    [JsonPropertyName(name: "Level")]
     public string Level
     {
         get => LogLevel.ToString();
-        set => LogLevel = Enum.Parse<LogEventLevel>(value);
+        set => LogLevel = Enum.Parse<LogEventLevel>(value: value);
     }
 }

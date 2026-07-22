@@ -36,7 +36,7 @@ namespace NoMercy.Tests.MediaProcessing.Files;
 // `new MediaContext()` — per the job-system convention, it is not injectable)
 // so the FolderLibrary scoping query itself is exercised, not mocked away.
 // ---------------------------------------------------------------------------
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class FileManagerPathsTests : IDisposable
 {
     private readonly string _tempRoot;
@@ -46,23 +46,23 @@ public sealed class FileManagerPathsTests : IDisposable
 
     public FileManagerPathsTests()
     {
-        _tempRoot = Path.Combine(Path.GetTempPath(), $"nm-paths-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempRoot);
+        _tempRoot = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-paths-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: _tempRoot);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempRoot))
-            Directory.Delete(_tempRoot, recursive: true);
+        if (Directory.Exists(path: _tempRoot))
+            Directory.Delete(path: _tempRoot, recursive: true);
 
         using MediaContext cleanup = new();
         cleanup.FolderLibrary.RemoveRange(
-            cleanup.FolderLibrary.Where(fl => _libraryIds.Contains(fl.LibraryId))
+            entities: cleanup.FolderLibrary.Where(predicate: fl => _libraryIds.Contains(fl.LibraryId))
         );
-        cleanup.Folders.RemoveRange(cleanup.Folders.Where(f => _folderIds.Contains(f.Id)));
-        cleanup.Libraries.RemoveRange(cleanup.Libraries.Where(l => _libraryIds.Contains(l.Id)));
+        cleanup.Folders.RemoveRange(entities: cleanup.Folders.Where(predicate: f => _folderIds.Contains(f.Id)));
+        cleanup.Libraries.RemoveRange(entities: cleanup.Libraries.Where(predicate: l => _libraryIds.Contains(l.Id)));
         cleanup.SaveChanges();
-        cleanup.Drivers.RemoveRange(cleanup.Drivers.Where(d => _driverIds.Contains(d.Id)));
+        cleanup.Drivers.RemoveRange(entities: cleanup.Drivers.Where(predicate: d => _driverIds.Contains(d.Id)));
         cleanup.SaveChanges();
     }
 
@@ -74,10 +74,10 @@ public sealed class FileManagerPathsTests : IDisposable
         Mock<IFileRepository> repoMock = new();
         Mock<IMediaAnalyzer> mediaAnalyzerMock = new();
         return new(
-            repoMock.Object,
-            (factoryMock ?? new()).Object,
-            (driverMock ?? new()).Object,
-            mediaAnalyzerMock.Object
+            fileRepository: repoMock.Object,
+            storageFactory: (factoryMock ?? new()).Object,
+            storageDriver: (driverMock ?? new()).Object,
+            mediaAnalyzer: mediaAnalyzerMock.Object
         );
     }
 
@@ -89,10 +89,10 @@ public sealed class FileManagerPathsTests : IDisposable
     )
     {
         MethodInfo method =
-            typeof(FileManager).GetMethod("Paths", BindingFlags.NonPublic | BindingFlags.Instance)
-            ?? throw new InvalidOperationException("Paths not found");
+            typeof(FileManager).GetMethod(name: "Paths", bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance)
+            ?? throw new InvalidOperationException(message: "Paths not found");
 
-        return (List<Folder>)method.Invoke(manager, [library, movie, show])!;
+        return (List<Folder>)method.Invoke(obj: manager, parameters: [library, movie, show])!;
     }
 
     private (Library Library, Folder Folder) SeedLibraryWithFolder(
@@ -101,7 +101,7 @@ public sealed class FileManagerPathsTests : IDisposable
     )
     {
         Ulid libraryId = Ulid.NewUlid();
-        _libraryIds.Add(libraryId);
+        _libraryIds.Add(item: libraryId);
 
         Library library = new()
         {
@@ -116,7 +116,7 @@ public sealed class FileManagerPathsTests : IDisposable
             Name = $"test-driver-{Ulid.NewUlid()}",
             Type = "local",
         };
-        _driverIds.Add(driver.Id);
+        _driverIds.Add(item: driver.Id);
 
         Folder folder = new()
         {
@@ -125,13 +125,13 @@ public sealed class FileManagerPathsTests : IDisposable
             DriverId = driver.Id,
         };
 
-        _folderIds.Add(folder.Id);
+        _folderIds.Add(item: folder.Id);
 
         using MediaContext context = new();
-        context.Drivers.Add(driver);
-        context.Libraries.Add(library);
-        context.Folders.Add(folder);
-        context.FolderLibrary.Add(new(folder.Id, library.Id));
+        context.Drivers.Add(entity: driver);
+        context.Libraries.Add(entity: library);
+        context.Folders.Add(entity: folder);
+        context.FolderLibrary.Add(entity: new(folderId: folder.Id, libraryId: library.Id));
         context.SaveChanges();
 
         return (library, folder);
@@ -150,7 +150,7 @@ public sealed class FileManagerPathsTests : IDisposable
         Library library = new() { Id = Ulid.NewUlid(), Type = MediaTypes.MovieMediaType };
         Movie movie = new() { Id = 1, Folder = null };
 
-        List<Folder> result = InvokePaths(manager, library, movie, null);
+        List<Folder> result = InvokePaths(manager: manager, library: library, movie: movie, show: null);
 
         result.Should().BeEmpty();
     }
@@ -162,7 +162,7 @@ public sealed class FileManagerPathsTests : IDisposable
         Library library = new() { Id = Ulid.NewUlid(), Type = MediaTypes.TvMediaType };
         Tv show = new() { Id = 1, Folder = null };
 
-        List<Folder> result = InvokePaths(manager, library, null, show);
+        List<Folder> result = InvokePaths(manager: manager, library: library, movie: null, show: show);
 
         result.Should().BeEmpty();
     }
@@ -178,7 +178,7 @@ public sealed class FileManagerPathsTests : IDisposable
         FileManager manager = BuildManager();
         Library library = new() { Id = Ulid.NewUlid(), Type = MediaTypes.TvMediaType };
 
-        List<Folder> result = InvokePaths(manager, library, null, null);
+        List<Folder> result = InvokePaths(manager: manager, library: library, movie: null, show: null);
 
         result.Should().BeEmpty();
     }
@@ -193,25 +193,25 @@ public sealed class FileManagerPathsTests : IDisposable
     public void Paths_UnknownLibraryType_ResolvesEmptyFolder_AndStillQueriesScopedFolders()
     {
         (Library library, Folder rootFolder) = SeedLibraryWithFolder(
-            MediaTypes.MusicMediaType,
-            _tempRoot
+            libraryType: MediaTypes.MusicMediaType,
+            folderPath: _tempRoot
         );
 
         Mock<IStorageFactory> factoryMock = new();
         LocalStorageDriver driver = new();
-        IStorage storage = new LocalStorage(driver, new StoragePathGuard([], driver));
+        IStorage storage = new LocalStorage(driver: driver, guard: new StoragePathGuard(allowedRoots: [], driver: driver));
         factoryMock
-            .Setup(f => f.For(rootFolder.Id, rootFolder.DriverId, string.Empty))
-            .Returns(storage);
+            .Setup(expression: f => f.For(rootFolder.Id, rootFolder.DriverId, string.Empty))
+            .Returns(value: storage);
 
-        FileManager manager = BuildManager(factoryMock);
+        FileManager manager = BuildManager(factoryMock: factoryMock);
 
-        List<Folder> result = InvokePaths(manager, library, null, null);
+        List<Folder> result = InvokePaths(manager: manager, library: library, movie: null, show: null);
 
         // The scope root itself always "exists" (it's the temp dir this test
         // created), so the empty-string folder resolves to the root and is
         // returned — proving the query executed and scoped to this library.
-        result.Should().ContainSingle(f => f.Id == rootFolder.Id);
+        result.Should().ContainSingle(predicate: f => f.Id == rootFolder.Id);
     }
 
     // -----------------------------------------------------------------------
@@ -224,27 +224,27 @@ public sealed class FileManagerPathsTests : IDisposable
     public void Paths_OnlyProbesFoldersScopedToTheRequestedLibrary()
     {
         (Library library, Folder rootFolder) = SeedLibraryWithFolder(
-            MediaTypes.MovieMediaType,
-            _tempRoot
+            libraryType: MediaTypes.MovieMediaType,
+            folderPath: _tempRoot
         );
 
         // A second, unrelated library/folder pair whose storage would throw
         // if it were ever touched — proving cross-library isolation.
         Ulid otherLibraryId = Ulid.NewUlid();
-        _libraryIds.Add(otherLibraryId);
+        _libraryIds.Add(item: otherLibraryId);
         Ulid otherDriverId = Ulid.NewUlid();
-        _driverIds.Add(otherDriverId);
+        _driverIds.Add(item: otherDriverId);
         Folder otherFolder = new()
         {
             Id = Ulid.NewUlid(),
             Path = "/should/never/be/probed",
             DriverId = otherDriverId,
         };
-        _folderIds.Add(otherFolder.Id);
+        _folderIds.Add(item: otherFolder.Id);
         using (MediaContext seed = new())
         {
             seed.Drivers.Add(
-                new()
+                entity: new()
                 {
                     Id = otherDriverId,
                     Name = $"other-driver-{otherDriverId}",
@@ -252,37 +252,37 @@ public sealed class FileManagerPathsTests : IDisposable
                 }
             );
             seed.Libraries.Add(
-                new()
+                entity: new()
                 {
                     Id = otherLibraryId,
                     Title = "Other Library",
                     Type = MediaTypes.MovieMediaType,
                 }
             );
-            seed.Folders.Add(otherFolder);
-            seed.FolderLibrary.Add(new(otherFolder.Id, otherLibraryId));
+            seed.Folders.Add(entity: otherFolder);
+            seed.FolderLibrary.Add(entity: new(folderId: otherFolder.Id, libraryId: otherLibraryId));
             seed.SaveChanges();
         }
 
         Mock<IStorageFactory> factoryMock = new();
         LocalStorageDriver driver = new();
-        IStorage storage = new LocalStorage(driver, new StoragePathGuard([], driver));
+        IStorage storage = new LocalStorage(driver: driver, guard: new StoragePathGuard(allowedRoots: [], driver: driver));
         factoryMock
-            .Setup(f => f.For(rootFolder.Id, rootFolder.DriverId, string.Empty))
-            .Returns(storage);
+            .Setup(expression: f => f.For(rootFolder.Id, rootFolder.DriverId, string.Empty))
+            .Returns(value: storage);
         factoryMock
-            .Setup(f => f.For(otherFolder.Id, otherFolder.DriverId, string.Empty))
-            .Throws(new InvalidOperationException("otherFolder must never be resolved"));
+            .Setup(expression: f => f.For(otherFolder.Id, otherFolder.DriverId, string.Empty))
+            .Throws(exception: new InvalidOperationException(message: "otherFolder must never be resolved"));
 
         string movieFolderName = "My.Movie.2020";
-        Directory.CreateDirectory(Path.Combine(_tempRoot, movieFolderName));
+        Directory.CreateDirectory(path: Path.Combine(path1: _tempRoot, path2: movieFolderName));
 
-        FileManager manager = BuildManager(factoryMock);
+        FileManager manager = BuildManager(factoryMock: factoryMock);
         Movie movie = new() { Id = 42, Folder = movieFolderName };
 
-        List<Folder> result = InvokePaths(manager, library, movie, null);
+        List<Folder> result = InvokePaths(manager: manager, library: library, movie: movie, show: null);
 
-        result.Should().ContainSingle(f => f.Id == rootFolder.Id);
+        result.Should().ContainSingle(predicate: f => f.Id == rootFolder.Id);
     }
 
     // -----------------------------------------------------------------------
@@ -293,31 +293,31 @@ public sealed class FileManagerPathsTests : IDisposable
     public void Paths_ExactDirectoryExists_ReturnsResolvedFolder()
     {
         (Library library, Folder rootFolder) = SeedLibraryWithFolder(
-            MediaTypes.MovieMediaType,
-            _tempRoot
+            libraryType: MediaTypes.MovieMediaType,
+            folderPath: _tempRoot
         );
 
         string movieFolderName = "My.Movie.2020";
-        Directory.CreateDirectory(Path.Combine(_tempRoot, movieFolderName));
+        Directory.CreateDirectory(path: Path.Combine(path1: _tempRoot, path2: movieFolderName));
 
         Mock<IStorageFactory> factoryMock = new();
         LocalStorageDriver driver = new();
-        IStorage storage = new LocalStorage(driver, new StoragePathGuard([], driver));
+        IStorage storage = new LocalStorage(driver: driver, guard: new StoragePathGuard(allowedRoots: [], driver: driver));
         factoryMock
-            .Setup(f => f.For(rootFolder.Id, rootFolder.DriverId, string.Empty))
-            .Returns(storage);
+            .Setup(expression: f => f.For(rootFolder.Id, rootFolder.DriverId, string.Empty))
+            .Returns(value: storage);
 
-        FileManager manager = BuildManager(factoryMock);
+        FileManager manager = BuildManager(factoryMock: factoryMock);
         Movie movie = new() { Id = 42, Folder = movieFolderName };
 
-        List<Folder> result = InvokePaths(manager, library, movie, null);
+        List<Folder> result = InvokePaths(manager: manager, library: library, movie: movie, show: null);
 
-        result.Should().HaveCount(1);
-        result[0].Id.Should().Be(rootFolder.Id);
-        result[0].DriverId.Should().Be(rootFolder.DriverId);
-        result[0]
+        result.Should().HaveCount(expected: 1);
+        result[index: 0].Id.Should().Be(expected: rootFolder.Id);
+        result[index: 0].DriverId.Should().Be(expected: rootFolder.DriverId);
+        result[index: 0]
             .Path.Should()
-            .Be(storage.CombinePath(rootFolder.Path, movieFolderName).Replace('\\', '/'));
+            .Be(expected: storage.CombinePath(parent: rootFolder.Path, child: movieFolderName).Replace(oldChar: '\\', newChar: '/'));
     }
 
     // -----------------------------------------------------------------------
@@ -331,32 +331,32 @@ public sealed class FileManagerPathsTests : IDisposable
     public void Paths_ExactMissing_FuzzyMatchOnDisk_ResolvesToTheMatchedDirectory()
     {
         (Library library, Folder rootFolder) = SeedLibraryWithFolder(
-            MediaTypes.MovieMediaType,
-            _tempRoot
+            libraryType: MediaTypes.MovieMediaType,
+            folderPath: _tempRoot
         );
 
         // Disk has punctuation-different casing of the same title; the DB
         // record's Folder value normalizes identically once compared via
         // FileNameSanitizer.NormalizeForComparison (strips non-alphanumerics).
         string onDiskName = "My Movie (2020)";
-        Directory.CreateDirectory(Path.Combine(_tempRoot, onDiskName));
+        Directory.CreateDirectory(path: Path.Combine(path1: _tempRoot, path2: onDiskName));
 
         Mock<IStorageFactory> factoryMock = new();
         LocalStorageDriver driver = new();
-        IStorage storage = new LocalStorage(driver, new StoragePathGuard([], driver));
+        IStorage storage = new LocalStorage(driver: driver, guard: new StoragePathGuard(allowedRoots: [], driver: driver));
         factoryMock
-            .Setup(f => f.For(rootFolder.Id, rootFolder.DriverId, string.Empty))
-            .Returns(storage);
+            .Setup(expression: f => f.For(rootFolder.Id, rootFolder.DriverId, string.Empty))
+            .Returns(value: storage);
 
-        FileManager manager = BuildManager(factoryMock);
+        FileManager manager = BuildManager(factoryMock: factoryMock);
         Movie movie = new() { Id = 42, Folder = "My.Movie.2020" };
 
-        List<Folder> result = InvokePaths(manager, library, movie, null);
+        List<Folder> result = InvokePaths(manager: manager, library: library, movie: movie, show: null);
 
-        result.Should().HaveCount(1);
-        result[0]
+        result.Should().HaveCount(expected: 1);
+        result[index: 0]
             .Path.Should()
-            .Be(storage.CombinePath(rootFolder.Path, onDiskName).Replace('\\', '/'));
+            .Be(expected: storage.CombinePath(parent: rootFolder.Path, child: onDiskName).Replace(oldChar: '\\', newChar: '/'));
     }
 
     // -----------------------------------------------------------------------
@@ -367,22 +367,22 @@ public sealed class FileManagerPathsTests : IDisposable
     public void Paths_NoExactAndNoFuzzyMatch_FolderIsSkipped()
     {
         (Library library, Folder rootFolder) = SeedLibraryWithFolder(
-            MediaTypes.MovieMediaType,
-            _tempRoot
+            libraryType: MediaTypes.MovieMediaType,
+            folderPath: _tempRoot
         );
         // Root exists but is empty — no candidate directory at all.
 
         Mock<IStorageFactory> factoryMock = new();
         LocalStorageDriver driver = new();
-        IStorage storage = new LocalStorage(driver, new StoragePathGuard([], driver));
+        IStorage storage = new LocalStorage(driver: driver, guard: new StoragePathGuard(allowedRoots: [], driver: driver));
         factoryMock
-            .Setup(f => f.For(rootFolder.Id, rootFolder.DriverId, string.Empty))
-            .Returns(storage);
+            .Setup(expression: f => f.For(rootFolder.Id, rootFolder.DriverId, string.Empty))
+            .Returns(value: storage);
 
-        FileManager manager = BuildManager(factoryMock);
+        FileManager manager = BuildManager(factoryMock: factoryMock);
         Movie movie = new() { Id = 42, Folder = "Nothing.Here.2020" };
 
-        List<Folder> result = InvokePaths(manager, library, movie, null);
+        List<Folder> result = InvokePaths(manager: manager, library: library, movie: movie, show: null);
 
         result.Should().BeEmpty();
     }
@@ -396,28 +396,28 @@ public sealed class FileManagerPathsTests : IDisposable
     public void Paths_AnimeLibrary_UsesShowFolder()
     {
         (Library library, Folder rootFolder) = SeedLibraryWithFolder(
-            MediaTypes.AnimeMediaType,
-            _tempRoot
+            libraryType: MediaTypes.AnimeMediaType,
+            folderPath: _tempRoot
         );
         string showFolderName = "My.Anime.Show";
-        Directory.CreateDirectory(Path.Combine(_tempRoot, showFolderName));
+        Directory.CreateDirectory(path: Path.Combine(path1: _tempRoot, path2: showFolderName));
 
         Mock<IStorageFactory> factoryMock = new();
         LocalStorageDriver driver = new();
-        IStorage storage = new LocalStorage(driver, new StoragePathGuard([], driver));
+        IStorage storage = new LocalStorage(driver: driver, guard: new StoragePathGuard(allowedRoots: [], driver: driver));
         factoryMock
-            .Setup(f => f.For(rootFolder.Id, rootFolder.DriverId, string.Empty))
-            .Returns(storage);
+            .Setup(expression: f => f.For(rootFolder.Id, rootFolder.DriverId, string.Empty))
+            .Returns(value: storage);
 
-        FileManager manager = BuildManager(factoryMock);
+        FileManager manager = BuildManager(factoryMock: factoryMock);
         Tv show = new() { Id = 7, Folder = showFolderName };
 
-        List<Folder> result = InvokePaths(manager, library, null, show);
+        List<Folder> result = InvokePaths(manager: manager, library: library, movie: null, show: show);
 
-        result.Should().HaveCount(1);
-        result[0]
+        result.Should().HaveCount(expected: 1);
+        result[index: 0]
             .Path.Should()
-            .Be(storage.CombinePath(rootFolder.Path, showFolderName).Replace('\\', '/'));
+            .Be(expected: storage.CombinePath(parent: rootFolder.Path, child: showFolderName).Replace(oldChar: '\\', newChar: '/'));
     }
 
     [Fact]
@@ -429,28 +429,28 @@ public sealed class FileManagerPathsTests : IDisposable
         // (non-null) folder, distinct from Paths_TvWithNullFolder_ReturnsEmpty
         // which never reaches the DB query at all.
         (Library library, Folder rootFolder) = SeedLibraryWithFolder(
-            MediaTypes.TvMediaType,
-            _tempRoot
+            libraryType: MediaTypes.TvMediaType,
+            folderPath: _tempRoot
         );
         string showFolderName = "My.Tv.Show";
-        Directory.CreateDirectory(Path.Combine(_tempRoot, showFolderName));
+        Directory.CreateDirectory(path: Path.Combine(path1: _tempRoot, path2: showFolderName));
 
         Mock<IStorageFactory> factoryMock = new();
         LocalStorageDriver driver = new();
-        IStorage storage = new LocalStorage(driver, new StoragePathGuard([], driver));
+        IStorage storage = new LocalStorage(driver: driver, guard: new StoragePathGuard(allowedRoots: [], driver: driver));
         factoryMock
-            .Setup(f => f.For(rootFolder.Id, rootFolder.DriverId, string.Empty))
-            .Returns(storage);
+            .Setup(expression: f => f.For(rootFolder.Id, rootFolder.DriverId, string.Empty))
+            .Returns(value: storage);
 
-        FileManager manager = BuildManager(factoryMock);
+        FileManager manager = BuildManager(factoryMock: factoryMock);
         Tv show = new() { Id = 8, Folder = showFolderName };
 
-        List<Folder> result = InvokePaths(manager, library, null, show);
+        List<Folder> result = InvokePaths(manager: manager, library: library, movie: null, show: show);
 
-        result.Should().HaveCount(1);
-        result[0]
+        result.Should().HaveCount(expected: 1);
+        result[index: 0]
             .Path.Should()
-            .Be(storage.CombinePath(rootFolder.Path, showFolderName).Replace('\\', '/'));
+            .Be(expected: storage.CombinePath(parent: rootFolder.Path, child: showFolderName).Replace(oldChar: '\\', newChar: '/'));
     }
 
     // -----------------------------------------------------------------------
@@ -469,7 +469,7 @@ public sealed class FileManagerPathsTests : IDisposable
         public bool FileExists(string path) => false;
 
         public bool DirectoryExists(string path) =>
-            throw new IOException("simulated remote transport failure");
+            throw new IOException(message: "simulated remote transport failure");
 
         public void CreateDirectory(string path) { }
 
@@ -512,33 +512,33 @@ public sealed class FileManagerPathsTests : IDisposable
     public void Paths_RemoteBackendThrowsOnExistsAndOnFuzzyMatch_FolderSkippedNotThrown()
     {
         (Library library, Folder rootFolder) = SeedLibraryWithFolder(
-            MediaTypes.MovieMediaType,
-            "/remote/export/root"
+            libraryType: MediaTypes.MovieMediaType,
+            folderPath: "/remote/export/root"
         );
 
         ThrowingRemoteDriver remoteDriver = new();
         Mock<IStorage> remoteStorage = new();
-        remoteStorage.Setup(s => s.Driver).Returns(remoteDriver);
+        remoteStorage.Setup(expression: s => s.Driver).Returns(value: remoteDriver);
         remoteStorage
-            .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns((string p, string c) => $"{p.TrimEnd('/')}/{c}");
+            .Setup(expression: s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(valueFunction: (string p, string c) => $"{p.TrimEnd(trimChar: '/')}/{c}");
         remoteStorage
-            .Setup(s => s.Exists(It.IsAny<string>()))
-            .Throws(new IOException("simulated remote transport failure"));
+            .Setup(expression: s => s.Exists(It.IsAny<string>()))
+            .Throws(exception: new IOException(message: "simulated remote transport failure"));
 
         Mock<IStorageFactory> factoryMock = new();
         factoryMock
-            .Setup(f => f.For(rootFolder.Id, rootFolder.DriverId, string.Empty))
-            .Returns(remoteStorage.Object);
+            .Setup(expression: f => f.For(rootFolder.Id, rootFolder.DriverId, string.Empty))
+            .Returns(value: remoteStorage.Object);
 
-        FileManager manager = BuildManager(factoryMock);
+        FileManager manager = BuildManager(factoryMock: factoryMock);
         Movie movie = new() { Id = 42, Folder = "Some.Movie.2020" };
 
-        List<Folder> result = InvokePaths(manager, library, movie, null);
+        List<Folder> result = InvokePaths(manager: manager, library: library, movie: movie, show: null);
 
         result
             .Should()
-            .BeEmpty("a transport failure on one backend must not throw or add a bogus folder");
+            .BeEmpty(because: "a transport failure on one backend must not throw or add a bogus folder");
     }
 
     // -----------------------------------------------------------------------
@@ -595,33 +595,33 @@ public sealed class FileManagerPathsTests : IDisposable
     public void Paths_NonLocalBackend_FuzzyMatchResolvesThroughDriverGetFullPath()
     {
         (Library library, Folder rootFolder) = SeedLibraryWithFolder(
-            MediaTypes.MovieMediaType,
-            "export/root"
+            libraryType: MediaTypes.MovieMediaType,
+            folderPath: "export/root"
         );
 
-        FuzzyMatchRemoteDriver remoteDriver = new("export/root/My Movie (2020)");
+        FuzzyMatchRemoteDriver remoteDriver = new(matchDirectory: "export/root/My Movie (2020)");
         Mock<IStorage> remoteStorage = new();
-        remoteStorage.Setup(s => s.Driver).Returns(remoteDriver);
+        remoteStorage.Setup(expression: s => s.Driver).Returns(value: remoteDriver);
         remoteStorage
-            .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns((string p, string c) => $"{p.TrimEnd('/')}/{c}");
-        remoteStorage.Setup(s => s.Exists("export/root/My.Movie.2020")).Returns(false);
-        remoteStorage.Setup(s => s.Exists("export/root/My Movie (2020)")).Returns(true);
+            .Setup(expression: s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(valueFunction: (string p, string c) => $"{p.TrimEnd(trimChar: '/')}/{c}");
+        remoteStorage.Setup(expression: s => s.Exists("export/root/My.Movie.2020")).Returns(value: false);
+        remoteStorage.Setup(expression: s => s.Exists("export/root/My Movie (2020)")).Returns(value: true);
         remoteStorage
-            .Setup(s => s.GetName("export/root/My Movie (2020)"))
-            .Returns("My Movie (2020)");
+            .Setup(expression: s => s.GetName("export/root/My Movie (2020)"))
+            .Returns(value: "My Movie (2020)");
 
         Mock<IStorageFactory> factoryMock = new();
         factoryMock
-            .Setup(f => f.For(rootFolder.Id, rootFolder.DriverId, string.Empty))
-            .Returns(remoteStorage.Object);
+            .Setup(expression: f => f.For(rootFolder.Id, rootFolder.DriverId, string.Empty))
+            .Returns(value: remoteStorage.Object);
 
-        FileManager manager = BuildManager(factoryMock);
+        FileManager manager = BuildManager(factoryMock: factoryMock);
         Movie movie = new() { Id = 42, Folder = "My.Movie.2020" };
 
-        List<Folder> result = InvokePaths(manager, library, movie, null);
+        List<Folder> result = InvokePaths(manager: manager, library: library, movie: movie, show: null);
 
-        result.Should().HaveCount(1);
-        result[0].Path.Should().Be("export/root/My Movie (2020)");
+        result.Should().HaveCount(expected: 1);
+        result[index: 0].Path.Should().Be(expected: "export/root/My Movie (2020)");
     }
 }

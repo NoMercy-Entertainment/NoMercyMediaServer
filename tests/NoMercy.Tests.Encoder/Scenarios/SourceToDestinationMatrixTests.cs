@@ -46,71 +46,71 @@ public class SourceToDestinationMatrixTests
 
     public SourceToDestinationMatrixTests()
     {
-        _hardware.Setup(h => h.HasGpu).Returns(false);
-        _hardware.Setup(h => h.CpuCores).Returns(8);
-        _hardware.Setup(h => h.Gpus).Returns([]);
-        _hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
+        _hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
+        _hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
+        _hardware.Setup(expression: h => h.Gpus).Returns(value: []);
+        _hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
         _hardware
-            .Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
-            .Returns((GpuDevice?)null);
+            .Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
+            .Returns(value: (GpuDevice?)null);
 
         SetupCodecResolver();
 
         _stage = new(
-            new(),
-            new(),
-            new(),
-            _codecResolver.Object,
-            _hardware.Object,
-            new TonemapSelector(),
-            new Mock<IFfmpegCapabilities>().Object,
-            new AbrLadderGenerator(),
-            new NoOpCropDetector(),
-            NullLogger<PlanStage>.Instance
+            graphBuilder: new(),
+            groupingStrategy: new(),
+            costEstimator: new(),
+            codecResolver: _codecResolver.Object,
+            hardware: _hardware.Object,
+            tonemapSelector: new TonemapSelector(),
+            ffmpegCapabilities: new Mock<IFfmpegCapabilities>().Object,
+            abrLadderGenerator: new AbrLadderGenerator(),
+            cropDetector: new NoOpCropDetector(),
+            logger: NullLogger<PlanStage>.Instance
         );
     }
 
     private void SetupCodecResolver()
     {
         _codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     VideoCodecType.Copy,
                     It.IsAny<IHardwareCapabilities>(),
                     It.IsAny<EncoderPreference>()
                 )
             )
-            .Returns(BuildResolvedCodec("copy", supports10Bit: true));
+            .Returns(value: BuildResolvedCodec(ffmpegName: "copy", supports10Bit: true));
 
         _codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     VideoCodecType.H265,
                     It.IsAny<IHardwareCapabilities>(),
                     It.IsAny<EncoderPreference>()
                 )
             )
-            .Returns(BuildResolvedCodec("libx265", supports10Bit: true));
+            .Returns(value: BuildResolvedCodec(ffmpegName: "libx265", supports10Bit: true));
 
         _codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     VideoCodecType.H264,
                     It.IsAny<IHardwareCapabilities>(),
                     It.IsAny<EncoderPreference>()
                 )
             )
-            .Returns(BuildResolvedCodec("libx264", supports10Bit: false));
+            .Returns(value: BuildResolvedCodec(ffmpegName: "libx264", supports10Bit: false));
 
         _codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     VideoCodecType.Av1,
                     It.IsAny<IHardwareCapabilities>(),
                     It.IsAny<EncoderPreference>()
                 )
             )
-            .Returns(BuildResolvedCodec("libaom-av1", supports10Bit: true));
+            .Returns(value: BuildResolvedCodec(ffmpegName: "libaom-av1", supports10Bit: true));
     }
 
     private static ResolvedCodec BuildResolvedCodec(string ffmpegName, bool supports10Bit) =>
@@ -122,7 +122,7 @@ public class SourceToDestinationMatrixTests
                 Presets: ffmpegName == "copy" ? [] : ["medium"],
                 Profiles: ffmpegName == "copy" ? [] : ["main", "main10"],
                 Levels: ffmpegName == "copy" ? [] : ["5.1"],
-                QualityRange: new(0, 51, 23),
+                QualityRange: new(Min: 0, Max: 51, Default: 23),
                 SupportedRateControl: [RateControlMode.Crf],
                 Supports10Bit: supports10Bit,
                 SupportsHdr: supports10Bit,
@@ -148,7 +148,7 @@ public class SourceToDestinationMatrixTests
         new(
             FilePath: "/media/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromHours(2),
+            Duration: TimeSpan.FromHours(hours: 2),
             OverallBitRateKbps: bitRateKbps + (includeAudio ? audioBitRateKbps : 0),
             FileSizeBytes: 14_400_000_000,
             VideoStreams:
@@ -252,9 +252,9 @@ public class SourceToDestinationMatrixTests
 
     private async Task<OutputPlan> RunPlanStage(MediaInfo media, EncodingProfile profile)
     {
-        ValidateInput input = new(media, profile);
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        ValidateInput input = new(Media: media, Profile: profile);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
         return success.Value.OutputPlan;
     }
 
@@ -263,90 +263,90 @@ public class SourceToDestinationMatrixTests
     [Fact]
     public async Task Video_MatchingResolutionAndCodecAndBitrate_CopiesStream()
     {
-        MediaInfo media = BuildMedia(1920, 1080, "hevc", bitDepth: 8, bitRateKbps: 6000);
+        MediaInfo media = BuildMedia(width: 1920, height: 1080, videoCodec: "hevc", bitDepth: 8, bitRateKbps: 6000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8)
+            video: BuildVideoOutput(codec: VideoCodecType.H265, width: 1920, height: 1080, bitDepth: 8)
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        video.EncoderName.Should().Be("copy");
-        video.Height.Should().Be(1080);
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        video.EncoderName.Should().Be(expected: "copy");
+        video.Height.Should().Be(expected: 1080);
     }
 
     [Fact]
     public async Task Video_DifferentCodec_H264ToHevc_Transcodes()
     {
-        MediaInfo media = BuildMedia(1920, 1080, "h264", bitDepth: 8, bitRateKbps: 4000);
+        MediaInfo media = BuildMedia(width: 1920, height: 1080, videoCodec: "h264", bitDepth: 8, bitRateKbps: 4000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8)
+            video: BuildVideoOutput(codec: VideoCodecType.H265, width: 1920, height: 1080, bitDepth: 8)
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        video.EncoderName.Should().Be("libx265");
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        video.EncoderName.Should().Be(expected: "libx265");
     }
 
     [Fact]
     public async Task Video_SourceUpscale_1080pSourceTo2160pProfile_ClampsToSourceHeight()
     {
-        MediaInfo media = BuildMedia(3840, 1080, "hevc", bitDepth: 8, bitRateKbps: 6000);
+        MediaInfo media = BuildMedia(width: 3840, height: 1080, videoCodec: "hevc", bitDepth: 8, bitRateKbps: 6000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 3840, 2160, bitDepth: 8)
+            video: BuildVideoOutput(codec: VideoCodecType.H265, width: 3840, height: 2160, bitDepth: 8)
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
         video
             .Height.Should()
-            .BeLessThanOrEqualTo(1080, "profile height must not exceed source height");
-        video.EncoderName.Should().Be("libx265");
+            .BeLessThanOrEqualTo(expected: 1080, because: "profile height must not exceed source height");
+        video.EncoderName.Should().Be(expected: "libx265");
     }
 
     [Fact]
     public async Task Video_10BitSourceTo8BitProfile_Transcodes()
     {
-        MediaInfo media = BuildMedia(1920, 1080, "hevc", bitDepth: 10, bitRateKbps: 6000);
+        MediaInfo media = BuildMedia(width: 1920, height: 1080, videoCodec: "hevc", bitDepth: 10, bitRateKbps: 6000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8)
+            video: BuildVideoOutput(codec: VideoCodecType.H265, width: 1920, height: 1080, bitDepth: 8)
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        video.EncoderName.Should().Be("libx265", "bit depth mismatch forces transcode");
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        video.EncoderName.Should().Be(expected: "libx265", because: "bit depth mismatch forces transcode");
     }
 
     [Fact]
     public async Task Video_8BitSourceTo10BitProfile_Transcodes()
     {
-        MediaInfo media = BuildMedia(1920, 1080, "hevc", bitDepth: 8, bitRateKbps: 6000);
+        MediaInfo media = BuildMedia(width: 1920, height: 1080, videoCodec: "hevc", bitDepth: 8, bitRateKbps: 6000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 10)
+            video: BuildVideoOutput(codec: VideoCodecType.H265, width: 1920, height: 1080, bitDepth: 10)
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        video.EncoderName.Should().Be("libx265", "bit depth mismatch forces transcode");
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        video.EncoderName.Should().Be(expected: "libx265", because: "bit depth mismatch forces transcode");
     }
 
     [Fact]
     public async Task Video_HevcSourceInHlsTs_Transcodes()
     {
-        MediaInfo media = BuildMedia(1920, 1080, "hevc", bitDepth: 8, bitRateKbps: 6000);
+        MediaInfo media = BuildMedia(width: 1920, height: 1080, videoCodec: "hevc", bitDepth: 8, bitRateKbps: 6000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8),
+            video: BuildVideoOutput(codec: VideoCodecType.H265, width: 1920, height: 1080, bitDepth: 8),
             container: Container.HlsTs
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        video.EncoderName.Should().Be("libx265", "HlsTs only carries H.264");
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        video.EncoderName.Should().Be(expected: "libx265", because: "HlsTs only carries H.264");
     }
 
     [Fact]
@@ -355,16 +355,16 @@ public class SourceToDestinationMatrixTests
         // Source bitrate must be >= the profile target for smart-copy (spec
         // §video passthrough); 20 Mbps clears any default so codec+res+depth
         // match is the only remaining gate → copy.
-        MediaInfo media = BuildMedia(1920, 1080, "h264", bitDepth: 8, bitRateKbps: 20000);
+        MediaInfo media = BuildMedia(width: 1920, height: 1080, videoCodec: "h264", bitDepth: 8, bitRateKbps: 20000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H264, 1920, 1080, bitDepth: 8),
+            video: BuildVideoOutput(codec: VideoCodecType.H264, width: 1920, height: 1080, bitDepth: 8),
             container: Container.HlsTs
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        video.EncoderName.Should().Be("copy");
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        video.EncoderName.Should().Be(expected: "copy");
     }
 
     [Fact]
@@ -372,18 +372,18 @@ public class SourceToDestinationMatrixTests
     {
         // Smart-copy needs source bitrate >= target. A source BELOW the target
         // is insufficient → transcode up to meet it.
-        MediaInfo media = BuildMedia(1920, 1080, "hevc", bitDepth: 8, bitRateKbps: 2000);
+        MediaInfo media = BuildMedia(width: 1920, height: 1080, videoCodec: "hevc", bitDepth: 8, bitRateKbps: 2000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8) with
+            video: BuildVideoOutput(codec: VideoCodecType.H265, width: 1920, height: 1080, bitDepth: 8) with
             {
                 BitrateKbps = 3000,
             }
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        video.EncoderName.Should().Be("libx265", "source bitrate below target requires transcode");
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        video.EncoderName.Should().Be(expected: "libx265", because: "source bitrate below target requires transcode");
     }
 
     [Fact]
@@ -392,18 +392,18 @@ public class SourceToDestinationMatrixTests
         // Documented contract: a source richer than the target is COPYABLE —
         // the target bitrate is a transcode ceiling, not a mandate to shrink a
         // good source (that would only lose quality).
-        MediaInfo media = BuildMedia(1920, 1080, "hevc", bitDepth: 8, bitRateKbps: 6000);
+        MediaInfo media = BuildMedia(width: 1920, height: 1080, videoCodec: "hevc", bitDepth: 8, bitRateKbps: 6000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8) with
+            video: BuildVideoOutput(codec: VideoCodecType.H265, width: 1920, height: 1080, bitDepth: 8) with
             {
                 BitrateKbps = 3000,
             }
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        video.EncoderName.Should().Be("copy", "a source above the target bitrate is copyable");
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        video.EncoderName.Should().Be(expected: "copy", because: "a source above the target bitrate is copyable");
     }
 
     // LADDER SCENARIOS
@@ -411,12 +411,12 @@ public class SourceToDestinationMatrixTests
     [Fact]
     public async Task Ladder_SourceHeightRungCopies_HigherRungsTranscode()
     {
-        MediaInfo media = BuildMedia(1920, 1080, "hevc", bitDepth: 10, bitRateKbps: 6000);
+        MediaInfo media = BuildMedia(width: 1920, height: 1080, videoCodec: "hevc", bitDepth: 10, bitRateKbps: 6000);
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
             Name: "LadderTest",
             Container: Container.HlsFmp4,
-            Video: BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 10),
+            Video: BuildVideoOutput(codec: VideoCodecType.H265, width: 1920, height: 1080, bitDepth: 10),
             Audio: [],
             Subtitles: [],
             Ladder: new LadderConfig
@@ -454,24 +454,24 @@ public class SourceToDestinationMatrixTests
             }
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        plan.VideoOutputs.Should().HaveCount(2);
-        plan.VideoOutputs[0].Height.Should().Be(1080);
-        plan.VideoOutputs[0].EncoderName.Should().Be("copy");
-        plan.VideoOutputs[1].Height.Should().Be(720);
-        plan.VideoOutputs[1].EncoderName.Should().Be("libx265");
+        plan.VideoOutputs.Should().HaveCount(expected: 2);
+        plan.VideoOutputs[0].Height.Should().Be(expected: 1080);
+        plan.VideoOutputs[0].EncoderName.Should().Be(expected: "copy");
+        plan.VideoOutputs[1].Height.Should().Be(expected: 720);
+        plan.VideoOutputs[1].EncoderName.Should().Be(expected: "libx265");
     }
 
     [Fact]
     public async Task Ladder_AllRungsAboveSourceHeight_NoRungsAdded()
     {
-        MediaInfo media = BuildMedia(1920, 720, "hevc", bitDepth: 8, bitRateKbps: 3000);
+        MediaInfo media = BuildMedia(width: 1920, height: 720, videoCodec: "hevc", bitDepth: 8, bitRateKbps: 3000);
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
             Name: "LadderAboveSource",
             Container: Container.HlsFmp4,
-            Video: BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8),
+            Video: BuildVideoOutput(codec: VideoCodecType.H265, width: 1920, height: 1080, bitDepth: 8),
             Audio: [],
             Subtitles: [],
             Ladder: new LadderConfig
@@ -509,12 +509,12 @@ public class SourceToDestinationMatrixTests
             }
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
         plan.VideoOutputs.Should().NotBeEmpty();
-        plan.VideoOutputs.All(v => v.Height <= 720)
+        plan.VideoOutputs.All(predicate: v => v.Height <= 720)
             .Should()
-            .BeTrue("no rung should upscale beyond source height");
+            .BeTrue(because: "no rung should upscale beyond source height");
     }
 
     // AUDIO SCENARIOS
@@ -523,43 +523,43 @@ public class SourceToDestinationMatrixTests
     public async Task Audio_MatchingCodecAndBitrateAndChannels_Copies()
     {
         MediaInfo media = BuildMedia(
-            1920,
-            1080,
+            width: 1920,
+            height: 1080,
             audioCodec: "aac",
             audioChannels: 2,
             audioBitRateKbps: 192
         );
         EncodingProfile profile = BuildProfile(
             video: null,
-            audio: [BuildAudioOutput(AudioCodecType.Aac, bitRateKbps: 192, channels: 2)]
+            audio: [BuildAudioOutput(codec: AudioCodecType.Aac, bitRateKbps: 192, channels: 2)]
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        AudioOutputPlan audioOutput = Assert.Single(plan.AudioOutputs);
-        audioOutput.Action.Should().Be(StreamAction.Copy);
-        audioOutput.EncoderName.Should().Be("copy");
+        AudioOutputPlan audioOutput = Assert.Single(collection: plan.AudioOutputs);
+        audioOutput.Action.Should().Be(expected: StreamAction.Copy);
+        audioOutput.EncoderName.Should().Be(expected: "copy");
     }
 
     [Fact]
     public async Task Audio_DifferentCodec_Transcodes()
     {
         MediaInfo media = BuildMedia(
-            1920,
-            1080,
+            width: 1920,
+            height: 1080,
             audioCodec: "aac",
             audioChannels: 2,
             audioBitRateKbps: 192
         );
         EncodingProfile profile = BuildProfile(
             video: null,
-            audio: [BuildAudioOutput(AudioCodecType.Opus, bitRateKbps: 128, channels: 2)]
+            audio: [BuildAudioOutput(codec: AudioCodecType.Opus, bitRateKbps: 128, channels: 2)]
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        AudioOutputPlan audioOutput = Assert.Single(plan.AudioOutputs);
-        audioOutput.Action.Should().Be(StreamAction.Transcode);
+        AudioOutputPlan audioOutput = Assert.Single(collection: plan.AudioOutputs);
+        audioOutput.Action.Should().Be(expected: StreamAction.Transcode);
     }
 
     [Fact]
@@ -568,21 +568,21 @@ public class SourceToDestinationMatrixTests
         // Source bitrate below the target is insufficient for smart-copy
         // (spec §35.1: copy requires source bitrate >= profile bitrate).
         MediaInfo media = BuildMedia(
-            1920,
-            1080,
+            width: 1920,
+            height: 1080,
             audioCodec: "aac",
             audioChannels: 2,
             audioBitRateKbps: 96
         );
         EncodingProfile profile = BuildProfile(
             video: null,
-            audio: [BuildAudioOutput(AudioCodecType.Aac, bitRateKbps: 128, channels: 2)]
+            audio: [BuildAudioOutput(codec: AudioCodecType.Aac, bitRateKbps: 128, channels: 2)]
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        AudioOutputPlan audioOutput = Assert.Single(plan.AudioOutputs);
-        audioOutput.Action.Should().Be(StreamAction.Transcode);
+        AudioOutputPlan audioOutput = Assert.Single(collection: plan.AudioOutputs);
+        audioOutput.Action.Should().Be(expected: StreamAction.Transcode);
     }
 
     [Fact]
@@ -592,86 +592,86 @@ public class SourceToDestinationMatrixTests
         // cannot satisfy a stereo target → transcode (up-mix). Bitrate is kept
         // sufficient so the channel count is the only gate.
         MediaInfo media = BuildMedia(
-            1920,
-            1080,
+            width: 1920,
+            height: 1080,
             audioCodec: "aac",
             audioChannels: 1,
             audioBitRateKbps: 384
         );
         EncodingProfile profile = BuildProfile(
             video: null,
-            audio: [BuildAudioOutput(AudioCodecType.Aac, bitRateKbps: 128, channels: 2)]
+            audio: [BuildAudioOutput(codec: AudioCodecType.Aac, bitRateKbps: 128, channels: 2)]
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        AudioOutputPlan audioOutput = Assert.Single(plan.AudioOutputs);
-        audioOutput.Action.Should().Be(StreamAction.Transcode);
+        AudioOutputPlan audioOutput = Assert.Single(collection: plan.AudioOutputs);
+        audioOutput.Action.Should().Be(expected: StreamAction.Transcode);
     }
 
     [Fact]
     public async Task Audio_SufficientBitrateAndChannels_Copies()
     {
         MediaInfo media = BuildMedia(
-            1920,
-            1080,
+            width: 1920,
+            height: 1080,
             audioCodec: "aac",
             audioChannels: 2,
             audioBitRateKbps: 192
         );
         EncodingProfile profile = BuildProfile(
             video: null,
-            audio: [BuildAudioOutput(AudioCodecType.Aac, bitRateKbps: 128, channels: 2)]
+            audio: [BuildAudioOutput(codec: AudioCodecType.Aac, bitRateKbps: 128, channels: 2)]
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        AudioOutputPlan audioOutput = Assert.Single(plan.AudioOutputs);
-        audioOutput.Action.Should().Be(StreamAction.Copy);
+        AudioOutputPlan audioOutput = Assert.Single(collection: plan.AudioOutputs);
+        audioOutput.Action.Should().Be(expected: StreamAction.Copy);
     }
 
     [Fact]
     public async Task Audio_OpusInHlsTs_Transcodes()
     {
         MediaInfo media = BuildMedia(
-            1920,
-            1080,
+            width: 1920,
+            height: 1080,
             audioCodec: "opus",
             audioChannels: 2,
             audioBitRateKbps: 192
         );
         EncodingProfile profile = BuildProfile(
-            video: BuildVideoOutput(VideoCodecType.H264, 1920, 1080, bitDepth: 8),
-            audio: [BuildAudioOutput(AudioCodecType.Opus, bitRateKbps: 192, channels: 2)],
+            video: BuildVideoOutput(codec: VideoCodecType.H264, width: 1920, height: 1080, bitDepth: 8),
+            audio: [BuildAudioOutput(codec: AudioCodecType.Opus, bitRateKbps: 192, channels: 2)],
             container: Container.HlsTs
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        AudioOutputPlan audioOutput = Assert.Single(plan.AudioOutputs);
-        audioOutput.Action.Should().Be(StreamAction.Transcode);
+        AudioOutputPlan audioOutput = Assert.Single(collection: plan.AudioOutputs);
+        audioOutput.Action.Should().Be(expected: StreamAction.Transcode);
     }
 
     [Fact]
     public async Task Audio_AacInHlsTs_Copies()
     {
         MediaInfo media = BuildMedia(
-            1920,
-            1080,
+            width: 1920,
+            height: 1080,
             audioCodec: "aac",
             audioChannels: 2,
             audioBitRateKbps: 192
         );
         EncodingProfile profile = BuildProfile(
-            video: BuildVideoOutput(VideoCodecType.H264, 1920, 1080, bitDepth: 8),
-            audio: [BuildAudioOutput(AudioCodecType.Aac, bitRateKbps: 128, channels: 2)],
+            video: BuildVideoOutput(codec: VideoCodecType.H264, width: 1920, height: 1080, bitDepth: 8),
+            audio: [BuildAudioOutput(codec: AudioCodecType.Aac, bitRateKbps: 128, channels: 2)],
             container: Container.HlsTs
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        AudioOutputPlan audioOutput = Assert.Single(plan.AudioOutputs);
-        audioOutput.Action.Should().Be(StreamAction.Copy);
+        AudioOutputPlan audioOutput = Assert.Single(collection: plan.AudioOutputs);
+        audioOutput.Action.Should().Be(expected: StreamAction.Copy);
     }
 
     // COMBINED VIDEO + AUDIO SCENARIOS
@@ -680,75 +680,75 @@ public class SourceToDestinationMatrixTests
     public async Task VideoAndAudio_BothCopyable_BothCopy()
     {
         MediaInfo media = BuildMedia(
-            1920,
-            1080,
-            "hevc",
+            width: 1920,
+            height: 1080,
+            videoCodec: "hevc",
             bitDepth: 8,
             bitRateKbps: 6000,
             audioCodec: "aac",
             audioBitRateKbps: 192
         );
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8),
-            [BuildAudioOutput(AudioCodecType.Aac, bitRateKbps: 128, channels: 2)]
+            video: BuildVideoOutput(codec: VideoCodecType.H265, width: 1920, height: 1080, bitDepth: 8),
+            audio: [BuildAudioOutput(codec: AudioCodecType.Aac, bitRateKbps: 128, channels: 2)]
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
-        video.EncoderName.Should().Be("copy");
-        audio.Action.Should().Be(StreamAction.Copy);
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        AudioOutputPlan audio = Assert.Single(collection: plan.AudioOutputs);
+        video.EncoderName.Should().Be(expected: "copy");
+        audio.Action.Should().Be(expected: StreamAction.Copy);
     }
 
     [Fact]
     public async Task VideoAndAudio_VideoCopyAudioTranscode_OnlyAudioTranscodes()
     {
         MediaInfo media = BuildMedia(
-            1920,
-            1080,
-            "hevc",
+            width: 1920,
+            height: 1080,
+            videoCodec: "hevc",
             bitDepth: 8,
             bitRateKbps: 6000,
             audioCodec: "aac",
             audioBitRateKbps: 192
         );
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8),
-            [BuildAudioOutput(AudioCodecType.Opus, bitRateKbps: 128, channels: 2)]
+            video: BuildVideoOutput(codec: VideoCodecType.H265, width: 1920, height: 1080, bitDepth: 8),
+            audio: [BuildAudioOutput(codec: AudioCodecType.Opus, bitRateKbps: 128, channels: 2)]
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
-        video.EncoderName.Should().Be("copy");
-        audio.Action.Should().Be(StreamAction.Transcode);
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        AudioOutputPlan audio = Assert.Single(collection: plan.AudioOutputs);
+        video.EncoderName.Should().Be(expected: "copy");
+        audio.Action.Should().Be(expected: StreamAction.Transcode);
     }
 
     [Fact]
     public async Task VideoAndAudio_VideoTranscodeAudioCopy_OnlyVideoTranscodes()
     {
         MediaInfo media = BuildMedia(
-            1920,
-            1080,
-            "h264",
+            width: 1920,
+            height: 1080,
+            videoCodec: "h264",
             bitDepth: 8,
             bitRateKbps: 4000,
             audioCodec: "aac",
             audioBitRateKbps: 192
         );
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8),
-            [BuildAudioOutput(AudioCodecType.Aac, bitRateKbps: 128, channels: 2)]
+            video: BuildVideoOutput(codec: VideoCodecType.H265, width: 1920, height: 1080, bitDepth: 8),
+            audio: [BuildAudioOutput(codec: AudioCodecType.Aac, bitRateKbps: 128, channels: 2)]
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
-        video.EncoderName.Should().Be("libx265");
-        audio.Action.Should().Be(StreamAction.Copy);
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        AudioOutputPlan audio = Assert.Single(collection: plan.AudioOutputs);
+        video.EncoderName.Should().Be(expected: "libx265");
+        audio.Action.Should().Be(expected: StreamAction.Copy);
     }
 
     // CODEC MISMATCH SCENARIOS
@@ -756,29 +756,29 @@ public class SourceToDestinationMatrixTests
     [Fact]
     public async Task Video_H265SourceToAv1Profile_Transcodes()
     {
-        MediaInfo media = BuildMedia(1920, 1080, "hevc", bitDepth: 8, bitRateKbps: 6000);
+        MediaInfo media = BuildMedia(width: 1920, height: 1080, videoCodec: "hevc", bitDepth: 8, bitRateKbps: 6000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.Av1, 1920, 1080, bitDepth: 8)
+            video: BuildVideoOutput(codec: VideoCodecType.Av1, width: 1920, height: 1080, bitDepth: 8)
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        video.EncoderName.Should().Be("libaom-av1");
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        video.EncoderName.Should().Be(expected: "libaom-av1");
     }
 
     [Fact]
     public async Task Video_H264ToH265_Transcodes()
     {
-        MediaInfo media = BuildMedia(1920, 1080, "h264", bitDepth: 8, bitRateKbps: 4000);
+        MediaInfo media = BuildMedia(width: 1920, height: 1080, videoCodec: "h264", bitDepth: 8, bitRateKbps: 4000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8)
+            video: BuildVideoOutput(codec: VideoCodecType.H265, width: 1920, height: 1080, bitDepth: 8)
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        video.EncoderName.Should().Be("libx265");
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        video.EncoderName.Should().Be(expected: "libx265");
     }
 
     // RESOLUTION EDGE CASES
@@ -786,60 +786,60 @@ public class SourceToDestinationMatrixTests
     [Fact]
     public async Task Video_ExactHeightMatch_Copies()
     {
-        MediaInfo media = BuildMedia(1920, 1080, "hevc", bitDepth: 8, bitRateKbps: 6000);
+        MediaInfo media = BuildMedia(width: 1920, height: 1080, videoCodec: "hevc", bitDepth: 8, bitRateKbps: 6000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8)
+            video: BuildVideoOutput(codec: VideoCodecType.H265, width: 1920, height: 1080, bitDepth: 8)
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        video.EncoderName.Should().Be("copy");
-        video.Height.Should().Be(1080);
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        video.EncoderName.Should().Be(expected: "copy");
+        video.Height.Should().Be(expected: 1080);
     }
 
     [Fact]
     public async Task Video_SourceHeightAboveProfile_Transcodes()
     {
-        MediaInfo media = BuildMedia(1920, 1440, "hevc", bitDepth: 8, bitRateKbps: 9000);
+        MediaInfo media = BuildMedia(width: 1920, height: 1440, videoCodec: "hevc", bitDepth: 8, bitRateKbps: 9000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8)
+            video: BuildVideoOutput(codec: VideoCodecType.H265, width: 1920, height: 1080, bitDepth: 8)
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        video.EncoderName.Should().Be("libx265");
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        video.EncoderName.Should().Be(expected: "libx265");
     }
 
     [Fact]
     public async Task Video_ProfileHeightNull_KeepsSourceHeight()
     {
-        MediaInfo media = BuildMedia(1920, 1080, "hevc", bitDepth: 8, bitRateKbps: 6000);
+        MediaInfo media = BuildMedia(width: 1920, height: 1080, videoCodec: "hevc", bitDepth: 8, bitRateKbps: 6000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8) with
+            video: BuildVideoOutput(codec: VideoCodecType.H265, width: 1920, height: 1080, bitDepth: 8) with
             {
                 Height = null,
             }
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        video.EncoderName.Should().Be("copy");
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        video.EncoderName.Should().Be(expected: "copy");
     }
 
     [Fact]
     public async Task Video_720pSourceTo1080p_OutputNotUpscaled()
     {
-        MediaInfo media = BuildMedia(1280, 720, "hevc", bitDepth: 8, bitRateKbps: 3000);
+        MediaInfo media = BuildMedia(width: 1280, height: 720, videoCodec: "hevc", bitDepth: 8, bitRateKbps: 3000);
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(VideoCodecType.H265, 1920, 1080, bitDepth: 8)
+            video: BuildVideoOutput(codec: VideoCodecType.H265, width: 1920, height: 1080, bitDepth: 8)
         );
 
-        OutputPlan plan = await RunPlanStage(media, profile);
+        OutputPlan plan = await RunPlanStage(media: media, profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        video.Height.Should().BeLessThanOrEqualTo(720, "output must never upscale beyond source");
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        video.Height.Should().BeLessThanOrEqualTo(expected: 720, because: "output must never upscale beyond source");
     }
 }

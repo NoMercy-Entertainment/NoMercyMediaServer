@@ -64,84 +64,85 @@ public class EncoderTests : IDisposable
         };
 
         AnalyzeStage analyzeStage = new(
-            _analyzer.Object,
-            _storage.Object,
-            NullLogger<AnalyzeStage>.Instance
+            analyzer: _analyzer.Object,
+            storage: _storage.Object,
+            logger: NullLogger<AnalyzeStage>.Instance
         );
-        ValidateStage validateStage = new(NullLogger<ValidateStage>.Instance);
+        ValidateStage validateStage = new(logger: NullLogger<ValidateStage>.Instance);
         PlanStage planStage = new(
-            new(),
-            new(),
-            new(),
-            _codecResolver.Object,
-            _hardware.Object,
-            new TonemapSelector(),
-            new Mock<IFfmpegCapabilities>().Object,
-            new AbrLadderGenerator(),
-            new NoOpCropDetector(),
-            NullLogger<PlanStage>.Instance,
-            outputNamingResolver: new OutputNamingResolver(new MediaKeyResolver())
+            graphBuilder: new(),
+            groupingStrategy: new(),
+            costEstimator: new(),
+            codecResolver: _codecResolver.Object,
+            hardware: _hardware.Object,
+            tonemapSelector: new TonemapSelector(),
+            ffmpegCapabilities: new Mock<IFfmpegCapabilities>().Object,
+            abrLadderGenerator: new AbrLadderGenerator(),
+            cropDetector: new NoOpCropDetector(),
+            logger: NullLogger<PlanStage>.Instance,
+            outputNamingResolver: new OutputNamingResolver(mediaKeys: new MediaKeyResolver())
         );
-        OutputStrategyFactory outputFactory = new([
-            new HlsOutputStrategy(TestStorageFactory.CreateLocal()),
-            new MkvOutputStrategy(TestStorageFactory.CreateLocal()),
-            new Mp4OutputStrategy(TestStorageFactory.CreateLocal()),
-            new DashOutputStrategy(TestStorageFactory.CreateLocal()),
-            new Mp3OutputStrategy(TestStorageFactory.CreateLocal()),
-            new FlacOutputStrategy(TestStorageFactory.CreateLocal()),
-            new OggOutputStrategy(TestStorageFactory.CreateLocal()),
+        OutputStrategyFactory outputFactory = new(strategies:
+        [
+            new HlsOutputStrategy(storage: TestStorageFactory.CreateLocal()),
+            new MkvOutputStrategy(storage: TestStorageFactory.CreateLocal()),
+            new Mp4OutputStrategy(storage: TestStorageFactory.CreateLocal()),
+            new DashOutputStrategy(storage: TestStorageFactory.CreateLocal()),
+            new Mp3OutputStrategy(storage: TestStorageFactory.CreateLocal()),
+            new FlacOutputStrategy(storage: TestStorageFactory.CreateLocal()),
+            new OggOutputStrategy(storage: TestStorageFactory.CreateLocal()),
         ]);
         BuildStage buildStage = new(
-            options,
-            new FontExtractor(TestStorageFactory.CreateLocal()),
-            new SubtitleExtractor(),
-            outputFactory,
-            [],
-            NullLogger<BuildStage>.Instance,
-            TestStorageFactory.CreateLocal(),
+            options: options,
+            fontExtractor: new FontExtractor(storage: TestStorageFactory.CreateLocal()),
+            subtitleExtractor: new SubtitleExtractor(),
+            outputStrategyFactory: outputFactory,
+            drmProcessors: [],
+            logger: NullLogger<BuildStage>.Instance,
+            storage: TestStorageFactory.CreateLocal(),
             metadataInjector: new MetadataInjector(),
             metadataMerger: new MetadataMerger()
         );
         ExecuteStage executeStage = new(
-            _ffmpegExecutor.Object,
-            new Mock<ICheckpointStore>().Object,
-            NullLogger<ExecuteStage>.Instance
+            executor: _ffmpegExecutor.Object,
+            checkpointStore: new Mock<ICheckpointStore>().Object,
+            logger: NullLogger<ExecuteStage>.Instance
         );
         FinalizeStage finalizeStage = new(
-            new ChapterWriter(TestStorageFactory.CreateLocal()),
-            new FontExtractor(TestStorageFactory.CreateLocal()),
-            outputFactory,
-            NullLogger<FinalizeStage>.Instance,
-            TestStorageFactory.CreateLocal(),
-            blueprintWriter: new MediaBlueprintWriter(new MediaBlueprintBuilder())
+            chapterWriter: new ChapterWriter(storage: TestStorageFactory.CreateLocal()),
+            fontExtractor: new FontExtractor(storage: TestStorageFactory.CreateLocal()),
+            outputStrategyFactory: outputFactory,
+            logger: NullLogger<FinalizeStage>.Instance,
+            storage: TestStorageFactory.CreateLocal(),
+            blueprintWriter: new MediaBlueprintWriter(builder: new MediaBlueprintBuilder())
         );
 
         _encoder = new(
-            analyzeStage,
-            validateStage,
-            planStage,
-            buildStage,
-            executeStage,
-            finalizeStage,
-            NullLogger<NoMercy.Encoder.Pipeline.Encoder>.Instance
+            analyzeStage: analyzeStage,
+            validateStage: validateStage,
+            planStage: planStage,
+            buildStage: buildStage,
+            executeStage: executeStage,
+            finalizeStage: finalizeStage,
+            logger: NullLogger<NoMercy.Encoder.Pipeline.Encoder>.Instance
         );
     }
 
     private void SetupDefaultHardware()
     {
-        _hardware.Setup(h => h.HasGpu).Returns(false);
-        _hardware.Setup(h => h.CpuCores).Returns(8);
-        _hardware.Setup(h => h.Gpus).Returns([]);
-        _hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
+        _hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
+        _hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
+        _hardware.Setup(expression: h => h.Gpus).Returns(value: []);
+        _hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
         _hardware
-            .Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
-            .Returns((GpuDevice?)null);
+            .Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
+            .Returns(value: (GpuDevice?)null);
     }
 
     private void SetupDefaultCodecResolver()
     {
         _codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<IHardwareCapabilities>(),
@@ -149,7 +150,7 @@ public class EncoderTests : IDisposable
                 )
             )
             .Returns(
-                new ResolvedCodec(
+                value: new ResolvedCodec(
                     FfmpegEncoderName: "libx264",
                     EncoderInfo: new(
                         FfmpegName: "libx264",
@@ -157,7 +158,7 @@ public class EncoderTests : IDisposable
                         Presets: ["medium"],
                         Profiles: ["high"],
                         Levels: ["4.1"],
-                        QualityRange: new(0, 51, 23),
+                        QualityRange: new(Min: 0, Max: 51, Default: 23),
                         SupportedRateControl: [RateControlMode.Crf],
                         Supports10Bit: false,
                         SupportsHdr: false,
@@ -175,8 +176,8 @@ public class EncoderTests : IDisposable
     {
         foreach (string directory in _tempDirectories)
         {
-            if (Directory.Exists(directory))
-                Directory.Delete(directory, true);
+            if (Directory.Exists(path: directory))
+                Directory.Delete(path: directory, recursive: true);
         }
     }
 
@@ -186,25 +187,25 @@ public class EncoderTests : IDisposable
     private string CreateSeededOutputDirectory()
     {
         string outputDirectory = Path.Combine(
-            Path.GetTempPath(),
-            $"nomercy-encoder-tests-{Guid.NewGuid():N}"
+            path1: Path.GetTempPath(),
+            path2: $"nomercy-encoder-tests-{Guid.NewGuid():N}"
         );
-        _tempDirectories.Add(outputDirectory);
+        _tempDirectories.Add(item: outputDirectory);
 
-        SeedVariant(outputDirectory, "video_1920x1080_SDR");
-        SeedVariant(outputDirectory, "audio_en_aac");
+        SeedVariant(outputDirectory: outputDirectory, name: "video_1920x1080_SDR");
+        SeedVariant(outputDirectory: outputDirectory, name: "audio_en_aac");
 
         return outputDirectory;
     }
 
     private static void SeedVariant(string outputDirectory, string name)
     {
-        string variantDirectory = Path.Combine(outputDirectory, name);
-        Directory.CreateDirectory(variantDirectory);
-        File.WriteAllBytes(Path.Combine(variantDirectory, $"{name}_00000.ts"), new byte[120_000]);
+        string variantDirectory = Path.Combine(path1: outputDirectory, path2: name);
+        Directory.CreateDirectory(path: variantDirectory);
+        File.WriteAllBytes(path: Path.Combine(path1: variantDirectory, path2: $"{name}_00000.ts"), bytes: new byte[120_000]);
         File.WriteAllText(
-            Path.Combine(variantDirectory, $"{name}.m3u8"),
-            $"#EXTM3U\n#EXTINF:6.000000,\n{name}_00000.ts\n#EXT-X-ENDLIST\n"
+            path: Path.Combine(path1: variantDirectory, path2: $"{name}.m3u8"),
+            contents: $"#EXTM3U\n#EXTINF:6.000000,\n{name}_00000.ts\n#EXT-X-ENDLIST\n"
         );
     }
 
@@ -212,7 +213,7 @@ public class EncoderTests : IDisposable
         new(
             FilePath: "/movies/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromHours(2),
+            Duration: TimeSpan.FromHours(hours: 2),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 7_200_000_000,
             VideoStreams:
@@ -298,14 +299,14 @@ public class EncoderTests : IDisposable
     {
         MediaInfo media = BuildMediaInfo();
 
-        _storage.Setup(s => s.Exists(inputPath)).Returns(true);
+        _storage.Setup(expression: s => s.Exists(inputPath)).Returns(value: true);
         _analyzer
-            .Setup(a =>
+            .Setup(expression: a =>
                 a.AnalyzeAsync(inputPath, It.IsAny<IStorage>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(media);
+            .ReturnsAsync(value: media);
         _ffmpegExecutor
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -315,11 +316,11 @@ public class EncoderTests : IDisposable
                 )
             )
             .ReturnsAsync(
-                new ExecutionResult(
+                value: new ExecutionResult(
                     Success: true,
                     ExitCode: 0,
                     StdErr: "",
-                    Duration: TimeSpan.FromMinutes(10),
+                    Duration: TimeSpan.FromMinutes(minutes: 10),
                     Error: null
                 )
             );
@@ -341,11 +342,11 @@ public class EncoderTests : IDisposable
             Profile: BuildProfile()
         );
 
-        EncodingResult result = await _encoder.EncodeAsync(request);
+        EncodingResult result = await _encoder.EncodeAsync(request: request);
 
         result.Success.Should().BeTrue();
         result.Error.Should().BeNull();
-        result.OutputPath.Should().Be(outputDirectory);
+        result.OutputPath.Should().Be(expected: outputDirectory);
     }
 
     [Fact]
@@ -359,9 +360,9 @@ public class EncoderTests : IDisposable
             Profile: BuildProfile()
         );
 
-        EncodingResult result = await _encoder.EncodeAsync(request);
+        EncodingResult result = await _encoder.EncodeAsync(request: request);
 
-        result.Duration.Should().BeGreaterThan(TimeSpan.Zero);
+        result.Duration.Should().BeGreaterThan(expected: TimeSpan.Zero);
     }
 
     [Fact]
@@ -376,10 +377,10 @@ public class EncoderTests : IDisposable
             Profile: BuildProfile()
         );
 
-        EncodingResult result = await _encoder.EncodeAsync(request);
+        EncodingResult result = await _encoder.EncodeAsync(request: request);
 
         result.Metrics.Should().NotBeNull();
-        result.Metrics!.EncoderUsed.Should().Be("libx264");
+        result.Metrics!.EncoderUsed.Should().Be(expected: "libx264");
     }
 
     // ------------------------------------------------------------------
@@ -389,7 +390,7 @@ public class EncoderTests : IDisposable
     [Fact]
     public async Task AnalyzeFailure_FileMissing_ReturnsFalseWithError()
     {
-        _storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(false);
+        _storage.Setup(expression: s => s.Exists(It.IsAny<string>())).Returns(value: false);
 
         EncodingRequest request = new(
             InputPath: "/missing/file.mkv",
@@ -397,17 +398,17 @@ public class EncoderTests : IDisposable
             Profile: BuildProfile()
         );
 
-        EncodingResult result = await _encoder.EncodeAsync(request);
+        EncodingResult result = await _encoder.EncodeAsync(request: request);
 
         result.Success.Should().BeFalse();
         result.Error.Should().NotBeNull();
-        result.Error!.Kind.Should().Be(EncodingErrorKind.InputNotFound);
+        result.Error!.Kind.Should().Be(expected: EncodingErrorKind.InputNotFound);
     }
 
     [Fact]
     public async Task AnalyzeFailure_DoesNotCallExecutor()
     {
-        _storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(false);
+        _storage.Setup(expression: s => s.Exists(It.IsAny<string>())).Returns(value: false);
 
         EncodingRequest request = new(
             InputPath: "/missing/file.mkv",
@@ -415,10 +416,10 @@ public class EncoderTests : IDisposable
             Profile: BuildProfile()
         );
 
-        await _encoder.EncodeAsync(request);
+        await _encoder.EncodeAsync(request: request);
 
         _ffmpegExecutor.Verify(
-            e =>
+            expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -426,7 +427,7 @@ public class EncoderTests : IDisposable
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Never
+            times: Times.Never
         );
     }
 
@@ -439,18 +440,18 @@ public class EncoderTests : IDisposable
     {
         MediaInfo media = BuildMediaInfo();
 
-        _storage.Setup(s => s.Exists("/movies/test.mkv")).Returns(true);
+        _storage.Setup(expression: s => s.Exists("/movies/test.mkv")).Returns(value: true);
         _analyzer
-            .Setup(a =>
+            .Setup(expression: a =>
                 a.AnalyzeAsync(
                     "/movies/test.mkv",
                     It.IsAny<IStorage>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(media);
+            .ReturnsAsync(value: media);
         _ffmpegExecutor
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -460,17 +461,17 @@ public class EncoderTests : IDisposable
                 )
             )
             .ReturnsAsync(
-                new ExecutionResult(
+                value: new ExecutionResult(
                     Success: false,
                     ExitCode: 1,
                     StdErr: "encoder error: resource exhausted",
-                    Duration: TimeSpan.FromSeconds(5),
+                    Duration: TimeSpan.FromSeconds(seconds: 5),
                     Error: new(
-                        EncodingErrorKind.ResourceExhausted,
-                        "Resource exhausted",
-                        "encoder error: resource exhausted",
-                        "Execute",
-                        true
+                        Kind: EncodingErrorKind.ResourceExhausted,
+                        Message: "Resource exhausted",
+                        FfmpegStderr: "encoder error: resource exhausted",
+                        StageName: "Execute",
+                        Recoverable: true
                     )
                 )
             );
@@ -481,11 +482,11 @@ public class EncoderTests : IDisposable
             Profile: BuildProfile()
         );
 
-        EncodingResult result = await _encoder.EncodeAsync(request);
+        EncodingResult result = await _encoder.EncodeAsync(request: request);
 
         result.Success.Should().BeFalse();
         result.Error.Should().NotBeNull();
-        result.Error!.Kind.Should().Be(EncodingErrorKind.ResourceExhausted);
+        result.Error!.Kind.Should().Be(expected: EncodingErrorKind.ResourceExhausted);
     }
 
     // ------------------------------------------------------------------
@@ -505,18 +506,18 @@ public class EncoderTests : IDisposable
             Profile: BuildProfile()
         );
 
-        await _encoder.EncodeAsync(request, progressMock.Object);
+        await _encoder.EncodeAsync(request: request, progress: progressMock.Object);
 
         progressMock.Verify(
-            p => p.OnStageCompleted(It.IsAny<string>(), It.IsAny<TimeSpan>()),
-            Times.AtLeast(6)
+            expression: p => p.OnStageCompleted(It.IsAny<string>(), It.IsAny<TimeSpan>()),
+            times: Times.AtLeast(callCount: 6)
         );
     }
 
     [Fact]
     public async Task ProgressObserver_OnError_CalledOnFailure()
     {
-        _storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(false);
+        _storage.Setup(expression: s => s.Exists(It.IsAny<string>())).Returns(value: false);
 
         Mock<IProgressObserver> progressMock = new();
         EncodingRequest request = new(
@@ -525,9 +526,9 @@ public class EncoderTests : IDisposable
             Profile: BuildProfile()
         );
 
-        await _encoder.EncodeAsync(request, progressMock.Object);
+        await _encoder.EncodeAsync(request: request, progress: progressMock.Object);
 
-        progressMock.Verify(p => p.OnError(It.IsAny<EncodingError>()), Times.Once);
+        progressMock.Verify(expression: p => p.OnError(It.IsAny<EncodingError>()), times: Times.Once);
     }
 
     // ------------------------------------------------------------------
@@ -578,11 +579,11 @@ public class EncoderTests : IDisposable
             MediaItem: MovieRef()
         );
 
-        EncodingResult result = await _encoder.EncodeAsync(request);
+        EncodingResult result = await _encoder.EncodeAsync(request: request);
 
         result.Success.Should().BeTrue();
         _ffmpegExecutor.Verify(
-            e =>
+            expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -590,8 +591,8 @@ public class EncoderTests : IDisposable
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Never,
-            "FinalizeOnly must skip Build+Execute — this is what makes MediaItem safe to populate"
+            times: Times.Never,
+            failMessage: "FinalizeOnly must skip Build+Execute — this is what makes MediaItem safe to populate"
         );
     }
 
@@ -609,7 +610,7 @@ public class EncoderTests : IDisposable
 
         List<string[]> capturedArgs = [];
         _ffmpegExecutor
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -624,47 +625,47 @@ public class EncoderTests : IDisposable
                 Action<EncodingProgress>?,
                 string?,
                 CancellationToken
-            >((cmd, _, _, _, _) => capturedArgs.Add(cmd.Arguments))
+            >(action: (cmd, _, _, _, _) => capturedArgs.Add(item: cmd.Arguments))
             .ReturnsAsync(
-                new ExecutionResult(
+                value: new ExecutionResult(
                     Success: true,
                     ExitCode: 0,
                     StdErr: "",
-                    Duration: TimeSpan.FromMinutes(10),
+                    Duration: TimeSpan.FromMinutes(minutes: 10),
                     Error: null
                 )
             );
 
         string plainDirectory = CreateSeededOutputDirectory();
         await _encoder.EncodeAsync(
-            new EncodingRequest(
+            request: new EncodingRequest(
                 InputPath: "/movies/test.mkv",
                 OutputDirectory: plainDirectory,
                 Profile: BuildProfile()
             )
         );
-        string[] plainArgs = capturedArgs[0];
+        string[] plainArgs = capturedArgs[index: 0];
         capturedArgs.Clear();
 
         string withItemDirectory = CreateSeededOutputDirectory();
         await _encoder.EncodeAsync(
-            new EncodingRequest(
+            request: new EncodingRequest(
                 InputPath: "/movies/test.mkv",
                 OutputDirectory: withItemDirectory,
                 Profile: BuildProfile(),
                 MediaItem: MovieRef()
             )
         );
-        string[] withItemArgs = capturedArgs[0];
+        string[] withItemArgs = capturedArgs[index: 0];
 
-        plainArgs.Should().NotContain("-metadata");
-        withItemArgs.Should().NotContain("-metadata");
+        plainArgs.Should().NotContain(unexpected: "-metadata");
+        withItemArgs.Should().NotContain(unexpected: "-metadata");
         withItemArgs
             .Should()
             .Equal(
-                plainArgs,
-                "MediaItem is pure identity — with EnableMetadataInjection left at its "
-                    + "default, populating it must never change a single argv token"
+                expected: plainArgs,
+                because: "MediaItem is pure identity — with EnableMetadataInjection left at its "
+                         + "default, populating it must never change a single argv token"
             );
     }
 
@@ -678,7 +679,7 @@ public class EncoderTests : IDisposable
 
         List<string[]> capturedArgs = [];
         _ffmpegExecutor
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -693,20 +694,20 @@ public class EncoderTests : IDisposable
                 Action<EncodingProgress>?,
                 string?,
                 CancellationToken
-            >((cmd, _, _, _, _) => capturedArgs.Add(cmd.Arguments))
+            >(action: (cmd, _, _, _, _) => capturedArgs.Add(item: cmd.Arguments))
             .ReturnsAsync(
-                new ExecutionResult(
+                value: new ExecutionResult(
                     Success: true,
                     ExitCode: 0,
                     StdErr: "",
-                    Duration: TimeSpan.FromMinutes(10),
+                    Duration: TimeSpan.FromMinutes(minutes: 10),
                     Error: null
                 )
             );
 
         string outputDirectory = CreateSeededOutputDirectory();
         await _encoder.EncodeAsync(
-            new EncodingRequest(
+            request: new EncodingRequest(
                 InputPath: "/movies/test.mkv",
                 OutputDirectory: outputDirectory,
                 Profile: BuildProfile(),
@@ -714,10 +715,10 @@ public class EncoderTests : IDisposable
                 MediaItem: MovieRef()
             )
         );
-        string[] args = capturedArgs[0];
+        string[] args = capturedArgs[index: 0];
 
-        args.Should().Contain("-metadata");
-        ContainsPair(args, "-metadata", "title=Fight Club").Should().BeTrue();
+        args.Should().Contain(expected: "-metadata");
+        ContainsPair(args: args, flag: "-metadata", value: "title=Fight Club").Should().BeTrue();
     }
 
     [Fact]
@@ -739,26 +740,26 @@ public class EncoderTests : IDisposable
             MediaItem: MovieRef()
         );
 
-        EncodingResult result = await _encoder.EncodeAsync(request);
+        EncodingResult result = await _encoder.EncodeAsync(request: request);
         result.Success.Should().BeTrue();
 
         // At the media folder root — never nested under encodes/{slug}/.
-        string blueprintPath = Path.Combine(outputDirectory, MediaBlueprintWriter.FileName);
+        string blueprintPath = Path.Combine(path1: outputDirectory, path2: MediaBlueprintWriter.FileName);
 
-        File.Exists(blueprintPath)
+        File.Exists(path: blueprintPath)
             .Should()
-            .BeTrue("the inline Whole-task path must write .nomercy.json");
+            .BeTrue(because: "the inline Whole-task path must write .nomercy.json");
 
         MediaBlueprint? blueprint = JsonConvert.DeserializeObject<MediaBlueprint>(
-            File.ReadAllText(blueprintPath)
+            value: File.ReadAllText(path: blueprintPath)
         );
         blueprint.Should().NotBeNull();
-        blueprint!.Identity.Type.Should().Be("movie");
-        blueprint.Identity.TmdbId.Should().Be(550);
-        blueprint.Source.Path.Should().Be("/movies/test.mkv");
+        blueprint!.Identity.Type.Should().Be(expected: "movie");
+        blueprint.Identity.TmdbId.Should().Be(expected: 550);
+        blueprint.Source.Path.Should().Be(expected: "/movies/test.mkv");
         blueprint.Encodes.Should().ContainSingle();
-        blueprint.Encodes[0].Tracks.Should().NotBeEmpty();
-        blueprint.Encodes[0].ReconstructionCommandTemplate.Should().NotBeNullOrWhiteSpace();
+        blueprint.Encodes[index: 0].Tracks.Should().NotBeEmpty();
+        blueprint.Encodes[index: 0].ReconstructionCommandTemplate.Should().NotBeNullOrWhiteSpace();
     }
 
     private static bool ContainsPair(string[] args, string flag, string value)
@@ -786,7 +787,7 @@ public class EncoderTests : IDisposable
         // directory name and never compare equal across two separate runs.
         string withoutItemDir = CreateSeededOutputDirectory();
         await _encoder.EncodeAsync(
-            new EncodingRequest(
+            request: new EncodingRequest(
                 InputPath: "/movies/test.mkv",
                 OutputDirectory: withoutItemDir,
                 Profile: BuildProfile(),
@@ -796,7 +797,7 @@ public class EncoderTests : IDisposable
 
         string withItemDir = CreateSeededOutputDirectory();
         await _encoder.EncodeAsync(
-            new EncodingRequest(
+            request: new EncodingRequest(
                 InputPath: "/movies/test.mkv",
                 OutputDirectory: withItemDir,
                 Profile: BuildProfile(),
@@ -808,18 +809,18 @@ public class EncoderTests : IDisposable
 
         static IEnumerable<string> RealFiles(string root) =>
             Directory
-                .EnumerateFiles(root, "*", SearchOption.AllDirectories)
-                .Select(f => Path.GetRelativePath(root, f).Replace('\\', '/'))
-                .Where(rel =>
-                    !rel.Equals(MediaBlueprintWriter.FileName, StringComparison.OrdinalIgnoreCase)
+                .EnumerateFiles(path: root, searchPattern: "*", searchOption: SearchOption.AllDirectories)
+                .Select(selector: f => Path.GetRelativePath(relativeTo: root, path: f).Replace(oldChar: '\\', newChar: '/'))
+                .Where(predicate: rel =>
+                    !rel.Equals(value: MediaBlueprintWriter.FileName, comparisonType: StringComparison.OrdinalIgnoreCase)
                 )
-                .OrderBy(rel => rel, StringComparer.Ordinal);
+                .OrderBy(keySelector: rel => rel, comparer: StringComparer.Ordinal);
 
-        RealFiles(withoutItemDir).Should().BeEquivalentTo(RealFiles(withItemDir));
+        RealFiles(root: withoutItemDir).Should().BeEquivalentTo(expectation: RealFiles(root: withItemDir));
 
         // The new sidecar lands ONLY at the media folder root — never nested
         // under a preset-scoped sub-directory.
-        File.Exists(Path.Combine(withItemDir, MediaBlueprintWriter.FileName)).Should().BeTrue();
+        File.Exists(path: Path.Combine(path1: withItemDir, path2: MediaBlueprintWriter.FileName)).Should().BeTrue();
     }
 
     [Fact]
@@ -836,33 +837,33 @@ public class EncoderTests : IDisposable
             MediaItem: MovieRef()
         );
 
-        EncodingResult result = await _encoder.EncodeAsync(request);
+        EncodingResult result = await _encoder.EncodeAsync(request: request);
         result.Success.Should().BeTrue();
 
         // At the media folder root — never nested under encodes/{slug}/.
-        string blueprintPath = Path.Combine(outputDirectory, MediaBlueprintWriter.FileName);
-        File.Exists(blueprintPath)
+        string blueprintPath = Path.Combine(path1: outputDirectory, path2: MediaBlueprintWriter.FileName);
+        File.Exists(path: blueprintPath)
             .Should()
-            .BeTrue(".nomercy.json must be written for a movie encode");
+            .BeTrue(because: ".nomercy.json must be written for a movie encode");
 
         MediaBlueprint? blueprint = JsonConvert.DeserializeObject<MediaBlueprint>(
-            File.ReadAllText(blueprintPath)
+            value: File.ReadAllText(path: blueprintPath)
         );
         blueprint.Should().NotBeNull();
-        blueprint!.Identity.Type.Should().Be("movie");
-        blueprint.Identity.TmdbId.Should().Be(550);
-        blueprint.Source.Path.Should().Be("/movies/test.mkv");
-        blueprint.Source.Container.Should().Be("matroska");
+        blueprint!.Identity.Type.Should().Be(expected: "movie");
+        blueprint.Identity.TmdbId.Should().Be(expected: 550);
+        blueprint.Source.Path.Should().Be(expected: "/movies/test.mkv");
+        blueprint.Source.Container.Should().Be(expected: "matroska");
 
         BlueprintEncode encode = blueprint.Encodes.Should().ContainSingle().Which;
-        encode.PresetSlug.Should().Be("test");
+        encode.PresetSlug.Should().Be(expected: "test");
         encode.Tracks.Should().NotBeEmpty();
         encode.ReconstructionCommandTemplate.Should().NotBeNullOrWhiteSpace();
         // BuildProfile()'s video rung transcodes h264 -> libx264 (CRF) — never
         // a stream copy — so it is lossy and must surface a warning explaining
         // what is not losslessly recoverable.
         encode.LossyWarnings.Should().NotBeEmpty();
-        encode.LossyWarnings.Should().Contain(w => w.Contains("video"));
+        encode.LossyWarnings.Should().Contain(predicate: w => w.Contains("video"));
         // Source audio is already AAC and the profile also targets AAC — the
         // planner smart-copies instead of re-encoding, so this track is
         // genuinely lossless. Asserting on the track itself (not just "some
@@ -870,7 +871,7 @@ public class EncoderTests : IDisposable
         // not just present.
         encode
             .Tracks.Should()
-            .Contain(t => t.Kind == "audio" && t.Fidelity == "lossless" && t.Policy == "copy");
+            .Contain(predicate: t => t.Kind == "audio" && t.Fidelity == "lossless" && t.Policy == "copy");
     }
 
     [Fact]
@@ -887,20 +888,20 @@ public class EncoderTests : IDisposable
             MediaItem: EpisodeRef()
         );
 
-        EncodingResult result = await _encoder.EncodeAsync(request);
+        EncodingResult result = await _encoder.EncodeAsync(request: request);
         result.Success.Should().BeTrue();
 
-        string blueprintPath = Path.Combine(outputDirectory, MediaBlueprintWriter.FileName);
-        File.Exists(blueprintPath)
+        string blueprintPath = Path.Combine(path1: outputDirectory, path2: MediaBlueprintWriter.FileName);
+        File.Exists(path: blueprintPath)
             .Should()
-            .BeTrue(".nomercy.json must be written for an episode encode");
+            .BeTrue(because: ".nomercy.json must be written for an episode encode");
 
         MediaBlueprint? blueprint = JsonConvert.DeserializeObject<MediaBlueprint>(
-            File.ReadAllText(blueprintPath)
+            value: File.ReadAllText(path: blueprintPath)
         );
         blueprint.Should().NotBeNull();
-        blueprint!.Identity.Type.Should().Be("episode");
-        blueprint.Identity.TmdbId.Should().Be(62085);
+        blueprint!.Identity.Type.Should().Be(expected: "episode");
+        blueprint.Identity.TmdbId.Should().Be(expected: 62085);
     }
 
     [Fact]
@@ -917,9 +918,9 @@ public class EncoderTests : IDisposable
             Profile: BuildProfile()
         );
 
-        EncodingResult result = await _encoder.EncodeAsync(request);
+        EncodingResult result = await _encoder.EncodeAsync(request: request);
 
         result.Success.Should().BeTrue();
-        Directory.Exists(Path.Combine(outputDirectory, "encodes")).Should().BeFalse();
+        Directory.Exists(path: Path.Combine(path1: outputDirectory, path2: "encodes")).Should().BeFalse();
     }
 }

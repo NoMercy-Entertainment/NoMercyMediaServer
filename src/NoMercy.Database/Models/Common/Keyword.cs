@@ -15,14 +15,14 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Common;
 
-[Index(nameof(Name))]
-[PrimaryKey(nameof(Id))]
+[Index(propertyName: nameof(Name))]
+[PrimaryKey(propertyName: nameof(Id))]
 public class Keyword
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.None)]
-    [JsonProperty("id")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 }

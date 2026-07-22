@@ -15,28 +15,28 @@ namespace NoMercy.Monitoring;
 
 public class Gpu
 {
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("d3d")]
+    [JsonProperty(propertyName: "d3d")]
     public double D3D { get; set; }
 
-    [JsonProperty("decode")]
+    [JsonProperty(propertyName: "decode")]
     public double Decode { get; set; }
 
-    [JsonProperty("core")]
+    [JsonProperty(propertyName: "core")]
     public double Core { get; set; }
 
-    [JsonProperty("memory")]
+    [JsonProperty(propertyName: "memory")]
     public double Memory { get; set; }
 
-    [JsonProperty("encode")]
+    [JsonProperty(propertyName: "encode")]
     public double Encode { get; set; }
 
-    [JsonProperty("power")]
+    [JsonProperty(propertyName: "power")]
     public double Power { get; set; }
 
-    [JsonProperty("identifier")]
+    [JsonProperty(propertyName: "identifier")]
     internal string Identifier { get; set; } = string.Empty;
 
     // TryParse rather than Parse: an empty/default Identifier ("") splits into a
@@ -44,7 +44,7 @@ public class Gpu
     // fires and int.Parse("") throws FormatException. Every real provider sets
     // Identifier before Index is read, but a defensively-constructed Gpu (or a
     // future caller) must not crash on a missing/malformed identifier.
-    [JsonProperty("index")]
+    [JsonProperty(propertyName: "index")]
     public int Index =>
-        int.TryParse(Identifier.Split('/').LastOrDefault(), out int index) ? index : 0;
+        int.TryParse(s: Identifier.Split(separator: '/').LastOrDefault(), result: out int index) ? index : 0;
 }

@@ -27,7 +27,7 @@ namespace NoMercy.Tests.Repositories;
 /// mirroring the exact FlexLabs upsert shape used by VideoPlaybackService.SetTime and
 /// VideoHub.Playback.SetTime.
 /// </summary>
-[Trait("Category", "Characterization")]
+[Trait(name: "Category", value: "Characterization")]
 public class ContinueWatchingLifecycleTests : IDisposable
 {
     private readonly IDbContextFactory<MediaContext> _factory;
@@ -37,7 +37,7 @@ public class ContinueWatchingLifecycleTests : IDisposable
     public ContinueWatchingLifecycleTests()
     {
         (_factory, _connection) = TestMediaContextFactory.CreateSeededFactory();
-        _recommendationRepository = new(_factory);
+        _recommendationRepository = new(contextFactory: _factory);
     }
 
     // HomeRepository.GetContinueWatchingAsync reads from the MediaContext handed to its
@@ -46,8 +46,8 @@ public class ContinueWatchingLifecycleTests : IDisposable
     private async Task<HashSet<UserData>> GetContinueWatchingAsync()
     {
         await using MediaContext context = await _factory.CreateDbContextAsync();
-        HomeRepository repository = new(context, _factory);
-        return await repository.GetContinueWatchingAsync(SeedConstants.UserId, "en", "US");
+        HomeRepository repository = new(context: context, contextFactory: _factory);
+        return await repository.GetContinueWatchingAsync(userId: SeedConstants.UserId, language: "en", country: "US");
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class ContinueWatchingLifecycleTests : IDisposable
         await using (MediaContext context = await _factory.CreateDbContextAsync())
         {
             List<UserData> rows = await context
-                .UserData.Where(ud => ud.MovieId == 129)
+                .UserData.Where(predicate: ud => ud.MovieId == 129)
                 .ToListAsync();
             foreach (UserData row in rows)
                 row.RemovedFromContinueWatching = true;
@@ -67,7 +67,7 @@ public class ContinueWatchingLifecycleTests : IDisposable
         }
 
         HashSet<UserData> beforeResume = await GetContinueWatchingAsync();
-        beforeResume.Should().NotContain(ud => ud.MovieId == 129);
+        beforeResume.Should().NotContain(predicate: ud => ud.MovieId == 129);
 
         // Act: replicate the exact upsert VideoPlaybackService.SetTime / VideoHub.Playback.SetTime
         // run every time new playback progress is recorded for the item.
@@ -83,15 +83,15 @@ public class ContinueWatchingLifecycleTests : IDisposable
             };
 
             await context
-                .UserData.Upsert(incoming)
-                .On(x => new
+                .UserData.Upsert(entity: incoming)
+                .On(match: x => new
                 {
                     x.VideoFileId,
                     x.UserId,
                     x.MovieId,
                 })
                 .WhenMatched(
-                    (uds, udi) =>
+                    updater: (uds, udi) =>
                         new()
                         {
                             Id = uds.Id,
@@ -114,15 +114,15 @@ public class ContinueWatchingLifecycleTests : IDisposable
         // Assert: the flag is cleared and the item is back in the carousel.
         await using (MediaContext context = await _factory.CreateDbContextAsync())
         {
-            UserData updated = await context.UserData.FirstAsync(ud =>
+            UserData updated = await context.UserData.FirstAsync(predicate: ud =>
                 ud.MovieId == 129 && ud.VideoFileId == SeedConstants.MovieVideoFile1Id
             );
             updated.RemovedFromContinueWatching.Should().BeFalse();
-            updated.Time.Should().Be(900);
+            updated.Time.Should().Be(expected: 900);
         }
 
         HashSet<UserData> afterResume = await GetContinueWatchingAsync();
-        afterResume.Should().Contain(ud => ud.MovieId == 129);
+        afterResume.Should().Contain(predicate: ud => ud.MovieId == 129);
     }
 
     [Fact]
@@ -133,7 +133,7 @@ public class ContinueWatchingLifecycleTests : IDisposable
         await using (MediaContext context = await _factory.CreateDbContextAsync())
         {
             List<UserData> rows = await context
-                .UserData.Where(ud => ud.MovieId == 129)
+                .UserData.Where(predicate: ud => ud.MovieId == 129)
                 .ToListAsync();
             foreach (UserData row in rows)
             {
@@ -145,14 +145,14 @@ public class ContinueWatchingLifecycleTests : IDisposable
 
         // Act
         List<UserAffinitySourceDto> affinity =
-            await _recommendationRepository.GetUserMovieAffinityDataAsync(SeedConstants.UserId);
+            await _recommendationRepository.GetUserMovieAffinityDataAsync(userId: SeedConstants.UserId);
 
         // Assert: RecommendationRepository never filters on RemovedFromContinueWatching —
         // the hidden row's signal must still feed the affinity model.
-        UserAffinitySourceDto? movieAffinity = affinity.FirstOrDefault(a => a.ItemId == 129);
+        UserAffinitySourceDto? movieAffinity = affinity.FirstOrDefault(predicate: a => a.ItemId == 129);
         movieAffinity.Should().NotBeNull();
-        movieAffinity!.Rating.Should().Be(8);
-        movieAffinity.TimeWatched.Should().Be(3600);
+        movieAffinity!.Rating.Should().Be(expected: 8);
+        movieAffinity.TimeWatched.Should().Be(expected: 3600);
     }
 
     public void Dispose()

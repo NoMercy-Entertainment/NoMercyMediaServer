@@ -32,14 +32,14 @@ public partial class FileManager
 {
     private async Task MediaType(int id, Library library)
     {
-        (Movie, Show, Type) = await fileRepository.MediaType(id, library);
+        (Movie, Show, Type) = await fileRepository.MediaType(id: id, library: library);
     }
 
     private async Task<ConcurrentBag<MediaFolderExtend>> GetFiles(Library library, Folder folder)
     {
-        IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
-        string scanRoot = ResolveBackendPath(folderStorage, folder.Path);
-        MediaScan mediaScan = new(folderStorage.Driver);
+        IStorage folderStorage = storageFactory.For(folderId: folder.Id, driverId: folder.DriverId, subPath: string.Empty);
+        string scanRoot = ResolveBackendPath(storage: folderStorage, scopeRelativePath: folder.Path);
+        MediaScan mediaScan = new(driver: folderStorage.Driver);
 
         int depth = library.Type switch
         {
@@ -51,9 +51,9 @@ public partial class FileManager
         ConcurrentBag<MediaFolderExtend> folders = await mediaScan
             .EnableFileListing()
             .DisableRegexFilter()
-            .FilterByMediaType(library.Type)
-            .FilterByFileName(Filter)
-            .Process(scanRoot, depth);
+            .FilterByMediaType(mediaType: library.Type)
+            .FilterByFileName(filter: Filter)
+            .Process(rootFolder: scanRoot, depth: depth);
 
         await mediaScan.DisposeAsync();
 
@@ -75,22 +75,22 @@ public partial class FileManager
     // hatch, so they must resolve through the driver.
     private static string ResolveBackendPath(IStorage storage, string scopeRelativePath) =>
         storage.Driver is LocalStorageDriver
-            ? storage.GetFullPath(scopeRelativePath)
-            : storage.Driver.GetFullPath(scopeRelativePath);
+            ? storage.GetFullPath(path: scopeRelativePath)
+            : storage.Driver.GetFullPath(path: scopeRelativePath);
 
     private List<Folder> Paths(Library library, Movie? movie = null, Tv? show = null)
     {
         List<Folder> folders = [];
         string? folder = library.Type switch
         {
-            MediaTypes.MovieMediaType => movie?.Folder?.Replace("/", ""),
-            MediaTypes.TvMediaType or MediaTypes.AnimeMediaType => show?.Folder?.Replace("/", ""),
+            MediaTypes.MovieMediaType => movie?.Folder?.Replace(oldValue: "/", newValue: ""),
+            MediaTypes.TvMediaType or MediaTypes.AnimeMediaType => show?.Folder?.Replace(oldValue: "/", newValue: ""),
             _ => "",
         };
 
         if (folder == null)
         {
-            Logger.App("Folder not set");
+            Logger.App(message: "Folder not set");
             return folders;
         }
 
@@ -102,15 +102,15 @@ public partial class FileManager
         // unrelated libraries — one flaky remote backend then threw on
         // Exists() and killed the whole job (retried up to maxAttempts).
         Folder[] rootFolders = mediaContext
-            .FolderLibrary.Where(fl => fl.LibraryId == library.Id)
-            .Include(fl => fl.Folder)
-                .ThenInclude(fl => fl.Driver)
-            .Select(f => f.Folder)
+            .FolderLibrary.Where(predicate: fl => fl.LibraryId == library.Id)
+            .Include(navigationPropertyPath: fl => fl.Folder)
+                .ThenInclude(navigationPropertyPath: fl => fl.Driver)
+            .Select(selector: f => f.Folder)
             .ToArray();
 
         foreach (Folder rootFolder in rootFolders)
         {
-            IStorage folderStorage = StorageFor(rootFolder);
+            IStorage folderStorage = StorageFor(folder: rootFolder);
 
             // Stay in scope-relative space: rootFolder.Path is the storage key
             // as the facade wants it (e.g. "Marvels/TV.Shows"), and the facade
@@ -118,13 +118,13 @@ public partial class FileManager
             // resolve to an OS/mount-absolute path here — GetFullPath (facade
             // OR driver) produces "/mnt/vault/..." which StoragePathGuard then
             // rejects as a scope-relative key.
-            string path = folderStorage.CombinePath(rootFolder.Path, folder);
+            string path = folderStorage.CombinePath(parent: rootFolder.Path, child: folder);
 
             // Treat a transport-level failure from any single backend as
             // "not in this folder" rather than aborting the whole rescan. The
             // job is idempotent on its successful folders, and one transient
             // S3 502 should not trigger queue-level retries.
-            bool exists = TryExists(folderStorage, path);
+            bool exists = TryExists(storage: folderStorage, path: path);
 
             if (!exists)
             {
@@ -133,22 +133,22 @@ public partial class FileManager
                 // root and returns a driver-absolute directory. Convert that hit
                 // back to a scope-relative key before storing / re-checking, so
                 // the facade and the downstream scan keep working in one space.
-                string resolvedRoot = ResolveBackendPath(folderStorage, rootFolder.Path);
+                string resolvedRoot = ResolveBackendPath(storage: folderStorage, scopeRelativePath: rootFolder.Path);
                 string? match = TryFindMatchingDirectory(
-                    folderStorage.Driver,
-                    resolvedRoot,
-                    folder
+                    driver: folderStorage.Driver,
+                    rootPath: resolvedRoot,
+                    expectedFolderName: folder
                 );
                 if (match != null)
                 {
-                    path = folderStorage.CombinePath(rootFolder.Path, folderStorage.GetName(match));
-                    exists = TryExists(folderStorage, path);
+                    path = folderStorage.CombinePath(parent: rootFolder.Path, child: folderStorage.GetName(path: match));
+                    exists = TryExists(storage: folderStorage, path: path);
                 }
             }
 
             if (exists)
                 folders.Add(
-                    new()
+                    item: new()
                     {
                         Path = path,
                         Id = rootFolder.Id,
@@ -165,13 +165,13 @@ public partial class FileManager
     {
         try
         {
-            return storage.Exists(path);
+            return storage.Exists(path: path);
         }
         catch (Exception ex)
         {
             Logger.App(
-                $"[FileManager.Paths] storage.Exists threw for '{path}' on driver {storage.Driver.GetType().Name}: {ex.Message}",
-                LogEventLevel.Warning
+                message: $"[FileManager.Paths] storage.Exists threw for '{path}' on driver {storage.Driver.GetType().Name}: {ex.Message}",
+                level: LogEventLevel.Warning
             );
             return false;
         }
@@ -185,13 +185,13 @@ public partial class FileManager
     {
         try
         {
-            return FileNameSanitizer.FindMatchingDirectory(driver, rootPath, expectedFolderName);
+            return FileNameSanitizer.FindMatchingDirectory(driver: driver, rootPath: rootPath, expectedFolderName: expectedFolderName);
         }
         catch (Exception ex)
         {
             Logger.App(
-                $"[FileManager.Paths] FindMatchingDirectory threw for root '{rootPath}' on driver {driver.GetType().Name}: {ex.Message}",
-                LogEventLevel.Warning
+                message: $"[FileManager.Paths] FindMatchingDirectory threw for root '{rootPath}' on driver {driver.GetType().Name}: {ex.Message}",
+                level: LogEventLevel.Warning
             );
             return null;
         }
@@ -206,12 +206,12 @@ public partial class FileManager
     // cache-busting), while a several-second sprite read collapses to a stat.
     private static string ComputeFileHash(IStorage storage, string filePath)
     {
-        long size = storage.SizeOrZero(filePath);
+        long size = storage.SizeOrZero(path: filePath);
 
         long modifiedTicks;
         try
         {
-            modifiedTicks = storage.LastModified(filePath).UtcTicks;
+            modifiedTicks = storage.LastModified(path: filePath).UtcTicks;
         }
         catch
         {
@@ -219,12 +219,12 @@ public partial class FileManager
         }
 
         using SHA256 sha256 = SHA256.Create();
-        byte[] hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes($"{size}:{modifiedTicks}"));
+        byte[] hashBytes = sha256.ComputeHash(buffer: Encoding.UTF8.GetBytes(s: $"{size}:{modifiedTicks}"));
 
-        StringBuilder hashStringBuilder = new(64);
+        StringBuilder hashStringBuilder = new(capacity: 64);
 
         foreach (byte b in hashBytes)
-            hashStringBuilder.Append(b.ToString("x2"));
+            hashStringBuilder.Append(value: b.ToString(format: "x2"));
         return hashStringBuilder.ToString();
     }
 
@@ -234,19 +234,19 @@ public partial class FileManager
     // only matched 3-char lang + 3-4 char type + 3-char ext and the consumer methods
     // further filtered to type in (sign, song, full) — both combined silently dropped
     // every "alt" / "sdh" / "forced" subtitle file.
-    [GeneratedRegex(@"(?<lang>[a-zA-Z]{2,3})\.(?<type>\w+)\.(?<ext>\w{3,6})$")]
+    [GeneratedRegex(pattern: @"(?<lang>[a-zA-Z]{2,3})\.(?<type>\w+)\.(?<ext>\w{3,6})$")]
     private static partial Regex SubtitleFileRegex();
 
-    [GeneratedRegex(@"#xywh=\d+,\d+,(?<width>\d+),(?<height>\d+)")]
+    [GeneratedRegex(pattern: @"#xywh=\d+,\d+,(?<width>\d+),(?<height>\d+)")]
     private static partial Regex ImageDimensions();
 
-    [GeneratedRegex(@"^video_(?<width>\d+)x(?<height>\d+)(?:_(?:SDR|HDR))?$")]
+    [GeneratedRegex(pattern: @"^video_(?<width>\d+)x(?<height>\d+)(?:_(?:SDR|HDR))?$")]
     private static partial Regex VideoDirectoryRegex();
 
     // Older encodes name the rendition dir `audio_<lang>` (no codec suffix);
     // newer ones `audio_<lang>_<codec>` (e.g. audio_jpn_aac). Match both — the
     // codec group is optional — or a rescan drops the audio group from the
     // rebuilt master and the title plays silent.
-    [GeneratedRegex(@"^audio_(?<lang>[a-z]{2,3})(?:_(?<codec>\w+))?$")]
+    [GeneratedRegex(pattern: @"^audio_(?<lang>[a-z]{2,3})(?:_(?<codec>\w+))?$")]
     private static partial Regex AudioDirectoryRegex();
 }

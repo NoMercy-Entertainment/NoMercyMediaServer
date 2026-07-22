@@ -24,30 +24,30 @@ public static class Archiving
         string destination
     )
     {
-        await EnsureExtractableAsync(storage, filePath);
+        await EnsureExtractableAsync(storage: storage, filePath: filePath);
 
         List<string> extractedFiles;
 
-        if (filePath.EndsWith(".zip"))
+        if (filePath.EndsWith(value: ".zip"))
         {
-            extractedFiles = ExtractZipFile(storage, filePath, destination);
+            extractedFiles = ExtractZipFile(storage: storage, zipFilePath: filePath, extractToDirectory: destination);
         }
         else if (
-            filePath.EndsWith(".tar.xz")
-            || filePath.EndsWith(".tar.gz")
-            || filePath.EndsWith(".tgz")
+            filePath.EndsWith(value: ".tar.xz")
+            || filePath.EndsWith(value: ".tar.gz")
+            || filePath.EndsWith(value: ".tgz")
         )
         {
-            extractedFiles = await ExtractTarFile(storage, filePath, destination);
+            extractedFiles = await ExtractTarFile(storage: storage, tarFilePath: filePath, extractToDirectory: destination);
         }
         else
         {
-            Logger.System($"Unsupported archive format for {filePath}", LogEventLevel.Error);
+            Logger.System(message: $"Unsupported archive format for {filePath}", level: LogEventLevel.Error);
             return [];
         }
 
         foreach (string extractedFile in extractedFiles)
-            await FilePermissions.SetExecutionPermissions(extractedFile);
+            await FilePermissions.SetExecutionPermissions(path: extractedFile);
 
         return extractedFiles;
     }
@@ -67,32 +67,32 @@ public static class Archiving
     private static async Task EnsureExtractableAsync(IStorage storage, string filePath)
     {
         const int maxAttempts = 3;
-        TimeSpan delay = TimeSpan.FromMilliseconds(250);
+        TimeSpan delay = TimeSpan.FromMilliseconds(milliseconds: 250);
 
         for (int attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            bool exists = storage.Exists(filePath);
-            long size = exists ? storage.SizeOrZero(filePath) : 0;
+            bool exists = storage.Exists(path: filePath);
+            long size = exists ? storage.SizeOrZero(path: filePath) : 0;
 
-            if (ArchiveExtractGate.CanProceed(exists, size))
+            if (ArchiveExtractGate.CanProceed(fileExists: exists, actualSizeBytes: size))
                 return;
 
             if (attempt == maxAttempts)
             {
                 Logger.System(
-                    $"Refusing to extract {filePath}: archive missing or empty "
-                        + $"(exists={exists}, size={size}) after {maxAttempts} checks",
-                    LogEventLevel.Error
+                    message: $"Refusing to extract {filePath}: archive missing or empty "
+                             + $"(exists={exists}, size={size}) after {maxAttempts} checks",
+                    level: LogEventLevel.Error
                 );
                 throw new FileNotFoundException(
-                    $"Cannot extract archive: file missing or empty at {filePath} — "
-                        + "the download did not complete or was removed before extraction. "
-                        + "Will retry the full download on the next provisioning attempt.",
-                    filePath
+                    message: $"Cannot extract archive: file missing or empty at {filePath} — "
+                             + "the download did not complete or was removed before extraction. "
+                             + "Will retry the full download on the next provisioning attempt.",
+                    fileName: filePath
                 );
             }
 
-            await Task.Delay(delay);
+            await Task.Delay(delay: delay);
             delay *= 2;
         }
     }
@@ -104,50 +104,50 @@ public static class Archiving
     )
     {
         List<string> extractedFiles = [];
-        string destinationRoot = Path.GetFullPath(extractToDirectory);
+        string destinationRoot = Path.GetFullPath(path: extractToDirectory);
 
         try
         {
-            using ZipArchive archive = ZipFile.OpenRead(zipFilePath);
+            using ZipArchive archive = ZipFile.OpenRead(archiveFileName: zipFilePath);
             foreach (ZipArchiveEntry entry in archive.Entries)
             {
                 string destinationPath = Path.Combine(
-                    extractToDirectory,
-                    NormalizeEntrySeparators(entry.FullName)
+                    path1: extractToDirectory,
+                    path2: NormalizeEntrySeparators(entryName: entry.FullName)
                 );
 
-                if (!IsPathContained(destinationRoot, destinationPath))
+                if (!IsPathContained(destinationRoot: destinationRoot, candidatePath: destinationPath))
                 {
                     Logger.System(
-                        $"Rejected zip-slip entry '{entry.FullName}' in {zipFilePath}: resolves outside {destinationRoot}",
-                        LogEventLevel.Error
+                        message: $"Rejected zip-slip entry '{entry.FullName}' in {zipFilePath}: resolves outside {destinationRoot}",
+                        level: LogEventLevel.Error
                     );
                     throw new InvalidDataException(
-                        $"Archive entry '{entry.FullName}' escapes the extraction root."
+                        message: $"Archive entry '{entry.FullName}' escapes the extraction root."
                     );
                 }
 
                 string destinationDir =
-                    Path.GetDirectoryName(destinationPath) ?? extractToDirectory;
+                    Path.GetDirectoryName(path: destinationPath) ?? extractToDirectory;
 
-                if (!storage.Exists(destinationDir))
-                    storage.CreateDirectory(destinationDir);
+                if (!storage.Exists(path: destinationDir))
+                    storage.CreateDirectory(path: destinationDir);
 
-                if (string.IsNullOrEmpty(entry.Name)) // Skip directories
+                if (string.IsNullOrEmpty(value: entry.Name)) // Skip directories
                     continue;
 
-                entry.ExtractToFile(destinationPath, true);
+                entry.ExtractToFile(destinationFileName: destinationPath, overwrite: true);
 
-                extractedFiles.Add(destinationPath);
+                extractedFiles.Add(item: destinationPath);
             }
         }
         catch (Exception ex)
         {
             Logger.System(
-                $"Failed to extract zip file {zipFilePath}: {ex.Message}",
-                LogEventLevel.Error
+                message: $"Failed to extract zip file {zipFilePath}: {ex.Message}",
+                level: LogEventLevel.Error
             );
-            throw new($"Failed to extract zip file {zipFilePath}", ex);
+            throw new(message: $"Failed to extract zip file {zipFilePath}", innerException: ex);
         }
 
         return extractedFiles;
@@ -160,30 +160,30 @@ public static class Archiving
     )
     {
         List<string> extractedFiles = [];
-        string destinationRoot = Path.GetFullPath(extractToDirectory);
+        string destinationRoot = Path.GetFullPath(path: extractToDirectory);
 
         try
         {
             // tar's -C target is not auto-created; on a fresh install the output
             // folder is absent and tar aborts ("Cannot open: No such file or
             // directory"), stranding the Binaries boot stage and every queue.
-            if (!storage.Exists(extractToDirectory))
-                storage.CreateDirectory(extractToDirectory);
+            if (!storage.Exists(path: extractToDirectory))
+                storage.CreateDirectory(path: extractToDirectory);
 
             // List entries first so a traversal attempt can be rejected before
             // any file is written — the tar CLI has no per-entry containment guard.
-            Shell.ExecResult listResult = await Shell.ExecAsync("tar", $"tf \"{tarFilePath}\"");
+            Shell.ExecResult listResult = await Shell.ExecAsync(executable: "tar", arguments: $"tf \"{tarFilePath}\"");
 
             if (listResult.ExitCode != 0)
             {
                 throw new InvalidOperationException(
-                    $"Failed to list tar file {tarFilePath}: {listResult.StandardError}"
+                    message: $"Failed to list tar file {tarFilePath}: {listResult.StandardError}"
                 );
             }
 
             string[] entries = listResult.StandardOutput.Split(
-                '\n',
-                StringSplitOptions.RemoveEmptyEntries
+                separator: '\n',
+                options: StringSplitOptions.RemoveEmptyEntries
             );
 
             List<string> destinationPaths = [];
@@ -191,47 +191,47 @@ public static class Archiving
             {
                 string entryName = line.Trim();
                 string destinationPath = Path.Combine(
-                    extractToDirectory,
-                    NormalizeEntrySeparators(entryName)
+                    path1: extractToDirectory,
+                    path2: NormalizeEntrySeparators(entryName: entryName)
                 );
 
-                if (!IsPathContained(destinationRoot, destinationPath))
+                if (!IsPathContained(destinationRoot: destinationRoot, candidatePath: destinationPath))
                 {
                     Logger.System(
-                        $"Rejected zip-slip entry '{entryName}' in {tarFilePath}: resolves outside {destinationRoot}",
-                        LogEventLevel.Error
+                        message: $"Rejected zip-slip entry '{entryName}' in {tarFilePath}: resolves outside {destinationRoot}",
+                        level: LogEventLevel.Error
                     );
                     throw new InvalidDataException(
-                        $"Archive entry '{entryName}' escapes the extraction root."
+                        message: $"Archive entry '{entryName}' escapes the extraction root."
                     );
                 }
 
-                destinationPaths.Add(destinationPath);
+                destinationPaths.Add(item: destinationPath);
             }
 
             Shell.ExecResult extractResult = await Shell.ExecAsync(
-                "tar",
-                $"xf \"{tarFilePath}\" -C \"{extractToDirectory}\""
+                executable: "tar",
+                arguments: $"xf \"{tarFilePath}\" -C \"{extractToDirectory}\""
             );
 
             if (extractResult.ExitCode != 0)
             {
                 throw new InvalidOperationException(
-                    $"tar exited with code {extractResult.ExitCode} extracting {tarFilePath}: {extractResult.StandardError}"
+                    message: $"tar exited with code {extractResult.ExitCode} extracting {tarFilePath}: {extractResult.StandardError}"
                 );
             }
 
             foreach (string destinationPath in destinationPaths)
-                if (storage.Exists(destinationPath))
-                    extractedFiles.Add(destinationPath);
+                if (storage.Exists(path: destinationPath))
+                    extractedFiles.Add(item: destinationPath);
         }
         catch (Exception ex)
         {
             Logger.System(
-                $"Failed to extract tar file {tarFilePath}: {ex.Message}",
-                LogEventLevel.Error
+                message: $"Failed to extract tar file {tarFilePath}: {ex.Message}",
+                level: LogEventLevel.Error
             );
-            throw new($"Failed to extract tar file {tarFilePath}", ex);
+            throw new(message: $"Failed to extract tar file {tarFilePath}", innerException: ex);
         }
 
         return extractedFiles;
@@ -250,7 +250,7 @@ public static class Archiving
     /// name instead of resolving the ".." segment it actually encodes.
     /// </summary>
     private static string NormalizeEntrySeparators(string entryName) =>
-        entryName.Replace('\\', '/');
+        entryName.Replace(oldChar: '\\', newChar: '/');
 
     /// <summary>
     /// Resolves both paths to their canonical full form and rejects any
@@ -260,16 +260,14 @@ public static class Archiving
     /// </summary>
     private static bool IsPathContained(string destinationRoot, string candidatePath)
     {
-        string normalizedRoot = destinationRoot.TrimEnd(
-            Path.DirectorySeparatorChar,
-            Path.AltDirectorySeparatorChar
+        string normalizedRoot = destinationRoot.TrimEnd(trimChars: [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]
         );
-        string fullCandidatePath = Path.GetFullPath(candidatePath);
+        string fullCandidatePath = Path.GetFullPath(path: candidatePath);
 
         return fullCandidatePath == normalizedRoot
             || fullCandidatePath.StartsWith(
-                normalizedRoot + Path.DirectorySeparatorChar,
-                StringComparison.Ordinal
+                value: normalizedRoot + Path.DirectorySeparatorChar,
+                comparisonType: StringComparison.Ordinal
             );
     }
 }

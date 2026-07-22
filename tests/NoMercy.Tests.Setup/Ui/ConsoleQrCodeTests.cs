@@ -29,7 +29,7 @@ namespace NoMercy.Tests.Setup.Ui;
 /// risk exactly the Console-state bleed-through documented in
 /// <c>SetupTerminalUiTests</c>.
 /// </remarks>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class ConsoleQrCodeTests : IDisposable
 {
     public ConsoleQrCodeTests() => SetupTerminalUi.ForceInteractiveForTests = false;
@@ -40,10 +40,10 @@ public sealed class ConsoleQrCodeTests : IDisposable
     public void Display_FourArgs_NonInteractive_LogsWithoutThrowing()
     {
         ConsoleQrCode.Display(
-            "https://auth.nomercy.tv/device?code=ABCD",
-            "https://auth.nomercy.tv/device",
-            "ABCD-1234",
-            "http://localhost:7626/setup"
+            verificationUriComplete: "https://auth.nomercy.tv/device?code=ABCD",
+            verificationUri: "https://auth.nomercy.tv/device",
+            userCode: "ABCD-1234",
+            setupPageUrl: "http://localhost:7626/setup"
         );
     }
 
@@ -51,39 +51,39 @@ public sealed class ConsoleQrCodeTests : IDisposable
     public void Display_ThreeArgs_NonInteractive_BuildsSetupPageUrlFromInternalPort()
     {
         ConsoleQrCode.Display(
-            "https://auth.nomercy.tv/device?code=ABCD",
-            "https://auth.nomercy.tv/device",
-            "ABCD-1234"
+            verificationUriComplete: "https://auth.nomercy.tv/device?code=ABCD",
+            verificationUri: "https://auth.nomercy.tv/device",
+            userCode: "ABCD-1234"
         );
     }
 
     [Fact]
     public void Display_LegacyOverload_ValidUri_ParsesDisplayUriAndUserCode()
     {
-        ConsoleQrCode.Display("https://auth.nomercy.tv:8443/device?user_code=WXYZ-5678&extra=1");
+        ConsoleQrCode.Display(verificationUriComplete: "https://auth.nomercy.tv:8443/device?user_code=WXYZ-5678&extra=1");
     }
 
     [Fact]
     public void Display_LegacyOverload_DefaultPort_OmitsPortFromDisplayUri()
     {
-        ConsoleQrCode.Display("https://auth.nomercy.tv/device?user_code=ABCD-0001");
+        ConsoleQrCode.Display(verificationUriComplete: "https://auth.nomercy.tv/device?user_code=ABCD-0001");
     }
 
     [Fact]
     public void Display_LegacyOverload_NoUserCodeQueryParam_DoesNotThrow()
     {
-        ConsoleQrCode.Display("https://auth.nomercy.tv/device");
+        ConsoleQrCode.Display(verificationUriComplete: "https://auth.nomercy.tv/device");
     }
 
     [Fact]
     public void Display_LegacyOverload_MalformedUri_FallsBackWithoutThrowing()
     {
-        ConsoleQrCode.Display("not a valid uri at all!!");
+        ConsoleQrCode.Display(verificationUriComplete: "not a valid uri at all!!");
     }
 
     [Fact]
     public void Display_LegacyOverload_EmptyString_DoesNotThrow()
     {
-        ConsoleQrCode.Display(string.Empty);
+        ConsoleQrCode.Display(verificationUriComplete: string.Empty);
     }
 }

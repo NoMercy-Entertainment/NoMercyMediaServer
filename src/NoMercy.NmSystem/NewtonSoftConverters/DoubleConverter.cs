@@ -25,10 +25,10 @@ public class DoubleConverter : JsonConverter
     {
         if (value is double doubleValue)
         {
-            if (double.IsInfinity(doubleValue) || double.IsNaN(doubleValue))
+            if (double.IsInfinity(d: doubleValue) || double.IsNaN(d: doubleValue))
                 writer.WriteNull();
             else
-                writer.WriteValue(doubleValue);
+                writer.WriteValue(value: doubleValue);
         }
         else
         {
@@ -46,7 +46,7 @@ public class DoubleConverter : JsonConverter
         return reader.TokenType switch
         {
             JsonToken.Null => null,
-            JsonToken.Float or JsonToken.Integer => Convert.ToDouble(reader.Value),
+            JsonToken.Float or JsonToken.Integer => Convert.ToDouble(value: reader.Value),
             // JSON always uses '.' as the decimal separator regardless of host
             // locale — parsing with the current culture silently mangles the
             // value on any machine where '.' isn't the decimal separator (e.g.
@@ -54,18 +54,18 @@ public class DoubleConverter : JsonConverter
             // separator).
             JsonToken.String
                 when double.TryParse(
-                    (string)reader.Value!,
-                    NumberStyles.Float,
-                    CultureInfo.InvariantCulture,
-                    out double result
+                    s: (string)reader.Value!,
+                    style: NumberStyles.Float,
+                    provider: CultureInfo.InvariantCulture,
+                    result: out double result
                 ) =>
                 result is not double.NaN
                 && result is not double.PositiveInfinity
                 && result is not double.NegativeInfinity
                     ? result
-                    : throw new JsonSerializationException($"Invalid double value: {reader.Value}"),
+                    : throw new JsonSerializationException(message: $"Invalid double value: {reader.Value}"),
             _ => throw new JsonSerializationException(
-                $"Unexpected token {reader.TokenType} when parsing double."
+                message: $"Unexpected token {reader.TokenType} when parsing double."
             ),
         };
     }

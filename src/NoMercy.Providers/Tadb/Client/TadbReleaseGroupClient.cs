@@ -22,7 +22,7 @@ public class TadbReleaseGroupClient : TadbBaseClient
         try
         {
             return (
-                await Get<TadbAlbumResponse>("album-mb.php", queryParams, priority)
+                await Get<TadbAlbumResponse>(url: "album-mb.php", query: queryParams, priority: priority)
             )?.Albums.FirstOrDefault();
         }
         catch (Exception)

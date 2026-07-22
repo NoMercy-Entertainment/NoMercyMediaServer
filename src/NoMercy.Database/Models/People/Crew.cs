@@ -16,14 +16,14 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.People;
 
-[PrimaryKey(nameof(Id))]
-[Index(nameof(CreditId), nameof(MovieId), nameof(JobId), IsUnique = true)]
-[Index(nameof(CreditId), nameof(TvId), nameof(JobId), IsUnique = true)]
-[Index(nameof(CreditId), nameof(SeasonId), nameof(JobId), IsUnique = true)]
-[Index(nameof(CreditId), nameof(EpisodeId), nameof(JobId), IsUnique = true)]
-[Index(nameof(CreditId))]
-[Index(nameof(PersonId))]
-[Index(nameof(JobId), IsUnique = false)]
+[PrimaryKey(propertyName: nameof(Id))]
+[Index(propertyName: nameof(CreditId), additionalPropertyNames: [nameof(MovieId), nameof(JobId)], IsUnique = true)]
+[Index(propertyName: nameof(CreditId), additionalPropertyNames: [nameof(TvId), nameof(JobId)], IsUnique = true)]
+[Index(propertyName: nameof(CreditId), additionalPropertyNames: [nameof(SeasonId), nameof(JobId)], IsUnique = true)]
+[Index(propertyName: nameof(CreditId), additionalPropertyNames: [nameof(EpisodeId), nameof(JobId)], IsUnique = true)]
+[Index(propertyName: nameof(CreditId))]
+[Index(propertyName: nameof(PersonId))]
+[Index(propertyName: nameof(JobId), IsUnique = false)]
 // The single-column owner-FK indexes (MovieId, TvId, SeasonId, EpisodeId) are declared
 // in MediaContext.ConfigureCreditForeignKeyIndexes as partial indexes (WHERE col IS NOT
 // NULL). Each crew credit belongs to exactly one owner, so every FK column is NULL on
@@ -31,34 +31,34 @@ namespace NoMercy.Database.Models.People;
 public class Crew
 {
     [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    [JsonProperty("id")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.Identity)]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("credit_id")]
+    [JsonProperty(propertyName: "credit_id")]
     public string? CreditId { get; set; }
 
-    [JsonProperty("movie_id")]
+    [JsonProperty(propertyName: "movie_id")]
     public int? MovieId { get; set; }
     public Movie? Movie { get; set; }
 
-    [JsonProperty("tv_id")]
+    [JsonProperty(propertyName: "tv_id")]
     public int? TvId { get; set; }
     public Tv? Tv { get; set; }
 
-    [JsonProperty("season_id")]
+    [JsonProperty(propertyName: "season_id")]
     public int? SeasonId { get; set; }
     public Season? Season { get; set; }
 
-    [JsonProperty("episode_id")]
+    [JsonProperty(propertyName: "episode_id")]
     public int? EpisodeId { get; set; }
     public Episode? Episode { get; set; }
 
-    [JsonProperty("person_id")]
+    [JsonProperty(propertyName: "person_id")]
     public int PersonId { get; set; }
     public Person Person { get; set; } = null!;
 
-    [JsonProperty("job_id")]
+    [JsonProperty(propertyName: "job_id")]
     public int? JobId { get; set; }
     public Job Job { get; set; } = null!;
 }

@@ -23,20 +23,20 @@ public class EncodingResultTests
         EncodingResult result = new(
             Success: true,
             OutputPath: "/out/test",
-            Duration: TimeSpan.FromSeconds(10),
+            Duration: TimeSpan.FromSeconds(seconds: 10),
             Error: null,
             Metrics: null
         );
 
-        Assert.Equal("success", result.Status);
-        Assert.Equal("", result.JobId);
-        Assert.Null(result.Plan);
-        Assert.Empty(result.Artifacts);
-        Assert.Null(result.Stats);
-        Assert.Empty(result.Warnings);
-        Assert.Null(result.EnrichedError);
-        Assert.True(result.Success);
-        Assert.Equal("/out/test", result.OutputPath);
+        Assert.Equal(expected: "success", actual: result.Status);
+        Assert.Equal(expected: "", actual: result.JobId);
+        Assert.Null(@object: result.Plan);
+        Assert.Empty(collection: result.Artifacts);
+        Assert.Null(@object: result.Stats);
+        Assert.Empty(collection: result.Warnings);
+        Assert.Null(@object: result.EnrichedError);
+        Assert.True(condition: result.Success);
+        Assert.Equal(expected: "/out/test", actual: result.OutputPath);
     }
 
     [Fact]
@@ -68,13 +68,13 @@ public class EncodingResultTests
             EnrichedError = shape,
         };
 
-        Assert.Equal("failed", result.Status);
-        Assert.False(result.Success);
-        Assert.NotNull(result.EnrichedError);
-        Assert.Equal(EncoderRuleId.EncoderInitFailed, result.EnrichedError!.Id);
-        Assert.Contains("h264_nvenc", result.EnrichedError.Message);
-        Assert.Empty(result.Artifacts);
-        Assert.Null(result.Stats);
+        Assert.Equal(expected: "failed", actual: result.Status);
+        Assert.False(condition: result.Success);
+        Assert.NotNull(@object: result.EnrichedError);
+        Assert.Equal(expected: EncoderRuleId.EncoderInitFailed, actual: result.EnrichedError!.Id);
+        Assert.Contains(expectedSubstring: "h264_nvenc", actualString: result.EnrichedError.Message);
+        Assert.Empty(collection: result.Artifacts);
+        Assert.Null(@object: result.Stats);
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public class EncodingResultTests
         EncodingResult result = new(
             Success: false,
             OutputPath: string.Empty,
-            Duration: TimeSpan.FromSeconds(3),
+            Duration: TimeSpan.FromSeconds(seconds: 3),
             Error: null,
             Metrics: null
         )
@@ -91,12 +91,12 @@ public class EncodingResultTests
             Status = "cancelled",
         };
 
-        Assert.Equal("cancelled", result.Status);
-        Assert.False(result.Success);
-        Assert.Empty(result.Artifacts);
-        Assert.Null(result.Stats);
-        Assert.Null(result.EnrichedError);
-        Assert.Null(result.Plan);
+        Assert.Equal(expected: "cancelled", actual: result.Status);
+        Assert.False(condition: result.Success);
+        Assert.Empty(collection: result.Artifacts);
+        Assert.Null(@object: result.Stats);
+        Assert.Null(@object: result.EnrichedError);
+        Assert.Null(@object: result.Plan);
     }
 
     [Fact]
@@ -105,7 +105,7 @@ public class EncodingResultTests
         EncodingResult original = new(
             Success: true,
             OutputPath: "/out/a",
-            Duration: TimeSpan.FromMinutes(1),
+            Duration: TimeSpan.FromMinutes(minutes: 1),
             Error: null,
             Metrics: null
         )
@@ -126,26 +126,26 @@ public class EncodingResultTests
             Artifacts =
             [
                 new(
-                    "/out/a/master.m3u8",
-                    1024L,
-                    "abc123",
-                    "application/vnd.apple.mpegurl"
+                    Path: "/out/a/master.m3u8",
+                    SizeBytes: 1024L,
+                    Sha256: "abc123",
+                    MediaType: "application/vnd.apple.mpegurl"
                 ),
             ],
         };
 
         // Original unchanged
-        Assert.Equal("success", original.Status);
-        Assert.Equal("job-001", original.JobId);
-        Assert.Empty(original.Artifacts);
-        Assert.Null(original.Stats);
+        Assert.Equal(expected: "success", actual: original.Status);
+        Assert.Equal(expected: "job-001", actual: original.JobId);
+        Assert.Empty(collection: original.Artifacts);
+        Assert.Null(@object: original.Stats);
 
         // Enriched carries new fields
-        Assert.Equal("success", enriched.Status);
-        Assert.Equal("job-001", enriched.JobId);
-        Assert.Single(enriched.Artifacts);
-        Assert.NotNull(enriched.Stats);
-        Assert.Equal(60.0, enriched.Stats!.DurationSeconds);
-        Assert.Equal(30.0, enriched.Stats.AvgFps);
+        Assert.Equal(expected: "success", actual: enriched.Status);
+        Assert.Equal(expected: "job-001", actual: enriched.JobId);
+        Assert.Single(collection: enriched.Artifacts);
+        Assert.NotNull(@object: enriched.Stats);
+        Assert.Equal(expected: 60.0, actual: enriched.Stats!.DurationSeconds);
+        Assert.Equal(expected: 30.0, actual: enriched.Stats.AvgFps);
     }
 }

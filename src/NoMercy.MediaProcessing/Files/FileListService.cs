@@ -37,28 +37,28 @@ public class FileListService(
     public FileInfo[] GetVideoFilesInDirectory(string directoryPath)
     {
         return storageDriver
-            .EnumerateFileSystemEntries(directoryPath, "*", SearchOption.TopDirectoryOnly)
-            .Where(p => !storageDriver.DirectoryExists(p))
-            .Where(p =>
+            .EnumerateFileSystemEntries(directory: directoryPath, searchPattern: "*", option: SearchOption.TopDirectoryOnly)
+            .Where(predicate: p => !storageDriver.DirectoryExists(path: p))
+            .Where(predicate: p =>
             {
-                string ext = Path.GetExtension(p);
+                string ext = Path.GetExtension(path: p);
                 return ext is ".mkv" or ".mp4" or ".avi" or ".webm" or ".flv";
             })
-            .Select(p => new FileInfo(p))
+            .Select(selector: p => new FileInfo(fileName: p))
             .ToArray();
     }
 
     public FileInfo[] GetAudioFilesInDirectory(string directoryPath)
     {
         return storageDriver
-            .EnumerateFileSystemEntries(directoryPath, "*", SearchOption.TopDirectoryOnly)
-            .Where(p => !storageDriver.DirectoryExists(p))
-            .Where(p =>
+            .EnumerateFileSystemEntries(directory: directoryPath, searchPattern: "*", option: SearchOption.TopDirectoryOnly)
+            .Where(predicate: p => !storageDriver.DirectoryExists(path: p))
+            .Where(predicate: p =>
             {
-                string ext = Path.GetExtension(p);
+                string ext = Path.GetExtension(path: p);
                 return ext is ".mp3" or ".flac" or ".wav" or ".m4a";
             })
-            .Select(p => new FileInfo(p))
+            .Select(selector: p => new FileInfo(fileName: p))
             .ToArray();
     }
 
@@ -67,11 +67,11 @@ public class FileListService(
 
     public async Task<List<FileItem>> GetFilesInDirectory(string directoryPath, string libraryType)
     {
-        DirectoryInfo directoryInfo = new(directoryPath);
+        DirectoryInfo directoryInfo = new(path: directoryPath);
 
-        FileInfo[] videoFiles = GetVideoFilesInDirectory(directoryPath);
+        FileInfo[] videoFiles = GetVideoFilesInDirectory(directoryPath: directoryPath);
 
-        FileInfo[] audioFiles = GetAudioFilesInDirectory(directoryPath);
+        FileInfo[] audioFiles = GetAudioFilesInDirectory(directoryPath: directoryPath);
 
         ConcurrentBag<FileItem> fileList = [];
         if (videoFiles.Length == 0 && audioFiles.Length == 0)
@@ -80,30 +80,30 @@ public class FileListService(
         if (audioFiles.Length > 0 && videoFiles.Length == 0)
         {
             (int year, string albumName, _, _) =
-                MusicPathParser.Parse(directoryPath, directoryInfo.Name);
+                MusicPathParser.Parse(directoryPath: directoryPath, folderName: directoryInfo.Name);
 
             await Parallel.ForEachAsync(
-                audioFiles,
-                SystemParallelism.Options,
-                (file, _) =>
+                source: audioFiles,
+                parallelOptions: SystemParallelism.Options,
+                body: (file, _) =>
                 {
                     fileList.Add(
-                        new()
+                        item: new()
                         {
                             Size = file.Length,
                             Mode = (int)file.Attributes,
-                            Name = Path.Combine(directoryPath, file.Name),
+                            Name = Path.Combine(path1: directoryPath, path2: file.Name),
                             Parent = directoryPath,
-                            Parsed = new(directoryPath)
+                            Parsed = new(filePath: directoryPath)
                             {
                                 Title =
-                                    albumName + " - " + Path.GetFileNameWithoutExtension(file.Name),
+                                    albumName + " - " + Path.GetFileNameWithoutExtension(path: file.Name),
                                 Year = year.ToString(),
                                 IsSeries = false,
                                 IsSuccess = true,
                             },
                             Match = new() { Title = albumName },
-                            Path = Path.Combine(directoryPath, file.FullName),
+                            Path = Path.Combine(path1: directoryPath, path2: file.FullName),
                         }
                     );
                     return ValueTask.CompletedTask;
@@ -119,16 +119,16 @@ public class FileListService(
             {
                 try
                 {
-                    await ProcessVideoFileInfo(libraryType, file, fileList);
+                    await ProcessVideoFileInfo(libraryType: libraryType, file: file, fileList: fileList);
                 }
                 catch (Exception e)
                 {
-                    logger.LogError(e.Message);
+                    logger.LogError(message: e.Message);
                 }
             }
         }
 
-        return fileList.OrderBy(file => file.Name).ToList();
+        return fileList.OrderBy(keySelector: file => file.Name).ToList();
     }
 
     /// <summary>
@@ -144,27 +144,27 @@ public class FileListService(
     )
     {
         IReadOnlyList<StorageEntry> allEntries = storage.List(
-            directoryPath,
+            path: directoryPath,
             pattern: null,
             recursive: false
         );
 
         StorageEntry[] videoEntries = allEntries
-            .Where(e =>
+            .Where(predicate: e =>
                 !e.IsDirectory
                 && VideoExtensions.Contains(
-                    Path.GetExtension(e.Path),
-                    StringComparer.OrdinalIgnoreCase
+                    value: Path.GetExtension(path: e.Path),
+                    comparer: StringComparer.OrdinalIgnoreCase
                 )
             )
             .ToArray();
 
         StorageEntry[] audioEntries = allEntries
-            .Where(e =>
+            .Where(predicate: e =>
                 !e.IsDirectory
                 && AudioExtensions.Contains(
-                    Path.GetExtension(e.Path),
-                    StringComparer.OrdinalIgnoreCase
+                    value: Path.GetExtension(path: e.Path),
+                    comparer: StringComparer.OrdinalIgnoreCase
                 )
             )
             .ToArray();
@@ -178,30 +178,30 @@ public class FileListService(
         {
             // Use the same audio pattern as the local path, but derive folder
             // name from the driver-relative directoryPath.
-            string folderName = StoragePathHelpers.GetName(directoryPath);
+            string folderName = StoragePathHelpers.GetName(path: directoryPath);
 
             (int year, string albumName, _, _) =
-                MusicPathParser.Parse(directoryPath, folderName);
+                MusicPathParser.Parse(directoryPath: directoryPath, folderName: folderName);
 
             await Parallel.ForEachAsync(
-                audioEntries,
-                SystemParallelism.Options,
-                (entry, _) =>
+                source: audioEntries,
+                parallelOptions: SystemParallelism.Options,
+                body: (entry, _) =>
                 {
-                    string name = StoragePathHelpers.GetName(entry.Path);
+                    string name = StoragePathHelpers.GetName(path: entry.Path);
                     fileList.Add(
-                        new()
+                        item: new()
                         {
                             Size = entry.SizeBytes,
                             Mode = 0,
                             Name = entry.Path,
                             Parent = directoryPath,
-                            Parsed = new(directoryPath)
+                            Parsed = new(filePath: directoryPath)
                             {
                                 Title =
                                     albumName
                                     + " - "
-                                    + StoragePathHelpers.GetNameWithoutExtension(entry.Path),
+                                    + StoragePathHelpers.GetNameWithoutExtension(path: entry.Path),
                                 Year = year.ToString(),
                                 IsSeries = false,
                                 IsSuccess = true,
@@ -220,16 +220,16 @@ public class FileListService(
             {
                 try
                 {
-                    await ProcessVideoStorageEntry(libraryType, entry, storage, fileList);
+                    await ProcessVideoStorageEntry(libraryType: libraryType, entry: entry, storage: storage, fileList: fileList);
                 }
                 catch (Exception e)
                 {
-                    logger.LogError(e.Message);
+                    logger.LogError(message: e.Message);
                 }
             }
         }
 
-        return fileList.OrderBy(file => file.Name).ToList();
+        return fileList.OrderBy(keySelector: file => file.Name).ToList();
     }
 
     private async Task<bool> ProcessVideoStorageEntry(
@@ -240,22 +240,22 @@ public class FileListService(
     )
     {
         string entryPath = entry.Path;
-        string fileName = StoragePathHelpers.GetName(entryPath);
-        string? directoryName = StoragePathHelpers.GetParent(entryPath);
+        string fileName = StoragePathHelpers.GetName(path: entryPath);
+        string? directoryName = StoragePathHelpers.GetParent(path: entryPath);
 
         // Build a synthetic FileInfo-like object using storage metadata so the
         // parsing helpers stay unchanged. We do not touch raw System.IO here.
-        string rawFileName = StoragePathHelpers.GetNameWithoutExtension(entryPath);
+        string rawFileName = StoragePathHelpers.GetNameWithoutExtension(path: entryPath);
 
         int? overrideTmdbId = rawFileName.TryGetTmdbHint();
 
         string cleanedForYear = StringExtensions
             .RemoveBracketedString()
-            .Replace(rawFileName, string.Empty);
+            .Replace(input: rawFileName, replacement: string.Empty);
         string? extractedYear = cleanedForYear.TryGetYear();
 
-        string title = entryPath.Replace("v2", "");
-        title = StringExtensions.RemoveBracketedString().Replace(title, string.Empty);
+        string title = entryPath.Replace(oldValue: "v2", newValue: "");
+        title = StringExtensions.RemoveBracketedString().Replace(input: title, replacement: string.Empty);
 
         // Filelist runs FOR EVERY FILE the user wants to triage; ffprobe over
         // a non-seekable stdin pipe scans to EOF on container formats whose
@@ -266,10 +266,10 @@ public class FileListService(
         // works end-to-end for LocalStorage.
         FfProbeData ffprobeData =
             storage.Driver is Storage.Drivers.Local.LocalStorageDriver
-                ? await FfProbe.CreateAsync(entryPath)
+                ? await FfProbe.CreateAsync(file: entryPath)
                 : new();
 
-        MovieFile parsed = ParseVideoFileName(fileName, directoryName, title, libraryType);
+        MovieFile parsed = ParseVideoFileName(fileNameWithExt: fileName, directoryName: directoryName, title: title, libraryType: libraryType);
 
         parsed.Year = extractedYear ?? parsed.Year;
         if (parsed.Title == null)
@@ -277,7 +277,7 @@ public class FileListService(
 
         parsed.Title = StringExtensions
             .RemoveParenthesizedString()
-            .Replace(parsed.Title, string.Empty);
+            .Replace(input: parsed.Title, replacement: string.Empty);
 
         bool seasonExplicit = parsed.Season.HasValue;
 
@@ -286,7 +286,7 @@ public class FileListService(
         // maps the date to the episode that aired that day.
         DateOnly? airDate =
             libraryType is MediaTypes.TvMediaType or MediaTypes.AnimeMediaType
-                ? DailyEpisodeParser.TryGetAirDate(rawFileName)
+                ? DailyEpisodeParser.TryGetAirDate(name: rawFileName)
                 : null;
         if (airDate.HasValue)
         {
@@ -306,22 +306,22 @@ public class FileListService(
         if (!airDate.HasValue && !parsed.Season.HasValue && !parsed.Episode.HasValue)
         {
             Regex regex = StringExtensions.MatchNumbers();
-            Match numberMatch = regex.Match(parsed.Title);
+            Match numberMatch = regex.Match(input: parsed.Title);
             if (numberMatch.Success)
             {
                 parsed.Season = folderSeason ?? 1;
-                parsed.Episode = int.Parse(numberMatch.Value);
-                parsed.Title = regex.Split(parsed.Title).FirstOrDefault();
+                parsed.Episode = int.Parse(s: numberMatch.Value);
+                parsed.Title = regex.Split(input: parsed.Title).FirstOrDefault();
             }
         }
 
         (MovieOrEpisode episodeMatch, string? imdbId)? result = await identification.IdentifyAsync(
-            parsed,
-            libraryType,
-            ffprobeData.Format.Duration,
-            overrideTmdbId,
-            seasonExplicit,
-            airDate
+            parsed: parsed,
+            libraryType: libraryType,
+            duration: ffprobeData.Format.Duration,
+            overrideTmdbId: overrideTmdbId,
+            seasonExplicit: seasonExplicit,
+            airDate: airDate
         );
 
         MovieOrEpisode match = new();
@@ -333,36 +333,36 @@ public class FileListService(
 
         // For driver-relative paths the "parent" is the directory that contains
         // the season folder, i.e. one level above directoryName.
-        string? parentPath = string.IsNullOrEmpty(directoryName)
+        string? parentPath = string.IsNullOrEmpty(value: directoryName)
             ? "/"
-            : StoragePathHelpers.GetParent(directoryName) ?? "/";
+            : StoragePathHelpers.GetParent(path: directoryName) ?? "/";
 
-        ApplyEpisodeCardLabel(parsed, match);
+        ApplyEpisodeCardLabel(parsed: parsed, match: match);
 
         fileList.Add(
-            new()
+            item: new()
             {
                 Size = entry.SizeBytes,
                 Mode = 0,
-                Name = StoragePathHelpers.GetNameWithoutExtension(fileName),
+                Name = StoragePathHelpers.GetNameWithoutExtension(path: fileName),
                 Parent = parentPath,
                 Parsed = parsed,
                 Match = match,
                 Path = entryPath,
                 Streams = new()
                 {
-                    Video = ffprobeData.VideoStreams.Select(video => new Video
+                    Video = ffprobeData.VideoStreams.Select(selector: video => new Video
                     {
                         Index = video.Index,
                         Width = video.Width,
                         Height = video.Height,
                     }),
-                    Audio = ffprobeData.AudioStreams.Select(stream => new Audio
+                    Audio = ffprobeData.AudioStreams.Select(selector: stream => new Audio
                     {
                         Index = stream.Index,
                         Language = stream.Language,
                     }),
-                    Subtitle = ffprobeData.SubtitleStreams.Select(stream => new Subtitle
+                    Subtitle = ffprobeData.SubtitleStreams.Select(selector: stream => new Subtitle
                     {
                         Index = stream.Index,
                         Language = stream.Language ?? "und",
@@ -383,7 +383,7 @@ public class FileListService(
     /// </summary>
     private static void ApplyEpisodeCardLabel(MovieFile parsed, MovieOrEpisode match)
     {
-        if (string.IsNullOrWhiteSpace(match.ShowName))
+        if (string.IsNullOrWhiteSpace(value: match.ShowName))
             return;
 
         parsed.Title = match.ShowName;
@@ -395,21 +395,21 @@ public class FileListService(
         ConcurrentBag<FileItem> fileList
     )
     {
-        string rawFileName = Path.GetFileNameWithoutExtension(file.Name);
+        string rawFileName = Path.GetFileNameWithoutExtension(path: file.Name);
 
         // Check for a [tmdb-1234] hint baked into the filename, e.g. "[tmdb-553604]Spring (2019).mkv"
         int? overrideTmdbId = rawFileName.TryGetTmdbHint();
 
         string cleanedForYear = StringExtensions
             .RemoveBracketedString()
-            .Replace(rawFileName, string.Empty);
+            .Replace(input: rawFileName, replacement: string.Empty);
         string? extractedYear = cleanedForYear.TryGetYear();
 
-        string title = file.FullName.Replace("v2", "");
-        title = StringExtensions.RemoveBracketedString().Replace(title, string.Empty);
+        string title = file.FullName.Replace(oldValue: "v2", newValue: "");
+        title = StringExtensions.RemoveBracketedString().Replace(input: title, replacement: string.Empty);
 
-        FfProbeData ffprobeData = await FfProbe.CreateAsync(file.FullName);
-        MovieFile parsed = ParseVideoFileName(file, title, libraryType);
+        FfProbeData ffprobeData = await FfProbe.CreateAsync(file: file.FullName);
+        MovieFile parsed = ParseVideoFileName(file: file, title: title, libraryType: libraryType);
 
         parsed.Year = extractedYear ?? parsed.Year;
         if (parsed.Title == null)
@@ -417,7 +417,7 @@ public class FileListService(
 
         parsed.Title = StringExtensions
             .RemoveParenthesizedString()
-            .Replace(parsed.Title, string.Empty);
+            .Replace(input: parsed.Title, replacement: string.Empty);
 
         // Track whether the season came from the filename or was defaulted to 1.
         // This controls whether the absolute-index fallback is allowed in ResolveShowEpisodeAsync.
@@ -428,7 +428,7 @@ public class FileListService(
         // maps the date to the episode that aired that day.
         DateOnly? airDate =
             libraryType is MediaTypes.TvMediaType or MediaTypes.AnimeMediaType
-                ? DailyEpisodeParser.TryGetAirDate(rawFileName)
+                ? DailyEpisodeParser.TryGetAirDate(name: rawFileName)
                 : null;
         if (airDate.HasValue)
         {
@@ -448,22 +448,22 @@ public class FileListService(
         if (!airDate.HasValue && !parsed.Season.HasValue && !parsed.Episode.HasValue)
         {
             Regex regex = StringExtensions.MatchNumbers();
-            Match numberMatch = regex.Match(parsed.Title);
+            Match numberMatch = regex.Match(input: parsed.Title);
             if (numberMatch.Success)
             {
                 parsed.Season = folderSeason ?? 1;
-                parsed.Episode = int.Parse(numberMatch.Value);
-                parsed.Title = regex.Split(parsed.Title).FirstOrDefault();
+                parsed.Episode = int.Parse(s: numberMatch.Value);
+                parsed.Title = regex.Split(input: parsed.Title).FirstOrDefault();
             }
         }
 
         (MovieOrEpisode episodeMatch, string? imdbId)? result = await identification.IdentifyAsync(
-            parsed,
-            libraryType,
-            ffprobeData.Format.Duration,
-            overrideTmdbId,
-            seasonExplicit,
-            airDate
+            parsed: parsed,
+            libraryType: libraryType,
+            duration: ffprobeData.Format.Duration,
+            overrideTmdbId: overrideTmdbId,
+            seasonExplicit: seasonExplicit,
+            airDate: airDate
         );
 
         MovieOrEpisode match = new();
@@ -472,13 +472,13 @@ public class FileListService(
             parsed.ImdbId = result.Value.imdbId;
             match = result.Value.episodeMatch;
         }
-        fileList.Add(BuildFileItem(file, parsed, match, ffprobeData));
+        fileList.Add(item: BuildFileItem(file: file, parsed: parsed, match: match, ffprobeData: ffprobeData));
 
         return result != null;
     }
 
     private MovieFile ParseVideoFileName(FileInfo file, string title, string libraryType) =>
-        ParseVideoFileName(file.Name, file.DirectoryName, title, libraryType);
+        ParseVideoFileName(fileNameWithExt: file.Name, directoryName: file.DirectoryName, title: title, libraryType: libraryType);
 
     private MovieFile ParseVideoFileName(
         string fileNameWithExt,
@@ -489,17 +489,17 @@ public class FileListService(
     {
         string cleanedFileName = StringExtensions
             .RemoveBracketedString()
-            .Replace(Path.GetFileNameWithoutExtension(fileNameWithExt), string.Empty)
+            .Replace(input: Path.GetFileNameWithoutExtension(path: fileNameWithExt), replacement: string.Empty)
             .Trim();
 
         return filenameParser.Parse(
-            new()
+            context: new()
             {
                 FileNameWithExtension = fileNameWithExt,
                 DirectoryName = directoryName,
                 Title = title,
                 CleanedFileName = cleanedFileName,
-                FolderTitle = ExtractTitleFromFolder(directoryName),
+                FolderTitle = ExtractTitleFromFolder(directoryName: directoryName),
                 LibraryType = libraryType,
             }
         );
@@ -507,27 +507,27 @@ public class FileListService(
 
     private static string ExtractTitleFromFolder(string? directoryName)
     {
-        string? folderName = Path.GetFileName(directoryName);
-        if (string.IsNullOrWhiteSpace(folderName))
+        string? folderName = Path.GetFileName(path: directoryName);
+        if (string.IsNullOrWhiteSpace(value: folderName))
             return "";
 
-        string cleaned = StringExtensions.RemoveBracketedString().Replace(folderName, string.Empty);
-        cleaned = StringExtensions.RemoveParenthesizedString().Replace(cleaned, string.Empty);
+        string cleaned = StringExtensions.RemoveBracketedString().Replace(input: folderName, replacement: string.Empty);
+        cleaned = StringExtensions.RemoveParenthesizedString().Replace(input: cleaned, replacement: string.Empty);
 
-        Match seasonTag = StringExtensions.MatchSeasonTag().Match(cleaned);
+        Match seasonTag = StringExtensions.MatchSeasonTag().Match(input: cleaned);
         if (seasonTag is { Success: true, Index: > 0 })
             cleaned = cleaned[..seasonTag.Index];
 
         string folderTitle = cleaned
-            .Replace('.', ' ')
-            .Replace('_', ' ')
-            .TrimEnd('-', '.', '_', ' ')
+            .Replace(oldChar: '.', newChar: ' ')
+            .Replace(oldChar: '_', newChar: ' ')
+            .TrimEnd(trimChars: ['-', '.', '_', ' '])
             .Trim();
 
         // Strip trailing year from folder-derived title (year is captured separately by TryGetYear)
-        Match yearInFolder = StringExtensions.MatchYearRegex().Match(folderTitle);
+        Match yearInFolder = StringExtensions.MatchYearRegex().Match(input: folderTitle);
         if (yearInFolder.Success)
-            folderTitle = folderTitle[..yearInFolder.Index].TrimEnd('-', '.', '_', ' ');
+            folderTitle = folderTitle[..yearInFolder.Index].TrimEnd(trimChars: ['-', '.', '_', ' ']);
 
         return folderTitle;
     }
@@ -539,35 +539,35 @@ public class FileListService(
         FfProbeData ffprobeData
     )
     {
-        string? parentPath = string.IsNullOrEmpty(file.DirectoryName)
+        string? parentPath = string.IsNullOrEmpty(value: file.DirectoryName)
             ? "/"
-            : Path.GetDirectoryName(Path.Combine(file.DirectoryName, ".."));
+            : Path.GetDirectoryName(path: Path.Combine(path1: file.DirectoryName, path2: ".."));
 
-        ApplyEpisodeCardLabel(parsed, match);
+        ApplyEpisodeCardLabel(parsed: parsed, match: match);
 
         return new()
         {
             Size = file.Length,
             Mode = (int)file.Attributes,
-            Name = Path.GetFileNameWithoutExtension(file.Name),
+            Name = Path.GetFileNameWithoutExtension(path: file.Name),
             Parent = parentPath,
             Parsed = parsed,
             Match = match,
             Path = file.FullName,
             Streams = new()
             {
-                Video = ffprobeData.VideoStreams.Select(video => new Video
+                Video = ffprobeData.VideoStreams.Select(selector: video => new Video
                 {
                     Index = video.Index,
                     Width = video.Width,
                     Height = video.Height,
                 }),
-                Audio = ffprobeData.AudioStreams.Select(stream => new Audio
+                Audio = ffprobeData.AudioStreams.Select(selector: stream => new Audio
                 {
                     Index = stream.Index,
                     Language = stream.Language,
                 }),
-                Subtitle = ffprobeData.SubtitleStreams.Select(stream => new Subtitle
+                Subtitle = ffprobeData.SubtitleStreams.Select(selector: stream => new Subtitle
                 {
                     Index = stream.Index,
                     Language = stream.Language ?? "und",

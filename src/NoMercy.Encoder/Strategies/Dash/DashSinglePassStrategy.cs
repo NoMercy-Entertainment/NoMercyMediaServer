@@ -33,7 +33,7 @@ public class DashSinglePassStrategy(
     IEncoder encoder,
     ILogger<DashSinglePassStrategy> logger,
     IStorage storage
-) : SinglePassStrategyBase(encoder, logger, storage)
+) : SinglePassStrategyBase(encoder: encoder, logger: logger, storage: storage)
 {
     public override OutputFormat Format => OutputFormat.Dash;
 
@@ -45,14 +45,14 @@ public class DashSinglePassStrategy(
         {
             VideoOutputPlan video = plan.VideoOutputs[i];
             tasks.Add(
-                new(
+                item: new(
                     TaskId: $"{groupTag}-video-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Video,
                     OutputIndex: i,
-                    Resources: TaskResourceHelper.ForVideoOutput(video),
-                    EstimatedCostUnits: EstimateVideoCost(video),
+                    Resources: TaskResourceHelper.ForVideoOutput(video: video),
+                    EstimatedCostUnits: EstimateVideoCost(video: video),
                     Label: $"{video.Width}p {video.EncoderName}"
                 )
             );
@@ -62,13 +62,13 @@ public class DashSinglePassStrategy(
         {
             AudioOutputPlan audio = plan.AudioOutputs[i];
             tasks.Add(
-                new(
+                item: new(
                     TaskId: $"{groupTag}-audio-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Audio,
                     OutputIndex: i,
-                    Resources: TaskResourceHelper.CpuOnly(1),
+                    Resources: TaskResourceHelper.CpuOnly(cpuThreads: 1),
                     EstimatedCostUnits: 1,
                     Label: $"{audio.Language ?? "und"} {audio.EncoderName}"
                 )
@@ -79,13 +79,13 @@ public class DashSinglePassStrategy(
         {
             SubtitleOutputPlan sub = plan.SubtitleOutputs[i];
             tasks.Add(
-                new(
+                item: new(
                     TaskId: $"{groupTag}-sub-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Subtitle,
                     OutputIndex: i,
-                    Resources: TaskResourceHelper.CpuOnly(1),
+                    Resources: TaskResourceHelper.CpuOnly(cpuThreads: 1),
                     EstimatedCostUnits: 1,
                     Label: $"sub {sub.Language ?? "und"}"
                 )
@@ -97,15 +97,15 @@ public class DashSinglePassStrategy(
             int count = plan.Chapters.Count;
             for (int i = 0; i < count; i++)
             {
-                ChapterInfo chapter = plan.Chapters[i];
+                ChapterInfo chapter = plan.Chapters[index: i];
                 tasks.Add(
-                    new(
+                    item: new(
                         TaskId: $"{groupTag}-chapter-{i}",
                         ParentJobId: 0,
                         GroupTag: groupTag,
                         Kind: EncodeTaskKind.Chapters,
                         OutputIndex: i,
-                        Resources: TaskResourceHelper.CpuOnly(1),
+                        Resources: TaskResourceHelper.CpuOnly(cpuThreads: 1),
                         EstimatedCostUnits: 1,
                         Label: $"chapter still {i + 1}/{count} @ {chapter.Start.TotalSeconds:F0}s"
                     )
@@ -114,7 +114,7 @@ public class DashSinglePassStrategy(
         }
 
         if (tasks.Count == 0)
-            return [IEncodingStrategy.WholeTask(groupTag)];
+            return [IEncodingStrategy.WholeTask(groupTag: groupTag)];
 
         return tasks.ToArray();
     }

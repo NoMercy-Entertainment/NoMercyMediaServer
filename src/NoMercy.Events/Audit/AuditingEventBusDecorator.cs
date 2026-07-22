@@ -18,8 +18,8 @@ public class AuditingEventBusDecorator : IEventBus
 
     public AuditingEventBusDecorator(IEventBus inner, EventAuditLog auditLog)
     {
-        _inner = inner ?? throw new ArgumentNullException(nameof(inner));
-        _auditLog = auditLog ?? throw new ArgumentNullException(nameof(auditLog));
+        _inner = inner ?? throw new ArgumentNullException(paramName: nameof(inner));
+        _auditLog = auditLog ?? throw new ArgumentNullException(paramName: nameof(auditLog));
     }
 
     public EventAuditLog AuditLog => _auditLog;
@@ -27,19 +27,19 @@ public class AuditingEventBusDecorator : IEventBus
     public async Task PublishAsync<TEvent>(TEvent @event, CancellationToken ct = default)
         where TEvent : IEvent
     {
-        _auditLog.Record(@event, typeof(TEvent).Name);
-        await _inner.PublishAsync(@event, ct);
+        _auditLog.Record(@event: @event, eventTypeName: typeof(TEvent).Name);
+        await _inner.PublishAsync(@event: @event, ct: ct);
     }
 
     public IDisposable Subscribe<TEvent>(Func<TEvent, CancellationToken, Task> handler)
         where TEvent : IEvent
     {
-        return _inner.Subscribe(handler);
+        return _inner.Subscribe(handler: handler);
     }
 
     public IDisposable Subscribe<TEvent>(IEventHandler<TEvent> handler)
         where TEvent : IEvent
     {
-        return _inner.Subscribe(handler);
+        return _inner.Subscribe(handler: handler);
     }
 }

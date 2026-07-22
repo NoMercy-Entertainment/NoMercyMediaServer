@@ -17,39 +17,39 @@ namespace NoMercy.Database.Models.Libraries;
 
 /// Dead-letter record for media imports that failed after all retries.
 /// Surfaced to users via GET /api/v1/libraries/{libraryId}/import-failures.
-[PrimaryKey(nameof(Id))]
-[Index(nameof(JobType))]
-[Index(nameof(LibraryId))]
-[Index(nameof(Resolved))]
-[Index(nameof(CreatedAt))]
+[PrimaryKey(propertyName: nameof(Id))]
+[Index(propertyName: nameof(JobType))]
+[Index(propertyName: nameof(LibraryId))]
+[Index(propertyName: nameof(Resolved))]
+[Index(propertyName: nameof(CreatedAt))]
 public class ImportFailure : Timestamps
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.None)]
-    [JsonProperty("id")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
+    [JsonProperty(propertyName: "id")]
     public Ulid Id { get; set; } = Ulid.NewUlid();
 
     /// The thing that failed to import: a file path, TMDB id, MusicBrainz release id, etc.
-    [MaxLength(1024)]
-    [JsonProperty("file_path")]
+    [MaxLength(length: 1024)]
+    [JsonProperty(propertyName: "file_path")]
     public string FilePath { get; set; } = string.Empty;
 
     /// "MovieImportJob", "ShowImportJob", "AudioImportJob".
-    [JsonProperty("job_type")]
+    [JsonProperty(propertyName: "job_type")]
     public string JobType { get; set; } = string.Empty;
 
-    [MaxLength(4096)]
-    [JsonProperty("error_message")]
+    [MaxLength(length: 4096)]
+    [JsonProperty(propertyName: "error_message")]
     public string ErrorMessage { get; set; } = string.Empty;
 
-    [JsonProperty("retry_count")]
+    [JsonProperty(propertyName: "retry_count")]
     public int RetryCount { get; set; }
 
-    [JsonProperty("last_attempt_at")]
+    [JsonProperty(propertyName: "last_attempt_at")]
     public DateTimeOffset LastAttemptAt { get; set; } = DateTimeOffset.UtcNow;
 
-    [JsonProperty("resolved")]
+    [JsonProperty(propertyName: "resolved")]
     public bool Resolved { get; set; }
 
-    [JsonProperty("library_id")]
+    [JsonProperty(propertyName: "library_id")]
     public Ulid? LibraryId { get; set; }
 }

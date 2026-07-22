@@ -26,7 +26,7 @@ public class UserPlaylistRepository(IDbContextFactory<MediaContext> contextFacto
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
 
         UserPlaylist playlist = new()
         {
@@ -37,8 +37,8 @@ public class UserPlaylistRepository(IDbContextFactory<MediaContext> contextFacto
             UserId = userId,
         };
 
-        context.UserPlaylists.Add(playlist);
-        await context.SaveChangesAsync(ct);
+        context.UserPlaylists.Add(entity: playlist);
+        await context.SaveChangesAsync(cancellationToken: ct);
 
         return playlist.Id;
     }
@@ -51,16 +51,16 @@ public class UserPlaylistRepository(IDbContextFactory<MediaContext> contextFacto
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
 
         bool ownsPlaylist = await context.UserPlaylists.AnyAsync(
-            p => p.Id == playlistId && p.UserId == userId,
-            ct
+            predicate: p => p.Id == playlistId && p.UserId == userId,
+            cancellationToken: ct
         );
         if (!ownsPlaylist)
             return null;
 
-        if (!await MediaExistsAsync(context, item, ct))
+        if (!await MediaExistsAsync(context: context, item: item, ct: ct))
             return null;
 
         int targetOrder;
@@ -70,20 +70,20 @@ public class UserPlaylistRepository(IDbContextFactory<MediaContext> contextFacto
             // Make room at the insertion point instead of colliding with it —
             // every existing item at or past the target shifts down by one.
             await context
-                .PlaylistItems.Where(pi =>
+                .PlaylistItems.Where(predicate: pi =>
                     pi.UserPlaylistId == playlistId && pi.Order >= targetOrder
                 )
                 .ExecuteUpdateAsync(
-                    setters => setters.SetProperty(pi => pi.Order, pi => pi.Order + 1),
-                    ct
+                    setPropertyCalls: setters => setters.SetProperty(propertyExpression: pi => pi.Order, valueExpression: pi => pi.Order + 1),
+                    cancellationToken: ct
                 );
         }
         else
         {
             int? maxOrder = await context
-                .PlaylistItems.Where(pi => pi.UserPlaylistId == playlistId)
-                .Select(pi => (int?)pi.Order)
-                .MaxAsync(ct);
+                .PlaylistItems.Where(predicate: pi => pi.UserPlaylistId == playlistId)
+                .Select(selector: pi => (int?)pi.Order)
+                .MaxAsync(cancellationToken: ct);
             targetOrder = (maxOrder ?? -1) + 1;
         }
 
@@ -99,8 +99,8 @@ public class UserPlaylistRepository(IDbContextFactory<MediaContext> contextFacto
             SpecialId = item.SpecialId,
         };
 
-        context.PlaylistItems.Add(playlistItem);
-        await context.SaveChangesAsync(ct);
+        context.PlaylistItems.Add(entity: playlistItem);
+        await context.SaveChangesAsync(cancellationToken: ct);
 
         return playlistItem;
     }
@@ -112,11 +112,11 @@ public class UserPlaylistRepository(IDbContextFactory<MediaContext> contextFacto
     ) =>
         item.Kind switch
         {
-            PlaylistItemKind.Movie => context.Movies.AnyAsync(m => m.Id == item.MovieId, ct),
-            PlaylistItemKind.Tv => context.Tvs.AnyAsync(t => t.Id == item.TvId, ct),
-            PlaylistItemKind.Episode => context.Episodes.AnyAsync(e => e.Id == item.EpisodeId, ct),
-            PlaylistItemKind.Special => context.Specials.AnyAsync(s => s.Id == item.SpecialId, ct),
-            _ => Task.FromResult(false),
+            PlaylistItemKind.Movie => context.Movies.AnyAsync(predicate: m => m.Id == item.MovieId, cancellationToken: ct),
+            PlaylistItemKind.Tv => context.Tvs.AnyAsync(predicate: t => t.Id == item.TvId, cancellationToken: ct),
+            PlaylistItemKind.Episode => context.Episodes.AnyAsync(predicate: e => e.Id == item.EpisodeId, cancellationToken: ct),
+            PlaylistItemKind.Special => context.Specials.AnyAsync(predicate: s => s.Id == item.SpecialId, cancellationToken: ct),
+            _ => Task.FromResult(result: false),
         };
 
     public async Task<bool> RemoveItemAsync(
@@ -126,21 +126,21 @@ public class UserPlaylistRepository(IDbContextFactory<MediaContext> contextFacto
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
 
         PlaylistItem? item = await context
-            .PlaylistItems.Where(pi =>
+            .PlaylistItems.Where(predicate: pi =>
                 pi.Id == itemId
                 && pi.UserPlaylistId == playlistId
                 && pi.UserPlaylist.UserId == userId
             )
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultAsync(cancellationToken: ct);
 
         if (item is null)
             return false;
 
-        context.PlaylistItems.Remove(item);
-        await context.SaveChangesAsync(ct);
+        context.PlaylistItems.Remove(entity: item);
+        await context.SaveChangesAsync(cancellationToken: ct);
 
         return true;
     }
@@ -152,32 +152,32 @@ public class UserPlaylistRepository(IDbContextFactory<MediaContext> contextFacto
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
 
         bool ownsPlaylist = await context.UserPlaylists.AnyAsync(
-            p => p.Id == playlistId && p.UserId == userId,
-            ct
+            predicate: p => p.Id == playlistId && p.UserId == userId,
+            cancellationToken: ct
         );
         if (!ownsPlaylist)
             return false;
 
         List<PlaylistItem> items = await context
-            .PlaylistItems.Where(pi => pi.UserPlaylistId == playlistId)
-            .ToListAsync(ct);
+            .PlaylistItems.Where(predicate: pi => pi.UserPlaylistId == playlistId)
+            .ToListAsync(cancellationToken: ct);
 
         // The caller must supply exactly the current item set — a partial or
         // stale list is rejected outright rather than silently reordering (and
         // implicitly dropping) a subset.
-        HashSet<Ulid> currentIds = items.Select(i => i.Id).ToHashSet();
+        HashSet<Ulid> currentIds = items.Select(selector: i => i.Id).ToHashSet();
         HashSet<Ulid> requestedIds = orderedItemIds.ToHashSet();
-        if (currentIds.Count != requestedIds.Count || !currentIds.SetEquals(requestedIds))
+        if (currentIds.Count != requestedIds.Count || !currentIds.SetEquals(other: requestedIds))
             return false;
 
-        Dictionary<Ulid, PlaylistItem> byId = items.ToDictionary(i => i.Id);
+        Dictionary<Ulid, PlaylistItem> byId = items.ToDictionary(keySelector: i => i.Id);
         for (int index = 0; index < orderedItemIds.Count; index++)
-            byId[orderedItemIds[index]].Order = index;
+            byId[key: orderedItemIds[index: index]].Order = index;
 
-        await context.SaveChangesAsync(ct);
+        await context.SaveChangesAsync(cancellationToken: ct);
 
         return true;
     }
@@ -187,12 +187,12 @@ public class UserPlaylistRepository(IDbContextFactory<MediaContext> contextFacto
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
 
         List<UserPlaylist> playlists = await context
             .UserPlaylists.AsNoTracking()
-            .Where(p => p.UserId == userId)
-            .ToListAsync(ct);
+            .Where(predicate: p => p.UserId == userId)
+            .ToListAsync(cancellationToken: ct);
 
         if (playlists.Count == 0)
             return [];
@@ -200,20 +200,20 @@ public class UserPlaylistRepository(IDbContextFactory<MediaContext> contextFacto
         // Second, flat query — UserPlaylist deliberately carries no PlaylistItems
         // collection navigation, so the per-playlist count is fetched separately
         // and merged in memory rather than through a correlated subquery.
-        List<Guid> playlistIds = playlists.Select(p => p.Id).ToList();
+        List<Guid> playlistIds = playlists.Select(selector: p => p.Id).ToList();
         Dictionary<Guid, int> itemCounts = await context
             .PlaylistItems.AsNoTracking()
-            .Where(pi => playlistIds.Contains(pi.UserPlaylistId))
-            .GroupBy(pi => pi.UserPlaylistId)
-            .Select(g => new { UserPlaylistId = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.UserPlaylistId, x => x.Count, ct);
+            .Where(predicate: pi => playlistIds.Contains(pi.UserPlaylistId))
+            .GroupBy(keySelector: pi => pi.UserPlaylistId)
+            .Select(selector: g => new { UserPlaylistId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(keySelector: x => x.UserPlaylistId, elementSelector: x => x.Count, cancellationToken: ct);
 
         return playlists
-            .Select(p => new UserPlaylistSummary(
-                p.Id,
-                p.Name,
-                p.Cover,
-                itemCounts.GetValueOrDefault(p.Id, 0)
+            .Select(selector: p => new UserPlaylistSummary(
+                Id: p.Id,
+                Name: p.Name,
+                Cover: p.Cover,
+                ItemCount: itemCounts.GetValueOrDefault(key: p.Id, defaultValue: 0)
             ))
             .ToList();
     }
@@ -226,11 +226,11 @@ public class UserPlaylistRepository(IDbContextFactory<MediaContext> contextFacto
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
 
         bool ownsPlaylist = await context.UserPlaylists.AnyAsync(
-            p => p.Id == playlistId && p.UserId == userId,
-            ct
+            predicate: p => p.Id == playlistId && p.UserId == userId,
+            cancellationToken: ct
         );
         if (!ownsPlaylist)
             return null;
@@ -243,15 +243,15 @@ public class UserPlaylistRepository(IDbContextFactory<MediaContext> contextFacto
         return await context
             .PlaylistItems.AsNoTracking()
             .AsSplitQuery()
-            .Where(pi => pi.UserPlaylistId == playlistId)
-            .Include(pi => pi.Movie)
-                .ThenInclude(m => m!.Images.Where(i => i.Type == "poster" || i.Type == "logo"))
-            .Include(pi => pi.Movie)
-                .ThenInclude(m => m!.Translations.Where(t => t.Iso6391 == language))
-            .Include(pi => pi.Movie)
-                .ThenInclude(m => m!.VideoFiles.Where(v => v.Folder != null))
-            .Include(pi => pi.Movie)
-                .ThenInclude(m =>
+            .Where(predicate: pi => pi.UserPlaylistId == playlistId)
+            .Include(navigationPropertyPath: pi => pi.Movie)
+                .ThenInclude(navigationPropertyPath: m => m!.Images.Where(i => i.Type == "poster" || i.Type == "logo"))
+            .Include(navigationPropertyPath: pi => pi.Movie)
+                .ThenInclude(navigationPropertyPath: m => m!.Translations.Where(t => t.Iso6391 == language))
+            .Include(navigationPropertyPath: pi => pi.Movie)
+                .ThenInclude(navigationPropertyPath: m => m!.VideoFiles.Where(v => v.Folder != null))
+            .Include(navigationPropertyPath: pi => pi.Movie)
+                .ThenInclude(navigationPropertyPath: m =>
                     m!
                         .CertificationMovies.Where(c =>
                             c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country
@@ -259,23 +259,23 @@ public class UserPlaylistRepository(IDbContextFactory<MediaContext> contextFacto
                         .OrderBy(c => c.CertificationId)
                         .Take(1)
                 )
-                    .ThenInclude(c => c.Certification)
-            .Include(pi => pi.Tv)
-                .ThenInclude(tv => tv!.Images.Where(i => i.Type == "poster" || i.Type == "logo"))
-            .Include(pi => pi.Tv)
-                .ThenInclude(tv => tv!.Translations.Where(t => t.Iso6391 == language))
-            .Include(pi => pi.Episode)
-                .ThenInclude(e => e!.Tv)
-            .Include(pi => pi.Episode)
-                .ThenInclude(e => e!.Images.Where(i => i.Type == "still"))
-            .Include(pi => pi.Episode)
-                .ThenInclude(e => e!.Translations.Where(t => t.Iso6391 == language))
-            .Include(pi => pi.Episode)
-                .ThenInclude(e => e!.VideoFiles.Where(v => v.Folder != null))
-            .Include(pi => pi.Special)
-            .OrderBy(pi => pi.Order)
-            .ThenBy(pi => pi.Id)
-            .ToListAsync(ct);
+                    .ThenInclude(navigationPropertyPath: c => c.Certification)
+            .Include(navigationPropertyPath: pi => pi.Tv)
+                .ThenInclude(navigationPropertyPath: tv => tv!.Images.Where(i => i.Type == "poster" || i.Type == "logo"))
+            .Include(navigationPropertyPath: pi => pi.Tv)
+                .ThenInclude(navigationPropertyPath: tv => tv!.Translations.Where(t => t.Iso6391 == language))
+            .Include(navigationPropertyPath: pi => pi.Episode)
+                .ThenInclude(navigationPropertyPath: e => e!.Tv)
+            .Include(navigationPropertyPath: pi => pi.Episode)
+                .ThenInclude(navigationPropertyPath: e => e!.Images.Where(i => i.Type == "still"))
+            .Include(navigationPropertyPath: pi => pi.Episode)
+                .ThenInclude(navigationPropertyPath: e => e!.Translations.Where(t => t.Iso6391 == language))
+            .Include(navigationPropertyPath: pi => pi.Episode)
+                .ThenInclude(navigationPropertyPath: e => e!.VideoFiles.Where(v => v.Folder != null))
+            .Include(navigationPropertyPath: pi => pi.Special)
+            .OrderBy(keySelector: pi => pi.Order)
+            .ThenBy(keySelector: pi => pi.Id)
+            .ToListAsync(cancellationToken: ct);
     }
 
     public async Task<bool> OwnsPlaylistAsync(
@@ -284,11 +284,11 @@ public class UserPlaylistRepository(IDbContextFactory<MediaContext> contextFacto
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
 
         return await context.UserPlaylists.AnyAsync(
-            p => p.Id == playlistId && p.UserId == userId,
-            ct
+            predicate: p => p.Id == playlistId && p.UserId == userId,
+            cancellationToken: ct
         );
     }
 
@@ -298,20 +298,20 @@ public class UserPlaylistRepository(IDbContextFactory<MediaContext> contextFacto
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
 
         UserPlaylist? playlist = await context
             .UserPlaylists.AsNoTracking()
-            .Where(p => p.Id == playlistId && p.UserId == userId)
-            .FirstOrDefaultAsync(ct);
+            .Where(predicate: p => p.Id == playlistId && p.UserId == userId)
+            .FirstOrDefaultAsync(cancellationToken: ct);
 
         return playlist is null
             ? null
             : new UserPlaylistDetail(
-                playlist.Id,
-                playlist.Name,
-                playlist.Description,
-                playlist.Cover
+                Id: playlist.Id,
+                Name: playlist.Name,
+                Description: playlist.Description,
+                Cover: playlist.Cover
             );
     }
 
@@ -324,11 +324,11 @@ public class UserPlaylistRepository(IDbContextFactory<MediaContext> contextFacto
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
 
         UserPlaylist? playlist = await context
-            .UserPlaylists.Where(p => p.Id == playlistId && p.UserId == userId)
-            .FirstOrDefaultAsync(ct);
+            .UserPlaylists.Where(predicate: p => p.Id == playlistId && p.UserId == userId)
+            .FirstOrDefaultAsync(cancellationToken: ct);
 
         if (playlist is null)
             return false;
@@ -340,7 +340,7 @@ public class UserPlaylistRepository(IDbContextFactory<MediaContext> contextFacto
         if (cover is not null)
             playlist.Cover = cover;
 
-        await context.SaveChangesAsync(ct);
+        await context.SaveChangesAsync(cancellationToken: ct);
 
         return true;
     }
@@ -351,15 +351,15 @@ public class UserPlaylistRepository(IDbContextFactory<MediaContext> contextFacto
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
 
         // PlaylistItems cascade-delete via FK_PlaylistItems_UserPlaylists_UserPlaylistId
         // ON DELETE CASCADE (see CorrectUserPlaylistToVideoOnlyContainer migration) —
         // the same ExecuteDeleteAsync-on-parent pattern MusicRepository.DeletePlaylistAsync
         // already relies on for the legacy music playlist's PlaylistTrack children.
         int deleted = await context
-            .UserPlaylists.Where(p => p.Id == playlistId && p.UserId == userId)
-            .ExecuteDeleteAsync(ct);
+            .UserPlaylists.Where(predicate: p => p.Id == playlistId && p.UserId == userId)
+            .ExecuteDeleteAsync(cancellationToken: ct);
 
         return deleted > 0;
     }

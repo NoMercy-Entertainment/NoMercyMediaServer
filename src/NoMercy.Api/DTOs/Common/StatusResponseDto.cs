@@ -16,19 +16,19 @@ namespace NoMercy.Api.DTOs.Common;
 
 public record StatusResponseDto<T>
 {
-    [JsonProperty("status")]
+    [JsonProperty(propertyName: "status")]
     public string Status { get; set; } = "ok";
 
-    [JsonProperty("data")]
+    [JsonProperty(propertyName: "data")]
     public T Data { get; set; } = default!;
 
-    [JsonProperty("message")]
+    [JsonProperty(propertyName: "message")]
     public string? Message
     {
         get;
         set => field = value?.Localize();
     }
 
-    [JsonProperty("args")]
+    [JsonProperty(propertyName: "args")]
     public dynamic[]? Args { get; set; } = [];
 }

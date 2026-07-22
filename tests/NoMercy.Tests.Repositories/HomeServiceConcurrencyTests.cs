@@ -28,23 +28,23 @@ public class HomeServiceConcurrencyTests : IDisposable
         (_factory, _connection) = TestMediaContextFactory.CreateFactory();
 
         using MediaContext seedContext = _factory.CreateDbContext();
-        TestMediaContextFactory.SeedData(seedContext);
+        TestMediaContextFactory.SeedData(context: seedContext);
     }
 
     [Fact]
     public async Task GetHomeData_WithParallelQueries_DoesNotThrow()
     {
         MediaContext mainContext = await _factory.CreateDbContextAsync();
-        HomeRepository homeRepository = new(mainContext, _factory);
-        LibraryRepository libraryRepository = new(_factory);
-        HomeService service = new(homeRepository, libraryRepository);
+        HomeRepository homeRepository = new(context: mainContext, contextFactory: _factory);
+        LibraryRepository libraryRepository = new(contextFactory: _factory);
+        HomeService service = new(homeRepository: homeRepository, libraryRepository: libraryRepository);
 
-        Exception? exception = await Record.ExceptionAsync(async () =>
+        Exception? exception = await Record.ExceptionAsync(testCode: async () =>
         {
-            await service.GetHomeData(SeedConstants.UserId, "en", "US");
+            await service.GetHomeData(userId: SeedConstants.UserId, language: "en", country: "US");
         });
 
-        Assert.Null(exception);
+        Assert.Null(@object: exception);
         await mainContext.DisposeAsync();
     }
 
@@ -52,18 +52,18 @@ public class HomeServiceConcurrencyTests : IDisposable
     public async Task GetHomeData_CalledMultipleTimes_DoesNotThrow()
     {
         MediaContext mainContext = await _factory.CreateDbContextAsync();
-        HomeRepository homeRepository = new(mainContext, _factory);
-        LibraryRepository libraryRepository = new(_factory);
-        HomeService service = new(homeRepository, libraryRepository);
+        HomeRepository homeRepository = new(context: mainContext, contextFactory: _factory);
+        LibraryRepository libraryRepository = new(contextFactory: _factory);
+        HomeService service = new(homeRepository: homeRepository, libraryRepository: libraryRepository);
 
         for (int i = 0; i < 3; i++)
         {
-            Exception? exception = await Record.ExceptionAsync(async () =>
+            Exception? exception = await Record.ExceptionAsync(testCode: async () =>
             {
-                await service.GetHomeData(SeedConstants.UserId, "en", "US");
+                await service.GetHomeData(userId: SeedConstants.UserId, language: "en", country: "US");
             });
 
-            Assert.Null(exception);
+            Assert.Null(@object: exception);
         }
 
         await mainContext.DisposeAsync();
@@ -72,6 +72,6 @@ public class HomeServiceConcurrencyTests : IDisposable
     public void Dispose()
     {
         _connection.Dispose();
-        GC.SuppressFinalize(this);
+        GC.SuppressFinalize(obj: this);
     }
 }

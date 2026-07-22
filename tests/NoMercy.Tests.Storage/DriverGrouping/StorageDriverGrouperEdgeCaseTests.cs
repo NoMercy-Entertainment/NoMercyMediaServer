@@ -20,7 +20,7 @@ namespace NoMercy.Tests.Storage.DriverGrouping;
 /// common ancestor, a sub-path that isn't actually under its claimed root,
 /// and POSIX-style (non-Windows-drive) segment joining.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class StorageDriverGrouperEdgeCaseTests
 {
     [Fact]
@@ -28,19 +28,19 @@ public sealed class StorageDriverGrouperEdgeCaseTests
     {
         // "\\server" with nothing after it — malformed/incomplete UNC input,
         // but DetectEndpoint must still classify it as SMB instead of throwing.
-        StorageEndpoint endpoint = StorageDriverGrouper.DetectEndpoint(@"\\server");
+        StorageEndpoint endpoint = StorageDriverGrouper.DetectEndpoint(absolutePath: @"\\server");
 
-        endpoint.Key.Should().Be(@"\\server");
-        endpoint.Kind.Should().Be(StorageEndpointKind.Smb);
+        endpoint.Key.Should().Be(expected: @"\\server");
+        endpoint.Kind.Should().Be(expected: StorageEndpointKind.Smb);
     }
 
     [Fact]
     public void ComputeCommonAncestor_throws_for_empty_path_list()
     {
         Action act = () =>
-            StorageDriverGrouper.ComputeCommonAncestor([], StorageEndpointKind.Local);
+            StorageDriverGrouper.ComputeCommonAncestor(absolutePaths: [], kind: StorageEndpointKind.Local);
 
-        act.Should().Throw<ArgumentException>().WithMessage("*empty*");
+        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*empty*");
     }
 
     [Fact]
@@ -49,22 +49,22 @@ public sealed class StorageDriverGrouperEdgeCaseTests
         // Different Windows drives share nothing in common — the ancestor
         // degrades to the local root marker rather than throwing.
         string result = StorageDriverGrouper.ComputeCommonAncestor(
-            [@"C:\Foo\Bar", @"D:\Baz\Qux"],
-            StorageEndpointKind.Local
+            absolutePaths: [@"C:\Foo\Bar", @"D:\Baz\Qux"],
+            kind: StorageEndpointKind.Local
         );
 
-        result.Should().Be("/");
+        result.Should().Be(expected: "/");
     }
 
     [Fact]
     public void ComputeCommonAncestor_returns_smb_root_marker_when_smb_paths_share_no_segment()
     {
         string result = StorageDriverGrouper.ComputeCommonAncestor(
-            [@"\\alpha\share\x", @"\\beta\share\y"],
-            StorageEndpointKind.Smb
+            absolutePaths: [@"\\alpha\share\x", @"\\beta\share\y"],
+            kind: StorageEndpointKind.Smb
         );
 
-        result.Should().Be(@"\\");
+        result.Should().Be(expected: @"\\");
     }
 
     [Fact]
@@ -73,22 +73,22 @@ public sealed class StorageDriverGrouperEdgeCaseTests
         // A caller-supplied "root" that isn't actually an ancestor of the path
         // must not silently truncate — the full path is the honest answer.
         string result = StorageDriverGrouper.ComputeSubPath(
-            @"C:\Media\Movies",
-            @"C:\Downloads\Movie.mkv",
-            StorageEndpointKind.Local
+            driverRoot: @"C:\Media\Movies",
+            absolutePath: @"C:\Downloads\Movie.mkv",
+            kind: StorageEndpointKind.Local
         );
 
-        result.Should().Be(@"C:\Downloads\Movie.mkv");
+        result.Should().Be(expected: @"C:\Downloads\Movie.mkv");
     }
 
     [Fact]
     public void ComputeCommonAncestor_joins_posix_style_paths_without_a_drive_letter()
     {
         string result = StorageDriverGrouper.ComputeCommonAncestor(
-            ["/mnt/media/movies", "/mnt/media/tv"],
-            StorageEndpointKind.Local
+            absolutePaths: ["/mnt/media/movies", "/mnt/media/tv"],
+            kind: StorageEndpointKind.Local
         );
 
-        result.Should().Be("/mnt/media");
+        result.Should().Be(expected: "/mnt/media");
     }
 }

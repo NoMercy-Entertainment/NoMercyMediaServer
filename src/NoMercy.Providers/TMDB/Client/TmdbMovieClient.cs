@@ -28,34 +28,35 @@ public class TmdbMovieClient : TmdbBaseClient, ITmdbMovieClient
         Func<TmdbMovieAppends?>? mockAppendsProvider = null,
         string? language = "en-US"
     )
-        : base((int)id!, language!)
+        : base(id: (int)id!, language: language!)
     {
         _mockAppendsProvider = mockAppendsProvider;
     }
 
     public Task<TmdbMovieDetails?> Details(bool? priority = false)
     {
-        return Get<TmdbMovieDetails>("movie/" + Id, priority: priority);
+        return Get<TmdbMovieDetails>(url: "movie/" + Id, priority: priority);
     }
 
     private Task<TmdbMovieAppends?> WithAppends(string[] appendices, bool? priority = false)
     {
         Dictionary<string, string?> queryParams = new()
         {
-            ["append_to_response"] = string.Join(",", appendices),
+            [key: "append_to_response"] = string.Join(separator: ",", value: appendices),
         };
 
-        return Get<TmdbMovieAppends>("movie/" + Id, queryParams, priority);
+        return Get<TmdbMovieAppends>(url: "movie/" + Id, query: queryParams, priority: priority);
     }
 
     public Task<TmdbMovieAppends?> WithAllAppends(bool? priority = false)
     {
         if (_mockAppendsProvider != null)
         {
-            return Task.FromResult(_mockAppendsProvider());
+            return Task.FromResult(result: _mockAppendsProvider());
         }
 
         return WithAppends(
+            appendices:
             [
                 "alternative_titles",
                 "release_dates",
@@ -70,14 +71,14 @@ public class TmdbMovieClient : TmdbBaseClient, ITmdbMovieClient
                 "images",
                 "watch/providers",
             ],
-            priority
+            priority: priority
         );
     }
 
     public Task<TmdbMovieAggregatedCredits?> AggregatedCredits(bool? priority = false)
     {
         return Get<TmdbMovieAggregatedCredits>(
-            "movie/" + Id + "/aggregate_credits",
+            url: "movie/" + Id + "/aggregate_credits",
             priority: priority
         );
     }
@@ -85,7 +86,7 @@ public class TmdbMovieClient : TmdbBaseClient, ITmdbMovieClient
     public Task<TmdbMovieAlternativeTitles?> AlternativeTitles(bool? priority = false)
     {
         return Get<TmdbMovieAlternativeTitles>(
-            "movie/" + Id + "/alternative_titles",
+            url: "movie/" + Id + "/alternative_titles",
             priority: priority
         );
     }
@@ -94,111 +95,111 @@ public class TmdbMovieClient : TmdbBaseClient, ITmdbMovieClient
     {
         Dictionary<string, string?> queryParams = new()
         {
-            ["start_date"] = startDate,
-            ["end_date"] = endDate,
+            [key: "start_date"] = startDate,
+            [key: "end_date"] = endDate,
         };
 
-        return Get<TmdbMovieChanges>("movie/" + Id + "/changes", queryParams);
+        return Get<TmdbMovieChanges>(url: "movie/" + Id + "/changes", query: queryParams);
     }
 
     public Task<TmdbMovieCredits?> Credits(bool? priority = false)
     {
-        return Get<TmdbMovieCredits>("movie/" + Id + "/credits", priority: priority);
+        return Get<TmdbMovieCredits>(url: "movie/" + Id + "/credits", priority: priority);
     }
 
     public Task<TmdbMovieExternalIds?> ExternalIds(bool? priority = false)
     {
-        return Get<TmdbMovieExternalIds>("movie/" + Id + "/external_ids", priority: priority);
+        return Get<TmdbMovieExternalIds>(url: "movie/" + Id + "/external_ids", priority: priority);
     }
 
     public Task<TmdbImages?> Images(bool? priority = false)
     {
-        return Get<TmdbImages>("movie/" + Id + "/images", priority: priority);
+        return Get<TmdbImages>(url: "movie/" + Id + "/images", priority: priority);
     }
 
     public Task<TmdbMovieKeywords?> Keywords(bool? priority = false)
     {
-        return Get<TmdbMovieKeywords>("movie/" + Id + "/keywords", priority: priority);
+        return Get<TmdbMovieKeywords>(url: "movie/" + Id + "/keywords", priority: priority);
     }
 
     public Task<TmdbMovieLists?> Lists(bool? priority = false)
     {
-        return Get<TmdbMovieLists>("movie/" + Id + "/lists", priority: priority);
+        return Get<TmdbMovieLists>(url: "movie/" + Id + "/lists", priority: priority);
     }
 
     public Task<TmdbMovieRecommendations?> Recommendations(bool? priority = false)
     {
         return Get<TmdbMovieRecommendations>(
-            "movie/" + Id + "/recommendations",
+            url: "movie/" + Id + "/recommendations",
             priority: priority
         );
     }
 
     public Task<TmdbMovieReleaseDates?> ReleaseDates(bool? priority = false)
     {
-        return Get<TmdbMovieReleaseDates>("movie/" + Id + "/release_dates", priority: priority);
+        return Get<TmdbMovieReleaseDates>(url: "movie/" + Id + "/release_dates", priority: priority);
     }
 
     public Task<TmdbMovieReviews?> Reviews(bool? priority = false)
     {
-        return Get<TmdbMovieReviews>("movie/" + Id + "/reviews", priority: priority);
+        return Get<TmdbMovieReviews>(url: "movie/" + Id + "/reviews", priority: priority);
     }
 
     public Task<TmdbMovieSimilar?> Similar(bool? priority = false)
     {
-        return Get<TmdbMovieSimilar>("movie/" + Id + "/similar", priority: priority);
+        return Get<TmdbMovieSimilar>(url: "movie/" + Id + "/similar", priority: priority);
     }
 
     public Task<TmdbSharedTranslations?> Translations(bool? priority = false)
     {
-        return Get<TmdbSharedTranslations>("movie/" + Id + "/translations", priority: priority);
+        return Get<TmdbSharedTranslations>(url: "movie/" + Id + "/translations", priority: priority);
     }
 
     public Task<TmdbMovieVideos?> Videos(bool? priority = false)
     {
-        return Get<TmdbMovieVideos>("movie/" + Id + "/videos", priority: priority);
+        return Get<TmdbMovieVideos>(url: "movie/" + Id + "/videos", priority: priority);
     }
 
     public Task<TmdbWatchProviders?> WatchProviders(bool? priority = false)
     {
-        return Get<TmdbWatchProviders>("movie/" + Id + "/watch/providers", priority: priority);
+        return Get<TmdbWatchProviders>(url: "movie/" + Id + "/watch/providers", priority: priority);
     }
 
     public Task<TmdbMovieLatest?> Latest(bool? priority = false)
     {
-        return Get<TmdbMovieLatest>("movie/" + Id + "/latest", priority: priority);
+        return Get<TmdbMovieLatest>(url: "movie/" + Id + "/latest", priority: priority);
     }
 
     public Task<TmdbMovieNowPlaying?> NowPlaying(bool? priority = false)
     {
-        return Get<TmdbMovieNowPlaying>("movie/" + Id + "/now_playing", priority: priority);
+        return Get<TmdbMovieNowPlaying>(url: "movie/" + Id + "/now_playing", priority: priority);
     }
 
     public Task<List<TmdbMovie>?> Popular(int limit = 10)
     {
-        return Paginated<TmdbMovie>("movie/popular", limit);
+        return Paginated<TmdbMovie>(url: "movie/popular", limit: limit);
     }
 
     public Task<TmdbMovieTopRated?> TopRated(bool? priority = false)
     {
-        return Get<TmdbMovieTopRated>("movie/" + Id + "/top_rated", priority: priority);
+        return Get<TmdbMovieTopRated>(url: "movie/" + Id + "/top_rated", priority: priority);
     }
 
     public Task<TmdbMovieUpcoming?> Upcoming(bool? priority = false)
     {
-        return Get<TmdbMovieUpcoming>("movie/" + Id + "/upcoming", priority: priority);
+        return Get<TmdbMovieUpcoming>(url: "movie/" + Id + "/upcoming", priority: priority);
     }
 
     public Task<TmdbMovieCertifications?> Certifications(bool? priority = false)
     {
-        return Get<TmdbMovieCertifications>("certification/movie/list", priority: priority);
+        return Get<TmdbMovieCertifications>(url: "certification/movie/list", priority: priority);
     }
 
     public Task<TmdbGenreMovies?> Genres(string language = "en", bool? priority = false)
     {
         return Get<TmdbGenreMovies>(
-            "genre/movie/list",
-            new Dictionary<string, string?> { ["language"] = language },
+            url: "genre/movie/list",
+            query: new Dictionary<string, string?> { [key: "language"] = language },
             priority: priority
         );
     }

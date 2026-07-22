@@ -65,7 +65,7 @@ public static class DecodeAwareBundlePlanner
         List<int> copyIndexes = new();
         List<int> transcodeIndexes = new();
         List<string> tonemapChainOrder = new();
-        Dictionary<string, List<int>> tonemapByChain = new(StringComparer.Ordinal);
+        Dictionary<string, List<int>> tonemapByChain = new(comparer: StringComparer.Ordinal);
 
         for (int i = 0; i < tasks.Length; i++)
         {
@@ -73,9 +73,9 @@ public static class DecodeAwareBundlePlanner
             if (task.Kind != EncodeTaskKind.Video)
                 continue;
 
-            if (string.Equals(task.VideoEncoderName, "copy", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(a: task.VideoEncoderName, b: "copy", comparisonType: StringComparison.OrdinalIgnoreCase))
             {
-                copyIndexes.Add(i);
+                copyIndexes.Add(item: i);
                 continue;
             }
 
@@ -86,32 +86,32 @@ public static class DecodeAwareBundlePlanner
 
             bool isTonemap =
                 output is { ConvertHdrToSdr: true }
-                && !string.IsNullOrEmpty(output.TonemapFilterChain);
+                && !string.IsNullOrEmpty(value: output.TonemapFilterChain);
 
             if (isTonemap)
             {
                 string chain = output!.TonemapFilterChain!;
-                if (!tonemapByChain.TryGetValue(chain, out List<int>? chainIndexes))
+                if (!tonemapByChain.TryGetValue(key: chain, value: out List<int>? chainIndexes))
                 {
                     chainIndexes = new();
-                    tonemapByChain[chain] = chainIndexes;
-                    tonemapChainOrder.Add(chain);
+                    tonemapByChain[key: chain] = chainIndexes;
+                    tonemapChainOrder.Add(item: chain);
                 }
-                chainIndexes.Add(i);
+                chainIndexes.Add(item: i);
             }
             else
             {
-                transcodeIndexes.Add(i);
+                transcodeIndexes.Add(item: i);
             }
         }
 
         List<DecodeGroup> groups = new();
         if (copyIndexes.Count > 0)
-            groups.Add(new(DecodeClass.Copy, TonemapChain: null, copyIndexes));
+            groups.Add(item: new(Class: DecodeClass.Copy, TonemapChain: null, VideoTaskIndexes: copyIndexes));
         if (transcodeIndexes.Count > 0)
-            groups.Add(new(DecodeClass.Transcode, TonemapChain: null, transcodeIndexes));
+            groups.Add(item: new(Class: DecodeClass.Transcode, TonemapChain: null, VideoTaskIndexes: transcodeIndexes));
         foreach (string chain in tonemapChainOrder)
-            groups.Add(new(DecodeClass.Tonemap, chain, tonemapByChain[chain]));
+            groups.Add(item: new(Class: DecodeClass.Tonemap, TonemapChain: chain, VideoTaskIndexes: tonemapByChain[key: chain]));
 
         return groups;
     }
@@ -135,14 +135,14 @@ public static class DecodeAwareBundlePlanner
     )
     {
         DecomposedTask[] stamped = tasks
-            .Select(task => task with { ParentJobId = parentJobId })
+            .Select(selector: task => task with { ParentJobId = parentJobId })
             .ToArray();
 
-        IReadOnlyList<DecodeGroup> decodeGroups = GroupByDecodeClass(stamped, plan);
+        IReadOnlyList<DecodeGroup> decodeGroups = GroupByDecodeClass(tasks: stamped, plan: plan);
 
         int[] copyVideoIndexes =
             decodeGroups
-                .FirstOrDefault(group => group.Class == DecodeClass.Copy)
+                .FirstOrDefault(predicate: group => group.Class == DecodeClass.Copy)
                 ?.VideoTaskIndexes.ToArray()
             ?? [];
 
@@ -154,17 +154,17 @@ public static class DecodeAwareBundlePlanner
         // rungs derive from the 4K master (see the cascade wiring below), so
         // their order after it is also their data dependency.
         List<(int[] Video, bool IsTonemap)> orderedRealUnits = new();
-        foreach (DecodeGroup group in decodeGroups.Where(g => g.Class == DecodeClass.Transcode))
-        foreach (int[] chunk in ChunkByCapacity(group.VideoTaskIndexes, stamped, gpuCap, cpuCap))
-            orderedRealUnits.Add((chunk, false));
-        foreach (DecodeGroup group in decodeGroups.Where(g => g.Class == DecodeClass.Tonemap))
-        foreach (int[] chunk in ChunkByCapacity(group.VideoTaskIndexes, stamped, gpuCap, cpuCap))
-            orderedRealUnits.Add((chunk, true));
+        foreach (DecodeGroup group in decodeGroups.Where(predicate: g => g.Class == DecodeClass.Transcode))
+        foreach (int[] chunk in ChunkByCapacity(videoIndexes: group.VideoTaskIndexes, tasks: stamped, gpuCap: gpuCap, cpuCap: cpuCap))
+            orderedRealUnits.Add(item: (chunk, false));
+        foreach (DecodeGroup group in decodeGroups.Where(predicate: g => g.Class == DecodeClass.Tonemap))
+        foreach (int[] chunk in ChunkByCapacity(videoIndexes: group.VideoTaskIndexes, tasks: stamped, gpuCap: gpuCap, cpuCap: cpuCap))
+            orderedRealUnits.Add(item: (chunk, true));
 
-        bool hasThumbs = stamped.Any(task => task.Kind == EncodeTaskKind.Thumbnails);
-        int[] audioIndexes = IndexesOf(stamped, task => task.Kind == EncodeTaskKind.Audio);
-        int[] subIndexes = IndexesOf(stamped, task => task.Kind == EncodeTaskKind.Subtitle);
-        int[] chapterIndexes = IndexesOf(stamped, task => task.Kind == EncodeTaskKind.Chapters);
+        bool hasThumbs = stamped.Any(predicate: task => task.Kind == EncodeTaskKind.Thumbnails);
+        int[] audioIndexes = IndexesOf(tasks: stamped, predicate: task => task.Kind == EncodeTaskKind.Audio);
+        int[] subIndexes = IndexesOf(tasks: stamped, predicate: task => task.Kind == EncodeTaskKind.Subtitle);
+        int[] chapterIndexes = IndexesOf(tasks: stamped, predicate: task => task.Kind == EncodeTaskKind.Chapters);
 
         // The thumbnail sprite must be Rec.709 (SDR), so it rides a Tonemap
         // bundle to reuse its HDR→SDR pass instead of sampling raw HDR. With the
@@ -172,7 +172,7 @@ public static class DecodeAwareBundlePlanner
         // sprite there would crush its colours. Route it to the first Tonemap
         // bundle; fall back to bundle 0 only when the plan has no tonemap at all
         // (a pure-SDR ladder, where bundle 0 is already Rec.709).
-        int firstTonemapUnit = orderedRealUnits.FindIndex(unit => unit.IsTonemap);
+        int firstTonemapUnit = orderedRealUnits.FindIndex(match: unit => unit.IsTonemap);
         int spriteUnit = firstTonemapUnit >= 0 ? firstTonemapUnit : 0;
 
         List<DecomposedTask> bundles = new();
@@ -181,7 +181,7 @@ public static class DecodeAwareBundlePlanner
 
         for (int unitIndex = 0; unitIndex < orderedRealUnits.Count; unitIndex++)
         {
-            int[] videoChunk = orderedRealUnits[unitIndex].Video;
+            int[] videoChunk = orderedRealUnits[index: unitIndex].Video;
             int[] videoForBundle = videoChunk;
             int[] audioForBundle = [];
             int[] subsForBundle = [];
@@ -194,7 +194,7 @@ public static class DecodeAwareBundlePlanner
                 // decode of its own: copy video (free — this ffmpeg already has
                 // the stream open) and every audio / subtitle / chapter task, so
                 // the master rendition is immediately playable with sound.
-                videoForBundle = videoChunk.Concat(copyVideoIndexes).ToArray();
+                videoForBundle = videoChunk.Concat(second: copyVideoIndexes).ToArray();
                 audioForBundle = audioIndexes;
                 subsForBundle = subIndexes;
                 chaptersForBundle = chapterIndexes;
@@ -204,17 +204,17 @@ public static class DecodeAwareBundlePlanner
                 thumbsForBundle = true;
 
             bundles.Add(
-                BuildBundleTask(
-                    stamped,
-                    videoForBundle,
-                    audioForBundle,
-                    subsForBundle,
-                    thumbsForBundle,
-                    chaptersForBundle,
-                    parentJobId,
-                    groupTag,
-                    bundleIndex++,
-                    isPartialTopUp
+                item: BuildBundleTask(
+                    allTasks: stamped,
+                    videoIndexes: videoForBundle,
+                    audioIndexes: audioForBundle,
+                    subIndexes: subsForBundle,
+                    thumbsForBundle: thumbsForBundle,
+                    chapterIndexes: chaptersForBundle,
+                    parentJobId: parentJobId,
+                    groupTag: groupTag,
+                    bundleIndex: bundleIndex++,
+                    isPartialTopUp: isPartialTopUp
                 )
             );
         }
@@ -234,17 +234,17 @@ public static class DecodeAwareBundlePlanner
             if (hasRemuxContent)
             {
                 bundles.Add(
-                    BuildBundleTask(
-                        stamped,
-                        copyVideoIndexes,
-                        audioIndexes,
-                        subIndexes,
+                    item: BuildBundleTask(
+                        allTasks: stamped,
+                        videoIndexes: copyVideoIndexes,
+                        audioIndexes: audioIndexes,
+                        subIndexes: subIndexes,
                         thumbsForBundle: false,
-                        chapterIndexes,
-                        parentJobId,
-                        groupTag,
-                        bundleIndex++,
-                        isPartialTopUp
+                        chapterIndexes: chapterIndexes,
+                        parentJobId: parentJobId,
+                        groupTag: groupTag,
+                        bundleIndex: bundleIndex++,
+                        isPartialTopUp: isPartialTopUp
                     )
                 );
             }
@@ -259,17 +259,17 @@ public static class DecodeAwareBundlePlanner
             if (hasThumbs)
             {
                 bundles.Add(
-                    BuildBundleTask(
-                        stamped,
+                    item: BuildBundleTask(
+                        allTasks: stamped,
                         videoIndexes: [],
                         audioIndexes: [],
                         subIndexes: [],
                         thumbsForBundle: true,
                         chapterIndexes: [],
-                        parentJobId,
-                        groupTag,
-                        bundleIndex++,
-                        isPartialTopUp
+                        parentJobId: parentJobId,
+                        groupTag: groupTag,
+                        bundleIndex: bundleIndex++,
+                        isPartialTopUp: isPartialTopUp
                     )
                 );
             }
@@ -296,15 +296,15 @@ public static class DecodeAwareBundlePlanner
     )
     {
         List<int> gpuIndexes = videoIndexes
-            .Where(idx => tasks[idx].Resources?.GpuDeviceKey is not null)
+            .Where(predicate: idx => tasks[idx].Resources?.GpuDeviceKey is not null)
             .ToList();
         List<int> cpuIndexes = videoIndexes
-            .Where(idx => tasks[idx].Resources?.GpuDeviceKey is null)
+            .Where(predicate: idx => tasks[idx].Resources?.GpuDeviceKey is null)
             .ToList();
 
         List<int[]> chunks = new();
-        chunks.AddRange(Chunk(gpuIndexes, gpuCap));
-        chunks.AddRange(Chunk(cpuIndexes, cpuCap));
+        chunks.AddRange(collection: Chunk(indexes: gpuIndexes, cap: gpuCap));
+        chunks.AddRange(collection: Chunk(indexes: cpuIndexes, cap: cpuCap));
         return chunks;
     }
 
@@ -315,7 +315,7 @@ public static class DecodeAwareBundlePlanner
             return chunks;
 
         for (int offset = 0; offset < indexes.Count; offset += cap)
-            chunks.Add(indexes.Skip(offset).Take(cap).ToArray());
+            chunks.Add(item: indexes.Skip(count: offset).Take(count: cap).ToArray());
 
         return chunks;
     }
@@ -325,8 +325,8 @@ public static class DecodeAwareBundlePlanner
         List<int> indexes = new();
         for (int i = 0; i < tasks.Length; i++)
         {
-            if (predicate(tasks[i]))
-                indexes.Add(i);
+            if (predicate(arg: tasks[i]))
+                indexes.Add(item: i);
         }
         return indexes.ToArray();
     }
@@ -345,33 +345,33 @@ public static class DecodeAwareBundlePlanner
     )
     {
         int[] containedTaskIndexes = videoIndexes
-            .Concat(audioIndexes)
-            .Concat(subIndexes)
-            .Concat(chapterIndexes)
+            .Concat(second: audioIndexes)
+            .Concat(second: subIndexes)
+            .Concat(second: chapterIndexes)
             .ToArray();
 
         if (thumbsForBundle)
         {
             int[] thumbnailTaskIndex = IndexesOf(
-                allTasks,
-                task => task.Kind == EncodeTaskKind.Thumbnails
+                tasks: allTasks,
+                predicate: task => task.Kind == EncodeTaskKind.Thumbnails
             );
-            containedTaskIndexes = containedTaskIndexes.Concat(thumbnailTaskIndex).ToArray();
+            containedTaskIndexes = containedTaskIndexes.Concat(second: thumbnailTaskIndex).ToArray();
         }
 
-        string[] bundledIds = containedTaskIndexes.Select(idx => allTasks[idx].TaskId).ToArray();
+        string[] bundledIds = containedTaskIndexes.Select(selector: idx => allTasks[idx].TaskId).ToArray();
 
         // Video/audio/subtitle slice descriptors point at the parent plan's
         // OutputPlan.{Video,Audio,Subtitle}Outputs indexes (DecomposedTask.OutputIndex
         // on each per-stream task is that index).
-        int[] videoSliceIndexes = videoIndexes.Select(idx => allTasks[idx].OutputIndex).ToArray();
-        int[] audioSliceIndexes = audioIndexes.Select(idx => allTasks[idx].OutputIndex).ToArray();
-        int[] subSliceIndexes = subIndexes.Select(idx => allTasks[idx].OutputIndex).ToArray();
+        int[] videoSliceIndexes = videoIndexes.Select(selector: idx => allTasks[idx].OutputIndex).ToArray();
+        int[] audioSliceIndexes = audioIndexes.Select(selector: idx => allTasks[idx].OutputIndex).ToArray();
+        int[] subSliceIndexes = subIndexes.Select(selector: idx => allTasks[idx].OutputIndex).ToArray();
 
         int videoCount = videoSliceIndexes.Length;
         int totalCount = bundledIds.Length;
 
-        DecomposedTask[] bundleTasks = containedTaskIndexes.Select(idx => allTasks[idx]).ToArray();
+        DecomposedTask[] bundleTasks = containedTaskIndexes.Select(selector: idx => allTasks[idx]).ToArray();
 
         return new(
             TaskId: $"{groupTag}-bundle-{bundleIndex}",
@@ -379,8 +379,8 @@ public static class DecodeAwareBundlePlanner
             GroupTag: groupTag,
             Kind: EncodeTaskKind.Whole,
             OutputIndex: 0,
-            Resources: ResolveBundleResources(bundleTasks),
-            EstimatedCostUnits: bundleTasks.Sum(task => task.EstimatedCostUnits),
+            Resources: ResolveBundleResources(tasks: bundleTasks),
+            EstimatedCostUnits: bundleTasks.Sum(selector: task => task.EstimatedCostUnits),
             Label: $"bundle {bundleIndex} ({videoCount} video / {totalCount} total)",
             BundledTaskIds: bundledIds,
             VideoSliceIndexes: videoSliceIndexes,
@@ -412,19 +412,19 @@ public static class DecodeAwareBundlePlanner
     private static ResourceRequirement? ResolveBundleResources(DecomposedTask[] tasks)
     {
         string? gpuKey = tasks
-            .Select(task => task.Resources?.GpuDeviceKey)
-            .FirstOrDefault(key => key is not null);
+            .Select(selector: task => task.Resources?.GpuDeviceKey)
+            .FirstOrDefault(predicate: key => key is not null);
 
-        int gpuSlots = tasks.Sum(task => task.Resources?.GpuSlots ?? 0);
-        int summedCpuThreads = tasks.Sum(task => task.Resources?.CpuThreads ?? 0);
+        int gpuSlots = tasks.Sum(selector: task => task.Resources?.GpuSlots ?? 0);
+        int summedCpuThreads = tasks.Sum(selector: task => task.Resources?.CpuThreads ?? 0);
 
-        int cores = Math.Max(1, Environment.ProcessorCount);
-        int cpuCap = Math.Max(1, cores - 1);
-        int cpuThreads = Math.Clamp(summedCpuThreads, 1, cpuCap);
+        int cores = Math.Max(val1: 1, val2: Environment.ProcessorCount);
+        int cpuCap = Math.Max(val1: 1, val2: cores - 1);
+        int cpuThreads = Math.Clamp(value: summedCpuThreads, min: 1, max: cpuCap);
 
         if (gpuKey is null && gpuSlots == 0 && summedCpuThreads == 0)
             return null;
 
-        return new(gpuKey, gpuSlots, cpuThreads);
+        return new(GpuDeviceKey: gpuKey, GpuSlots: gpuSlots, CpuThreads: cpuThreads);
     }
 }

@@ -15,9 +15,9 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record DirectoryListRequest
 {
-    [JsonProperty("folder")]
+    [JsonProperty(propertyName: "folder")]
     public string Folder { get; set; } = string.Empty;
 
-    [JsonProperty("with_empty")]
+    [JsonProperty(propertyName: "with_empty")]
     public bool WithEmpty { get; set; }
 }

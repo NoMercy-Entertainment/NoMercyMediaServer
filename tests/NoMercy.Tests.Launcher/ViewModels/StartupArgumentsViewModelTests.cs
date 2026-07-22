@@ -27,14 +27,14 @@ public sealed class StartupArgumentsViewModelTests : IDisposable
 {
     public StartupArgumentsViewModelTests()
     {
-        if (File.Exists(AppFiles.TraySettingsFile))
-            File.Delete(AppFiles.TraySettingsFile);
+        if (File.Exists(path: AppFiles.TraySettingsFile))
+            File.Delete(path: AppFiles.TraySettingsFile);
     }
 
     public void Dispose()
     {
-        if (File.Exists(AppFiles.TraySettingsFile))
-            File.Delete(AppFiles.TraySettingsFile);
+        if (File.Exists(path: AppFiles.TraySettingsFile))
+            File.Delete(path: AppFiles.TraySettingsFile);
     }
 
     [Fact]
@@ -44,7 +44,7 @@ public sealed class StartupArgumentsViewModelTests : IDisposable
 
         await viewModel.LoadAsync();
 
-        viewModel.StartupArguments.Should().Be(string.Empty);
+        viewModel.StartupArguments.Should().Be(expected: string.Empty);
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public sealed class StartupArgumentsViewModelTests : IDisposable
         StartupArgumentsViewModel loader = new();
         await loader.LoadAsync();
 
-        loader.StartupArguments.Should().Be("--dev --port 7626");
+        loader.StartupArguments.Should().Be(expected: "--dev --port 7626");
     }
 
     [Fact]
@@ -66,13 +66,13 @@ public sealed class StartupArgumentsViewModelTests : IDisposable
 
         await viewModel.SaveAsync();
 
-        viewModel.SaveStatus.Should().Be("Saved");
+        viewModel.SaveStatus.Should().Be(expected: "Saved");
     }
 
     [Fact]
     public async Task SaveAsync_PreservesOtherTraySettingsFields()
     {
-        LauncherSettings.Save(new TraySettings { ShowOnStartup = true, AutoStart = true });
+        LauncherSettings.Save(settings: new TraySettings { ShowOnStartup = true, AutoStart = true });
 
         StartupArgumentsViewModel viewModel = new() { StartupArguments = "--dev" };
         await viewModel.SaveAsync();
@@ -80,7 +80,7 @@ public sealed class StartupArgumentsViewModelTests : IDisposable
         TraySettings reloaded = LauncherSettings.Load();
         reloaded.ShowOnStartup.Should().BeTrue();
         reloaded.AutoStart.Should().BeTrue();
-        reloaded.StartupArguments.Should().Be("--dev");
+        reloaded.StartupArguments.Should().Be(expected: "--dev");
     }
 
     [Fact]
@@ -91,13 +91,13 @@ public sealed class StartupArgumentsViewModelTests : IDisposable
         viewModel.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is not null)
-                changed.Add(e.PropertyName);
+                changed.Add(item: e.PropertyName);
         };
 
         viewModel.StartupArguments = "--dev";
         viewModel.SaveStatus = "Saved";
 
-        changed.Should().Contain(nameof(StartupArgumentsViewModel.StartupArguments));
-        changed.Should().Contain(nameof(StartupArgumentsViewModel.SaveStatus));
+        changed.Should().Contain(expected: nameof(StartupArgumentsViewModel.StartupArguments));
+        changed.Should().Contain(expected: nameof(StartupArgumentsViewModel.SaveStatus));
     }
 }

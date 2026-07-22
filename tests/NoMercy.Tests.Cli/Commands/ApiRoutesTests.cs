@@ -21,22 +21,22 @@ namespace NoMercy.Tests.Cli.Commands;
 /// silent rename on either side breaks every installed CLI until both are
 /// upgraded together — locking the literal values in guards against that.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class ApiRoutesTests
 {
     [Fact]
     public void Routes_MatchDocumentedManagementPaths()
     {
-        ApiRoutes.Update.Should().Be("/manage/update");
-        ApiRoutes.Stop.Should().Be("/manage/stop");
-        ApiRoutes.Restart.Should().Be("/manage/restart");
-        ApiRoutes.Config.Should().Be("/manage/config");
-        ApiRoutes.Plugins.Should().Be("/manage/plugins");
-        ApiRoutes.Status.Should().Be("/manage/status");
-        ApiRoutes.Resources.Should().Be("/manage/resources");
-        ApiRoutes.Queue.Should().Be("/manage/queue");
-        ApiRoutes.AutoStart.Should().Be("/manage/autostart");
-        ApiRoutes.Logs.Should().Be("/manage/logs");
-        ApiRoutes.LogsStream.Should().Be("/manage/logs/stream");
+        ApiRoutes.Update.Should().Be(expected: "/manage/update");
+        ApiRoutes.Stop.Should().Be(expected: "/manage/stop");
+        ApiRoutes.Restart.Should().Be(expected: "/manage/restart");
+        ApiRoutes.Config.Should().Be(expected: "/manage/config");
+        ApiRoutes.Plugins.Should().Be(expected: "/manage/plugins");
+        ApiRoutes.Status.Should().Be(expected: "/manage/status");
+        ApiRoutes.Resources.Should().Be(expected: "/manage/resources");
+        ApiRoutes.Queue.Should().Be(expected: "/manage/queue");
+        ApiRoutes.AutoStart.Should().Be(expected: "/manage/autostart");
+        ApiRoutes.Logs.Should().Be(expected: "/manage/logs");
+        ApiRoutes.LogsStream.Should().Be(expected: "/manage/logs/stream");
     }
 }

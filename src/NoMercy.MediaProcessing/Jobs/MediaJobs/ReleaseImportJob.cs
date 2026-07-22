@@ -40,7 +40,7 @@ public class ReleaseImportJob : AbstractMusicFolderJob
         IAudioFingerprinter audioFingerprinter,
         ILoggerFactory loggerFactory
     )
-        : base(storageFactory, storageDriver, audioFingerprinter, loggerFactory) { }
+        : base(storageFactory: storageFactory, storageDriver: storageDriver, audioFingerprinter: audioFingerprinter, loggerFactory: loggerFactory) { }
 
     public override string QueueName => "import";
     public override int Priority => 4;
@@ -53,51 +53,51 @@ public class ReleaseImportJob : AbstractMusicFolderJob
         JobDispatcher jobDispatcher = new();
 
         Library albumLibrary = await context
-            .Libraries.Where(f => f.Id == LibraryId)
-            .Include(f => f.FolderLibraries)
-                .ThenInclude(f => f.Folder)
+            .Libraries.Where(predicate: f => f.Id == LibraryId)
+            .Include(navigationPropertyPath: f => f.FolderLibraries)
+                .ThenInclude(navigationPropertyPath: f => f.Folder)
             .FirstAsync();
 
-        await using MediaScan mediaScan = new(StorageDriver);
+        await using MediaScan mediaScan = new(driver: StorageDriver);
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan
             .DisableRegexFilter()
             // .EnableFileListing()
-            .Process(InputFolder, 1);
+            .Process(rootFolder: InputFolder, depth: 1);
 
         if (rootFolders.Count == 0)
         {
-            Log.LogTrace("Processing folder: {InputFolder}", InputFolder);
-            Folder? baseFolder = MatchLibraryFolder(albumLibrary, InputFolder);
+            Log.LogTrace(message: "Processing folder: {InputFolder}", args: InputFolder);
+            Folder? baseFolder = MatchLibraryFolder(library: albumLibrary, absolutePath: InputFolder);
             if (baseFolder is null)
             {
                 Log.LogWarning(
-                    "ReleaseImportJob: no library folder contains {InputFolder}; skipping",
-                    InputFolder
+                    message: "ReleaseImportJob: no library folder contains {InputFolder}; skipping",
+                    args: InputFolder
                 );
                 return;
             }
 
-            jobDispatcher.DispatchJob<AudioImportJob>(LibraryId, baseFolder.Id, InputFolder);
+            jobDispatcher.DispatchJob<AudioImportJob>(libraryId: LibraryId, folderId: baseFolder.Id, filePath: InputFolder);
             return;
         }
 
         Parallel.ForEach(
-            rootFolders,
-            SystemParallelism.Options,
-            folder =>
+            source: rootFolders,
+            parallelOptions: SystemParallelism.Options,
+            body: folder =>
             {
-                Log.LogInformation("Processing folder: {Path}", folder.Path);
-                Folder? baseFolder = MatchLibraryFolder(albumLibrary, folder.Path);
+                Log.LogInformation(message: "Processing folder: {Path}", args: folder.Path);
+                Folder? baseFolder = MatchLibraryFolder(library: albumLibrary, absolutePath: folder.Path);
                 if (baseFolder is null)
                 {
                     Log.LogWarning(
-                        "ReleaseImportJob: no library folder contains {Path}; skipping",
-                        folder.Path
+                        message: "ReleaseImportJob: no library folder contains {Path}; skipping",
+                        args: folder.Path
                     );
                     return;
                 }
 
-                jobDispatcher.DispatchJob<AudioImportJob>(LibraryId, baseFolder.Id, folder.Path);
+                jobDispatcher.DispatchJob<AudioImportJob>(libraryId: LibraryId, folderId: baseFolder.Id, filePath: folder.Path);
             }
         );
     }
@@ -114,14 +114,14 @@ public class ReleaseImportJob : AbstractMusicFolderJob
     /// </summary>
     private Folder? MatchLibraryFolder(Library library, string absolutePath) =>
         library
-            .FolderLibraries.Select(folderLibrary => folderLibrary.Folder)
-            .FirstOrDefault(f =>
+            .FolderLibraries.Select(selector: folderLibrary => folderLibrary.Folder)
+            .FirstOrDefault(predicate: f =>
                 absolutePath.StartsWith(
-                    LibraryManager.ResolveScanRoot(
-                        StorageFactory.For(f.Id, f.DriverId, string.Empty),
-                        f.Path
+                    value: LibraryManager.ResolveScanRoot(
+                        storage: StorageFactory.For(folderId: f.Id, driverId: f.DriverId, subPath: string.Empty),
+                        folderPath: f.Path
                     ),
-                    StringComparison.OrdinalIgnoreCase
+                    comparisonType: StringComparison.OrdinalIgnoreCase
                 )
             );
 }

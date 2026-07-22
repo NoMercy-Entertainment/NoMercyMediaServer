@@ -30,7 +30,7 @@ public class CropDetectSubscriberTests
         // Sanity: encoder ships with crop detect on by default.
         options.EnableCropDetectSubscriber.Should().BeTrue();
 
-        CropDetectSubscriber subject = new(options, NullLogger<CropDetectSubscriber>.Instance);
+        CropDetectSubscriber subject = new(options: options, logger: NullLogger<CropDetectSubscriber>.Instance);
 
         subject.IsEnabled.Should().BeTrue();
     }
@@ -40,7 +40,7 @@ public class CropDetectSubscriberTests
     {
         EncoderOptions options = new() { EnableCropDetectSubscriber = false };
 
-        CropDetectSubscriber subject = new(options, NullLogger<CropDetectSubscriber>.Instance);
+        CropDetectSubscriber subject = new(options: options, logger: NullLogger<CropDetectSubscriber>.Instance);
 
         subject.IsEnabled.Should().BeFalse();
     }
@@ -53,7 +53,7 @@ public class CropDetectSubscriberTests
         EncoderOptions options = new() { EnableCropDetectSubscriber = false };
 
         Action act = () =>
-            _ = new CropDetectSubscriber(options, NullLogger<CropDetectSubscriber>.Instance);
+            _ = new CropDetectSubscriber(options: options, logger: NullLogger<CropDetectSubscriber>.Instance);
 
         act.Should().NotThrow();
     }

@@ -13,7 +13,7 @@ using NoMercy.OpticalMedia.Metadata;
 
 namespace NoMercy.Tests.OpticalMedia.Metadata;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class DiscIdAlgorithmTests
 {
     // ── MusicBrainzDiscId.Compute — algorithm correctness ─────────────────
@@ -36,9 +36,9 @@ public class DiscIdAlgorithmTests
             TrackOffsetsSectors: [150, 15363, 32314, 46592, 63414, 80489]
         );
 
-        string discId = MusicBrainzDiscId.Compute(toc);
+        string discId = MusicBrainzDiscId.Compute(toc: toc);
 
-        discId.Should().Be("49HHV7Eb8UKF3aQiNmu1GR8vKTY-");
+        discId.Should().Be(expected: "49HHV7Eb8UKF3aQiNmu1GR8vKTY-");
     }
 
     [Fact]
@@ -51,11 +51,11 @@ public class DiscIdAlgorithmTests
             TrackOffsetsSectors: [150, 15363, 32314, 46592, 63414, 80489]
         );
 
-        string discId = MusicBrainzDiscId.Compute(toc);
+        string discId = MusicBrainzDiscId.Compute(toc: toc);
 
-        discId.Should().HaveLength(28, "MusicBrainz disc IDs are always 28 chars");
-        discId.Should().MatchRegex(@"^[A-Za-z0-9._-]+$", "base64url-like alphabet only");
-        discId.Should().NotContainAny("+", "/", "=");
+        discId.Should().HaveLength(expected: 28, because: "MusicBrainz disc IDs are always 28 chars");
+        discId.Should().MatchRegex(regularExpression: @"^[A-Za-z0-9._-]+$", because: "base64url-like alphabet only");
+        discId.Should().NotContainAny(values: ["+", "/", "="]);
     }
 
     [Fact]
@@ -68,16 +68,16 @@ public class DiscIdAlgorithmTests
             TrackOffsetsSectors: [150, 15150, 30150]
         );
 
-        MusicBrainzDiscId.Compute(toc).Should().Be(MusicBrainzDiscId.Compute(toc));
+        MusicBrainzDiscId.Compute(toc: toc).Should().Be(expected: MusicBrainzDiscId.Compute(toc: toc));
     }
 
     [Fact]
     public void Compute_DifferentLeadOut_ProducesDifferentId()
     {
-        DiscToc tocA = new(1, 1, 18150, [150]);
-        DiscToc tocB = new(1, 1, 19150, [150]);
+        DiscToc tocA = new(FirstTrack: 1, LastTrack: 1, LeadOutOffsetSectors: 18150, TrackOffsetsSectors: [150]);
+        DiscToc tocB = new(FirstTrack: 1, LastTrack: 1, LeadOutOffsetSectors: 19150, TrackOffsetsSectors: [150]);
 
-        MusicBrainzDiscId.Compute(tocA).Should().NotBe(MusicBrainzDiscId.Compute(tocB));
+        MusicBrainzDiscId.Compute(toc: tocA).Should().NotBe(unexpected: MusicBrainzDiscId.Compute(toc: tocB));
     }
 
     [Fact]
@@ -90,7 +90,7 @@ public class DiscIdAlgorithmTests
             TrackOffsetsSectors: [150, 15150]
         );
 
-        Action act = () => MusicBrainzDiscId.Compute(toc);
+        Action act = () => MusicBrainzDiscId.Compute(toc: toc);
         act.Should().Throw<ArgumentException>();
     }
 
@@ -100,7 +100,7 @@ public class DiscIdAlgorithmTests
     public async Task NullTocReader_AlwaysReturnsNull()
     {
         NullTocReader reader = new();
-        DiscToc? result = await reader.ReadTocAsync("/dev/sr0", CancellationToken.None);
+        DiscToc? result = await reader.ReadTocAsync(drivePath: "/dev/sr0", ct: CancellationToken.None);
         result.Should().BeNull();
     }
 }

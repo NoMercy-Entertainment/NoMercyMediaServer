@@ -18,35 +18,35 @@ namespace NoMercy.Providers.TMDB.Client;
 public class TmdbCollectionClient : TmdbBaseClient
 {
     public TmdbCollectionClient(int id, string[]? appendices = null, string? language = "en-US")
-        : base(id, language!) { }
+        : base(id: id, language: language!) { }
 
     public Task<TmdbCollectionDetails?> Details()
     {
-        return Get<TmdbCollectionDetails>("collection/" + Id);
+        return Get<TmdbCollectionDetails>(url: "collection/" + Id);
     }
 
     private Task<TmdbCollectionAppends?> WithAppends(string[] appendices, bool? priority = false)
     {
         Dictionary<string, string?> queryParams = new()
         {
-            ["append_to_response"] = string.Join(",", appendices),
+            [key: "append_to_response"] = string.Join(separator: ",", value: appendices),
         };
 
-        return Get<TmdbCollectionAppends>("collection/" + Id, queryParams, priority);
+        return Get<TmdbCollectionAppends>(url: "collection/" + Id, query: queryParams, priority: priority);
     }
 
     public Task<TmdbCollectionAppends?> WithAllAppends(bool? priority = false)
     {
-        return WithAppends(["images", "translations"], priority);
+        return WithAppends(appendices: ["images", "translations"], priority: priority);
     }
 
     public Task<TmdbCollectionImages?> Images()
     {
-        return Get<TmdbCollectionImages>("collection/" + Id + "/images");
+        return Get<TmdbCollectionImages>(url: "collection/" + Id + "/images");
     }
 
     public Task<TmdbCollectionsTranslations?> Translations()
     {
-        return Get<TmdbCollectionsTranslations>("collection/" + Id + "/translations");
+        return Get<TmdbCollectionsTranslations>(url: "collection/" + Id + "/translations");
     }
 }

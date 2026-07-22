@@ -28,7 +28,7 @@ public class SqliteQueueContext : IQueueContext
         DateTime,
         QueueJobEntity?
     > ReserveJobQuery = EF.CompileQuery(
-        (QueueDbContext context, byte maxAttempts, string name, long? currentJobId, DateTime now) =>
+        queryExpression: (QueueDbContext context, byte maxAttempts, string name, long? currentJobId, DateTime now) =>
             context
                 .QueueJobs.Where(j =>
                     j.ReservedAt == null && j.Attempts < maxAttempts && j.AvailableAt <= now
@@ -42,7 +42,7 @@ public class SqliteQueueContext : IQueueContext
     );
 
     internal static readonly Func<QueueDbContext, string, bool> ExistsQuery = EF.CompileQuery(
-        (QueueDbContext context, string payloadString) =>
+        queryExpression: (QueueDbContext context, string payloadString) =>
             context.QueueJobs.Any(j => j.Payload == payloadString)
     );
 
@@ -65,14 +65,14 @@ public class SqliteQueueContext : IQueueContext
             ParentJobId = job.ParentJobId,
             GroupTag = job.GroupTag,
         };
-        _context.QueueJobs.Add(entity);
+        _context.QueueJobs.Add(entity: entity);
         SaveAndClear();
         job.Id = entity.Id;
     }
 
     public void RemoveJob(QueueJobModel job)
     {
-        QueueJobEntity? entity = _context.QueueJobs.Find(job.Id);
+        QueueJobEntity? entity = _context.QueueJobs.Find(keyValues: job.Id);
         if (entity == null)
         {
             entity = new()
@@ -81,9 +81,9 @@ public class SqliteQueueContext : IQueueContext
                 Payload = job.Payload,
                 Queue = job.Queue,
             };
-            _context.QueueJobs.Attach(entity);
+            _context.QueueJobs.Attach(entity: entity);
         }
-        _context.QueueJobs.Remove(entity);
+        _context.QueueJobs.Remove(entity: entity);
         SaveAndClear();
     }
 
@@ -94,37 +94,37 @@ public class SqliteQueueContext : IQueueContext
         DateTime now
     )
     {
-        if (string.IsNullOrEmpty(queueName))
+        if (string.IsNullOrEmpty(value: queueName))
         {
             QueueJobEntity? anyJob = _context
-                .QueueJobs.OrderByDescending(j => j.Priority)
-                .ThenBy(j => j.CreatedAt)
-                .ThenBy(j => j.Id)
+                .QueueJobs.OrderByDescending(keySelector: j => j.Priority)
+                .ThenBy(keySelector: j => j.CreatedAt)
+                .ThenBy(keySelector: j => j.Id)
                 .FirstOrDefault();
-            return anyJob == null ? null : ToModel(anyJob);
+            return anyJob == null ? null : ToModel(entity: anyJob);
         }
 
-        QueueJobEntity? job = ReserveJobQuery(_context, maxAttempts, queueName, currentJobId, now);
+        QueueJobEntity? job = ReserveJobQuery(arg1: _context, arg2: maxAttempts, arg3: queueName, arg4: currentJobId, arg5: now);
         if (job == null)
             return null;
 
-        return ToModel(job);
+        return ToModel(entity: job);
     }
 
     public QueueJobModel? FindJob(int id)
     {
-        QueueJobEntity? job = _context.QueueJobs.Find(id);
-        return job == null ? null : ToModel(job);
+        QueueJobEntity? job = _context.QueueJobs.Find(keyValues: id);
+        return job == null ? null : ToModel(entity: job);
     }
 
     public bool JobExists(string payload)
     {
-        return ExistsQuery(_context, payload);
+        return ExistsQuery(arg1: _context, arg2: payload);
     }
 
     public void UpdateJob(QueueJobModel job)
     {
-        QueueJobEntity? entity = _context.QueueJobs.Find(job.Id);
+        QueueJobEntity? entity = _context.QueueJobs.Find(keyValues: job.Id);
         if (entity == null)
             return;
 
@@ -138,7 +138,7 @@ public class SqliteQueueContext : IQueueContext
 
     public void UpdateJobPayload(int jobId, string newPayload, DateTime availableAt)
     {
-        QueueJobEntity? entity = _context.QueueJobs.Find(jobId);
+        QueueJobEntity? entity = _context.QueueJobs.Find(keyValues: jobId);
         if (entity == null)
             return;
 
@@ -161,9 +161,9 @@ public class SqliteQueueContext : IQueueContext
     {
         return _context
             .QueueJobs.AsNoTracking()
-            .Where(j => j.ReservedAt != null && j.ReservedAt < cutoffUtc)
+            .Where(predicate: j => j.ReservedAt != null && j.ReservedAt < cutoffUtc)
             .ToList()
-            .Select(e => new QueueJobModel
+            .Select(selector: e => new QueueJobModel
             {
                 Id = e.Id,
                 Priority = e.Priority,
@@ -181,7 +181,7 @@ public class SqliteQueueContext : IQueueContext
 
     public bool IsParentFailed(int parentJobId)
     {
-        return _context.FailedJobs.AsNoTracking().Any(f => f.ParentJobId == parentJobId);
+        return _context.FailedJobs.AsNoTracking().Any(predicate: f => f.ParentJobId == parentJobId);
     }
 
     public void AddFailedJob(FailedJobModel failedJob)
@@ -196,15 +196,15 @@ public class SqliteQueueContext : IQueueContext
             FailedAt = failedJob.FailedAt,
             ParentJobId = failedJob.ParentJobId,
         };
-        _context.FailedJobs.Add(entity);
+        _context.FailedJobs.Add(entity: entity);
     }
 
     public void RemoveFailedJob(FailedJobModel failedJob)
     {
-        FailedJobEntity? entity = _context.FailedJobs.Find(failedJob.Id);
+        FailedJobEntity? entity = _context.FailedJobs.Find(keyValues: failedJob.Id);
         if (entity != null)
         {
-            _context.FailedJobs.Remove(entity);
+            _context.FailedJobs.Remove(entity: entity);
         }
     }
 
@@ -220,9 +220,9 @@ public class SqliteQueueContext : IQueueContext
             FailedAt = failedJob.FailedAt,
             ParentJobId = failedJob.ParentJobId,
         };
-        _context.FailedJobs.Add(failedEntity);
+        _context.FailedJobs.Add(entity: failedEntity);
 
-        QueueJobEntity? jobEntity = _context.QueueJobs.Find(job.Id);
+        QueueJobEntity? jobEntity = _context.QueueJobs.Find(keyValues: job.Id);
         if (jobEntity == null)
         {
             jobEntity = new()
@@ -231,9 +231,9 @@ public class SqliteQueueContext : IQueueContext
                 Payload = job.Payload,
                 Queue = job.Queue,
             };
-            _context.QueueJobs.Attach(jobEntity);
+            _context.QueueJobs.Attach(entity: jobEntity);
         }
-        _context.QueueJobs.Remove(jobEntity);
+        _context.QueueJobs.Remove(entity: jobEntity);
 
         SaveAndClear();
         failedJob.Id = failedEntity.Id;
@@ -241,18 +241,18 @@ public class SqliteQueueContext : IQueueContext
 
     public FailedJobModel? FindFailedJob(int id)
     {
-        FailedJobEntity? entity = _context.FailedJobs.Find((long)id);
-        return entity == null ? null : ToFailedModel(entity);
+        FailedJobEntity? entity = _context.FailedJobs.Find(keyValues: (long)id);
+        return entity == null ? null : ToFailedModel(entity: entity);
     }
 
     public IReadOnlyList<FailedJobModel> GetFailedJobs(long? failedJobId = null)
     {
         IQueryable<FailedJobEntity> query = _context.FailedJobs;
         if (failedJobId.HasValue)
-            query = query.Where(j => j.Id == failedJobId.Value);
+            query = query.Where(predicate: j => j.Id == failedJobId.Value);
 
         return query
-            .Select(j => new FailedJobModel
+            .Select(selector: j => new FailedJobModel
             {
                 Id = j.Id,
                 Uuid = j.Uuid,
@@ -269,8 +269,8 @@ public class SqliteQueueContext : IQueueContext
     public IReadOnlyList<CronJobModel> GetEnabledCronJobs()
     {
         return _context
-            .CronJobs.Where(c => c.IsEnabled)
-            .Select(c => new CronJobModel
+            .CronJobs.Where(predicate: c => c.IsEnabled)
+            .Select(selector: c => new CronJobModel
             {
                 Id = c.Id,
                 Name = c.Name,
@@ -286,8 +286,8 @@ public class SqliteQueueContext : IQueueContext
 
     public CronJobModel? FindCronJobByName(string name)
     {
-        CronJobEntity? entity = _context.CronJobs.FirstOrDefault(c => c.Name == name);
-        return entity == null ? null : ToCronModel(entity);
+        CronJobEntity? entity = _context.CronJobs.FirstOrDefault(predicate: c => c.Name == name);
+        return entity == null ? null : ToCronModel(entity: entity);
     }
 
     public void AddCronJob(CronJobModel cronJob)
@@ -302,13 +302,13 @@ public class SqliteQueueContext : IQueueContext
             LastRun = cronJob.LastRun,
             NextRun = cronJob.NextRun,
         };
-        _context.CronJobs.Add(entity);
+        _context.CronJobs.Add(entity: entity);
         SaveAndClear();
     }
 
     public void UpdateCronJob(CronJobModel cronJob)
     {
-        CronJobEntity? entity = _context.CronJobs.Find(cronJob.Id);
+        CronJobEntity? entity = _context.CronJobs.Find(keyValues: cronJob.Id);
         if (entity == null)
             return;
 
@@ -321,10 +321,10 @@ public class SqliteQueueContext : IQueueContext
 
     public void RemoveCronJob(CronJobModel cronJob)
     {
-        CronJobEntity? entity = _context.CronJobs.Find(cronJob.Id);
+        CronJobEntity? entity = _context.CronJobs.Find(keyValues: cronJob.Id);
         if (entity != null)
         {
-            _context.CronJobs.Remove(entity);
+            _context.CronJobs.Remove(entity: entity);
             SaveAndClear();
         }
     }

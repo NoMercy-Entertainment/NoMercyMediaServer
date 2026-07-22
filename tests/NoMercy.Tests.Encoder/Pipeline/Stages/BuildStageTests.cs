@@ -34,13 +34,13 @@ public class BuildStageTests
             FfprobePathOverride = "ffprobe",
         };
         _stage = new(
-            options,
-            new FontExtractor(TestStorageFactory.CreateLocal()),
-            new SubtitleExtractor(),
-            OutputStrategyFactoryTestHelper.Create(),
-            [],
-            NullLogger<BuildStage>.Instance,
-            TestStorageFactory.CreateLocal()
+            options: options,
+            fontExtractor: new FontExtractor(storage: TestStorageFactory.CreateLocal()),
+            subtitleExtractor: new SubtitleExtractor(),
+            outputStrategyFactory: OutputStrategyFactoryTestHelper.Create(),
+            drmProcessors: [],
+            logger: NullLogger<BuildStage>.Instance,
+            storage: TestStorageFactory.CreateLocal()
         );
     }
 
@@ -52,8 +52,8 @@ public class BuildStageTests
                     GroupId: "group_0",
                     Nodes:
                     [
-                        new("decode_0", OperationType.Decode, [], new()),
-                        new("encode_0", OperationType.Encode, ["decode_0"], new()),
+                        new(Id: "decode_0", Operation: OperationType.Decode, DependsOn: [], Parameters: new()),
+                        new(Id: "encode_0", Operation: OperationType.Encode, DependsOn: ["decode_0"], Parameters: new()),
                     ],
                     DeviceId: null,
                     GpuSlotsRequired: 0,
@@ -62,7 +62,7 @@ public class BuildStageTests
                     Priority: 1
                 ),
             ],
-            EstimatedTotalDuration: TimeSpan.FromMinutes(90),
+            EstimatedTotalDuration: TimeSpan.FromMinutes(minutes: 90),
             OutputPlan: new(
                 Format: OutputFormat.Hls,
                 VideoOutputs:
@@ -107,9 +107,9 @@ public class BuildStageTests
     public async Task HlsPlan_BuildsAtLeastOneCommand()
     {
         ExecutionPlan plan = BuildHlsPlan();
-        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
+        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
 
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
@@ -124,12 +124,12 @@ public class BuildStageTests
     public async Task BuiltCommand_UsesConfiguredFfmpegPath()
     {
         ExecutionPlan plan = BuildHlsPlan();
-        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
+        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
 
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
-        commands[0].Executable.Should().Be("ffmpeg");
+        commands[0].Executable.Should().Be(expected: "ffmpeg");
     }
 
     // ------------------------------------------------------------------
@@ -140,12 +140,12 @@ public class BuildStageTests
     public async Task BuiltCommand_ContainsInputPath()
     {
         ExecutionPlan plan = BuildHlsPlan();
-        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
+        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
 
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
-        commands[0].Arguments.Should().Contain("/movies/test.mkv");
+        commands[0].Arguments.Should().Contain(expected: "/movies/test.mkv");
     }
 
     // ------------------------------------------------------------------
@@ -156,12 +156,12 @@ public class BuildStageTests
     public async Task BuiltCommand_ContainsVideoEncoder()
     {
         ExecutionPlan plan = BuildHlsPlan();
-        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
+        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
 
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
-        commands[0].Arguments.Should().Contain("libx264");
+        commands[0].Arguments.Should().Contain(expected: "libx264");
     }
 
     // ------------------------------------------------------------------
@@ -175,9 +175,9 @@ public class BuildStageTests
         {
             OutputPlan = BuildHlsPlan().OutputPlan with { Format = OutputFormat.Mkv },
         };
-        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
+        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
 
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
     }

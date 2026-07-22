@@ -23,7 +23,7 @@ public class ActivityLogRetentionCronJob : ICronJobExecutor
     private readonly ILogger<ActivityLogRetentionCronJob> _logger;
     private readonly int _retentionDays;
 
-    public string CronExpression => new CronExpressionBuilder().Daily(3);
+    public string CronExpression => new CronExpressionBuilder().Daily(hour: 3);
     public string JobName => "Activity Log Retention";
 
     public ActivityLogRetentionCronJob(
@@ -39,19 +39,19 @@ public class ActivityLogRetentionCronJob : ICronJobExecutor
 
     public async Task ExecuteAsync(string parameters, CancellationToken cancellationToken = default)
     {
-        DateTime cutoff = DateTime.UtcNow.AddDays(-_retentionDays);
+        DateTime cutoff = DateTime.UtcNow.AddDays(value: -_retentionDays);
         _logger.LogInformation(
-            "Activity retention sweep starting; deleting rows older than {Cutoff}",
-            cutoff
+            message: "Activity retention sweep starting; deleting rows older than {Cutoff}",
+            args: cutoff
         );
 
         await using MediaContext ctx = await _contextFactory.CreateDbContextAsync(
-            cancellationToken
+            cancellationToken: cancellationToken
         );
         int deleted = await ctx
-            .ActivityLogs.Where(x => x.CreatedAt < cutoff)
-            .ExecuteDeleteAsync(cancellationToken);
+            .ActivityLogs.Where(predicate: x => x.CreatedAt < cutoff)
+            .ExecuteDeleteAsync(cancellationToken: cancellationToken);
 
-        _logger.LogInformation("Activity retention sweep complete; removed {Count} rows", deleted);
+        _logger.LogInformation(message: "Activity retention sweep complete; removed {Count} rows", args: deleted);
     }
 }

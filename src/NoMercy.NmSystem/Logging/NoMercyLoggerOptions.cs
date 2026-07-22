@@ -25,7 +25,7 @@ public sealed class NoMercyLoggerOptions
 
     /// <summary>Per-category (by <see cref="LogCategory.Key"/>) minimum level overrides.</summary>
     public Dictionary<string, LogLevel> CategoryLevels { get; } =
-        new(StringComparer.OrdinalIgnoreCase);
+        new(comparer: StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Force colour on/off. Null auto-detects (off when redirected or NO_COLOR is set).</summary>
     public bool? Color { get; set; }

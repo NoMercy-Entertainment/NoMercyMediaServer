@@ -89,8 +89,8 @@ public class DolbyVisionGateTests
         );
 
         result.Preserved.Should().BeFalse();
-        result.Reason.Should().Contain("AlwaysTonemap");
-        log.Snapshot().Should().ContainSingle(d => d.Key == "plan.dv_stripped");
+        result.Reason.Should().Contain(expected: "AlwaysTonemap");
+        log.Snapshot().Should().ContainSingle(predicate: d => d.Key == "plan.dv_stripped");
     }
 
     // ---------------------------------------------------------------------------
@@ -113,8 +113,8 @@ public class DolbyVisionGateTests
         );
 
         result.Preserved.Should().BeFalse();
-        result.Reason.Should().Contain("codec").And.Contain("H264");
-        log.Snapshot().Should().ContainSingle(d => d.Key == "plan.dv_stripped");
+        result.Reason.Should().Contain(expected: "codec").And.Contain(expected: "H264");
+        log.Snapshot().Should().ContainSingle(predicate: d => d.Key == "plan.dv_stripped");
     }
 
     [Fact]
@@ -133,8 +133,8 @@ public class DolbyVisionGateTests
         );
 
         result.Preserved.Should().BeFalse();
-        result.Reason.Should().Contain("Vp9");
-        log.Snapshot().Should().ContainSingle(d => d.Key == "plan.dv_stripped");
+        result.Reason.Should().Contain(expected: "Vp9");
+        log.Snapshot().Should().ContainSingle(predicate: d => d.Key == "plan.dv_stripped");
     }
 
     // ---------------------------------------------------------------------------
@@ -157,8 +157,8 @@ public class DolbyVisionGateTests
         );
 
         result.Preserved.Should().BeFalse();
-        result.Reason.Should().Contain("bit_depth").And.Contain("8");
-        log.Snapshot().Should().ContainSingle(d => d.Key == "plan.dv_stripped");
+        result.Reason.Should().Contain(expected: "bit_depth").And.Contain(expected: "8");
+        log.Snapshot().Should().ContainSingle(predicate: d => d.Key == "plan.dv_stripped");
     }
 
     // ---------------------------------------------------------------------------
@@ -181,8 +181,8 @@ public class DolbyVisionGateTests
         );
 
         result.Preserved.Should().BeFalse();
-        result.Reason.Should().Contain("Dash");
-        log.Snapshot().Should().ContainSingle(d => d.Key == "plan.dv_stripped");
+        result.Reason.Should().Contain(expected: "Dash");
+        log.Snapshot().Should().ContainSingle(predicate: d => d.Key == "plan.dv_stripped");
     }
 
     // ---------------------------------------------------------------------------
@@ -205,9 +205,9 @@ public class DolbyVisionGateTests
         );
 
         result.Preserved.Should().BeTrue();
-        result.ExtraFlags.Should().ContainKey("-tag:v").WhoseValue.Should().Be("dvh1");
-        result.ExtraFlags.Should().ContainKey("-brand").WhoseValue.Should().Be("iso6");
-        log.Snapshot().Should().ContainSingle(d => d.Key == "plan.dv_preserved");
+        result.ExtraFlags.Should().ContainKey(expected: "-tag:v").WhoseValue.Should().Be(expected: "dvh1");
+        result.ExtraFlags.Should().ContainKey(expected: "-brand").WhoseValue.Should().Be(expected: "iso6");
+        log.Snapshot().Should().ContainSingle(predicate: d => d.Key == "plan.dv_preserved");
     }
 
     [Fact]
@@ -223,8 +223,8 @@ public class DolbyVisionGateTests
             decisions: NewLog()
         );
 
-        result.ExtraFlags["-tag:v"].Should().Be("dvh1");
-        result.ExtraFlags["-brand"].Should().Be("iso6");
+        result.ExtraFlags[key: "-tag:v"].Should().Be(expected: "dvh1");
+        result.ExtraFlags[key: "-brand"].Should().Be(expected: "iso6");
     }
 
     // ---------------------------------------------------------------------------
@@ -248,9 +248,9 @@ public class DolbyVisionGateTests
 
         result.Preserved.Should().BeTrue();
         // MKV carries DV natively — only disposition flag, no codec tag.
-        result.ExtraFlags.Should().ContainKey("-disposition:v");
-        result.ExtraFlags.Should().NotContainKey("-tag:v");
-        log.Snapshot().Should().ContainSingle(d => d.Key == "plan.dv_preserved");
+        result.ExtraFlags.Should().ContainKey(expected: "-disposition:v");
+        result.ExtraFlags.Should().NotContainKey(unexpected: "-tag:v");
+        log.Snapshot().Should().ContainSingle(predicate: d => d.Key == "plan.dv_preserved");
     }
 
     // ---------------------------------------------------------------------------
@@ -274,8 +274,8 @@ public class DolbyVisionGateTests
         );
 
         result.Preserved.Should().BeTrue();
-        result.ExtraFlags.Should().ContainKey("-hls_segment_type").WhoseValue.Should().Be("fmp4");
-        log.Snapshot().Should().ContainSingle(d => d.Key == "plan.dv_preserved");
+        result.ExtraFlags.Should().ContainKey(expected: "-hls_segment_type").WhoseValue.Should().Be(expected: "fmp4");
+        log.Snapshot().Should().ContainSingle(predicate: d => d.Key == "plan.dv_preserved");
     }
 
     [Fact]
@@ -295,8 +295,8 @@ public class DolbyVisionGateTests
         );
 
         result.Preserved.Should().BeFalse();
-        result.Reason.Should().Contain("mpegts");
-        log.Snapshot().Should().ContainSingle(d => d.Key == "plan.dv_stripped");
+        result.Reason.Should().Contain(expected: "mpegts");
+        log.Snapshot().Should().ContainSingle(predicate: d => d.Key == "plan.dv_stripped");
     }
 
     // ---------------------------------------------------------------------------
@@ -325,9 +325,9 @@ public class DolbyVisionGateTests
         );
 
         result.Preserved.Should().BeFalse();
-        result.Reason.Should().Contain("re-encoded");
-        result.ExtraFlags.Should().NotContainKey("-tag:v");
-        log.Snapshot().Should().ContainSingle(d => d.Key == "plan.dv_stripped");
+        result.Reason.Should().Contain(expected: "re-encoded");
+        result.ExtraFlags.Should().NotContainKey(unexpected: "-tag:v");
+        log.Snapshot().Should().ContainSingle(predicate: d => d.Key == "plan.dv_stripped");
     }
 
     // ---------------------------------------------------------------------------
@@ -350,7 +350,7 @@ public class DolbyVisionGateTests
         );
 
         result.Preserved.Should().BeTrue();
-        log.Snapshot().Should().ContainSingle(d => d.Key == "plan.dv_preserved");
+        log.Snapshot().Should().ContainSingle(predicate: d => d.Key == "plan.dv_preserved");
     }
 
     // ---------------------------------------------------------------------------
@@ -363,53 +363,53 @@ public class DolbyVisionGateTests
         // AlwaysTonemap branch
         ScopedDecisionLog log1 = NewLog();
         DolbyVisionGate.Resolve(
-            DvSource(),
-            VideoCodecType.H265,
-            10,
-            OutputFormat.Mp4,
-            HdrPolicies.AlwaysTonemap,
-            true,
-            log1
+            source: DvSource(),
+            outputCodec: VideoCodecType.H265,
+            outputBitDepth: 10,
+            container: OutputFormat.Mp4,
+            policies: HdrPolicies.AlwaysTonemap,
+            videoIsStreamCopy: true,
+            decisions: log1
         );
-        log1.Snapshot()[0].Message.Should().NotBeNullOrWhiteSpace();
+        log1.Snapshot()[index: 0].Message.Should().NotBeNullOrWhiteSpace();
 
         // Codec branch
         ScopedDecisionLog log2 = NewLog();
         DolbyVisionGate.Resolve(
-            DvSource(),
-            VideoCodecType.H264,
-            10,
-            OutputFormat.Mp4,
-            HdrPolicies.PassthroughWhenPossible,
-            true,
-            log2
+            source: DvSource(),
+            outputCodec: VideoCodecType.H264,
+            outputBitDepth: 10,
+            container: OutputFormat.Mp4,
+            policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: true,
+            decisions: log2
         );
-        log2.Snapshot()[0].Message.Should().Contain("H264");
+        log2.Snapshot()[index: 0].Message.Should().Contain(expected: "H264");
 
         // Bit-depth branch
         ScopedDecisionLog log3 = NewLog();
         DolbyVisionGate.Resolve(
-            DvSource(),
-            VideoCodecType.H265,
-            8,
-            OutputFormat.Mp4,
-            HdrPolicies.PassthroughWhenPossible,
-            true,
-            log3
+            source: DvSource(),
+            outputCodec: VideoCodecType.H265,
+            outputBitDepth: 8,
+            container: OutputFormat.Mp4,
+            policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: true,
+            decisions: log3
         );
-        log3.Snapshot()[0].Message.Should().Contain("8");
+        log3.Snapshot()[index: 0].Message.Should().Contain(expected: "8");
 
         // Container branch
         ScopedDecisionLog log4 = NewLog();
         DolbyVisionGate.Resolve(
-            DvSource(),
-            VideoCodecType.H265,
-            10,
-            OutputFormat.Dash,
-            HdrPolicies.PassthroughWhenPossible,
-            true,
-            log4
+            source: DvSource(),
+            outputCodec: VideoCodecType.H265,
+            outputBitDepth: 10,
+            container: OutputFormat.Dash,
+            policies: HdrPolicies.PassthroughWhenPossible,
+            videoIsStreamCopy: true,
+            decisions: log4
         );
-        log4.Snapshot()[0].Message.Should().Contain("Dash");
+        log4.Snapshot()[index: 0].Message.Should().Contain(expected: "Dash");
     }
 }

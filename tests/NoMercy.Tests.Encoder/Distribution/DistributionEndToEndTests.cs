@@ -41,7 +41,7 @@ namespace NoMercy.Tests.Encoder.Distribution;
 /// </summary>
 public class DistributionEndToEndTests
 {
-    private readonly byte[] _sharedKey = Encoding.UTF8.GetBytes("end-to-end-shared-signing-key-32");
+    private readonly byte[] _sharedKey = Encoding.UTF8.GetBytes(s: "end-to-end-shared-signing-key-32");
     private readonly TaskSerializer _serializer = new();
 
     [Fact]
@@ -52,52 +52,52 @@ public class DistributionEndToEndTests
         // this executor's output.
         Mock<IFfmpegExecutor> executor = MakeSuccessExecutor();
         LocalWorkerDispatcher workerLocalDispatcher = new(
-            executor.Object,
-            NullLogger<LocalWorkerDispatcher>.Instance
+            executor: executor.Object,
+            logger: NullLogger<LocalWorkerDispatcher>.Instance
         );
 
         // Fake HTTP handler routes /execute-task straight into the worker's
         // controller logic.
-        WorkerHandler handler = new(workerLocalDispatcher, _serializer, _sharedKey);
-        HttpClient httpToWorker = new(handler) { BaseAddress = new("http://worker.test/") };
+        WorkerHandler handler = new(localDispatcher: workerLocalDispatcher, serializer: _serializer, workerSigningKey: _sharedKey);
+        HttpClient httpToWorker = new(handler: handler) { BaseAddress = new(uriString: "http://worker.test/") };
 
         HttpRemoteWorker remoteWorker = new(
             workerId: "end2end-worker",
             http: httpToWorker,
             serializer: _serializer,
             signingKey: _sharedKey,
-            initialCapabilities: new HardwareCapabilities([], 4),
-            initialBudget: new(0, 4, 0),
+            initialCapabilities: new HardwareCapabilities(Gpus: [], CpuCores: 4),
+            initialBudget: new(AvailableGpuSlots: 0, AvailableCpuThreads: 4, GpuUtilization: 0),
             logger: NullLogger<HttpRemoteWorker>.Instance
         );
 
         InMemoryRemoteWorkerRegistry registry = new();
-        registry.Register(remoteWorker);
+        registry.Register(worker: remoteWorker);
 
         // Coordinator-side local fallback — should NOT be called in the
         // happy path, but needs to be wired for the dispatcher.
         LocalWorkerDispatcher coordinatorFallback = new(
-            MakeSuccessExecutor().Object,
-            NullLogger<LocalWorkerDispatcher>.Instance
+            executor: MakeSuccessExecutor().Object,
+            logger: NullLogger<LocalWorkerDispatcher>.Instance
         );
         RemoteWorkerDispatcher coordinatorDispatcher = new(
-            registry,
-            new WorkerAssigner(),
-            coordinatorFallback,
-            NullLogger<RemoteWorkerDispatcher>.Instance
+            registry: registry,
+            assigner: new WorkerAssigner(),
+            localFallback: coordinatorFallback,
+            logger: NullLogger<RemoteWorkerDispatcher>.Instance
         );
 
-        EncodeTask[] tasks = [MakeTask("e2e-1"), MakeTask("e2e-2"), MakeTask("e2e-3")];
+        EncodeTask[] tasks = [MakeTask(id: "e2e-1"), MakeTask(id: "e2e-2"), MakeTask(id: "e2e-3")];
 
         DispatchResult[] results = await coordinatorDispatcher.DispatchAsync(
-            tasks,
-            CancellationToken.None
+            tasks: tasks,
+            ct: CancellationToken.None
         );
 
-        results.Should().HaveCount(3);
-        results.Should().AllSatisfy(r => r.Success.Should().BeTrue());
-        results.Should().AllSatisfy(r => r.WorkerId.Should().Be("end2end-worker"));
-        handler.ReceivedTaskCount.Should().Be(3, "worker should have received all three tasks");
+        results.Should().HaveCount(expected: 3);
+        results.Should().AllSatisfy(expected: r => r.Success.Should().BeTrue());
+        results.Should().AllSatisfy(expected: r => r.WorkerId.Should().Be(expected: "end2end-worker"));
+        handler.ReceivedTaskCount.Should().Be(expected: 3, because: "worker should have received all three tasks");
     }
 
     [Fact]
@@ -106,49 +106,49 @@ public class DistributionEndToEndTests
         // Worker uses a different signing key than the coordinator. The
         // coordinator will reject the response as "HMAC verification
         // failure" and the result falls back to local dispatch.
-        byte[] wrongKey = Encoding.UTF8.GetBytes("wrong-key-32-bytes-padded-here!!");
+        byte[] wrongKey = Encoding.UTF8.GetBytes(s: "wrong-key-32-bytes-padded-here!!");
 
         Mock<IFfmpegExecutor> workerExec = MakeSuccessExecutor();
         LocalWorkerDispatcher workerLocal = new(
-            workerExec.Object,
-            NullLogger<LocalWorkerDispatcher>.Instance
+            executor: workerExec.Object,
+            logger: NullLogger<LocalWorkerDispatcher>.Instance
         );
 
-        WorkerHandler handler = new(workerLocal, _serializer, wrongKey);
-        HttpClient httpToWorker = new(handler) { BaseAddress = new("http://worker.test/") };
+        WorkerHandler handler = new(localDispatcher: workerLocal, serializer: _serializer, workerSigningKey: wrongKey);
+        HttpClient httpToWorker = new(handler: handler) { BaseAddress = new(uriString: "http://worker.test/") };
 
         HttpRemoteWorker remoteWorker = new(
             workerId: "mismatched-key",
             http: httpToWorker,
             serializer: _serializer,
             signingKey: _sharedKey, // coordinator's key — doesn't match worker's
-            initialCapabilities: new HardwareCapabilities([], 4),
-            initialBudget: new(0, 4, 0),
+            initialCapabilities: new HardwareCapabilities(Gpus: [], CpuCores: 4),
+            initialBudget: new(AvailableGpuSlots: 0, AvailableCpuThreads: 4, GpuUtilization: 0),
             logger: NullLogger<HttpRemoteWorker>.Instance
         );
 
         InMemoryRemoteWorkerRegistry registry = new();
-        registry.Register(remoteWorker);
+        registry.Register(worker: remoteWorker);
 
         LocalWorkerDispatcher coordinatorFallback = new(
-            MakeSuccessExecutor().Object,
-            NullLogger<LocalWorkerDispatcher>.Instance
+            executor: MakeSuccessExecutor().Object,
+            logger: NullLogger<LocalWorkerDispatcher>.Instance
         );
         RemoteWorkerDispatcher coordinatorDispatcher = new(
-            registry,
-            new WorkerAssigner(),
-            coordinatorFallback,
-            NullLogger<RemoteWorkerDispatcher>.Instance
+            registry: registry,
+            assigner: new WorkerAssigner(),
+            localFallback: coordinatorFallback,
+            logger: NullLogger<RemoteWorkerDispatcher>.Instance
         );
 
         DispatchResult[] results = await coordinatorDispatcher.DispatchAsync(
-            [MakeTask("mismatch-1")],
-            CancellationToken.None
+            tasks: [MakeTask(id: "mismatch-1")],
+            ct: CancellationToken.None
         );
 
         // The task must still complete via local fallback — a signing-key
         // mismatch must NOT fail the user's encode.
-        results.Should().HaveCount(1);
+        results.Should().HaveCount(expected: 1);
         results[0].Success.Should().BeTrue();
     }
 
@@ -159,7 +159,7 @@ public class DistributionEndToEndTests
     private static Mock<IFfmpegExecutor> MakeSuccessExecutor()
     {
         Mock<IFfmpegExecutor> mock = new();
-        mock.Setup(e =>
+        mock.Setup(expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -169,11 +169,11 @@ public class DistributionEndToEndTests
                 )
             )
             .ReturnsAsync(
-                new ExecutionResult(
+                value: new ExecutionResult(
                     Success: true,
                     ExitCode: 0,
                     StdErr: string.Empty,
-                    Duration: TimeSpan.FromSeconds(1),
+                    Duration: TimeSpan.FromSeconds(seconds: 1),
                     Error: null
                 )
             );
@@ -183,7 +183,7 @@ public class DistributionEndToEndTests
     private static EncodeTask MakeTask(string id) =>
         new(
             TaskId: id,
-            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            Command: new(Executable: "ffmpeg", Arguments: ["-i", "in.mkv", "out.ts"], WorkingDirectory: null),
             OutputPath: $"/out/{id}",
             Type: EncodeTaskType.QualityVariant
         );
@@ -208,27 +208,27 @@ public class DistributionEndToEndTests
         {
             string absolutePath = request.RequestUri!.AbsolutePath;
             if (
-                !absolutePath.Contains("/worker/tasks")
-                && !absolutePath.Contains("/worker/execute-task")
+                !absolutePath.Contains(value: "/worker/tasks")
+                && !absolutePath.Contains(value: "/worker/execute-task")
             )
-                return new(HttpStatusCode.NotFound);
+                return new(statusCode: HttpStatusCode.NotFound);
 
-            string body = await request.Content!.ReadAsStringAsync(cancellationToken);
-            EncodeTask? task = serializer.Deserialize(body, workerSigningKey);
+            string body = await request.Content!.ReadAsStringAsync(cancellationToken: cancellationToken);
+            EncodeTask? task = serializer.Deserialize(payload: body, signingKey: workerSigningKey);
             if (task is null)
-                return new(HttpStatusCode.Unauthorized);
+                return new(statusCode: HttpStatusCode.Unauthorized);
 
             ReceivedTaskCount++;
             DispatchResult[] results = await localDispatcher.DispatchAsync(
-                [task],
-                cancellationToken
+                tasks: [task],
+                ct: cancellationToken
             );
             DispatchResult result = results[0];
 
-            string signed = serializer.SerializeResult(result, workerSigningKey);
-            return new(HttpStatusCode.OK)
+            string signed = serializer.SerializeResult(result: result, signingKey: workerSigningKey);
+            return new(statusCode: HttpStatusCode.OK)
             {
-                Content = new StringContent(signed, Encoding.UTF8, "application/json"),
+                Content = new StringContent(content: signed, encoding: Encoding.UTF8, mediaType: "application/json"),
             };
         }
     }

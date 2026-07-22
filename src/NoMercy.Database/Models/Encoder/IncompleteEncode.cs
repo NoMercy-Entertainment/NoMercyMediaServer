@@ -14,24 +14,24 @@ using Microsoft.EntityFrameworkCore;
 
 namespace NoMercy.Database.Models.Encoder;
 
-[PrimaryKey(nameof(Id))]
-[Index(nameof(MediaId), nameof(FolderId), IsUnique = true)]
+[PrimaryKey(propertyName: nameof(Id))]
+[Index(propertyName: nameof(MediaId), additionalPropertyNames: nameof(FolderId), IsUnique = true)]
 public class IncompleteEncode
 {
     public int Id { get; set; }
 
     public required long MediaId { get; set; }
 
-    [MaxLength(256)]
+    [MaxLength(length: 256)]
     public required string FolderId { get; set; }
 
-    [MaxLength(512)]
+    [MaxLength(length: 512)]
     public required string Title { get; set; }
 
-    [MaxLength(int.MaxValue)]
+    [MaxLength(length: int.MaxValue)]
     public required string MissingRenditions { get; set; }
 
-    [MaxLength(4096)]
+    [MaxLength(length: 4096)]
     public string? LastError { get; set; }
 
     public required int AttemptsMade { get; set; }

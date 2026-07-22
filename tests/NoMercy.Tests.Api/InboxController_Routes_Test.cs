@@ -28,7 +28,7 @@ namespace NoMercy.Tests.Api;
 ///   1. Every expected route + verb exists on InboxController.
 ///   2. InboxAssignRequest binds from a representative JSON payload (contract test).
 /// </summary>
-[Trait("Category", "Routes")]
+[Trait(name: "Category", value: "Routes")]
 public class InboxController_Routes_Test
 {
     // -------------------------------------------------------------------------
@@ -37,8 +37,8 @@ public class InboxController_Routes_Test
 
     private static IEnumerable<MethodInfo> PublicActions(Type controller) =>
         controller
-            .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Where(method => method.GetCustomAttributes<HttpMethodAttribute>().Any());
+            .GetMethods(bindingAttr: BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Where(predicate: method => method.GetCustomAttributes<HttpMethodAttribute>().Any());
 
     private static MethodInfo? FindAction(
         Type controller,
@@ -46,10 +46,10 @@ public class InboxController_Routes_Test
         string routeSuffix
     )
     {
-        foreach (MethodInfo method in PublicActions(controller))
+        foreach (MethodInfo method in PublicActions(controller: controller))
         {
             HttpMethodAttribute? attr = method
-                .GetCustomAttributes(httpVerbAttribute, inherit: false)
+                .GetCustomAttributes(attributeType: httpVerbAttribute, inherit: false)
                 .Cast<HttpMethodAttribute>()
                 .FirstOrDefault();
 
@@ -60,9 +60,9 @@ public class InboxController_Routes_Test
 
             if (
                 string.Equals(
-                    StripConstraints(template),
-                    StripConstraints(routeSuffix),
-                    StringComparison.OrdinalIgnoreCase
+                    a: StripConstraints(template: template),
+                    b: StripConstraints(template: routeSuffix),
+                    comparisonType: StringComparison.OrdinalIgnoreCase
                 )
             )
                 return method;
@@ -72,7 +72,7 @@ public class InboxController_Routes_Test
     }
 
     private static string StripConstraints(string template) =>
-        Regex.Replace(template, @"\{(\w+):[^}]+\}", "{$1}");
+        Regex.Replace(input: template, pattern: @"\{(\w+):[^}]+\}", replacement: "{$1}");
 
     private static void AssertEndpointExists(
         Type controller,
@@ -81,10 +81,10 @@ public class InboxController_Routes_Test
         string description
     )
     {
-        MethodInfo? method = FindAction(controller, httpVerb, routeSuffix);
+        MethodInfo? method = FindAction(controller: controller, httpVerbAttribute: httpVerb, routeSuffix: routeSuffix);
         Assert.True(
-            method is not null,
-            $"Missing endpoint on {controller.Name}: {description} (route suffix: \"{routeSuffix}\")"
+            condition: method is not null,
+            userMessage: $"Missing endpoint on {controller.Name}: {description} (route suffix: \"{routeSuffix}\")"
         );
     }
 
@@ -93,19 +93,19 @@ public class InboxController_Routes_Test
     // -------------------------------------------------------------------------
 
     [Theory]
-    [InlineData(typeof(HttpGetAttribute), "", "GET / (list)")]
-    [InlineData(typeof(HttpGetAttribute), "{id}", "GET /{id}")]
-    [InlineData(typeof(HttpGetAttribute), "{id}/matches", "GET /{id}/matches")]
-    [InlineData(typeof(HttpPostAttribute), "{id}/assign", "POST /{id}/assign")]
-    [InlineData(typeof(HttpPostAttribute), "{id}/dismiss", "POST /{id}/dismiss")]
-    [InlineData(typeof(HttpDeleteAttribute), "{id}", "DELETE /{id}")]
+    [InlineData(data: [typeof(HttpGetAttribute), "", "GET / (list)"])]
+    [InlineData(data: [typeof(HttpGetAttribute), "{id}", "GET /{id}"])]
+    [InlineData(data: [typeof(HttpGetAttribute), "{id}/matches", "GET /{id}/matches"])]
+    [InlineData(data: [typeof(HttpPostAttribute), "{id}/assign", "POST /{id}/assign"])]
+    [InlineData(data: [typeof(HttpPostAttribute), "{id}/dismiss", "POST /{id}/dismiss"])]
+    [InlineData(data: [typeof(HttpDeleteAttribute), "{id}", "DELETE /{id}"])]
     public void InboxController_HasExpectedEndpoint(
         Type httpVerb,
         string routeSuffix,
         string description
     )
     {
-        AssertEndpointExists(typeof(InboxController), httpVerb, routeSuffix, description);
+        AssertEndpointExists(controller: typeof(InboxController), httpVerb: httpVerb, routeSuffix: routeSuffix, description: description);
     }
 
     // -------------------------------------------------------------------------
@@ -132,19 +132,19 @@ public class InboxController_Routes_Test
             }
             """;
 
-        InboxAssignRequest? request = JsonConvert.DeserializeObject<InboxAssignRequest>(json);
+        InboxAssignRequest? request = JsonConvert.DeserializeObject<InboxAssignRequest>(value: json);
 
-        Assert.NotNull(request);
-        Assert.Equal("movie", request!.Type);
-        Assert.NotNull(request.Match);
-        Assert.Equal("tmdb", request.Match.Provider);
-        Assert.Equal("603", request.Match.ExternalId);
-        Assert.Equal("The Matrix", request.Match.Title);
-        Assert.Equal(1999, request.Match.Year);
-        Assert.Equal(0.97, request.Match.Score, precision: 5);
-        Assert.Equal(Ulid.Parse("01HZXY7ABCDEF0123456789012"), request.TargetLibraryId);
-        Assert.Equal(Ulid.Parse("01HZXY7ABCDEF0123456789013"), request.TargetFolderId);
-        Assert.Equal(Ulid.Parse("01HZXY7ABCDEF0123456789014"), request.TargetProfileId);
+        Assert.NotNull(@object: request);
+        Assert.Equal(expected: "movie", actual: request!.Type);
+        Assert.NotNull(@object: request.Match);
+        Assert.Equal(expected: "tmdb", actual: request.Match.Provider);
+        Assert.Equal(expected: "603", actual: request.Match.ExternalId);
+        Assert.Equal(expected: "The Matrix", actual: request.Match.Title);
+        Assert.Equal(expected: 1999, actual: request.Match.Year);
+        Assert.Equal(expected: 0.97, actual: request.Match.Score, precision: 5);
+        Assert.Equal(expected: Ulid.Parse(base32: "01HZXY7ABCDEF0123456789012"), actual: request.TargetLibraryId);
+        Assert.Equal(expected: Ulid.Parse(base32: "01HZXY7ABCDEF0123456789013"), actual: request.TargetFolderId);
+        Assert.Equal(expected: Ulid.Parse(base32: "01HZXY7ABCDEF0123456789014"), actual: request.TargetProfileId);
     }
 
     [Fact]
@@ -173,16 +173,16 @@ public class InboxController_Routes_Test
             ],
         };
 
-        InboxItemDto dto = new(item);
+        InboxItemDto dto = new(item: item);
 
-        Assert.Equal(itemId.ToString(), dto.Id);
-        Assert.Equal("inbox/The Matrix (1999).mkv", dto.SourcePath);
-        Assert.Equal("movie", dto.DetectedType);
-        Assert.Equal("high", dto.Confidence);
-        Assert.Equal("NeedsReview", dto.Status);
-        Assert.Single(dto.Candidates);
-        Assert.Equal("The Matrix", dto.Candidates[0].Title);
-        Assert.Null(dto.SelectedMatch);
-        Assert.Null(dto.TargetLibraryId);
+        Assert.Equal(expected: itemId.ToString(), actual: dto.Id);
+        Assert.Equal(expected: "inbox/The Matrix (1999).mkv", actual: dto.SourcePath);
+        Assert.Equal(expected: "movie", actual: dto.DetectedType);
+        Assert.Equal(expected: "high", actual: dto.Confidence);
+        Assert.Equal(expected: "NeedsReview", actual: dto.Status);
+        Assert.Single(collection: dto.Candidates);
+        Assert.Equal(expected: "The Matrix", actual: dto.Candidates[0].Title);
+        Assert.Null(@object: dto.SelectedMatch);
+        Assert.Null(@object: dto.TargetLibraryId);
     }
 }

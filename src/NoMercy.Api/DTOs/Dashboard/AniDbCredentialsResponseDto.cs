@@ -15,12 +15,12 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record AniDbCredentialsResponseDto
 {
-    [JsonProperty("key")]
+    [JsonProperty(propertyName: "key")]
     public string Key { get; set; } = string.Empty;
 
-    [JsonProperty("username")]
+    [JsonProperty(propertyName: "username")]
     public string Username { get; set; } = string.Empty;
 
-    [JsonProperty("api_key")]
+    [JsonProperty(propertyName: "api_key")]
     public string? ApiKey { get; set; }
 }

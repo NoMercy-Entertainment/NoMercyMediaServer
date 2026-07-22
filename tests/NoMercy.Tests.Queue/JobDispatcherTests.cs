@@ -27,8 +27,8 @@ public class JobDispatcherTests
     private static (JobDispatcher dispatcher, TestQueueContextAdapter adapter) CreateDispatcher()
     {
         TestQueueContextAdapter adapter = new();
-        JobQueue queue = new(adapter);
-        JobDispatcher dispatcher = new(queue, NullLogger<JobDispatcher>.Instance);
+        JobQueue queue = new(context: adapter);
+        JobDispatcher dispatcher = new(queue: queue, logger: NullLogger<JobDispatcher>.Instance);
         return (dispatcher, adapter);
     }
 
@@ -41,31 +41,31 @@ public class JobDispatcherTests
     public void Dispatch_QueueEnqueueThrows_DoesNotPropagate_JobDispatcherSurvives()
     {
         Mock<IQueueContext> context = new();
-        context.Setup(c => c.JobExists(It.IsAny<string>())).Throws<InvalidOperationException>();
-        JobQueue queue = new(context.Object);
-        JobDispatcher dispatcher = new(queue, NullLogger<JobDispatcher>.Instance);
+        context.Setup(expression: c => c.JobExists(It.IsAny<string>())).Throws<InvalidOperationException>();
+        JobQueue queue = new(context: context.Object);
+        JobDispatcher dispatcher = new(queue: queue, logger: NullLogger<JobDispatcher>.Instance);
         TestJob job = new() { Message = "will not enqueue" };
 
-        Action act = () => dispatcher.Dispatch(job);
+        Action act = () => dispatcher.Dispatch(job: job);
 
         act.Should().NotThrow();
-        context.Verify(c => c.AddJob(It.IsAny<QueueJobModel>()), Times.Never);
+        context.Verify(expression: c => c.AddJob(It.IsAny<QueueJobModel>()), times: Times.Never);
     }
 
     [Fact]
     public void DispatchChild_QueueEnqueueThrows_DoesNotPropagate()
     {
         Mock<IQueueContext> context = new();
-        context.Setup(c => c.JobExists(It.IsAny<string>())).Throws<InvalidOperationException>();
-        JobQueue queue = new(context.Object);
-        JobDispatcher dispatcher = new(queue, NullLogger<JobDispatcher>.Instance);
+        context.Setup(expression: c => c.JobExists(It.IsAny<string>())).Throws<InvalidOperationException>();
+        JobQueue queue = new(context: context.Object);
+        JobDispatcher dispatcher = new(queue: queue, logger: NullLogger<JobDispatcher>.Instance);
         TestJob job = new() { Message = "child will not enqueue" };
 
         Action act = () =>
-            dispatcher.DispatchChild(job, "encoder-child", 1, parentJobId: 5, groupTag: "g");
+            dispatcher.DispatchChild(job: job, onQueue: "encoder-child", priority: 1, parentJobId: 5, groupTag: "g");
 
         act.Should().NotThrow();
-        context.Verify(c => c.AddJob(It.IsAny<QueueJobModel>()), Times.Never);
+        context.Verify(expression: c => c.AddJob(It.IsAny<QueueJobModel>()), times: Times.Never);
     }
 
     [Fact]
@@ -80,17 +80,17 @@ public class JobDispatcherTests
         };
 
         // Act
-        string serialized = SerializationHelper.Serialize(testJob);
-        object deserialized = SerializationHelper.Deserialize<object>(serialized);
+        string serialized = SerializationHelper.Serialize(obj: testJob);
+        object deserialized = SerializationHelper.Deserialize<object>(data: serialized);
 
         // Assert
-        Assert.NotNull(deserialized);
-        Assert.IsType<TestJob>(deserialized);
+        Assert.NotNull(@object: deserialized);
+        Assert.IsType<TestJob>(@object: deserialized);
 
         TestJob deserializedJob = (TestJob)deserialized;
-        Assert.Equal(testJob.Message, deserializedJob.Message);
-        Assert.Equal(testJob.HasExecuted, deserializedJob.HasExecuted);
-        Assert.Equal(testJob.ShouldFail, deserializedJob.ShouldFail);
+        Assert.Equal(expected: testJob.Message, actual: deserializedJob.Message);
+        Assert.Equal(expected: testJob.HasExecuted, actual: deserializedJob.HasExecuted);
+        Assert.Equal(expected: testJob.ShouldFail, actual: deserializedJob.ShouldFail);
     }
 
     [Fact]
@@ -100,16 +100,16 @@ public class JobDispatcherTests
         AnotherTestJob testJob = new() { Value = 100, HasExecuted = true };
 
         // Act
-        string serialized = SerializationHelper.Serialize(testJob);
-        object deserialized = SerializationHelper.Deserialize<object>(serialized);
+        string serialized = SerializationHelper.Serialize(obj: testJob);
+        object deserialized = SerializationHelper.Deserialize<object>(data: serialized);
 
         // Assert
-        Assert.NotNull(deserialized);
-        Assert.IsType<AnotherTestJob>(deserialized);
+        Assert.NotNull(@object: deserialized);
+        Assert.IsType<AnotherTestJob>(@object: deserialized);
 
         AnotherTestJob deserializedJob = (AnotherTestJob)deserialized;
-        Assert.Equal(testJob.Value, deserializedJob.Value);
-        Assert.Equal(testJob.HasExecuted, deserializedJob.HasExecuted);
+        Assert.Equal(expected: testJob.Value, actual: deserializedJob.Value);
+        Assert.Equal(expected: testJob.HasExecuted, actual: deserializedJob.HasExecuted);
     }
 
     [Fact]
@@ -119,17 +119,17 @@ public class JobDispatcherTests
         TestJob testJob = new() { Message = "Execution test", HasExecuted = false };
 
         // Act
-        string serialized = SerializationHelper.Serialize(testJob);
-        object deserialized = SerializationHelper.Deserialize<object>(serialized);
+        string serialized = SerializationHelper.Serialize(obj: testJob);
+        object deserialized = SerializationHelper.Deserialize<object>(data: serialized);
 
         // Assert
-        Assert.IsAssignableFrom<IShouldQueue>(deserialized);
+        Assert.IsAssignableFrom<IShouldQueue>(@object: deserialized);
 
         IShouldQueue executableJob = (IShouldQueue)deserialized;
-        Assert.NotNull(executableJob);
+        Assert.NotNull(@object: executableJob);
 
-        MethodInfo? handleMethod = executableJob.GetType().GetMethod("Handle");
-        Assert.NotNull(handleMethod);
+        MethodInfo? handleMethod = executableJob.GetType().GetMethod(name: "Handle");
+        Assert.NotNull(@object: handleMethod);
     }
 
     [Fact]
@@ -140,14 +140,14 @@ public class JobDispatcherTests
         TestJob testJob = new() { Message = "test enqueue" };
 
         // Act
-        dispatcher.Dispatch(testJob);
+        dispatcher.Dispatch(job: testJob);
 
         // Assert
-        Assert.Single(adapter.Jobs);
-        QueueJobModel enqueued = adapter.Jobs[0];
-        Assert.Equal("default", enqueued.Queue);
-        Assert.Equal(0, enqueued.Priority);
-        Assert.Contains("test enqueue", enqueued.Payload);
+        Assert.Single(collection: adapter.Jobs);
+        QueueJobModel enqueued = adapter.Jobs[index: 0];
+        Assert.Equal(expected: "default", actual: enqueued.Queue);
+        Assert.Equal(expected: 0, actual: enqueued.Priority);
+        Assert.Contains(expectedSubstring: "test enqueue", actualString: enqueued.Payload);
     }
 
     [Fact]
@@ -158,13 +158,13 @@ public class JobDispatcherTests
         TestJob testJob = new() { Message = "override test" };
 
         // Act
-        dispatcher.Dispatch(testJob, "custom-queue", 99);
+        dispatcher.Dispatch(job: testJob, onQueue: "custom-queue", priority: 99);
 
         // Assert
-        Assert.Single(adapter.Jobs);
-        QueueJobModel enqueued = adapter.Jobs[0];
-        Assert.Equal("custom-queue", enqueued.Queue);
-        Assert.Equal(99, enqueued.Priority);
+        Assert.Single(collection: adapter.Jobs);
+        QueueJobModel enqueued = adapter.Jobs[index: 0];
+        Assert.Equal(expected: "custom-queue", actual: enqueued.Queue);
+        Assert.Equal(expected: 99, actual: enqueued.Priority);
     }
 
     [Fact]
@@ -175,13 +175,13 @@ public class JobDispatcherTests
         PriorityTestJob job = new();
 
         // Act
-        dispatcher.Dispatch(job);
+        dispatcher.Dispatch(job: job);
 
         // Assert
-        Assert.Single(adapter.Jobs);
-        QueueJobModel enqueued = adapter.Jobs[0];
-        Assert.Equal("high-priority", enqueued.Queue);
-        Assert.Equal(42, enqueued.Priority);
+        Assert.Single(collection: adapter.Jobs);
+        QueueJobModel enqueued = adapter.Jobs[index: 0];
+        Assert.Equal(expected: "high-priority", actual: enqueued.Queue);
+        Assert.Equal(expected: 42, actual: enqueued.Priority);
     }
 
     [Fact]
@@ -198,17 +198,17 @@ public class JobDispatcherTests
         };
 
         // Act
-        dispatcher.Dispatch(testJob);
+        dispatcher.Dispatch(job: testJob);
 
         // Assert
-        Assert.Single(adapter.Jobs);
-        object deserialized = SerializationHelper.Deserialize<object>(adapter.Jobs[0].Payload);
-        Assert.IsType<TestJob>(deserialized);
+        Assert.Single(collection: adapter.Jobs);
+        object deserialized = SerializationHelper.Deserialize<object>(data: adapter.Jobs[index: 0].Payload);
+        Assert.IsType<TestJob>(@object: deserialized);
         TestJob roundtripped = (TestJob)deserialized;
-        Assert.Equal("roundtrip test", roundtripped.Message);
-        Assert.False(roundtripped.HasExecuted);
-        Assert.True(roundtripped.ShouldFail);
-        Assert.Equal(500, roundtripped.ExecutionDelay);
+        Assert.Equal(expected: "roundtrip test", actual: roundtripped.Message);
+        Assert.False(condition: roundtripped.HasExecuted);
+        Assert.True(condition: roundtripped.ShouldFail);
+        Assert.Equal(expected: 500, actual: roundtripped.ExecutionDelay);
     }
 
     [Fact]
@@ -218,13 +218,13 @@ public class JobDispatcherTests
         (JobDispatcher dispatcher, TestQueueContextAdapter adapter) = CreateDispatcher();
 
         // Act
-        dispatcher.Dispatch(new TestJob { Message = "job1" });
-        dispatcher.Dispatch(new TestJob { Message = "job2" });
-        dispatcher.Dispatch(new AnotherTestJob { Value = 10 });
+        dispatcher.Dispatch(job: new TestJob { Message = "job1" });
+        dispatcher.Dispatch(job: new TestJob { Message = "job2" });
+        dispatcher.Dispatch(job: new AnotherTestJob { Value = 10 });
 
         // Assert - Only 2 unique jobs enqueued because duplicate check prevents job1 and job2 with same type
         // Actually all 3 have different payloads so all should be enqueued
-        Assert.Equal(3, adapter.Jobs.Count);
+        Assert.Equal(expected: 3, actual: adapter.Jobs.Count);
     }
 
     [Fact]
@@ -235,11 +235,11 @@ public class JobDispatcherTests
         TestJob testJob = new() { Message = "duplicate" };
 
         // Act
-        dispatcher.Dispatch(testJob);
-        dispatcher.Dispatch(testJob);
+        dispatcher.Dispatch(job: testJob);
+        dispatcher.Dispatch(job: testJob);
 
         // Assert - JobQueue deduplicates by payload
-        Assert.Single(adapter.Jobs);
+        Assert.Single(collection: adapter.Jobs);
     }
 
     [Fact]
@@ -249,7 +249,7 @@ public class JobDispatcherTests
         (JobDispatcher dispatcher, _) = CreateDispatcher();
 
         // Assert
-        Assert.IsAssignableFrom<IJobDispatcher>(dispatcher);
+        Assert.IsAssignableFrom<IJobDispatcher>(@object: dispatcher);
     }
 
     [Fact]
@@ -259,20 +259,20 @@ public class JobDispatcherTests
         TestJob testJob = new() { Message = "child work" };
 
         dispatcher.DispatchChild(
-            testJob,
+            job: testJob,
             onQueue: "encoder-child",
             priority: 7,
             parentJobId: 42,
             groupTag: "group-abc"
         );
 
-        Assert.Single(adapter.Jobs);
-        QueueJobModel child = adapter.Jobs[0];
-        Assert.Equal("encoder-child", child.Queue);
-        Assert.Equal(7, child.Priority);
-        Assert.Equal(42, child.ParentJobId!.Value);
-        Assert.Equal("group-abc", child.GroupTag);
-        Assert.Contains("child work", child.Payload);
+        Assert.Single(collection: adapter.Jobs);
+        QueueJobModel child = adapter.Jobs[index: 0];
+        Assert.Equal(expected: "encoder-child", actual: child.Queue);
+        Assert.Equal(expected: 7, actual: child.Priority);
+        Assert.Equal(expected: 42, actual: child.ParentJobId!.Value);
+        Assert.Equal(expected: "group-abc", actual: child.GroupTag);
+        Assert.Contains(expectedSubstring: "child work", actualString: child.Payload);
     }
 }
 

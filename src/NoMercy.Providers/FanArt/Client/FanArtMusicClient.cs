@@ -24,7 +24,7 @@ public class FanArtMusicClient : FanArtBaseClient
             //
         };
 
-        return Get<FanArtArtistDetails>("music/" + id, queryParams, priority);
+        return Get<FanArtArtistDetails>(url: "music/" + id, query: queryParams, priority: priority);
     }
 
     public Task<FanArtAlbum?> Album(Guid id, bool priority = false)
@@ -34,7 +34,7 @@ public class FanArtMusicClient : FanArtBaseClient
             //
         };
 
-        return Get<FanArtAlbum>("music/albums/" + id, queryParams, priority);
+        return Get<FanArtAlbum>(url: "music/albums/" + id, query: queryParams, priority: priority);
     }
 
     public Task<FanArtLabel?> Label(Guid id, bool priority = false)
@@ -44,7 +44,7 @@ public class FanArtMusicClient : FanArtBaseClient
             //
         };
 
-        return Get<FanArtLabel>("music/labels/" + id, queryParams, priority);
+        return Get<FanArtLabel>(url: "music/labels/" + id, query: queryParams, priority: priority);
     }
 
     public Task<FanArtLatest[]?> Latest(Guid id, bool priority = false)
@@ -54,6 +54,6 @@ public class FanArtMusicClient : FanArtBaseClient
             //
         };
 
-        return Get<FanArtLatest[]>("music/latest", queryParams, priority);
+        return Get<FanArtLatest[]>(url: "music/latest", query: queryParams, priority: priority);
     }
 }

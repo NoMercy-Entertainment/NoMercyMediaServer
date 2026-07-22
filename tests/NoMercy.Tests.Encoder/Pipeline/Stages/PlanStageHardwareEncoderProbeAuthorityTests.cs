@@ -50,47 +50,47 @@ public class PlanStageHardwareEncoderProbeAuthorityTests
     )
     {
         CodecRegistry registry = new();
-        CodecResolver codecResolver = new(registry);
+        CodecResolver codecResolver = new(registry: registry);
         HardwarePreferenceResolver hardwarePreferenceResolver = new();
         BitDepthPolicyResolver bitDepthPolicyResolver = new();
 
         Mock<IHardwareCapabilities> hardware = new();
-        hardware.Setup(h => h.HasGpu).Returns(gpus.Count > 0);
-        hardware.Setup(h => h.CpuCores).Returns(16);
-        hardware.Setup(h => h.Gpus).Returns(gpus);
+        hardware.Setup(expression: h => h.HasGpu).Returns(value: gpus.Count > 0);
+        hardware.Setup(expression: h => h.CpuCores).Returns(value: 16);
+        hardware.Setup(expression: h => h.Gpus).Returns(value: gpus);
         hardware
-            .Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>()))
-            .Returns(gpus.Count > 0);
+            .Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>()))
+            .Returns(value: gpus.Count > 0);
         hardware
-            .Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
-            .Returns(gpus.Count > 0 ? gpus[0] : null);
-        hardware.Setup(h => h.UsableHardwareEncoders).Returns(usableHardwareEncoders);
+            .Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
+            .Returns(value: gpus.Count > 0 ? gpus[index: 0] : null);
+        hardware.Setup(expression: h => h.UsableHardwareEncoders).Returns(value: usableHardwareEncoders);
 
         Mock<IFfmpegCapabilities> ffmpegCapabilities = new();
-        ffmpegCapabilities.Setup(c => c.AvailableEncoders).Returns(compiledEncoders);
-        ffmpegCapabilities.Setup(c => c.AvailableFilters).Returns(new HashSet<string>());
+        ffmpegCapabilities.Setup(expression: c => c.AvailableEncoders).Returns(value: compiledEncoders);
+        ffmpegCapabilities.Setup(expression: c => c.AvailableFilters).Returns(value: new HashSet<string>());
         ffmpegCapabilities
-            .Setup(c => c.HasEncoder(It.IsAny<string>()))
-            .Returns((string encoderName) => compiledEncoders.Contains(encoderName));
-        ffmpegCapabilities.Setup(c => c.HasFilter(It.IsAny<string>())).Returns(false);
+            .Setup(expression: c => c.HasEncoder(It.IsAny<string>()))
+            .Returns(valueFunction: (string encoderName) => compiledEncoders.Contains(item: encoderName));
+        ffmpegCapabilities.Setup(expression: c => c.HasFilter(It.IsAny<string>())).Returns(value: false);
 
         // Empty SpeedIndex — no encoder has ever been benchmarked. Forces the
         // resolver's unmeasured-encoder fallback, which is exactly the branch
         // that used to trust ffmpeg's compiled list (plus the vendor gate)
         // without confirming a real init.
-        SpeedIndex speedIndex = new(new());
+        SpeedIndex speedIndex = new(Measurements: new());
 
         PlanStage stage = new(
-            new(),
-            new(),
-            new(),
-            codecResolver,
-            hardware.Object,
-            new TonemapSelector(),
-            ffmpegCapabilities.Object,
-            new AbrLadderGenerator(),
-            new NoOpCropDetector(),
-            NullLogger<PlanStage>.Instance,
+            graphBuilder: new(),
+            groupingStrategy: new(),
+            costEstimator: new(),
+            codecResolver: codecResolver,
+            hardware: hardware.Object,
+            tonemapSelector: new TonemapSelector(),
+            ffmpegCapabilities: ffmpegCapabilities.Object,
+            abrLadderGenerator: new AbrLadderGenerator(),
+            cropDetector: new NoOpCropDetector(),
+            logger: NullLogger<PlanStage>.Instance,
             hardwarePreferenceResolver: hardwarePreferenceResolver,
             speedIndex: speedIndex,
             bitDepthPolicyResolver: bitDepthPolicyResolver
@@ -128,7 +128,7 @@ public class PlanStageHardwareEncoderProbeAuthorityTests
         MediaInfo media = new(
             FilePath: "/movies/test/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(110),
+            Duration: TimeSpan.FromMinutes(minutes: 110),
             OverallBitRateKbps: 12000,
             FileSizeBytes: 9_000_000_000,
             VideoStreams:
@@ -158,11 +158,11 @@ public class PlanStageHardwareEncoderProbeAuthorityTests
             Chapters: []
         );
 
-        ValidateInput input = new(media, profile);
+        ValidateInput input = new(Media: media, Profile: profile);
         EncodingContext context = EncodingContext.Create();
-        StageResult result = await stage.ExecuteAsync(input, context, CancellationToken.None);
+        StageResult result = await stage.ExecuteAsync(input: input, context: context, ct: CancellationToken.None);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
         return success.Value.OutputPlan;
     }
 
@@ -204,9 +204,9 @@ public class PlanStageHardwareEncoderProbeAuthorityTests
             compiledEncoders: compiled
         );
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        video.EncoderName.Should().Be("libx264");
-        video.EncoderName.Should().NotBe("h264_amf");
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        video.EncoderName.Should().Be(expected: "libx264");
+        video.EncoderName.Should().NotBe(unexpected: "h264_amf");
     }
 
     [Fact]
@@ -232,9 +232,9 @@ public class PlanStageHardwareEncoderProbeAuthorityTests
             compiledEncoders: compiled
         );
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        video.EncoderName.Should().Be("h264_nvenc");
-        video.EncoderName.Should().NotBe("h264_amf");
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        video.EncoderName.Should().Be(expected: "h264_nvenc");
+        video.EncoderName.Should().NotBe(unexpected: "h264_amf");
     }
 
     // -------------------------------------------------------------------------
@@ -253,8 +253,8 @@ public class PlanStageHardwareEncoderProbeAuthorityTests
             compiledEncoders: compiled
         );
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        video.EncoderName.Should().Be("libx264");
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        video.EncoderName.Should().Be(expected: "libx264");
     }
 
     // -------------------------------------------------------------------------
@@ -273,7 +273,7 @@ public class PlanStageHardwareEncoderProbeAuthorityTests
             compiledEncoders: compiled
         );
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        video.EncoderName.Should().Be("libx264");
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        video.EncoderName.Should().Be(expected: "libx264");
     }
 }

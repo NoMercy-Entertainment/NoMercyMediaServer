@@ -38,7 +38,7 @@ public class ApiKeyLoader : IApiKeyLoader
         IApiKeyStore apiKeyStore,
         IStorageDriver storageDriver
     )
-        : this(authTokenStore, logger, apiKeyStore, storageDriver, delay: null) { }
+        : this(authTokenStore: authTokenStore, logger: logger, apiKeyStore: apiKeyStore, storageDriver: storageDriver, delay: null) { }
 
     /// <summary>
     /// Internal (not exposed on the public constructor): lets NoMercy.Tests.Setup drive
@@ -69,9 +69,9 @@ public class ApiKeyLoader : IApiKeyLoader
 
         if (liveData is not null)
         {
-            ApplyKeys(liveData);
-            await WriteCacheFile(liveData);
-            _logger.LogInformation("API keys loaded from network");
+            ApplyKeys(data: liveData);
+            await WriteCacheFile(data: liveData);
+            _logger.LogInformation(message: "API keys loaded from network");
             return;
         }
 
@@ -80,11 +80,11 @@ public class ApiKeyLoader : IApiKeyLoader
 
         if (cachedData is not null)
         {
-            ApplyKeys(cachedData);
+            ApplyKeys(data: cachedData);
             string cachedAt = cachedData.CachedAt ?? "unknown";
 
             DateTime? cachedAtDate = cachedData.CachedAt is not null
-                ? DateTime.TryParse(cachedData.CachedAt, out DateTime parsed)
+                ? DateTime.TryParse(s: cachedData.CachedAt, result: out DateTime parsed)
                     ? parsed
                     : null
                 : null;
@@ -92,25 +92,25 @@ public class ApiKeyLoader : IApiKeyLoader
             if (cachedAtDate.HasValue && (DateTime.UtcNow - cachedAtDate.Value).TotalDays > 30)
             {
                 _logger.LogWarning(
-                    "API keys loaded from cache (cached at {CachedAt}) — cache is over 30 days old",
-                    cachedAt
+                    message: "API keys loaded from cache (cached at {CachedAt}) — cache is over 30 days old",
+                    args: cachedAt
                 );
             }
             else
             {
                 _logger.LogInformation(
-                    "API keys loaded from cache (cached at {CachedAt})",
-                    cachedAt
+                    message: "API keys loaded from cache (cached at {CachedAt})",
+                    args: cachedAt
                 );
             }
 
-            StartBackgroundRefresh(ct);
+            StartBackgroundRefresh(ct: ct);
             return;
         }
 
         // 3. No network, no cache — cannot function without keys
         _logger.LogError(
-            "API unreachable and no cached keys available — provider features will be unavailable"
+            message: "API unreachable and no cached keys available — provider features will be unavailable"
         );
     }
 
@@ -118,24 +118,24 @@ public class ApiKeyLoader : IApiKeyLoader
     {
         try
         {
-            _logger.LogInformation("Requesting server info");
+            _logger.LogInformation(message: "Requesting server info");
 
-            GenericHttpClient apiClient = new(ExternalServicesConfig.Current.ApiBaseUrl);
+            GenericHttpClient apiClient = new(baseUrl: ExternalServicesConfig.Current.ApiBaseUrl);
             apiClient.SetDefaultHeaders(
-                ExternalServicesConfig.Current.UserAgent,
-                _authTokenStore.AccessToken
+                userAgent: ExternalServicesConfig.Current.UserAgent,
+                bearerToken: _authTokenStore.AccessToken
             );
 
-            string content = await apiClient.SendAndReadAsync(HttpMethod.Get, "v1/info");
+            string content = await apiClient.SendAndReadAsync(method: HttpMethod.Get, endpoint: "v1/info");
 
             ApiInfoResponse? data = content.FromJson<ApiInfoResponse>();
             if (data?.Data.Keys is null)
                 return null;
 
-            if (string.IsNullOrEmpty(data.Data.Keys.TmdbToken))
+            if (string.IsNullOrEmpty(value: data.Data.Keys.TmdbToken))
             {
                 _logger.LogWarning(
-                    "API keys response contained empty keys — auth token may be expired, discarding response"
+                    message: "API keys response contained empty keys — auth token may be expired, discarding response"
                 );
                 return null;
             }
@@ -144,7 +144,7 @@ public class ApiKeyLoader : IApiKeyLoader
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to fetch API keys from network");
+            _logger.LogWarning(exception: ex, message: "Failed to fetch API keys from network");
             return null;
         }
     }
@@ -172,19 +172,19 @@ public class ApiKeyLoader : IApiKeyLoader
     {
         try
         {
-            data.CachedAt = DateTime.UtcNow.ToString("O");
-            string json = JsonConvert.SerializeObject(data, Formatting.Indented);
+            data.CachedAt = DateTime.UtcNow.ToString(format: "O");
+            string json = JsonConvert.SerializeObject(value: data, formatting: Formatting.Indented);
             await using Stream stream = _storageDriver.OpenWrite(
-                AppFiles.ApiKeysFile,
+                path: AppFiles.ApiKeysFile,
                 overwrite: true
             );
-            await using StreamWriter writer = new(stream, Encoding.UTF8, leaveOpen: true);
-            await writer.WriteAsync(json);
+            await using StreamWriter writer = new(stream: stream, encoding: Encoding.UTF8, leaveOpen: true);
+            await writer.WriteAsync(value: json);
             await writer.FlushAsync();
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to write API keys cache");
+            _logger.LogWarning(exception: ex, message: "Failed to write API keys cache");
         }
     }
 
@@ -192,14 +192,14 @@ public class ApiKeyLoader : IApiKeyLoader
     {
         try
         {
-            if (!_storageDriver.FileExists(AppFiles.ApiKeysFile))
+            if (!_storageDriver.FileExists(path: AppFiles.ApiKeysFile))
                 return null;
 
             string json;
-            using (StreamReader reader = new(_storageDriver.OpenRead(AppFiles.ApiKeysFile)))
+            using (StreamReader reader = new(stream: _storageDriver.OpenRead(path: AppFiles.ApiKeysFile)))
                 json = await reader.ReadToEndAsync();
 
-            if (string.IsNullOrWhiteSpace(json))
+            if (string.IsNullOrWhiteSpace(value: json))
                 return null;
 
             ApiInfoResponse? data = json.FromJson<ApiInfoResponse>();
@@ -212,10 +212,10 @@ public class ApiKeyLoader : IApiKeyLoader
             // only ever persists a response that already passed this exact check, so a
             // blank token here means the file was corrupted, hand-edited, or written by
             // an older/different build — treat it the same as a missing cache.
-            if (string.IsNullOrEmpty(data.Data.Keys.TmdbToken))
+            if (string.IsNullOrEmpty(value: data.Data.Keys.TmdbToken))
             {
                 _logger.LogWarning(
-                    "Cached API keys file has an empty TMDB token — discarding as invalid"
+                    message: "Cached API keys file has an empty TMDB token — discarding as invalid"
                 );
                 return null;
             }
@@ -224,7 +224,7 @@ public class ApiKeyLoader : IApiKeyLoader
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to read API keys cache");
+            _logger.LogWarning(exception: ex, message: "Failed to read API keys cache");
             return null;
         }
     }
@@ -232,16 +232,16 @@ public class ApiKeyLoader : IApiKeyLoader
     private void StartBackgroundRefresh(CancellationToken ct)
     {
         _ = Task.Run(
-            async () =>
+            function: async () =>
             {
                 int attempt = 0;
 
                 while (!ct.IsCancellationRequested)
                 {
-                    int delaySeconds = BackoffSeconds[Math.Min(attempt, BackoffSeconds.Length - 1)];
+                    int delaySeconds = BackoffSeconds[Math.Min(val1: attempt, val2: BackoffSeconds.Length - 1)];
                     try
                     {
-                        await _delay(TimeSpan.FromSeconds(delaySeconds), ct);
+                        await _delay(arg1: TimeSpan.FromSeconds(seconds: delaySeconds), arg2: ct);
                     }
                     catch (OperationCanceledException)
                     {
@@ -251,21 +251,19 @@ public class ApiKeyLoader : IApiKeyLoader
                     ApiInfoResponse? fresh = await TryFetchFromNetwork();
                     if (fresh is not null)
                     {
-                        ApplyKeys(fresh);
-                        await WriteCacheFile(fresh);
-                        _logger.LogInformation("API keys refreshed from network");
+                        ApplyKeys(data: fresh);
+                        await WriteCacheFile(data: fresh);
+                        _logger.LogInformation(message: "API keys refreshed from network");
                         return;
                     }
 
                     attempt++;
                     _logger.LogWarning(
-                        "API key refresh attempt {Attempt} failed, retrying in {Delay}s",
-                        attempt,
-                        delaySeconds
+                        message: "API key refresh attempt {Attempt} failed, retrying in {Delay}s", args: [attempt, delaySeconds]
                     );
                 }
             },
-            ct
+            cancellationToken: ct
         );
     }
 }

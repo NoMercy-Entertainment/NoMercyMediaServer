@@ -18,7 +18,7 @@ using Newtonsoft.Json.Serialization;
 public static class ProfileDiffer
 {
     private static readonly JsonSerializer CamelSerializer = JsonSerializer.Create(
-        new()
+        settings: new()
         {
             ContractResolver = new CamelCasePropertyNamesContractResolver(),
         }
@@ -26,9 +26,9 @@ public static class ProfileDiffer
 
     public static JObject Diff(EncodingProfile child, EncodingProfile resolvedParent)
     {
-        JObject childJson = JObject.FromObject(child, CamelSerializer);
-        JObject parentJson = JObject.FromObject(resolvedParent, CamelSerializer);
-        return DiffObject(childJson, parentJson);
+        JObject childJson = JObject.FromObject(o: child, jsonSerializer: CamelSerializer);
+        JObject parentJson = JObject.FromObject(o: resolvedParent, jsonSerializer: CamelSerializer);
+        return DiffObject(child: childJson, parent: parentJson);
     }
 
     private static JObject DiffObject(JObject child, JObject parent)
@@ -36,12 +36,12 @@ public static class ProfileDiffer
         JObject result = new();
         foreach (JProperty prop in child.Properties())
         {
-            JToken? parentValue = parent[prop.Name];
+            JToken? parentValue = parent[propertyName: prop.Name];
             JToken childValue = prop.Value;
 
-            if (parentValue is null || !JToken.DeepEquals(childValue, parentValue))
+            if (parentValue is null || !JToken.DeepEquals(t1: childValue, t2: parentValue))
             {
-                result[prop.Name] = childValue.DeepClone();
+                result[propertyName: prop.Name] = childValue.DeepClone();
             }
         }
         return result;

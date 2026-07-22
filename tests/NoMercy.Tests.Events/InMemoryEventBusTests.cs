@@ -34,7 +34,7 @@ public class InMemoryEventBusTests
 
         public Task HandleAsync(TestEvent @event, CancellationToken ct = default)
         {
-            Received.Add(@event);
+            Received.Add(item: @event);
             return Task.CompletedTask;
         }
     }
@@ -45,7 +45,7 @@ public class InMemoryEventBusTests
         InMemoryEventBus bus = new();
         TestEvent evt = new() { Data = "hello" };
 
-        Func<Task> act = () => bus.PublishAsync(evt);
+        Func<Task> act = () => bus.PublishAsync(@event: evt);
 
         await act.Should().NotThrowAsync();
     }
@@ -57,17 +57,17 @@ public class InMemoryEventBusTests
         List<TestEvent> received = [];
 
         bus.Subscribe<TestEvent>(
-            (e, _) =>
+            handler: (e, _) =>
             {
-                received.Add(e);
+                received.Add(item: e);
                 return Task.CompletedTask;
             }
         );
 
         TestEvent evt = new() { Data = "test-data" };
-        await bus.PublishAsync(evt);
+        await bus.PublishAsync(@event: evt);
 
-        received.Should().ContainSingle().Which.Data.Should().Be("test-data");
+        received.Should().ContainSingle().Which.Data.Should().Be(expected: "test-data");
     }
 
     [Fact]
@@ -76,12 +76,12 @@ public class InMemoryEventBusTests
         InMemoryEventBus bus = new();
         TestHandler handler = new();
 
-        bus.Subscribe(handler);
+        bus.Subscribe(handler: handler);
 
         TestEvent evt = new() { Data = "handler-test" };
-        await bus.PublishAsync(evt);
+        await bus.PublishAsync(@event: evt);
 
-        handler.Received.Should().ContainSingle().Which.Data.Should().Be("handler-test");
+        handler.Received.Should().ContainSingle().Which.Data.Should().Be(expected: "handler-test");
     }
 
     [Fact]
@@ -91,27 +91,27 @@ public class InMemoryEventBusTests
         List<string> order = [];
 
         bus.Subscribe<TestEvent>(
-            (_, _) =>
+            handler: (_, _) =>
             {
-                order.Add("first");
+                order.Add(item: "first");
                 return Task.CompletedTask;
             }
         );
 
         bus.Subscribe<TestEvent>(
-            (_, _) =>
+            handler: (_, _) =>
             {
-                order.Add("second");
+                order.Add(item: "second");
                 return Task.CompletedTask;
             }
         );
 
         TestHandler handler = new();
-        bus.Subscribe(handler);
+        bus.Subscribe(handler: handler);
 
-        await bus.PublishAsync(new TestEvent { Data = "multi" });
+        await bus.PublishAsync(@event: new TestEvent { Data = "multi" });
 
-        order.Should().Equal("first", "second");
+        order.Should().Equal(expected: ["first", "second"]);
         handler.Received.Should().ContainSingle();
     }
 
@@ -123,22 +123,22 @@ public class InMemoryEventBusTests
         List<OtherEvent> otherReceived = [];
 
         bus.Subscribe<TestEvent>(
-            (e, _) =>
+            handler: (e, _) =>
             {
-                testReceived.Add(e);
+                testReceived.Add(item: e);
                 return Task.CompletedTask;
             }
         );
 
         bus.Subscribe<OtherEvent>(
-            (e, _) =>
+            handler: (e, _) =>
             {
-                otherReceived.Add(e);
+                otherReceived.Add(item: e);
                 return Task.CompletedTask;
             }
         );
 
-        await bus.PublishAsync(new TestEvent { Data = "for-test" });
+        await bus.PublishAsync(@event: new TestEvent { Data = "for-test" });
 
         testReceived.Should().ContainSingle();
         otherReceived.Should().BeEmpty();
@@ -151,20 +151,20 @@ public class InMemoryEventBusTests
         List<TestEvent> received = [];
 
         IDisposable subscription = bus.Subscribe<TestEvent>(
-            (e, _) =>
+            handler: (e, _) =>
             {
-                received.Add(e);
+                received.Add(item: e);
                 return Task.CompletedTask;
             }
         );
 
-        await bus.PublishAsync(new TestEvent { Data = "before" });
+        await bus.PublishAsync(@event: new TestEvent { Data = "before" });
         received.Should().ContainSingle();
 
         subscription.Dispose();
 
-        await bus.PublishAsync(new TestEvent { Data = "after" });
-        received.Should().ContainSingle("handler should not be called after dispose");
+        await bus.PublishAsync(@event: new TestEvent { Data = "after" });
+        received.Should().ContainSingle(because: "handler should not be called after dispose");
     }
 
     [Fact]
@@ -172,7 +172,7 @@ public class InMemoryEventBusTests
     {
         InMemoryEventBus bus = new();
 
-        IDisposable subscription = bus.Subscribe<TestEvent>((_, _) => Task.CompletedTask);
+        IDisposable subscription = bus.Subscribe<TestEvent>(handler: (_, _) => Task.CompletedTask);
 
         Action act = () =>
         {
@@ -191,26 +191,26 @@ public class InMemoryEventBusTests
         List<string> order = [];
 
         bus.Subscribe<TestEvent>(
-            (_, _) =>
+            handler: (_, _) =>
             {
-                order.Add("first");
+                order.Add(item: "first");
                 cts.Cancel();
                 return Task.CompletedTask;
             }
         );
 
         bus.Subscribe<TestEvent>(
-            (_, _) =>
+            handler: (_, _) =>
             {
-                order.Add("second");
+                order.Add(item: "second");
                 return Task.CompletedTask;
             }
         );
 
-        Func<Task> act = () => bus.PublishAsync(new TestEvent(), cts.Token);
+        Func<Task> act = () => bus.PublishAsync(@event: new TestEvent(), ct: cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
-        order.Should().Equal("first");
+        order.Should().Equal(expected: "first");
     }
 
     [Fact]
@@ -219,19 +219,19 @@ public class InMemoryEventBusTests
         InMemoryEventBus bus = new();
         List<string> ran = [];
 
-        bus.Subscribe<TestEvent>((_, _) => throw new InvalidOperationException("handler error"));
+        bus.Subscribe<TestEvent>(handler: (_, _) => throw new InvalidOperationException(message: "handler error"));
         bus.Subscribe<TestEvent>(
-            (_, _) =>
+            handler: (_, _) =>
             {
-                ran.Add("second");
+                ran.Add(item: "second");
                 return Task.CompletedTask;
             }
         );
 
-        Func<Task> act = () => bus.PublishAsync(new TestEvent());
+        Func<Task> act = () => bus.PublishAsync(@event: new TestEvent());
 
         await act.Should().NotThrowAsync();
-        ran.Should().Equal("second");
+        ran.Should().Equal(expected: "second");
     }
 
     [Fact]
@@ -240,13 +240,13 @@ public class InMemoryEventBusTests
         InMemoryEventBus bus = new();
         TestHandler handler = new();
 
-        IDisposable sub = bus.Subscribe(handler);
-        await bus.PublishAsync(new TestEvent { Data = "before" });
-        handler.Received.Should().HaveCount(1);
+        IDisposable sub = bus.Subscribe(handler: handler);
+        await bus.PublishAsync(@event: new TestEvent { Data = "before" });
+        handler.Received.Should().HaveCount(expected: 1);
 
         sub.Dispose();
-        await bus.PublishAsync(new TestEvent { Data = "after" });
-        handler.Received.Should().HaveCount(1);
+        await bus.PublishAsync(@event: new TestEvent { Data = "after" });
+        handler.Received.Should().HaveCount(expected: 1);
     }
 
     [Fact]
@@ -256,20 +256,20 @@ public class InMemoryEventBusTests
         int count = 0;
 
         bus.Subscribe<TestEvent>(
-            (_, _) =>
+            handler: (_, _) =>
             {
-                Interlocked.Increment(ref count);
+                Interlocked.Increment(location: ref count);
                 return Task.CompletedTask;
             }
         );
 
         Task[] tasks = Enumerable
-            .Range(0, 100)
-            .Select(i => bus.PublishAsync(new TestEvent { Data = $"event-{i}" }))
+            .Range(start: 0, count: 100)
+            .Select(selector: i => bus.PublishAsync(@event: new TestEvent { Data = $"event-{i}" }))
             .ToArray();
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks: tasks);
 
-        count.Should().Be(100);
+        count.Should().Be(expected: 100);
     }
 }

@@ -31,16 +31,16 @@ public class HlsSubtitleMediaTagTests
         // AudioVariantKey), not MapLabel — every rung re-plans as MapLabel "[v0]"
         // in its own bundle, so keying by label collapsed the ladder.
         Dictionary<string, VariantMetrics> videoMetrics = plan.VideoOutputs.ToDictionary(
-            PlaylistGenerator.VideoVariantKey,
-            _ => new VariantMetrics(5_000_000, 4_500_000)
+            keySelector: PlaylistGenerator.VideoVariantKey,
+            elementSelector: _ => new VariantMetrics(PeakBandwidth: 5_000_000, AverageBandwidth: 4_500_000)
         );
         Dictionary<string, VariantMetrics> audioMetrics = plan.AudioOutputs.ToDictionary(
-            PlaylistGenerator.AudioVariantKey,
-            _ => new VariantMetrics(192_000, 180_000)
+            keySelector: PlaylistGenerator.AudioVariantKey,
+            elementSelector: _ => new VariantMetrics(PeakBandwidth: 192_000, AverageBandwidth: 180_000)
         );
 
         PlaylistGenerator gen = new();
-        return gen.GenerateMasterPlaylist(plan, "Test.Movie", videoMetrics, audioMetrics);
+        return gen.GenerateMasterPlaylist(plan: plan, mediaTitle: "Test.Movie", videoMetrics: videoMetrics, audioMetrics: audioMetrics);
     }
 
     // ----------------------------------------------------------------
@@ -50,15 +50,16 @@ public class HlsSubtitleMediaTagTests
     [Fact]
     public void MasterPlaylist_HasOneExtXMediaPerSubtitleStream()
     {
-        OutputPlan plan = BuildPlan([
-            Sub(SubtitleCodecType.WebVtt, "eng"),
-            Sub(SubtitleCodecType.WebVtt, "fra"),
+        OutputPlan plan = BuildPlan(subs:
+        [
+            Sub(codec: SubtitleCodecType.WebVtt, lang: "eng"),
+            Sub(codec: SubtitleCodecType.WebVtt, lang: "fra"),
         ]);
 
-        string playlist = GenerateMaster(plan);
+        string playlist = GenerateMaster(plan: plan);
 
-        int tagCount = CountOccurrences(playlist, "TYPE=SUBTITLES");
-        tagCount.Should().Be(2, "two subtitle streams → two EXT-X-MEDIA tags");
+        int tagCount = CountOccurrences(haystack: playlist, needle: "TYPE=SUBTITLES");
+        tagCount.Should().Be(expected: 2, because: "two subtitle streams → two EXT-X-MEDIA tags");
     }
 
     // ----------------------------------------------------------------
@@ -68,21 +69,21 @@ public class HlsSubtitleMediaTagTests
     [Fact]
     public void StreamInf_IncludesSubtitlesAttribute_WhenSubtitlesPresentAll()
     {
-        OutputPlan plan = BuildPlan([Sub(SubtitleCodecType.WebVtt, "eng")]);
+        OutputPlan plan = BuildPlan(subs: [Sub(codec: SubtitleCodecType.WebVtt, lang: "eng")]);
 
-        string playlist = GenerateMaster(plan);
+        string playlist = GenerateMaster(plan: plan);
 
-        playlist.Should().Contain("SUBTITLES=\"subs\"");
+        playlist.Should().Contain(expected: "SUBTITLES=\"subs\"");
     }
 
     [Fact]
     public void StreamInf_NoSubtitlesAttribute_WhenNoSubtitles()
     {
-        OutputPlan plan = BuildPlan([]);
+        OutputPlan plan = BuildPlan(subs: []);
 
-        string playlist = GenerateMaster(plan);
+        string playlist = GenerateMaster(plan: plan);
 
-        playlist.Should().NotContain("SUBTITLES=");
+        playlist.Should().NotContain(unexpected: "SUBTITLES=");
     }
 
     // ----------------------------------------------------------------
@@ -117,15 +118,15 @@ public class HlsSubtitleMediaTagTests
             MapLabel: "0:s:2"
         );
 
-        OutputPlan plan = BuildPlan([srt, pgs, ass]);
+        OutputPlan plan = BuildPlan(subs: [srt, pgs, ass]);
 
-        string playlist = GenerateMaster(plan);
+        string playlist = GenerateMaster(plan: plan);
 
-        int tagCount = CountOccurrences(playlist, "TYPE=SUBTITLES");
-        tagCount.Should().Be(2, "SRT and ASS are active; PGS is dropped and must not appear");
+        int tagCount = CountOccurrences(haystack: playlist, needle: "TYPE=SUBTITLES");
+        tagCount.Should().Be(expected: 2, because: "SRT and ASS are active; PGS is dropped and must not appear");
 
-        playlist.Should().Contain("LANGUAGE=\"fra\"");
-        playlist.Should().Contain("LANGUAGE=\"eng\"");
+        playlist.Should().Contain(expected: "LANGUAGE=\"fra\"");
+        playlist.Should().Contain(expected: "LANGUAGE=\"eng\"");
     }
 
     // ----------------------------------------------------------------
@@ -147,12 +148,12 @@ public class HlsSubtitleMediaTagTests
             MapLabel: "0:s:0"
         );
 
-        string playlist = PlaylistGenerator.GenerateAssMediaPlaylist(sub, "subs_eng.ass", 6);
+        string playlist = PlaylistGenerator.GenerateAssMediaPlaylist(sub: sub, assFileName: "subs_eng.ass", segmentDurationSeconds: 6);
 
-        playlist.Should().StartWith("#EXTM3U");
-        playlist.Should().Contain("subs_eng.ass");
-        playlist.Should().Contain("#EXT-X-ENDLIST");
-        playlist.Should().Contain("#EXT-X-TARGETDURATION:6");
+        playlist.Should().StartWith(expected: "#EXTM3U");
+        playlist.Should().Contain(expected: "subs_eng.ass");
+        playlist.Should().Contain(expected: "#EXT-X-ENDLIST");
+        playlist.Should().Contain(expected: "#EXT-X-TARGETDURATION:6");
     }
 
     // ----------------------------------------------------------------
@@ -168,8 +169,8 @@ public class HlsSubtitleMediaTagTests
             + "00:00:07.000 --> 00:00:08.000\nWorld\n";
 
         IReadOnlyList<WebVttSegment> segments = segmenter.SliceContent(
-            vttContent,
-            TimeSpan.FromSeconds(6)
+            vttContent: vttContent,
+            segmentDuration: TimeSpan.FromSeconds(seconds: 6)
         );
 
         SubtitleOutputPlan sub = new(
@@ -180,13 +181,13 @@ public class HlsSubtitleMediaTagTests
             MapLabel: "0:s:0"
         );
 
-        string playlist = PlaylistGenerator.GenerateSubtitleMediaPlaylist(sub, segments, 6);
+        string playlist = PlaylistGenerator.GenerateSubtitleMediaPlaylist(sub: sub, segments: segments, segmentDurationSeconds: 6);
 
         // Playlist lives in subtitles/eng/ — segment URIs are relative to it.
-        playlist.Should().Contain("#EXTM3U");
-        playlist.Should().Contain("full_00000.vtt");
-        playlist.Should().Contain("full_00001.vtt");
-        playlist.Should().Contain("#EXT-X-ENDLIST");
+        playlist.Should().Contain(expected: "#EXTM3U");
+        playlist.Should().Contain(expected: "full_00000.vtt");
+        playlist.Should().Contain(expected: "full_00001.vtt");
+        playlist.Should().Contain(expected: "#EXT-X-ENDLIST");
     }
 
     // ----------------------------------------------------------------
@@ -242,7 +243,7 @@ public class HlsSubtitleMediaTagTests
     {
         int count = 0;
         int idx = 0;
-        while ((idx = haystack.IndexOf(needle, idx, StringComparison.Ordinal)) >= 0)
+        while ((idx = haystack.IndexOf(value: needle, startIndex: idx, comparisonType: StringComparison.Ordinal)) >= 0)
         {
             count++;
             idx += needle.Length;

@@ -40,7 +40,7 @@ namespace NoMercy.Tests.Api;
 ///   an unhandled exception rather than returning a ValidationEnvelope.
 ///   Test Validate_WellFormedJsonObject_IsNotRejectedAsMalformed is guarded
 ///   against 500 so the suite flags it as a production bug, not a test bug.
-[Trait("Category", "EncoderValidationContract")]
+[Trait(name: "Category", value: "EncoderValidationContract")]
 public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, IAsyncLifetime
 {
     private readonly NoMercyApiFactory _factory;
@@ -52,7 +52,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     private Ulid _childPresetId;
 
     private static readonly string ValidProfileJson = JsonSerializer.Serialize(
-        new
+        value: new
         {
             Id = Ulid.NewUlid().ToString(),
             Name = "Contract Test Profile",
@@ -94,32 +94,34 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         _builtInPresetId = Ulid.NewUlid();
         _childPresetId = Ulid.NewUlid();
 
-        ctx.EncodingPresets.AddRange(
-            new EncodingPreset
-            {
-                Id = _userPresetId,
-                Name = $"User Preset {_userPresetId}",
-                ProfileJson = ValidProfileJson,
-                IsBuiltIn = false,
-                Source = "db",
-            },
-            new EncodingPreset
-            {
-                Id = _builtInPresetId,
-                Name = $"BuiltIn Preset {_builtInPresetId}",
-                ProfileJson = ValidProfileJson,
-                IsBuiltIn = true,
-                Source = "seed",
-            },
-            new EncodingPreset
-            {
-                Id = _childPresetId,
-                Name = $"Child Preset {_childPresetId}",
-                ProfileJson = "{}",
-                ParentPresetId = _userPresetId,
-                IsBuiltIn = false,
-                Source = "db",
-            }
+        ctx.EncodingPresets.AddRange(entities:
+            [
+                new EncodingPreset
+                {
+                    Id = _userPresetId,
+                    Name = $"User Preset {_userPresetId}",
+                    ProfileJson = ValidProfileJson,
+                    IsBuiltIn = false,
+                    Source = "db",
+                },
+                new EncodingPreset
+                {
+                    Id = _builtInPresetId,
+                    Name = $"BuiltIn Preset {_builtInPresetId}",
+                    ProfileJson = ValidProfileJson,
+                    IsBuiltIn = true,
+                    Source = "seed",
+                },
+                new EncodingPreset
+                {
+                    Id = _childPresetId,
+                    Name = $"Child Preset {_childPresetId}",
+                    ProfileJson = "{}",
+                    ParentPresetId = _userPresetId,
+                    IsBuiltIn = false,
+                    Source = "db",
+                }
+            ]
         );
 
         await ctx.SaveChangesAsync();
@@ -129,45 +131,45 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     {
         await using MediaContext ctx = new();
         Ulid[] ids = [_userPresetId, _builtInPresetId, _childPresetId];
-        await ctx.EncodingPresets.Where(p => ids.Contains(p.Id)).ExecuteDeleteAsync();
+        await ctx.EncodingPresets.Where(predicate: p => ids.Contains(p.Id)).ExecuteDeleteAsync();
     }
 
     // RULE: auth-required — all encoder/profile and dashboard/encoding/presets
 
     [Theory]
-    [InlineData("GET", "/api/v1/encoder/profiles")]
-    [InlineData("GET", "/api/v1/dashboard/encoding/presets")]
-    [InlineData("POST", "/api/v1/encoder/profiles/validate")]
-    [InlineData("POST", "/api/v1/dashboard/encoding/presets/validate")]
-    [InlineData("POST", "/api/v1/dashboard/drivers")]
-    [InlineData("GET", "/api/v1/dashboard/drivers")]
-    [InlineData("GET", "/api/v1/dashboard/drivers/types")]
+    [InlineData(data: ["GET", "/api/v1/encoder/profiles"])]
+    [InlineData(data: ["GET", "/api/v1/dashboard/encoding/presets"])]
+    [InlineData(data: ["POST", "/api/v1/encoder/profiles/validate"])]
+    [InlineData(data: ["POST", "/api/v1/dashboard/encoding/presets/validate"])]
+    [InlineData(data: ["POST", "/api/v1/dashboard/drivers"])]
+    [InlineData(data: ["GET", "/api/v1/dashboard/drivers"])]
+    [InlineData(data: ["GET", "/api/v1/dashboard/drivers/types"])]
     public async Task AllEncoderEndpoints_Anonymous_Returns401Or403(string method, string path)
     {
-        HttpRequestMessage req = new(new(method), path);
+        HttpRequestMessage req = new(method: new(method: method), requestUri: path);
         if (method is "POST" or "PUT")
-            req.Content = new StringContent("{}", Encoding.UTF8, "application/json");
+            req.Content = new StringContent(content: "{}", encoding: Encoding.UTF8, mediaType: "application/json");
 
-        HttpResponseMessage response = await _unauthed.SendAsync(req);
+        HttpResponseMessage response = await _unauthed.SendAsync(request: req);
 
         Assert.True(
-            response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
-            $"Expected 401/403 on {method} {path} when anonymous, got {(int)response.StatusCode}"
+            condition: response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
+            userMessage: $"Expected 401/403 on {method} {path} when anonymous, got {(int)response.StatusCode}"
         );
     }
 
     [Theory]
-    [InlineData("GET", "/api/v1/encoder/profiles")]
-    [InlineData("GET", "/api/v1/dashboard/drivers/types")]
+    [InlineData(data: ["GET", "/api/v1/encoder/profiles"])]
+    [InlineData(data: ["GET", "/api/v1/dashboard/drivers/types"])]
     public async Task ReadEndpoints_Authenticated_ReturnsOk(string method, string path)
     {
-        HttpRequestMessage req = new(new(method), path);
-        HttpResponseMessage response = await _authed.SendAsync(req);
+        HttpRequestMessage req = new(method: new(method: method), requestUri: path);
+        HttpResponseMessage response = await _authed.SendAsync(request: req);
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected 200 on {method} {path}, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected 200 on {method} {path}, got {(int)response.StatusCode}: {body}"
         );
     }
 
@@ -180,59 +182,59 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task Validate_MissingProfileJson_Returns200WithValidFalseAndRuleId()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/encoder/profiles/validate",
-            new { profile_json = "" }
+            requestUri: "/api/v1/encoder/profiles/validate",
+            value: new { profile_json = "" }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected 200 (validation envelope), got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected 200 (validation envelope), got {(int)response.StatusCode}: {body}"
         );
 
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
         JsonElement root = doc.RootElement;
 
-        root.TryGetProperty("valid", out JsonElement validEl)
+        root.TryGetProperty(propertyName: "valid", value: out JsonElement validEl)
             .Should()
-            .BeTrue($"Response must have 'valid' field. Body: {body}");
-        validEl.GetBoolean().Should().BeFalse("valid must be false for empty profile_json");
+            .BeTrue(because: $"Response must have 'valid' field. Body: {body}");
+        validEl.GetBoolean().Should().BeFalse(because: "valid must be false for empty profile_json");
 
-        root.TryGetProperty("errors", out JsonElement errorsEl)
+        root.TryGetProperty(propertyName: "errors", value: out JsonElement errorsEl)
             .Should()
-            .BeTrue($"Response must have 'errors' array. Body: {body}");
-        errorsEl.GetArrayLength().Should().BeGreaterThan(0, "Errors array must not be empty");
+            .BeTrue(because: $"Response must have 'errors' array. Body: {body}");
+        errorsEl.GetArrayLength().Should().BeGreaterThan(expected: 0, because: "Errors array must not be empty");
 
         JsonElement firstError = errorsEl.EnumerateArray().First();
         firstError
-            .TryGetProperty("id", out JsonElement idEl)
+            .TryGetProperty(propertyName: "id", value: out JsonElement idEl)
             .Should()
-            .BeTrue("Each error must have an 'id' field (stable rule id)");
-        idEl.GetString().Should().NotBeNullOrEmpty("Rule id must not be empty");
+            .BeTrue(because: "Each error must have an 'id' field (stable rule id)");
+        idEl.GetString().Should().NotBeNullOrEmpty(because: "Rule id must not be empty");
     }
 
     [Fact]
     public async Task Validate_ValidProfileJson_Returns200WithValidTrue()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/encoder/profiles/validate",
-            new { profile_json = ValidProfileJson }
+            requestUri: "/api/v1/encoder/profiles/validate",
+            value: new { profile_json = ValidProfileJson }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected 200 for valid profile_json, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected 200 for valid profile_json, got {(int)response.StatusCode}: {body}"
         );
 
-        using JsonDocument doc = JsonDocument.Parse(body);
-        doc.RootElement.TryGetProperty("valid", out JsonElement validEl)
+        using JsonDocument doc = JsonDocument.Parse(json: body);
+        doc.RootElement.TryGetProperty(propertyName: "valid", value: out JsonElement validEl)
             .Should()
-            .BeTrue($"Response must have 'valid'. Body: {body}");
+            .BeTrue(because: $"Response must have 'valid'. Body: {body}");
         validEl
             .GetBoolean()
             .Should()
-            .BeTrue($"valid must be true for a well-formed profile. Body: {body}");
+            .BeTrue(because: $"valid must be true for a well-formed profile. Body: {body}");
     }
 
     // RULE: validate/profile_json-malformed — malformed JSON must return 200
@@ -241,48 +243,48 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task Validate_MalformedProfileJson_Returns200WithValidFalse_NotA500()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/encoder/profiles/validate",
-            new { profile_json = "{not valid json{{{{" }
+            requestUri: "/api/v1/encoder/profiles/validate",
+            value: new { profile_json = "{not valid json{{{{" }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Malformed JSON must yield 200 with valid:false (not 500). Got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Malformed JSON must yield 200 with valid:false (not 500). Got {(int)response.StatusCode}: {body}"
         );
 
-        using JsonDocument doc = JsonDocument.Parse(body);
-        doc.RootElement.TryGetProperty("valid", out JsonElement validEl).Should().BeTrue();
-        validEl.GetBoolean().Should().BeFalse("malformed JSON is never valid");
+        using JsonDocument doc = JsonDocument.Parse(json: body);
+        doc.RootElement.TryGetProperty(propertyName: "valid", value: out JsonElement validEl).Should().BeTrue();
+        validEl.GetBoolean().Should().BeFalse(because: "malformed JSON is never valid");
     }
 
     [Fact]
     public async Task Validate_WellFormedJsonObject_IsNotRejectedAsMalformed()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/encoder/profiles/validate",
-            new { profile_json = ValidProfileJson }
+            requestUri: "/api/v1/encoder/profiles/validate",
+            value: new { profile_json = ValidProfileJson }
         );
 
         string body = await response.Content.ReadAsStringAsync();
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
 
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"A well-formed JSON object must not 500. Got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"A well-formed JSON object must not 500. Got {(int)response.StatusCode}: {body}"
         );
 
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
         bool hasMalformedError = false;
-        if (doc.RootElement.TryGetProperty("errors", out JsonElement errs))
+        if (doc.RootElement.TryGetProperty(propertyName: "errors", value: out JsonElement errs))
         {
             hasMalformedError = errs.EnumerateArray()
-                .Any(e =>
-                    e.TryGetProperty("message", out JsonElement msg)
-                    && msg.GetString()!.Contains("malformed")
+                .Any(predicate: e =>
+                    e.TryGetProperty(propertyName: "message", value: out JsonElement msg)
+                    && msg.GetString()!.Contains(value: "malformed")
                 );
         }
-        Assert.False(hasMalformedError, "A valid JSON object must not be flagged as malformed");
+        Assert.False(condition: hasMalformedError, userMessage: "A valid JSON object must not be flagged as malformed");
     }
 
     // RULE: validate/empty-outputs — POST /encoder/profiles/validate with well-formed JSON
@@ -295,7 +297,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task Validate_EmptyArraysProfile_Returns200WithValidFalseAndNoOutputsRuleId()
     {
         string emptyOutputsJson = JsonSerializer.Serialize(
-            new
+            value: new
             {
                 Id = Ulid.NewUlid().ToString(),
                 Name = "Empty Outputs Test",
@@ -307,37 +309,37 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         );
 
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/encoder/profiles/validate",
-            new { profile_json = emptyOutputsJson }
+            requestUri: "/api/v1/encoder/profiles/validate",
+            value: new { profile_json = emptyOutputsJson }
         );
 
         string body = await response.Content.ReadAsStringAsync();
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected 200 (validation envelope) for empty-outputs profile, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected 200 (validation envelope) for empty-outputs profile, got {(int)response.StatusCode}: {body}"
         );
 
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
         JsonElement root = doc.RootElement;
 
-        root.TryGetProperty("valid", out JsonElement validEl)
+        root.TryGetProperty(propertyName: "valid", value: out JsonElement validEl)
             .Should()
-            .BeTrue($"Response must have 'valid'. Body: {body}");
-        validEl.GetBoolean().Should().BeFalse("empty outputs are not valid");
+            .BeTrue(because: $"Response must have 'valid'. Body: {body}");
+        validEl.GetBoolean().Should().BeFalse(because: "empty outputs are not valid");
 
-        root.TryGetProperty("errors", out JsonElement errorsEl)
+        root.TryGetProperty(propertyName: "errors", value: out JsonElement errorsEl)
             .Should()
-            .BeTrue($"Response must have 'errors'. Body: {body}");
+            .BeTrue(because: $"Response must have 'errors'. Body: {body}");
         bool hasNoOutputsRule = errorsEl
             .EnumerateArray()
-            .Any(e =>
-                e.TryGetProperty("id", out JsonElement idEl)
+            .Any(predicate: e =>
+                e.TryGetProperty(propertyName: "id", value: out JsonElement idEl)
                 && idEl.GetString() == "profile.no_outputs"
             );
         Assert.True(
-            hasNoOutputsRule,
-            $"Expected rule id 'profile.no_outputs' in errors. Body: {body}"
+            condition: hasNoOutputsRule,
+            userMessage: $"Expected rule id 'profile.no_outputs' in errors. Body: {body}"
         );
     }
 
@@ -345,27 +347,27 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task Validate_ProfileWithOneAudioOutput_DoesNotFireNoOutputsRule()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/encoder/profiles/validate",
-            new { profile_json = ValidProfileJson }
+            requestUri: "/api/v1/encoder/profiles/validate",
+            value: new { profile_json = ValidProfileJson }
         );
 
         string body = await response.Content.ReadAsStringAsync();
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
 
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
         bool hasNoOutputsRule = false;
-        if (doc.RootElement.TryGetProperty("errors", out JsonElement errs))
+        if (doc.RootElement.TryGetProperty(propertyName: "errors", value: out JsonElement errs))
         {
             hasNoOutputsRule = errs.EnumerateArray()
-                .Any(e =>
-                    e.TryGetProperty("id", out JsonElement idEl)
+                .Any(predicate: e =>
+                    e.TryGetProperty(propertyName: "id", value: out JsonElement idEl)
                     && idEl.GetString() == "profile.no_outputs"
                 );
         }
         Assert.False(
-            hasNoOutputsRule,
-            $"profile.no_outputs must not fire when at least one output is declared. Body: {body}"
+            condition: hasNoOutputsRule,
+            userMessage: $"profile.no_outputs must not fire when at least one output is declared. Body: {body}"
         );
     }
 
@@ -379,14 +381,14 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task LegacyValidate_MissingProfileJson_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/encoding/presets/validate",
-            new { ProfileJson = "" }
+            requestUri: "/api/v1/dashboard/encoding/presets/validate",
+            value: new { ProfileJson = "" }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 400 for missing profile_json on legacy validate, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.BadRequest,
+            userMessage: $"Expected 400 for missing profile_json on legacy validate, got {(int)response.StatusCode}: {body}"
         );
     }
 
@@ -394,14 +396,14 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task LegacyValidate_PresentProfileJson_Returns200()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/encoding/presets/validate",
-            new { ProfileJson = ValidProfileJson }
+            requestUri: "/api/v1/dashboard/encoding/presets/validate",
+            value: new { ProfileJson = ValidProfileJson }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected 200 for present profile_json, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected 200 for present profile_json, got {(int)response.StatusCode}: {body}"
         );
     }
 
@@ -415,16 +417,16 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task CreateProfile_MissingName_Returns400NotA500()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/encoder/profiles",
-            new { profile_json = ValidProfileJson }
+            requestUri: "/api/v1/encoder/profiles",
+            value: new { profile_json = ValidProfileJson }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 400 for missing name, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.BadRequest,
+            userMessage: $"Expected 400 for missing name, got {(int)response.StatusCode}: {body}"
         );
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
     }
 
     [Fact]
@@ -432,18 +434,18 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     {
         string uniqueName = $"Contract-Test-{Ulid.NewUlid()}";
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/encoder/profiles",
-            new { name = uniqueName, profile_json = ValidProfileJson }
+            requestUri: "/api/v1/encoder/profiles",
+            value: new { name = uniqueName, profile_json = ValidProfileJson }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected 200 for valid create, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected 200 for valid create, got {(int)response.StatusCode}: {body}"
         );
 
         await using MediaContext cleanupCtx = new();
-        await cleanupCtx.EncodingPresets.Where(p => p.Name == uniqueName).ExecuteDeleteAsync();
+        await cleanupCtx.EncodingPresets.Where(predicate: p => p.Name == uniqueName).ExecuteDeleteAsync();
     }
 
     // RULE: create-preset/profile_json-required — POST /encoder/profiles with name
@@ -452,14 +454,14 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task CreateProfile_MissingProfileJson_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/encoder/profiles",
-            new { name = "SomeProfile" }
+            requestUri: "/api/v1/encoder/profiles",
+            value: new { name = "SomeProfile" }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 400 for missing profile_json, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.BadRequest,
+            userMessage: $"Expected 400 for missing profile_json, got {(int)response.StatusCode}: {body}"
         );
     }
 
@@ -468,14 +470,14 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     {
         string uniqueName = $"Contract-Both-{Ulid.NewUlid()}";
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/encoder/profiles",
-            new { name = uniqueName, profile_json = ValidProfileJson }
+            requestUri: "/api/v1/encoder/profiles",
+            value: new { name = uniqueName, profile_json = ValidProfileJson }
         );
 
-        Assert.NotEqual(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.BadRequest, actual: response.StatusCode);
 
         await using MediaContext cleanupCtx = new();
-        await cleanupCtx.EncodingPresets.Where(p => p.Name == uniqueName).ExecuteDeleteAsync();
+        await cleanupCtx.EncodingPresets.Where(predicate: p => p.Name == uniqueName).ExecuteDeleteAsync();
     }
 
     // RULE: create-preset/name-conflict — POST /encoder/profiles with a name that
@@ -484,22 +486,22 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task CreateProfile_DuplicateName_Returns409Conflict()
     {
         await using MediaContext ctx = new();
-        EncodingPreset? existing = await ctx.EncodingPresets.FirstOrDefaultAsync(p =>
+        EncodingPreset? existing = await ctx.EncodingPresets.FirstOrDefaultAsync(predicate: p =>
             p.Id == _userPresetId
         );
-        Assert.NotNull(existing);
+        Assert.NotNull(@object: existing);
 
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/encoder/profiles",
-            new { name = existing!.Name, profile_json = ValidProfileJson }
+            requestUri: "/api/v1/encoder/profiles",
+            value: new { name = existing!.Name, profile_json = ValidProfileJson }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.Conflict,
-            $"Expected 409 for duplicate name, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.Conflict,
+            userMessage: $"Expected 409 for duplicate name, got {(int)response.StatusCode}: {body}"
         );
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
     }
 
     [Fact]
@@ -507,15 +509,15 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     {
         string uniqueName = $"Unique-{Ulid.NewUlid()}";
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/encoder/profiles",
-            new { name = uniqueName, profile_json = ValidProfileJson }
+            requestUri: "/api/v1/encoder/profiles",
+            value: new { name = uniqueName, profile_json = ValidProfileJson }
         );
 
         string body = await response.Content.ReadAsStringAsync();
-        Assert.NotEqual(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.Conflict, actual: response.StatusCode);
 
         await using MediaContext cleanupCtx = new();
-        await cleanupCtx.EncodingPresets.Where(p => p.Name == uniqueName).ExecuteDeleteAsync();
+        await cleanupCtx.EncodingPresets.Where(predicate: p => p.Name == uniqueName).ExecuteDeleteAsync();
     }
 
     // RULE: update-preset/builtin-readonly — PUT /encoder/profiles/{id} on a
@@ -527,8 +529,8 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task UpdateProfile_BuiltInPreset_Returns400NotA500()
     {
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            $"/api/v1/encoder/profiles/{_builtInPresetId}",
-            new
+            requestUri: $"/api/v1/encoder/profiles/{_builtInPresetId}",
+            value: new
             {
                 Id = _builtInPresetId.ToString(),
                 Name = "Tampered",
@@ -541,20 +543,20 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 400 for update on built-in preset, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.BadRequest,
+            userMessage: $"Expected 400 for update on built-in preset, got {(int)response.StatusCode}: {body}"
         );
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
-        Assert.NotEqual(HttpStatusCode.OK, response.StatusCode);
-        Assert.NotEqual(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.OK, actual: response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.NoContent, actual: response.StatusCode);
     }
 
     [Fact]
     public async Task UpdateProfile_UserPreset_ReturnsNoContent()
     {
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            $"/api/v1/encoder/profiles/{_userPresetId}",
-            new
+            requestUri: $"/api/v1/encoder/profiles/{_userPresetId}",
+            value: new
             {
                 Id = _userPresetId.ToString(),
                 Name = "Updated",
@@ -567,8 +569,8 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.NoContent,
-            $"Expected 204 for updating a user preset, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.NoContent,
+            userMessage: $"Expected 204 for updating a user preset, got {(int)response.StatusCode}: {body}"
         );
     }
 
@@ -578,15 +580,15 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task DeleteProfile_BuiltIn_Returns400()
     {
         HttpResponseMessage response = await _authed.DeleteAsync(
-            $"/api/v1/encoder/profiles/{_builtInPresetId}"
+            requestUri: $"/api/v1/encoder/profiles/{_builtInPresetId}"
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 400 for deleting a built-in preset, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.BadRequest,
+            userMessage: $"Expected 400 for deleting a built-in preset, got {(int)response.StatusCode}: {body}"
         );
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
     }
 
     [Fact]
@@ -596,7 +598,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         await using (MediaContext seedCtx = new())
         {
             seedCtx.EncodingPresets.Add(
-                new()
+                entity: new()
                 {
                     Id = deleteTargetId,
                     Name = $"Delete-Target-{deleteTargetId}",
@@ -609,13 +611,13 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         }
 
         HttpResponseMessage response = await _authed.DeleteAsync(
-            $"/api/v1/encoder/profiles/{deleteTargetId}"
+            requestUri: $"/api/v1/encoder/profiles/{deleteTargetId}"
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.NoContent,
-            $"Expected 204 for deleting user preset with no children, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.NoContent,
+            userMessage: $"Expected 204 for deleting user preset with no children, got {(int)response.StatusCode}: {body}"
         );
     }
 
@@ -625,15 +627,15 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task DeleteProfile_HasChildren_Returns400()
     {
         HttpResponseMessage response = await _authed.DeleteAsync(
-            $"/api/v1/encoder/profiles/{_userPresetId}"
+            requestUri: $"/api/v1/encoder/profiles/{_userPresetId}"
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 400 when deleting a preset with children, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.BadRequest,
+            userMessage: $"Expected 400 when deleting a preset with children, got {(int)response.StatusCode}: {body}"
         );
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
     }
 
     [Fact]
@@ -643,7 +645,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         await using (MediaContext seedCtx = new())
         {
             seedCtx.EncodingPresets.Add(
-                new()
+                entity: new()
                 {
                     Id = parentId,
                     Name = $"Parent-{parentId}",
@@ -656,12 +658,12 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         }
 
         HttpResponseMessage response = await _authed.DeleteAsync(
-            $"/api/v1/encoder/profiles/{parentId}"
+            requestUri: $"/api/v1/encoder/profiles/{parentId}"
         );
 
         Assert.True(
-            response.StatusCode == HttpStatusCode.NoContent,
-            $"Expected 204 for deleting a leaf preset (no children), got {(int)response.StatusCode}"
+            condition: response.StatusCode == HttpStatusCode.NoContent,
+            userMessage: $"Expected 204 for deleting a leaf preset (no children), got {(int)response.StatusCode}"
         );
     }
 
@@ -672,37 +674,37 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     {
         Ulid phantomId = Ulid.NewUlid();
         HttpResponseMessage response = await _authed.GetAsync(
-            $"/api/v1/encoder/profiles/{phantomId}"
+            requestUri: $"/api/v1/encoder/profiles/{phantomId}"
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound,
-            $"Expected 404 for non-existent preset, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.NotFound,
+            userMessage: $"Expected 404 for non-existent preset, got {(int)response.StatusCode}: {body}"
         );
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
     }
 
     [Fact]
     public async Task GetProfile_ExistingId_ReturnsOkWithExpectedShape()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            $"/api/v1/encoder/profiles/{_userPresetId}"
+            requestUri: $"/api/v1/encoder/profiles/{_userPresetId}"
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected 200 for existing preset, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected 200 for existing preset, got {(int)response.StatusCode}: {body}"
         );
 
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
         JsonElement root = doc.RootElement;
-        root.TryGetProperty("id", out _).Should().BeTrue("id field must be present");
-        root.TryGetProperty("name", out _).Should().BeTrue("name field must be present");
-        root.TryGetProperty("is_built_in", out _)
+        root.TryGetProperty(propertyName: "id", value: out _).Should().BeTrue(because: "id field must be present");
+        root.TryGetProperty(propertyName: "name", value: out _).Should().BeTrue(because: "name field must be present");
+        root.TryGetProperty(propertyName: "is_built_in", value: out _)
             .Should()
-            .BeTrue("is_built_in field must be present");
+            .BeTrue(because: "is_built_in field must be present");
     }
 
     // RULE: get-list/pagination-clamped — GET /encoder/profiles?pageSize=999999
@@ -711,35 +713,35 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task ListProfiles_ExcessivePageSize_ClampsAndReturnsOk()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            "/api/v1/encoder/profiles?pageSize=999999"
+            requestUri: "/api/v1/encoder/profiles?pageSize=999999"
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected 200 for excessive pageSize, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected 200 for excessive pageSize, got {(int)response.StatusCode}: {body}"
         );
 
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
         JsonElement root = doc.RootElement;
-        root.TryGetProperty("meta", out JsonElement meta).Should().BeTrue("meta must be present");
-        meta.TryGetProperty("pageSize", out JsonElement pageSizeEl).Should().BeTrue();
+        root.TryGetProperty(propertyName: "meta", value: out JsonElement meta).Should().BeTrue(because: "meta must be present");
+        meta.TryGetProperty(propertyName: "pageSize", value: out JsonElement pageSizeEl).Should().BeTrue();
         int clampedSize = pageSizeEl.GetInt32();
-        Assert.True(clampedSize <= 500, $"pageSize must be clamped to ≤ 500, got {clampedSize}");
+        Assert.True(condition: clampedSize <= 500, userMessage: $"pageSize must be clamped to ≤ 500, got {clampedSize}");
     }
 
     [Fact]
     public async Task ListProfiles_NormalPageSize_ReturnsThatPageSize()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            "/api/v1/encoder/profiles?pageSize=10"
+            requestUri: "/api/v1/encoder/profiles?pageSize=10"
         );
 
         string body = await response.Content.ReadAsStringAsync();
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
 
-        using JsonDocument doc = JsonDocument.Parse(body);
-        doc.RootElement.GetProperty("meta").GetProperty("pageSize").GetInt32().Should().Be(10);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
+        doc.RootElement.GetProperty(propertyName: "meta").GetProperty(propertyName: "pageSize").GetInt32().Should().Be(expected: 10);
     }
 
     // RULE: get-list/envelope-shape — GET /encoder/profiles must return
@@ -747,20 +749,20 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     [Fact]
     public async Task ListProfiles_ReturnsEnvelopeWithDataAndMeta()
     {
-        HttpResponseMessage response = await _authed.GetAsync("/api/v1/encoder/profiles");
+        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/encoder/profiles");
 
         string body = await response.Content.ReadAsStringAsync();
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
 
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
         JsonElement root = doc.RootElement;
-        root.TryGetProperty("data", out JsonElement data).Should().BeTrue("'data' must be present");
-        data.ValueKind.Should().Be(JsonValueKind.Array, "data must be an array");
-        root.TryGetProperty("meta", out JsonElement meta).Should().BeTrue("'meta' must be present");
-        meta.TryGetProperty("total", out _).Should().BeTrue("meta.total must be present");
-        meta.TryGetProperty("pageSize", out _).Should().BeTrue("meta.pageSize must be present");
-        meta.TryGetProperty("pageIndex", out _).Should().BeTrue("meta.pageIndex must be present");
-        meta.TryGetProperty("totalPages", out _).Should().BeTrue("meta.totalPages must be present");
+        root.TryGetProperty(propertyName: "data", value: out JsonElement data).Should().BeTrue(because: "'data' must be present");
+        data.ValueKind.Should().Be(expected: JsonValueKind.Array, because: "data must be an array");
+        root.TryGetProperty(propertyName: "meta", value: out JsonElement meta).Should().BeTrue(because: "'meta' must be present");
+        meta.TryGetProperty(propertyName: "total", value: out _).Should().BeTrue(because: "meta.total must be present");
+        meta.TryGetProperty(propertyName: "pageSize", value: out _).Should().BeTrue(because: "meta.pageSize must be present");
+        meta.TryGetProperty(propertyName: "pageIndex", value: out _).Should().BeTrue(because: "meta.pageIndex must be present");
+        meta.TryGetProperty(propertyName: "totalPages", value: out _).Should().BeTrue(because: "meta.totalPages must be present");
     }
 
     // RULE: clone/name-required — POST /encoder/profiles/{id}/clone with no name
@@ -769,16 +771,16 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task CloneProfile_MissingName_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            $"/api/v1/encoder/profiles/{_userPresetId}/clone",
-            new { }
+            requestUri: $"/api/v1/encoder/profiles/{_userPresetId}/clone",
+            value: new { }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 400 for clone with no name, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.BadRequest,
+            userMessage: $"Expected 400 for clone with no name, got {(int)response.StatusCode}: {body}"
         );
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
     }
 
     [Fact]
@@ -786,23 +788,23 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     {
         string cloneName = $"Clone-{Ulid.NewUlid()}";
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            $"/api/v1/encoder/profiles/{_userPresetId}/clone",
-            new { name = cloneName }
+            requestUri: $"/api/v1/encoder/profiles/{_userPresetId}/clone",
+            value: new { name = cloneName }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.Created,
-            $"Expected 201 for valid clone, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.Created,
+            userMessage: $"Expected 201 for valid clone, got {(int)response.StatusCode}: {body}"
         );
 
-        using JsonDocument doc = JsonDocument.Parse(body);
-        doc.RootElement.TryGetProperty("id", out _)
+        using JsonDocument doc = JsonDocument.Parse(json: body);
+        doc.RootElement.TryGetProperty(propertyName: "id", value: out _)
             .Should()
-            .BeTrue("Clone response must include 'id'");
+            .BeTrue(because: "Clone response must include 'id'");
 
         await using MediaContext cleanupCtx = new();
-        await cleanupCtx.EncodingPresets.Where(p => p.Name == cloneName).ExecuteDeleteAsync();
+        await cleanupCtx.EncodingPresets.Where(predicate: p => p.Name == cloneName).ExecuteDeleteAsync();
     }
 
     // RULE: clone/parent-not-found — POST /encoder/profiles/{id}/clone for a
@@ -812,14 +814,14 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     {
         Ulid phantomId = Ulid.NewUlid();
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            $"/api/v1/encoder/profiles/{phantomId}/clone",
-            new { name = "AnyName" }
+            requestUri: $"/api/v1/encoder/profiles/{phantomId}/clone",
+            value: new { name = "AnyName" }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound,
-            $"Expected 404 for clone from non-existent parent, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.NotFound,
+            userMessage: $"Expected 404 for clone from non-existent parent, got {(int)response.StatusCode}: {body}"
         );
     }
 
@@ -828,14 +830,14 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     {
         string cloneName = $"Clone-Neighbor-{Ulid.NewUlid()}";
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            $"/api/v1/encoder/profiles/{_userPresetId}/clone",
-            new { name = cloneName }
+            requestUri: $"/api/v1/encoder/profiles/{_userPresetId}/clone",
+            value: new { name = cloneName }
         );
 
-        Assert.NotEqual(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.NotFound, actual: response.StatusCode);
 
         await using MediaContext cleanupCtx = new();
-        await cleanupCtx.EncodingPresets.Where(p => p.Name == cloneName).ExecuteDeleteAsync();
+        await cleanupCtx.EncodingPresets.Where(predicate: p => p.Name == cloneName).ExecuteDeleteAsync();
     }
 
     // RULE: import/neither-body-nor-url — POST /encoder/profiles/import with no
@@ -846,21 +848,21 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task ImportProfile_NeitherBodyNorUrl_Returns422WithEnvelope()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/encoder/profiles/import?trust_unsigned=true",
-            new { }
+            requestUri: "/api/v1/encoder/profiles/import?trust_unsigned=true",
+            value: new { }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.UnprocessableEntity,
-            $"Expected 422 for import with no source, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.UnprocessableEntity,
+            userMessage: $"Expected 422 for import with no source, got {(int)response.StatusCode}: {body}"
         );
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
 
-        using JsonDocument doc = JsonDocument.Parse(body);
-        doc.RootElement.TryGetProperty("valid", out JsonElement validEl)
+        using JsonDocument doc = JsonDocument.Parse(json: body);
+        doc.RootElement.TryGetProperty(propertyName: "valid", value: out JsonElement validEl)
             .Should()
-            .BeTrue($"Response must be a ValidationEnvelope with 'valid'. Body: {body}");
+            .BeTrue(because: $"Response must be a ValidationEnvelope with 'valid'. Body: {body}");
         validEl.GetBoolean().Should().BeFalse();
     }
 
@@ -869,7 +871,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     {
         string uniqueName = $"Imported-{Ulid.NewUlid()}";
         string importJson = JsonSerializer.Serialize(
-            new
+            value: new
             {
                 Id = Ulid.NewUlid().ToString(),
                 Name = uniqueName,
@@ -881,18 +883,18 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         );
 
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/encoder/profiles/import?trust_unsigned=true",
-            new { profile_json = importJson }
+            requestUri: "/api/v1/encoder/profiles/import?trust_unsigned=true",
+            value: new { profile_json = importJson }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.Created,
-            $"Expected 201 for valid import with trust_unsigned=true, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.Created,
+            userMessage: $"Expected 201 for valid import with trust_unsigned=true, got {(int)response.StatusCode}: {body}"
         );
 
         await using MediaContext cleanupCtx = new();
-        await cleanupCtx.EncodingPresets.Where(p => p.Name == uniqueName).ExecuteDeleteAsync();
+        await cleanupCtx.EncodingPresets.Where(predicate: p => p.Name == uniqueName).ExecuteDeleteAsync();
     }
 
     // RULE: import/unsigned-requires-flag — POST /encoder/profiles/import with
@@ -902,7 +904,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task ImportProfile_UnsignedWithoutTrustFlag_Returns422()
     {
         string importJson = JsonSerializer.Serialize(
-            new
+            value: new
             {
                 Id = Ulid.NewUlid().ToString(),
                 Name = $"Untrusted-{Ulid.NewUlid()}",
@@ -914,26 +916,26 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         );
 
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/encoder/profiles/import",
-            new { profile_json = importJson }
+            requestUri: "/api/v1/encoder/profiles/import",
+            value: new { profile_json = importJson }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.UnprocessableEntity,
-            $"Expected 422 for unsigned import without trust_unsigned flag, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.UnprocessableEntity,
+            userMessage: $"Expected 422 for unsigned import without trust_unsigned flag, got {(int)response.StatusCode}: {body}"
         );
 
-        using JsonDocument doc = JsonDocument.Parse(body);
-        doc.RootElement.TryGetProperty("errors", out JsonElement errs).Should().BeTrue();
+        using JsonDocument doc = JsonDocument.Parse(json: body);
+        doc.RootElement.TryGetProperty(propertyName: "errors", value: out JsonElement errs).Should().BeTrue();
         bool hasUnsignedRule = errs.EnumerateArray()
-            .Any(e =>
-                e.TryGetProperty("id", out JsonElement idEl)
+            .Any(predicate: e =>
+                e.TryGetProperty(propertyName: "id", value: out JsonElement idEl)
                 && idEl.GetString() == "import.unsigned_requires_flag"
             );
         Assert.True(
-            hasUnsignedRule,
-            $"Expected rule id 'import.unsigned_requires_flag'. Body: {body}"
+            condition: hasUnsignedRule,
+            userMessage: $"Expected rule id 'import.unsigned_requires_flag'. Body: {body}"
         );
     }
 
@@ -942,7 +944,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     {
         string uniqueName = $"Trusted-Import-{Ulid.NewUlid()}";
         string importJson = JsonSerializer.Serialize(
-            new
+            value: new
             {
                 Id = Ulid.NewUlid().ToString(),
                 Name = uniqueName,
@@ -954,15 +956,15 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         );
 
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/encoder/profiles/import?trust_unsigned=true",
-            new { profile_json = importJson }
+            requestUri: "/api/v1/encoder/profiles/import?trust_unsigned=true",
+            value: new { profile_json = importJson }
         );
 
         string body = await response.Content.ReadAsStringAsync();
-        Assert.NotEqual(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.UnprocessableEntity, actual: response.StatusCode);
 
         await using MediaContext cleanupCtx = new();
-        await cleanupCtx.EncodingPresets.Where(p => p.Name == uniqueName).ExecuteDeleteAsync();
+        await cleanupCtx.EncodingPresets.Where(predicate: p => p.Name == uniqueName).ExecuteDeleteAsync();
     }
 
     // RULE: import/http-url-rejected — POST /encoder/profiles/import with a
@@ -971,38 +973,38 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task ImportProfile_HttpUrl_Returns422WithHttpNotHttpsRuleId()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/encoder/profiles/import",
-            new { url = "http://example.com/profile.json" }
+            requestUri: "/api/v1/encoder/profiles/import",
+            value: new { url = "http://example.com/profile.json" }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.UnprocessableEntity,
-            $"Expected 422 for http:// URL, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.UnprocessableEntity,
+            userMessage: $"Expected 422 for http:// URL, got {(int)response.StatusCode}: {body}"
         );
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
 
-        using JsonDocument doc = JsonDocument.Parse(body);
-        doc.RootElement.TryGetProperty("errors", out JsonElement errs)
+        using JsonDocument doc = JsonDocument.Parse(json: body);
+        doc.RootElement.TryGetProperty(propertyName: "errors", value: out JsonElement errs)
             .Should()
-            .BeTrue($"Envelope must have 'errors'. Body: {body}");
+            .BeTrue(because: $"Envelope must have 'errors'. Body: {body}");
         bool hasHttpRule = errs.EnumerateArray()
-            .Any(e =>
-                e.TryGetProperty("id", out JsonElement idEl)
+            .Any(predicate: e =>
+                e.TryGetProperty(propertyName: "id", value: out JsonElement idEl)
                 && idEl.GetString() == "import.http_not_https"
             );
-        Assert.True(hasHttpRule, $"Expected rule 'import.http_not_https'. Body: {body}");
+        Assert.True(condition: hasHttpRule, userMessage: $"Expected rule 'import.http_not_https'. Body: {body}");
     }
 
     [Fact]
     public async Task ImportProfile_HttpsUrl_DoesNotRejectForHttpNotHttps()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/encoder/profiles/import",
-            new { url = "https://example.com/profile.json" }
+            requestUri: "/api/v1/encoder/profiles/import",
+            value: new { url = "https://example.com/profile.json" }
         );
 
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
     }
 
     // RULE: legacy-create/name-required — POST /dashboard/encoding/presets with
@@ -1016,16 +1018,16 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task LegacyCreatePreset_MissingName_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/encoding/presets",
-            new { ProfileJson = ValidProfileJson }
+            requestUri: "/api/v1/dashboard/encoding/presets",
+            value: new { ProfileJson = ValidProfileJson }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 400 for legacy create with missing name, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.BadRequest,
+            userMessage: $"Expected 400 for legacy create with missing name, got {(int)response.StatusCode}: {body}"
         );
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
     }
 
     [Fact]
@@ -1033,14 +1035,14 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     {
         string uniqueName = $"Legacy-Create-{Ulid.NewUlid()}";
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/encoding/presets",
-            new { Name = uniqueName, ProfileJson = ValidProfileJson }
+            requestUri: "/api/v1/dashboard/encoding/presets",
+            value: new { Name = uniqueName, ProfileJson = ValidProfileJson }
         );
 
-        Assert.NotEqual(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.BadRequest, actual: response.StatusCode);
 
         await using MediaContext cleanupCtx = new();
-        await cleanupCtx.EncodingPresets.Where(p => p.Name == uniqueName).ExecuteDeleteAsync();
+        await cleanupCtx.EncodingPresets.Where(predicate: p => p.Name == uniqueName).ExecuteDeleteAsync();
     }
 
     // RULE: legacy-create/profile_json-required — POST /dashboard/encoding/presets
@@ -1049,14 +1051,14 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task LegacyCreatePreset_MissingProfileJson_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/encoding/presets",
-            new { Name = "SomeName" }
+            requestUri: "/api/v1/dashboard/encoding/presets",
+            value: new { Name = "SomeName" }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 400 for legacy create with missing profile_json, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.BadRequest,
+            userMessage: $"Expected 400 for legacy create with missing profile_json, got {(int)response.StatusCode}: {body}"
         );
     }
 
@@ -1066,20 +1068,20 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task LegacyCreatePreset_DuplicateName_Returns409()
     {
         await using MediaContext ctx = new();
-        EncodingPreset? existing = await ctx.EncodingPresets.FirstOrDefaultAsync(p =>
+        EncodingPreset? existing = await ctx.EncodingPresets.FirstOrDefaultAsync(predicate: p =>
             p.Id == _userPresetId
         );
-        Assert.NotNull(existing);
+        Assert.NotNull(@object: existing);
 
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/encoding/presets",
-            new { Name = existing!.Name, ProfileJson = ValidProfileJson }
+            requestUri: "/api/v1/dashboard/encoding/presets",
+            value: new { Name = existing!.Name, ProfileJson = ValidProfileJson }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.Conflict,
-            $"Expected 409 for duplicate name on legacy endpoint, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.Conflict,
+            userMessage: $"Expected 409 for duplicate name on legacy endpoint, got {(int)response.StatusCode}: {body}"
         );
     }
 
@@ -1092,29 +1094,29 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task LegacyUpdatePreset_BuiltIn_Returns422WithBuiltinReadonlyRuleId()
     {
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            $"/api/v1/dashboard/encoding/presets/{_builtInPresetId}",
-            new { Name = "Tampered" }
+            requestUri: $"/api/v1/dashboard/encoding/presets/{_builtInPresetId}",
+            value: new { Name = "Tampered" }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.UnprocessableEntity,
-            $"Expected 422 for update on built-in preset (legacy), got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.UnprocessableEntity,
+            userMessage: $"Expected 422 for update on built-in preset (legacy), got {(int)response.StatusCode}: {body}"
         );
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
 
-        using JsonDocument doc = JsonDocument.Parse(body);
-        doc.RootElement.TryGetProperty("errors", out JsonElement errs)
+        using JsonDocument doc = JsonDocument.Parse(json: body);
+        doc.RootElement.TryGetProperty(propertyName: "errors", value: out JsonElement errs)
             .Should()
-            .BeTrue($"Response must have 'errors'. Body: {body}");
+            .BeTrue(because: $"Response must have 'errors'. Body: {body}");
         bool hasBuiltinRule = errs.EnumerateArray()
-            .Any(e =>
-                e.TryGetProperty("id", out JsonElement idEl)
+            .Any(predicate: e =>
+                e.TryGetProperty(propertyName: "id", value: out JsonElement idEl)
                 && idEl.GetString() == "profile.builtin_readonly"
             );
         Assert.True(
-            hasBuiltinRule,
-            $"Expected rule 'profile.builtin_readonly' in errors. Body: {body}"
+            condition: hasBuiltinRule,
+            userMessage: $"Expected rule 'profile.builtin_readonly' in errors. Body: {body}"
         );
     }
 
@@ -1122,12 +1124,12 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task LegacyUpdatePreset_UserPreset_DoesNotReturn422()
     {
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            $"/api/v1/dashboard/encoding/presets/{_userPresetId}",
-            new { Name = $"Updated-{Ulid.NewUlid()}" }
+            requestUri: $"/api/v1/dashboard/encoding/presets/{_userPresetId}",
+            value: new { Name = $"Updated-{Ulid.NewUlid()}" }
         );
 
-        Assert.NotEqual(HttpStatusCode.UnprocessableEntity, response.StatusCode);
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.UnprocessableEntity, actual: response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
     }
 
     // RULE: legacy-get/invalid-ulid — GET /dashboard/encoding/presets/{id} with
@@ -1136,28 +1138,28 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task LegacyGetPreset_InvalidUlid_Returns400()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            "/api/v1/dashboard/encoding/presets/not-a-ulid"
+            requestUri: "/api/v1/dashboard/encoding/presets/not-a-ulid"
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 400 for invalid ULID on legacy get, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.BadRequest,
+            userMessage: $"Expected 400 for invalid ULID on legacy get, got {(int)response.StatusCode}: {body}"
         );
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
     }
 
     [Fact]
     public async Task LegacyGetPreset_ValidUlid_ExistingPreset_Returns200()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            $"/api/v1/dashboard/encoding/presets/{_userPresetId}"
+            requestUri: $"/api/v1/dashboard/encoding/presets/{_userPresetId}"
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected 200 for valid ULID, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected 200 for valid ULID, got {(int)response.StatusCode}: {body}"
         );
     }
 
@@ -1169,14 +1171,14 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task LegacyImportPreset_MissingName_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/encoding/presets/import",
-            new { ProfileJson = ValidProfileJson }
+            requestUri: "/api/v1/dashboard/encoding/presets/import",
+            value: new { ProfileJson = ValidProfileJson }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 400 for legacy import with missing name, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.BadRequest,
+            userMessage: $"Expected 400 for legacy import with missing name, got {(int)response.StatusCode}: {body}"
         );
     }
 
@@ -1184,14 +1186,14 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task LegacyImportPreset_MissingProfileJson_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/encoding/presets/import",
-            new { Name = "ImportedWithoutJson" }
+            requestUri: "/api/v1/dashboard/encoding/presets/import",
+            value: new { Name = "ImportedWithoutJson" }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 400 for legacy import with missing profile_json, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.BadRequest,
+            userMessage: $"Expected 400 for legacy import with missing profile_json, got {(int)response.StatusCode}: {body}"
         );
     }
 
@@ -1203,30 +1205,30 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task LegacyImportUrl_EmptyUrl_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/encoding/presets/import-url",
-            new { Url = "" }
+            requestUri: "/api/v1/dashboard/encoding/presets/import-url",
+            value: new { Url = "" }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 400 for empty URL on legacy import-url, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.BadRequest,
+            userMessage: $"Expected 400 for empty URL on legacy import-url, got {(int)response.StatusCode}: {body}"
         );
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
     }
 
     [Fact]
     public async Task LegacyImportUrl_InvalidUrl_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/encoding/presets/import-url",
-            new { Url = "not_a_url_at_all" }
+            requestUri: "/api/v1/dashboard/encoding/presets/import-url",
+            value: new { Url = "not_a_url_at_all" }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 400 for non-absolute URL, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.BadRequest,
+            userMessage: $"Expected 400 for non-absolute URL, got {(int)response.StatusCode}: {body}"
         );
     }
 
@@ -1234,27 +1236,27 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task LegacyImportUrl_HttpUrl_Returns400WithHttpsOnlyMessage()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/encoding/presets/import-url",
-            new { Url = "http://example.com/profile.json" }
+            requestUri: "/api/v1/dashboard/encoding/presets/import-url",
+            value: new { Url = "http://example.com/profile.json" }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 400 for http:// URL on legacy import-url, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.BadRequest,
+            userMessage: $"Expected 400 for http:// URL on legacy import-url, got {(int)response.StatusCode}: {body}"
         );
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
     }
 
     [Fact]
     public async Task LegacyImportUrl_ValidHttpsUrl_IsNotRejectedForHttps()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/encoding/presets/import-url",
-            new { Url = "https://example.com/profile.json" }
+            requestUri: "/api/v1/dashboard/encoding/presets/import-url",
+            value: new { Url = "https://example.com/profile.json" }
         );
 
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
     }
 
     // DRIVER RULES
@@ -1265,8 +1267,8 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task CreateDriver_InvalidType_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/drivers",
-            new
+            requestUri: "/api/v1/dashboard/drivers",
+            value: new
             {
                 name = $"TestDriver-{Ulid.NewUlid()}",
                 type = "ftp",
@@ -1276,14 +1278,14 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 400 for invalid driver type, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.BadRequest,
+            userMessage: $"Expected 400 for invalid driver type, got {(int)response.StatusCode}: {body}"
         );
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
 
-        using JsonDocument doc = JsonDocument.Parse(body);
-        doc.RootElement.TryGetProperty("detail", out JsonElement detail).Should().BeTrue();
-        detail.GetString().Should().Contain("Invalid type");
+        using JsonDocument doc = JsonDocument.Parse(json: body);
+        doc.RootElement.TryGetProperty(propertyName: "detail", value: out JsonElement detail).Should().BeTrue();
+        detail.GetString().Should().Contain(expected: "Invalid type");
     }
 
     [Fact]
@@ -1291,8 +1293,8 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     {
         string uniqueName = $"Local-Driver-{Ulid.NewUlid()}";
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/drivers",
-            new
+            requestUri: "/api/v1/dashboard/drivers",
+            value: new
             {
                 name = uniqueName,
                 type = "local",
@@ -1301,11 +1303,11 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         );
 
         string body = await response.Content.ReadAsStringAsync();
-        Assert.NotEqual(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.BadRequest, actual: response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
 
         await using MediaContext cleanupCtx = new();
-        await cleanupCtx.Drivers.Where(d => d.Name == uniqueName).ExecuteDeleteAsync();
+        await cleanupCtx.Drivers.Where(predicate: d => d.Name == uniqueName).ExecuteDeleteAsync();
     }
 
     // RULE: driver-create/name-required — POST /dashboard/drivers with empty name
@@ -1314,8 +1316,8 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task CreateDriver_EmptyName_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/drivers",
-            new
+            requestUri: "/api/v1/dashboard/drivers",
+            value: new
             {
                 name = "",
                 type = "local",
@@ -1325,10 +1327,10 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 400 for empty driver name, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.BadRequest,
+            userMessage: $"Expected 400 for empty driver name, got {(int)response.StatusCode}: {body}"
         );
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
     }
 
     [Fact]
@@ -1336,8 +1338,8 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     {
         string uniqueName = $"Named-Driver-{Ulid.NewUlid()}";
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/drivers",
-            new
+            requestUri: "/api/v1/dashboard/drivers",
+            value: new
             {
                 name = uniqueName,
                 type = "local",
@@ -1345,10 +1347,10 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
             }
         );
 
-        Assert.NotEqual(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.BadRequest, actual: response.StatusCode);
 
         await using MediaContext cleanupCtx = new();
-        await cleanupCtx.Drivers.Where(d => d.Name == uniqueName).ExecuteDeleteAsync();
+        await cleanupCtx.Drivers.Where(predicate: d => d.Name == uniqueName).ExecuteDeleteAsync();
     }
 
     // RULE: driver-create/local-requires-rootpath — POST /dashboard/drivers type=local
@@ -1357,8 +1359,8 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task CreateDriver_LocalWithoutRootPath_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/drivers",
-            new
+            requestUri: "/api/v1/dashboard/drivers",
+            value: new
             {
                 name = $"LocalNoPath-{Ulid.NewUlid()}",
                 type = "local",
@@ -1368,14 +1370,14 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 400 for local driver without rootPath, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.BadRequest,
+            userMessage: $"Expected 400 for local driver without rootPath, got {(int)response.StatusCode}: {body}"
         );
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
 
-        using JsonDocument doc = JsonDocument.Parse(body);
-        doc.RootElement.TryGetProperty("detail", out JsonElement detail).Should().BeTrue();
-        detail.GetString().Should().Contain("rootPath");
+        using JsonDocument doc = JsonDocument.Parse(json: body);
+        doc.RootElement.TryGetProperty(propertyName: "detail", value: out JsonElement detail).Should().BeTrue();
+        detail.GetString().Should().Contain(expected: "rootPath");
     }
 
     [Fact]
@@ -1383,8 +1385,8 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     {
         string uniqueName = $"LocalWithPath-{Ulid.NewUlid()}";
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/drivers",
-            new
+            requestUri: "/api/v1/dashboard/drivers",
+            value: new
             {
                 name = uniqueName,
                 type = "local",
@@ -1392,11 +1394,11 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
             }
         );
 
-        Assert.NotEqual(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.BadRequest, actual: response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
 
         await using MediaContext cleanupCtx = new();
-        await cleanupCtx.Drivers.Where(d => d.Name == uniqueName).ExecuteDeleteAsync();
+        await cleanupCtx.Drivers.Where(predicate: d => d.Name == uniqueName).ExecuteDeleteAsync();
     }
 
     // RULE: driver-create/nfs-requires-server-and-export — POST /dashboard/drivers
@@ -1405,8 +1407,8 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task CreateDriver_NfsWithoutServer_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/drivers",
-            new
+            requestUri: "/api/v1/dashboard/drivers",
+            value: new
             {
                 name = $"NfsNoServer-{Ulid.NewUlid()}",
                 type = "nfs",
@@ -1416,10 +1418,10 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 400 for nfs driver without server, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.BadRequest,
+            userMessage: $"Expected 400 for nfs driver without server, got {(int)response.StatusCode}: {body}"
         );
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
     }
 
     [Fact]
@@ -1427,8 +1429,8 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     {
         string uniqueName = $"NfsValid-{Ulid.NewUlid()}";
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/drivers",
-            new
+            requestUri: "/api/v1/dashboard/drivers",
+            value: new
             {
                 name = uniqueName,
                 type = "nfs",
@@ -1436,11 +1438,11 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
             }
         );
 
-        Assert.NotEqual(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.BadRequest, actual: response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
 
         await using MediaContext cleanupCtx = new();
-        await cleanupCtx.Drivers.Where(d => d.Name == uniqueName).ExecuteDeleteAsync();
+        await cleanupCtx.Drivers.Where(predicate: d => d.Name == uniqueName).ExecuteDeleteAsync();
     }
 
     // RULE: driver-create/nfs-version-restricted — nfs version must be 3 or 4;
@@ -1449,8 +1451,8 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     public async Task CreateDriver_NfsInvalidVersion_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/drivers",
-            new
+            requestUri: "/api/v1/dashboard/drivers",
+            value: new
             {
                 name = $"NfsV99-{Ulid.NewUlid()}",
                 type = "nfs",
@@ -1465,10 +1467,10 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 400 for nfs version=99, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.BadRequest,
+            userMessage: $"Expected 400 for nfs version=99, got {(int)response.StatusCode}: {body}"
         );
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
     }
 
     [Fact]
@@ -1476,8 +1478,8 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     {
         string uniqueName = $"NfsV3-{Ulid.NewUlid()}";
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/drivers",
-            new
+            requestUri: "/api/v1/dashboard/drivers",
+            value: new
             {
                 name = uniqueName,
                 type = "nfs",
@@ -1490,19 +1492,19 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
             }
         );
 
-        Assert.NotEqual(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.BadRequest, actual: response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
 
         await using MediaContext cleanupCtx = new();
-        await cleanupCtx.Drivers.Where(d => d.Name == uniqueName).ExecuteDeleteAsync();
+        await cleanupCtx.Drivers.Where(predicate: d => d.Name == uniqueName).ExecuteDeleteAsync();
     }
 
     [Fact]
     public async Task CreateDriver_S3WithoutBucket_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/drivers",
-            new
+            requestUri: "/api/v1/dashboard/drivers",
+            value: new
             {
                 name = $"S3NoBucket-{Ulid.NewUlid()}",
                 type = "s3",
@@ -1512,10 +1514,10 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 400 for s3 without bucket, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.BadRequest,
+            userMessage: $"Expected 400 for s3 without bucket, got {(int)response.StatusCode}: {body}"
         );
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
     }
 
     [Fact]
@@ -1523,8 +1525,8 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     {
         string uniqueName = $"S3Valid-{Ulid.NewUlid()}";
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/drivers",
-            new
+            requestUri: "/api/v1/dashboard/drivers",
+            value: new
             {
                 name = uniqueName,
                 type = "s3",
@@ -1532,19 +1534,19 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
             }
         );
 
-        Assert.NotEqual(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.BadRequest, actual: response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
 
         await using MediaContext cleanupCtx = new();
-        await cleanupCtx.Drivers.Where(d => d.Name == uniqueName).ExecuteDeleteAsync();
+        await cleanupCtx.Drivers.Where(predicate: d => d.Name == uniqueName).ExecuteDeleteAsync();
     }
 
     [Fact]
     public async Task CreateDriver_R2WithoutEndpoint_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/drivers",
-            new
+            requestUri: "/api/v1/dashboard/drivers",
+            value: new
             {
                 name = $"R2NoEndpoint-{Ulid.NewUlid()}",
                 type = "r2",
@@ -1554,14 +1556,14 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 400 for r2 without endpoint, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.BadRequest,
+            userMessage: $"Expected 400 for r2 without endpoint, got {(int)response.StatusCode}: {body}"
         );
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
 
-        using JsonDocument doc = JsonDocument.Parse(body);
-        doc.RootElement.TryGetProperty("detail", out JsonElement detail).Should().BeTrue();
-        detail.GetString().Should().Contain("endpoint");
+        using JsonDocument doc = JsonDocument.Parse(json: body);
+        doc.RootElement.TryGetProperty(propertyName: "detail", value: out JsonElement detail).Should().BeTrue();
+        detail.GetString().Should().Contain(expected: "endpoint");
     }
 
     [Fact]
@@ -1569,8 +1571,8 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     {
         string uniqueName = $"R2Valid-{Ulid.NewUlid()}";
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/drivers",
-            new
+            requestUri: "/api/v1/dashboard/drivers",
+            value: new
             {
                 name = uniqueName,
                 type = "r2",
@@ -1583,19 +1585,19 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
             }
         );
 
-        Assert.NotEqual(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.BadRequest, actual: response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
 
         await using MediaContext cleanupCtx = new();
-        await cleanupCtx.Drivers.Where(d => d.Name == uniqueName).ExecuteDeleteAsync();
+        await cleanupCtx.Drivers.Where(predicate: d => d.Name == uniqueName).ExecuteDeleteAsync();
     }
 
     [Fact]
     public async Task CreateDriver_WebDavWithoutUrl_Returns400()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/drivers",
-            new
+            requestUri: "/api/v1/dashboard/drivers",
+            value: new
             {
                 name = $"WebDavNoUrl-{Ulid.NewUlid()}",
                 type = "webdav",
@@ -1605,10 +1607,10 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 400 for webdav without url, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.BadRequest,
+            userMessage: $"Expected 400 for webdav without url, got {(int)response.StatusCode}: {body}"
         );
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
     }
 
     [Fact]
@@ -1616,8 +1618,8 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     {
         string uniqueName = $"WebDavValid-{Ulid.NewUlid()}";
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/drivers",
-            new
+            requestUri: "/api/v1/dashboard/drivers",
+            value: new
             {
                 name = uniqueName,
                 type = "webdav",
@@ -1628,11 +1630,11 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
             }
         );
 
-        Assert.NotEqual(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.BadRequest, actual: response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
 
         await using MediaContext cleanupCtx = new();
-        await cleanupCtx.Drivers.Where(d => d.Name == uniqueName).ExecuteDeleteAsync();
+        await cleanupCtx.Drivers.Where(predicate: d => d.Name == uniqueName).ExecuteDeleteAsync();
     }
 
     [Fact]
@@ -1644,7 +1646,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         await using (MediaContext seedCtx = new())
         {
             seedCtx.Drivers.Add(
-                new()
+                entity: new()
                 {
                     Id = firstId,
                     Name = sharedName,
@@ -1660,8 +1662,8 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         try
         {
             HttpResponseMessage response = await _authed.PostAsJsonAsync(
-                "/api/v1/dashboard/drivers",
-                new
+                requestUri: "/api/v1/dashboard/drivers",
+                value: new
                 {
                     name = sharedName,
                     type = "local",
@@ -1671,15 +1673,15 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
 
             string body = await response.Content.ReadAsStringAsync();
             Assert.True(
-                response.StatusCode == HttpStatusCode.Conflict,
-                $"Expected 409 for duplicate driver name, got {(int)response.StatusCode}: {body}"
+                condition: response.StatusCode == HttpStatusCode.Conflict,
+                userMessage: $"Expected 409 for duplicate driver name, got {(int)response.StatusCode}: {body}"
             );
-            Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+            Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
         }
         finally
         {
             await using MediaContext cleanupCtx = new();
-            await cleanupCtx.Drivers.Where(d => d.Id == firstId).ExecuteDeleteAsync();
+            await cleanupCtx.Drivers.Where(predicate: d => d.Id == firstId).ExecuteDeleteAsync();
         }
     }
 
@@ -1688,8 +1690,8 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     {
         string uniqueName = $"UniqueDriver-{Ulid.NewUlid()}";
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/drivers",
-            new
+            requestUri: "/api/v1/dashboard/drivers",
+            value: new
             {
                 name = uniqueName,
                 type = "local",
@@ -1697,11 +1699,11 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
             }
         );
 
-        Assert.NotEqual(HttpStatusCode.Conflict, response.StatusCode);
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.Conflict, actual: response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
 
         await using MediaContext cleanupCtx = new();
-        await cleanupCtx.Drivers.Where(d => d.Name == uniqueName).ExecuteDeleteAsync();
+        await cleanupCtx.Drivers.Where(predicate: d => d.Name == uniqueName).ExecuteDeleteAsync();
     }
 
     // RULE: driver-delete/system-driver-protected — DELETE /dashboard/drivers/system-local-id
@@ -1711,15 +1713,15 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     {
         string systemId = Database.Models.Storage.Driver.SystemLocalDriverId.ToString();
         HttpResponseMessage response = await _authed.DeleteAsync(
-            $"/api/v1/dashboard/drivers/{systemId}"
+            requestUri: $"/api/v1/dashboard/drivers/{systemId}"
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.Conflict,
-            $"Expected 409 for delete of system driver, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.Conflict,
+            userMessage: $"Expected 409 for delete of system driver, got {(int)response.StatusCode}: {body}"
         );
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
     }
 
     [Fact]
@@ -1729,7 +1731,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         await using (MediaContext seedCtx = new())
         {
             seedCtx.Drivers.Add(
-                new()
+                entity: new()
                 {
                     Id = deleteableId,
                     Name = $"Deleteable-{deleteableId}",
@@ -1743,11 +1745,11 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         }
 
         HttpResponseMessage response = await _authed.DeleteAsync(
-            $"/api/v1/dashboard/drivers/{deleteableId}"
+            requestUri: $"/api/v1/dashboard/drivers/{deleteableId}"
         );
 
-        Assert.NotEqual(HttpStatusCode.Conflict, response.StatusCode);
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.Conflict, actual: response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
     }
 
     // RULE: driver-update/system-driver-immutable — PUT /dashboard/drivers/{system-id}
@@ -1757,16 +1759,16 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     {
         string systemId = Database.Models.Storage.Driver.SystemLocalDriverId.ToString();
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            $"/api/v1/dashboard/drivers/{systemId}",
-            new { name = "Renamed System" }
+            requestUri: $"/api/v1/dashboard/drivers/{systemId}",
+            value: new { name = "Renamed System" }
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.Conflict,
-            $"Expected 409 for update of system driver, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.Conflict,
+            userMessage: $"Expected 409 for update of system driver, got {(int)response.StatusCode}: {body}"
         );
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
     }
 
     [Fact]
@@ -1776,7 +1778,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         await using (MediaContext seedCtx = new())
         {
             seedCtx.Drivers.Add(
-                new()
+                entity: new()
                 {
                     Id = updateableId,
                     Name = $"Updateable-{updateableId}",
@@ -1790,16 +1792,16 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         }
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            $"/api/v1/dashboard/drivers/{updateableId}",
-            new { name = $"Renamed-{Ulid.NewUlid()}" }
+            requestUri: $"/api/v1/dashboard/drivers/{updateableId}",
+            value: new { name = $"Renamed-{Ulid.NewUlid()}" }
         );
 
         string body = await response.Content.ReadAsStringAsync();
-        Assert.NotEqual(HttpStatusCode.Conflict, response.StatusCode);
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.Conflict, actual: response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
 
         await using MediaContext cleanupCtx = new();
-        await cleanupCtx.Drivers.Where(d => d.Id == updateableId).ExecuteDeleteAsync();
+        await cleanupCtx.Drivers.Where(predicate: d => d.Id == updateableId).ExecuteDeleteAsync();
     }
 
     // RULE: driver-update-credentials/blank-credentials-rejected — PUT
@@ -1812,7 +1814,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         await using (MediaContext seedCtx = new())
         {
             seedCtx.Drivers.Add(
-                new()
+                entity: new()
                 {
                     Id = driverId,
                     Name = $"CredDriver-{driverId}",
@@ -1828,21 +1830,21 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         try
         {
             HttpResponseMessage response = await _authed.PutAsJsonAsync(
-                $"/api/v1/dashboard/drivers/{driverId}/credentials",
-                new { access_key = "", secret_key = "" }
+                requestUri: $"/api/v1/dashboard/drivers/{driverId}/credentials",
+                value: new { access_key = "", secret_key = "" }
             );
 
             string body = await response.Content.ReadAsStringAsync();
             Assert.True(
-                response.StatusCode == HttpStatusCode.BadRequest,
-                $"Expected 400 for blank credentials, got {(int)response.StatusCode}: {body}"
+                condition: response.StatusCode == HttpStatusCode.BadRequest,
+                userMessage: $"Expected 400 for blank credentials, got {(int)response.StatusCode}: {body}"
             );
-            Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+            Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
         }
         finally
         {
             await using MediaContext cleanupCtx = new();
-            await cleanupCtx.Drivers.Where(d => d.Id == driverId).ExecuteDeleteAsync();
+            await cleanupCtx.Drivers.Where(predicate: d => d.Id == driverId).ExecuteDeleteAsync();
         }
     }
 
@@ -1853,7 +1855,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         await using (MediaContext seedCtx = new())
         {
             seedCtx.Drivers.Add(
-                new()
+                entity: new()
                 {
                     Id = driverId,
                     Name = $"CredDriverFull-{driverId}",
@@ -1869,21 +1871,21 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
         try
         {
             HttpResponseMessage response = await _authed.PutAsJsonAsync(
-                $"/api/v1/dashboard/drivers/{driverId}/credentials",
-                new
+                requestUri: $"/api/v1/dashboard/drivers/{driverId}/credentials",
+                value: new
                 {
                     access_key = "AKIAIOSFODNN7EXAMPLE",
                     secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
                 }
             );
 
-            Assert.NotEqual(HttpStatusCode.BadRequest, response.StatusCode);
-            Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+            Assert.NotEqual(expected: HttpStatusCode.BadRequest, actual: response.StatusCode);
+            Assert.NotEqual(expected: HttpStatusCode.InternalServerError, actual: response.StatusCode);
         }
         finally
         {
             await using MediaContext cleanupCtx = new();
-            await cleanupCtx.Drivers.Where(d => d.Id == driverId).ExecuteDeleteAsync();
+            await cleanupCtx.Drivers.Where(predicate: d => d.Id == driverId).ExecuteDeleteAsync();
         }
     }
 
@@ -1897,12 +1899,12 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
     {
         string systemId = Database.Models.Storage.Driver.SystemLocalDriverId.ToString();
         HttpResponseMessage response = await _authed.DeleteAsync(
-            $"/api/v1/dashboard/drivers/{systemId}"
+            requestUri: $"/api/v1/dashboard/drivers/{systemId}"
         );
 
         Assert.True(
-            response.StatusCode == HttpStatusCode.Conflict,
-            $"Expected 409 (system guard or folder-count guard), got {(int)response.StatusCode}"
+            condition: response.StatusCode == HttpStatusCode.Conflict,
+            userMessage: $"Expected 409 (system guard or folder-count guard), got {(int)response.StatusCode}"
         );
     }
 
@@ -2094,7 +2096,7 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
 
         System.Reflection.MethodInfo[] allMethods = GetType()
             .GetMethods(
-                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance
+                bindingAttr: System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance
             );
 
         List<string> missing = [];
@@ -2105,24 +2107,24 @@ public class EncoderValidationContractTests : IClassFixture<NoMercyApiFactory>, 
             string firesFragment = pair[1];
             string neighborFragment = pair[2];
 
-            bool hasFires = allMethods.Any(m =>
-                m.Name.Contains(firesFragment, StringComparison.OrdinalIgnoreCase)
+            bool hasFires = allMethods.Any(predicate: m =>
+                m.Name.Contains(value: firesFragment, comparisonType: StringComparison.OrdinalIgnoreCase)
             );
-            bool hasNeighbor = allMethods.Any(m =>
-                m.Name.Contains(neighborFragment, StringComparison.OrdinalIgnoreCase)
+            bool hasNeighbor = allMethods.Any(predicate: m =>
+                m.Name.Contains(value: neighborFragment, comparisonType: StringComparison.OrdinalIgnoreCase)
             );
 
             if (!hasFires)
-                missing.Add($"Rule '{ruleId}': missing FIRES test containing '{firesFragment}'");
+                missing.Add(item: $"Rule '{ruleId}': missing FIRES test containing '{firesFragment}'");
             if (!hasNeighbor)
                 missing.Add(
-                    $"Rule '{ruleId}': missing NEIGHBOR test containing '{neighborFragment}'"
+                    item: $"Rule '{ruleId}': missing NEIGHBOR test containing '{neighborFragment}'"
                 );
         }
 
         Assert.True(
-            missing.Count == 0,
-            $"Catalogue completeness failures:\n{string.Join("\n", missing)}"
+            condition: missing.Count == 0,
+            userMessage: $"Catalogue completeness failures:\n{string.Join(separator: "\n", values: missing)}"
         );
     }
 }

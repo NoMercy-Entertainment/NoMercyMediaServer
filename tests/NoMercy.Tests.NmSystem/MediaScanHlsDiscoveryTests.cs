@@ -22,12 +22,12 @@ namespace NoMercy.Tests.NmSystem;
 /// <c>FileManager.GetFiles</c> does for an anime library (file listing on, regex
 /// filter off, video extension filter, depth 2), over a temp tree.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class MediaScanHlsDiscoveryTests : IDisposable
 {
     private readonly string _root = Path.Combine(
-        Path.GetTempPath(),
-        "nm_scan_" + Guid.NewGuid().ToString("N")
+        path1: Path.GetTempPath(),
+        path2: "nm_scan_" + Guid.NewGuid().ToString(format: "N")
     );
 
     // The exact production folder name for Hensuki (id 88061): embeds a comma and
@@ -38,34 +38,31 @@ public class MediaScanHlsDiscoveryTests : IDisposable
     private const string CleanName = "One.Piece.(1999)";
 
     [Theory]
-    [InlineData(
-        HensukiName,
-        "Hensuki.Are.You.Willing.to.Fall.in.Love.With.a.Pervert,.As.Long.As.She's.a.Cutie"
-    )]
-    [InlineData(CleanName, "One.Piece")]
+    [InlineData(data: [HensukiName, "Hensuki.Are.You.Willing.to.Fall.in.Love.With.a.Pervert,.As.Long.As.She's.a.Cutie"])]
+    [InlineData(data: [CleanName, "One.Piece"])]
     public async Task Process_FindsHlsMasters_ForEachEpisodeFolder(
         string showFolderName,
         string episodeBase
     )
     {
-        string showFolder = Path.Combine(_root, showFolderName);
-        Directory.CreateDirectory(showFolder);
+        string showFolder = Path.Combine(path1: _root, path2: showFolderName);
+        Directory.CreateDirectory(path: showFolder);
 
         for (int ep = 1; ep <= 3; ep++)
         {
-            string episodeFolder = Path.Combine(showFolder, $"{episodeBase}.S01E{ep:D2}");
-            Directory.CreateDirectory(episodeFolder);
+            string episodeFolder = Path.Combine(path1: showFolder, path2: $"{episodeBase}.S01E{ep:D2}");
+            Directory.CreateDirectory(path: episodeFolder);
 
             File.WriteAllText(
-                Path.Combine(
-                    episodeFolder,
-                    $"{episodeBase}.S01E{ep:D2}.Episode.Title.NoMercy.m3u8"
+                path: Path.Combine(
+                    path1: episodeFolder,
+                    path2: $"{episodeBase}.S01E{ep:D2}.Episode.Title.NoMercy.m3u8"
                 ),
-                "#EXTM3U\n#EXT-X-VERSION:6\n"
+                contents: "#EXTM3U\n#EXT-X-VERSION:6\n"
             );
-            File.WriteAllText(Path.Combine(episodeFolder, "chapters.vtt"), "WEBVTT\n");
-            File.WriteAllText(Path.Combine(episodeFolder, "fonts.json"), "[]");
-            File.WriteAllText(Path.Combine(episodeFolder, "thumbs_160x90.vtt"), "WEBVTT\n");
+            File.WriteAllText(path: Path.Combine(path1: episodeFolder, path2: "chapters.vtt"), contents: "WEBVTT\n");
+            File.WriteAllText(path: Path.Combine(path1: episodeFolder, path2: "fonts.json"), contents: "[]");
+            File.WriteAllText(path: Path.Combine(path1: episodeFolder, path2: "thumbs_160x90.vtt"), contents: "WEBVTT\n");
             foreach (
                 string sub in new[]
                 {
@@ -76,31 +73,31 @@ public class MediaScanHlsDiscoveryTests : IDisposable
                     "fonts",
                 }
             )
-                Directory.CreateDirectory(Path.Combine(episodeFolder, sub));
+                Directory.CreateDirectory(path: Path.Combine(path1: episodeFolder, path2: sub));
         }
 
-        MediaScan mediaScan = new(new LocalStorageDriver());
+        MediaScan mediaScan = new(driver: new LocalStorageDriver());
         ConcurrentBag<MediaFolderExtend> folders = await mediaScan
             .EnableFileListing()
             .DisableRegexFilter()
-            .FilterByMediaType("anime")
-            .FilterByFileName(null)
-            .Process(showFolder, 2);
+            .FilterByMediaType(mediaType: "anime")
+            .FilterByFileName(filter: null)
+            .Process(rootFolder: showFolder, depth: 2);
         await mediaScan.DisposeAsync();
 
-        int rawFileCount = folders.Sum(folder => folder.Files?.Count ?? 0);
+        int rawFileCount = folders.Sum(selector: folder => folder.Files?.Count ?? 0);
         bool hasCandidates = folders
-            .SelectMany(folder => folder.Files ?? [])
-            .Any(file => file.Parsed is not null);
+            .SelectMany(selector: folder => folder.Files ?? [])
+            .Any(predicate: file => file.Parsed is not null);
 
-        rawFileCount.Should().Be(3, "each of the 3 episode folders holds one .NoMercy.m3u8 master");
-        hasCandidates.Should().BeTrue("the discovered m3u8 masters must be parseable candidates");
+        rawFileCount.Should().Be(expected: 3, because: "each of the 3 episode folders holds one .NoMercy.m3u8 master");
+        hasCandidates.Should().BeTrue(because: "the discovered m3u8 masters must be parseable candidates");
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(_root))
-            Directory.Delete(_root, recursive: true);
-        GC.SuppressFinalize(this);
+        if (Directory.Exists(path: _root))
+            Directory.Delete(path: _root, recursive: true);
+        GC.SuppressFinalize(obj: this);
     }
 }

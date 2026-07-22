@@ -19,30 +19,30 @@ internal static class ResourcesCommand
 {
     public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
-        Command command = new("resources") { Description = "Show server resource usage" };
+        Command command = new(name: "resources") { Description = "Show server resource usage" };
 
         command.SetAction(
-            async (parseResult, ct) =>
+            action: async (parseResult, ct) =>
             {
-                string? pipe = parseResult.GetValue(pipeOption);
-                using ICliClient client = clientFactory.Create(pipe);
+                string? pipe = parseResult.GetValue(option: pipeOption);
+                using ICliClient client = clientFactory.Create(pipeNameOrSocketPath: pipe);
                 ResourcesResponse? resources = await client.GetAsync<ResourcesResponse>(
-                    ApiRoutes.Resources,
-                    ct
+                    path: ApiRoutes.Resources,
+                    cancellationToken: ct
                 );
 
                 if (resources is null)
                 {
-                    await Console.Error.WriteLineAsync("Could not retrieve resource information.");
+                    await Console.Error.WriteLineAsync(value: "Could not retrieve resource information.");
                     return (int)ExitCode.ServerError;
                 }
 
                 Console.WriteLine(
-                    $"CPU:          {F1(resources.Cpu.Total)}% (max {F1(resources.Cpu.Max)}%)"
+                    value: $"CPU:          {F1(value: resources.Cpu.Total)}% (max {F1(value: resources.Cpu.Max)}%)"
                 );
 
                 Console.WriteLine(
-                    $"Memory:       {F1(resources.Memory.Use)} / {F1(resources.Memory.Total)} GB ({F1(resources.Memory.Percentage)}%)"
+                    value: $"Memory:       {F1(value: resources.Memory.Use)} / {F1(value: resources.Memory.Total)} GB ({F1(value: resources.Memory.Percentage)}%)"
                 );
 
                 if (resources.Gpu.Count > 0)
@@ -50,7 +50,7 @@ internal static class ResourcesCommand
                     foreach (GpuInfo gpu in resources.Gpu)
                     {
                         Console.WriteLine(
-                            $"GPU {gpu.Index}:        {F1(gpu.Core)}% core, {F1(gpu.Memory)}% memory, {F1(gpu.Encode)}% encode, {F1(gpu.Decode)}% decode"
+                            value: $"GPU {gpu.Index}:        {F1(value: gpu.Core)}% core, {F1(value: gpu.Memory)}% memory, {F1(value: gpu.Encode)}% encode, {F1(value: gpu.Decode)}% decode"
                         );
                     }
                 }
@@ -58,12 +58,12 @@ internal static class ResourcesCommand
                 if (resources.Storage.Count > 0)
                 {
                     Console.WriteLine();
-                    Console.WriteLine("Storage:");
+                    Console.WriteLine(value: "Storage:");
                     foreach (StorageInfo drive in resources.Storage)
                     {
                         double used = drive.Total - drive.Available;
                         Console.WriteLine(
-                            $"  {drive.Name, -12} {F1(used)} / {F1(drive.Total)} GB ({F1(drive.Percentage)}% free)"
+                            value: $"  {drive.Name, -12} {F1(value: used)} / {F1(value: drive.Total)} GB ({F1(value: drive.Percentage)}% free)"
                         );
                     }
                 }
@@ -80,5 +80,5 @@ internal static class ResourcesCommand
     // "12,5%" instead of "12.5%" — inconsistent with the docs/scripts that
     // assume a dot, and a regression trap for a self-hosted tool with a global
     // audience. Force invariant formatting explicitly.
-    private static string F1(double value) => value.ToString("F1", CultureInfo.InvariantCulture);
+    private static string F1(double value) => value.ToString(format: "F1", provider: CultureInfo.InvariantCulture);
 }

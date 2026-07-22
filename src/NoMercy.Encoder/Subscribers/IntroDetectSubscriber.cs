@@ -44,14 +44,14 @@ public class IntroDetectSubscriber : IDisposable
 
     // Fingerprint the first 3 minutes for intro detection.
     private static readonly FingerprintWindow IntroWindow = new(
-        TimeSpan.Zero,
-        TimeSpan.FromMinutes(3)
+        Start: TimeSpan.Zero,
+        Duration: TimeSpan.FromMinutes(minutes: 3)
     );
 
     // Fingerprint the last 4 minutes for outro detection.
     private static readonly FingerprintWindow OutroWindow = new(
-        TimeSpan.FromMinutes(-4),
-        TimeSpan.FromMinutes(4)
+        Start: TimeSpan.FromMinutes(minutes: -4),
+        Duration: TimeSpan.FromMinutes(minutes: 4)
     );
 
     public IntroDetectSubscriber(
@@ -71,7 +71,7 @@ public class IntroDetectSubscriber : IDisposable
         _storage = storage;
         _contextFactory = contextFactory;
 
-        _subscriptions.Add(eventBus.Subscribe<LibraryScanCompletedEvent>(OnLibraryScanCompleted));
+        _subscriptions.Add(item: eventBus.Subscribe<LibraryScanCompletedEvent>(handler: OnLibraryScanCompleted));
     }
 
     internal async Task OnLibraryScanCompleted(
@@ -84,17 +84,17 @@ public class IntroDetectSubscriber : IDisposable
 
         // Load all TV seasons whose show belongs to this library.
         List<int> seasonIds;
-        await using (MediaContext context = await _contextFactory.CreateDbContextAsync(ct))
+        await using (MediaContext context = await _contextFactory.CreateDbContextAsync(cancellationToken: ct))
         {
             seasonIds = await context
                 .Seasons.AsNoTracking()
-                .Where(s =>
+                .Where(predicate: s =>
                     context.LibraryTv.Any(lt =>
                         lt.LibraryId == @event.LibraryId && lt.TvId == s.TvId
                     )
                 )
-                .Select(s => s.Id)
-                .ToListAsync(ct);
+                .Select(selector: s => s.Id)
+                .ToListAsync(cancellationToken: ct);
         }
 
         // Intro/outro detection is a TV-episode feature. A library with no TV
@@ -103,18 +103,13 @@ public class IntroDetectSubscriber : IDisposable
         if (seasonIds.Count == 0)
         {
             _logger.LogDebug(
-                "IntroDetect: no TV content in library {LibraryName} ({LibraryId}) — skipping",
-                @event.LibraryName,
-                @event.LibraryId
+                message: "IntroDetect: no TV content in library {LibraryName} ({LibraryId}) — skipping", args: [@event.LibraryName, @event.LibraryId]
             );
             return;
         }
 
         _logger.LogInformation(
-            "IntroDetect: starting for library {LibraryName} ({LibraryId}) — {SeasonCount} season(s)",
-            @event.LibraryName,
-            @event.LibraryId,
-            seasonIds.Count
+            message: "IntroDetect: starting for library {LibraryName} ({LibraryId}) — {SeasonCount} season(s)", args: [@event.LibraryName, @event.LibraryId, seasonIds.Count]
         );
 
         foreach (int seasonId in seasonIds)
@@ -122,7 +117,7 @@ public class IntroDetectSubscriber : IDisposable
             if (ct.IsCancellationRequested)
                 break;
 
-            await ProcessSeasonAsync(seasonId, ct);
+            await ProcessSeasonAsync(seasonId: seasonId, ct: ct);
         }
     }
 
@@ -132,16 +127,16 @@ public class IntroDetectSubscriber : IDisposable
         HashSet<int> episodesWithIntro;
         HashSet<int> episodesWithOutro;
 
-        await using (MediaContext context = await _contextFactory.CreateDbContextAsync(ct))
+        await using (MediaContext context = await _contextFactory.CreateDbContextAsync(cancellationToken: ct))
         {
             episodes = await context
                 .Episodes.AsNoTracking()
-                .Where(e => e.SeasonId == seasonId)
-                .OrderBy(e => e.EpisodeNumber)
-                .ToListAsync(ct);
+                .Where(predicate: e => e.SeasonId == seasonId)
+                .OrderBy(keySelector: e => e.EpisodeNumber)
+                .ToListAsync(cancellationToken: ct);
 
             // Two-step to avoid SQLite APPLY: fetch episode IDs with existing segments first.
-            List<int> episodeIds = episodes.Select(e => e.Id).ToList();
+            List<int> episodeIds = episodes.Select(selector: e => e.Id).ToList();
 
             // Every existing segment regardless of Source — a prior detector
             // run's rows must block re-insertion on a rescan just as much as a
@@ -149,47 +144,47 @@ public class IntroDetectSubscriber : IDisposable
             // every segment row on each pass.
             List<ContentSegment> existingSegments = await context
                 .ContentSegments.AsNoTracking()
-                .Where(cs => cs.EpisodeId != null && episodeIds.Contains(cs.EpisodeId!.Value))
-                .ToListAsync(ct);
+                .Where(predicate: cs => cs.EpisodeId != null && episodeIds.Contains(cs.EpisodeId!.Value))
+                .ToListAsync(cancellationToken: ct);
 
             episodesWithIntro = existingSegments
-                .Where(cs => cs.SegmentType == ContentSegmentType.Intro)
-                .Select(cs => cs.EpisodeId!.Value)
+                .Where(predicate: cs => cs.SegmentType == ContentSegmentType.Intro)
+                .Select(selector: cs => cs.EpisodeId!.Value)
                 .ToHashSet();
 
             episodesWithOutro = existingSegments
-                .Where(cs => cs.SegmentType == ContentSegmentType.Outro)
-                .Select(cs => cs.EpisodeId!.Value)
+                .Where(predicate: cs => cs.SegmentType == ContentSegmentType.Outro)
+                .Select(selector: cs => cs.EpisodeId!.Value)
                 .ToHashSet();
         }
 
         if (episodes.Count < 2)
         {
             _logger.LogDebug(
-                "IntroDetect: season {SeasonId} has fewer than 2 episodes — skipping",
-                seasonId
+                message: "IntroDetect: season {SeasonId} has fewer than 2 episodes — skipping",
+                args: seasonId
             );
             return;
         }
 
         // Resolve source file paths for each episode.
         List<(Episode Episode, string FilePath)> episodeFiles = await ResolveFilePathsAsync(
-            episodes,
-            ct
+            episodes: episodes,
+            ct: ct
         );
 
         if (episodeFiles.Count < 2)
             return;
 
         // Fingerprint intro windows.
-        bool needIntro = episodeFiles.Any(ef => !episodesWithIntro.Contains(ef.Episode.Id));
-        bool needOutro = episodeFiles.Any(ef => !episodesWithOutro.Contains(ef.Episode.Id));
+        bool needIntro = episodeFiles.Any(predicate: ef => !episodesWithIntro.Contains(item: ef.Episode.Id));
+        bool needOutro = episodeFiles.Any(predicate: ef => !episodesWithOutro.Contains(item: ef.Episode.Id));
 
         if (!needIntro && !needOutro)
         {
             _logger.LogDebug(
-                "IntroDetect: all episodes in season {SeasonId} already have manual segments",
-                seasonId
+                message: "IntroDetect: all episodes in season {SeasonId} already have manual segments",
+                args: seasonId
             );
             return;
         }
@@ -199,26 +194,26 @@ public class IntroDetectSubscriber : IDisposable
         if (needIntro)
         {
             List<(Episode Episode, AudioFingerprint Fp)> introFingerprints = await FingerprintAsync(
-                episodeFiles,
-                IntroWindow,
-                ct
+                episodeFiles: episodeFiles,
+                window: IntroWindow,
+                ct: ct
             );
 
             if (introFingerprints.Count >= 2)
             {
                 IntroMarker? marker = _introDetector.DetectIntro(
-                    introFingerprints.Select(x => x.Fp).ToList()
+                    episodeFingerprints: introFingerprints.Select(selector: x => x.Fp).ToList()
                 );
 
                 if (marker is not null)
                 {
                     foreach ((Episode episode, _) in introFingerprints)
                     {
-                        if (episodesWithIntro.Contains(episode.Id))
+                        if (episodesWithIntro.Contains(item: episode.Id))
                             continue;
 
                         newSegments.Add(
-                            new()
+                            item: new()
                             {
                                 EpisodeId = episode.Id,
                                 SegmentType = ContentSegmentType.Intro,
@@ -236,26 +231,26 @@ public class IntroDetectSubscriber : IDisposable
         if (needOutro)
         {
             List<(Episode Episode, AudioFingerprint Fp)> outroFingerprints = await FingerprintAsync(
-                episodeFiles,
-                OutroWindow,
-                ct
+                episodeFiles: episodeFiles,
+                window: OutroWindow,
+                ct: ct
             );
 
             if (outroFingerprints.Count >= 2)
             {
                 IntroMarker? marker = _introDetector.DetectOutro(
-                    outroFingerprints.Select(x => x.Fp).ToList()
+                    episodeFingerprints: outroFingerprints.Select(selector: x => x.Fp).ToList()
                 );
 
                 if (marker is not null)
                 {
                     foreach ((Episode episode, _) in outroFingerprints)
                     {
-                        if (episodesWithOutro.Contains(episode.Id))
+                        if (episodesWithOutro.Contains(item: episode.Id))
                             continue;
 
                         newSegments.Add(
-                            new()
+                            item: new()
                             {
                                 EpisodeId = episode.Id,
                                 SegmentType = ContentSegmentType.Outro,
@@ -273,16 +268,14 @@ public class IntroDetectSubscriber : IDisposable
         if (newSegments.Count == 0)
             return;
 
-        await using (MediaContext context = await _contextFactory.CreateDbContextAsync(ct))
+        await using (MediaContext context = await _contextFactory.CreateDbContextAsync(cancellationToken: ct))
         {
-            context.ContentSegments.AddRange(newSegments);
-            await context.SaveChangesAsync(ct);
+            context.ContentSegments.AddRange(entities: newSegments);
+            await context.SaveChangesAsync(cancellationToken: ct);
         }
 
         _logger.LogInformation(
-            "IntroDetect: persisted {Count} segment(s) for season {SeasonId}",
-            newSegments.Count,
-            seasonId
+            message: "IntroDetect: persisted {Count} segment(s) for season {SeasonId}", args: [newSegments.Count, seasonId]
         );
     }
 
@@ -291,30 +284,30 @@ public class IntroDetectSubscriber : IDisposable
         CancellationToken ct
     )
     {
-        List<int> episodeIds = episodes.Select(e => e.Id).ToList();
+        List<int> episodeIds = episodes.Select(selector: e => e.Id).ToList();
 
         List<(int EpisodeId, string HostFolder, string Filename)> fileRows;
-        await using (MediaContext context = await _contextFactory.CreateDbContextAsync(ct))
+        await using (MediaContext context = await _contextFactory.CreateDbContextAsync(cancellationToken: ct))
         {
             fileRows = await context
                 .VideoFiles.AsNoTracking()
-                .Where(vf => vf.EpisodeId != null && episodeIds.Contains(vf.EpisodeId!.Value))
-                .Select(vf => new ValueTuple<int, string, string>(
+                .Where(predicate: vf => vf.EpisodeId != null && episodeIds.Contains(vf.EpisodeId!.Value))
+                .Select(selector: vf => new ValueTuple<int, string, string>(
                     vf.EpisodeId!.Value,
                     vf.HostFolder,
                     vf.Filename
                 ))
-                .ToListAsync(ct);
+                .ToListAsync(cancellationToken: ct);
         }
 
         Dictionary<int, string> fileByEpisode = fileRows.ToDictionary(
-            r => r.EpisodeId,
-            r => r.HostFolder + r.Filename
+            keySelector: r => r.EpisodeId,
+            elementSelector: r => r.HostFolder + r.Filename
         );
 
         return episodes
-            .Where(e => fileByEpisode.ContainsKey(e.Id))
-            .Select(e => (e, fileByEpisode[e.Id]))
+            .Where(predicate: e => fileByEpisode.ContainsKey(key: e.Id))
+            .Select(selector: e => (e, fileByEpisode[key: e.Id]))
             .ToList();
     }
 
@@ -331,27 +324,25 @@ public class IntroDetectSubscriber : IDisposable
             if (ct.IsCancellationRequested)
                 break;
 
-            if (!_storage.Exists(filePath))
+            if (!_storage.Exists(path: filePath))
             {
                 _logger.LogDebug(
-                    "IntroDetect: file not found for episode {EpisodeId}: {FilePath}",
-                    episode.Id,
-                    filePath
+                    message: "IntroDetect: file not found for episode {EpisodeId}: {FilePath}", args: [episode.Id, filePath]
                 );
                 continue;
             }
 
             try
             {
-                AudioFingerprint fp = await _fingerprinter.FingerprintAsync(filePath, window, ct);
-                results.Add((episode, fp));
+                AudioFingerprint fp = await _fingerprinter.FingerprintAsync(filePath: filePath, window: window, ct: ct);
+                results.Add(item: (episode, fp));
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(
-                    ex,
-                    "IntroDetect: fingerprinting failed for episode {EpisodeId}",
-                    episode.Id
+                    exception: ex,
+                    message: "IntroDetect: fingerprinting failed for episode {EpisodeId}",
+                    args: episode.Id
                 );
             }
         }

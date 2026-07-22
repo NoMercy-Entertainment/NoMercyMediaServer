@@ -47,18 +47,18 @@ public partial class DiscRipper(
         CancellationToken ct
     )
     {
-        string lockKey = string.IsNullOrWhiteSpace(request.VolumeUuid)
+        string lockKey = string.IsNullOrWhiteSpace(value: request.VolumeUuid)
             ? request.DrivePath
             : request.VolumeUuid;
 
-        if (!driveLockRegistry.TryAcquire(lockKey, out DriveLock? driveLock))
+        if (!driveLockRegistry.TryAcquire(driveKey: lockKey, driveLock: out DriveLock? driveLock))
         {
-            throw new DiscDriveBusyException(lockKey);
+            throw new DiscDriveBusyException(driveKey: lockKey);
         }
 
         try
         {
-            return await RipInternalAsync(request, outputDirectory, ct);
+            return await RipInternalAsync(request: request, outputDirectory: outputDirectory, ct: ct);
         }
         finally
         {
@@ -72,26 +72,23 @@ public partial class DiscRipper(
         CancellationToken ct
     )
     {
-        storage.CreateDirectory(outputDirectory);
+        storage.CreateDirectory(path: outputDirectory);
 
         // CD audio discs use a dedicated per-track FLAC path. Each CD-DA
         // track is a separate libcdio audio stream; the shared video path
         // hardcodes -map 0:v:0 which is invalid for audio-only CD-DA.
-        if (ResolveDiscType(request) == OpticalDiscType.Cd)
-            return await RipCdTracksAsync(request, outputDirectory, ct);
+        if (ResolveDiscType(request: request) == OpticalDiscType.Cd)
+            return await RipCdTracksAsync(request: request, outputDirectory: outputDirectory, ct: ct);
 
         List<DiscRipResult> results = [];
         foreach (int titleIndex in request.SelectedTitleIndices)
         {
             ct.ThrowIfCancellationRequested();
-            DiscRipResult result = await RipOneTitleAsync(request, titleIndex, outputDirectory, ct);
-            results.Add(result);
+            DiscRipResult result = await RipOneTitleAsync(request: request, titleIndex: titleIndex, outputDirectory: outputDirectory, ct: ct);
+            results.Add(item: result);
             if (!result.Success)
                 logger.LogWarning(
-                    "Rip title {Index} from {Drive} failed: {Error}",
-                    titleIndex,
-                    request.DrivePath,
-                    result.Error
+                    message: "Rip title {Index} from {Drive} failed: {Error}", args: [titleIndex, request.DrivePath, result.Error]
                 );
         }
         return results.ToArray();
@@ -124,18 +121,15 @@ public partial class DiscRipper(
         {
             ct.ThrowIfCancellationRequested();
             DiscRipResult result = await RipOneCdTrackAsync(
-                request,
-                trackIndex,
-                outputDirectory,
-                ct
+                request: request,
+                trackIndex: trackIndex,
+                outputDirectory: outputDirectory,
+                ct: ct
             );
-            results.Add(result);
+            results.Add(item: result);
             if (!result.Success)
                 logger.LogWarning(
-                    "CD track rip {Index} from {Drive} failed: {Error}",
-                    trackIndex,
-                    request.DrivePath,
-                    result.Error
+                    message: "CD track rip {Index} from {Drive} failed: {Error}", args: [trackIndex, request.DrivePath, result.Error]
                 );
         }
 
@@ -160,9 +154,9 @@ public partial class DiscRipper(
         // trackIndex is 1-based (matches DiscTrack.Index); stream 0:a:N-1.
         int streamIndex = trackIndex - 1;
 
-        string trackTitle = ResolveTrackTitle(request, trackIndex);
-        string fileName = $"{trackIndex:D2} - {SanitizeForPath(trackTitle)}.flac";
-        string outputPath = Path.Combine(outputDirectory, fileName);
+        string trackTitle = ResolveTrackTitle(request: request, trackIndex: trackIndex);
+        string fileName = $"{trackIndex:D2} - {SanitizeForPath(input: trackTitle)}.flac";
+        string outputPath = Path.Combine(path1: outputDirectory, path2: fileName);
 
         List<string> args =
         [
@@ -178,13 +172,13 @@ public partial class DiscRipper(
             "flac",
         ];
 
-        await using LocalPathLease outputLease = storage.AcquireLocalPath(outputPath);
-        args.Add(outputLease.Path);
+        await using LocalPathLease outputLease = storage.AcquireLocalPath(path: outputPath);
+        args.Add(item: outputLease.Path);
 
         Stopwatch stopwatch = Stopwatch.StartNew();
         ProcessResult result = await processRunner.RunAsync(
-            options.FfmpegPath,
-            args.ToArray(),
+            executable: options.FfmpegPath,
+            arguments: args.ToArray(),
             workingDirectory: outputDirectory,
             cancellationToken: ct
         );
@@ -193,14 +187,11 @@ public partial class DiscRipper(
         if (!result.IsSuccess)
         {
             string stderrTail =
-                string.IsNullOrEmpty(result.StdErr) ? "(no stderr)"
+                string.IsNullOrEmpty(value: result.StdErr) ? "(no stderr)"
                 : result.StdErr.Length > 800 ? result.StdErr[^800..]
                 : result.StdErr;
             logger.LogInformation(
-                "ffmpeg CD rip failed exit={Exit} args=[{Args}] stderr_tail={Stderr}",
-                result.ExitCode,
-                string.Join(" ", args),
-                stderrTail
+                message: "ffmpeg CD rip failed exit={Exit} args=[{Args}] stderr_tail={Stderr}", args: [result.ExitCode, string.Join(separator: " ", values: args), stderrTail]
             );
 
             return new(
@@ -213,15 +204,9 @@ public partial class DiscRipper(
             );
         }
 
-        long size = storage.SizeOrZero(outputPath);
+        long size = storage.SizeOrZero(path: outputPath);
         logger.LogInformation(
-            "Ripped CD track {Index} (stream 0:a:{Stream}) from {Drive} → {Path} ({Bytes} bytes, {Duration:c})",
-            trackIndex,
-            streamIndex,
-            request.DrivePath,
-            outputPath,
-            size,
-            stopwatch.Elapsed
+            message: "Ripped CD track {Index} (stream 0:a:{Stream}) from {Drive} → {Path} ({Bytes} bytes, {Duration:c})", args: [trackIndex, streamIndex, request.DrivePath, outputPath, size, stopwatch.Elapsed]
         );
 
         return new(
@@ -244,14 +229,14 @@ public partial class DiscRipper(
 
     private static string SanitizeForPath(string input)
     {
-        string trimmed = InvalidFsCharsRegex().Replace(input, " ").Trim();
-        return WhitespaceRunRegex().Replace(trimmed, " ");
+        string trimmed = InvalidFsCharsRegex().Replace(input: input, replacement: " ").Trim();
+        return WhitespaceRunRegex().Replace(input: trimmed, replacement: " ");
     }
 
-    [GeneratedRegex(@"[<>:""/\\|?*\x00-\x1F]")]
+    [GeneratedRegex(pattern: @"[<>:""/\\|?*\x00-\x1F]")]
     private static partial Regex InvalidFsCharsRegex();
 
-    [GeneratedRegex(@"\s+")]
+    [GeneratedRegex(pattern: @"\s+")]
     private static partial Regex WhitespaceRunRegex();
 
     private async Task<DiscRipResult> RipOneTitleAsync(
@@ -261,10 +246,10 @@ public partial class DiscRipper(
         CancellationToken ct
     )
     {
-        string outputPath = Path.Combine(outputDirectory, $"title_{titleIndex:D2}.mkv");
+        string outputPath = Path.Combine(path1: outputDirectory, path2: $"title_{titleIndex:D2}.mkv");
 
-        OpticalDiscType discType = ResolveDiscType(request);
-        string inputUrl = BuildInputUrl(request.DrivePath, discType, titleIndex);
+        OpticalDiscType discType = ResolveDiscType(request: request);
+        string inputUrl = BuildInputUrl(drivePath: request.DrivePath, discType: discType, titleIndex: titleIndex);
 
         List<string> args = ["-y", "-hide_banner"];
 
@@ -274,49 +259,49 @@ public partial class DiscRipper(
         switch (discType)
         {
             case OpticalDiscType.BluRay:
-                args.Add("-playlist");
-                args.Add(titleIndex.ToString());
+                args.Add(item: "-playlist");
+                args.Add(item: titleIndex.ToString());
                 break;
             case OpticalDiscType.Dvd:
-                args.Add("-f");
-                args.Add("dvdvideo");
-                args.Add("-title");
-                args.Add(titleIndex.ToString());
+                args.Add(item: "-f");
+                args.Add(item: "dvdvideo");
+                args.Add(item: "-title");
+                args.Add(item: titleIndex.ToString());
                 break;
             case OpticalDiscType.Cd:
-                args.Add("-f");
-                args.Add("libcdio");
+                args.Add(item: "-f");
+                args.Add(item: "libcdio");
                 break;
         }
 
-        args.Add("-i");
-        args.Add(inputUrl);
+        args.Add(item: "-i");
+        args.Add(item: inputUrl);
 
         // Map only the audio / subtitle streams the user opted into.
-        args.Add("-map");
-        args.Add("0:v:0");
+        args.Add(item: "-map");
+        args.Add(item: "0:v:0");
 
-        foreach (AudioTrackSelection audio in request.AudioTracks.Where(a => a.Include))
+        foreach (AudioTrackSelection audio in request.AudioTracks.Where(predicate: a => a.Include))
         {
-            args.Add("-map");
-            args.Add($"0:a:{audio.StreamIndex}");
+            args.Add(item: "-map");
+            args.Add(item: $"0:a:{audio.StreamIndex}");
         }
 
-        foreach (SubtitleSelection sub in request.Subtitles.Where(s => s.Include))
+        foreach (SubtitleSelection sub in request.Subtitles.Where(predicate: s => s.Include))
         {
-            args.Add("-map");
-            args.Add($"0:s:{sub.StreamIndex}");
+            args.Add(item: "-map");
+            args.Add(item: $"0:s:{sub.StreamIndex}");
         }
 
         // Stream copy — preserves disc-source quality and finishes in
         // read-speed rather than encode-speed time.
-        args.Add("-c");
-        args.Add("copy");
+        args.Add(item: "-c");
+        args.Add(item: "copy");
 
         // Lease the output path through IStorage so remote drivers can
         // stage it locally for ffmpeg and clean up on dispose.
-        await using LocalPathLease outputLease = storage.AcquireLocalPath(outputPath);
-        args.Add(outputLease.Path);
+        await using LocalPathLease outputLease = storage.AcquireLocalPath(path: outputPath);
+        args.Add(item: outputLease.Path);
 
         // Forward AACS / BD+ database overrides into the child process environment
         // when the caller has configured them.  The host process environment is
@@ -326,20 +311,20 @@ public partial class DiscRipper(
         // and libbdplus src/libbdplus/bdplus.c (LIBBDPLUS_DATABASE).
         // Assumption: names are stable; documented here in case a future upstream
         // release renames them.
-        Dictionary<string, string>? envOverrides = BuildBluRayEnvOverrides(request.DrivePath);
+        Dictionary<string, string>? envOverrides = BuildBluRayEnvOverrides(drivePath: request.DrivePath);
 
         Stopwatch stopwatch = Stopwatch.StartNew();
         ProcessResult result = envOverrides is { Count: > 0 }
             ? await processRunner.RunAsync(
-                options.FfmpegPath,
-                args.ToArray(),
-                envOverrides,
+                executable: options.FfmpegPath,
+                arguments: args.ToArray(),
+                extraEnv: envOverrides,
                 workingDirectory: outputDirectory,
                 cancellationToken: ct
             )
             : await processRunner.RunAsync(
-                options.FfmpegPath,
-                args.ToArray(),
+                executable: options.FfmpegPath,
+                arguments: args.ToArray(),
                 workingDirectory: outputDirectory,
                 cancellationToken: ct
             );
@@ -348,20 +333,17 @@ public partial class DiscRipper(
         if (!result.IsSuccess)
         {
             // Surface structured AACS / BD+ errors when the rip fails mid-stream.
-            if (request.DrivePath.StartsWith("bluray:", StringComparison.OrdinalIgnoreCase))
+            if (request.DrivePath.StartsWith(value: "bluray:", comparisonType: StringComparison.OrdinalIgnoreCase))
             {
-                DiscScanner.ClassifyBluRayStderr(request.DrivePath, result.StdErr);
+                DiscScanner.ClassifyBluRayStderr(drivePath: request.DrivePath, stderr: result.StdErr);
             }
 
             string stderrTail =
-                string.IsNullOrEmpty(result.StdErr) ? "(no stderr)"
+                string.IsNullOrEmpty(value: result.StdErr) ? "(no stderr)"
                 : result.StdErr.Length > 800 ? result.StdErr[^800..]
                 : result.StdErr;
             logger.LogInformation(
-                "ffmpeg rip failed exit={Exit} args=[{Args}] stderr_tail={Stderr}",
-                result.ExitCode,
-                string.Join(" ", args),
-                stderrTail
+                message: "ffmpeg rip failed exit={Exit} args=[{Args}] stderr_tail={Stderr}", args: [result.ExitCode, string.Join(separator: " ", values: args), stderrTail]
             );
 
             return new(
@@ -374,14 +356,9 @@ public partial class DiscRipper(
             );
         }
 
-        long size = storage.SizeOrZero(outputPath);
+        long size = storage.SizeOrZero(path: outputPath);
         logger.LogInformation(
-            "Ripped title {Index} from {Drive} → {Path} ({Bytes} bytes, {Duration:c})",
-            titleIndex,
-            request.DrivePath,
-            outputPath,
-            size,
-            stopwatch.Elapsed
+            message: "Ripped title {Index} from {Drive} → {Path} ({Bytes} bytes, {Duration:c})", args: [titleIndex, request.DrivePath, outputPath, size, stopwatch.Elapsed]
         );
 
         return new(
@@ -404,9 +381,9 @@ public partial class DiscRipper(
     {
         if (request.DiscType != OpticalDiscType.None)
             return request.DiscType;
-        if (request.DrivePath.StartsWith("bluray:", StringComparison.OrdinalIgnoreCase))
+        if (request.DrivePath.StartsWith(value: "bluray:", comparisonType: StringComparison.OrdinalIgnoreCase))
             return OpticalDiscType.BluRay;
-        if (request.DrivePath.StartsWith("dvd:", StringComparison.OrdinalIgnoreCase))
+        if (request.DrivePath.StartsWith(value: "dvd:", comparisonType: StringComparison.OrdinalIgnoreCase))
             return OpticalDiscType.Dvd;
         return OpticalDiscType.None;
     }
@@ -420,12 +397,12 @@ public partial class DiscRipper(
     /// </summary>
     private static string BuildInputUrl(string drivePath, OpticalDiscType discType, int titleIndex)
     {
-        if (drivePath.StartsWith("bluray:", StringComparison.OrdinalIgnoreCase))
+        if (drivePath.StartsWith(value: "bluray:", comparisonType: StringComparison.OrdinalIgnoreCase))
             return drivePath;
-        if (drivePath.StartsWith("dvd:", StringComparison.OrdinalIgnoreCase))
+        if (drivePath.StartsWith(value: "dvd:", comparisonType: StringComparison.OrdinalIgnoreCase))
             return drivePath;
 
-        string trimmed = drivePath.TrimEnd('\\', '/');
+        string trimmed = drivePath.TrimEnd(trimChars: ['\\', '/']);
         return discType switch
         {
             OpticalDiscType.BluRay => $"bluray:{trimmed}/",
@@ -442,7 +419,7 @@ public partial class DiscRipper(
     /// </summary>
     private Dictionary<string, string>? BuildBluRayEnvOverrides(string drivePath)
     {
-        if (!drivePath.StartsWith("bluray:", StringComparison.OrdinalIgnoreCase))
+        if (!drivePath.StartsWith(value: "bluray:", comparisonType: StringComparison.OrdinalIgnoreCase))
             return null;
 
         BluRayOptions? bluRay = options.BluRay;
@@ -451,11 +428,11 @@ public partial class DiscRipper(
 
         Dictionary<string, string> env = [];
 
-        if (!string.IsNullOrWhiteSpace(bluRay.KeyDbOverridePath))
-            env["LIBAACS_KEY_DB"] = bluRay.KeyDbOverridePath;
+        if (!string.IsNullOrWhiteSpace(value: bluRay.KeyDbOverridePath))
+            env[key: "LIBAACS_KEY_DB"] = bluRay.KeyDbOverridePath;
 
-        if (!string.IsNullOrWhiteSpace(bluRay.AacsKeysOverridePath))
-            env["LIBBDPLUS_DATABASE"] = bluRay.AacsKeysOverridePath;
+        if (!string.IsNullOrWhiteSpace(value: bluRay.AacsKeysOverridePath))
+            env[key: "LIBBDPLUS_DATABASE"] = bluRay.AacsKeysOverridePath;
 
         return env.Count > 0 ? env : null;
     }

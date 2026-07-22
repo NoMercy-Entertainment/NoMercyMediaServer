@@ -40,8 +40,8 @@ public class ShutdownCoordinator : IShutdownCoordinator, IDisposable
 
     public void ForceShutdown()
     {
-        _logger.LogInformation("Force shutdown requested!");
-        Environment.Exit(1);
+        _logger.LogInformation(message: "Force shutdown requested!");
+        Environment.Exit(exitCode: 1);
     }
 
     private void OnCancelKeyPress(object? sender, ConsoleCancelEventArgs e)
@@ -53,7 +53,7 @@ public class ShutdownCoordinator : IShutdownCoordinator, IDisposable
             if (_shutdownAttempts == 1)
             {
                 e.Cancel = true; // Prevent immediate termination
-                _logger.LogInformation("Graceful shutdown initiated... (Press Ctrl+C again to force shutdown)");
+                _logger.LogInformation(message: "Graceful shutdown initiated... (Press Ctrl+C again to force shutdown)");
                 RequestShutdown();
             }
             else if (_shutdownAttempts >= 2)
@@ -68,6 +68,6 @@ public class ShutdownCoordinator : IShutdownCoordinator, IDisposable
     {
         Console.CancelKeyPress -= OnCancelKeyPress;
         _applicationShutdownCts.Dispose();
-        GC.SuppressFinalize(this);
+        GC.SuppressFinalize(obj: this);
     }
 }

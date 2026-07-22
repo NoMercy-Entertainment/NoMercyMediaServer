@@ -18,56 +18,56 @@ using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Database.Models.Music;
 
-[PrimaryKey(nameof(Id))]
-[Index(nameof(Name))]
-[Index(nameof(Folder))]
-[Index(nameof(Filename))]
-[Index(nameof(TrackNumber))]
-[Index(nameof(DiscNumber))]
+[PrimaryKey(propertyName: nameof(Id))]
+[Index(propertyName: nameof(Name))]
+[Index(propertyName: nameof(Folder))]
+[Index(propertyName: nameof(Filename))]
+[Index(propertyName: nameof(TrackNumber))]
+[Index(propertyName: nameof(DiscNumber))]
 // Non-unique on purpose: a unique constraint would fail to apply on existing
 // libraries that already contain duplicate tracks. Speeds the dedup lookup; a
 // unique constraint needs a separate de-dup migration first.
-[Index(nameof(Filename), nameof(HostFolder))]
+[Index(propertyName: nameof(Filename), additionalPropertyNames: nameof(HostFolder))]
 public class Track : ColorPaletteTimeStamps
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.None)]
-    [JsonProperty("id")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
+    [JsonProperty(propertyName: "id")]
     public Guid Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("track")]
+    [JsonProperty(propertyName: "track")]
     public int TrackNumber { get; set; }
 
-    [JsonProperty("disc")]
+    [JsonProperty(propertyName: "disc")]
     public int DiscNumber { get; set; }
 
-    [JsonProperty("cover")]
+    [JsonProperty(propertyName: "cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty("date")]
+    [JsonProperty(propertyName: "date")]
     public DateTime? Date { get; set; }
 
-    [JsonProperty("filename")]
+    [JsonProperty(propertyName: "filename")]
     public string? Filename { get; set; }
 
-    [JsonProperty("duration")]
+    [JsonProperty(propertyName: "duration")]
     public string Duration { get; set; } = string.Empty;
 
-    [JsonProperty("quality")]
+    [JsonProperty(propertyName: "quality")]
     public int? Quality { get; set; }
 
-    [JsonProperty("lyrics_offset")]
+    [JsonProperty(propertyName: "lyrics_offset")]
     public int? LyricsOffset { get; set; }
 
-    [Column("Lyrics")]
+    [Column(name: "Lyrics")]
     [System.Text.Json.Serialization.JsonIgnore]
     // ReSharper disable once InconsistentNaming
     public string? _lyrics { get; set; }
 
     [NotMapped]
-    [JsonProperty("lyrics")]
+    [JsonProperty(propertyName: "lyrics")]
     public Lyric[]? Lyrics
     {
         get
@@ -76,63 +76,63 @@ public class Track : ColorPaletteTimeStamps
                 return null;
             try
             {
-                return JsonConvert.DeserializeObject<Lyric[]>(_lyrics);
+                return JsonConvert.DeserializeObject<Lyric[]>(value: _lyrics);
             }
             catch (Exception)
             {
                 return _lyrics
-                    .Split("\\n")
-                    .Select(l => new Lyric { Text = Regex.Replace(l, "^\"|\"$", "") })
+                    .Split(separator: "\\n")
+                    .Select(selector: l => new Lyric { Text = Regex.Replace(input: l, pattern: "^\"|\"$", replacement: "") })
                     .ToArray();
             }
         }
-        set => _lyrics = JsonConvert.SerializeObject(value);
+        set => _lyrics = JsonConvert.SerializeObject(value: value);
     }
 
-    [JsonProperty("folder")]
+    [JsonProperty(propertyName: "folder")]
     public string? Folder
     {
         get;
-        set => field = PathNormalizer.NormalizeNullable(value);
+        set => field = PathNormalizer.NormalizeNullable(value: value);
     }
 
-    [JsonProperty("host_folder")]
+    [JsonProperty(propertyName: "host_folder")]
     public string? HostFolder
     {
         get;
-        set => field = PathNormalizer.NormalizeNullable(value);
+        set => field = PathNormalizer.NormalizeNullable(value: value);
     }
 
-    [JsonProperty("folder_id")]
+    [JsonProperty(propertyName: "folder_id")]
     public Ulid FolderId { get; set; }
     public Folder LibraryFolder { get; set; } = null!;
 
-    [JsonProperty("metadata_id")]
+    [JsonProperty(propertyName: "metadata_id")]
     public Ulid? MetadataId { get; set; }
     public Metadata Metadata { get; init; } = null!;
 
-    [JsonProperty("album_track")]
+    [JsonProperty(propertyName: "album_track")]
     public ICollection<AlbumTrack> AlbumTrack { get; set; } = [];
 
-    [JsonProperty("artist_track")]
+    [JsonProperty(propertyName: "artist_track")]
     public ICollection<ArtistTrack> ArtistTrack { get; set; } = [];
 
-    [JsonProperty("library_track")]
+    [JsonProperty(propertyName: "library_track")]
     public ICollection<LibraryTrack> LibraryTrack { get; set; } = [];
 
-    [JsonProperty("playlist_track")]
+    [JsonProperty(propertyName: "playlist_track")]
     public ICollection<PlaylistTrack> PlaylistTrack { get; set; } = [];
 
-    [JsonProperty("images")]
+    [JsonProperty(propertyName: "images")]
     public ICollection<Image> Images { get; set; } = [];
 
-    [JsonProperty("track_user")]
+    [JsonProperty(propertyName: "track_user")]
     public ICollection<TrackUser> TrackUser { get; set; } = [];
 
-    [JsonProperty("genre_track")]
+    [JsonProperty(propertyName: "genre_track")]
     public ICollection<MusicGenreTrack> MusicGenreTrack { get; set; } = [];
 
-    [JsonProperty("music_plays")]
+    [JsonProperty(propertyName: "music_plays")]
     public ICollection<MusicPlay> MusicPlays { get; set; } = [];
 
     public string CreateFolderName()
@@ -148,15 +148,7 @@ public class Track : ColorPaletteTimeStamps
 
         // Track may be orphaned during ingest (no AlbumTrack row yet) — fall
         // back to an empty album prefix instead of throwing.
-        return string.Concat(
-            AlbumTrack.FirstOrDefault()?.Album.Name ?? string.Empty,
-            ": ",
-            DiscNumber.ToString(),
-            "-",
-            TrackNumber.ToString().PadLeft(padding, '0'),
-            " - ",
-            Name,
-            " NoMercy"
+        return string.Concat(values: [AlbumTrack.FirstOrDefault()?.Album.Name ?? string.Empty, ": ", DiscNumber.ToString(), "-", TrackNumber.ToString().PadLeft(totalWidth: padding, paddingChar: '0'), " - ", Name, " NoMercy"]
         );
     }
 
@@ -166,10 +158,10 @@ public class Track : ColorPaletteTimeStamps
         if (AlbumTrack.Count.ToString().Length > 2)
             padding = AlbumTrack.Count.ToString().Length;
         return string.Concat(
-            TrackNumber.ToString().PadLeft(padding, '0'),
-            " - ",
-            Name.MusicBrainzSafeName(),
-            ".NoMercy"
+            str0: TrackNumber.ToString().PadLeft(totalWidth: padding, paddingChar: '0'),
+            str1: " - ",
+            str2: Name.MusicBrainzSafeName(),
+            str3: ".NoMercy"
         );
     }
 }

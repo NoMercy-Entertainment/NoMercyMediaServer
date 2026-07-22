@@ -25,7 +25,7 @@ internal static class S3SigV4
     // -----------------------------------------------------------------------
 
     internal static byte[] HmacSha256(byte[] key, string data) =>
-        new HMACSHA256(key).ComputeHash(Encoding.UTF8.GetBytes(data));
+        new HMACSHA256(key: key).ComputeHash(buffer: Encoding.UTF8.GetBytes(s: data));
 
     internal static byte[] DeriveSigningKey(
         string secret,
@@ -34,11 +34,11 @@ internal static class S3SigV4
         string service = "s3"
     )
     {
-        byte[] kSecret = Encoding.UTF8.GetBytes("AWS4" + secret);
-        byte[] kDate = HmacSha256(kSecret, dateStamp);
-        byte[] kRegion = HmacSha256(kDate, region);
-        byte[] kService = HmacSha256(kRegion, service);
-        return HmacSha256(kService, "aws4_request");
+        byte[] kSecret = Encoding.UTF8.GetBytes(s: "AWS4" + secret);
+        byte[] kDate = HmacSha256(key: kSecret, data: dateStamp);
+        byte[] kRegion = HmacSha256(key: kDate, data: region);
+        byte[] kService = HmacSha256(key: kRegion, data: service);
+        return HmacSha256(key: kService, data: "aws4_request");
     }
 
     // -----------------------------------------------------------------------
@@ -53,11 +53,11 @@ internal static class S3SigV4
     internal static string EscapeKey(string key)
     {
         StringBuilder sb = new();
-        foreach (string segment in key.Split('/'))
+        foreach (string segment in key.Split(separator: '/'))
         {
             if (sb.Length > 0)
-                sb.Append('/');
-            sb.Append(Uri.EscapeDataString(segment));
+                sb.Append(value: '/');
+            sb.Append(value: Uri.EscapeDataString(stringToEscape: segment));
         }
         return sb.ToString();
     }
@@ -82,11 +82,11 @@ internal static class S3SigV4
         DateTime utcNow
     )
     {
-        string host = HostFromEndpoint(endpoint);
-        string canonicalUri = "/" + Uri.EscapeDataString(bucket) + "/" + EscapeKey(key);
+        string host = HostFromEndpoint(endpoint: endpoint);
+        string canonicalUri = "/" + Uri.EscapeDataString(stringToEscape: bucket) + "/" + EscapeKey(key: key);
 
-        string amzDate = utcNow.ToString("yyyyMMddTHHmmssZ");
-        string dateStamp = utcNow.ToString("yyyyMMdd");
+        string amzDate = utcNow.ToString(format: "yyyyMMddTHHmmssZ");
+        string dateStamp = utcNow.ToString(format: "yyyyMMdd");
 
         const string payloadHash =
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
@@ -96,29 +96,21 @@ internal static class S3SigV4
         const string signedHeaders = "host;x-amz-content-sha256;x-amz-date";
 
         string canonicalRequest = string.Join(
-            "\n",
-            method,
-            canonicalUri,
-            canonicalQueryString,
-            canonicalHeaders,
-            signedHeaders,
-            payloadHash
+            separator: "\n", value: [method, canonicalUri, canonicalQueryString, canonicalHeaders, signedHeaders, payloadHash]
         );
 
         string credentialScope = $"{dateStamp}/{region}/s3/aws4_request";
         string stringToSign = string.Join(
-            "\n",
-            "AWS4-HMAC-SHA256",
-            amzDate,
-            credentialScope,
-            Convert
-                .ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonicalRequest)))
+            separator: "\n", value:
+            ["AWS4-HMAC-SHA256", amzDate, credentialScope, Convert
+                .ToHexString(inArray: SHA256.HashData(source: Encoding.UTF8.GetBytes(s: canonicalRequest)))
                 .ToLowerInvariant()
+            ]
         );
 
-        byte[] signingKey = DeriveSigningKey(secretKey, dateStamp, region);
+        byte[] signingKey = DeriveSigningKey(secret: secretKey, dateStamp: dateStamp, region: region);
         string signature = Convert
-            .ToHexString(HmacSha256(signingKey, stringToSign))
+            .ToHexString(inArray: HmacSha256(key: signingKey, data: stringToSign))
             .ToLowerInvariant();
 
         string authHeader =
@@ -147,15 +139,15 @@ internal static class S3SigV4
         DateTime utcNow
     )
     {
-        int expiresSeconds = (int)Math.Clamp(ttl.TotalSeconds, 60, 86400);
+        int expiresSeconds = (int)Math.Clamp(value: ttl.TotalSeconds, min: 60, max: 86400);
 
-        string host = HostFromEndpoint(endpoint);
-        string canonicalUri = "/" + Uri.EscapeDataString(bucket) + "/" + EscapeKey(key);
+        string host = HostFromEndpoint(endpoint: endpoint);
+        string canonicalUri = "/" + Uri.EscapeDataString(stringToEscape: bucket) + "/" + EscapeKey(key: key);
 
-        string amzDate = utcNow.ToString("yyyyMMddTHHmmssZ");
-        string dateStamp = utcNow.ToString("yyyyMMdd");
+        string amzDate = utcNow.ToString(format: "yyyyMMddTHHmmssZ");
+        string dateStamp = utcNow.ToString(format: "yyyyMMdd");
         string credentialScope = $"{dateStamp}/{region}/s3/aws4_request";
-        string credentialParam = Uri.EscapeDataString($"{accessKey}/{credentialScope}");
+        string credentialParam = Uri.EscapeDataString(stringToEscape: $"{accessKey}/{credentialScope}");
 
         // Query-string params must be sorted alphabetically
         string canonicalQs =
@@ -170,38 +162,30 @@ internal static class S3SigV4
         const string payloadHash = "UNSIGNED-PAYLOAD";
 
         string canonicalRequest = string.Join(
-            "\n",
-            "GET",
-            canonicalUri,
-            canonicalQs,
-            canonicalHeaders,
-            signedHeaders,
-            payloadHash
+            separator: "\n", value: ["GET", canonicalUri, canonicalQs, canonicalHeaders, signedHeaders, payloadHash]
         );
 
         string stringToSign = string.Join(
-            "\n",
-            "AWS4-HMAC-SHA256",
-            amzDate,
-            credentialScope,
-            Convert
-                .ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonicalRequest)))
+            separator: "\n", value:
+            ["AWS4-HMAC-SHA256", amzDate, credentialScope, Convert
+                .ToHexString(inArray: SHA256.HashData(source: Encoding.UTF8.GetBytes(s: canonicalRequest)))
                 .ToLowerInvariant()
+            ]
         );
 
-        byte[] signingKey = DeriveSigningKey(secretKey, dateStamp, region);
+        byte[] signingKey = DeriveSigningKey(secret: secretKey, dateStamp: dateStamp, region: region);
         string signature = Convert
-            .ToHexString(HmacSha256(signingKey, stringToSign))
+            .ToHexString(inArray: HmacSha256(key: signingKey, data: stringToSign))
             .ToLowerInvariant();
 
         string url =
-            endpoint.TrimEnd('/')
+            endpoint.TrimEnd(trimChar: '/')
             + canonicalUri
             + "?"
             + canonicalQs
             + $"&X-Amz-Signature={signature}";
 
-        return new(url);
+        return new(uriString: url);
     }
 
     // -----------------------------------------------------------------------
@@ -210,7 +194,7 @@ internal static class S3SigV4
 
     internal static string HostFromEndpoint(string endpoint)
     {
-        Uri uri = new(endpoint.TrimEnd('/'));
+        Uri uri = new(uriString: endpoint.TrimEnd(trimChar: '/'));
         return uri.Host + (uri.IsDefaultPort ? string.Empty : $":{uri.Port}");
     }
 }

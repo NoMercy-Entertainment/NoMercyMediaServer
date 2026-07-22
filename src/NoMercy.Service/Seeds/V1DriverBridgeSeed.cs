@@ -40,7 +40,7 @@ public static class V1DriverBridgeSeed
 {
     private sealed record AutoSeededFolder(string FolderIdStr, string AbsoluteRootPath);
 
-    private sealed record LocalDriverConfig([property: JsonProperty("rootPath")] string RootPath);
+    private sealed record LocalDriverConfig([property: JsonProperty(propertyName: "rootPath")] string RootPath);
 
     public static async Task RunAsync(MediaContext context)
     {
@@ -48,30 +48,30 @@ public static class V1DriverBridgeSeed
         if (connection.State != ConnectionState.Open)
             await connection.OpenAsync();
 
-        List<AutoSeededFolder> autoSeededFolders = await LoadAutoSeededFoldersRaw(connection);
+        List<AutoSeededFolder> autoSeededFolders = await LoadAutoSeededFoldersRaw(connection: connection);
 
         if (autoSeededFolders.Count == 0)
             return;
 
         Logger.Setup(
-            $"V1DriverBridge: found {autoSeededFolders.Count} auto-seeded folder(s) to regroup",
-            LogEventLevel.Verbose
+            message: $"V1DriverBridge: found {autoSeededFolders.Count} auto-seeded folder(s) to regroup",
+            level: LogEventLevel.Verbose
         );
 
         List<FolderRootInput> inputs = autoSeededFolders
-            .Select(f => new FolderRootInput(Ulid.Parse(f.FolderIdStr), f.AbsoluteRootPath))
+            .Select(selector: f => new FolderRootInput(FolderId: Ulid.Parse(base32: f.FolderIdStr), AbsoluteRootPath: f.AbsoluteRootPath))
             .ToList();
 
-        IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs);
+        IReadOnlyList<DriverGroup> groups = StorageDriverGrouper.Group(inputs: inputs);
 
         foreach (DriverGroup group in groups)
         {
-            await ApplyGroupRaw(connection, group);
+            await ApplyGroupRaw(connection: connection, group: group);
         }
 
         Logger.Setup(
-            $"V1DriverBridge: regrouped {autoSeededFolders.Count} folder(s) into {groups.Count} shared driver(s)",
-            LogEventLevel.Verbose
+            message: $"V1DriverBridge: regrouped {autoSeededFolders.Count} folder(s) into {groups.Count} shared driver(s)",
+            level: LogEventLevel.Verbose
         );
     }
 
@@ -91,9 +91,9 @@ public static class V1DriverBridgeSeed
             await using DbDataReader reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
-                string folderId = reader.GetString(0);
-                string driverId = reader.GetString(1);
-                selfFolders.Add((folderId, driverId));
+                string folderId = reader.GetString(ordinal: 0);
+                string driverId = reader.GetString(ordinal: 1);
+                selfFolders.Add(item: (folderId, driverId));
             }
         }
 
@@ -104,9 +104,9 @@ public static class V1DriverBridgeSeed
 
         foreach ((string folderId, string driverId) in selfFolders)
         {
-            string? rootPath = await ReadDriverRootPath(connection, driverId);
-            if (!string.IsNullOrEmpty(rootPath))
-                result.Add(new(folderId, rootPath));
+            string? rootPath = await ReadDriverRootPath(connection: connection, driverId: driverId);
+            if (!string.IsNullOrEmpty(value: rootPath))
+                result.Add(item: new(FolderIdStr: folderId, AbsoluteRootPath: rootPath));
         }
 
         return result;
@@ -119,7 +119,7 @@ public static class V1DriverBridgeSeed
         DbParameter param = cmd.CreateParameter();
         param.ParameterName = "@id";
         param.Value = driverId;
-        cmd.Parameters.Add(param);
+        cmd.Parameters.Add(value: param);
 
         object? result = await cmd.ExecuteScalarAsync();
         if (result is null or DBNull)
@@ -128,7 +128,7 @@ public static class V1DriverBridgeSeed
         try
         {
             LocalDriverConfig? parsed = JsonConvert.DeserializeObject<LocalDriverConfig>(
-                result.ToString()!
+                value: result.ToString()!
             );
             return parsed?.RootPath;
         }
@@ -141,8 +141,8 @@ public static class V1DriverBridgeSeed
     private static async Task ApplyGroupRaw(DbConnection connection, DriverGroup group)
     {
         string? existingSharedDriverId = await FindExistingSharedDriverId(
-            connection,
-            group.DriverRoot
+            connection: connection,
+            driverRoot: group.DriverRoot
         );
 
         string sharedDriverIdStr;
@@ -153,31 +153,31 @@ public static class V1DriverBridgeSeed
         else
         {
             sharedDriverIdStr = Ulid.NewUlid().ToString();
-            string config = JsonConvert.SerializeObject(new LocalDriverConfig(group.DriverRoot));
+            string config = JsonConvert.SerializeObject(value: new LocalDriverConfig(RootPath: group.DriverRoot));
 
             await using DbCommand insertCmd = connection.CreateCommand();
             insertCmd.CommandText =
                 "INSERT OR IGNORE INTO Drivers (Id, Name, Type, Config, CreatedAt, UpdatedAt) "
                 + "VALUES (@id, @name, @type, @config, @now, @now)";
-            AddParam(insertCmd, "@id", sharedDriverIdStr);
-            AddParam(insertCmd, "@name", group.DriverRoot);
-            AddParam(insertCmd, "@type", group.DriverType);
-            AddParam(insertCmd, "@config", config);
-            AddParam(insertCmd, "@now", DateTimeOffset.UtcNow.ToString("O"));
+            AddParam(cmd: insertCmd, name: "@id", value: sharedDriverIdStr);
+            AddParam(cmd: insertCmd, name: "@name", value: group.DriverRoot);
+            AddParam(cmd: insertCmd, name: "@type", value: group.DriverType);
+            AddParam(cmd: insertCmd, name: "@config", value: config);
+            AddParam(cmd: insertCmd, name: "@now", value: DateTimeOffset.UtcNow.ToString(format: "O"));
             await insertCmd.ExecuteNonQueryAsync();
         }
 
         foreach (FolderAssignment assignment in group.Folders)
         {
             string folderIdStr = assignment.FolderId.ToString();
-            string subPath = assignment.SubPath.Replace('\\', '/');
+            string subPath = assignment.SubPath.Replace(oldChar: '\\', newChar: '/');
 
             await using DbCommand updateCmd = connection.CreateCommand();
             updateCmd.CommandText =
                 "UPDATE Folders SET DriverId = @driverId, Path = @path WHERE Id = @folderId";
-            AddParam(updateCmd, "@driverId", sharedDriverIdStr);
-            AddParam(updateCmd, "@path", subPath);
-            AddParam(updateCmd, "@folderId", folderIdStr);
+            AddParam(cmd: updateCmd, name: "@driverId", value: sharedDriverIdStr);
+            AddParam(cmd: updateCmd, name: "@path", value: subPath);
+            AddParam(cmd: updateCmd, name: "@folderId", value: folderIdStr);
             await updateCmd.ExecuteNonQueryAsync();
         }
 
@@ -189,7 +189,7 @@ public static class V1DriverBridgeSeed
 
             await using DbCommand deleteCmd = connection.CreateCommand();
             deleteCmd.CommandText = "DELETE FROM Drivers WHERE Id = @id";
-            AddParam(deleteCmd, "@id", obsoleteIdStr);
+            AddParam(cmd: deleteCmd, name: "@id", value: obsoleteIdStr);
             await deleteCmd.ExecuteNonQueryAsync();
         }
     }
@@ -205,23 +205,23 @@ public static class V1DriverBridgeSeed
 
         while (await reader.ReadAsync())
         {
-            string driverId = reader.GetString(0);
-            string? configJson = reader.IsDBNull(1) ? null : reader.GetString(1);
+            string driverId = reader.GetString(ordinal: 0);
+            string? configJson = reader.IsDBNull(ordinal: 1) ? null : reader.GetString(ordinal: 1);
 
-            if (string.IsNullOrEmpty(configJson))
+            if (string.IsNullOrEmpty(value: configJson))
                 continue;
 
             try
             {
                 LocalDriverConfig? parsed = JsonConvert.DeserializeObject<LocalDriverConfig>(
-                    configJson
+                    value: configJson
                 );
                 if (
                     parsed is not null
                     && string.Equals(
-                        parsed.RootPath,
-                        driverRoot,
-                        StringComparison.OrdinalIgnoreCase
+                        a: parsed.RootPath,
+                        b: driverRoot,
+                        comparisonType: StringComparison.OrdinalIgnoreCase
                     )
                     && driverId != Driver.SystemLocalDriverId.ToString()
                 )
@@ -241,6 +241,6 @@ public static class V1DriverBridgeSeed
         DbParameter param = cmd.CreateParameter();
         param.ParameterName = name;
         param.Value = value;
-        cmd.Parameters.Add(param);
+        cmd.Parameters.Add(value: param);
     }
 }

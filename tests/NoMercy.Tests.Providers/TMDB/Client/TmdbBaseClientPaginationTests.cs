@@ -24,7 +24,7 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// count must be adjusted before being passed in or the last page is silently
 /// dropped from every popular/discover listing.
 /// </summary>
-[Collection("HttpClientProvider")]
+[Collection(name: "HttpClientProvider")]
 public class TmdbBaseClientPaginationTests : IDisposable
 {
     private ServiceProvider? _serviceProvider;
@@ -33,12 +33,12 @@ public class TmdbBaseClientPaginationTests : IDisposable
     {
         HttpClientProvider.Reset();
         _serviceProvider?.Dispose();
-        GC.SuppressFinalize(this);
+        GC.SuppressFinalize(obj: this);
     }
 
     private sealed class FakeItem
     {
-        [JsonProperty("id")]
+        [JsonProperty(propertyName: "id")]
         public int Id { get; set; }
     }
 
@@ -47,7 +47,7 @@ public class TmdbBaseClientPaginationTests : IDisposable
         public new Task<List<T>?> Paginated<T>(string url, int limit)
             where T : class
         {
-            return base.Paginated<T>(url, limit);
+            return base.Paginated<T>(url: url, limit: limit);
         }
     }
 
@@ -60,7 +60,7 @@ public class TmdbBaseClientPaginationTests : IDisposable
     /// </summary>
     private sealed class TotalPagesHandler(int totalPages) : HttpMessageHandler
     {
-        private readonly HttpMessageInvoker _passthrough = new(new HttpClientHandler());
+        private readonly HttpMessageInvoker _passthrough = new(handler: new HttpClientHandler());
 
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
@@ -69,19 +69,19 @@ public class TmdbBaseClientPaginationTests : IDisposable
         {
             if (
                 request.RequestUri is null
-                || !request.RequestUri.AbsolutePath.Contains("test/paginated")
+                || !request.RequestUri.AbsolutePath.Contains(value: "test/paginated")
             )
-                return _passthrough.SendAsync(request, cancellationToken);
+                return _passthrough.SendAsync(request: request, cancellationToken: cancellationToken);
 
-            int page = ExtractPage(request.RequestUri);
+            int page = ExtractPage(uri: request.RequestUri);
             string json = $$"""
                 {"page": {{page}}, "total_pages": {{totalPages}}, "total_results": {{totalPages}}, "results": [{"id": {{page}}}]}
                 """;
 
             return Task.FromResult(
-                new HttpResponseMessage(HttpStatusCode.OK)
+                result: new HttpResponseMessage(statusCode: HttpStatusCode.OK)
                 {
-                    Content = new StringContent(json, Encoding.UTF8, "application/json"),
+                    Content = new StringContent(content: json, encoding: Encoding.UTF8, mediaType: "application/json"),
                 }
             );
         }
@@ -91,7 +91,7 @@ public class TmdbBaseClientPaginationTests : IDisposable
             if (disposing)
                 _passthrough.Dispose();
 
-            base.Dispose(disposing);
+            base.Dispose(disposing: disposing);
         }
 
         private static int ExtractPage(Uri? uri)
@@ -101,12 +101,12 @@ public class TmdbBaseClientPaginationTests : IDisposable
 
             foreach (
                 string pair in uri
-                    .Query.TrimStart('?')
-                    .Split('&', StringSplitOptions.RemoveEmptyEntries)
+                    .Query.TrimStart(trimChar: '?')
+                    .Split(separator: '&', options: StringSplitOptions.RemoveEmptyEntries)
             )
             {
-                string[] parts = pair.Split('=', 2);
-                if (parts[0] == "page" && parts.Length == 2 && int.TryParse(parts[1], out int page))
+                string[] parts = pair.Split(separator: '=', count: 2);
+                if (parts[0] == "page" && parts.Length == 2 && int.TryParse(s: parts[1], result: out int page))
                     return page;
             }
 
@@ -121,13 +121,13 @@ public class TmdbBaseClientPaginationTests : IDisposable
         ServiceCollection services = new();
         services
             .AddHttpClient(
-                HttpClientNames.Tmdb,
-                client => client.BaseAddress = new("https://api.themoviedb.org/3/")
+                name: HttpClientNames.Tmdb,
+                configureClient: client => client.BaseAddress = new(uriString: "https://api.themoviedb.org/3/")
             )
-            .ConfigurePrimaryHttpMessageHandler(() => new TotalPagesHandler(totalPages));
+            .ConfigurePrimaryHttpMessageHandler(configureHandler: () => new TotalPagesHandler(totalPages: totalPages));
 
         _serviceProvider = services.BuildServiceProvider();
-        HttpClientProvider.Initialize(_serviceProvider.GetRequiredService<IHttpClientFactory>());
+        HttpClientProvider.Initialize(factory: _serviceProvider.GetRequiredService<IHttpClientFactory>());
 
         return new();
     }
@@ -143,10 +143,10 @@ public class TmdbBaseClientPaginationTests : IDisposable
     {
         using TestableBaseClient client = CreateClient(totalPages: 3);
 
-        List<FakeItem>? results = await client.Paginated<FakeItem>(UniquePaginatedUrl(), 10);
+        List<FakeItem>? results = await client.Paginated<FakeItem>(url: UniquePaginatedUrl(), limit: 10);
 
         results.Should().NotBeNull();
-        results!.Select(item => item.Id).Should().BeEquivalentTo([1, 2, 3]);
+        results!.Select(selector: item => item.Id).Should().BeEquivalentTo(expectation: [1, 2, 3]);
     }
 
     [Fact]
@@ -154,9 +154,9 @@ public class TmdbBaseClientPaginationTests : IDisposable
     {
         using TestableBaseClient client = CreateClient(totalPages: 500);
 
-        List<FakeItem>? results = await client.Paginated<FakeItem>(UniquePaginatedUrl(), 4);
+        List<FakeItem>? results = await client.Paginated<FakeItem>(url: UniquePaginatedUrl(), limit: 4);
 
         results.Should().NotBeNull();
-        results!.Select(item => item.Id).Should().BeEquivalentTo([1, 2, 3, 4]);
+        results!.Select(selector: item => item.Id).Should().BeEquivalentTo(expectation: [1, 2, 3, 4]);
     }
 }

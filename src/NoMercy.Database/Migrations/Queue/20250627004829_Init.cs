@@ -27,7 +27,7 @@ namespace NoMercy.Database.Migrations.Queue
                 {
                     Id = table
                         .Column<long>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
+                        .Annotation(name: "Sqlite:Autoincrement", value: true),
                     Uuid = table.Column<Guid>(type: "TEXT", nullable: false),
                     Connection = table.Column<string>(
                         type: "TEXT",
@@ -41,7 +41,7 @@ namespace NoMercy.Database.Migrations.Queue
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_FailedJobs", x => x.Id);
+                    table.PrimaryKey(name: "PK_FailedJobs", columns: x => x.Id);
                 }
             );
 
@@ -51,7 +51,7 @@ namespace NoMercy.Database.Migrations.Queue
                 {
                     Id = table
                         .Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
+                        .Annotation(name: "Sqlite:Autoincrement", value: true),
                     Priority = table.Column<int>(type: "INTEGER", nullable: false),
                     Queue = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
                     Payload = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
@@ -66,7 +66,7 @@ namespace NoMercy.Database.Migrations.Queue
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_QueueJobs", x => x.Id);
+                    table.PrimaryKey(name: "PK_QueueJobs", columns: x => x.Id);
                 }
             );
         }

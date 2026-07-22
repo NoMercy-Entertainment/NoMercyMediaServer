@@ -24,7 +24,7 @@ using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.Tests.MediaProcessing.Reclaim;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class ReclaimScanServiceTests
 {
     private static IDbContextFactory<MediaContext> ContextFactory(
@@ -32,7 +32,7 @@ public class ReclaimScanServiceTests
         Action<MediaContext> seed
     )
     {
-        SqliteConnection conn = new("DataSource=:memory:");
+        SqliteConnection conn = new(connectionString: "DataSource=:memory:");
         conn.Open();
         connection = conn;
 
@@ -43,28 +43,28 @@ public class ReclaimScanServiceTests
         }
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseSqlite(conn)
+            .UseSqlite(connection: conn)
             .Options;
 
-        using (MediaContext seedContext = new(options))
+        using (MediaContext seedContext = new(options: options))
         {
             seedContext.Database.EnsureCreated();
-            seed(seedContext);
+            seed(obj: seedContext);
             seedContext.SaveChanges();
         }
 
         Mock<IDbContextFactory<MediaContext>> factory = new();
         factory
-            .Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => new(options));
-        factory.Setup(f => f.CreateDbContext()).Returns(() => new(options));
+            .Setup(expression: f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(valueFunction: () => new(options: options));
+        factory.Setup(expression: f => f.CreateDbContext()).Returns(valueFunction: () => new(options: options));
         return factory.Object;
     }
 
     private static Folder SeedFolder(MediaContext context, Ulid folderId, string path) =>
         Seed(
-            context,
-            new Folder
+            context: context,
+            entity: new Folder
             {
                 Id = folderId,
                 Path = path,
@@ -75,7 +75,7 @@ public class ReclaimScanServiceTests
     private static T Seed<T>(MediaContext context, T entity)
         where T : class
     {
-        context.Add(entity);
+        context.Add(entity: entity);
         return entity;
     }
 
@@ -88,11 +88,11 @@ public class ReclaimScanServiceTests
         string movieTitle
     )
     {
-        SeedFolder(context, folderId, hostFolder);
+        SeedFolder(context: context, folderId: folderId, path: hostFolder);
 
         Seed(
-            context,
-            new Movie
+            context: context,
+            entity: new Movie
             {
                 Id = movieId,
                 Title = movieTitle,
@@ -102,8 +102,8 @@ public class ReclaimScanServiceTests
         );
 
         return Seed(
-            context,
-            new VideoFile
+            context: context,
+            entity: new VideoFile
             {
                 Id = Ulid.NewUlid(),
                 Filename = filename,
@@ -129,11 +129,11 @@ public class ReclaimScanServiceTests
         int tvId = episodeId + 10_000;
         int seasonId = episodeId + 20_000;
 
-        SeedFolder(context, folderId, hostFolder);
+        SeedFolder(context: context, folderId: folderId, path: hostFolder);
 
         Seed(
-            context,
-            new Tv
+            context: context,
+            entity: new Tv
             {
                 Id = tvId,
                 Title = showTitle,
@@ -143,8 +143,8 @@ public class ReclaimScanServiceTests
         );
 
         Seed(
-            context,
-            new Season
+            context: context,
+            entity: new Season
             {
                 Id = seasonId,
                 Title = $"Season {seasonNumber}",
@@ -154,8 +154,8 @@ public class ReclaimScanServiceTests
         );
 
         Seed(
-            context,
-            new Episode
+            context: context,
+            entity: new Episode
             {
                 Id = episodeId,
                 Title = $"Episode {episodeNumber}",
@@ -167,8 +167,8 @@ public class ReclaimScanServiceTests
         );
 
         return Seed(
-            context,
-            new VideoFile
+            context: context,
+            entity: new VideoFile
             {
                 Id = Ulid.NewUlid(),
                 Filename = filename,
@@ -186,18 +186,18 @@ public class ReclaimScanServiceTests
         IConfigurationStore? configurationStore = null
     ) =>
         new(
-            contextFactory,
-            new Mock<IStorageFactory>(MockBehavior.Strict).Object,
-            configurationStore ?? new StubConfigurationStore(),
-            NullLogger<ReclaimScanService>.Instance,
-            listFolderEntries
+            contextFactory: contextFactory,
+            storageFactory: new Mock<IStorageFactory>(behavior: MockBehavior.Strict).Object,
+            configurationStore: configurationStore ?? new StubConfigurationStore(),
+            logger: NullLogger<ReclaimScanService>.Instance,
+            listFolderEntriesOverride: listFolderEntries
         );
 
     private static async Task WaitUntilNotScanningAsync(IReclaimScanService service)
     {
-        DateTime deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+        DateTime deadline = DateTime.UtcNow + TimeSpan.FromSeconds(seconds: 5);
         while (service.State == ReclaimScanState.Scanning && DateTime.UtcNow < deadline)
-            await Task.Delay(10);
+            await Task.Delay(millisecondsDelay: 10);
     }
 
     [Fact]
@@ -207,13 +207,13 @@ public class ReclaimScanServiceTests
         const string HostFolder = "movies/Protected Movie (2020)";
 
         IDbContextFactory<MediaContext> factory = ContextFactory(
-            out SqliteConnection connection,
-            context =>
+            connection: out SqliteConnection connection,
+            seed: context =>
                 SeedMovieVideoFile(
-                    context,
-                    folderId,
-                    HostFolder,
-                    "movie.NoMercy.m3u8",
+                    context: context,
+                    folderId: folderId,
+                    hostFolder: HostFolder,
+                    filename: "movie.NoMercy.m3u8",
                     movieId: 1,
                     movieTitle: "Protected Movie"
                 )
@@ -222,21 +222,21 @@ public class ReclaimScanServiceTests
 
         List<FolderEntry> entries =
         [
-            new("movie.mkv", false, 4_000_000_000, DateTimeOffset.UtcNow.AddDays(-30)),
-            new("movie.NoMercy.m3u8", false, 500, DateTimeOffset.UtcNow.AddDays(-1)),
-            new("video_1920x1080_SDR", true, 1_500_000_000, DateTimeOffset.UtcNow.AddDays(-1)),
+            new(Name: "movie.mkv", IsDirectory: false, Size: 4_000_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -30)),
+            new(Name: "movie.NoMercy.m3u8", IsDirectory: false, Size: 500, LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)),
+            new(Name: "video_1920x1080_SDR", IsDirectory: true, Size: 1_500_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)),
         ];
 
-        ReclaimScanService service = BuildService(factory, (_, _, _) => entries);
+        ReclaimScanService service = BuildService(contextFactory: factory, listFolderEntries: (_, _, _) => entries);
 
-        await service.StartScanAsync(CancellationToken.None);
-        await WaitUntilNotScanningAsync(service);
+        await service.StartScanAsync(ct: CancellationToken.None);
+        await WaitUntilNotScanningAsync(service: service);
 
-        service.State.Should().Be(ReclaimScanState.Completed);
+        service.State.Should().Be(expected: ReclaimScanState.Completed);
         service.Latest.Should().NotBeNull();
         service.Latest!.Items.Should().BeEmpty();
         service.Latest.PartialJunk.Should().BeEmpty();
-        service.Latest.TotalReclaimableBytes.Should().Be(0);
+        service.Latest.TotalReclaimableBytes.Should().Be(expected: 0);
     }
 
     [Fact]
@@ -246,13 +246,13 @@ public class ReclaimScanServiceTests
         const string HostFolder = "movies/Reclaimable Movie (2019)";
 
         IDbContextFactory<MediaContext> factory = ContextFactory(
-            out SqliteConnection connection,
-            context =>
+            connection: out SqliteConnection connection,
+            seed: context =>
                 SeedMovieVideoFile(
-                    context,
-                    folderId,
-                    HostFolder,
-                    "movie.mkv",
+                    context: context,
+                    folderId: folderId,
+                    hostFolder: HostFolder,
+                    filename: "movie.mkv",
                     movieId: 2,
                     movieTitle: "Reclaimable Movie"
                 )
@@ -261,33 +261,34 @@ public class ReclaimScanServiceTests
 
         List<FolderEntry> entries =
         [
-            new("movie.mkv", false, 4_000_000_000, DateTimeOffset.UtcNow.AddDays(-30)),
-            new("movie.NoMercy.m3u8", false, 500, DateTimeOffset.UtcNow.AddDays(-1)),
-            new("video_1920x1080_SDR", true, 1_500_000_000, DateTimeOffset.UtcNow.AddDays(-1)),
-            new("audio_eng", true, 200_000_000, DateTimeOffset.UtcNow.AddDays(-1)),
+            new(Name: "movie.mkv", IsDirectory: false, Size: 4_000_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -30)),
+            new(Name: "movie.NoMercy.m3u8", IsDirectory: false, Size: 500, LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)),
+            new(Name: "video_1920x1080_SDR", IsDirectory: true, Size: 1_500_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)),
+            new(Name: "audio_eng", IsDirectory: true, Size: 200_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)),
         ];
 
-        ReclaimScanService service = BuildService(factory, (_, _, _) => entries);
+        ReclaimScanService service = BuildService(contextFactory: factory, listFolderEntries: (_, _, _) => entries);
 
-        await service.StartScanAsync(CancellationToken.None);
-        await WaitUntilNotScanningAsync(service);
+        await service.StartScanAsync(ct: CancellationToken.None);
+        await WaitUntilNotScanningAsync(service: service);
 
         service.Latest.Should().NotBeNull();
-        service.Latest!.Items.Should().HaveCount(1);
-        ReclaimableItem item = service.Latest.Items[0];
-        item.Title.Should().Be("Reclaimable Movie");
-        item.MediaType.Should().Be("movie");
-        item.Folder.Should().Be(HostFolder);
-        item.ServedCopy.Should().Be("movie.mkv");
-        item.Kind.Should().Be(ReclaimKind.ReclaimableHls);
-        item.ReclaimableBytes.Should().Be(500 + 1_500_000_000 + 200_000_000);
+        service.Latest!.Items.Should().HaveCount(expected: 1);
+        ReclaimableItem item = service.Latest.Items[index: 0];
+        item.Title.Should().Be(expected: "Reclaimable Movie");
+        item.MediaType.Should().Be(expected: "movie");
+        item.Folder.Should().Be(expected: HostFolder);
+        item.ServedCopy.Should().Be(expected: "movie.mkv");
+        item.Kind.Should().Be(expected: ReclaimKind.ReclaimableHls);
+        item.ReclaimableBytes.Should().Be(expected: 500 + 1_500_000_000 + 200_000_000);
         item.TargetPaths.Should()
-            .BeEquivalentTo([
+            .BeEquivalentTo(expectation:
+            [
                 $"{HostFolder}/video_1920x1080_SDR",
                 $"{HostFolder}/audio_eng",
                 $"{HostFolder}/movie.NoMercy.m3u8",
             ]);
-        service.Latest.TotalReclaimableBytes.Should().Be(item.ReclaimableBytes);
+        service.Latest.TotalReclaimableBytes.Should().Be(expected: item.ReclaimableBytes);
         service.Latest.PartialJunk.Should().BeEmpty();
     }
 
@@ -298,13 +299,13 @@ public class ReclaimScanServiceTests
         const string HostFolder = "movies/Partial Movie (2021)";
 
         IDbContextFactory<MediaContext> factory = ContextFactory(
-            out SqliteConnection connection,
-            context =>
+            connection: out SqliteConnection connection,
+            seed: context =>
                 SeedMovieVideoFile(
-                    context,
-                    folderId,
-                    HostFolder,
-                    "movie.mkv",
+                    context: context,
+                    folderId: folderId,
+                    hostFolder: HostFolder,
+                    filename: "movie.mkv",
                     movieId: 3,
                     movieTitle: "Partial Movie"
                 )
@@ -313,24 +314,24 @@ public class ReclaimScanServiceTests
 
         List<FolderEntry> entries =
         [
-            new("video_1920x1080_SDR", true, 900_000_000, DateTimeOffset.UtcNow.AddDays(-10)),
-            new("audio_eng", true, 100_000_000, DateTimeOffset.UtcNow.AddDays(-10)),
+            new(Name: "video_1920x1080_SDR", IsDirectory: true, Size: 900_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -10)),
+            new(Name: "audio_eng", IsDirectory: true, Size: 100_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -10)),
         ];
 
-        ReclaimScanService service = BuildService(factory, (_, _, _) => entries);
+        ReclaimScanService service = BuildService(contextFactory: factory, listFolderEntries: (_, _, _) => entries);
 
-        await service.StartScanAsync(CancellationToken.None);
-        await WaitUntilNotScanningAsync(service);
+        await service.StartScanAsync(ct: CancellationToken.None);
+        await WaitUntilNotScanningAsync(service: service);
 
         service.Latest.Should().NotBeNull();
         service.Latest!.Items.Should().BeEmpty();
-        service.Latest.PartialJunk.Should().HaveCount(1);
-        PartialJunkItem junk = service.Latest.PartialJunk[0];
-        junk.Folder.Should().Be(HostFolder);
-        junk.Bytes.Should().Be(900_000_000 + 100_000_000);
+        service.Latest.PartialJunk.Should().HaveCount(expected: 1);
+        PartialJunkItem junk = service.Latest.PartialJunk[index: 0];
+        junk.Folder.Should().Be(expected: HostFolder);
+        junk.Bytes.Should().Be(expected: 900_000_000 + 100_000_000);
         junk.TargetPaths.Should()
-            .BeEquivalentTo([$"{HostFolder}/video_1920x1080_SDR", $"{HostFolder}/audio_eng"]);
-        service.Latest.TotalPartialJunkBytes.Should().Be(junk.Bytes);
+            .BeEquivalentTo(expectation: [$"{HostFolder}/video_1920x1080_SDR", $"{HostFolder}/audio_eng"]);
+        service.Latest.TotalPartialJunkBytes.Should().Be(expected: junk.Bytes);
     }
 
     [Fact]
@@ -340,13 +341,13 @@ public class ReclaimScanServiceTests
         const string HostFolder = "movies/Untouched Movie (2022)";
 
         IDbContextFactory<MediaContext> factory = ContextFactory(
-            out SqliteConnection connection,
-            context =>
+            connection: out SqliteConnection connection,
+            seed: context =>
                 SeedMovieVideoFile(
-                    context,
-                    folderId,
-                    HostFolder,
-                    "movie.mkv",
+                    context: context,
+                    folderId: folderId,
+                    hostFolder: HostFolder,
+                    filename: "movie.mkv",
                     movieId: 4,
                     movieTitle: "Untouched Movie"
                 )
@@ -354,17 +355,17 @@ public class ReclaimScanServiceTests
         using SqliteConnection _ = connection;
 
         ReclaimScanService service = BuildService(
-            factory,
-            (_, _, _) => [new("movie.mkv", false, 4_000_000_000, DateTimeOffset.UtcNow)]
+            contextFactory: factory,
+            listFolderEntries: (_, _, _) => [new(Name: "movie.mkv", IsDirectory: false, Size: 4_000_000_000, LastModified: DateTimeOffset.UtcNow)]
         );
 
-        service.State.Should().Be(ReclaimScanState.Idle);
+        service.State.Should().Be(expected: ReclaimScanState.Idle);
         service.LastScannedAt.Should().BeNull();
 
-        await service.StartScanAsync(CancellationToken.None);
-        await WaitUntilNotScanningAsync(service);
+        await service.StartScanAsync(ct: CancellationToken.None);
+        await WaitUntilNotScanningAsync(service: service);
 
-        service.State.Should().Be(ReclaimScanState.Completed);
+        service.State.Should().Be(expected: ReclaimScanState.Completed);
         service.LastScannedAt.Should().NotBeNull();
         service.Latest.Should().NotBeNull();
     }
@@ -376,43 +377,43 @@ public class ReclaimScanServiceTests
         const string HostFolder = "movies/Gated Movie (2023)";
 
         IDbContextFactory<MediaContext> factory = ContextFactory(
-            out SqliteConnection connection,
-            context =>
+            connection: out SqliteConnection connection,
+            seed: context =>
                 SeedMovieVideoFile(
-                    context,
-                    folderId,
-                    HostFolder,
-                    "movie.mkv",
+                    context: context,
+                    folderId: folderId,
+                    hostFolder: HostFolder,
+                    filename: "movie.mkv",
                     movieId: 5,
                     movieTitle: "Gated Movie"
                 )
         );
         using SqliteConnection _ = connection;
 
-        using SemaphoreSlim gate = new(0, 1);
+        using SemaphoreSlim gate = new(initialCount: 0, maxCount: 1);
         int listCallCount = 0;
 
         ReclaimScanService service = BuildService(
-            factory,
-            (_, _, _) =>
+            contextFactory: factory,
+            listFolderEntries: (_, _, _) =>
             {
-                Interlocked.Increment(ref listCallCount);
-                gate.Wait(TimeSpan.FromSeconds(5));
-                return [new("movie.mkv", false, 4_000_000_000, DateTimeOffset.UtcNow)];
+                Interlocked.Increment(location: ref listCallCount);
+                gate.Wait(timeout: TimeSpan.FromSeconds(seconds: 5));
+                return [new(Name: "movie.mkv", IsDirectory: false, Size: 4_000_000_000, LastModified: DateTimeOffset.UtcNow)];
             }
         );
 
-        await service.StartScanAsync(CancellationToken.None);
-        service.State.Should().Be(ReclaimScanState.Scanning);
+        await service.StartScanAsync(ct: CancellationToken.None);
+        service.State.Should().Be(expected: ReclaimScanState.Scanning);
 
-        await service.StartScanAsync(CancellationToken.None);
-        service.State.Should().Be(ReclaimScanState.Scanning);
+        await service.StartScanAsync(ct: CancellationToken.None);
+        service.State.Should().Be(expected: ReclaimScanState.Scanning);
 
         gate.Release();
-        await WaitUntilNotScanningAsync(service);
+        await WaitUntilNotScanningAsync(service: service);
 
-        service.State.Should().Be(ReclaimScanState.Completed);
-        listCallCount.Should().Be(1);
+        service.State.Should().Be(expected: ReclaimScanState.Completed);
+        listCallCount.Should().Be(expected: 1);
     }
 
     [Fact]
@@ -422,13 +423,13 @@ public class ReclaimScanServiceTests
         const string HostFolder = "movies/Recent Partial Movie (2024)";
 
         IDbContextFactory<MediaContext> factory = ContextFactory(
-            out SqliteConnection connection,
-            context =>
+            connection: out SqliteConnection connection,
+            seed: context =>
                 SeedMovieVideoFile(
-                    context,
-                    folderId,
-                    HostFolder,
-                    "movie.mkv",
+                    context: context,
+                    folderId: folderId,
+                    hostFolder: HostFolder,
+                    filename: "movie.mkv",
                     movieId: 6,
                     movieTitle: "Recent Partial Movie"
                 )
@@ -437,25 +438,25 @@ public class ReclaimScanServiceTests
 
         List<FolderEntry> entries =
         [
-            new("video_1920x1080_SDR", true, 900_000_000, DateTimeOffset.UtcNow.AddHours(-2)),
+            new(Name: "video_1920x1080_SDR", IsDirectory: true, Size: 900_000_000, LastModified: DateTimeOffset.UtcNow.AddHours(hours: -2)),
         ];
 
-        ReclaimScanService defaultService = BuildService(factory, (_, _, _) => entries);
-        await defaultService.StartScanAsync(CancellationToken.None);
-        await WaitUntilNotScanningAsync(defaultService);
+        ReclaimScanService defaultService = BuildService(contextFactory: factory, listFolderEntries: (_, _, _) => entries);
+        await defaultService.StartScanAsync(ct: CancellationToken.None);
+        await WaitUntilNotScanningAsync(service: defaultService);
         defaultService.Latest!.PartialJunk.Should().BeEmpty();
 
         ReclaimScanService overriddenService = BuildService(
-            factory,
-            (_, _, _) => entries,
-            new StubConfigurationStore("1")
+            contextFactory: factory,
+            listFolderEntries: (_, _, _) => entries,
+            configurationStore: new StubConfigurationStore(partialStaleHoursValue: "1")
         );
-        await overriddenService.StartScanAsync(CancellationToken.None);
-        await WaitUntilNotScanningAsync(overriddenService);
+        await overriddenService.StartScanAsync(ct: CancellationToken.None);
+        await WaitUntilNotScanningAsync(service: overriddenService);
 
         overriddenService.Latest.Should().NotBeNull();
-        overriddenService.Latest!.PartialJunk.Should().HaveCount(1);
-        overriddenService.Latest.PartialJunk[0].Folder.Should().Be(HostFolder);
+        overriddenService.Latest!.PartialJunk.Should().HaveCount(expected: 1);
+        overriddenService.Latest.PartialJunk[index: 0].Folder.Should().Be(expected: HostFolder);
     }
 
     [Fact]
@@ -465,13 +466,13 @@ public class ReclaimScanServiceTests
         const string HostFolder = "tv/Some Show/Season 01";
 
         IDbContextFactory<MediaContext> factory = ContextFactory(
-            out SqliteConnection connection,
-            context =>
+            connection: out SqliteConnection connection,
+            seed: context =>
                 SeedEpisodeVideoFile(
-                    context,
-                    folderId,
-                    HostFolder,
-                    "episode.mkv",
+                    context: context,
+                    folderId: folderId,
+                    hostFolder: HostFolder,
+                    filename: "episode.mkv",
                     episodeId: 42,
                     showTitle: "Some Show",
                     seasonNumber: 1,
@@ -482,21 +483,21 @@ public class ReclaimScanServiceTests
 
         List<FolderEntry> entries =
         [
-            new("episode.mkv", false, 2_000_000_000, DateTimeOffset.UtcNow.AddDays(-30)),
-            new("episode.NoMercy.m3u8", false, 400, DateTimeOffset.UtcNow.AddDays(-1)),
-            new("video_1280x720_SDR", true, 800_000_000, DateTimeOffset.UtcNow.AddDays(-1)),
+            new(Name: "episode.mkv", IsDirectory: false, Size: 2_000_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -30)),
+            new(Name: "episode.NoMercy.m3u8", IsDirectory: false, Size: 400, LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)),
+            new(Name: "video_1280x720_SDR", IsDirectory: true, Size: 800_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)),
         ];
 
-        ReclaimScanService service = BuildService(factory, (_, _, _) => entries);
+        ReclaimScanService service = BuildService(contextFactory: factory, listFolderEntries: (_, _, _) => entries);
 
-        await service.StartScanAsync(CancellationToken.None);
-        await WaitUntilNotScanningAsync(service);
+        await service.StartScanAsync(ct: CancellationToken.None);
+        await WaitUntilNotScanningAsync(service: service);
 
         service.Latest.Should().NotBeNull();
-        service.Latest!.Items.Should().HaveCount(1);
-        ReclaimableItem item = service.Latest.Items[0];
-        item.Title.Should().Be("Some Show S01E03");
-        item.MediaType.Should().Be("tv");
+        service.Latest!.Items.Should().HaveCount(expected: 1);
+        ReclaimableItem item = service.Latest.Items[index: 0];
+        item.Title.Should().Be(expected: "Some Show S01E03");
+        item.MediaType.Should().Be(expected: "tv");
     }
 
     [Fact]
@@ -507,12 +508,12 @@ public class ReclaimScanServiceTests
         const string HostFolder = "movies/Real Storage Movie (2020)";
 
         IDbContextFactory<MediaContext> factory = ContextFactory(
-            out SqliteConnection connection,
-            context =>
+            connection: out SqliteConnection connection,
+            seed: context =>
             {
                 Seed(
-                    context,
-                    new Folder
+                    context: context,
+                    entity: new Folder
                     {
                         Id = folderId,
                         Path = HostFolder,
@@ -520,8 +521,8 @@ public class ReclaimScanServiceTests
                     }
                 );
                 Seed(
-                    context,
-                    new Movie
+                    context: context,
+                    entity: new Movie
                     {
                         Id = 100,
                         Title = "Real Storage Movie",
@@ -530,8 +531,8 @@ public class ReclaimScanServiceTests
                     }
                 );
                 Seed(
-                    context,
-                    new VideoFile
+                    context: context,
+                    entity: new VideoFile
                     {
                         Id = Ulid.NewUlid(),
                         Filename = "movie.mkv",
@@ -548,61 +549,62 @@ public class ReclaimScanServiceTests
         List<StorageEntry> storageEntries =
         [
             new(
-                $"{HostFolder}/movie.mkv",
-                false,
-                4_000_000_000,
-                DateTimeOffset.UtcNow.AddDays(-30)
+                Path: $"{HostFolder}/movie.mkv",
+                IsDirectory: false,
+                SizeBytes: 4_000_000_000,
+                LastModified: DateTimeOffset.UtcNow.AddDays(days: -30)
             ),
-            new($"{HostFolder}/movie.NoMercy.m3u8", false, 500, DateTimeOffset.UtcNow.AddDays(-1)),
+            new(Path: $"{HostFolder}/movie.NoMercy.m3u8", IsDirectory: false, SizeBytes: 500, LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)),
             new(
-                $"{HostFolder}/video_1920x1080_SDR",
-                true,
-                1_500_000_000,
-                DateTimeOffset.UtcNow.AddDays(-1)
+                Path: $"{HostFolder}/video_1920x1080_SDR",
+                IsDirectory: true,
+                SizeBytes: 1_500_000_000,
+                LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)
             ),
-            new($"{HostFolder}/audio_eng", true, 200_000_000, DateTimeOffset.UtcNow.AddDays(-1)),
+            new(Path: $"{HostFolder}/audio_eng", IsDirectory: true, SizeBytes: 200_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)),
         ];
 
         Mock<IStorage> storage = new();
-        storage.Setup(s => s.List(HostFolder, null, false)).Returns(storageEntries);
+        storage.Setup(expression: s => s.List(HostFolder, null, false)).Returns(value: storageEntries);
         storage
-            .Setup(s => s.GetName(It.IsAny<string>()))
+            .Setup(expression: s => s.GetName(It.IsAny<string>()))
             .Returns(
-                (string path) =>
+                valueFunction: (string path) =>
                 {
-                    int idx = path.LastIndexOf('/');
+                    int idx = path.LastIndexOf(value: '/');
                     return idx < 0 ? path : path[(idx + 1)..];
                 }
             );
 
         Mock<IStorageFactory> storageFactory = new();
-        storageFactory.Setup(f => f.For(folderId, driverId, string.Empty)).Returns(storage.Object);
+        storageFactory.Setup(expression: f => f.For(folderId, driverId, string.Empty)).Returns(value: storage.Object);
 
         ReclaimScanService service = new(
-            factory,
-            storageFactory.Object,
-            new StubConfigurationStore(),
-            NullLogger<ReclaimScanService>.Instance
+            contextFactory: factory,
+            storageFactory: storageFactory.Object,
+            configurationStore: new StubConfigurationStore(),
+            logger: NullLogger<ReclaimScanService>.Instance
         );
 
-        await service.StartScanAsync(CancellationToken.None);
-        await WaitUntilNotScanningAsync(service);
+        await service.StartScanAsync(ct: CancellationToken.None);
+        await WaitUntilNotScanningAsync(service: service);
 
-        storageFactory.Verify(f => f.For(folderId, driverId, string.Empty), Times.Once);
-        storage.Verify(s => s.List(HostFolder, null, false), Times.Once);
+        storageFactory.Verify(expression: f => f.For(folderId, driverId, string.Empty), times: Times.Once);
+        storage.Verify(expression: s => s.List(HostFolder, null, false), times: Times.Once);
 
-        service.State.Should().Be(ReclaimScanState.Completed);
+        service.State.Should().Be(expected: ReclaimScanState.Completed);
         service.Latest.Should().NotBeNull();
-        service.Latest!.Items.Should().HaveCount(1);
-        ReclaimableItem item = service.Latest.Items[0];
-        item.Title.Should().Be("Real Storage Movie");
-        item.MediaType.Should().Be("movie");
-        item.Folder.Should().Be(HostFolder);
-        item.ServedCopy.Should().Be("movie.mkv");
-        item.Kind.Should().Be(ReclaimKind.ReclaimableHls);
-        item.ReclaimableBytes.Should().Be(500 + 1_500_000_000 + 200_000_000);
+        service.Latest!.Items.Should().HaveCount(expected: 1);
+        ReclaimableItem item = service.Latest.Items[index: 0];
+        item.Title.Should().Be(expected: "Real Storage Movie");
+        item.MediaType.Should().Be(expected: "movie");
+        item.Folder.Should().Be(expected: HostFolder);
+        item.ServedCopy.Should().Be(expected: "movie.mkv");
+        item.Kind.Should().Be(expected: ReclaimKind.ReclaimableHls);
+        item.ReclaimableBytes.Should().Be(expected: 500 + 1_500_000_000 + 200_000_000);
         item.TargetPaths.Should()
-            .BeEquivalentTo([
+            .BeEquivalentTo(expectation:
+            [
                 $"{HostFolder}/video_1920x1080_SDR",
                 $"{HostFolder}/audio_eng",
                 $"{HostFolder}/movie.NoMercy.m3u8",
@@ -615,12 +617,12 @@ public class ReclaimScanServiceTests
         const string HostFolder = "movies/Bad Share Movie (2018)";
 
         IDbContextFactory<MediaContext> factory = ContextFactory(
-            out SqliteConnection connection,
-            context =>
+            connection: out SqliteConnection connection,
+            seed: context =>
             {
                 Seed(
-                    context,
-                    new Movie
+                    context: context,
+                    entity: new Movie
                     {
                         Id = 7,
                         Title = "Bad Share Movie",
@@ -629,8 +631,8 @@ public class ReclaimScanServiceTests
                     }
                 );
                 Seed(
-                    context,
-                    new VideoFile
+                    context: context,
+                    entity: new VideoFile
                     {
                         Id = Ulid.NewUlid(),
                         Filename = "movie.mkv",
@@ -646,18 +648,18 @@ public class ReclaimScanServiceTests
 
         bool listWasCalled = false;
         ReclaimScanService service = BuildService(
-            factory,
-            (_, _, _) =>
+            contextFactory: factory,
+            listFolderEntries: (_, _, _) =>
             {
                 listWasCalled = true;
                 return [];
             }
         );
 
-        await service.StartScanAsync(CancellationToken.None);
-        await WaitUntilNotScanningAsync(service);
+        await service.StartScanAsync(ct: CancellationToken.None);
+        await WaitUntilNotScanningAsync(service: service);
 
-        service.State.Should().Be(ReclaimScanState.Completed);
+        service.State.Should().Be(expected: ReclaimScanState.Completed);
         service.Latest.Should().NotBeNull();
         service.Latest!.Items.Should().BeEmpty();
         service.Latest.PartialJunk.Should().BeEmpty();

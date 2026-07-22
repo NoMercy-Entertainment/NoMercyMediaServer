@@ -23,7 +23,7 @@ public static class SwaggerConfiguration
 
     public static void AddSwagger(IServiceCollection services)
     {
-        services.AddSwaggerGen(options => options.OperationFilter<SwaggerDefaultValues>());
+        services.AddSwaggerGen(setupAction: options => options.OperationFilter<SwaggerDefaultValues>());
         services.AddSwaggerGenNewtonsoftSupport();
         services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
     }
@@ -38,13 +38,13 @@ public static class SwaggerConfiguration
         // which causes corruption when multiple hosts initialize in parallel (e.g. during tests).
         lock (ThemeLock)
             app.UseSwaggerUI(
-                Theme.Dark,
-                options =>
+                theme: Theme.Dark,
+                setupAction: options =>
                 {
                     options.RoutePrefix = string.Empty;
                     options.DocumentTitle = "NoMercy MediaServer API";
-                    options.OAuthClientId(ExternalServicesConfig.Current.TokenClientId);
-                    options.OAuthScopes("openid");
+                    options.OAuthClientId(value: ExternalServicesConfig.Current.TokenClientId);
+                    options.OAuthScopes(scopes: "openid");
                     options.EnablePersistAuthorization();
                     options.EnableTryItOutByDefault();
 
@@ -55,7 +55,7 @@ public static class SwaggerConfiguration
                         string groupName = $"v{description.ApiVersion.MajorVersion}";
                         string url = $"/swagger/{groupName}/swagger.json";
                         string name = groupName.ToUpperInvariant();
-                        options.SwaggerEndpoint(url, name);
+                        options.SwaggerEndpoint(url: url, name: name);
                     }
                 }
             );

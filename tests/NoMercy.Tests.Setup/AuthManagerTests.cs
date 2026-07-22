@@ -22,7 +22,7 @@ using NoMercy.Storage.Drivers.Local;
 
 namespace NoMercy.Tests.Setup;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class AuthManagerTests : IDisposable
 {
     private readonly AppDbContext _appContext;
@@ -34,15 +34,15 @@ public class AuthManagerTests : IDisposable
         ServiceCollection services = new();
         services.AddDataProtection().UseEphemeralDataProtectionProvider();
         ServiceProvider provider = services.BuildServiceProvider();
-        TokenStore.Initialize(provider);
+        TokenStore.Initialize(serviceProvider: provider);
 
         DbContextOptionsBuilder<AppDbContext> optionsBuilder = new();
-        optionsBuilder.UseSqlite("Data Source=:memory:");
-        _appContext = new(optionsBuilder.Options);
+        optionsBuilder.UseSqlite(connectionString: "Data Source=:memory:");
+        _appContext = new(options: optionsBuilder.Options);
         _appContext.Database.OpenConnection();
         _appContext.Database.EnsureCreated();
 
-        _authManager = new(_appContext, new LocalStorageDriver(), _authTokenStore);
+        _authManager = new(appContext: _appContext, driver: new LocalStorageDriver(), authTokenStore: _authTokenStore);
     }
 
     public void Dispose()
@@ -50,7 +50,7 @@ public class AuthManagerTests : IDisposable
         _appContext.Database.CloseConnection();
         _appContext.Dispose();
         // Reset global access token to avoid state leaking between tests
-        _authTokenStore.SetAccessToken(null);
+        _authTokenStore.SetAccessToken(token: null);
     }
 
     // ── Helper ───────────────────────────────────────────────────────────────
@@ -60,21 +60,21 @@ public class AuthManagerTests : IDisposable
         JwtSecurityTokenHandler handler = new();
         // notBefore must be strictly before expires — use earliest of (now-5min, expires-1min)
         DateTime notBefore =
-            validTo < DateTime.UtcNow ? validTo.AddMinutes(-10) : DateTime.UtcNow.AddMinutes(-5);
+            validTo < DateTime.UtcNow ? validTo.AddMinutes(value: -10) : DateTime.UtcNow.AddMinutes(value: -5);
         JwtSecurityToken token = new(
             issuer: "https://auth.nomercy.tv/realms/NoMercyTV",
             audience: "nomercy-server",
-            claims: [new("sub", Guid.NewGuid().ToString())],
+            claims: [new(type: "sub", value: Guid.NewGuid().ToString())],
             notBefore: notBefore,
             expires: validTo
         );
-        return handler.WriteToken(token);
+        return handler.WriteToken(token: token);
     }
 
     private async Task SeedSecureValue(string key, string value)
     {
         _appContext.Configuration.Add(
-            new()
+            entity: new()
             {
                 Key = key,
                 Value = string.Empty,
@@ -89,10 +89,10 @@ public class AuthManagerTests : IDisposable
     [Fact]
     public async Task WaitForAuthReady_NotSignaledInitially()
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromMilliseconds(100));
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromMilliseconds(milliseconds: 100));
         // TaskCanceledException is a subclass of OperationCanceledException — use ThrowsAnyAsync
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            _authManager.WaitForAuthReadyAsync(cts.Token)
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(testCode: () =>
+            _authManager.WaitForAuthReadyAsync(ct: cts.Token)
         );
     }
 
@@ -101,102 +101,102 @@ public class AuthManagerTests : IDisposable
     {
         bool result = await _authManager.InitializeAsync();
 
-        Assert.False(result);
+        Assert.False(condition: result);
     }
 
     [Fact]
     public async Task InitializeAsync_ValidToken_ReturnsTrue()
     {
-        string jwt = CreateValidJwt(DateTime.UtcNow.AddHours(2));
-        await SeedSecureValue("auth_access_token", jwt);
+        string jwt = CreateValidJwt(validTo: DateTime.UtcNow.AddHours(value: 2));
+        await SeedSecureValue(key: "auth_access_token", value: jwt);
         await SeedSecureValue(
-            "auth_token_metadata",
-            $"{{\"expires_at\":\"{DateTime.UtcNow.AddHours(2):O}\",\"token_type\":\"Bearer\"}}"
+            key: "auth_token_metadata",
+            value: $"{{\"expires_at\":\"{DateTime.UtcNow.AddHours(value: 2):O}\",\"token_type\":\"Bearer\"}}"
         );
 
         bool result = await _authManager.InitializeAsync();
 
-        Assert.True(result);
+        Assert.True(condition: result);
     }
 
     [Fact]
     public async Task InitializeAsync_ValidToken_SignalsAuthReady()
     {
-        string jwt = CreateValidJwt(DateTime.UtcNow.AddHours(2));
-        await SeedSecureValue("auth_access_token", jwt);
+        string jwt = CreateValidJwt(validTo: DateTime.UtcNow.AddHours(value: 2));
+        await SeedSecureValue(key: "auth_access_token", value: jwt);
         await SeedSecureValue(
-            "auth_token_metadata",
-            $"{{\"expires_at\":\"{DateTime.UtcNow.AddHours(2):O}\",\"token_type\":\"Bearer\"}}"
+            key: "auth_token_metadata",
+            value: $"{{\"expires_at\":\"{DateTime.UtcNow.AddHours(value: 2):O}\",\"token_type\":\"Bearer\"}}"
         );
 
         await _authManager.InitializeAsync();
 
-        using CancellationTokenSource cts = new(TimeSpan.FromMilliseconds(500));
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromMilliseconds(milliseconds: 500));
         // Should NOT throw — auth is ready
-        await _authManager.WaitForAuthReadyAsync(cts.Token);
+        await _authManager.WaitForAuthReadyAsync(ct: cts.Token);
     }
 
     [Fact]
     public async Task InitializeAsync_ExpiredToken_NoRefresh_ReturnsFalse()
     {
-        string jwt = CreateValidJwt(DateTime.UtcNow.AddMinutes(-10));
-        await SeedSecureValue("auth_access_token", jwt);
+        string jwt = CreateValidJwt(validTo: DateTime.UtcNow.AddMinutes(value: -10));
+        await SeedSecureValue(key: "auth_access_token", value: jwt);
         // No refresh token seeded — so TryRefreshToken cannot be attempted
 
         bool result = await _authManager.InitializeAsync();
 
-        Assert.False(result);
+        Assert.False(condition: result);
     }
 
     [Fact]
     public async Task StoreTokensAsync_PersistsToDb()
     {
-        string jwt = CreateValidJwt(DateTime.UtcNow.AddHours(1));
-        DateTime expiresAt = DateTime.UtcNow.AddHours(1);
+        string jwt = CreateValidJwt(validTo: DateTime.UtcNow.AddHours(value: 1));
+        DateTime expiresAt = DateTime.UtcNow.AddHours(value: 1);
 
-        await _authManager.StoreTokensAsync(jwt, "refresh-xyz", expiresAt, "Bearer");
+        await _authManager.StoreTokensAsync(accessToken: jwt, refreshToken: "refresh-xyz", expiresAt: expiresAt, tokenType: "Bearer");
 
         Configuration? accessRow = await _appContext
             .Configuration.AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Key == "auth_access_token");
+            .FirstOrDefaultAsync(predicate: c => c.Key == "auth_access_token");
         Configuration? refreshRow = await _appContext
             .Configuration.AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Key == "auth_refresh_token");
+            .FirstOrDefaultAsync(predicate: c => c.Key == "auth_refresh_token");
         Configuration? metaRow = await _appContext
             .Configuration.AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Key == "auth_token_metadata");
+            .FirstOrDefaultAsync(predicate: c => c.Key == "auth_token_metadata");
 
-        Assert.NotNull(accessRow);
-        Assert.Equal(jwt, accessRow.SecureValue);
+        Assert.NotNull(@object: accessRow);
+        Assert.Equal(expected: jwt, actual: accessRow.SecureValue);
 
-        Assert.NotNull(refreshRow);
-        Assert.Equal("refresh-xyz", refreshRow.SecureValue);
+        Assert.NotNull(@object: refreshRow);
+        Assert.Equal(expected: "refresh-xyz", actual: refreshRow.SecureValue);
 
-        Assert.NotNull(metaRow);
-        Assert.Contains("expires_at", metaRow.SecureValue ?? string.Empty);
+        Assert.NotNull(@object: metaRow);
+        Assert.Contains(expectedSubstring: "expires_at", actualString: metaRow.SecureValue ?? string.Empty);
     }
 
     [Fact]
     public async Task StoreTokensAsync_SetsAccessToken()
     {
-        string jwt = CreateValidJwt(DateTime.UtcNow.AddHours(1));
-        _authTokenStore.SetAccessToken(null);
+        string jwt = CreateValidJwt(validTo: DateTime.UtcNow.AddHours(value: 1));
+        _authTokenStore.SetAccessToken(token: null);
 
-        await _authManager.StoreTokensAsync(jwt, null, DateTime.UtcNow.AddHours(1), "Bearer");
+        await _authManager.StoreTokensAsync(accessToken: jwt, refreshToken: null, expiresAt: DateTime.UtcNow.AddHours(value: 1), tokenType: "Bearer");
 
-        Assert.Equal(jwt, _authTokenStore.AccessToken);
+        Assert.Equal(expected: jwt, actual: _authTokenStore.AccessToken);
     }
 
     [Fact]
     public async Task StoreTokensAsync_SignalsAuthReady()
     {
-        string jwt = CreateValidJwt(DateTime.UtcNow.AddHours(1));
+        string jwt = CreateValidJwt(validTo: DateTime.UtcNow.AddHours(value: 1));
 
-        await _authManager.StoreTokensAsync(jwt, null, DateTime.UtcNow.AddHours(1), "Bearer");
+        await _authManager.StoreTokensAsync(accessToken: jwt, refreshToken: null, expiresAt: DateTime.UtcNow.AddHours(value: 1), tokenType: "Bearer");
 
-        using CancellationTokenSource cts = new(TimeSpan.FromMilliseconds(500));
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromMilliseconds(milliseconds: 500));
         // Should NOT throw — auth is ready after store
-        await _authManager.WaitForAuthReadyAsync(cts.Token);
+        await _authManager.WaitForAuthReadyAsync(ct: cts.Token);
     }
 
     [Fact]
@@ -205,9 +205,9 @@ public class AuthManagerTests : IDisposable
         string verifier = AuthManager.GenerateCodeVerifier();
 
         // Base64url chars: A-Z a-z 0-9 - _   (no + / =)
-        Assert.DoesNotContain("+", verifier);
-        Assert.DoesNotContain("/", verifier);
-        Assert.DoesNotContain("=", verifier);
+        Assert.DoesNotContain(expectedSubstring: "+", actualString: verifier);
+        Assert.DoesNotContain(expectedSubstring: "/", actualString: verifier);
+        Assert.DoesNotContain(expectedSubstring: "=", actualString: verifier);
     }
 
     [Fact]
@@ -216,7 +216,7 @@ public class AuthManagerTests : IDisposable
         string verifier = AuthManager.GenerateCodeVerifier();
 
         // 32 bytes → 43 base64url chars (without padding)
-        Assert.True(verifier.Length >= 43, $"Expected length >= 43 but got {verifier.Length}");
+        Assert.True(condition: verifier.Length >= 43, userMessage: $"Expected length >= 43 but got {verifier.Length}");
     }
 
     [Fact]
@@ -226,9 +226,9 @@ public class AuthManagerTests : IDisposable
         string knownVerifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
         string expectedChallenge = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM";
 
-        string challenge = AuthManager.GenerateCodeChallenge(knownVerifier);
+        string challenge = AuthManager.GenerateCodeChallenge(codeVerifier: knownVerifier);
 
-        Assert.Equal(expectedChallenge, challenge);
+        Assert.Equal(expected: expectedChallenge, actual: challenge);
     }
 
     [Fact]
@@ -241,14 +241,14 @@ public class AuthManagerTests : IDisposable
             codeVerifier: "my-verifier"
         );
 
-        Dictionary<string, string> dict = body.ToDictionary(kv => kv.Key, kv => kv.Value);
+        Dictionary<string, string> dict = body.ToDictionary(keySelector: kv => kv.Key, elementSelector: kv => kv.Value);
 
-        Assert.Equal("authorization_code", dict["grant_type"]);
-        Assert.Equal("my-client", dict["client_id"]);
-        Assert.Equal("auth-code-123", dict["code"]);
-        Assert.Equal("http://localhost:7626/sso-callback", dict["redirect_uri"]);
-        Assert.Equal("my-verifier", dict["code_verifier"]);
-        Assert.Contains("openid", dict["scope"]);
+        Assert.Equal(expected: "authorization_code", actual: dict[key: "grant_type"]);
+        Assert.Equal(expected: "my-client", actual: dict[key: "client_id"]);
+        Assert.Equal(expected: "auth-code-123", actual: dict[key: "code"]);
+        Assert.Equal(expected: "http://localhost:7626/sso-callback", actual: dict[key: "redirect_uri"]);
+        Assert.Equal(expected: "my-verifier", actual: dict[key: "code_verifier"]);
+        Assert.Contains(expectedSubstring: "openid", actualString: dict[key: "scope"]);
     }
 
     [Fact]
@@ -259,11 +259,11 @@ public class AuthManagerTests : IDisposable
             refreshToken: "my-refresh-token"
         );
 
-        Dictionary<string, string> dict = body.ToDictionary(kv => kv.Key, kv => kv.Value);
+        Dictionary<string, string> dict = body.ToDictionary(keySelector: kv => kv.Key, elementSelector: kv => kv.Value);
 
-        Assert.Equal("refresh_token", dict["grant_type"]);
-        Assert.Equal("my-client", dict["client_id"]);
-        Assert.Equal("my-refresh-token", dict["refresh_token"]);
-        Assert.Contains("openid", dict["scope"]);
+        Assert.Equal(expected: "refresh_token", actual: dict[key: "grant_type"]);
+        Assert.Equal(expected: "my-client", actual: dict[key: "client_id"]);
+        Assert.Equal(expected: "my-refresh-token", actual: dict[key: "refresh_token"]);
+        Assert.Contains(expectedSubstring: "openid", actualString: dict[key: "scope"]);
     }
 }

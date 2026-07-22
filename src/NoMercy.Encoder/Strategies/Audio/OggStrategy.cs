@@ -21,7 +21,7 @@ namespace NoMercy.Encoder.Strategies.Audio;
 /// depending on profile's audio codec selection.
 /// </summary>
 public class OggStrategy(IEncoder encoder, ILogger<OggStrategy> logger, IStorage storage)
-    : SinglePassStrategyBase(encoder, logger, storage)
+    : SinglePassStrategyBase(encoder: encoder, logger: logger, storage: storage)
 {
     public override OutputFormat Format => OutputFormat.Ogg;
 }

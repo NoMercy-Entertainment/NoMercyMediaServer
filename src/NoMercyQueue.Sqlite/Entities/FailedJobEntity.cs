@@ -15,22 +15,22 @@ using Microsoft.EntityFrameworkCore;
 
 namespace NoMercyQueue.Sqlite.Entities;
 
-[PrimaryKey(nameof(Id))]
+[PrimaryKey(propertyName: nameof(Id))]
 internal class FailedJobEntity
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.Identity)]
     public long Id { get; set; }
 
     public Guid Uuid { get; set; }
     public string Connection { get; set; } = "default";
 
-    [MaxLength(1024)]
+    [MaxLength(length: 1024)]
     public required string Queue { get; set; }
 
-    [MaxLength(4092)]
+    [MaxLength(length: 4092)]
     public required string Payload { get; set; }
 
-    [MaxLength(4092)]
+    [MaxLength(length: 4092)]
     public required string Exception { get; set; }
     public DateTime FailedAt { get; set; } = DateTime.UtcNow;
 

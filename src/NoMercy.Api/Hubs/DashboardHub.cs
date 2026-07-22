@@ -38,7 +38,7 @@ public class DashboardHub : ConnectionHub
         IResourceMonitorService resourceMonitorService,
         IActivityLogger activityLogger
     )
-        : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
+        : base(httpContextAccessor: httpContextAccessor, contextFactory: contextFactory, connectedClients: connectedClients, activityLogger: activityLogger)
     {
         _logger = logger;
         _clientMessenger = clientMessenger;
@@ -49,20 +49,20 @@ public class DashboardHub : ConnectionHub
     public override async Task OnConnectedAsync()
     {
         await base.OnConnectedAsync();
-        if (AuthPolicy.IsModerator(Context.User))
+        if (AuthPolicy.IsModerator(principal: Context.User))
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, "moderators");
+            await Groups.AddToGroupAsync(connectionId: Context.ConnectionId, groupName: "moderators");
         }
 
-        _logger.LogDebug("Dashboard client connected");
+        _logger.LogDebug(message: "Dashboard client connected");
         _logBroadcastService.Start();
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        await base.OnDisconnectedAsync(exception);
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, "moderators");
-        _logger.LogDebug("Dashboard client disconnected");
+        await base.OnDisconnectedAsync(exception: exception);
+        await Groups.RemoveFromGroupAsync(connectionId: Context.ConnectionId, groupName: "moderators");
+        _logger.LogDebug(message: "Dashboard client disconnected");
 
         // Teardown when the last dashboard client leaves must NOT depend on the
         // disconnecting client's role — otherwise a non-moderator being the last
@@ -73,10 +73,10 @@ public class DashboardHub : ConnectionHub
 
     public void StartResources()
     {
-        if (!AuthPolicy.IsModerator(Context.User))
+        if (!AuthPolicy.IsModerator(principal: Context.User))
         {
             _logger.LogDebug(
-                "Non-moderator client attempted to start dashboard resource monitoring"
+                message: "Non-moderator client attempted to start dashboard resource monitoring"
             );
             return;
         }
@@ -86,10 +86,10 @@ public class DashboardHub : ConnectionHub
 
     public void StopResources()
     {
-        if (!AuthPolicy.IsModerator(Context.User))
+        if (!AuthPolicy.IsModerator(principal: Context.User))
         {
             _logger.LogDebug(
-                "Non-moderator client attempted to stop dashboard resource monitoring"
+                message: "Non-moderator client attempted to stop dashboard resource monitoring"
             );
             return;
         }
@@ -99,7 +99,7 @@ public class DashboardHub : ConnectionHub
 
     private void StopResourcesIfLastClient()
     {
-        if (ConnectedClients.Clients.Values.All(x => x.Endpoint != "/dashboardHub"))
+        if (ConnectedClients.Clients.Values.All(predicate: x => x.Endpoint != "/dashboardHub"))
         {
             _resourceMonitorService.Stop();
             _logBroadcastService.Stop();

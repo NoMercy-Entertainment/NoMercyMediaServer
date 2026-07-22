@@ -15,9 +15,9 @@ namespace NoMercy.Providers.TMDB.Models.TV;
 
 public class TmdbTvAlternativeTitle
 {
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty("iso_3166_1")]
+    [JsonProperty(propertyName: "iso_3166_1")]
     public string Iso31661 { get; set; } = string.Empty;
 }

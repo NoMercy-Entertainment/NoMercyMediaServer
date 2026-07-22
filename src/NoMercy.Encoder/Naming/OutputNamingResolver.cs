@@ -23,11 +23,11 @@ public class OutputNamingResolver(IMediaKeyResolver mediaKeys) : IOutputNamingRe
 
     public BundleLayout Resolve(MediaItemRef media, EncodingProfile profile)
     {
-        string mediaKey = mediaKeys.ForMedia(media.Type, media.Id);
-        string slug = Slugify(profile.Name);
-        bool single = IsSingleFileContainer(profile.Container);
+        string mediaKey = mediaKeys.ForMedia(type: media.Type, id: media.Id);
+        string slug = Slugify(name: profile.Name);
+        bool single = IsSingleFileContainer(c: profile.Container);
 
-        string singleExt = SingleFileExtension(profile.Container);
+        string singleExt = SingleFileExtension(c: profile.Container);
         string yearSuffix = media.Year is not null ? $".({media.Year})" : string.Empty;
         string singleName = single
             ? $"{media.Title}{yearSuffix}.NoMercy.{singleExt}"
@@ -36,24 +36,24 @@ public class OutputNamingResolver(IMediaKeyResolver mediaKeys) : IOutputNamingRe
         string bundleDir = single ? string.Empty : $"encodes/{slug}";
         string masterName = single ? string.Empty : $"{mediaKey}_master.m3u8";
         string manifestPath = single
-            ? $"{TrimExt(singleName)}.manifest.json"
+            ? $"{TrimExt(name: singleName)}.manifest.json"
             : $"{bundleDir}/manifest.json";
         string reconstructionPath = single
-            ? $"{TrimExt(singleName)}.reconstruction.json"
+            ? $"{TrimExt(name: singleName)}.reconstruction.json"
             : $"{bundleDir}/reconstruction.json";
 
         return new(
-            mediaKey,
-            slug,
-            single,
-            bundleDir,
-            masterName,
-            manifestPath,
-            reconstructionPath,
-            singleName,
+            MediaKey: mediaKey,
+            PresetSlug: slug,
+            IsSingleFile: single,
+            BundleDirectory: bundleDir,
+            MasterPlaylistName: masterName,
+            ManifestPath: manifestPath,
+            ReconstructionPath: reconstructionPath,
+            SingleFileName: singleName,
             PresetId: profile.Id.ToString(),
             PresetName: profile.Name,
-            ContainerString: ContainerToString(profile.Container)
+            ContainerString: ContainerToString(c: profile.Container)
         );
     }
 
@@ -94,17 +94,17 @@ public class OutputNamingResolver(IMediaKeyResolver mediaKeys) : IOutputNamingRe
         char prev = '\0';
         foreach (char c in lower)
         {
-            char next = char.IsLetterOrDigit(c) ? c : '-';
+            char next = char.IsLetterOrDigit(c: c) ? c : '-';
             if (next == '-' && prev == '-')
                 continue;
             chars[j++] = next;
             prev = next;
         }
-        string slug = new string(chars, 0, j).Trim('-');
+        string slug = new string(value: chars, startIndex: 0, length: j).Trim(trimChar: '-');
         // Trim trailing dashes again after truncation so a name that splits
         // mid-separator (e.g. "Long Name Foo" cut at char 24) doesn't leave a
         // dangling "long-name-" slug.
-        return slug.Length <= MaxSlugChars ? slug : slug[..MaxSlugChars].TrimEnd('-');
+        return slug.Length <= MaxSlugChars ? slug : slug[..MaxSlugChars].TrimEnd(trimChar: '-');
     }
 
     private static bool IsSingleFileContainer(Container c) =>
@@ -134,7 +134,7 @@ public class OutputNamingResolver(IMediaKeyResolver mediaKeys) : IOutputNamingRe
 
     private static string TrimExt(string name)
     {
-        int dot = name.LastIndexOf('.');
+        int dot = name.LastIndexOf(value: '.');
         return dot < 0 ? name : name[..dot];
     }
 

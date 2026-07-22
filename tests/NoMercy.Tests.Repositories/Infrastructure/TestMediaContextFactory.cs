@@ -34,7 +34,7 @@ public class TestDbContextFactory : IDbContextFactory<MediaContext>
 
     public MediaContext CreateDbContext()
     {
-        return new TestMediaContext(_options);
+        return new TestMediaContext(options: _options);
     }
 }
 
@@ -44,23 +44,23 @@ public static class TestMediaContextFactory
     {
         string dbName = databaseName ?? Guid.NewGuid().ToString();
         SqliteConnection connection = new(
-            $"DataSource={dbName};Mode=Memory;Cache=Shared;Foreign Keys=True"
+            connectionString: $"DataSource={dbName};Mode=Memory;Cache=Shared;Foreign Keys=True"
         );
         connection.Open();
         connection.CreateFunction(
-            "normalize_search",
-            (string? input) => input?.NormalizeSearch() ?? string.Empty
+            name: "normalize_search",
+            function: (string? input) => input?.NormalizeSearch() ?? string.Empty
         );
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(
-                connection,
-                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+                connection: connection,
+                sqliteOptionsAction: o => o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery)
             )
-            .AddInterceptors(new SqliteNormalizeSearchInterceptor())
+            .AddInterceptors(interceptors: new SqliteNormalizeSearchInterceptor())
             .Options;
 
-        TestMediaContext context = new(options);
+        TestMediaContext context = new(options: options);
         context.Database.EnsureCreated();
 
         return context;
@@ -69,7 +69,7 @@ public static class TestMediaContextFactory
     public static MediaContext CreateSeededContext()
     {
         MediaContext context = CreateContext();
-        SeedData(context);
+        SeedData(context: context);
         return context;
     }
 
@@ -80,24 +80,24 @@ public static class TestMediaContextFactory
     {
         string dbName = databaseName ?? Guid.NewGuid().ToString();
         SqliteConnection connection = new(
-            $"DataSource={dbName};Mode=Memory;Cache=Shared;Foreign Keys=True"
+            connectionString: $"DataSource={dbName};Mode=Memory;Cache=Shared;Foreign Keys=True"
         );
         connection.Open();
         connection.CreateFunction(
-            "normalize_search",
-            (string? input) => input?.NormalizeSearch() ?? string.Empty
+            name: "normalize_search",
+            function: (string? input) => input?.NormalizeSearch() ?? string.Empty
         );
 
         SqlCaptureInterceptor interceptor = new();
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(
-                connection,
-                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+                connection: connection,
+                sqliteOptionsAction: o => o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery)
             )
-            .AddInterceptors(interceptor, new SqliteNormalizeSearchInterceptor())
+            .AddInterceptors(interceptors: [interceptor, new SqliteNormalizeSearchInterceptor()])
             .Options;
 
-        TestMediaContext context = new(options);
+        TestMediaContext context = new(options: options);
         context.Database.EnsureCreated();
 
         return (context, interceptor);
@@ -109,7 +109,7 @@ public static class TestMediaContextFactory
     ) CreateSeededContextWithInterceptor()
     {
         (MediaContext context, SqlCaptureInterceptor interceptor) = CreateContextWithInterceptor();
-        SeedData(context);
+        SeedData(context: context);
         interceptor.Clear();
         return (context, interceptor);
     }
@@ -123,11 +123,11 @@ public static class TestMediaContextFactory
         string connectionString = $"DataSource={dbName};Mode=Memory;Cache=Shared;Foreign Keys=True";
 
         // Keep a connection open to prevent the in-memory database from being destroyed
-        SqliteConnection keepAliveConnection = new(connectionString);
+        SqliteConnection keepAliveConnection = new(connectionString: connectionString);
         keepAliveConnection.Open();
         keepAliveConnection.CreateFunction(
-            "normalize_search",
-            (string? input) => input?.NormalizeSearch() ?? string.Empty
+            name: "normalize_search",
+            function: (string? input) => input?.NormalizeSearch() ?? string.Empty
         );
 
         // Enable WAL mode so concurrent connections don't block on CreateFunction
@@ -139,19 +139,19 @@ public static class TestMediaContextFactory
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(
-                connectionString,
-                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+                connectionString: connectionString,
+                sqliteOptionsAction: o => o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery)
             )
-            .AddInterceptors(new SqliteNormalizeSearchInterceptor())
+            .AddInterceptors(interceptors: new SqliteNormalizeSearchInterceptor())
             .Options;
 
         // Ensure the schema is created
-        using (TestMediaContext initContext = new(options))
+        using (TestMediaContext initContext = new(options: options))
         {
             initContext.Database.EnsureCreated();
         }
 
-        return (new TestDbContextFactory(options), keepAliveConnection);
+        return (new TestDbContextFactory(options: options), keepAliveConnection);
     }
 
     // Mirrors CreateFactory exactly, plus a caller-supplied interceptor — for tests that need
@@ -164,11 +164,11 @@ public static class TestMediaContextFactory
         string dbName = databaseName ?? Guid.NewGuid().ToString();
         string connectionString = $"DataSource={dbName};Mode=Memory;Cache=Shared;Foreign Keys=True";
 
-        SqliteConnection keepAliveConnection = new(connectionString);
+        SqliteConnection keepAliveConnection = new(connectionString: connectionString);
         keepAliveConnection.Open();
         keepAliveConnection.CreateFunction(
-            "normalize_search",
-            (string? input) => input?.NormalizeSearch() ?? string.Empty
+            name: "normalize_search",
+            function: (string? input) => input?.NormalizeSearch() ?? string.Empty
         );
 
         using (SqliteCommand walCmd = keepAliveConnection.CreateCommand())
@@ -179,18 +179,18 @@ public static class TestMediaContextFactory
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(
-                connectionString,
-                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+                connectionString: connectionString,
+                sqliteOptionsAction: o => o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery)
             )
-            .AddInterceptors(interceptor, new SqliteNormalizeSearchInterceptor())
+            .AddInterceptors(interceptors: [interceptor, new SqliteNormalizeSearchInterceptor()])
             .Options;
 
-        using (TestMediaContext initContext = new(options))
+        using (TestMediaContext initContext = new(options: options))
         {
             initContext.Database.EnsureCreated();
         }
 
-        return (new TestDbContextFactory(options), keepAliveConnection);
+        return (new TestDbContextFactory(options: options), keepAliveConnection);
     }
 
     public static (
@@ -199,11 +199,11 @@ public static class TestMediaContextFactory
     ) CreateSeededFactory(string? databaseName = null)
     {
         (IDbContextFactory<MediaContext> factory, SqliteConnection connection) = CreateFactory(
-            databaseName
+            databaseName: databaseName
         );
         using (MediaContext context = factory.CreateDbContext())
         {
-            SeedData(context);
+            SeedData(context: context);
         }
 
         return (factory, connection);
@@ -218,11 +218,11 @@ public static class TestMediaContextFactory
         string dbName = databaseName ?? Guid.NewGuid().ToString();
         string connectionString = $"DataSource={dbName};Mode=Memory;Cache=Shared;Foreign Keys=True";
 
-        SqliteConnection keepAliveConnection = new(connectionString);
+        SqliteConnection keepAliveConnection = new(connectionString: connectionString);
         keepAliveConnection.Open();
         keepAliveConnection.CreateFunction(
-            "normalize_search",
-            (string? input) => input?.NormalizeSearch() ?? string.Empty
+            name: "normalize_search",
+            function: (string? input) => input?.NormalizeSearch() ?? string.Empty
         );
 
         using (SqliteCommand walCmd = keepAliveConnection.CreateCommand())
@@ -234,20 +234,20 @@ public static class TestMediaContextFactory
         SqlCaptureInterceptor interceptor = new();
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(
-                connectionString,
-                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+                connectionString: connectionString,
+                sqliteOptionsAction: o => o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery)
             )
-            .AddInterceptors(interceptor, new SqliteNormalizeSearchInterceptor())
+            .AddInterceptors(interceptors: [interceptor, new SqliteNormalizeSearchInterceptor()])
             .Options;
 
-        using (TestMediaContext initContext = new(options))
+        using (TestMediaContext initContext = new(options: options))
         {
             initContext.Database.EnsureCreated();
-            SeedData(initContext);
+            SeedData(context: initContext);
         }
 
         interceptor.Clear();
-        return (new TestDbContextFactory(options), interceptor, keepAliveConnection);
+        return (new TestDbContextFactory(options: options), interceptor, keepAliveConnection);
     }
 
     public static void SeedData(MediaContext context)
@@ -261,7 +261,7 @@ public static class TestMediaContextFactory
             Allowed = true,
             Manage = true,
         };
-        context.Users.Add(testUser);
+        context.Users.Add(entity: testUser);
 
         Library movieLibrary = new()
         {
@@ -270,7 +270,7 @@ public static class TestMediaContextFactory
             Type = "movie",
             Order = 1,
         };
-        context.Libraries.Add(movieLibrary);
+        context.Libraries.Add(entity: movieLibrary);
 
         Library tvLibrary = new()
         {
@@ -279,10 +279,10 @@ public static class TestMediaContextFactory
             Type = "tv",
             Order = 2,
         };
-        context.Libraries.Add(tvLibrary);
+        context.Libraries.Add(entity: tvLibrary);
 
-        context.LibraryUser.Add(new(SeedConstants.MovieLibraryId, SeedConstants.UserId));
-        context.LibraryUser.Add(new(SeedConstants.TvLibraryId, SeedConstants.UserId));
+        context.LibraryUser.Add(entity: new(libraryId: SeedConstants.MovieLibraryId, userId: SeedConstants.UserId));
+        context.LibraryUser.Add(entity: new(libraryId: SeedConstants.TvLibraryId, userId: SeedConstants.UserId));
 
         Driver systemLocalDriver = new()
         {
@@ -293,7 +293,7 @@ public static class TestMediaContextFactory
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow,
         };
-        context.Drivers.Add(systemLocalDriver);
+        context.Drivers.Add(entity: systemLocalDriver);
 
         Folder movieFolder = new()
         {
@@ -301,8 +301,8 @@ public static class TestMediaContextFactory
             Path = "/media/movies",
             DriverId = Driver.SystemLocalDriverId,
         };
-        context.Folders.Add(movieFolder);
-        context.FolderLibrary.Add(new(SeedConstants.MovieFolderId, SeedConstants.MovieLibraryId));
+        context.Folders.Add(entity: movieFolder);
+        context.FolderLibrary.Add(entity: new(folderId: SeedConstants.MovieFolderId, libraryId: SeedConstants.MovieLibraryId));
 
         EncodingPreset encodingPreset = new()
         {
@@ -311,9 +311,9 @@ public static class TestMediaContextFactory
             ProfileJson = "{}",
             IsBuiltIn = false,
         };
-        context.EncodingPresets.Add(encodingPreset);
+        context.EncodingPresets.Add(entity: encodingPreset);
         context.EncodingPresetFolders.Add(
-            new()
+            entity: new()
             {
                 PresetId = SeedConstants.EncodingPresetId,
                 FolderId = SeedConstants.MovieFolderId,
@@ -328,12 +328,12 @@ public static class TestMediaContextFactory
             EnglishName = "English",
             Name = "English",
         };
-        context.Languages.Add(english);
-        context.LanguageLibrary.Add(new(1, SeedConstants.MovieLibraryId));
+        context.Languages.Add(entity: english);
+        context.LanguageLibrary.Add(entity: new(languageId: 1, libraryId: SeedConstants.MovieLibraryId));
 
         Genre actionGenre = new() { Id = 28, Name = "Action" };
         Genre dramaGenre = new() { Id = 18, Name = "Drama" };
-        context.Genres.AddRange(actionGenre, dramaGenre);
+        context.Genres.AddRange(entities: [actionGenre, dramaGenre]);
 
         Movie movie1 = new()
         {
@@ -344,7 +344,7 @@ public static class TestMediaContextFactory
                 "A young girl, Chihiro, becomes trapped in a strange new world of spirits. When her parents undergo a mysterious transformation, she must call upon the courage she never knew she had to free her family.",
             Poster = "/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg",
             Backdrop = "/Ab8mkHmkYADjU7wQiOkia9BzGvS.jpg",
-            ReleaseDate = new DateTime(2001, 7, 20),
+            ReleaseDate = new DateTime(year: 2001, month: 7, day: 20),
             LibraryId = SeedConstants.MovieLibraryId,
             VoteAverage = 8.5,
         };
@@ -358,15 +358,13 @@ public static class TestMediaContextFactory
                 "The lives of two mob hitmen, a boxer, a gangster and his wife intertwine in four tales of violence and redemption.",
             Poster = "/d5iIlFn5s0ImszYzBPb8JPIfbXD.jpg",
             Backdrop = "/suaEOtk1N1sgg2MTM7oZd2cfVp3.jpg",
-            ReleaseDate = new DateTime(1994, 9, 10),
+            ReleaseDate = new DateTime(year: 1994, month: 9, day: 10),
             LibraryId = SeedConstants.MovieLibraryId,
             VoteAverage = 8.5,
         };
-        context.Movies.AddRange(movie1, movie2);
+        context.Movies.AddRange(entities: [movie1, movie2]);
 
-        context.LibraryMovie.AddRange(
-            new LibraryMovie(SeedConstants.MovieLibraryId, 129),
-            new LibraryMovie(SeedConstants.MovieLibraryId, 680)
+        context.LibraryMovie.AddRange(entities: [new LibraryMovie(libraryId: SeedConstants.MovieLibraryId, movieId: 129), new LibraryMovie(libraryId: SeedConstants.MovieLibraryId, movieId: 680)]
         );
 
         VideoFile movieVideoFile1 = new()
@@ -391,12 +389,9 @@ public static class TestMediaContextFactory
             Share = "movies",
             MovieId = 680,
         };
-        context.VideoFiles.AddRange(movieVideoFile1, movieVideoFile2);
+        context.VideoFiles.AddRange(entities: [movieVideoFile1, movieVideoFile2]);
 
-        context.GenreMovie.AddRange(
-            new GenreMovie { GenreId = 28, MovieId = 129 },
-            new GenreMovie { GenreId = 18, MovieId = 129 },
-            new GenreMovie { GenreId = 18, MovieId = 680 }
+        context.GenreMovie.AddRange(entities: [new GenreMovie { GenreId = 28, MovieId = 129 }, new GenreMovie { GenreId = 18, MovieId = 129 }, new GenreMovie { GenreId = 18, MovieId = 680 }]
         );
 
         Tv show1 = new()
@@ -408,15 +403,15 @@ public static class TestMediaContextFactory
                 "A chemistry teacher diagnosed with lung cancer teams up with a former student to cook and sell crystal meth.",
             Poster = "/ggFHVNu6YYI5L9pCfOacjizRGt.jpg",
             Backdrop = "/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg",
-            FirstAirDate = new DateTime(2008, 1, 20),
+            FirstAirDate = new DateTime(year: 2008, month: 1, day: 20),
             NumberOfEpisodes = 62,
             NumberOfSeasons = 5,
             LibraryId = SeedConstants.TvLibraryId,
             VoteAverage = 8.9,
         };
-        context.Tvs.Add(show1);
+        context.Tvs.Add(entity: show1);
 
-        context.LibraryTv.Add(new(SeedConstants.TvLibraryId, 1399));
+        context.LibraryTv.Add(entity: new(libraryId: SeedConstants.TvLibraryId, tvId: 1399));
 
         Season season1 = new()
         {
@@ -426,7 +421,7 @@ public static class TestMediaContextFactory
             EpisodeCount = 7,
             TvId = 1399,
         };
-        context.Seasons.Add(season1);
+        context.Seasons.Add(entity: season1);
 
         Episode episode1 = new()
         {
@@ -450,7 +445,7 @@ public static class TestMediaContextFactory
             Overview =
                 "After their decaying RV breaks down, Walt and Jesse are forced to deal with a corpse and a prisoner.",
         };
-        context.Episodes.AddRange(episode1, episode2);
+        context.Episodes.AddRange(entities: [episode1, episode2]);
 
         VideoFile tvVideoFile1 = new()
         {
@@ -474,43 +469,45 @@ public static class TestMediaContextFactory
             Share = "tv",
             EpisodeId = 62086,
         };
-        context.VideoFiles.AddRange(tvVideoFile1, tvVideoFile2);
+        context.VideoFiles.AddRange(entities: [tvVideoFile1, tvVideoFile2]);
 
-        context.GenreTv.AddRange(new GenreTv { GenreId = 18, TvId = 1399 });
+        context.GenreTv.AddRange(entities: new GenreTv { GenreId = 18, TvId = 1399 });
 
         // UserData for continue watching tests
-        context.UserData.AddRange(
-            new UserData
-            {
-                Id = Ulid.Parse("01JABC0000000000000000MOVI"),
-                UserId = SeedConstants.UserId,
-                MovieId = 129,
-                VideoFileId = SeedConstants.MovieVideoFile1Id,
-                Type = "movie",
-                Time = 3600,
-                LastPlayedDate = "2026-02-01T10:00:00Z",
-            },
-            // Duplicate entry for same movie (different video file)
-            new UserData
-            {
-                Id = Ulid.Parse("01JDBC0000000000000000MDUP"),
-                UserId = SeedConstants.UserId,
-                MovieId = 129,
-                VideoFileId = SeedConstants.MovieVideoFile2Id,
-                Type = "movie",
-                Time = 1800,
-                LastPlayedDate = "2026-01-15T08:00:00Z",
-            },
-            new UserData
-            {
-                Id = Ulid.Parse("01JBBC0000000000000000TVSH"),
-                UserId = SeedConstants.UserId,
-                TvId = 1399,
-                VideoFileId = SeedConstants.TvVideoFile1Id,
-                Type = "tv",
-                Time = 2400,
-                LastPlayedDate = "2026-02-02T14:00:00Z",
-            }
+        context.UserData.AddRange(entities:
+            [
+                new UserData
+                {
+                    Id = Ulid.Parse(base32: "01JABC0000000000000000MOVI"),
+                    UserId = SeedConstants.UserId,
+                    MovieId = 129,
+                    VideoFileId = SeedConstants.MovieVideoFile1Id,
+                    Type = "movie",
+                    Time = 3600,
+                    LastPlayedDate = "2026-02-01T10:00:00Z",
+                },
+                // Duplicate entry for same movie (different video file)
+                new UserData
+                {
+                    Id = Ulid.Parse(base32: "01JDBC0000000000000000MDUP"),
+                    UserId = SeedConstants.UserId,
+                    MovieId = 129,
+                    VideoFileId = SeedConstants.MovieVideoFile2Id,
+                    Type = "movie",
+                    Time = 1800,
+                    LastPlayedDate = "2026-01-15T08:00:00Z",
+                },
+                new UserData
+                {
+                    Id = Ulid.Parse(base32: "01JBBC0000000000000000TVSH"),
+                    UserId = SeedConstants.UserId,
+                    TvId = 1399,
+                    VideoFileId = SeedConstants.TvVideoFile1Id,
+                    Type = "tv",
+                    Time = 2400,
+                    LastPlayedDate = "2026-02-02T14:00:00Z",
+                }
+            ]
         );
 
         context.SaveChanges();

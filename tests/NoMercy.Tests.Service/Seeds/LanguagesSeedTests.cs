@@ -24,7 +24,7 @@ namespace NoMercy.Tests.Service.Seeds;
 /// decide which translations to fetch, so a language seed that re-runs
 /// needlessly on every boot would also multiply GenresSeed's per-language fan-out.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class LanguagesSeedTests : IDisposable
 {
     private readonly SqliteConnection _connection;
@@ -32,16 +32,16 @@ public sealed class LanguagesSeedTests : IDisposable
 
     public LanguagesSeedTests()
     {
-        _connection = new("DataSource=:memory:");
+        _connection = new(connectionString: "DataSource=:memory:");
         _connection.Open();
         _options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(
-                _connection,
-                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+                connection: _connection,
+                sqliteOptionsAction: o => o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery)
             )
             .Options;
 
-        using MediaContext ctx = new(_options);
+        using MediaContext ctx = new(options: _options);
         ctx.Database.EnsureCreated();
     }
 
@@ -50,9 +50,9 @@ public sealed class LanguagesSeedTests : IDisposable
     [Fact]
     public async Task Init_LanguagesAlreadySeeded_ReturnsWithoutCallingNetwork()
     {
-        await using MediaContext seedContext = new(_options);
+        await using MediaContext seedContext = new(options: _options);
         seedContext.Languages.Add(
-            new()
+            entity: new()
             {
                 Iso6391 = "en",
                 EnglishName = "English",
@@ -61,11 +61,11 @@ public sealed class LanguagesSeedTests : IDisposable
         );
         await seedContext.SaveChangesAsync();
 
-        await using MediaContext context = new(_options);
+        await using MediaContext context = new(options: _options);
 
-        await LanguagesSeed.Init(context);
+        await LanguagesSeed.Init(dbContext: context);
 
         int count = await context.Languages.CountAsync();
-        Assert.Equal(1, count);
+        Assert.Equal(expected: 1, actual: count);
     }
 }

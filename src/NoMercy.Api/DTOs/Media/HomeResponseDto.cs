@@ -15,6 +15,6 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record HomeResponseDto<T>
 {
-    [JsonProperty("data")]
+    [JsonProperty(propertyName: "data")]
     public IEnumerable<GenreRowDto<T>> Data { get; set; } = [];
 }

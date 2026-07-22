@@ -27,7 +27,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Middleware;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class HmacValidationMiddlewareTests
 {
     private const string Secret = "test-hmac-secret-middleware";
@@ -43,26 +43,26 @@ public class HmacValidationMiddlewareTests
     private static HttpClient BuildClient(string? configuredSecret)
     {
         IHost host = new HostBuilder()
-            .ConfigureWebHost(web =>
+            .ConfigureWebHost(configure: web =>
             {
                 web.UseTestServer();
-                web.ConfigureServices(services =>
+                web.ConfigureServices(configureServices: services =>
                 {
                     EncoderOptions opts = new()
                     {
                         DistributedEncodingSigningKey = configuredSecret,
                     };
                     services.AddSingleton<IOptions<EncoderOptions>>(
-                        new OptionsWrapper<EncoderOptions>(opts)
+                        implementationInstance: new OptionsWrapper<EncoderOptions>(options: opts)
                     );
                 });
-                web.Configure(app =>
+                web.Configure(configureApp: app =>
                 {
                     app.UseMiddleware<HmacValidationMiddleware>();
-                    app.Run(ctx =>
+                    app.Run(handler: ctx =>
                     {
                         ctx.Response.StatusCode = 200;
-                        return ctx.Response.WriteAsync("ok");
+                        return ctx.Response.WriteAsync(text: "ok");
                     });
                 });
             })
@@ -86,27 +86,27 @@ public class HmacValidationMiddlewareTests
     )
     {
         IHost host = new HostBuilder()
-            .ConfigureWebHost(web =>
+            .ConfigureWebHost(configure: web =>
             {
                 web.UseTestServer();
-                web.ConfigureServices(services =>
+                web.ConfigureServices(configureServices: services =>
                 {
                     EncoderOptions opts = new()
                     {
                         DistributedEncodingSigningKey = configuredSecret,
                     };
                     services.AddSingleton<IOptions<EncoderOptions>>(
-                        new OptionsWrapper<EncoderOptions>(opts)
+                        implementationInstance: new OptionsWrapper<EncoderOptions>(options: opts)
                     );
-                    services.AddSingleton(licenseTokenClient.Object);
+                    services.AddSingleton(implementationInstance: licenseTokenClient.Object);
                 });
-                web.Configure(app =>
+                web.Configure(configureApp: app =>
                 {
                     app.UseMiddleware<HmacValidationMiddleware>();
-                    app.Run(ctx =>
+                    app.Run(handler: ctx =>
                     {
                         ctx.Response.StatusCode = 200;
-                        return ctx.Response.WriteAsync("ok");
+                        return ctx.Response.WriteAsync(text: "ok");
                     });
                 });
             })
@@ -123,9 +123,9 @@ public class HmacValidationMiddlewareTests
         string secret
     )
     {
-        HmacSigner signer = new(secret);
+        HmacSigner signer = new(secret: secret);
         long ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        string sig = signer.Sign(method, path, ts, body);
+        string sig = signer.Sign(method: method, path: path, timestamp: ts, body: body);
         return (ts, sig);
     }
 
@@ -134,14 +134,14 @@ public class HmacValidationMiddlewareTests
     // -------------------------------------------------------------------------
 
     [Theory]
-    [InlineData("/api/v1/media/movies")]
-    [InlineData("/api/v1/auth/login")]
-    [InlineData("/health")]
+    [InlineData(data: "/api/v1/media/movies")]
+    [InlineData(data: "/api/v1/auth/login")]
+    [InlineData(data: "/health")]
     public async Task NonProtectedRoute_NoHeaders_Returns200(string route)
     {
-        HttpClient client = BuildClient(Secret);
-        HttpResponseMessage response = await client.GetAsync(route);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        HttpClient client = BuildClient(configuredSecret: Secret);
+        HttpResponseMessage response = await client.GetAsync(requestUri: route);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
     }
 
     // -------------------------------------------------------------------------
@@ -151,79 +151,79 @@ public class HmacValidationMiddlewareTests
     [Fact]
     public async Task DistributionRoute_NoTimestamp_Returns401()
     {
-        HttpClient client = BuildClient(Secret);
-        HttpResponseMessage response = await client.GetAsync("/api/v1/distribution/workers");
+        HttpClient client = BuildClient(configuredSecret: Secret);
+        HttpResponseMessage response = await client.GetAsync(requestUri: "/api/v1/distribution/workers");
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.Unauthorized, actual: response.StatusCode);
         string body = await response.Content.ReadAsStringAsync();
-        JsonDocument json = JsonDocument.Parse(body);
-        Assert.Equal("hmac_invalid", json.RootElement.GetProperty("error").GetString());
-        Assert.Equal("missing_timestamp", json.RootElement.GetProperty("reason").GetString());
+        JsonDocument json = JsonDocument.Parse(json: body);
+        Assert.Equal(expected: "hmac_invalid", actual: json.RootElement.GetProperty(propertyName: "error").GetString());
+        Assert.Equal(expected: "missing_timestamp", actual: json.RootElement.GetProperty(propertyName: "reason").GetString());
     }
 
     [Fact]
     public async Task WorkerRoute_NoSignature_Returns401()
     {
-        HttpClient client = BuildClient(Secret);
-        HttpRequestMessage request = new(HttpMethod.Post, "/api/v1/worker/execute-task");
+        HttpClient client = BuildClient(configuredSecret: Secret);
+        HttpRequestMessage request = new(method: HttpMethod.Post, requestUri: "/api/v1/worker/execute-task");
         request.Headers.Add(
-            "X-NoMercy-Timestamp",
-            DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString()
+            name: "X-NoMercy-Timestamp",
+            value: DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString()
         );
 
-        HttpResponseMessage response = await client.SendAsync(request);
+        HttpResponseMessage response = await client.SendAsync(request: request);
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.Unauthorized, actual: response.StatusCode);
         string body = await response.Content.ReadAsStringAsync();
-        JsonDocument json = JsonDocument.Parse(body);
-        Assert.Equal("missing_signature", json.RootElement.GetProperty("reason").GetString());
+        JsonDocument json = JsonDocument.Parse(json: body);
+        Assert.Equal(expected: "missing_signature", actual: json.RootElement.GetProperty(propertyName: "reason").GetString());
     }
 
     [Fact]
     public async Task DistributionRoute_WrongSecret_Returns401()
     {
-        HttpClient client = BuildClient(Secret);
+        HttpClient client = BuildClient(configuredSecret: Secret);
 
-        byte[] bodyBytes = Encoding.UTF8.GetBytes("{\"test\":true}");
+        byte[] bodyBytes = Encoding.UTF8.GetBytes(s: "{\"test\":true}");
         (long ts, string sig) = MakeSignature(
-            "POST",
-            "/api/v1/distribution/tasks",
-            bodyBytes,
-            "wrong-secret"
+            method: "POST",
+            path: "/api/v1/distribution/tasks",
+            body: bodyBytes,
+            secret: "wrong-secret"
         );
 
-        HttpRequestMessage request = new(HttpMethod.Post, "/api/v1/distribution/tasks")
+        HttpRequestMessage request = new(method: HttpMethod.Post, requestUri: "/api/v1/distribution/tasks")
         {
-            Content = new ByteArrayContent(bodyBytes),
+            Content = new ByteArrayContent(content: bodyBytes),
         };
-        request.Headers.Add("X-NoMercy-Timestamp", ts.ToString());
-        request.Headers.Add("X-NoMercy-Signature", sig);
+        request.Headers.Add(name: "X-NoMercy-Timestamp", value: ts.ToString());
+        request.Headers.Add(name: "X-NoMercy-Signature", value: sig);
 
-        HttpResponseMessage response = await client.SendAsync(request);
+        HttpResponseMessage response = await client.SendAsync(request: request);
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.Unauthorized, actual: response.StatusCode);
         string body = await response.Content.ReadAsStringAsync();
-        JsonDocument json = JsonDocument.Parse(body);
-        Assert.Equal("signature_invalid", json.RootElement.GetProperty("reason").GetString());
+        JsonDocument json = JsonDocument.Parse(json: body);
+        Assert.Equal(expected: "signature_invalid", actual: json.RootElement.GetProperty(propertyName: "reason").GetString());
     }
 
     [Fact]
     public async Task DistributionRoute_StaleTimestamp_Returns401()
     {
-        HttpClient client = BuildClient(Secret);
+        HttpClient client = BuildClient(configuredSecret: Secret);
 
         byte[] bodyBytes = [];
-        long staleTs = DateTimeOffset.UtcNow.AddMinutes(-6).ToUnixTimeSeconds();
-        HmacSigner signer = new(Secret);
-        string sig = signer.Sign("GET", "/api/v1/distribution/workers", staleTs, bodyBytes);
+        long staleTs = DateTimeOffset.UtcNow.AddMinutes(minutes: -6).ToUnixTimeSeconds();
+        HmacSigner signer = new(secret: Secret);
+        string sig = signer.Sign(method: "GET", path: "/api/v1/distribution/workers", timestamp: staleTs, body: bodyBytes);
 
-        HttpRequestMessage request = new(HttpMethod.Get, "/api/v1/distribution/workers");
-        request.Headers.Add("X-NoMercy-Timestamp", staleTs.ToString());
-        request.Headers.Add("X-NoMercy-Signature", sig);
+        HttpRequestMessage request = new(method: HttpMethod.Get, requestUri: "/api/v1/distribution/workers");
+        request.Headers.Add(name: "X-NoMercy-Timestamp", value: staleTs.ToString());
+        request.Headers.Add(name: "X-NoMercy-Signature", value: sig);
 
-        HttpResponseMessage response = await client.SendAsync(request);
+        HttpResponseMessage response = await client.SendAsync(request: request);
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.Unauthorized, actual: response.StatusCode);
     }
 
     // -------------------------------------------------------------------------
@@ -233,48 +233,48 @@ public class HmacValidationMiddlewareTests
     [Fact]
     public async Task DistributionRoute_ValidSignature_Returns200()
     {
-        HttpClient client = BuildClient(Secret);
+        HttpClient client = BuildClient(configuredSecret: Secret);
 
-        byte[] bodyBytes = Encoding.UTF8.GetBytes("{\"test\":true}");
+        byte[] bodyBytes = Encoding.UTF8.GetBytes(s: "{\"test\":true}");
         (long ts, string sig) = MakeSignature(
-            "POST",
-            "/api/v1/distribution/tasks",
-            bodyBytes,
-            Secret
+            method: "POST",
+            path: "/api/v1/distribution/tasks",
+            body: bodyBytes,
+            secret: Secret
         );
 
-        HttpRequestMessage request = new(HttpMethod.Post, "/api/v1/distribution/tasks")
+        HttpRequestMessage request = new(method: HttpMethod.Post, requestUri: "/api/v1/distribution/tasks")
         {
-            Content = new ByteArrayContent(bodyBytes),
+            Content = new ByteArrayContent(content: bodyBytes),
         };
-        request.Headers.Add("X-NoMercy-Timestamp", ts.ToString());
-        request.Headers.Add("X-NoMercy-Signature", sig);
+        request.Headers.Add(name: "X-NoMercy-Timestamp", value: ts.ToString());
+        request.Headers.Add(name: "X-NoMercy-Signature", value: sig);
 
-        HttpResponseMessage response = await client.SendAsync(request);
+        HttpResponseMessage response = await client.SendAsync(request: request);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
     }
 
     [Fact]
     public async Task WorkerRoute_ValidSignature_EmptyBody_Returns200()
     {
-        HttpClient client = BuildClient(Secret);
+        HttpClient client = BuildClient(configuredSecret: Secret);
 
         byte[] bodyBytes = [];
         (long ts, string sig) = MakeSignature(
-            "POST",
-            "/api/v1/worker/execute-task",
-            bodyBytes,
-            Secret
+            method: "POST",
+            path: "/api/v1/worker/execute-task",
+            body: bodyBytes,
+            secret: Secret
         );
 
-        HttpRequestMessage request = new(HttpMethod.Post, "/api/v1/worker/execute-task");
-        request.Headers.Add("X-NoMercy-Timestamp", ts.ToString());
-        request.Headers.Add("X-NoMercy-Signature", sig);
+        HttpRequestMessage request = new(method: HttpMethod.Post, requestUri: "/api/v1/worker/execute-task");
+        request.Headers.Add(name: "X-NoMercy-Timestamp", value: ts.ToString());
+        request.Headers.Add(name: "X-NoMercy-Signature", value: sig);
 
-        HttpResponseMessage response = await client.SendAsync(request);
+        HttpResponseMessage response = await client.SendAsync(request: request);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
     }
 
     // -------------------------------------------------------------------------
@@ -282,13 +282,13 @@ public class HmacValidationMiddlewareTests
     // -------------------------------------------------------------------------
 
     [Theory]
-    [InlineData("/api/v1/distribution/workers/worker-1/tasks/task-abc/progress")]
-    [InlineData("/api/v1/distribution/workers/xyz/tasks/123/progress")]
+    [InlineData(data: "/api/v1/distribution/workers/worker-1/tasks/task-abc/progress")]
+    [InlineData(data: "/api/v1/distribution/workers/xyz/tasks/123/progress")]
     public async Task ProgressPushPath_NoHeaders_IsExempt_Returns200(string path)
     {
-        HttpClient client = BuildClient(Secret);
-        HttpResponseMessage response = await client.PostAsync(path, new StringContent("{}"));
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        HttpClient client = BuildClient(configuredSecret: Secret);
+        HttpResponseMessage response = await client.PostAsync(requestUri: path, content: new StringContent(content: "{}"));
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
     }
 
     // -------------------------------------------------------------------------
@@ -303,8 +303,8 @@ public class HmacValidationMiddlewareTests
         // means distributed encoding is misconfigured, and passing through would
         // bypass HMAC authentication entirely.
         HttpClient client = BuildClient(configuredSecret: null);
-        HttpResponseMessage response = await client.GetAsync("/api/v1/distribution/workers");
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        HttpResponseMessage response = await client.GetAsync(requestUri: "/api/v1/distribution/workers");
+        Assert.Equal(expected: HttpStatusCode.ServiceUnavailable, actual: response.StatusCode);
     }
 
     // -------------------------------------------------------------------------
@@ -317,36 +317,36 @@ public class HmacValidationMiddlewareTests
         const string workerToken = "worker-token-abc123";
         Mock<ILicenseTokenClient> licenseTokenClient = new();
         licenseTokenClient
-            .Setup(c => c.IntrospectAsync(workerToken, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new IntrospectResult(true, [], null));
+            .Setup(expression: c => c.IntrospectAsync(workerToken, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: new IntrospectResult(Active: true, Scopes: [], Message: null));
 
         // Configured signing key is deliberately different from the worker
         // token — proves the signature must be verified against the WORKER
         // TOKEN, not the static DistributedEncodingSigningKey.
         HttpClient client = BuildClientWithWorkerToken(
             configuredSecret: "static-secret-never-used-here",
-            licenseTokenClient
+            licenseTokenClient: licenseTokenClient
         );
 
-        byte[] bodyBytes = Encoding.UTF8.GetBytes("{\"task\":true}");
-        HmacSigner signer = new(workerToken);
+        byte[] bodyBytes = Encoding.UTF8.GetBytes(s: "{\"task\":true}");
+        HmacSigner signer = new(secret: workerToken);
         long ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        string sig = signer.Sign("POST", "/api/v1/worker/execute-task", ts, bodyBytes);
+        string sig = signer.Sign(method: "POST", path: "/api/v1/worker/execute-task", timestamp: ts, body: bodyBytes);
 
-        HttpRequestMessage request = new(HttpMethod.Post, "/api/v1/worker/execute-task")
+        HttpRequestMessage request = new(method: HttpMethod.Post, requestUri: "/api/v1/worker/execute-task")
         {
-            Content = new ByteArrayContent(bodyBytes),
+            Content = new ByteArrayContent(content: bodyBytes),
         };
-        request.Headers.Add("X-NoMercy-WorkerToken", workerToken);
-        request.Headers.Add("X-NoMercy-Timestamp", ts.ToString());
-        request.Headers.Add("X-NoMercy-Signature", sig);
+        request.Headers.Add(name: "X-NoMercy-WorkerToken", value: workerToken);
+        request.Headers.Add(name: "X-NoMercy-Timestamp", value: ts.ToString());
+        request.Headers.Add(name: "X-NoMercy-Signature", value: sig);
 
-        HttpResponseMessage response = await client.SendAsync(request);
+        HttpResponseMessage response = await client.SendAsync(request: request);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
         licenseTokenClient.Verify(
-            c => c.IntrospectAsync(workerToken, It.IsAny<CancellationToken>()),
-            Times.Once
+            expression: c => c.IntrospectAsync(workerToken, It.IsAny<CancellationToken>()),
+            times: Times.Once
         );
     }
 
@@ -356,24 +356,24 @@ public class HmacValidationMiddlewareTests
         const string workerToken = "worker-token-abc123";
         Mock<ILicenseTokenClient> licenseTokenClient = new();
         licenseTokenClient
-            .Setup(c => c.IntrospectAsync(workerToken, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new IntrospectResult(true, [], null));
+            .Setup(expression: c => c.IntrospectAsync(workerToken, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: new IntrospectResult(Active: true, Scopes: [], Message: null));
 
-        HttpClient client = BuildClientWithWorkerToken(Secret, licenseTokenClient);
+        HttpClient client = BuildClientWithWorkerToken(configuredSecret: Secret, licenseTokenClient: licenseTokenClient);
 
         byte[] bodyBytes = [];
-        HmacSigner wrongSigner = new("not-the-worker-token");
+        HmacSigner wrongSigner = new(secret: "not-the-worker-token");
         long ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        string sig = wrongSigner.Sign("GET", "/api/v1/worker/status", ts, bodyBytes);
+        string sig = wrongSigner.Sign(method: "GET", path: "/api/v1/worker/status", timestamp: ts, body: bodyBytes);
 
-        HttpRequestMessage request = new(HttpMethod.Get, "/api/v1/worker/status");
-        request.Headers.Add("X-NoMercy-WorkerToken", workerToken);
-        request.Headers.Add("X-NoMercy-Timestamp", ts.ToString());
-        request.Headers.Add("X-NoMercy-Signature", sig);
+        HttpRequestMessage request = new(method: HttpMethod.Get, requestUri: "/api/v1/worker/status");
+        request.Headers.Add(name: "X-NoMercy-WorkerToken", value: workerToken);
+        request.Headers.Add(name: "X-NoMercy-Timestamp", value: ts.ToString());
+        request.Headers.Add(name: "X-NoMercy-Signature", value: sig);
 
-        HttpResponseMessage response = await client.SendAsync(request);
+        HttpResponseMessage response = await client.SendAsync(request: request);
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.Unauthorized, actual: response.StatusCode);
     }
 
     [Fact]
@@ -382,54 +382,54 @@ public class HmacValidationMiddlewareTests
         const string workerToken = "revoked-worker-token";
         Mock<ILicenseTokenClient> licenseTokenClient = new();
         licenseTokenClient
-            .Setup(c => c.IntrospectAsync(workerToken, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new IntrospectResult(false, [], "Token has been revoked"));
+            .Setup(expression: c => c.IntrospectAsync(workerToken, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: new IntrospectResult(Active: false, Scopes: [], Message: "Token has been revoked"));
 
-        HttpClient client = BuildClientWithWorkerToken(Secret, licenseTokenClient);
+        HttpClient client = BuildClientWithWorkerToken(configuredSecret: Secret, licenseTokenClient: licenseTokenClient);
 
-        HttpRequestMessage request = new(HttpMethod.Get, "/api/v1/worker/status");
-        request.Headers.Add("X-NoMercy-WorkerToken", workerToken);
+        HttpRequestMessage request = new(method: HttpMethod.Get, requestUri: "/api/v1/worker/status");
+        request.Headers.Add(name: "X-NoMercy-WorkerToken", value: workerToken);
         request.Headers.Add(
-            "X-NoMercy-Timestamp",
-            DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString()
+            name: "X-NoMercy-Timestamp",
+            value: DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString()
         );
-        request.Headers.Add("X-NoMercy-Signature", "irrelevant-since-token-is-inactive");
+        request.Headers.Add(name: "X-NoMercy-Signature", value: "irrelevant-since-token-is-inactive");
 
-        HttpResponseMessage response = await client.SendAsync(request);
+        HttpResponseMessage response = await client.SendAsync(request: request);
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.Unauthorized, actual: response.StatusCode);
         string body = await response.Content.ReadAsStringAsync();
-        JsonDocument json = JsonDocument.Parse(body);
-        Assert.Equal("worker_token_invalid", json.RootElement.GetProperty("reason").GetString());
+        JsonDocument json = JsonDocument.Parse(json: body);
+        Assert.Equal(expected: "worker_token_invalid", actual: json.RootElement.GetProperty(propertyName: "reason").GetString());
     }
 
     [Fact]
     public async Task NoWorkerTokenHeader_FallsBackToConfiguredSigningKey_NeverConsultsLicenseClient()
     {
         Mock<ILicenseTokenClient> licenseTokenClient = new();
-        HttpClient client = BuildClientWithWorkerToken(Secret, licenseTokenClient);
+        HttpClient client = BuildClientWithWorkerToken(configuredSecret: Secret, licenseTokenClient: licenseTokenClient);
 
-        byte[] bodyBytes = Encoding.UTF8.GetBytes("{\"test\":true}");
+        byte[] bodyBytes = Encoding.UTF8.GetBytes(s: "{\"test\":true}");
         (long ts, string sig) = MakeSignature(
-            "POST",
-            "/api/v1/distribution/tasks",
-            bodyBytes,
-            Secret
+            method: "POST",
+            path: "/api/v1/distribution/tasks",
+            body: bodyBytes,
+            secret: Secret
         );
 
-        HttpRequestMessage request = new(HttpMethod.Post, "/api/v1/distribution/tasks")
+        HttpRequestMessage request = new(method: HttpMethod.Post, requestUri: "/api/v1/distribution/tasks")
         {
-            Content = new ByteArrayContent(bodyBytes),
+            Content = new ByteArrayContent(content: bodyBytes),
         };
-        request.Headers.Add("X-NoMercy-Timestamp", ts.ToString());
-        request.Headers.Add("X-NoMercy-Signature", sig);
+        request.Headers.Add(name: "X-NoMercy-Timestamp", value: ts.ToString());
+        request.Headers.Add(name: "X-NoMercy-Signature", value: sig);
 
-        HttpResponseMessage response = await client.SendAsync(request);
+        HttpResponseMessage response = await client.SendAsync(request: request);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
         licenseTokenClient.Verify(
-            c => c.IntrospectAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never
+            expression: c => c.IntrospectAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            times: Times.Never
         );
     }
 }

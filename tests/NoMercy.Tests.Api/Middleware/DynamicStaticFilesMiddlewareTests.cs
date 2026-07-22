@@ -29,7 +29,7 @@ namespace NoMercy.Tests.Api.Middleware;
 // translate storage-layer failures into the RIGHT status code (404 vs 502)
 // without ever leaking a raw exception to a client mid-stream. None of this
 // had a single test before this file.
-[Trait("Category", "Middleware")]
+[Trait(name: "Category", value: "Middleware")]
 public sealed class DynamicStaticFilesMiddlewareTests
 {
     private static DefaultHttpContext CreateContext(string path, string? rangeHeader = null)
@@ -50,20 +50,20 @@ public sealed class DynamicStaticFilesMiddlewareTests
     )
     {
         Mock<IStorage> storage = new();
-        storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(exists);
-        storage.Setup(s => s.Size(It.IsAny<string>())).Returns(size);
+        storage.Setup(expression: s => s.Exists(It.IsAny<string>())).Returns(value: exists);
+        storage.Setup(expression: s => s.Size(It.IsAny<string>())).Returns(value: size);
         storage
-            .Setup(s => s.OpenRead(It.IsAny<string>()))
-            .Returns(() => new MemoryStream(content ?? new byte[size]));
+            .Setup(expression: s => s.OpenRead(It.IsAny<string>()))
+            .Returns(valueFunction: () => new MemoryStream(buffer: content ?? new byte[size]));
         storage
-            .Setup(s =>
+            .Setup(expression: s =>
                 s.TryGetPresignedUrlAsync(
                     It.IsAny<string>(),
                     It.IsAny<TimeSpan>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(presigned);
+            .ReturnsAsync(value: presigned);
         return storage;
     }
 
@@ -76,19 +76,19 @@ public sealed class DynamicStaticFilesMiddlewareTests
     {
         bool[] nextCalled = [false];
         DynamicStaticFilesMiddleware middleware = new(
-            _ =>
+            next: _ =>
             {
                 nextCalled[0] = true;
                 return Task.CompletedTask;
             },
-            NullLogger<DynamicStaticFilesMiddleware>.Instance
+            logger: NullLogger<DynamicStaticFilesMiddleware>.Instance
         );
 
         Mock<IStorageFactory> storageFactory = new();
         if (storage is not null)
             storageFactory
-                .Setup(f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
-                .Returns(storage);
+                .Setup(expression: f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
+                .Returns(value: storage);
 
         return (middleware, storageFactory, new MediaActivityMonitor(), nextCalled);
     }
@@ -100,10 +100,10 @@ public sealed class DynamicStaticFilesMiddlewareTests
         public RegisteredFolder(string subPath = "")
         {
             FolderId = Ulid.NewUlid();
-            DynamicStaticFilesMiddleware.AddFolder(FolderId, Ulid.NewUlid(), subPath);
+            DynamicStaticFilesMiddleware.AddFolder(folderId: FolderId, driverId: Ulid.NewUlid(), subPath: subPath);
         }
 
-        public void Dispose() => DynamicStaticFilesMiddleware.RemoveFolder(FolderId);
+        public void Dispose() => DynamicStaticFilesMiddleware.RemoveFolder(folderId: FolderId);
     }
 
     [Fact]
@@ -118,7 +118,7 @@ public sealed class DynamicStaticFilesMiddlewareTests
         DefaultHttpContext context = new();
         context.Request.Path = default;
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
         nextCalled[0].Should().BeTrue();
     }
@@ -132,19 +132,19 @@ public sealed class DynamicStaticFilesMiddlewareTests
             MediaActivityMonitor activityMonitor,
             bool[] nextCalled
         ) = CreateMiddleware();
-        DefaultHttpContext context = CreateContext("/");
+        DefaultHttpContext context = CreateContext(path: "/");
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
         nextCalled[0].Should().BeTrue();
     }
 
     [Theory]
-    [InlineData("/api/movies")]
-    [InlineData("/index.html")]
-    [InlineData("/swagger-ui/index.html")]
-    [InlineData("/images/poster.jpg")]
-    [InlineData("/manage/dashboard")]
+    [InlineData(data: "/api/movies")]
+    [InlineData(data: "/index.html")]
+    [InlineData(data: "/swagger-ui/index.html")]
+    [InlineData(data: "/images/poster.jpg")]
+    [InlineData(data: "/manage/dashboard")]
     public async Task InvokeAsync_SystemRootSegment_CallsNextWithoutTouchingStorage(string path)
     {
         (
@@ -153,14 +153,14 @@ public sealed class DynamicStaticFilesMiddlewareTests
             MediaActivityMonitor activityMonitor,
             bool[] nextCalled
         ) = CreateMiddleware();
-        DefaultHttpContext context = CreateContext(path);
+        DefaultHttpContext context = CreateContext(path: path);
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
         nextCalled[0].Should().BeTrue();
         storageFactory.Verify(
-            f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()),
-            Times.Never
+            expression: f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()),
+            times: Times.Never
         );
     }
 
@@ -173,9 +173,9 @@ public sealed class DynamicStaticFilesMiddlewareTests
             MediaActivityMonitor activityMonitor,
             bool[] nextCalled
         ) = CreateMiddleware();
-        DefaultHttpContext context = CreateContext("/favicon.ico");
+        DefaultHttpContext context = CreateContext(path: "/favicon.ico");
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
         nextCalled[0].Should().BeTrue();
     }
@@ -189,9 +189,9 @@ public sealed class DynamicStaticFilesMiddlewareTests
             MediaActivityMonitor activityMonitor,
             bool[] nextCalled
         ) = CreateMiddleware();
-        DefaultHttpContext context = CreateContext($"/{Ulid.NewUlid()}/movie.mp4");
+        DefaultHttpContext context = CreateContext(path: $"/{Ulid.NewUlid()}/movie.mp4");
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
         nextCalled[0].Should().BeTrue();
     }
@@ -207,11 +207,11 @@ public sealed class DynamicStaticFilesMiddlewareTests
             bool[] nextCalled
         ) = CreateMiddleware();
         storageFactory
-            .Setup(f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
-            .Throws(new InvalidOperationException("driver misconfigured"));
-        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/movie.mp4");
+            .Setup(expression: f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
+            .Throws(exception: new InvalidOperationException(message: "driver misconfigured"));
+        DefaultHttpContext context = CreateContext(path: $"/{folder.FolderId}/movie.mp4");
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
         nextCalled[0].Should().BeTrue();
     }
@@ -222,17 +222,17 @@ public sealed class DynamicStaticFilesMiddlewareTests
         using RegisteredFolder folder = new();
         Mock<IStorage> storage = CreateStorage();
         storage
-            .Setup(s => s.Exists(It.IsAny<string>()))
-            .Throws(new IOException("nfs mount unavailable"));
+            .Setup(expression: s => s.Exists(It.IsAny<string>()))
+            .Throws(exception: new IOException(message: "nfs mount unavailable"));
         (
             DynamicStaticFilesMiddleware middleware,
             Mock<IStorageFactory> storageFactory,
             MediaActivityMonitor activityMonitor,
             bool[] nextCalled
-        ) = CreateMiddleware(storage.Object);
-        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/movie.mp4");
+        ) = CreateMiddleware(storage: storage.Object);
+        DefaultHttpContext context = CreateContext(path: $"/{folder.FolderId}/movie.mp4");
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
         nextCalled[0].Should().BeTrue();
     }
@@ -247,10 +247,10 @@ public sealed class DynamicStaticFilesMiddlewareTests
             Mock<IStorageFactory> storageFactory,
             MediaActivityMonitor activityMonitor,
             bool[] nextCalled
-        ) = CreateMiddleware(storage.Object);
-        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/missing.mp4");
+        ) = CreateMiddleware(storage: storage.Object);
+        DefaultHttpContext context = CreateContext(path: $"/{folder.FolderId}/missing.mp4");
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
         nextCalled[0].Should().BeTrue();
     }
@@ -259,43 +259,43 @@ public sealed class DynamicStaticFilesMiddlewareTests
     public async Task InvokeAsync_PresignedUrlAvailable_RedirectsAndSkipsBodyStreaming()
     {
         using RegisteredFolder folder = new();
-        Uri presignedUrl = new("https://cdn.example.com/movie.mp4?sig=abc");
+        Uri presignedUrl = new(uriString: "https://cdn.example.com/movie.mp4?sig=abc");
         Mock<IStorage> storage = CreateStorage(presigned: presignedUrl);
         (
             DynamicStaticFilesMiddleware middleware,
             Mock<IStorageFactory> storageFactory,
             MediaActivityMonitor activityMonitor,
             bool[] nextCalled
-        ) = CreateMiddleware(storage.Object);
-        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/movie.mp4");
+        ) = CreateMiddleware(storage: storage.Object);
+        DefaultHttpContext context = CreateContext(path: $"/{folder.FolderId}/movie.mp4");
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
-        context.Response.StatusCode.Should().Be(302);
-        context.Response.Headers.Location.ToString().Should().Be(presignedUrl.ToString());
+        context.Response.StatusCode.Should().Be(expected: 302);
+        context.Response.Headers.Location.ToString().Should().Be(expected: presignedUrl.ToString());
         nextCalled[0].Should().BeFalse();
-        activityMonitor.IsActive.Should().BeFalse("a redirect never touches playback activity");
+        activityMonitor.IsActive.Should().BeFalse(because: "a redirect never touches playback activity");
     }
 
     [Fact]
     public async Task InvokeAsync_NoRangeNonStreamableFile_ServesWholeFileAndTouchesActivity()
     {
         using RegisteredFolder folder = new();
-        byte[] content = Encoding.UTF8.GetBytes("WEBVTT\n\n00:00.000 --> 00:01.000\nHi");
+        byte[] content = Encoding.UTF8.GetBytes(s: "WEBVTT\n\n00:00.000 --> 00:01.000\nHi");
         Mock<IStorage> storage = CreateStorage(size: content.Length, content: content);
         (
             DynamicStaticFilesMiddleware middleware,
             Mock<IStorageFactory> storageFactory,
             MediaActivityMonitor activityMonitor,
             _
-        ) = CreateMiddleware(storage.Object);
-        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/subs.vtt");
+        ) = CreateMiddleware(storage: storage.Object);
+        DefaultHttpContext context = CreateContext(path: $"/{folder.FolderId}/subs.vtt");
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
-        context.Response.StatusCode.Should().Be(200);
-        context.Response.ContentLength.Should().Be(content.Length);
-        context.Response.ContentType.Should().Be("text/vtt; charset=utf-8");
+        context.Response.StatusCode.Should().Be(expected: 200);
+        context.Response.ContentLength.Should().Be(expected: content.Length);
+        context.Response.ContentType.Should().Be(expected: "text/vtt; charset=utf-8");
         activityMonitor.IsActive.Should().BeTrue();
     }
 
@@ -310,37 +310,37 @@ public sealed class DynamicStaticFilesMiddlewareTests
             Mock<IStorageFactory> storageFactory,
             MediaActivityMonitor activityMonitor,
             _
-        ) = CreateMiddleware(storage.Object);
-        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/movie.mp4");
+        ) = CreateMiddleware(storage: storage.Object);
+        DefaultHttpContext context = CreateContext(path: $"/{folder.FolderId}/movie.mp4");
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
-        context.Response.StatusCode.Should().Be(206);
-        context.Response.ContentLength.Should().Be(1024 * 1024);
-        context.Response.Headers.ContentRange.ToString().Should().StartWith("bytes 0-1048575/");
+        context.Response.StatusCode.Should().Be(expected: 206);
+        context.Response.ContentLength.Should().Be(expected: 1024 * 1024);
+        context.Response.Headers.ContentRange.ToString().Should().StartWith(expected: "bytes 0-1048575/");
     }
 
     [Fact]
     public async Task InvokeAsync_RangeWithExplicitEnd_ServesExactSlice()
     {
         using RegisteredFolder folder = new();
-        byte[] content = Encoding.UTF8.GetBytes(new string('a', 100));
+        byte[] content = Encoding.UTF8.GetBytes(s: new string(c: 'a', count: 100));
         Mock<IStorage> storage = CreateStorage(size: content.Length, content: content);
         (
             DynamicStaticFilesMiddleware middleware,
             Mock<IStorageFactory> storageFactory,
             MediaActivityMonitor activityMonitor,
             _
-        ) = CreateMiddleware(storage.Object);
-        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/movie.mp4", "bytes=10-19");
+        ) = CreateMiddleware(storage: storage.Object);
+        DefaultHttpContext context = CreateContext(path: $"/{folder.FolderId}/movie.mp4", rangeHeader: "bytes=10-19");
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
-        context.Response.StatusCode.Should().Be(206);
-        context.Response.ContentLength.Should().Be(10);
-        context.Response.Headers.ContentRange.ToString().Should().Be("bytes 10-19/100");
-        context.Response.Headers.AcceptRanges.ToString().Should().Be("bytes");
-        ((MemoryStream)context.Response.Body).ToArray().Should().HaveCount(10);
+        context.Response.StatusCode.Should().Be(expected: 206);
+        context.Response.ContentLength.Should().Be(expected: 10);
+        context.Response.Headers.ContentRange.ToString().Should().Be(expected: "bytes 10-19/100");
+        context.Response.Headers.AcceptRanges.ToString().Should().Be(expected: "bytes");
+        ((MemoryStream)context.Response.Body).ToArray().Should().HaveCount(expected: 10);
     }
 
     [Fact]
@@ -354,14 +354,14 @@ public sealed class DynamicStaticFilesMiddlewareTests
             Mock<IStorageFactory> storageFactory,
             MediaActivityMonitor activityMonitor,
             _
-        ) = CreateMiddleware(storage.Object);
-        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/movie.mp4", "bytes=0-");
+        ) = CreateMiddleware(storage: storage.Object);
+        DefaultHttpContext context = CreateContext(path: $"/{folder.FolderId}/movie.mp4", rangeHeader: "bytes=0-");
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
-        context.Response.StatusCode.Should().Be(206);
-        context.Response.ContentLength.Should().Be(1024 * 1024);
-        context.Response.Headers.ContentRange.ToString().Should().StartWith("bytes 0-1048575/");
+        context.Response.StatusCode.Should().Be(expected: 206);
+        context.Response.ContentLength.Should().Be(expected: 1024 * 1024);
+        context.Response.Headers.ContentRange.ToString().Should().StartWith(expected: "bytes 0-1048575/");
     }
 
     [Fact]
@@ -374,13 +374,13 @@ public sealed class DynamicStaticFilesMiddlewareTests
             Mock<IStorageFactory> storageFactory,
             MediaActivityMonitor activityMonitor,
             _
-        ) = CreateMiddleware(storage.Object);
-        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/empty.vtt");
+        ) = CreateMiddleware(storage: storage.Object);
+        DefaultHttpContext context = CreateContext(path: $"/{folder.FolderId}/empty.vtt");
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
-        context.Response.StatusCode.Should().Be(200);
-        context.Response.ContentLength.Should().Be(0);
+        context.Response.StatusCode.Should().Be(expected: 200);
+        context.Response.ContentLength.Should().Be(expected: 0);
     }
 
     [Fact]
@@ -389,37 +389,37 @@ public sealed class DynamicStaticFilesMiddlewareTests
         using RegisteredFolder folder = new();
         byte[] actualContent = "abc"u8.ToArray();
         Mock<IStorage> storage = new();
-        storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(true);
+        storage.Setup(expression: s => s.Exists(It.IsAny<string>())).Returns(value: true);
         // Reports a size larger than the stream actually contains -- a real
         // MemoryStream naturally returns 0 once its own backing array is
         // exhausted, which is exactly the "backend handed back fewer bytes
         // than promised" race the read loop's `if (bytesRead == 0) break;`
         // guards against.
-        storage.Setup(s => s.Size(It.IsAny<string>())).Returns(100);
+        storage.Setup(expression: s => s.Size(It.IsAny<string>())).Returns(value: 100);
         storage
-            .Setup(s => s.OpenRead(It.IsAny<string>()))
-            .Returns(() => new MemoryStream(actualContent));
+            .Setup(expression: s => s.OpenRead(It.IsAny<string>()))
+            .Returns(valueFunction: () => new MemoryStream(buffer: actualContent));
         storage
-            .Setup(s =>
+            .Setup(expression: s =>
                 s.TryGetPresignedUrlAsync(
                     It.IsAny<string>(),
                     It.IsAny<TimeSpan>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync((Uri?)null);
+            .ReturnsAsync(value: (Uri?)null);
         (
             DynamicStaticFilesMiddleware middleware,
             Mock<IStorageFactory> storageFactory,
             MediaActivityMonitor activityMonitor,
             _
-        ) = CreateMiddleware(storage.Object);
-        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/movie.mp4", "bytes=0-99");
+        ) = CreateMiddleware(storage: storage.Object);
+        DefaultHttpContext context = CreateContext(path: $"/{folder.FolderId}/movie.mp4", rangeHeader: "bytes=0-99");
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
-        context.Response.StatusCode.Should().Be(206);
-        ((MemoryStream)context.Response.Body).ToArray().Should().Equal(actualContent);
+        context.Response.StatusCode.Should().Be(expected: 206);
+        ((MemoryStream)context.Response.Body).ToArray().Should().Equal(elements: actualContent);
     }
 
     [Fact]
@@ -436,13 +436,13 @@ public sealed class DynamicStaticFilesMiddlewareTests
             Mock<IStorageFactory> storageFactory,
             MediaActivityMonitor activityMonitor,
             _
-        ) = CreateMiddleware(storage.Object);
-        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/movie.mp4", "bytes=50");
+        ) = CreateMiddleware(storage: storage.Object);
+        DefaultHttpContext context = CreateContext(path: $"/{folder.FolderId}/movie.mp4", rangeHeader: "bytes=50");
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
-        context.Response.StatusCode.Should().Be(206);
-        context.Response.Headers.ContentRange.ToString().Should().Be("bytes 50-99/100");
+        context.Response.StatusCode.Should().Be(expected: 206);
+        context.Response.Headers.ContentRange.ToString().Should().Be(expected: "bytes 50-99/100");
     }
 
     [Fact]
@@ -459,13 +459,13 @@ public sealed class DynamicStaticFilesMiddlewareTests
             Mock<IStorageFactory> storageFactory,
             MediaActivityMonitor activityMonitor,
             _
-        ) = CreateMiddleware(storage.Object);
-        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/subs.vtt", "bytes=0-");
+        ) = CreateMiddleware(storage: storage.Object);
+        DefaultHttpContext context = CreateContext(path: $"/{folder.FolderId}/subs.vtt", rangeHeader: "bytes=0-");
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
-        context.Response.StatusCode.Should().Be(206);
-        context.Response.Headers.ContentRange.ToString().Should().Be("bytes 0-49/50");
+        context.Response.StatusCode.Should().Be(expected: 206);
+        context.Response.Headers.ContentRange.ToString().Should().Be(expected: "bytes 0-49/50");
     }
 
     [Fact]
@@ -479,13 +479,13 @@ public sealed class DynamicStaticFilesMiddlewareTests
             Mock<IStorageFactory> storageFactory,
             MediaActivityMonitor activityMonitor,
             _
-        ) = CreateMiddleware(storage.Object);
-        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/movie.mp4", "bytes=50-");
+        ) = CreateMiddleware(storage: storage.Object);
+        DefaultHttpContext context = CreateContext(path: $"/{folder.FolderId}/movie.mp4", rangeHeader: "bytes=50-");
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
-        context.Response.StatusCode.Should().Be(206);
-        context.Response.Headers.ContentRange.ToString().Should().Be("bytes 50-99/100");
+        context.Response.StatusCode.Should().Be(expected: 206);
+        context.Response.Headers.ContentRange.ToString().Should().Be(expected: "bytes 50-99/100");
     }
 
     [Fact]
@@ -499,16 +499,16 @@ public sealed class DynamicStaticFilesMiddlewareTests
             Mock<IStorageFactory> storageFactory,
             MediaActivityMonitor activityMonitor,
             _
-        ) = CreateMiddleware(storage.Object);
+        ) = CreateMiddleware(storage: storage.Object);
         DefaultHttpContext context = CreateContext(
-            $"/{folder.FolderId}/movie.mp4",
-            "bytes=90-999999"
+            path: $"/{folder.FolderId}/movie.mp4",
+            rangeHeader: "bytes=90-999999"
         );
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
-        context.Response.StatusCode.Should().Be(206);
-        context.Response.Headers.ContentRange.ToString().Should().Be("bytes 90-99/100");
+        context.Response.StatusCode.Should().Be(expected: 206);
+        context.Response.Headers.ContentRange.ToString().Should().Be(expected: "bytes 90-99/100");
     }
 
     [Fact]
@@ -521,12 +521,12 @@ public sealed class DynamicStaticFilesMiddlewareTests
             Mock<IStorageFactory> storageFactory,
             MediaActivityMonitor activityMonitor,
             _
-        ) = CreateMiddleware(storage.Object);
-        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/movie.mp4", "bytes=abc-99");
+        ) = CreateMiddleware(storage: storage.Object);
+        DefaultHttpContext context = CreateContext(path: $"/{folder.FolderId}/movie.mp4", rangeHeader: "bytes=abc-99");
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
-        context.Response.StatusCode.Should().Be((int)HttpStatusCode.RequestedRangeNotSatisfiable);
+        context.Response.StatusCode.Should().Be(expected: (int)HttpStatusCode.RequestedRangeNotSatisfiable);
     }
 
     [Fact]
@@ -539,12 +539,12 @@ public sealed class DynamicStaticFilesMiddlewareTests
             Mock<IStorageFactory> storageFactory,
             MediaActivityMonitor activityMonitor,
             _
-        ) = CreateMiddleware(storage.Object);
-        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/movie.mp4", "bytes=0-xyz");
+        ) = CreateMiddleware(storage: storage.Object);
+        DefaultHttpContext context = CreateContext(path: $"/{folder.FolderId}/movie.mp4", rangeHeader: "bytes=0-xyz");
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
-        context.Response.StatusCode.Should().Be((int)HttpStatusCode.RequestedRangeNotSatisfiable);
+        context.Response.StatusCode.Should().Be(expected: (int)HttpStatusCode.RequestedRangeNotSatisfiable);
     }
 
     [Fact]
@@ -557,21 +557,21 @@ public sealed class DynamicStaticFilesMiddlewareTests
             Mock<IStorageFactory> storageFactory,
             MediaActivityMonitor activityMonitor,
             _
-        ) = CreateMiddleware(storage.Object);
+        ) = CreateMiddleware(storage: storage.Object);
         // start(500) will be clamped-compared against end (fileLength-1=9) -> start > end.
-        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/movie.mp4", "bytes=500-");
+        DefaultHttpContext context = CreateContext(path: $"/{folder.FolderId}/movie.mp4", rangeHeader: "bytes=500-");
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
-        context.Response.StatusCode.Should().Be((int)HttpStatusCode.RequestedRangeNotSatisfiable);
+        context.Response.StatusCode.Should().Be(expected: (int)HttpStatusCode.RequestedRangeNotSatisfiable);
     }
 
     [Theory]
-    [InlineData("captions.vtt", "text/vtt; charset=utf-8")]
-    [InlineData("playlist.m3u8", "application/vnd.apple.mpegurl")]
-    [InlineData("segment.ts", "video/mp2t")]
-    [InlineData("font.woff2", "font/woff2")]
-    [InlineData("subtitle.srt", "application/x-subrip; charset=utf-8")]
+    [InlineData(data: ["captions.vtt", "text/vtt; charset=utf-8"])]
+    [InlineData(data: ["playlist.m3u8", "application/vnd.apple.mpegurl"])]
+    [InlineData(data: ["segment.ts", "video/mp2t"])]
+    [InlineData(data: ["font.woff2", "font/woff2"])]
+    [InlineData(data: ["subtitle.srt", "application/x-subrip; charset=utf-8"])]
     public async Task InvokeAsync_KnownExtension_UsesContentTypeOverride(
         string filename,
         string expectedContentType
@@ -585,12 +585,12 @@ public sealed class DynamicStaticFilesMiddlewareTests
             Mock<IStorageFactory> storageFactory,
             MediaActivityMonitor activityMonitor,
             _
-        ) = CreateMiddleware(storage.Object);
-        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/{filename}");
+        ) = CreateMiddleware(storage: storage.Object);
+        DefaultHttpContext context = CreateContext(path: $"/{folder.FolderId}/{filename}");
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
-        context.Response.ContentType.Should().Be(expectedContentType);
+        context.Response.ContentType.Should().Be(expected: expectedContentType);
     }
 
     [Fact]
@@ -604,12 +604,12 @@ public sealed class DynamicStaticFilesMiddlewareTests
             Mock<IStorageFactory> storageFactory,
             MediaActivityMonitor activityMonitor,
             _
-        ) = CreateMiddleware(storage.Object);
-        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/poster.jpg");
+        ) = CreateMiddleware(storage: storage.Object);
+        DefaultHttpContext context = CreateContext(path: $"/{folder.FolderId}/poster.jpg");
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
-        context.Response.ContentType.Should().Be("image/jpeg");
+        context.Response.ContentType.Should().Be(expected: "image/jpeg");
     }
 
     [Fact]
@@ -617,18 +617,18 @@ public sealed class DynamicStaticFilesMiddlewareTests
     {
         using RegisteredFolder folder = new();
         Mock<IStorage> storage = CreateStorage();
-        storage.Setup(s => s.Size(It.IsAny<string>())).Throws(new FileNotFoundException("gone"));
+        storage.Setup(expression: s => s.Size(It.IsAny<string>())).Throws(exception: new FileNotFoundException(message: "gone"));
         (
             DynamicStaticFilesMiddleware middleware,
             Mock<IStorageFactory> storageFactory,
             MediaActivityMonitor activityMonitor,
             _
-        ) = CreateMiddleware(storage.Object);
-        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/movie.mp4");
+        ) = CreateMiddleware(storage: storage.Object);
+        DefaultHttpContext context = CreateContext(path: $"/{folder.FolderId}/movie.mp4");
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
-        context.Response.StatusCode.Should().Be((int)HttpStatusCode.NotFound);
+        context.Response.StatusCode.Should().Be(expected: (int)HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -636,18 +636,18 @@ public sealed class DynamicStaticFilesMiddlewareTests
     {
         using RegisteredFolder folder = new();
         Mock<IStorage> storage = CreateStorage();
-        storage.Setup(s => s.Size(It.IsAny<string>())).Throws(new IOException("nfs hiccup"));
+        storage.Setup(expression: s => s.Size(It.IsAny<string>())).Throws(exception: new IOException(message: "nfs hiccup"));
         (
             DynamicStaticFilesMiddleware middleware,
             Mock<IStorageFactory> storageFactory,
             MediaActivityMonitor activityMonitor,
             _
-        ) = CreateMiddleware(storage.Object);
-        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/movie.mp4");
+        ) = CreateMiddleware(storage: storage.Object);
+        DefaultHttpContext context = CreateContext(path: $"/{folder.FolderId}/movie.mp4");
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
-        context.Response.StatusCode.Should().Be((int)HttpStatusCode.BadGateway);
+        context.Response.StatusCode.Should().Be(expected: (int)HttpStatusCode.BadGateway);
     }
 
     [Fact]
@@ -656,24 +656,24 @@ public sealed class DynamicStaticFilesMiddlewareTests
         using RegisteredFolder folder = new();
         Mock<IStorage> storage = CreateStorage();
         storage
-            .Setup(s => s.Size(It.IsAny<string>()))
-            .Throws(new OperationCanceledException("client gone"));
+            .Setup(expression: s => s.Size(It.IsAny<string>()))
+            .Throws(exception: new OperationCanceledException(message: "client gone"));
         (
             DynamicStaticFilesMiddleware middleware,
             Mock<IStorageFactory> storageFactory,
             MediaActivityMonitor activityMonitor,
             _
-        ) = CreateMiddleware(storage.Object);
-        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/movie.mp4");
+        ) = CreateMiddleware(storage: storage.Object);
+        DefaultHttpContext context = CreateContext(path: $"/{folder.FolderId}/movie.mp4");
         CancellationTokenSource cts = new();
         cts.Cancel();
         context.RequestAborted = cts.Token;
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
         // No status was ever set for an aborted client — the default success
         // code stands because there is no client left to send anything to.
-        context.Response.StatusCode.Should().Be(200);
+        context.Response.StatusCode.Should().Be(expected: 200);
     }
 
     [Fact]
@@ -687,20 +687,20 @@ public sealed class DynamicStaticFilesMiddlewareTests
         using RegisteredFolder folder = new();
         Mock<IStorage> storage = CreateStorage();
         storage
-            .Setup(s => s.Size(It.IsAny<string>()))
-            .Throws(new OperationCanceledException("unrelated timeout"));
+            .Setup(expression: s => s.Size(It.IsAny<string>()))
+            .Throws(exception: new OperationCanceledException(message: "unrelated timeout"));
         (
             DynamicStaticFilesMiddleware middleware,
             Mock<IStorageFactory> storageFactory,
             MediaActivityMonitor activityMonitor,
             _
-        ) = CreateMiddleware(storage.Object);
-        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/movie.mp4");
+        ) = CreateMiddleware(storage: storage.Object);
+        DefaultHttpContext context = CreateContext(path: $"/{folder.FolderId}/movie.mp4");
         context.RequestAborted = CancellationToken.None;
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
-        context.Response.StatusCode.Should().Be((int)HttpStatusCode.BadGateway);
+        context.Response.StatusCode.Should().Be(expected: (int)HttpStatusCode.BadGateway);
     }
 
     [Fact]
@@ -709,32 +709,32 @@ public sealed class DynamicStaticFilesMiddlewareTests
         using RegisteredFolder folder = new();
         Mock<IStorage> storage = CreateStorage();
         storage
-            .Setup(s => s.Size(It.IsAny<string>()))
-            .Throws(new InvalidOperationException("boom"));
+            .Setup(expression: s => s.Size(It.IsAny<string>()))
+            .Throws(exception: new InvalidOperationException(message: "boom"));
         (
             DynamicStaticFilesMiddleware middleware,
             Mock<IStorageFactory> storageFactory,
             MediaActivityMonitor activityMonitor,
             _
-        ) = CreateMiddleware(storage.Object);
-        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/movie.mp4");
+        ) = CreateMiddleware(storage: storage.Object);
+        DefaultHttpContext context = CreateContext(path: $"/{folder.FolderId}/movie.mp4");
 
-        await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+        await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
-        context.Response.StatusCode.Should().Be((int)HttpStatusCode.BadGateway);
+        context.Response.StatusCode.Should().Be(expected: (int)HttpStatusCode.BadGateway);
     }
 
     [Fact]
     public void AddFolder_ThenRemoveFolder_ForgetsTheRegistration()
     {
         Ulid folderId = Ulid.NewUlid();
-        DynamicStaticFilesMiddleware.AddFolder(folderId, Ulid.NewUlid(), "sub/path");
+        DynamicStaticFilesMiddleware.AddFolder(folderId: folderId, driverId: Ulid.NewUlid(), subPath: "sub/path");
 
-        DynamicStaticFilesMiddleware.RemoveFolder(folderId);
+        DynamicStaticFilesMiddleware.RemoveFolder(folderId: folderId);
 
         // Re-removing an already-forgotten folder must be a safe no-op (used by
         // the RegisteredFolder test fixture's Dispose across every test above).
-        DynamicStaticFilesMiddleware.RemoveFolder(folderId);
+        DynamicStaticFilesMiddleware.RemoveFolder(folderId: folderId);
     }
 
     [Fact]
@@ -746,7 +746,7 @@ public sealed class DynamicStaticFilesMiddlewareTests
         // null! here pins that the defensive `?? string.Empty` actually runs
         // rather than just being dead decoration.
         Ulid folderId = Ulid.NewUlid();
-        DynamicStaticFilesMiddleware.AddFolder(folderId, Ulid.NewUlid(), null!);
+        DynamicStaticFilesMiddleware.AddFolder(folderId: folderId, driverId: Ulid.NewUlid(), subPath: null!);
         try
         {
             Mock<IStorage> storage = CreateStorage();
@@ -755,16 +755,16 @@ public sealed class DynamicStaticFilesMiddlewareTests
                 Mock<IStorageFactory> storageFactory,
                 MediaActivityMonitor activityMonitor,
                 _
-            ) = CreateMiddleware(storage.Object);
-            DefaultHttpContext context = CreateContext($"/{folderId}/movie.mp4");
+            ) = CreateMiddleware(storage: storage.Object);
+            DefaultHttpContext context = CreateContext(path: $"/{folderId}/movie.mp4");
 
-            await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
+            await middleware.InvokeAsync(context: context, storageFactory: storageFactory.Object, activityMonitor: activityMonitor);
 
-            storageFactory.Verify(f => f.For(folderId, It.IsAny<Ulid>(), string.Empty), Times.Once);
+            storageFactory.Verify(expression: f => f.For(folderId, It.IsAny<Ulid>(), string.Empty), times: Times.Once);
         }
         finally
         {
-            DynamicStaticFilesMiddleware.RemoveFolder(folderId);
+            DynamicStaticFilesMiddleware.RemoveFolder(folderId: folderId);
         }
     }
 }

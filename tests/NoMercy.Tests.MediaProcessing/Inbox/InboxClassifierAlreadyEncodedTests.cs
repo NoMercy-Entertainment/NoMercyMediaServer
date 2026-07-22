@@ -13,7 +13,7 @@ using NoMercy.MediaProcessing.Inbox;
 
 namespace NoMercy.Tests.MediaProcessing.Inbox;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class InboxClassifierAlreadyEncodedTests
 {
     [Fact]
@@ -21,9 +21,9 @@ public class InboxClassifierAlreadyEncodedTests
     {
         string[] siblingNames = ["movie.NoMercy.m3u8", "video_1920x1080_SDR", "audio_eng"];
 
-        bool result = InboxClassifier.IsFinishedHls(siblingNames);
+        bool result = InboxClassifier.IsFinishedHls(siblingNames: siblingNames);
 
-        Assert.True(result);
+        Assert.True(condition: result);
     }
 
     [Fact]
@@ -31,9 +31,9 @@ public class InboxClassifierAlreadyEncodedTests
     {
         string[] siblingNames = ["movie.NoMercy.m3u8"];
 
-        bool result = InboxClassifier.IsFinishedHls(siblingNames);
+        bool result = InboxClassifier.IsFinishedHls(siblingNames: siblingNames);
 
-        Assert.False(result);
+        Assert.False(condition: result);
     }
 
     [Fact]
@@ -41,9 +41,9 @@ public class InboxClassifierAlreadyEncodedTests
     {
         string[] siblingNames = ["video_1920x1080_SDR", "audio_eng"];
 
-        bool result = InboxClassifier.IsFinishedHls(siblingNames);
+        bool result = InboxClassifier.IsFinishedHls(siblingNames: siblingNames);
 
-        Assert.False(result);
+        Assert.False(condition: result);
     }
 
     [Fact]
@@ -51,9 +51,9 @@ public class InboxClassifierAlreadyEncodedTests
     {
         string[] siblingNames = ["movie.mkv"];
 
-        bool result = InboxClassifier.IsFinishedHls(siblingNames);
+        bool result = InboxClassifier.IsFinishedHls(siblingNames: siblingNames);
 
-        Assert.False(result);
+        Assert.False(condition: result);
     }
 
     [Fact]
@@ -61,9 +61,9 @@ public class InboxClassifierAlreadyEncodedTests
     {
         string[] siblingNames = ["movie.mp4", "poster.jpg"];
 
-        bool result = InboxClassifier.IsFinishedHls(siblingNames);
+        bool result = InboxClassifier.IsFinishedHls(siblingNames: siblingNames);
 
-        Assert.False(result);
+        Assert.False(condition: result);
     }
 
     [Fact]
@@ -71,9 +71,9 @@ public class InboxClassifierAlreadyEncodedTests
     {
         string[] siblingNames = ["movie.nomercy.M3U8", "video_1920x1080_SDR"];
 
-        bool result = InboxClassifier.IsFinishedHls(siblingNames);
+        bool result = InboxClassifier.IsFinishedHls(siblingNames: siblingNames);
 
-        Assert.True(result);
+        Assert.True(condition: result);
     }
 
     [Fact]
@@ -81,9 +81,9 @@ public class InboxClassifierAlreadyEncodedTests
     {
         string[] siblingNames = ["movie.NoMercy.m3u8", "subtitles"];
 
-        bool result = InboxClassifier.IsFinishedHls(siblingNames);
+        bool result = InboxClassifier.IsFinishedHls(siblingNames: siblingNames);
 
-        Assert.False(result);
+        Assert.False(condition: result);
     }
 
     [Fact]
@@ -91,9 +91,9 @@ public class InboxClassifierAlreadyEncodedTests
     {
         string[] siblingNames = ["movie.NoMercy.m3u8", "Extras"];
 
-        bool result = InboxClassifier.IsFinishedHls(siblingNames);
+        bool result = InboxClassifier.IsFinishedHls(siblingNames: siblingNames);
 
-        Assert.False(result);
+        Assert.False(condition: result);
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public class InboxClassifierAlreadyEncodedTests
             AlreadyEncoded = true,
         };
 
-        Assert.False(defaulted.AlreadyEncoded);
-        Assert.True(encoded.AlreadyEncoded);
+        Assert.False(condition: defaulted.AlreadyEncoded);
+        Assert.True(condition: encoded.AlreadyEncoded);
     }
 }

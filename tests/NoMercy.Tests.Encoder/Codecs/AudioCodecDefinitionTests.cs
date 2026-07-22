@@ -19,27 +19,27 @@ public class AudioCodecDefinitionTests
     [Fact]
     public void Aac_HasCorrectEncoder()
     {
-        AudioEncoderInfo aac = AudioCodecDefinitions.GetEncoder(AudioCodecType.Aac);
-        aac.FfmpegName.Should().Be("libfdk_aac");
-        aac.Channels.Should().Contain(2);
-        aac.Channels.Should().Contain(6);
+        AudioEncoderInfo aac = AudioCodecDefinitions.GetEncoder(codecType: AudioCodecType.Aac);
+        aac.FfmpegName.Should().Be(expected: "libfdk_aac");
+        aac.Channels.Should().Contain(expected: 2);
+        aac.Channels.Should().Contain(expected: 6);
     }
 
     [Fact]
     public void Flac_IsLossless()
     {
-        AudioEncoderInfo flac = AudioCodecDefinitions.GetEncoder(AudioCodecType.Flac);
-        flac.FfmpegName.Should().Be("flac");
+        AudioEncoderInfo flac = AudioCodecDefinitions.GetEncoder(codecType: AudioCodecType.Flac);
+        flac.FfmpegName.Should().Be(expected: "flac");
         flac.IsLossless.Should().BeTrue();
     }
 
     [Fact]
     public void Opus_HasCorrectBitrateRange()
     {
-        AudioEncoderInfo opus = AudioCodecDefinitions.GetEncoder(AudioCodecType.Opus);
-        opus.FfmpegName.Should().Be("libopus");
-        opus.MinBitrateKbps.Should().Be(6);
-        opus.MaxBitrateKbps.Should().Be(510);
+        AudioEncoderInfo opus = AudioCodecDefinitions.GetEncoder(codecType: AudioCodecType.Opus);
+        opus.FfmpegName.Should().Be(expected: "libopus");
+        opus.MinBitrateKbps.Should().Be(expected: 6);
+        opus.MaxBitrateKbps.Should().Be(expected: 510);
     }
 
     [Fact]
@@ -47,7 +47,7 @@ public class AudioCodecDefinitionTests
     {
         foreach (AudioCodecType codecType in Enum.GetValues<AudioCodecType>())
         {
-            AudioEncoderInfo encoder = AudioCodecDefinitions.GetEncoder(codecType);
+            AudioEncoderInfo encoder = AudioCodecDefinitions.GetEncoder(codecType: codecType);
             encoder.Should().NotBeNull();
             encoder.FfmpegName.Should().NotBeNullOrEmpty();
         }
@@ -66,9 +66,9 @@ public class AudioCodecDefinitionTests
         // be rejected by the validator — ffmpeg's ac3 encoder downmixes
         // silently when given 8 channels and the result is stereo or 5.1
         // depending on source layout, never 7.1.
-        AudioEncoderInfo ac3 = AudioCodecDefinitions.GetEncoder(AudioCodecType.Ac3);
-        ac3.Channels.Should().NotContain(8);
-        ac3.Channels.Should().BeEquivalentTo(new[] { 1, 2, 6 });
+        AudioEncoderInfo ac3 = AudioCodecDefinitions.GetEncoder(codecType: AudioCodecType.Ac3);
+        ac3.Channels.Should().NotContain(unexpected: 8);
+        ac3.Channels.Should().BeEquivalentTo(expectation: new[] { 1, 2, 6 });
     }
 
     [Fact]
@@ -76,8 +76,8 @@ public class AudioCodecDefinitionTests
     {
         // DTS core ("dca" in ffmpeg) is 5.1 max. DTS-HD MA / DTS:X extensions
         // support 7.1 but ffmpeg's dca encoder is core-only.
-        AudioEncoderInfo dts = AudioCodecDefinitions.GetEncoder(AudioCodecType.Dts);
-        dts.Channels.Should().NotContain(8);
+        AudioEncoderInfo dts = AudioCodecDefinitions.GetEncoder(codecType: AudioCodecType.Dts);
+        dts.Channels.Should().NotContain(unexpected: 8);
     }
 
     [Fact]
@@ -85,8 +85,8 @@ public class AudioCodecDefinitionTests
     {
         // E-AC3 is the step up from AC3 specifically to add 7.1 support.
         // DASH/HLS Dolby Digital Plus output relies on this.
-        AudioEncoderInfo eac3 = AudioCodecDefinitions.GetEncoder(AudioCodecType.Eac3);
-        eac3.Channels.Should().Contain(8);
+        AudioEncoderInfo eac3 = AudioCodecDefinitions.GetEncoder(codecType: AudioCodecType.Eac3);
+        eac3.Channels.Should().Contain(expected: 8);
     }
 
     [Fact]
@@ -95,8 +95,8 @@ public class AudioCodecDefinitionTests
         // MP3 cannot carry surround. A profile requesting 5.1/7.1 MP3 is
         // broken on its face — the MP3 container validation layer relies
         // on this assertion.
-        AudioEncoderInfo mp3 = AudioCodecDefinitions.GetEncoder(AudioCodecType.Mp3);
-        mp3.Channels.Should().BeEquivalentTo(new[] { 1, 2 });
+        AudioEncoderInfo mp3 = AudioCodecDefinitions.GetEncoder(codecType: AudioCodecType.Mp3);
+        mp3.Channels.Should().BeEquivalentTo(expectation: new[] { 1, 2 });
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -107,8 +107,8 @@ public class AudioCodecDefinitionTests
     [Fact]
     public void Opus_SampleRate_48kHzOnly()
     {
-        AudioEncoderInfo opus = AudioCodecDefinitions.GetEncoder(AudioCodecType.Opus);
-        opus.SampleRates.Should().BeEquivalentTo(new[] { 48000 });
+        AudioEncoderInfo opus = AudioCodecDefinitions.GetEncoder(codecType: AudioCodecType.Opus);
+        opus.SampleRates.Should().BeEquivalentTo(expectation: new[] { 48000 });
     }
 
     [Fact]
@@ -117,10 +117,10 @@ public class AudioCodecDefinitionTests
         AudioCodecType[] dolbyDts = [AudioCodecType.Ac3, AudioCodecType.Eac3, AudioCodecType.Dts];
         foreach (AudioCodecType codec in dolbyDts)
         {
-            AudioEncoderInfo encoder = AudioCodecDefinitions.GetEncoder(codec);
+            AudioEncoderInfo encoder = AudioCodecDefinitions.GetEncoder(codecType: codec);
             encoder
                 .SampleRates.Should()
-                .BeEquivalentTo(new[] { 48000 }, $"{codec} is 48 kHz only by spec");
+                .BeEquivalentTo(expectation: new[] { 48000 }, because: $"{codec} is 48 kHz only by spec");
         }
     }
 
@@ -129,8 +129,8 @@ public class AudioCodecDefinitionTests
     {
         // FLAC is the archival codec — must keep source sample rates
         // verbatim, up to 192 kHz for high-res audio sources.
-        AudioEncoderInfo flac = AudioCodecDefinitions.GetEncoder(AudioCodecType.Flac);
-        flac.SampleRates.Should().Contain(192000);
+        AudioEncoderInfo flac = AudioCodecDefinitions.GetEncoder(codecType: AudioCodecType.Flac);
+        flac.SampleRates.Should().Contain(expected: 192000);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -145,11 +145,11 @@ public class AudioCodecDefinitionTests
         AudioCodecType[] lossless = [AudioCodecType.Flac, AudioCodecType.TrueHd];
         foreach (AudioCodecType codec in lossless)
         {
-            AudioEncoderInfo encoder = AudioCodecDefinitions.GetEncoder(codec);
+            AudioEncoderInfo encoder = AudioCodecDefinitions.GetEncoder(codecType: codec);
             encoder.IsLossless.Should().BeTrue();
-            encoder.MinBitrateKbps.Should().Be(0);
-            encoder.MaxBitrateKbps.Should().Be(0);
-            encoder.DefaultBitrateKbps.Should().Be(0);
+            encoder.MinBitrateKbps.Should().Be(expected: 0);
+            encoder.MaxBitrateKbps.Should().Be(expected: 0);
+            encoder.DefaultBitrateKbps.Should().Be(expected: 0);
         }
     }
 
@@ -168,13 +168,13 @@ public class AudioCodecDefinitionTests
         ];
         foreach (AudioCodecType codec in lossy)
         {
-            AudioEncoderInfo encoder = AudioCodecDefinitions.GetEncoder(codec);
+            AudioEncoderInfo encoder = AudioCodecDefinitions.GetEncoder(codecType: codec);
             encoder.IsLossless.Should().BeFalse();
-            encoder.MinBitrateKbps.Should().BeGreaterThan(0);
-            encoder.MaxBitrateKbps.Should().BeGreaterThan(encoder.MinBitrateKbps);
+            encoder.MinBitrateKbps.Should().BeGreaterThan(expected: 0);
+            encoder.MaxBitrateKbps.Should().BeGreaterThan(expected: encoder.MinBitrateKbps);
             encoder
                 .DefaultBitrateKbps.Should()
-                .BeInRange(encoder.MinBitrateKbps, encoder.MaxBitrateKbps);
+                .BeInRange(minimumValue: encoder.MinBitrateKbps, maximumValue: encoder.MaxBitrateKbps);
         }
     }
 
@@ -189,8 +189,8 @@ public class AudioCodecDefinitionTests
         // nomercy-ffmpeg builds with --enable-nonfree to enable libfdk_aac —
         // the stock "aac" encoder quality is noticeably worse at matched
         // bitrate. If this ever regresses to "aac" the build is misconfigured.
-        AudioEncoderInfo aac = AudioCodecDefinitions.GetEncoder(AudioCodecType.Aac);
-        aac.FfmpegName.Should().Be("libfdk_aac");
+        AudioEncoderInfo aac = AudioCodecDefinitions.GetEncoder(codecType: AudioCodecType.Aac);
+        aac.FfmpegName.Should().Be(expected: "libfdk_aac");
     }
 
     [Fact]
@@ -198,7 +198,7 @@ public class AudioCodecDefinitionTests
     {
         // ffmpeg encoder is named "dca" (per the DCA Coherent Acoustics spec);
         // the "dts" name is only on the decoder side.
-        AudioEncoderInfo dts = AudioCodecDefinitions.GetEncoder(AudioCodecType.Dts);
-        dts.FfmpegName.Should().Be("dca");
+        AudioEncoderInfo dts = AudioCodecDefinitions.GetEncoder(codecType: AudioCodecType.Dts);
+        dts.FfmpegName.Should().Be(expected: "dca");
     }
 }

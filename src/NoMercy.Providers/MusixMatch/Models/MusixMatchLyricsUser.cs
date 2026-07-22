@@ -15,6 +15,6 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class MusixMatchLyricsUser
 {
-    [JsonProperty("user")]
+    [JsonProperty(propertyName: "user")]
     public MusixMatchUser MusixMatchUser { get; set; } = new();
 }

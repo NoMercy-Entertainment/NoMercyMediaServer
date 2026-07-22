@@ -35,7 +35,7 @@ public static class JobOperationTimeoutExtensions
     /// or a busy NFS mount, short enough that one hang no longer holds an
     /// `extras` worker slot for hours.
     /// </summary>
-    public static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(3);
+    public static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(minutes: 3);
 
     public static async Task WithTimeout(
         this Task operation,
@@ -47,7 +47,7 @@ public static class JobOperationTimeoutExtensions
 
         try
         {
-            await operation.WaitAsync(effectiveTimeout).ConfigureAwait(false);
+            await operation.WaitAsync(timeout: effectiveTimeout).ConfigureAwait(continueOnCapturedContext: false);
         }
         catch (TimeoutException ex)
         {
@@ -59,7 +59,7 @@ public static class JobOperationTimeoutExtensions
             // process-level UnobservedTaskException on the finalizer thread. Observe
             // it here to keep the abandoned failure contained.
             operation.ObserveExceptionWhenFaulted();
-            throw new TimeoutException($"{operationName} timed out after {effectiveTimeout}", ex);
+            throw new TimeoutException(message: $"{operationName} timed out after {effectiveTimeout}", innerException: ex);
         }
     }
 
@@ -71,10 +71,10 @@ public static class JobOperationTimeoutExtensions
     private static void ObserveExceptionWhenFaulted(this Task task)
     {
         _ = task.ContinueWith(
-            static faulted => _ = faulted.Exception,
-            CancellationToken.None,
-            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
-            TaskScheduler.Default
+            continuationFunction: static faulted => _ = faulted.Exception,
+            cancellationToken: CancellationToken.None,
+            continuationOptions: TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+            scheduler: TaskScheduler.Default
         );
     }
 }

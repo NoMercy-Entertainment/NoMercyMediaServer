@@ -22,22 +22,22 @@ public class GpuResidentEligibilityTests
     [Fact]
     public void Eligible_PureDecodeScaleEncode_True()
     {
-        bool eligible = GpuResidentEligibility.IsEligible([Video()], []);
-        eligible.Should().BeTrue("decode→scale→encode keeps frames on the GPU");
+        bool eligible = GpuResidentEligibility.IsEligible(videoOutputs: [Video()], subtitleOutputs: []);
+        eligible.Should().BeTrue(because: "decode→scale→encode keeps frames on the GPU");
     }
 
     [Fact]
     public void Ineligible_HdrTonemap_False()
     {
         VideoOutputPlan hdr = Video() with { ConvertHdrToSdr = true };
-        GpuResidentEligibility.IsEligible([hdr], []).Should().BeFalse("CPU tonemap in the graph");
+        GpuResidentEligibility.IsEligible(videoOutputs: [hdr], subtitleOutputs: []).Should().BeFalse(because: "CPU tonemap in the graph");
     }
 
     [Fact]
     public void Ineligible_Crop_False()
     {
         VideoOutputPlan cropped = Video() with { CropFilter = "1920:800:0:140" };
-        GpuResidentEligibility.IsEligible([cropped], []).Should().BeFalse();
+        GpuResidentEligibility.IsEligible(videoOutputs: [cropped], subtitleOutputs: []).Should().BeFalse();
     }
 
     [Fact]
@@ -51,13 +51,13 @@ public class GpuResidentEligibilityTests
             MapLabel: null,
             Policy: SubtitlePolicy.BurnIn
         );
-        GpuResidentEligibility.IsEligible([Video()], [burnIn]).Should().BeFalse();
+        GpuResidentEligibility.IsEligible(videoOutputs: [Video()], subtitleOutputs: [burnIn]).Should().BeFalse();
     }
 
     [Fact]
     public void Ineligible_NoVideo_False()
     {
-        GpuResidentEligibility.IsEligible([], []).Should().BeFalse();
+        GpuResidentEligibility.IsEligible(videoOutputs: [], subtitleOutputs: []).Should().BeFalse();
     }
 
     private static VideoOutputPlan Video() =>

@@ -43,82 +43,82 @@ public class TesseractModelDownloader(
     // last-known-good disk cache) and its manifest cache — both keyed per apiUrl — so
     // repeated language downloads on this singleton never re-fetch or re-verify the same
     // release manifest.
-    private readonly Binaries _binaries = new(driver, storage, httpClient);
+    private readonly Binaries _binaries = new(driver: driver, storage: storage, httpClient: httpClient);
 
     public async Task<Stream> DownloadVerifiedAsync(string language, CancellationToken ct)
     {
         string assetName = $"{language}.traineddata";
 
         GithubReleaseResponse releaseInfo = await _binaries.GetLatestReleaseInfo(
-            TesseractReleaseApiUrl
+            apiUrl: TesseractReleaseApiUrl
         );
         if (releaseInfo.Assets.Length == 0)
         {
             throw new InvalidOperationException(
-                $"Could not reach the nomercy-tesseract release — no signed model available for '{language}'."
+                message: $"Could not reach the nomercy-tesseract release — no signed model available for '{language}'."
             );
         }
 
         (ReleaseManifest? manifest, bool sigVerified, bool sigPresent) =
-            await _binaries.GetOrFetchManifestAsync(TesseractReleaseApiUrl, releaseInfo);
+            await _binaries.GetOrFetchManifestAsync(apiUrl: TesseractReleaseApiUrl, releaseInfo: releaseInfo);
 
         if (manifest is null)
         {
             throw new InvalidOperationException(
-                $"No signed release manifest is available for nomercy-tesseract — refusing to "
-                    + $"install an unverified model for '{language}'."
+                message: $"No signed release manifest is available for nomercy-tesseract — refusing to "
+                         + $"install an unverified model for '{language}'."
             );
         }
 
         if (!sigPresent || !sigVerified)
         {
             throw new InvalidOperationException(
-                $"nomercy-tesseract release manifest signature could not be verified — refusing "
-                    + $"to install an unverified model for '{language}'."
+                message: $"nomercy-tesseract release manifest signature could not be verified — refusing "
+                         + $"to install an unverified model for '{language}'."
             );
         }
 
-        ManifestAsset? manifestAsset = manifest.Assets.FirstOrDefault(a =>
-            a.Name.Equals(assetName, StringComparison.OrdinalIgnoreCase)
+        ManifestAsset? manifestAsset = manifest.Assets.FirstOrDefault(predicate: a =>
+            a.Name.Equals(value: assetName, comparisonType: StringComparison.OrdinalIgnoreCase)
         );
         if (manifestAsset is null)
         {
             throw new InvalidOperationException(
-                $"No signed manifest entry for '{assetName}' in the nomercy-tesseract release."
+                message: $"No signed manifest entry for '{assetName}' in the nomercy-tesseract release."
             );
         }
 
-        Asset? releaseAsset = releaseInfo.Assets.FirstOrDefault(a =>
-            a.Name.Equals(assetName, StringComparison.OrdinalIgnoreCase)
+        Asset? releaseAsset = releaseInfo.Assets.FirstOrDefault(predicate: a =>
+            a.Name.Equals(value: assetName, comparisonType: StringComparison.OrdinalIgnoreCase)
         );
         if (releaseAsset is null)
         {
             throw new InvalidOperationException(
-                $"No release asset for '{assetName}' in the nomercy-tesseract release."
+                message: $"No release asset for '{assetName}' in the nomercy-tesseract release."
             );
         }
 
         using HttpResponseMessage response = await httpClient.GetAsync(
-            releaseAsset.BrowserDownloadUrl,
-            HttpCompletionOption.ResponseHeadersRead,
-            ct
+            requestUri: releaseAsset.BrowserDownloadUrl,
+            completionOption: HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken: ct
         );
         response.EnsureSuccessStatusCode();
 
-        byte[] payload = await response.Content.ReadAsByteArrayAsync(ct);
-        MemoryStream payloadStream = new(payload);
+        byte[] payload = await response.Content.ReadAsByteArrayAsync(cancellationToken: ct);
+        MemoryStream payloadStream = new(buffer: payload);
 
         bool hashOk = await BinaryVerification.VerifyStreamSha256Async(
-            payloadStream,
-            manifestAsset.Sha256,
-            ct
+            stream: payloadStream,
+            expectedHex: manifestAsset.Sha256,
+            ct: ct
         );
         if (!hashOk)
         {
             await payloadStream.DisposeAsync();
             throw new InvalidDataException(
-                $"SHA-256 mismatch for '{assetName}': the downloaded model does not match the "
-                    + "signed nomercy-tesseract manifest."
+                message: $"SHA-256 mismatch for '{assetName}': the downloaded model does not match the "
+                         + "signed nomercy-tesseract manifest."
             );
         }
 

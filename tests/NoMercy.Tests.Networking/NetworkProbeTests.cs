@@ -26,7 +26,7 @@ namespace NoMercy.Tests.Networking;
 /// static, process-wide mutable state shared with production code, so it is
 /// restored after every test.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class NetworkProbeTests : IDisposable
 {
     private readonly string[] _originalTargets = NetworkProbe.ProbeTargets;
@@ -42,15 +42,15 @@ public sealed class NetworkProbeTests : IDisposable
 
         bool result = await NetworkProbe.CheckConnectivity(timeoutMs: 500);
 
-        Assert.False(result);
+        Assert.False(condition: result);
     }
 
     [Fact]
     public void ProbeTargets_DefaultsIncludeApiCloudflareAndGoogle()
     {
-        Assert.Contains("api.nomercy.tv", _originalTargets);
-        Assert.Contains("1.1.1.1", _originalTargets);
-        Assert.Contains("8.8.8.8", _originalTargets);
+        Assert.Contains(expected: "api.nomercy.tv", collection: _originalTargets);
+        Assert.Contains(expected: "1.1.1.1", collection: _originalTargets);
+        Assert.Contains(expected: "8.8.8.8", collection: _originalTargets);
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public sealed class NetworkProbeTests : IDisposable
     {
         NetworkProbe.ProbeTargets = ["custom.example.com"];
 
-        Assert.Single(NetworkProbe.ProbeTargets);
-        Assert.Equal("custom.example.com", NetworkProbe.ProbeTargets[0]);
+        Assert.Single(collection: NetworkProbe.ProbeTargets);
+        Assert.Equal(expected: "custom.example.com", actual: NetworkProbe.ProbeTargets[0]);
     }
 }

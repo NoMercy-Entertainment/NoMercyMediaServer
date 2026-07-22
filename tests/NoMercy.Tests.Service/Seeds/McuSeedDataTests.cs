@@ -25,13 +25,13 @@ namespace NoMercy.Tests.Service.Seeds;
 /// would seed a broken or incomplete collection with no compiler feedback —
 /// these tests pin the shape SpecialSeed actually depends on.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class McuSeedDataTests
 {
     [Fact]
     public void Special_HasAStableNonEmptyId()
     {
-        McuSeedData.Special.Id.Should().NotBe(Ulid.Empty);
+        McuSeedData.Special.Id.Should().NotBe(unexpected: Ulid.Empty);
     }
 
     [Fact]
@@ -61,15 +61,15 @@ public class McuSeedDataTests
         foreach (SpecialItem item in McuSeedData.McuItems)
         {
             item.Title.Should().NotBeNullOrWhiteSpace();
-            item.Year.Should().BeGreaterThan(1900);
-            knownTypes.Should().Contain(item.Type);
+            item.Year.Should().BeGreaterThan(expected: 1900);
+            knownTypes.Should().Contain(expected: item.Type);
         }
     }
 
     [Fact]
     public void McuItems_IndicesAreUniqueAndSequential()
     {
-        int[] indices = McuSeedData.McuItems.Select(item => item.Index).ToArray();
+        int[] indices = McuSeedData.McuItems.Select(selector: item => item.Index).ToArray();
 
         indices.Should().OnlyHaveUniqueItems();
     }

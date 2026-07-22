@@ -22,91 +22,91 @@ namespace NoMercy.Api.DTOs.Music;
 
 public record ArtistResponseItemDto
 {
-    [JsonProperty("color_palette")]
+    [JsonProperty(propertyName: "color_palette")]
     public JToken? ColorPalette { get; set; }
 
-    [JsonProperty("country")]
+    [JsonProperty(propertyName: "country")]
     public string? Country { get; set; }
 
-    [JsonProperty("backdrop")]
+    [JsonProperty(propertyName: "backdrop")]
     public string? Backdrop { get; set; }
 
-    [JsonProperty("cover")]
+    [JsonProperty(propertyName: "cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty("disambiguation")]
+    [JsonProperty(propertyName: "disambiguation")]
     public string? Disambiguation { get; set; }
 
-    [JsonProperty("description")]
+    [JsonProperty(propertyName: "description")]
     public string? Description { get; set; }
 
-    [JsonProperty("favorite")]
+    [JsonProperty(propertyName: "favorite")]
     public bool Favorite { get; set; }
 
-    [JsonProperty("folder")]
+    [JsonProperty(propertyName: "folder")]
     public string? Folder { get; set; }
 
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public Guid Id { get; set; }
 
-    [JsonProperty("library_id")]
+    [JsonProperty(propertyName: "library_id")]
     public Ulid? LibraryId { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty("year")]
+    [JsonProperty(propertyName: "year")]
     public int? Year { get; set; }
 
-    [JsonProperty("link")]
+    [JsonProperty(propertyName: "link")]
     public Uri Link { get; set; } = null!;
 
-    [JsonProperty("playlists")]
+    [JsonProperty(propertyName: "playlists")]
     public IEnumerable<AlbumDto> Playlists { get; set; } = [];
 
-    [JsonProperty("tracks")]
+    [JsonProperty(propertyName: "tracks")]
     public IEnumerable<ArtistTrackDto> Tracks { get; set; } = [];
 
-    [JsonProperty("favorite_tracks")]
+    [JsonProperty(propertyName: "favorite_tracks")]
     public List<FavoriteTrackDto> FavoriteTracks { get; set; } = [];
 
-    [JsonProperty("images")]
+    [JsonProperty(propertyName: "images")]
     public IEnumerable<ImageDto> Images { get; set; } = [];
 
-    [JsonProperty("genres")]
+    [JsonProperty(propertyName: "genres")]
     public IEnumerable<GenreDto> Genres { get; set; } = [];
 
-    [JsonProperty("albums")]
+    [JsonProperty(propertyName: "albums")]
     public IEnumerable<AlbumDto> Albums { get; set; } = [];
 
-    [JsonProperty("featured")]
+    [JsonProperty(propertyName: "featured")]
     public List<AlbumDto> Featured { get; set; } = [];
 
     public ArtistResponseItemDto(Artist artist, Guid userId, string? country = "US")
     {
         string? description =
             artist
-                .Translations.FirstOrDefault(translation => translation.Iso31661 == country)
+                .Translations.FirstOrDefault(predicate: translation => translation.Iso31661 == country)
                 ?.Description
             ?? artist.Description;
 
         Image? thumb = artist
-            .Images.OrderByDescending(i => i.VoteAverage)
-            .FirstOrDefault(i => i.Type == "thumb");
-        Image? background = artist.Images.FirstOrDefault(image => image.Type == "background");
+            .Images.OrderByDescending(keySelector: i => i.VoteAverage)
+            .FirstOrDefault(predicate: i => i.Type == "thumb");
+        Image? background = artist.Images.FirstOrDefault(predicate: image => image.Type == "background");
 
         Backdrop = background?.FilePath is not null
-            ? new Uri($"/images/music{background.FilePath}", UriKind.Relative).ToString()
+            ? new Uri(uriString: $"/images/music{background.FilePath}", uriKind: UriKind.Relative).ToString()
             : null;
 
         JToken? palette = artist._colorPalette.ToRaw() ?? thumb?._colorPalette.ToRaw();
 
         Cover = artist.Cover ?? thumb?.FilePath;
         Cover = Cover is not null
-            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
+            ? new Uri(uriString: $"/images/music{Cover}", uriKind: UriKind.Relative).ToString()
             : null;
 
         ColorPalette = palette;
@@ -118,48 +118,48 @@ public record ArtistResponseItemDto
         LibraryId = artist.LibraryId;
         Name = artist.Name;
         Type = "artist";
-        Link = new($"/music/artists/{Id}", UriKind.Relative);
+        Link = new(uriString: $"/music/artists/{Id}", uriKind: UriKind.Relative);
 
         Genres = artist
-            .ArtistMusicGenre.Select(artistMusicGenre => new GenreDto(artistMusicGenre))
+            .ArtistMusicGenre.Select(selector: artistMusicGenre => new GenreDto(artistMusicGenre: artistMusicGenre))
             .ToList();
 
-        Images = artist.Images.Select(image => new ImageDto(image)).ToList();
+        Images = artist.Images.Select(selector: image => new ImageDto(media: image)).ToList();
 
         // Materialized: Featured below calls Albums.All(...) per candidate. Left lazy,
         // that re-ran this whole AlbumArtist projection for every featured album, which
         // for an artist with many track-albums was tens of seconds of recomputation.
         Albums = artist
-            .AlbumArtist.Select(album => new AlbumDto(album, country!))
-            .GroupBy(album => album.Id)
-            .Select(album => album.First())
-            .OrderBy(artistTrack => artistTrack.Year)
+            .AlbumArtist.Select(selector: album => new AlbumDto(albumArtist: album, country: country!))
+            .GroupBy(keySelector: album => album.Id)
+            .Select(selector: album => album.First())
+            .OrderBy(keySelector: artistTrack => artistTrack.Year)
             .ToList();
 
         Featured = artist
-            .ArtistTrack.Select(artistTrack => artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album)
-            .Where(album => album != null)
-            .GroupBy(album => album!.Name.RemoveNonAlphaNumericCharacters())
-            .Select(album => album.First()!)
-            .OrderBy(album => album.Year)
-            .Where(album => Albums.All(albumDto => albumDto.Id != album.Id))
-            .Select(album => new AlbumDto(album, country!))
-            .OrderBy(artistTrack => artistTrack.Year)
+            .ArtistTrack.Select(selector: artistTrack => artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album)
+            .Where(predicate: album => album != null)
+            .GroupBy(keySelector: album => album!.Name.RemoveNonAlphaNumericCharacters())
+            .Select(selector: album => album.First()!)
+            .OrderBy(keySelector: album => album.Year)
+            .Where(predicate: album => Albums.All(predicate: albumDto => albumDto.Id != album.Id))
+            .Select(selector: album => new AlbumDto(album: album, country: country!))
+            .OrderBy(keySelector: artistTrack => artistTrack.Year)
             .ToList();
 
         Playlists = artist
-            .AlbumArtist.DistinctBy(albumArtist => albumArtist.AlbumId)
-            .Where(album => album.Album.AlbumUser.Any(user => user.UserId.Equals(userId)))
-            .Select(trackAlbum => new AlbumDto(trackAlbum, country!))
-            .OrderBy(album => album.Year)
+            .AlbumArtist.DistinctBy(keySelector: albumArtist => albumArtist.AlbumId)
+            .Where(predicate: album => album.Album.AlbumUser.Any(predicate: user => user.UserId.Equals(g: userId)))
+            .Select(selector: trackAlbum => new AlbumDto(albumArtist: trackAlbum, country: country!))
+            .OrderBy(keySelector: album => album.Year)
             .ToList();
 
         Tracks = artist
-            .ArtistTrack.Select(artistTrack => new ArtistTrackDto(artistTrack, country!))
-            .DistinctBy(artistTrack => artistTrack.Id)
-            .OrderBy(artistTrack => artistTrack.AlbumName)
-            .ThenBy(artistTrack => artistTrack.Disc)
-            .ThenBy(artistTrack => artistTrack.Track)
+            .ArtistTrack.Select(selector: artistTrack => new ArtistTrackDto(artistTrack: artistTrack, country: country!))
+            .DistinctBy(keySelector: artistTrack => artistTrack.Id)
+            .OrderBy(keySelector: artistTrack => artistTrack.AlbumName)
+            .ThenBy(keySelector: artistTrack => artistTrack.Disc)
+            .ThenBy(keySelector: artistTrack => artistTrack.Track)
             .ToList();
 
         // Use the per-user TrackUser "liked" relation instead of MusicPlays.
@@ -167,8 +167,8 @@ public record ArtistResponseItemDto
         // so no extra fan-out. MusicPlays would re-introduce the Ed Sheeran
         // timeout via O(tracks × plays) explosion.
         FavoriteTracks = artist
-            .ArtistTrack.Where(artistTrack => artistTrack.Track.TrackUser.Count > 0)
-            .Select(artistTrack => new FavoriteTrackDto(artistTrack, country!))
+            .ArtistTrack.Where(predicate: artistTrack => artistTrack.Track.TrackUser.Count > 0)
+            .Select(selector: artistTrack => new FavoriteTrackDto(artistTrack: artistTrack, country: country!))
             .ToList();
     }
 }

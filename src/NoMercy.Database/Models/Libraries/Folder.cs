@@ -19,31 +19,31 @@ using NoMercy.Database.Models.Storage;
 
 namespace NoMercy.Database.Models.Libraries;
 
-[PrimaryKey(nameof(Id))]
-[Index(nameof(DriverId), nameof(Path), IsUnique = true)]
+[PrimaryKey(propertyName: nameof(Id))]
+[Index(propertyName: nameof(DriverId), additionalPropertyNames: nameof(Path), IsUnique = true)]
 public class Folder
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.None)]
-    [JsonProperty("id")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
+    [JsonProperty(propertyName: "id")]
     public Ulid Id { get; set; }
 
-    [JsonProperty("path")]
+    [JsonProperty(propertyName: "path")]
     public string Path
     {
         get;
-        set => field = PathNormalizer.Normalize(value);
+        set => field = PathNormalizer.Normalize(value: value);
     } = string.Empty;
 
-    [JsonProperty("driver_id")]
+    [JsonProperty(propertyName: "driver_id")]
     public Ulid DriverId { get; set; }
 
-    [JsonProperty("driver")]
+    [JsonProperty(propertyName: "driver")]
     public Driver? Driver { get; set; }
 
-    [JsonProperty("encoding_preset_folders")]
-    [InverseProperty(nameof(EncodingPresetFolder.Folder))]
+    [JsonProperty(propertyName: "encoding_preset_folders")]
+    [InverseProperty(property: nameof(EncodingPresetFolder.Folder))]
     public ICollection<EncodingPresetFolder> EncodingPresetFolders { get; set; } = [];
 
-    [JsonProperty("folder_libraries")]
+    [JsonProperty(propertyName: "folder_libraries")]
     public ICollection<FolderLibrary> FolderLibraries { get; set; } = [];
 }

@@ -47,17 +47,17 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
     public async Task StoreVideoFile(VideoFile videoFile)
     {
-        VideoFile? existing = await context.VideoFiles.FirstOrDefaultAsync(v =>
+        VideoFile? existing = await context.VideoFiles.FirstOrDefaultAsync(predicate: v =>
             v.Filename == videoFile.Filename && v.HostFolder == videoFile.HostFolder
         );
 
         if (existing is null)
         {
-            context.VideoFiles.Add(videoFile);
+            context.VideoFiles.Add(entity: videoFile);
             await context.SaveChangesAsync();
             Logger.App(
-                $"[StoreVideoFile] inserted {videoFile.Filename}",
-                LogEventLevel.Information
+                message: $"[StoreVideoFile] inserted {videoFile.Filename}",
+                level: LogEventLevel.Information
             );
             return;
         }
@@ -78,22 +78,22 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         existing.MetadataId = videoFile.MetadataId;
 
         await context.SaveChangesAsync();
-        Logger.App($"[StoreVideoFile] updated {videoFile.Filename}", LogEventLevel.Information);
+        Logger.App(message: $"[StoreVideoFile] updated {videoFile.Filename}", level: LogEventLevel.Information);
     }
 
     public async Task<Ulid> StoreMetadata(Metadata metadata)
     {
-        Metadata? existing = await context.Metadata.FirstOrDefaultAsync(m =>
+        Metadata? existing = await context.Metadata.FirstOrDefaultAsync(predicate: m =>
             m.Filename == metadata.Filename && m.HostFolder == metadata.HostFolder
         );
 
         if (existing is null)
         {
-            context.Metadata.Add(metadata);
+            context.Metadata.Add(entity: metadata);
             await context.SaveChangesAsync();
             Logger.App(
-                $"[StoreMetadata] inserted {metadata.Filename} (id={metadata.Id})",
-                LogEventLevel.Information
+                message: $"[StoreMetadata] inserted {metadata.Filename} (id={metadata.Id})",
+                level: LogEventLevel.Information
             );
             return metadata.Id;
         }
@@ -116,8 +116,8 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
         await context.SaveChangesAsync();
         Logger.App(
-            $"[StoreMetadata] updated {metadata.Filename} (id={existing.Id})",
-            LogEventLevel.Information
+            message: $"[StoreMetadata] updated {metadata.Filename} (id={existing.Id})",
+            level: LogEventLevel.Information
         );
         return existing.Id;
     }
@@ -128,9 +128,9 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             return null;
 
         return await context
-            .Episodes.Where(e => e.TvId == showId)
-            .Where(e => e.SeasonNumber == item.Parsed!.Season)
-            .Where(e => e.EpisodeNumber == item.Parsed!.Episode)
+            .Episodes.Where(predicate: e => e.TvId == showId)
+            .Where(predicate: e => e.SeasonNumber == item.Parsed!.Season)
+            .Where(predicate: e => e.EpisodeNumber == item.Parsed!.Episode)
             .FirstOrDefaultAsync();
     }
 
@@ -145,24 +145,24 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             case MediaTypes.MovieMediaType:
                 movie = await context
                     .Movies.IgnoreQueryFilters()
-                    .Where(m => m.Id == id)
+                    .Where(predicate: m => m.Id == id)
                     .FirstOrDefaultAsync();
                 type = library.Type;
                 break;
             case MediaTypes.TvMediaType:
             case MediaTypes.AnimeMediaType:
-                show = await context.Tvs.Where(t => t.Id == id).FirstOrDefaultAsync();
+                show = await context.Tvs.Where(predicate: t => t.Id == id).FirstOrDefaultAsync();
 
                 if (show == null)
                 {
                     Episode? episode = await context
-                        .Episodes.Where(e => e.Id == id)
+                        .Episodes.Where(predicate: e => e.Id == id)
                         .FirstOrDefaultAsync();
 
                     if (episode != null)
                     {
                         show = await context
-                            .Tvs.Where(t => t.Id == episode.TvId)
+                            .Tvs.Where(predicate: t => t.Id == episode.TvId)
                             .FirstOrDefaultAsync();
                     }
                 }
@@ -192,17 +192,17 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
     {
         PrevSearchQueries.Clear();
 
-        MediaScan mediaScan = new(storageDriver);
+        MediaScan mediaScan = new(driver: storageDriver);
         ConcurrentBag<MediaFolderExtend> mediaFolders = await mediaScan
             .EnableFileListing()
-            .FilterByMediaType("music")
-            .Process(folder, 2);
+            .FilterByMediaType(mediaType: "music")
+            .Process(rootFolder: folder, depth: 2);
 
         if (mediaFolders.Count == 0)
             return [];
 
         ConcurrentBag<MediaFile> mediaFiles = mediaFolders
-            .SelectMany(m => m.Files ?? [])
+            .SelectMany(selector: m => m.Files ?? [])
             .ToConcurrentBag();
 
         using MusicBrainzReleaseClient musicBrainzReleaseClient = new();
@@ -211,15 +211,15 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
         (List<MusicBrainzReleaseAppends> releases, string year) =
             await SearchForReleasesFromMediaFiles(
-                mediaFiles,
-                musicBrainzReleaseClient,
-                lookupReleaseIds,
-                musicBrainzRecordingClient,
-                audioFingerprinter
+                mediaFiles: mediaFiles,
+                musicBrainzReleaseClient: musicBrainzReleaseClient,
+                lookupReleaseIds: lookupReleaseIds,
+                musicBrainzRecordingClient: musicBrainzRecordingClient,
+                audioFingerprinter: audioFingerprinter
             );
 
-        releases = await FetchReleaseAppends(lookupReleaseIds, musicBrainzReleaseClient, releases);
-        List<FileItem> files = await GenerateResponse(folder, releases, mediaFiles, year);
+        releases = await FetchReleaseAppends(lookupReleaseIds: lookupReleaseIds, musicBrainzReleaseClient: musicBrainzReleaseClient, releases: releases);
+        List<FileItem> files = await GenerateResponse(folder: folder, releases: releases, mediaFiles: mediaFiles, year: year);
         return files;
     }
 
@@ -240,39 +240,39 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         object lockObject = new();
 
         await Parallel.ForEachAsync(
-            mediaFiles,
-            SystemParallelism.Options,
-            async (mediaFile, _) =>
+            source: mediaFiles,
+            parallelOptions: SystemParallelism.Options,
+            body: async (mediaFile, _) =>
             {
-                AudioTagModel audioTagModel = await AudioTagModel.Create(mediaFile);
+                AudioTagModel audioTagModel = await AudioTagModel.Create(fileItem: mediaFile);
 
                 if (audioTagModel.Tags == null)
                     return;
-                if (!string.IsNullOrEmpty(audioTagModel.Tags.MusicBrainzReleaseId))
+                if (!string.IsNullOrEmpty(value: audioTagModel.Tags.MusicBrainzReleaseId))
                 {
                     (prevMusicBrainzReleaseId, year) = await FromMusicBrainzRelease(
-                        musicBrainzReleaseClient,
-                        audioTagModel,
-                        lockObject,
-                        releases,
-                        prevMusicBrainzReleaseId,
-                        year
+                        musicBrainzReleaseClient: musicBrainzReleaseClient,
+                        audioTagModel: audioTagModel,
+                        lockObject: lockObject,
+                        releases: releases,
+                        prevMusicBrainzReleaseId: prevMusicBrainzReleaseId,
+                        year: year
                     );
                 }
                 else
                 {
                     prevMusicBrainzReleaseId =
                         await FromFingerprint(
-                            musicBrainzReleaseClient,
-                            mediaFile,
-                            lockObject,
-                            releases,
-                            audioFingerprinter
+                            musicBrainzReleaseClient: musicBrainzReleaseClient,
+                            mediaFile: mediaFile,
+                            lockObject: lockObject,
+                            releases: releases,
+                            audioFingerprinter: audioFingerprinter
                         ) ?? prevMusicBrainzReleaseId;
                 }
             }
         );
-        releases = releases.Where(x => x.Id != Guid.Empty).DistinctBy(x => x.Id).ToList();
+        releases = releases.Where(predicate: x => x.Id != Guid.Empty).DistinctBy(keySelector: x => x.Id).ToList();
         return (releases, year);
     }
 
@@ -285,8 +285,8 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
     )
     {
         string prevMusicBrainzReleaseId;
-        AcoustIdFingerprintClient acoustIdFingerprintClient = new(audioFingerprinter);
-        AcoustIdFingerprint? acoustIds = await acoustIdFingerprintClient.Lookup(mediaFile.Path);
+        AcoustIdFingerprintClient acoustIdFingerprintClient = new(fingerprinter: audioFingerprinter);
+        AcoustIdFingerprint? acoustIds = await acoustIdFingerprintClient.Lookup(file: mediaFile.Path);
         if (acoustIds == null)
             return null;
         foreach (AcoustIdFingerprintResult fingerPrint in acoustIds?.Results ?? [])
@@ -301,7 +301,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
                 {
                     MusicBrainzReleaseAppends? release =
                         await musicBrainzReleaseClient.WithAllAppends(
-                            acoustIdFingerprintReleaseGroups.Id
+                            id: acoustIdFingerprintReleaseGroups.Id
                         );
 
                     if (release == null || release.Id == Guid.Empty)
@@ -309,7 +309,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
                     prevMusicBrainzReleaseId = release.Id.ToString();
                     lock (lockObject)
                     {
-                        releases.Add(release);
+                        releases.Add(item: release);
                     }
                 }
             }
@@ -338,12 +338,12 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         }
 
         Guid musicBrainzReleaseId = Guid.Parse(
-            (audioTagModel.Tags?.MusicBrainzReleaseId).OrEmpty()
+            input: (audioTagModel.Tags?.MusicBrainzReleaseId).OrEmpty()
         );
         if (musicBrainzReleaseId == Guid.Empty)
             return (prevMusicBrainzReleaseId, year);
         MusicBrainzReleaseAppends? release = await musicBrainzReleaseClient.WithAllAppends(
-            musicBrainzReleaseId
+            id: musicBrainzReleaseId
         );
 
         if (release == null || release.Id == Guid.Empty)
@@ -351,7 +351,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         prevMusicBrainzReleaseId = release.Id.ToString();
         lock (lockObject)
         {
-            releases.Add(release);
+            releases.Add(item: release);
         }
 
         return (prevMusicBrainzReleaseId, year);
@@ -369,27 +369,27 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
 
         List<FileItem> files = [];
 
-        MusicBrainzReleaseAppends? bestResult = await GetBestMatchedRelease(mediaFiles, releases);
+        MusicBrainzReleaseAppends? bestResult = await GetBestMatchedRelease(mediaFiles: mediaFiles, matchedReleases: releases);
         if (bestResult != null)
         {
             Logger.MusicBrainz(
-                $"Best match: {bestResult.Title} - {bestResult.Id}",
-                LogEventLevel.Verbose
+                message: $"Best match: {bestResult.Title} - {bestResult.Id}",
+                level: LogEventLevel.Verbose
             );
 
             Uri? coverPaletteUrl = await CoverArtImageManagerManager.GetCoverUrl(
-                bestResult.Id,
-                true
+                id: bestResult.Id,
+                priority: true
             );
 
             files.Add(
-                new()
+                item: new()
                 {
-                    Size = mediaFiles.Sum(x => x.Size),
+                    Size = mediaFiles.Sum(selector: x => x.Size),
                     Mode = 0,
                     Name = bestResult.Title,
                     Parent = folder,
-                    Parsed = new(folder)
+                    Parsed = new(filePath: folder)
                     {
                         Title = bestResult.Title,
                         Year = bestResult.DateTime?.Year.ToString() ?? year,
@@ -403,7 +403,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
                         Still = coverPaletteUrl?.ToString(),
                     },
                     Path = folder,
-                    Tracks = bestResult.Media.Sum(m => m.TrackCount),
+                    Tracks = bestResult.Media.Sum(selector: m => m.TrackCount),
                     Streams = new()
                     {
                         Audio =
@@ -412,7 +412,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
                             {
                                 Index = 0,
                                 Language =
-                                    $"Best Match {string.Join(", ", bestResult.Media.Select<MusicBrainzMedia, string>(m => m.Format))}",
+                                    $"Best Match {string.Join(separator: ", ", values: bestResult.Media.Select<MusicBrainzMedia, string>(selector: m => m.Format))}",
                             },
                         ],
                     },
@@ -421,26 +421,26 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         }
 
         await Parallel.ForEachAsync(
-            releases,
-            SystemParallelism.Options,
-            async (release, _) =>
+            source: releases,
+            parallelOptions: SystemParallelism.Options,
+            body: async (release, _) =>
             {
-                if (files.Any(x => x.Match.Id == release.Id))
+                if (files.Any(predicate: x => x.Match.Id == release.Id))
                     return;
 
                 Uri? coverPaletteUrl = await CoverArtImageManagerManager.GetCoverUrl(
-                    release.Id,
-                    true
+                    id: release.Id,
+                    priority: true
                 );
 
                 files.Add(
-                    new()
+                    item: new()
                     {
-                        Size = mediaFiles.Sum(x => x.Size),
+                        Size = mediaFiles.Sum(selector: x => x.Size),
                         Mode = 0,
                         Name = release.Title,
                         Parent = folder,
-                        Parsed = new(folder)
+                        Parsed = new(filePath: folder)
                         {
                             Title = release.Title,
                             Year = release.DateTime?.Year.ToString() ?? year,
@@ -454,7 +454,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
                             Still = coverPaletteUrl?.ToString(),
                         },
                         Path = folder,
-                        Tracks = release.Media.Sum(m => m.TrackCount),
+                        Tracks = release.Media.Sum(selector: m => m.TrackCount),
                         Streams = new()
                         {
                             Audio =
@@ -463,7 +463,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
                                 {
                                     Index = 0,
                                     Language =
-                                        $"Formats: {string.Join(", ", release.Media.Select(m => m.Format))}",
+                                        $"Formats: {string.Join(separator: ", ", values: release.Media.Select(selector: m => m.Format))}",
                                 },
                             ],
                         },
@@ -482,24 +482,24 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
     )
     {
         object lockObject = new();
-        lookupReleaseIds = lookupReleaseIds.DistinctBy(x => x).ToList();
+        lookupReleaseIds = lookupReleaseIds.DistinctBy(keySelector: x => x).ToList();
         await Parallel.ForEachAsync(
-            lookupReleaseIds,
-            SystemParallelism.Options,
-            async (releaseId, _) =>
+            source: lookupReleaseIds,
+            parallelOptions: SystemParallelism.Options,
+            body: async (releaseId, _) =>
             {
                 MusicBrainzReleaseAppends? musicBrainzRelease =
-                    await musicBrainzReleaseClient.WithAllAppends(releaseId, true);
-                if (musicBrainzRelease == null || releases.Any(r => r.Id == musicBrainzRelease.Id))
+                    await musicBrainzReleaseClient.WithAllAppends(id: releaseId, priority: true);
+                if (musicBrainzRelease == null || releases.Any(predicate: r => r.Id == musicBrainzRelease.Id))
                     return;
                 lock (lockObject)
                 {
-                    releases.Add(musicBrainzRelease);
+                    releases.Add(item: musicBrainzRelease);
                 }
             }
         );
 
-        return releases.Where(x => x.Id != Guid.Empty).DistinctBy(x => x.Id).ToList();
+        return releases.Where(predicate: x => x.Id != Guid.Empty).DistinctBy(keySelector: x => x.Id).ToList();
     }
 
     private static async Task<MusicBrainzReleaseAppends?> GetBestMatchedRelease(
@@ -512,11 +512,11 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         object lockObject = new();
 
         await Parallel.ForEachAsync(
-            matchedReleases,
-            SystemParallelism.Options,
-            async (release, cancellationToken) =>
+            source: matchedReleases,
+            parallelOptions: SystemParallelism.Options,
+            body: async (release, cancellationToken) =>
             {
-                int score = await CalculateMatchScoreAsync(release, mediaFiles);
+                int score = await CalculateMatchScoreAsync(release: release, localFiles: mediaFiles);
                 lock (lockObject)
                 {
                     if (score < highestScore)
@@ -542,41 +542,41 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             return 0;
 
         await Parallel.ForEachAsync(
-            release.Media,
-            SystemParallelism.Options,
-            async (media, cancellationToken) =>
+            source: release.Media,
+            parallelOptions: SystemParallelism.Options,
+            body: async (media, cancellationToken) =>
             {
                 if (media.Tracks.Length == 0 || media.TrackCount == 0)
                     return;
 
                 await Parallel.ForEachAsync(
-                    localFiles,
-                    SystemParallelism.Options,
-                    async (file, ct) =>
+                    source: localFiles,
+                    parallelOptions: SystemParallelism.Options,
+                    body: async (file, ct) =>
                     {
                         try
                         {
-                            file.TagFile ??= TagFile.Create(file.Path);
-                            file.FFprobe ??= await FfProbe.CreateAsync(file.Path, ct);
+                            file.TagFile ??= TagFile.Create(path: file.Path);
+                            file.FFprobe ??= await FfProbe.CreateAsync(file: file.Path, ct: ct);
 
-                            int trackIndex = localFiles.ToList().IndexOf(file);
-                            bool isMatch = media.Tracks.Any(track =>
+                            int trackIndex = localFiles.ToList().IndexOf(item: file);
+                            bool isMatch = media.Tracks.Any(predicate: track =>
                             {
-                                bool nameMatch = CompareTrackName(file, track);
-                                bool numberMatch = CompareTrackNumber(file, track, trackIndex);
-                                bool durationMatch = CompareTrackDuration(file, track);
+                                bool nameMatch = CompareTrackName(mediaFile: file, track: track);
+                                bool numberMatch = CompareTrackNumber(mediaFile: file, track: track, trackIndex: trackIndex);
+                                bool durationMatch = CompareTrackDuration(mediaFile: file, track: track);
                                 return nameMatch && numberMatch && durationMatch;
                             });
 
                             if (!isMatch)
                                 return;
-                            Interlocked.Increment(ref score);
+                            Interlocked.Increment(location: ref score);
                         }
                         catch (Exception ex)
                         {
                             Logger.MusicBrainz(
-                                $"Error processing file {file.Path}: {ex.Message}",
-                                LogEventLevel.Verbose
+                                message: $"Error processing file {file.Path}: {ex.Message}",
+                                level: LogEventLevel.Verbose
                             );
                         }
                     }
@@ -596,8 +596,8 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         if (duration == 0 && fileDuration == 0 && tagDuration == 0)
             return false;
 
-        return Math.Abs(duration - fileDuration).ToInt() < 3
-            || Math.Abs(duration - tagDuration).ToInt() < 3;
+        return Math.Abs(value: duration - fileDuration).ToInt() < 3
+            || Math.Abs(value: duration - tagDuration).ToInt() < 3;
     }
 
     private static bool CompareTrackNumber(
@@ -613,39 +613,39 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         if (trackNumber == 0 && fileTrackNumber == 0 && tagTrackNumber == 0)
             return false;
 
-        return Math.Abs(trackNumber - fileTrackNumber) == 0
-            || Math.Abs(trackNumber - trackIndex) == 0
-            || (int)Math.Abs(trackNumber - tagTrackNumber) == 0;
+        return Math.Abs(value: trackNumber - fileTrackNumber) == 0
+            || Math.Abs(value: trackNumber - trackIndex) == 0
+            || (int)Math.Abs(value: trackNumber - tagTrackNumber) == 0;
     }
 
     private static bool CompareTrackName(MediaFile mediaFile, MusicBrainzTrack track)
     {
         string trackTitle = track.Title;
         string tagTitle =
-            mediaFile.TagFile?.Tag?.Title ?? Path.GetFileNameWithoutExtension(mediaFile.Name);
+            mediaFile.TagFile?.Tag?.Title ?? Path.GetFileNameWithoutExtension(path: mediaFile.Name);
         string fileTitle =
-            mediaFile.Parsed?.Title ?? Path.GetFileNameWithoutExtension(mediaFile.Name);
+            mediaFile.Parsed?.Title ?? Path.GetFileNameWithoutExtension(path: mediaFile.Name);
 
         if (
-            string.IsNullOrEmpty(trackTitle)
-            && string.IsNullOrEmpty(fileTitle)
-            && string.IsNullOrEmpty(tagTitle)
+            string.IsNullOrEmpty(value: trackTitle)
+            && string.IsNullOrEmpty(value: fileTitle)
+            && string.IsNullOrEmpty(value: tagTitle)
         )
             return false;
 
-        return fileTitle.ContainsSanitized(trackTitle) || tagTitle.ContainsSanitized(trackTitle);
+        return fileTitle.ContainsSanitized(value: trackTitle) || tagTitle.ContainsSanitized(value: trackTitle);
     }
 
     public async Task<int> DeleteVideoFilesByHostFolderAsync(string hostFolder)
     {
         return await context
-            .VideoFiles.Where(vf => vf.HostFolder == hostFolder)
+            .VideoFiles.Where(predicate: vf => vf.HostFolder == hostFolder)
             .ExecuteDeleteAsync();
     }
 
     public async Task<int> DeleteMetadataByHostFolderAsync(string hostFolder)
     {
-        return await context.Metadata.Where(m => m.HostFolder == hostFolder).ExecuteDeleteAsync();
+        return await context.Metadata.Where(predicate: m => m.HostFolder == hostFolder).ExecuteDeleteAsync();
     }
 
     public async Task<int> UpdateVideoFilePathsAsync(
@@ -655,15 +655,15 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         string newFilename
     )
     {
-        string newFolder = "/" + StoragePathHelpers.GetName(newHostFolder);
+        string newFolder = "/" + StoragePathHelpers.GetName(path: newHostFolder);
 
         return await context
-            .VideoFiles.Where(vf => vf.HostFolder == oldHostFolder && vf.Filename == oldFilename)
-            .ExecuteUpdateAsync(setters =>
+            .VideoFiles.Where(predicate: vf => vf.HostFolder == oldHostFolder && vf.Filename == oldFilename)
+            .ExecuteUpdateAsync(setPropertyCalls: setters =>
                 setters
-                    .SetProperty(vf => vf.HostFolder, newHostFolder)
-                    .SetProperty(vf => vf.Filename, newFilename)
-                    .SetProperty(vf => vf.Folder, newFolder)
+                    .SetProperty(propertyExpression: vf => vf.HostFolder, valueExpression: newHostFolder)
+                    .SetProperty(propertyExpression: vf => vf.Filename, valueExpression: newFilename)
+                    .SetProperty(propertyExpression: vf => vf.Folder, valueExpression: newFolder)
             );
     }
 
@@ -674,51 +674,51 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
     )
     {
         return await context
-            .VideoFiles.Where(vf => vf.Id == videoFileId)
+            .VideoFiles.Where(predicate: vf => vf.Id == videoFileId)
             .ExecuteUpdateAsync(
-                setters => setters.SetProperty(vf => vf.Subtitles, subtitlesJson),
-                ct
+                setPropertyCalls: setters => setters.SetProperty(propertyExpression: vf => vf.Subtitles, valueExpression: subtitlesJson),
+                cancellationToken: ct
             );
     }
 
     public async Task DeleteVideoFilesAndMetadataByMovieIdAsync(int movieId)
     {
         List<Ulid> metadataIds = await context
-            .VideoFiles.Where(vf => vf.MovieId == movieId && vf.MetadataId != null)
-            .Select(vf => vf.MetadataId!.Value)
+            .VideoFiles.Where(predicate: vf => vf.MovieId == movieId && vf.MetadataId != null)
+            .Select(selector: vf => vf.MetadataId!.Value)
             .ToListAsync();
 
-        await context.VideoFiles.Where(vf => vf.MovieId == movieId).ExecuteDeleteAsync();
+        await context.VideoFiles.Where(predicate: vf => vf.MovieId == movieId).ExecuteDeleteAsync();
 
         if (metadataIds.Count > 0)
         {
-            await context.Metadata.Where(m => metadataIds.Contains(m.Id)).ExecuteDeleteAsync();
+            await context.Metadata.Where(predicate: m => metadataIds.Contains(m.Id)).ExecuteDeleteAsync();
         }
     }
 
     public async Task DeleteVideoFilesAndMetadataByTvIdAsync(int tvId)
     {
         List<int> episodeIds = await context
-            .Episodes.Where(e => e.TvId == tvId)
-            .Select(e => e.Id)
+            .Episodes.Where(predicate: e => e.TvId == tvId)
+            .Select(selector: e => e.Id)
             .ToListAsync();
 
         List<Ulid> metadataIds = await context
-            .VideoFiles.Where(vf =>
+            .VideoFiles.Where(predicate: vf =>
                 vf.EpisodeId != null
                 && episodeIds.Contains(vf.EpisodeId.Value)
                 && vf.MetadataId != null
             )
-            .Select(vf => vf.MetadataId!.Value)
+            .Select(selector: vf => vf.MetadataId!.Value)
             .ToListAsync();
 
         await context
-            .VideoFiles.Where(vf => vf.EpisodeId != null && episodeIds.Contains(vf.EpisodeId.Value))
+            .VideoFiles.Where(predicate: vf => vf.EpisodeId != null && episodeIds.Contains(vf.EpisodeId.Value))
             .ExecuteDeleteAsync();
 
         if (metadataIds.Count > 0)
         {
-            await context.Metadata.Where(m => metadataIds.Contains(m.Id)).ExecuteDeleteAsync();
+            await context.Metadata.Where(predicate: m => metadataIds.Contains(m.Id)).ExecuteDeleteAsync();
         }
     }
 
@@ -726,30 +726,30 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
     {
         List<DirectoryTree> array = [];
 
-        if (string.IsNullOrEmpty(folder) || folder == "/")
+        if (string.IsNullOrEmpty(value: folder) || folder == "/")
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
             {
                 DriveInfo[] driveInfo = DriveInfo.GetDrives();
                 return driveInfo
-                    .Where(d => d.IsReady)
-                    .Select(d => new DirectoryTree(d.RootDirectory.ToString(), ""))
-                    .OrderBy(file => file.Path)
+                    .Where(predicate: d => d.IsReady)
+                    .Select(selector: d => new DirectoryTree(parent: d.RootDirectory.ToString(), path: ""))
+                    .OrderBy(keySelector: file => file.Path)
                     .ToList();
             }
 
             folder = "/";
         }
 
-        if (!storageDriver.DirectoryExists(folder))
+        if (!storageDriver.DirectoryExists(path: folder))
             return array;
 
         IEnumerable<string> directories;
         try
         {
             directories = storageDriver
-                .EnumerateFileSystemEntries(folder, "*", SearchOption.TopDirectoryOnly)
-                .Where(e => storageDriver.DirectoryExists(e));
+                .EnumerateFileSystemEntries(directory: folder, searchPattern: "*", option: SearchOption.TopDirectoryOnly)
+                .Where(predicate: e => storageDriver.DirectoryExists(path: e));
         }
         catch (IOException)
         {
@@ -761,8 +761,8 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         }
 
         array = directories
-            .Select(d => new DirectoryTree(folder, d))
-            .OrderBy(file => file.Path)
+            .Select(selector: d => new DirectoryTree(parent: folder, path: d))
+            .OrderBy(keySelector: file => file.Path)
             .ToList();
 
         return array;
@@ -776,13 +776,13 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
     {
         IQueryable<VideoFile> baseQuery = context
             .VideoFiles.AsNoTracking()
-            .Include(file => file.Movie)
-            .Include(file => file.Episode)
-                .ThenInclude(episode => episode!.Tv);
+            .Include(navigationPropertyPath: file => file.Movie)
+            .Include(navigationPropertyPath: file => file.Episode)
+                .ThenInclude(navigationPropertyPath: episode => episode!.Tv);
 
-        IQueryable<VideoFile> filtered = string.IsNullOrEmpty(query)
+        IQueryable<VideoFile> filtered = string.IsNullOrEmpty(value: query)
             ? baseQuery
-            : baseQuery.Where(file =>
+            : baseQuery.Where(predicate: file =>
                 EF.Functions.Like(file.Filename, $"%{query}%")
                 || (file.Movie != null && EF.Functions.Like(file.Movie.Title, $"%{query}%"))
                 || (file.Episode != null && EF.Functions.Like(file.Episode.Title!, $"%{query}%"))
@@ -793,6 +793,6 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
                 )
             );
 
-        return filtered.OrderByDescending(file => file.UpdatedAt).Take(limit).ToListAsync(ct);
+        return filtered.OrderByDescending(keySelector: file => file.UpdatedAt).Take(count: limit).ToListAsync(cancellationToken: ct);
     }
 }

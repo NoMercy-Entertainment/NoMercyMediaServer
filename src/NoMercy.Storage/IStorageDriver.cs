@@ -68,12 +68,12 @@ public interface IStorageDriver
         SearchOption option
     )
     {
-        foreach (string entry in EnumerateFileSystemEntries(directory, searchPattern, option))
+        foreach (string entry in EnumerateFileSystemEntries(directory: directory, searchPattern: searchPattern, option: option))
         {
-            bool isDir = DirectoryExists(entry);
-            long size = isDir ? 0L : GetFileSize(entry);
-            DateTime utc = GetLastWriteTimeUtc(entry);
-            yield return new(entry, isDir, size, utc);
+            bool isDir = DirectoryExists(path: entry);
+            long size = isDir ? 0L : GetFileSize(path: entry);
+            DateTime utc = GetLastWriteTimeUtc(path: entry);
+            yield return new(Path: entry, IsDirectory: isDir, Size: size, LastWriteUtc: utc);
         }
     }
 
@@ -106,7 +106,7 @@ public interface IStorageDriver
     /// that manage shared protocol state (e.g. NFS seqid) override this to
     /// return a stream backed by a dedicated, short-lived connection.
     /// </summary>
-    Stream OpenReadIsolated(string path) => OpenRead(path);
+    Stream OpenReadIsolated(string path) => OpenRead(path: path);
 
     /// <summary>
     /// Materializes <paramref name="path"/> as a real local file path that
@@ -116,24 +116,24 @@ public interface IStorageDriver
     /// </summary>
     async Task<LocalPathLease> AcquireLocalPathAsync(string path, CancellationToken ct)
     {
-        Directory.CreateDirectory(StoragePaths.TempRoot);
+        Directory.CreateDirectory(path: StoragePaths.TempRoot);
         string tmp = Path.Combine(
-            StoragePaths.TempRoot,
-            $"nomercy-probe-{Guid.NewGuid():N}{Path.GetExtension(path)}"
+            path1: StoragePaths.TempRoot,
+            path2: $"nomercy-probe-{Guid.NewGuid():N}{Path.GetExtension(path: path)}"
         );
 
-        await using (Stream src = OpenReadIsolated(path))
-        await using (FileStream dst = new(tmp, FileMode.Create, FileAccess.Write, FileShare.None))
-            await src.CopyToAsync(dst, ct);
+        await using (Stream src = OpenReadIsolated(path: path))
+        await using (FileStream dst = new(path: tmp, mode: FileMode.Create, access: FileAccess.Write, share: FileShare.None))
+            await src.CopyToAsync(destination: dst, cancellationToken: ct);
 
         return new(
-            tmp,
-            () =>
+            path: tmp,
+            onDispose: () =>
             {
                 try
                 {
-                    if (File.Exists(tmp))
-                        File.Delete(tmp);
+                    if (File.Exists(path: tmp))
+                        File.Delete(path: tmp);
                 }
                 catch
                 {
@@ -152,7 +152,7 @@ public interface IStorageDriver
     /// TTL is clamped to [60s, 24h] by the implementing driver.
     /// </summary>
     Task<Uri?> TryGetPresignedUrlAsync(string path, TimeSpan ttl, CancellationToken ct) =>
-        Task.FromResult<Uri?>(null);
+        Task.FromResult<Uri?>(result: null);
 
     /// <summary>
     /// Path separator the driver speaks. Local on Windows is '\\'; remote
@@ -171,12 +171,12 @@ public interface IStorageDriver
     string CombinePath(string parent, string child)
     {
         char sep = DirectorySeparator;
-        if (string.IsNullOrEmpty(child))
+        if (string.IsNullOrEmpty(value: child))
             return parent;
-        if (string.IsNullOrEmpty(parent))
+        if (string.IsNullOrEmpty(value: parent))
             return child;
-        string trimmedParent = parent.TrimEnd('/', '\\');
-        string trimmedChild = child.TrimStart('/', '\\');
+        string trimmedParent = parent.TrimEnd(trimChars: ['/', '\\']);
+        string trimmedChild = child.TrimStart(trimChars: ['/', '\\']);
         return $"{trimmedParent}{sep}{trimmedChild}";
     }
 }

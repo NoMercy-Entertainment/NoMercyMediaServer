@@ -34,7 +34,7 @@ namespace NoMercy.Tests.Setup.Server;
 /// goes through a real <see cref="LocalStorageDriver"/> against the isolated
 /// NOMERCY_APP_PATH temp tree the test harness already provides.
 /// </remarks>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class ApiKeyLoaderTests : IDisposable
 {
     private readonly LocalStorageDriver _driver = new();
@@ -43,16 +43,16 @@ public sealed class ApiKeyLoaderTests : IDisposable
 
     public void Dispose()
     {
-        if (_driver.FileExists(NoMercy.NmSystem.Information.AppFiles.ApiKeysFile))
-            _driver.DeleteFile(NoMercy.NmSystem.Information.AppFiles.ApiKeysFile);
+        if (_driver.FileExists(path: NoMercy.NmSystem.Information.AppFiles.ApiKeysFile))
+            _driver.DeleteFile(path: NoMercy.NmSystem.Information.AppFiles.ApiKeysFile);
     }
 
     private ApiKeyLoader BuildLoader(Func<TimeSpan, CancellationToken, Task>? delay = null) =>
-        new(_authTokenStore, NullLogger<ApiKeyLoader>.Instance, _apiKeyStore, _driver, delay);
+        new(authTokenStore: _authTokenStore, logger: NullLogger<ApiKeyLoader>.Instance, apiKeyStore: _apiKeyStore, storageDriver: _driver, delay: delay);
 
     private static string ApiInfoJson(string tmdbToken = "tmdb-token-1", string? cachedAt = null) =>
         JsonConvert.SerializeObject(
-            new ApiInfoResponse
+            value: new ApiInfoResponse
             {
                 Status = "ok",
                 CachedAt = cachedAt,
@@ -77,7 +77,7 @@ public sealed class ApiKeyLoaderTests : IDisposable
     private static LoopbackHttpServer FastFailingServer()
     {
         LoopbackHttpServer server = new();
-        server.Handler = _ => new(400, "bad request");
+        server.Handler = _ => new(StatusCode: 400, Body: "bad request");
         return server;
     }
 
@@ -85,28 +85,28 @@ public sealed class ApiKeyLoaderTests : IDisposable
     public async Task LoadKeys_NetworkSuccess_AppliesKeysAndWritesCache()
     {
         using LoopbackHttpServer server = new();
-        server.Handler = _ => new(200, ApiInfoJson("fresh-tmdb-token"));
+        server.Handler = _ => new(StatusCode: 200, Body: ApiInfoJson(tmdbToken: "fresh-tmdb-token"));
         using ExternalServicesConfigScope scope = new(apiBaseUrl: server.BaseUrl);
 
         ApiKeyLoader loader = BuildLoader();
         await loader.LoadKeys();
 
-        Assert.True(_apiKeyStore.KeysLoaded);
-        Assert.Equal("fresh-tmdb-token", _apiKeyStore.TmdbToken);
-        Assert.True(_driver.FileExists(NoMercy.NmSystem.Information.AppFiles.ApiKeysFile));
+        Assert.True(condition: _apiKeyStore.KeysLoaded);
+        Assert.Equal(expected: "fresh-tmdb-token", actual: _apiKeyStore.TmdbToken);
+        Assert.True(condition: _driver.FileExists(path: NoMercy.NmSystem.Information.AppFiles.ApiKeysFile));
     }
 
     [Fact]
     public async Task LoadKeys_NetworkResponseEmptyTmdbToken_TreatedAsInvalid_NoCacheAvailable()
     {
         using LoopbackHttpServer server = new();
-        server.Handler = _ => new(200, ApiInfoJson(tmdbToken: string.Empty));
+        server.Handler = _ => new(StatusCode: 200, Body: ApiInfoJson(tmdbToken: string.Empty));
         using ExternalServicesConfigScope scope = new(apiBaseUrl: server.BaseUrl);
 
         ApiKeyLoader loader = BuildLoader();
         await loader.LoadKeys();
 
-        Assert.False(_apiKeyStore.KeysLoaded);
+        Assert.False(condition: _apiKeyStore.KeysLoaded);
     }
 
     [Fact]
@@ -118,13 +118,13 @@ public sealed class ApiKeyLoaderTests : IDisposable
         ApiKeyLoader loader = BuildLoader();
         await loader.LoadKeys();
 
-        Assert.False(_apiKeyStore.KeysLoaded);
+        Assert.False(condition: _apiKeyStore.KeysLoaded);
     }
 
     [Fact]
     public async Task LoadKeys_NetworkUnreachable_RecentCache_AppliesCachedKeys()
     {
-        await SeedCacheFile(ApiInfoJson("cached-token", cachedAt: DateTime.UtcNow.ToString("O")));
+        await SeedCacheFile(content: ApiInfoJson(tmdbToken: "cached-token", cachedAt: DateTime.UtcNow.ToString(format: "O")));
 
         // The background refresh that fires after a cache hit must never block LoadKeys —
         // give it a no-op delay so any retry attempts fail fast against the same
@@ -134,18 +134,18 @@ public sealed class ApiKeyLoaderTests : IDisposable
         ApiKeyLoader loader = BuildLoader(delay: (_, _) => Task.CompletedTask);
 
         using CancellationTokenSource cts = new();
-        await loader.LoadKeys(cts.Token);
+        await loader.LoadKeys(ct: cts.Token);
         cts.Cancel();
 
-        Assert.True(_apiKeyStore.KeysLoaded);
-        Assert.Equal("cached-token", _apiKeyStore.TmdbToken);
+        Assert.True(condition: _apiKeyStore.KeysLoaded);
+        Assert.Equal(expected: "cached-token", actual: _apiKeyStore.TmdbToken);
     }
 
     [Fact]
     public async Task LoadKeys_NetworkUnreachable_StaleCache_StillAppliesCachedKeys()
     {
         await SeedCacheFile(
-            ApiInfoJson("stale-cached-token", cachedAt: DateTime.UtcNow.AddDays(-45).ToString("O"))
+            content: ApiInfoJson(tmdbToken: "stale-cached-token", cachedAt: DateTime.UtcNow.AddDays(value: -45).ToString(format: "O"))
         );
 
         using LoopbackHttpServer server = FastFailingServer();
@@ -153,40 +153,40 @@ public sealed class ApiKeyLoaderTests : IDisposable
         ApiKeyLoader loader = BuildLoader(delay: (_, _) => Task.CompletedTask);
 
         using CancellationTokenSource cts = new();
-        await loader.LoadKeys(cts.Token);
+        await loader.LoadKeys(ct: cts.Token);
         cts.Cancel();
 
         // A cache over 30 days old logs a warning instead of info, but a self-hosted
         // server with no network at all still needs SOMETHING to run providers with —
         // it must be applied, not discarded.
-        Assert.True(_apiKeyStore.KeysLoaded);
-        Assert.Equal("stale-cached-token", _apiKeyStore.TmdbToken);
+        Assert.True(condition: _apiKeyStore.KeysLoaded);
+        Assert.Equal(expected: "stale-cached-token", actual: _apiKeyStore.TmdbToken);
     }
 
     [Fact]
     public async Task LoadKeys_CacheFileEmpty_TreatedAsNoCache()
     {
-        await SeedCacheFile(string.Empty);
+        await SeedCacheFile(content: string.Empty);
 
         using LoopbackHttpServer server = FastFailingServer();
         using ExternalServicesConfigScope scope = new(apiBaseUrl: server.BaseUrl);
         ApiKeyLoader loader = BuildLoader();
         await loader.LoadKeys();
 
-        Assert.False(_apiKeyStore.KeysLoaded);
+        Assert.False(condition: _apiKeyStore.KeysLoaded);
     }
 
     [Fact]
     public async Task LoadKeys_CacheFileMalformedJson_TreatedAsNoCache()
     {
-        await SeedCacheFile("{not-valid-json-at-all");
+        await SeedCacheFile(content: "{not-valid-json-at-all");
 
         using LoopbackHttpServer server = FastFailingServer();
         using ExternalServicesConfigScope scope = new(apiBaseUrl: server.BaseUrl);
         ApiKeyLoader loader = BuildLoader();
         await loader.LoadKeys();
 
-        Assert.False(_apiKeyStore.KeysLoaded);
+        Assert.False(condition: _apiKeyStore.KeysLoaded);
     }
 
     [Fact]
@@ -197,7 +197,7 @@ public sealed class ApiKeyLoaderTests : IDisposable
         // `= new()` default and is therefore NOT null (see the empty-token test below
         // for the requirement that actually applies to a plain `{"status":"ok"}` cache).
         await SeedCacheFile(
-            JsonConvert.SerializeObject(new { status = "ok", data = new { keys = (object?)null } })
+            content: JsonConvert.SerializeObject(value: new { status = "ok", data = new { keys = (object?)null } })
         );
 
         using LoopbackHttpServer server = FastFailingServer();
@@ -205,7 +205,7 @@ public sealed class ApiKeyLoaderTests : IDisposable
         ApiKeyLoader loader = BuildLoader();
         await loader.LoadKeys();
 
-        Assert.False(_apiKeyStore.KeysLoaded);
+        Assert.False(condition: _apiKeyStore.KeysLoaded);
     }
 
     [Fact]
@@ -216,49 +216,49 @@ public sealed class ApiKeyLoaderTests : IDisposable
         // response that already passed this same non-empty check) — must be discarded
         // exactly like the live-fetch path discards an empty-token API response,
         // otherwise KeysLoaded flips true with every provider key blank.
-        await SeedCacheFile(ApiInfoJson(tmdbToken: string.Empty));
+        await SeedCacheFile(content: ApiInfoJson(tmdbToken: string.Empty));
 
         using LoopbackHttpServer server = FastFailingServer();
         using ExternalServicesConfigScope scope = new(apiBaseUrl: server.BaseUrl);
         ApiKeyLoader loader = BuildLoader();
         await loader.LoadKeys();
 
-        Assert.False(_apiKeyStore.KeysLoaded);
+        Assert.False(condition: _apiKeyStore.KeysLoaded);
     }
 
     [Fact]
     public async Task LoadKeys_NoCacheDirectoryYet_DoesNotThrowWhenWritingCache()
     {
         using LoopbackHttpServer server = new();
-        server.Handler = _ => new(200, ApiInfoJson());
+        server.Handler = _ => new(StatusCode: 200, Body: ApiInfoJson());
         using ExternalServicesConfigScope scope = new(apiBaseUrl: server.BaseUrl);
 
-        if (_driver.FileExists(NoMercy.NmSystem.Information.AppFiles.ApiKeysFile))
-            _driver.DeleteFile(NoMercy.NmSystem.Information.AppFiles.ApiKeysFile);
+        if (_driver.FileExists(path: NoMercy.NmSystem.Information.AppFiles.ApiKeysFile))
+            _driver.DeleteFile(path: NoMercy.NmSystem.Information.AppFiles.ApiKeysFile);
 
         ApiKeyLoader loader = BuildLoader();
         await loader.LoadKeys();
 
-        Assert.True(_driver.FileExists(NoMercy.NmSystem.Information.AppFiles.ApiKeysFile));
+        Assert.True(condition: _driver.FileExists(path: NoMercy.NmSystem.Information.AppFiles.ApiKeysFile));
     }
 
     [Fact]
     public async Task LoadKeys_BackgroundRefresh_EventuallyAppliesFreshKeysOnceNetworkReturns()
     {
-        await SeedCacheFile(ApiInfoJson("cached-token", cachedAt: DateTime.UtcNow.ToString("O")));
+        await SeedCacheFile(content: ApiInfoJson(tmdbToken: "cached-token", cachedAt: DateTime.UtcNow.ToString(format: "O")));
 
         int attempt = 0;
         using LoopbackHttpServer server = new();
         server.Handler = _ =>
         {
-            int thisAttempt = Interlocked.Increment(ref attempt);
+            int thisAttempt = Interlocked.Increment(location: ref attempt);
             // Fail the initial foreground fetch AND the first background retry, then
             // succeed — proves the retry loop actually loops, not just fires once.
             // 400 (not 5xx): avoids GenericHttpClient's own internal retry-on-transient
             // policy stacking its 2s/4s/8s backoff on top of this test's own retries.
             return thisAttempt <= 2
-                ? new(400, "still down")
-                : new(200, ApiInfoJson("refreshed-token"));
+                ? new(StatusCode: 400, Body: "still down")
+                : new(StatusCode: 200, Body: ApiInfoJson(tmdbToken: "refreshed-token"));
         };
         using ExternalServicesConfigScope scope = new(apiBaseUrl: server.BaseUrl);
 
@@ -267,36 +267,36 @@ public sealed class ApiKeyLoaderTests : IDisposable
         ApiKeyLoader loader = BuildLoader(delay: (_, _) => Task.CompletedTask);
 
         using CancellationTokenSource cts = new();
-        await loader.LoadKeys(cts.Token);
+        await loader.LoadKeys(ct: cts.Token);
 
-        DateTime deadline = DateTime.UtcNow.AddSeconds(5);
+        DateTime deadline = DateTime.UtcNow.AddSeconds(value: 5);
         while (_apiKeyStore.TmdbToken != "refreshed-token" && DateTime.UtcNow < deadline)
-            await Task.Delay(20);
+            await Task.Delay(millisecondsDelay: 20);
 
         cts.Cancel();
 
-        Assert.Equal("refreshed-token", _apiKeyStore.TmdbToken);
-        Assert.True(attempt >= 3, $"expected at least 3 fetch attempts, saw {attempt}");
+        Assert.Equal(expected: "refreshed-token", actual: _apiKeyStore.TmdbToken);
+        Assert.True(condition: attempt >= 3, userMessage: $"expected at least 3 fetch attempts, saw {attempt}");
     }
 
     [Fact]
     public async Task LoadKeys_BackgroundRefresh_CancelledMidLoop_StopsCleanly()
     {
-        await SeedCacheFile(ApiInfoJson("cached-token", cachedAt: DateTime.UtcNow.ToString("O")));
+        await SeedCacheFile(content: ApiInfoJson(tmdbToken: "cached-token", cachedAt: DateTime.UtcNow.ToString(format: "O")));
 
         using LoopbackHttpServer server = FastFailingServer();
         using ExternalServicesConfigScope scope = new(apiBaseUrl: server.BaseUrl);
 
         // A long real delay so cancellation fires while the loop is awaiting it —
         // exercises the OperationCanceledException break branch specifically.
-        ApiKeyLoader loader = BuildLoader(delay: (_, ct) => Task.Delay(Timeout.Infinite, ct));
+        ApiKeyLoader loader = BuildLoader(delay: (_, ct) => Task.Delay(millisecondsDelay: Timeout.Infinite, cancellationToken: ct));
 
         using CancellationTokenSource cts = new();
-        await loader.LoadKeys(cts.Token);
+        await loader.LoadKeys(ct: cts.Token);
 
-        await Task.Delay(50);
+        await Task.Delay(millisecondsDelay: 50);
         cts.Cancel();
-        await Task.Delay(50);
+        await Task.Delay(millisecondsDelay: 50);
 
         // No assertion beyond "did not throw / did not hang" — this locks the
         // cancellation-during-wait branch inside the background refresh loop.
@@ -305,16 +305,16 @@ public sealed class ApiKeyLoaderTests : IDisposable
     private async Task SeedCacheFile(string content)
     {
         string directory = System.IO.Path.GetDirectoryName(
-            NoMercy.NmSystem.Information.AppFiles.ApiKeysFile
+            path: NoMercy.NmSystem.Information.AppFiles.ApiKeysFile
         )!;
-        if (!_driver.DirectoryExists(directory))
-            System.IO.Directory.CreateDirectory(directory);
+        if (!_driver.DirectoryExists(path: directory))
+            System.IO.Directory.CreateDirectory(path: directory);
 
         await using Stream stream = _driver.OpenWrite(
-            NoMercy.NmSystem.Information.AppFiles.ApiKeysFile,
+            path: NoMercy.NmSystem.Information.AppFiles.ApiKeysFile,
             overwrite: true
         );
-        await using StreamWriter writer = new(stream);
-        await writer.WriteAsync(content);
+        await using StreamWriter writer = new(stream: stream);
+        await writer.WriteAsync(value: content);
     }
 }

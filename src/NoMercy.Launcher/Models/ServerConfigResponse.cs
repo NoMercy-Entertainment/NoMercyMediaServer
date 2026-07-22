@@ -15,39 +15,39 @@ namespace NoMercy.Launcher.Models;
 
 public class ServerConfigResponse
 {
-    [JsonProperty("internal_port")]
+    [JsonProperty(propertyName: "internal_port")]
     public int InternalPort { get; set; }
 
-    [JsonProperty("external_port")]
+    [JsonProperty(propertyName: "external_port")]
     public int ExternalPort { get; set; }
 
-    [JsonProperty("server_name")]
+    [JsonProperty(propertyName: "server_name")]
     public string? ServerName { get; set; }
 
-    [JsonProperty("library_workers")]
+    [JsonProperty(propertyName: "library_workers")]
     public int LibraryWorkers { get; set; }
 
-    [JsonProperty("import_workers")]
+    [JsonProperty(propertyName: "import_workers")]
     public int ImportWorkers { get; set; }
 
-    [JsonProperty("extras_workers")]
+    [JsonProperty(propertyName: "extras_workers")]
     public int ExtrasWorkers { get; set; }
 
-    [JsonProperty("encoder_workers")]
+    [JsonProperty(propertyName: "encoder_workers")]
     public int EncoderWorkers { get; set; }
 
-    [JsonProperty("cron_workers")]
+    [JsonProperty(propertyName: "cron_workers")]
     public int CronWorkers { get; set; }
 
-    [JsonProperty("image_workers")]
+    [JsonProperty(propertyName: "image_workers")]
     public int ImageWorkers { get; set; }
 
-    [JsonProperty("file_workers")]
+    [JsonProperty(propertyName: "file_workers")]
     public int FileWorkers { get; set; }
 
-    [JsonProperty("music_workers")]
+    [JsonProperty(propertyName: "music_workers")]
     public int MusicWorkers { get; set; }
 
-    [JsonProperty("swagger")]
+    [JsonProperty(propertyName: "swagger")]
     public bool Swagger { get; set; }
 }

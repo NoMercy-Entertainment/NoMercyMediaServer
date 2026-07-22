@@ -49,10 +49,10 @@ public static class SubtitleClassifier
     // could list but never render.
     private static readonly HashSet<string> BitmapSidecarExtensions = ["mks", "sup", "idx", "vob"];
 
-    public static bool IsTextBased(string codec) => TextCodecs.Contains(codec.ToLowerInvariant());
+    public static bool IsTextBased(string codec) => TextCodecs.Contains(item: codec.ToLowerInvariant());
 
     public static bool IsBitmapBased(string codec) =>
-        BitmapCodecs.Contains(codec.ToLowerInvariant());
+        BitmapCodecs.Contains(item: codec.ToLowerInvariant());
 
     /// <summary>
     /// True when a sidecar file's extension denotes a bitmap subtitle. The single
@@ -60,7 +60,7 @@ public static class SubtitleClassifier
     /// library scan and the playback track list both classify that way.
     /// </summary>
     public static bool IsBitmapSidecarExtension(string extension) =>
-        BitmapSidecarExtensions.Contains(extension.TrimStart('.').ToLowerInvariant());
+        BitmapSidecarExtensions.Contains(item: extension.TrimStart(trimChar: '.').ToLowerInvariant());
 
     // Title takes priority over disposition flags so signs/songs and SDH
     // tracks land in the right slot even when the muxer mis-flagged them.
@@ -69,7 +69,7 @@ public static class SubtitleClassifier
     // a second un-classified stream in the same language should become "alt".
     public static string ResolveVariant(SubtitleStreamInfo stream)
     {
-        return PreClassify(stream) ?? "full";
+        return PreClassify(stream: stream) ?? "full";
     }
 
     /// <summary>
@@ -86,31 +86,31 @@ public static class SubtitleClassifier
     {
         string[] variants = new string[streams.Count];
         Dictionary<string, List<int>> unclassifiedByLanguage = new(
-            StringComparer.OrdinalIgnoreCase
+            comparer: StringComparer.OrdinalIgnoreCase
         );
 
         for (int i = 0; i < streams.Count; i++)
         {
-            string? preClassified = PreClassify(streams[i]);
+            string? preClassified = PreClassify(stream: streams[index: i]);
             if (preClassified is not null)
             {
                 variants[i] = preClassified;
                 continue;
             }
 
-            string language = streams[i].Language ?? "und";
-            if (!unclassifiedByLanguage.TryGetValue(language, out List<int>? indices))
-                unclassifiedByLanguage[language] = indices = [];
-            indices.Add(i);
+            string language = streams[index: i].Language ?? "und";
+            if (!unclassifiedByLanguage.TryGetValue(key: language, value: out List<int>? indices))
+                unclassifiedByLanguage[key: language] = indices = [];
+            indices.Add(item: i);
         }
 
         foreach (List<int> indices in unclassifiedByLanguage.Values)
         {
             // Prefer the default-flagged stream as "full"; otherwise the
             // first un-classified stream in source order.
-            int fullIndex = indices.FirstOrDefault(i => streams[i].IsDefault, -1);
+            int fullIndex = indices.FirstOrDefault(predicate: i => streams[index: i].IsDefault, defaultValue: -1);
             if (fullIndex < 0)
-                fullIndex = indices[0];
+                fullIndex = indices[index: 0];
 
             foreach (int i in indices)
                 variants[i] = i == fullIndex ? "full" : "alt";
@@ -129,10 +129,10 @@ public static class SubtitleClassifier
     {
         string title = stream.Title?.ToLowerInvariant() ?? "";
 
-        if (title.Contains("s&s") || title.Contains("sign") || title.Contains("song"))
+        if (title.Contains(value: "s&s") || title.Contains(value: "sign") || title.Contains(value: "song"))
             return "sign";
 
-        if (title.Contains("sdh") || title.Contains("hearing"))
+        if (title.Contains(value: "sdh") || title.Contains(value: "hearing"))
             return "sdh";
 
         if (stream.IsForced)

@@ -18,14 +18,14 @@ public class Albums
     private Image[]? _cover = [];
     private Image[]? _cdart = [];
 
-    [JsonProperty("albumcover")]
+    [JsonProperty(propertyName: "albumcover")]
     public Image[] Cover
     {
         get => _cover ?? [];
         set => _cover = value;
     }
 
-    [JsonProperty("cdart")]
+    [JsonProperty(propertyName: "cdart")]
     public Image[] CdArt
     {
         get => _cdart ?? [];

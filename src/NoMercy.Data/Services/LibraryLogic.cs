@@ -42,16 +42,16 @@ public class LibraryLogic(
     {
         Library? library = await mediaContext
             .Libraries.AsNoTracking()
-            .Include(library => library.FolderLibraries)
-                .ThenInclude(folderLibrary => folderLibrary.Folder)
-            .FirstOrDefaultAsync(library => library.Id == Id);
+            .Include(navigationPropertyPath: library => library.FolderLibraries)
+                .ThenInclude(navigationPropertyPath: folderLibrary => folderLibrary.Folder)
+            .FirstOrDefaultAsync(predicate: library => library.Id == Id);
 
         if (library is null)
             return false;
 
         Library = library;
 
-        FolderList.AddRange(Library.FolderLibraries.Select(folderLibrary => folderLibrary.Folder));
+        FolderList.AddRange(collection: Library.FolderLibraries.Select(selector: folderLibrary => folderLibrary.Folder));
 
         GetDepth();
 
@@ -75,28 +75,28 @@ public class LibraryLogic(
             switch (Library?.Type)
             {
                 case "music":
-                    await ScanAudioFolder(folder);
+                    await ScanAudioFolder(folder: folder);
                     break;
             }
 
-        logger.LogInformation("Scanning done");
+        logger.LogInformation(message: "Scanning done");
     }
 
     private async Task ScanAudioFolder(Folder folder)
     {
-        IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
+        IStorage folderStorage = storageFactory.For(folderId: folder.Id, driverId: folder.DriverId, subPath: string.Empty);
         // Resolve through the driver, not the IStorage facade: the facade's
         // GetFullPath is a LocalStorage-only escape hatch that throws on every
         // remote backend, so a facade call here killed every rescan of an
         // NFS / SMB / S3 / WebDAV library. The driver resolves the path within
         // its own backend, exactly as MediaScan.Process does internally.
-        string scanRoot = folderStorage.Driver.GetFullPath(folder.Path);
+        string scanRoot = folderStorage.Driver.GetFullPath(path: folder.Path);
 
-        await using MediaScan mediaScan = new(folderStorage.Driver);
+        await using MediaScan mediaScan = new(driver: folderStorage.Driver);
         IEnumerable<MediaFolderExtend> rootFolders = (
-            await mediaScan.DisableRegexFilter().Process(scanRoot, 2)
+            await mediaScan.DisableRegexFilter().Process(rootFolder: scanRoot, depth: 2)
         )
-            .SelectMany(r => r.SubFolders ?? [])
+            .SelectMany(selector: r => r.SubFolders ?? [])
             .ToList();
 
         foreach (MediaFolderExtend rootFolder in rootFolders)
@@ -104,15 +104,15 @@ public class LibraryLogic(
             if (rootFolder.Path == scanRoot)
                 return;
 
-            Titles.Add(rootFolder.Path);
+            Titles.Add(item: rootFolder.Path);
 
-            logger.LogTrace("Processing {Path}", rootFolder.Path);
+            logger.LogTrace(message: "Processing {Path}", args: rootFolder.Path);
 
-            MusicJob musicJob = new(rootFolder.Path, Library);
-            QueueRunner.Current!.Dispatcher.Dispatch(musicJob);
+            MusicJob musicJob = new(folder: rootFolder.Path, library: Library);
+            QueueRunner.Current!.Dispatcher.Dispatch(job: musicJob);
         }
 
-        logger.LogInformation("Found {Count} subfolders", Titles.Count);
+        logger.LogInformation(message: "Found {Count} subfolders", args: Titles.Count);
     }
 
     public void Dispose()

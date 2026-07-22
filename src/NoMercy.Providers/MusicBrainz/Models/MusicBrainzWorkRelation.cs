@@ -15,39 +15,39 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class MusicBrainzWorkRelation : MusicBrainzLifeSpan
 {
-    [JsonProperty("attribute-ids")]
+    [JsonProperty(propertyName: "attribute-ids")]
     public Dictionary<string, Guid> AttributeIds { get; set; } = new();
 
-    [JsonProperty("attribute-values")]
+    [JsonProperty(propertyName: "attribute-values")]
     public MusicBrainzAttributeValues MusicBrainzAttributeValues { get; set; } = new();
 
-    [JsonProperty("attributes")]
+    [JsonProperty(propertyName: "attributes")]
     public string[] Attributes { get; set; } = [];
 
-    [JsonProperty("direction")]
+    [JsonProperty(propertyName: "direction")]
     public string Direction { get; set; } = string.Empty;
 
-    [JsonProperty("source-credit")]
+    [JsonProperty(propertyName: "source-credit")]
     public string SourceCredit { get; set; } = string.Empty;
 
-    [JsonProperty("target-credit")]
+    [JsonProperty(propertyName: "target-credit")]
     public string TargetCredit { get; set; } = string.Empty;
 
-    [JsonProperty("target-type")]
+    [JsonProperty(propertyName: "target-type")]
     public string TargetType { get; set; } = string.Empty;
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty("type-id")]
+    [JsonProperty(propertyName: "type-id")]
     public Guid? TypeId { get; set; }
 
-    [JsonProperty("artist")]
+    [JsonProperty(propertyName: "artist")]
     public MusicBrainzArtist MusicBrainzArtist { get; set; } = new();
 
-    [JsonProperty("label")]
+    [JsonProperty(propertyName: "label")]
     public MusicBrainzLabel MusicBrainzLabel { get; set; } = new();
 
-    [JsonProperty("url")]
+    [JsonProperty(propertyName: "url")]
     public MusicBrainzUrl MusicBrainzUrl { get; set; } = new();
 }

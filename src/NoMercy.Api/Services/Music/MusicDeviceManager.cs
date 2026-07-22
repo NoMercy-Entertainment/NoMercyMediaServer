@@ -28,23 +28,23 @@ public class MusicDeviceManager
 
     public Device? GetUserDevice(Guid userId)
     {
-        return _currentDevices.TryGetValue(userId, out Device? device) ? device : null;
+        return _currentDevices.TryGetValue(key: userId, value: out Device? device) ? device : null;
     }
 
     public void SetUserDevice(Guid userId, Device device)
     {
-        _currentDevices.AddOrUpdate(userId, device, (_, _) => device);
+        _currentDevices.AddOrUpdate(key: userId, addValue: device, updateValueFactory: (_, _) => device);
     }
 
     public bool RemoveUserDevice(Guid userId)
     {
-        return _currentDevices.TryRemove(userId, out _);
+        return _currentDevices.TryRemove(key: userId, value: out _);
     }
 
     public async Task UpdateDeviceVolume(string deviceId, int volume)
     {
         await _mediaContext
-            .Devices.Where(d => d.DeviceId == deviceId)
-            .ExecuteUpdateAsync(d => d.SetProperty(x => x.VolumePercent, volume));
+            .Devices.Where(predicate: d => d.DeviceId == deviceId)
+            .ExecuteUpdateAsync(setPropertyCalls: d => d.SetProperty(propertyExpression: x => x.VolumePercent, valueExpression: volume));
     }
 }

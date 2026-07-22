@@ -21,34 +21,34 @@ namespace NoMercy.Tests.Queue;
 /// last run, already arrived?" — a plugin-facing alternative to CronWorker's
 /// own internal NextRun bookkeeping loop.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class CronServiceTests
 {
     [Fact]
     public void ShouldRun_CurrentTimeAtOrAfterNextOccurrence_ReturnsTrue()
     {
-        DateTime lastRun = new(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        DateTime currentTime = new(2025, 1, 2, 0, 0, 1, DateTimeKind.Utc);
+        DateTime lastRun = new(year: 2025, month: 1, day: 1, hour: 0, minute: 0, second: 0, kind: DateTimeKind.Utc);
+        DateTime currentTime = new(year: 2025, month: 1, day: 2, hour: 0, minute: 0, second: 1, kind: DateTimeKind.Utc);
 
-        CronService.ShouldRun("0 0 * * *", lastRun, currentTime).Should().BeTrue();
+        CronService.ShouldRun(cronExpression: "0 0 * * *", lastRun: lastRun, currentTime: currentTime).Should().BeTrue();
     }
 
     [Fact]
     public void ShouldRun_CurrentTimeBeforeNextOccurrence_ReturnsFalse()
     {
-        DateTime lastRun = new(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        DateTime currentTime = new(2025, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        DateTime lastRun = new(year: 2025, month: 1, day: 1, hour: 0, minute: 0, second: 0, kind: DateTimeKind.Utc);
+        DateTime currentTime = new(year: 2025, month: 1, day: 1, hour: 12, minute: 0, second: 0, kind: DateTimeKind.Utc);
 
-        CronService.ShouldRun("0 0 * * *", lastRun, currentTime).Should().BeFalse();
+        CronService.ShouldRun(cronExpression: "0 0 * * *", lastRun: lastRun, currentTime: currentTime).Should().BeFalse();
     }
 
     [Fact]
     public void GetNextOccurrence_DailyExpression_ReturnsNextMidnight()
     {
-        DateTime baseTime = new(2025, 6, 10, 14, 0, 0, DateTimeKind.Utc);
+        DateTime baseTime = new(year: 2025, month: 6, day: 10, hour: 14, minute: 0, second: 0, kind: DateTimeKind.Utc);
 
-        DateTime next = CronService.GetNextOccurrence("0 0 * * *", baseTime);
+        DateTime next = CronService.GetNextOccurrence(cronExpression: "0 0 * * *", baseTime: baseTime);
 
-        next.Should().Be(new DateTime(2025, 6, 11, 0, 0, 0, DateTimeKind.Unspecified));
+        next.Should().Be(expected: new DateTime(year: 2025, month: 6, day: 11, hour: 0, minute: 0, second: 0, kind: DateTimeKind.Unspecified));
     }
 }

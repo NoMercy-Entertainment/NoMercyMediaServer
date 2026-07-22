@@ -49,15 +49,15 @@ public static class OfflineJwksCache
     {
         try
         {
-            using Stream stream = Backend.OpenWrite(AppFiles.AuthKeysFile, overwrite: true);
-            using StreamWriter writer = new(stream, Encoding.UTF8, leaveOpen: true);
-            writer.Write(publicKeyBase64);
-            CachedSigningKey = CreateSecurityKeyFromBase64(publicKeyBase64);
-            Logger.Auth("Cached auth public key for offline use");
+            using Stream stream = Backend.OpenWrite(path: AppFiles.AuthKeysFile, overwrite: true);
+            using StreamWriter writer = new(stream: stream, encoding: Encoding.UTF8, leaveOpen: true);
+            writer.Write(value: publicKeyBase64);
+            CachedSigningKey = CreateSecurityKeyFromBase64(publicKeyBase64: publicKeyBase64);
+            Logger.Auth(message: "Cached auth public key for offline use");
         }
         catch (Exception e)
         {
-            Logger.Auth($"Failed to cache auth public key: {e.Message}", LogEventLevel.Warning);
+            Logger.Auth(message: $"Failed to cache auth public key: {e.Message}", level: LogEventLevel.Warning);
         }
     }
 
@@ -65,25 +65,25 @@ public static class OfflineJwksCache
     {
         try
         {
-            if (!Backend.FileExists(AppFiles.AuthKeysFile))
+            if (!Backend.FileExists(path: AppFiles.AuthKeysFile))
                 return false;
 
             string publicKeyBase64;
-            using (StreamReader reader = new(Backend.OpenRead(AppFiles.AuthKeysFile)))
+            using (StreamReader reader = new(stream: Backend.OpenRead(path: AppFiles.AuthKeysFile)))
                 publicKeyBase64 = reader.ReadToEnd().Trim();
 
-            if (string.IsNullOrEmpty(publicKeyBase64))
+            if (string.IsNullOrEmpty(value: publicKeyBase64))
                 return false;
 
-            CachedSigningKey = CreateSecurityKeyFromBase64(publicKeyBase64);
-            Logger.Auth("Loaded cached auth public key for offline validation");
+            CachedSigningKey = CreateSecurityKeyFromBase64(publicKeyBase64: publicKeyBase64);
+            Logger.Auth(message: "Loaded cached auth public key for offline validation");
             return true;
         }
         catch (Exception e)
         {
             Logger.Auth(
-                $"Failed to load cached auth public key: {e.Message}",
-                LogEventLevel.Warning
+                message: $"Failed to load cached auth public key: {e.Message}",
+                level: LogEventLevel.Warning
             );
             return false;
         }
@@ -92,17 +92,17 @@ public static class OfflineJwksCache
     internal static RsaSecurityKey CreateSecurityKeyFromBase64(string publicKeyBase64)
     {
         string cleaned = publicKeyBase64
-            .Replace("-----BEGIN PUBLIC KEY-----", "")
-            .Replace("-----END PUBLIC KEY-----", "")
-            .Replace("-----BEGIN RSA PUBLIC KEY-----", "")
-            .Replace("-----END RSA PUBLIC KEY-----", "")
-            .Replace("\n", "")
-            .Replace("\r", "")
+            .Replace(oldValue: "-----BEGIN PUBLIC KEY-----", newValue: "")
+            .Replace(oldValue: "-----END PUBLIC KEY-----", newValue: "")
+            .Replace(oldValue: "-----BEGIN RSA PUBLIC KEY-----", newValue: "")
+            .Replace(oldValue: "-----END RSA PUBLIC KEY-----", newValue: "")
+            .Replace(oldValue: "\n", newValue: "")
+            .Replace(oldValue: "\r", newValue: "")
             .Trim();
 
-        byte[] keyBytes = Convert.FromBase64String(cleaned);
+        byte[] keyBytes = Convert.FromBase64String(s: cleaned);
         RSA rsa = RSA.Create();
-        rsa.ImportSubjectPublicKeyInfo(keyBytes, out _);
-        return new(rsa);
+        rsa.ImportSubjectPublicKeyInfo(source: keyBytes, bytesRead: out _);
+        return new(rsa: rsa);
     }
 }

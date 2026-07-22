@@ -15,75 +15,75 @@ using NoMercy.Database.Models.People;
 
 namespace NoMercy.Tests.Database;
 
-[Trait("Category", "Characterization")]
+[Trait(name: "Category", value: "Characterization")]
 public class CastNavigationInitializerTests
 {
     [Fact]
     public void Movie_Navigation_DefaultIsNull()
     {
         Cast cast = new();
-        Assert.Null(cast.Movie);
+        Assert.Null(@object: cast.Movie);
     }
 
     [Fact]
     public void Tv_Navigation_DefaultIsNull()
     {
         Cast cast = new();
-        Assert.Null(cast.Tv);
+        Assert.Null(@object: cast.Tv);
     }
 
     [Fact]
     public void Season_Navigation_DefaultIsNull()
     {
         Cast cast = new();
-        Assert.Null(cast.Season);
+        Assert.Null(@object: cast.Season);
     }
 
     [Fact]
     public void Episode_Navigation_DefaultIsNull()
     {
         Cast cast = new();
-        Assert.Null(cast.Episode);
+        Assert.Null(@object: cast.Episode);
     }
 
     [Fact]
     public void Movie_Navigation_IsNullable()
     {
-        PropertyInfo? prop = typeof(Cast).GetProperty("Movie");
-        Assert.NotNull(prop);
+        PropertyInfo? prop = typeof(Cast).GetProperty(name: "Movie");
+        Assert.NotNull(@object: prop);
         NullabilityInfoContext context = new();
-        NullabilityInfo info = context.Create(prop);
-        Assert.Equal(NullabilityState.Nullable, info.ReadState);
+        NullabilityInfo info = context.Create(propertyInfo: prop);
+        Assert.Equal(expected: NullabilityState.Nullable, actual: info.ReadState);
     }
 
     [Fact]
     public void Tv_Navigation_IsNullable()
     {
-        PropertyInfo? prop = typeof(Cast).GetProperty("Tv");
-        Assert.NotNull(prop);
+        PropertyInfo? prop = typeof(Cast).GetProperty(name: "Tv");
+        Assert.NotNull(@object: prop);
         NullabilityInfoContext context = new();
-        NullabilityInfo info = context.Create(prop);
-        Assert.Equal(NullabilityState.Nullable, info.ReadState);
+        NullabilityInfo info = context.Create(propertyInfo: prop);
+        Assert.Equal(expected: NullabilityState.Nullable, actual: info.ReadState);
     }
 
     [Fact]
     public void Season_Navigation_IsNullable()
     {
-        PropertyInfo? prop = typeof(Cast).GetProperty("Season");
-        Assert.NotNull(prop);
+        PropertyInfo? prop = typeof(Cast).GetProperty(name: "Season");
+        Assert.NotNull(@object: prop);
         NullabilityInfoContext context = new();
-        NullabilityInfo info = context.Create(prop);
-        Assert.Equal(NullabilityState.Nullable, info.ReadState);
+        NullabilityInfo info = context.Create(propertyInfo: prop);
+        Assert.Equal(expected: NullabilityState.Nullable, actual: info.ReadState);
     }
 
     [Fact]
     public void Episode_Navigation_IsNullable()
     {
-        PropertyInfo? prop = typeof(Cast).GetProperty("Episode");
-        Assert.NotNull(prop);
+        PropertyInfo? prop = typeof(Cast).GetProperty(name: "Episode");
+        Assert.NotNull(@object: prop);
         NullabilityInfoContext context = new();
-        NullabilityInfo info = context.Create(prop);
-        Assert.Equal(NullabilityState.Nullable, info.ReadState);
+        NullabilityInfo info = context.Create(propertyInfo: prop);
+        Assert.Equal(expected: NullabilityState.Nullable, actual: info.ReadState);
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public class CastNavigationInitializerTests
     {
         Cast cast = new();
         bool hasMovie = cast.Movie is not null;
-        Assert.False(hasMovie);
+        Assert.False(condition: hasMovie);
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public class CastNavigationInitializerTests
     {
         Cast cast = new();
         bool hasTv = cast.Tv is not null;
-        Assert.False(hasTv);
+        Assert.False(condition: hasTv);
     }
 
     [Fact]
@@ -107,7 +107,7 @@ public class CastNavigationInitializerTests
     {
         Cast cast = new();
         bool hasSeason = cast.Season is not null;
-        Assert.False(hasSeason);
+        Assert.False(condition: hasSeason);
     }
 
     [Fact]
@@ -115,41 +115,41 @@ public class CastNavigationInitializerTests
     {
         Cast cast = new();
         bool hasEpisode = cast.Episode is not null;
-        Assert.False(hasEpisode);
+        Assert.False(condition: hasEpisode);
     }
 
     [Theory]
-    [InlineData("Movie")]
-    [InlineData("Tv")]
-    [InlineData("Season")]
-    [InlineData("Episode")]
+    [InlineData(data: "Movie")]
+    [InlineData(data: "Tv")]
+    [InlineData(data: "Season")]
+    [InlineData(data: "Episode")]
     public void NullableNavigation_HasNoFieldInitializer_ToNew(string propertyName)
     {
         Cast cast = new();
-        PropertyInfo? prop = typeof(Cast).GetProperty(propertyName);
-        Assert.NotNull(prop);
-        object? value = prop.GetValue(cast);
-        Assert.Null(value);
+        PropertyInfo? prop = typeof(Cast).GetProperty(name: propertyName);
+        Assert.NotNull(@object: prop);
+        object? value = prop.GetValue(obj: cast);
+        Assert.Null(@object: value);
     }
 
     [Fact]
     public void Person_Navigation_IsNotNull_WithInitializer()
     {
-        PropertyInfo? prop = typeof(Cast).GetProperty("Person");
-        Assert.NotNull(prop);
+        PropertyInfo? prop = typeof(Cast).GetProperty(name: "Person");
+        Assert.NotNull(@object: prop);
         NullabilityInfoContext context = new();
-        NullabilityInfo info = context.Create(prop);
-        Assert.Equal(NullabilityState.NotNull, info.ReadState);
+        NullabilityInfo info = context.Create(propertyInfo: prop);
+        Assert.Equal(expected: NullabilityState.NotNull, actual: info.ReadState);
     }
 
     [Fact]
     public void Role_Navigation_IsNotNull_WithInitializer()
     {
-        PropertyInfo? prop = typeof(Cast).GetProperty("Role");
-        Assert.NotNull(prop);
+        PropertyInfo? prop = typeof(Cast).GetProperty(name: "Role");
+        Assert.NotNull(@object: prop);
         NullabilityInfoContext context = new();
-        NullabilityInfo info = context.Create(prop);
-        Assert.Equal(NullabilityState.NotNull, info.ReadState);
+        NullabilityInfo info = context.Create(propertyInfo: prop);
+        Assert.Equal(expected: NullabilityState.NotNull, actual: info.ReadState);
     }
 
     [Fact]
@@ -157,8 +157,8 @@ public class CastNavigationInitializerTests
     {
         Movie movie = new() { Id = 1 };
         Cast cast = new() { Movie = movie, MovieId = 1 };
-        Assert.NotNull(cast.Movie);
-        Assert.Equal(1, cast.Movie.Id);
+        Assert.NotNull(@object: cast.Movie);
+        Assert.Equal(expected: 1, actual: cast.Movie.Id);
     }
 
     [Fact]
@@ -167,6 +167,6 @@ public class CastNavigationInitializerTests
         Movie movie = new() { Id = 1 };
         Cast cast = new() { Movie = movie, MovieId = 1 };
         cast.Movie = null;
-        Assert.Null(cast.Movie);
+        Assert.Null(@object: cast.Movie);
     }
 }

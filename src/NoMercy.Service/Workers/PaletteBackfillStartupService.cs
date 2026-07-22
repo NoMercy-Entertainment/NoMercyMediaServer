@@ -31,36 +31,36 @@ public class PaletteBackfillStartupService(ILogger<PaletteBackfillStartupService
         {
             await using AppDbContext db = new();
             bool reopened = await PaletteBackfillState.EnsureVersionAsync(
-                db,
-                PaletteBackfillJob.CurrentVersion,
-                PaletteBackfillJob.AllTypes,
-                cancellationToken
+                db: db,
+                currentVersion: PaletteBackfillJob.CurrentVersion,
+                entityTypes: PaletteBackfillJob.AllTypes,
+                ct: cancellationToken
             );
             if (reopened)
             {
                 QueueRunner.Current?.Dispatcher.Dispatch(
-                    new TrackCoverBackfillJob(),
-                    "palette",
-                    20
+                    job: new TrackCoverBackfillJob(),
+                    onQueue: "palette",
+                    priority: 20
                 );
                 logger.LogInformation(
-                    "Palette backfill re-opened for new entity types; track cover backfill dispatched"
+                    message: "Palette backfill re-opened for new entity types; track cover backfill dispatched"
                 );
             }
 
-            bool complete = await PaletteBackfillState.IsCompleteAsync(db, cancellationToken);
+            bool complete = await PaletteBackfillState.IsCompleteAsync(db: db, ct: cancellationToken);
             if (complete)
             {
-                logger.LogDebug("Palette backfill already complete — skipping dispatch");
+                logger.LogDebug(message: "Palette backfill already complete — skipping dispatch");
                 return;
             }
 
-            QueueRunner.Current?.Dispatcher.Dispatch(new PaletteBackfillJob(), "palette", 20);
-            logger.LogInformation("Palette backfill job dispatched on startup");
+            QueueRunner.Current?.Dispatcher.Dispatch(job: new PaletteBackfillJob(), onQueue: "palette", priority: 20);
+            logger.LogInformation(message: "Palette backfill job dispatched on startup");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to dispatch palette backfill on startup; continuing");
+            logger.LogError(exception: ex, message: "Failed to dispatch palette backfill on startup; continuing");
         }
     }
 

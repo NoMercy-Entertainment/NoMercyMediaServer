@@ -13,62 +13,62 @@ using System.Xml.Serialization;
 
 namespace NoMercy.Providers.OpenSubtitles.Models;
 
-[XmlRoot("methodResponse")]
+[XmlRoot(elementName: "methodResponse")]
 public class SubtitleSearchResponse
 {
-    [XmlArray("params")]
-    [XmlArrayItem("param")]
+    [XmlArray(elementName: "params")]
+    [XmlArrayItem(elementName: "param")]
     public List<SubtitleSearchResponseParam> Params { get; set; } = new();
 }
 
 public class SubtitleSearchResponseParam
 {
-    [XmlElement("value")]
+    [XmlElement(elementName: "value")]
     public SubtitleSearchResponseMemberValue Value { get; set; } = new();
 }
 
 public class SubtitleSearchResponseResponseValue
 {
-    [XmlElement("struct")]
+    [XmlElement(elementName: "struct")]
     public SubtitleSearchResponseStruct Struct { get; set; } = new();
 }
 
 public class SubtitleSearchResponseStruct
 {
-    [XmlElement("member")]
+    [XmlElement(elementName: "member")]
     public List<SubtitleSearchResponseMember> Members { get; set; } = new();
 }
 
 public class SubtitleSearchResponseMember
 {
-    [XmlElement("name")]
+    [XmlElement(elementName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [XmlElement("value")]
+    [XmlElement(elementName: "value")]
     public SubtitleSearchResponseMemberValue MemberValue { get; set; } = new();
 }
 
 public class SubtitleSearchResponseMemberValue
 {
-    [XmlElement("struct", IsNullable = true)]
+    [XmlElement(elementName: "struct", IsNullable = true)]
     public SubtitleSearchResponseStruct InnerStruct { get; set; } = new();
 
-    [XmlElement("array", IsNullable = true)]
+    [XmlElement(elementName: "array", IsNullable = true)]
     public SubtitleSearchResponseArrayData ArrayData { get; set; } = new();
 
-    [XmlElement("string", IsNullable = true)]
+    [XmlElement(elementName: "string", IsNullable = true)]
     public string StringValue { get; set; } = string.Empty;
 
-    [XmlElement("double", IsNullable = true)]
+    [XmlElement(elementName: "double", IsNullable = true)]
     public double? DoubleValue { get; set; }
 
-    [XmlElement("int", IsNullable = true)]
+    [XmlElement(elementName: "int", IsNullable = true)]
     public int? IntValue { get; set; }
 }
 
 public class SubtitleSearchResponseArrayData
 {
-    [XmlArray("data")]
-    [XmlArrayItem("value")]
+    [XmlArray(elementName: "data")]
+    [XmlArrayItem(elementName: "value")]
     public List<SubtitleSearchResponseMemberValue> Values { get; set; } = [];
 }

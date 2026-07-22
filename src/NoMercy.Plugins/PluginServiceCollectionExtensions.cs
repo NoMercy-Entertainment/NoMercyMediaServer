@@ -31,42 +31,42 @@ public static class PluginServiceCollectionExtensions
         string pluginsPath
     )
     {
-        ArgumentNullException.ThrowIfNull(services);
-        ArgumentException.ThrowIfNullOrWhiteSpace(pluginsPath);
+        ArgumentNullException.ThrowIfNull(argument: services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(argument: pluginsPath);
 
         services.AddSingleton<IPluginVerifier, PluginVerifier>();
 
-        services.AddSingleton<IPluginConsentStore>(sp =>
+        services.AddSingleton<IPluginConsentStore>(implementationFactory: sp =>
         {
             IStorageDriver driver = sp.GetRequiredService<IStorageDriver>();
-            IStorage storage = new LocalStorage(driver, new([pluginsPath], driver));
-            string platformDataFolder = Path.Combine(pluginsPath, "data", "platform");
+            IStorage storage = new LocalStorage(driver: driver, guard: new(allowedRoots: [pluginsPath], driver: driver));
+            string platformDataFolder = Path.Combine(path1: pluginsPath, path2: "data", path3: "platform");
             IPluginConfiguration configuration = new PluginConfiguration(
-                platformDataFolder,
-                storage
+                dataFolderPath: platformDataFolder,
+                storage: storage
             );
-            return new ConfigPluginConsentStore(configuration);
+            return new ConfigPluginConsentStore(configuration: configuration);
         });
 
         services.AddSingleton<IPluginConsentService, PluginConsentService>();
 
-        services.AddSingleton<IPluginManager>(sp =>
+        services.AddSingleton<IPluginManager>(implementationFactory: sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
             ILogger<PluginManager> logger = sp.GetRequiredService<ILogger<PluginManager>>();
             IStorageDriver driver = sp.GetRequiredService<IStorageDriver>();
             IPluginVerifier verifier = sp.GetRequiredService<IPluginVerifier>();
             IPluginConsentService consentService = sp.GetRequiredService<IPluginConsentService>();
-            IStorage storage = new LocalStorage(driver, new([pluginsPath], driver));
+            IStorage storage = new LocalStorage(driver: driver, guard: new(allowedRoots: [pluginsPath], driver: driver));
             return new PluginManager(
-                eventBus,
-                sp,
-                logger,
-                pluginsPath,
-                storage,
-                driver,
-                verifier,
-                consentService
+                eventBus: eventBus,
+                serviceProvider: sp,
+                logger: logger,
+                pluginsPath: pluginsPath,
+                storage: storage,
+                driver: driver,
+                verifier: verifier,
+                consentService: consentService
             );
         });
 
@@ -88,12 +88,12 @@ public static class PluginServiceCollectionExtensions
         PluginManager pluginManager
     )
     {
-        ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(pluginManager);
+        ArgumentNullException.ThrowIfNull(argument: services);
+        ArgumentNullException.ThrowIfNull(argument: pluginManager);
 
         foreach (IPluginServiceRegistrator registrator in pluginManager.GetServiceRegistrators())
         {
-            registrator.RegisterServices(services);
+            registrator.RegisterServices(services: services);
         }
     }
 
@@ -110,50 +110,50 @@ public static class PluginServiceCollectionExtensions
         string pluginsPath
     )
     {
-        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(argument: services);
 
-        if (!Directory.Exists(pluginsPath))
+        if (!Directory.Exists(path: pluginsPath))
             return services;
 
-        foreach (string pluginDir in Directory.EnumerateDirectories(pluginsPath))
+        foreach (string pluginDir in Directory.EnumerateDirectories(path: pluginsPath))
         {
-            string dirName = Path.GetFileName(pluginDir);
+            string dirName = Path.GetFileName(path: pluginDir);
             if (dirName is "configurations" or "data")
                 continue;
 
-            string manifestPath = Path.Combine(pluginDir, "plugin.json");
-            if (!File.Exists(manifestPath))
+            string manifestPath = Path.Combine(path1: pluginDir, path2: "plugin.json");
+            if (!File.Exists(path: manifestPath))
                 continue;
 
             try
             {
-                string manifestJson = File.ReadAllText(manifestPath);
-                PluginManifest manifest = PluginManifestParser.Parse(manifestJson);
-                string assemblyPath = Path.Combine(pluginDir, manifest.Assembly);
+                string manifestJson = File.ReadAllText(path: manifestPath);
+                PluginManifest manifest = PluginManifestParser.Parse(json: manifestJson);
+                string assemblyPath = Path.Combine(path1: pluginDir, path2: manifest.Assembly);
 
-                if (!File.Exists(assemblyPath))
+                if (!File.Exists(path: assemblyPath))
                     continue;
 
                 // Load into a temporary context for discovery only; unloaded after registration.
-                PluginLoadContext discoveryCtx = new(assemblyPath);
+                PluginLoadContext discoveryCtx = new(pluginPath: assemblyPath);
                 try
                 {
-                    Assembly assembly = discoveryCtx.LoadFromAssemblyPath(assemblyPath);
+                    Assembly assembly = discoveryCtx.LoadFromAssemblyPath(assemblyPath: assemblyPath);
 
                     IEnumerable<Type> registratorTypes = assembly
                         .GetTypes()
-                        .Where(t =>
-                            typeof(IPluginServiceRegistrator).IsAssignableFrom(t)
+                        .Where(predicate: t =>
+                            typeof(IPluginServiceRegistrator).IsAssignableFrom(c: t)
                             && t is { IsAbstract: false, IsInterface: false }
                         );
 
                     foreach (Type registratorType in registratorTypes)
                     {
                         if (
-                            Activator.CreateInstance(registratorType)
+                            Activator.CreateInstance(type: registratorType)
                             is IPluginServiceRegistrator registrator
                         )
-                            registrator.RegisterServices(services);
+                            registrator.RegisterServices(services: services);
                     }
                 }
                 finally

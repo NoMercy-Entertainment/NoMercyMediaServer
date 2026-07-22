@@ -49,9 +49,9 @@ public class MediaAnalyzerCultureTests
         """;
 
     [Theory]
-    [InlineData("de-DE")]
-    [InlineData("nl-NL")]
-    [InlineData("fr-FR")]
+    [InlineData(data: "de-DE")]
+    [InlineData(data: "nl-NL")]
+    [InlineData(data: "fr-FR")]
     public void ParseFrameRate_GroupedLookingNumerator_StaysInvariantUnderCommaCulture(
         string culture
     )
@@ -59,19 +59,19 @@ public class MediaAnalyzerCultureTests
         CultureInfo previous = Thread.CurrentThread.CurrentCulture;
         try
         {
-            Thread.CurrentThread.CurrentCulture = new(culture);
+            Thread.CurrentThread.CurrentCulture = new(name: culture);
 
             MediaInfo info = MediaAnalyzer.ParseFfprobeJson(
-                MalformedFrameRateFixture,
-                "/media/test.mkv"
+                json: MalformedFrameRateFixture,
+                filePath: "/media/test.mkv"
             );
-            VideoStreamInfo video = info.VideoStreams[0];
+            VideoStreamInfo video = info.VideoStreams[index: 0];
 
             // Old code (bare double.TryParse, CurrentCulture + AllowThousands)
             // strips the "." and reads "24.000" as 24000 on these locales.
-            video.FrameRate.Should().Be(24.0);
-            video.AverageFrameRate.Should().Be(24.0);
-            video.RealFrameRate.Should().Be(24.0);
+            video.FrameRate.Should().Be(expected: 24.0);
+            video.AverageFrameRate.Should().Be(expected: 24.0);
+            video.RealFrameRate.Should().Be(expected: 24.0);
         }
         finally
         {

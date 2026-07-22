@@ -35,15 +35,15 @@ public class LibraryManagerResolveScanRootTests
         // LocalStorage.GetFullPath joins the configured rootPath with the relative
         // folder path — the real absolute scan target.
         storage
-            .Setup(s => s.GetFullPath("Libraries/Anime"))
-            .Returns(@"\\nas\Media\Libraries\Anime");
+            .Setup(expression: s => s.GetFullPath("Libraries/Anime"))
+            .Returns(value: @"\\nas\Media\Libraries\Anime");
 
-        string root = LibraryManager.ResolveScanRoot(storage.Object, "Libraries/Anime");
+        string root = LibraryManager.ResolveScanRoot(storage: storage.Object, folderPath: "Libraries/Anime");
 
-        root.Should().Be(@"\\nas\Media\Libraries\Anime");
+        root.Should().Be(expected: @"\\nas\Media\Libraries\Anime");
         // The driver must never be consulted for a backend the facade can resolve:
         // its root-less GetFullPath would resolve against the process CWD.
-        storage.Verify(s => s.Driver, Times.Never);
+        storage.Verify(expression: s => s.Driver, times: Times.Never);
     }
 
     [Fact]
@@ -51,17 +51,17 @@ public class LibraryManagerResolveScanRootTests
     {
         Mock<IStorageDriver> driver = new();
         driver
-            .Setup(d => d.GetFullPath("Libraries/Anime"))
-            .Returns("/mnt/vault/Media/Libraries/Anime");
+            .Setup(expression: d => d.GetFullPath("Libraries/Anime"))
+            .Returns(value: "/mnt/vault/Media/Libraries/Anime");
 
         Mock<IStorage> storage = new();
         // Remote facades don't support GetFullPath — they throw. The scan must then
         // fall back to the driver, whose GetFullPath prepends the export/prefix.
-        storage.Setup(s => s.GetFullPath(It.IsAny<string>())).Throws<NotSupportedException>();
-        storage.Setup(s => s.Driver).Returns(driver.Object);
+        storage.Setup(expression: s => s.GetFullPath(It.IsAny<string>())).Throws<NotSupportedException>();
+        storage.Setup(expression: s => s.Driver).Returns(value: driver.Object);
 
-        string root = LibraryManager.ResolveScanRoot(storage.Object, "Libraries/Anime");
+        string root = LibraryManager.ResolveScanRoot(storage: storage.Object, folderPath: "Libraries/Anime");
 
-        root.Should().Be("/mnt/vault/Media/Libraries/Anime");
+        root.Should().Be(expected: "/mnt/vault/Media/Libraries/Anime");
     }
 }

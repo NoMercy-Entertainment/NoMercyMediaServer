@@ -34,7 +34,7 @@ public class NvmlGpuSamplerTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     "nvidia-smi",
                     It.IsAny<string[]>(),
@@ -42,9 +42,9 @@ public class NvmlGpuSamplerTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(FailureResult());
+            .ReturnsAsync(value: FailureResult());
 
-        NvmlGpuSampler sampler = new(runner.Object, NullLogger<NvmlGpuSampler>.Instance);
+        NvmlGpuSampler sampler = new(processRunner: runner.Object, logger: NullLogger<NvmlGpuSampler>.Instance);
 
         IReadOnlyList<GpuProcessSample> samples = await sampler.SampleGpuAsync();
 
@@ -57,7 +57,7 @@ public class NvmlGpuSamplerTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     "nvidia-smi",
                     It.IsAny<string[]>(),
@@ -65,9 +65,9 @@ public class NvmlGpuSamplerTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ThrowsAsync(new("nvidia-smi not on PATH"));
+            .ThrowsAsync(exception: new(message: "nvidia-smi not on PATH"));
 
-        NvmlGpuSampler sampler = new(runner.Object, NullLogger<NvmlGpuSampler>.Instance);
+        NvmlGpuSampler sampler = new(processRunner: runner.Object, logger: NullLogger<NvmlGpuSampler>.Instance);
 
         IReadOnlyList<GpuProcessSample> samples = await sampler.SampleGpuAsync();
 
@@ -80,7 +80,7 @@ public class NvmlGpuSamplerTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     "nvidia-smi",
                     It.IsAny<string[]>(),
@@ -88,9 +88,9 @@ public class NvmlGpuSamplerTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(SuccessResult("   "));
+            .ReturnsAsync(value: SuccessResult(stdOut: "   "));
 
-        NvmlGpuSampler sampler = new(runner.Object, NullLogger<NvmlGpuSampler>.Instance);
+        NvmlGpuSampler sampler = new(processRunner: runner.Object, logger: NullLogger<NvmlGpuSampler>.Instance);
 
         IReadOnlyList<GpuProcessSample> samples = await sampler.SampleGpuAsync();
 
@@ -107,13 +107,13 @@ public class NvmlGpuSamplerTests
     {
         string output = "12345, 512";
 
-        IReadOnlyList<GpuProcessSample> samples = NvmlGpuSampler.ParseNvidiaSmiOutput(output);
+        IReadOnlyList<GpuProcessSample> samples = NvmlGpuSampler.ParseNvidiaSmiOutput(stdOut: output);
 
-        samples.Should().HaveCount(1);
-        samples[0].Pid.Should().Be(12345);
-        samples[0].EncoderMemoryBytes.Should().Be(512L * 1024 * 1024);
-        samples[0].GpuIndex.Should().Be(0);
-        samples[0].EncoderUtilizationPercent.Should().Be(0);
+        samples.Should().HaveCount(expected: 1);
+        samples[index: 0].Pid.Should().Be(expected: 12345);
+        samples[index: 0].EncoderMemoryBytes.Should().Be(expected: 512L * 1024 * 1024);
+        samples[index: 0].GpuIndex.Should().Be(expected: 0);
+        samples[index: 0].EncoderUtilizationPercent.Should().Be(expected: 0);
     }
 
     [Fact]
@@ -121,12 +121,12 @@ public class NvmlGpuSamplerTests
     {
         string output = "1001, 256\n2002, 1024\n3003, 128";
 
-        IReadOnlyList<GpuProcessSample> samples = NvmlGpuSampler.ParseNvidiaSmiOutput(output);
+        IReadOnlyList<GpuProcessSample> samples = NvmlGpuSampler.ParseNvidiaSmiOutput(stdOut: output);
 
-        samples.Should().HaveCount(3);
-        samples[0].Pid.Should().Be(1001);
-        samples[1].Pid.Should().Be(2002);
-        samples[2].Pid.Should().Be(3003);
+        samples.Should().HaveCount(expected: 3);
+        samples[index: 0].Pid.Should().Be(expected: 1001);
+        samples[index: 1].Pid.Should().Be(expected: 2002);
+        samples[index: 2].Pid.Should().Be(expected: 3003);
     }
 
     [Fact]
@@ -134,9 +134,9 @@ public class NvmlGpuSamplerTests
     {
         string output = "9999, 1";
 
-        IReadOnlyList<GpuProcessSample> samples = NvmlGpuSampler.ParseNvidiaSmiOutput(output);
+        IReadOnlyList<GpuProcessSample> samples = NvmlGpuSampler.ParseNvidiaSmiOutput(stdOut: output);
 
-        samples[0].EncoderMemoryBytes.Should().Be(1L * 1024 * 1024);
+        samples[index: 0].EncoderMemoryBytes.Should().Be(expected: 1L * 1024 * 1024);
     }
 
     [Fact]
@@ -144,16 +144,16 @@ public class NvmlGpuSamplerTests
     {
         string output = "not_a_pid, 512\n1234, not_a_number\n5678, 100";
 
-        IReadOnlyList<GpuProcessSample> samples = NvmlGpuSampler.ParseNvidiaSmiOutput(output);
+        IReadOnlyList<GpuProcessSample> samples = NvmlGpuSampler.ParseNvidiaSmiOutput(stdOut: output);
 
-        samples.Should().HaveCount(1);
-        samples[0].Pid.Should().Be(5678);
+        samples.Should().HaveCount(expected: 1);
+        samples[index: 0].Pid.Should().Be(expected: 5678);
     }
 
     [Fact]
     public void ParseNvidiaSmiOutput_empty_string_returns_empty()
     {
-        IReadOnlyList<GpuProcessSample> samples = NvmlGpuSampler.ParseNvidiaSmiOutput("");
+        IReadOnlyList<GpuProcessSample> samples = NvmlGpuSampler.ParseNvidiaSmiOutput(stdOut: "");
 
         samples.Should().BeEmpty();
     }
@@ -163,10 +163,10 @@ public class NvmlGpuSamplerTests
     {
         string output = "12345\n5678, 64";
 
-        IReadOnlyList<GpuProcessSample> samples = NvmlGpuSampler.ParseNvidiaSmiOutput(output);
+        IReadOnlyList<GpuProcessSample> samples = NvmlGpuSampler.ParseNvidiaSmiOutput(stdOut: output);
 
-        samples.Should().HaveCount(1);
-        samples[0].Pid.Should().Be(5678);
+        samples.Should().HaveCount(expected: 1);
+        samples[index: 0].Pid.Should().Be(expected: 5678);
     }
 
     // ------------------------------------------------------------------
@@ -178,7 +178,7 @@ public class NvmlGpuSamplerTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     "nvidia-smi",
                     It.IsAny<string[]>(),
@@ -186,24 +186,24 @@ public class NvmlGpuSamplerTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(SuccessResult("1234, 512"));
+            .ReturnsAsync(value: SuccessResult(stdOut: "1234, 512"));
 
-        NvmlGpuSampler sampler = new(runner.Object, NullLogger<NvmlGpuSampler>.Instance);
+        NvmlGpuSampler sampler = new(processRunner: runner.Object, logger: NullLogger<NvmlGpuSampler>.Instance);
 
         IReadOnlyList<GpuProcessSample> first = await sampler.SampleGpuAsync();
         IReadOnlyList<GpuProcessSample> second = await sampler.SampleGpuAsync();
 
         runner.Verify(
-            r =>
+            expression: r =>
                 r.RunAsync(
                     "nvidia-smi",
                     It.IsAny<string[]>(),
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Once
+            times: Times.Once
         );
 
-        second.Should().BeEquivalentTo(first);
+        second.Should().BeEquivalentTo(expectation: first);
     }
 }

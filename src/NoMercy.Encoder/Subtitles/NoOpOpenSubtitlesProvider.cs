@@ -29,14 +29,14 @@ public class NoOpOpenSubtitlesProvider : IOpenSubtitlesProvider
         string[] languages,
         CancellationToken ct,
         bool priority = false
-    ) => Task.FromResult<IReadOnlyList<OpenSubtitlesSearchResult>>([]);
+    ) => Task.FromResult<IReadOnlyList<OpenSubtitlesSearchResult>>(result: []);
 
     public Task<IReadOnlyList<OpenSubtitlesSearchResult>> SearchByFilenameAsync(
         string filename,
         string[] languages,
         CancellationToken ct,
         bool priority = false
-    ) => Task.FromResult<IReadOnlyList<OpenSubtitlesSearchResult>>([]);
+    ) => Task.FromResult<IReadOnlyList<OpenSubtitlesSearchResult>>(result: []);
 
     public Task<IReadOnlyList<OpenSubtitlesSearchResult>> SearchByTitleAsync(
         string title,
@@ -46,11 +46,11 @@ public class NoOpOpenSubtitlesProvider : IOpenSubtitlesProvider
         string[] languages,
         CancellationToken ct,
         bool priority = false
-    ) => Task.FromResult<IReadOnlyList<OpenSubtitlesSearchResult>>([]);
+    ) => Task.FromResult<IReadOnlyList<OpenSubtitlesSearchResult>>(result: []);
 
     public Task<byte[]> DownloadSubtitleAsync(
         string downloadUrl,
         CancellationToken ct,
         bool priority = false
-    ) => Task.FromResult(Array.Empty<byte>());
+    ) => Task.FromResult(result: Array.Empty<byte>());
 }

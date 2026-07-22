@@ -13,7 +13,7 @@ using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Tests.NmSystem;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class ConditionalSetExtensionsTests
 {
     private class TestClass
@@ -25,15 +25,15 @@ public class ConditionalSetExtensionsTests
     public void GetIf_WithTrueConditionAndNonNullSource_ReturnsSource()
     {
         TestClass obj = new();
-        TestClass? result = obj.GetIf(true);
-        result.Should().Be(obj);
+        TestClass? result = obj.GetIf(condition: true);
+        result.Should().Be(expected: obj);
     }
 
     [Fact]
     public void GetIf_WithFalseConditionAndNonNullSource_ReturnsNull()
     {
         TestClass obj = new();
-        TestClass? result = obj.GetIf(false);
+        TestClass? result = obj.GetIf(condition: false);
         result.Should().BeNull();
     }
 
@@ -41,7 +41,7 @@ public class ConditionalSetExtensionsTests
     public void GetIf_WithTrueConditionAndNullSource_ReturnsNull()
     {
         TestClass? obj = null;
-        TestClass? result = obj.GetIf(true);
+        TestClass? result = obj.GetIf(condition: true);
         result.Should().BeNull();
     }
 
@@ -49,7 +49,7 @@ public class ConditionalSetExtensionsTests
     public void GetIf_WithFalseConditionAndNullSource_ReturnsNull()
     {
         TestClass? obj = null;
-        TestClass? result = obj.GetIf(false);
+        TestClass? result = obj.GetIf(condition: false);
         result.Should().BeNull();
     }
 
@@ -58,7 +58,7 @@ public class ConditionalSetExtensionsTests
     {
         TestClass obj = new();
         TestClass? result = obj.GetIfNotNull();
-        result.Should().Be(obj);
+        result.Should().Be(expected: obj);
     }
 
     [Fact]
@@ -74,11 +74,11 @@ public class ConditionalSetExtensionsTests
     {
         TestClass obj = new();
         bool condition = false;
-        TestClass? result = obj.GetIf(condition);
+        TestClass? result = obj.GetIf(condition: condition);
         result.Should().BeNull();
 
         condition = true;
-        result = obj.GetIf(condition);
-        result.Should().Be(obj);
+        result = obj.GetIf(condition: condition);
+        result.Should().Be(expected: obj);
     }
 }

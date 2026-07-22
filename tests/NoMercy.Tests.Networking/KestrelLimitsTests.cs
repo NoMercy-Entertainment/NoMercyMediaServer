@@ -17,7 +17,7 @@ namespace NoMercy.Tests.Networking;
 /// HIGH-14: Verify Kestrel limits are set to finite, generous values
 /// instead of null (unlimited).
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class KestrelLimitsTests
 {
     private readonly string _source;
@@ -25,9 +25,9 @@ public class KestrelLimitsTests
     public KestrelLimitsTests()
     {
         string sourceFile = FindSourceFile(
-            "src/NoMercy.Networking/Certificate/CertificateService.cs"
+            relativePath: "src/NoMercy.Networking/Certificate/CertificateService.cs"
         );
-        _source = File.ReadAllText(sourceFile);
+        _source = File.ReadAllText(path: sourceFile);
     }
 
     [Fact]
@@ -35,13 +35,13 @@ public class KestrelLimitsTests
     {
         string[] lines = GetKestrelConfigLines();
 
-        string? bodyLine = lines.FirstOrDefault(l =>
-            l.Contains("MaxRequestBodySize") && !l.TrimStart().StartsWith("//")
+        string? bodyLine = lines.FirstOrDefault(predicate: l =>
+            l.Contains(value: "MaxRequestBodySize") && !l.TrimStart().StartsWith(value: "//")
         );
 
-        Assert.NotNull(bodyLine);
-        Assert.DoesNotContain("= null", bodyLine);
-        Assert.Contains("100L * 1024 * 1024 * 1024", bodyLine);
+        Assert.NotNull(@object: bodyLine);
+        Assert.DoesNotContain(expectedSubstring: "= null", actualString: bodyLine);
+        Assert.Contains(expectedSubstring: "100L * 1024 * 1024 * 1024", actualString: bodyLine);
     }
 
     [Fact]
@@ -49,15 +49,15 @@ public class KestrelLimitsTests
     {
         string[] lines = GetKestrelConfigLines();
 
-        string? connLine = lines.FirstOrDefault(l =>
-            l.Contains("MaxConcurrentConnections")
-            && !l.Contains("MaxConcurrentUpgradedConnections")
-            && !l.TrimStart().StartsWith("//")
+        string? connLine = lines.FirstOrDefault(predicate: l =>
+            l.Contains(value: "MaxConcurrentConnections")
+            && !l.Contains(value: "MaxConcurrentUpgradedConnections")
+            && !l.TrimStart().StartsWith(value: "//")
         );
 
-        Assert.NotNull(connLine);
-        Assert.DoesNotContain("= null", connLine);
-        Assert.Contains("1000", connLine);
+        Assert.NotNull(@object: connLine);
+        Assert.DoesNotContain(expectedSubstring: "= null", actualString: connLine);
+        Assert.Contains(expectedSubstring: "1000", actualString: connLine);
     }
 
     [Fact]
@@ -65,13 +65,13 @@ public class KestrelLimitsTests
     {
         string[] lines = GetKestrelConfigLines();
 
-        string? upgradedLine = lines.FirstOrDefault(l =>
-            l.Contains("MaxConcurrentUpgradedConnections") && !l.TrimStart().StartsWith("//")
+        string? upgradedLine = lines.FirstOrDefault(predicate: l =>
+            l.Contains(value: "MaxConcurrentUpgradedConnections") && !l.TrimStart().StartsWith(value: "//")
         );
 
-        Assert.NotNull(upgradedLine);
-        Assert.DoesNotContain("= null", upgradedLine);
-        Assert.Contains("500", upgradedLine);
+        Assert.NotNull(@object: upgradedLine);
+        Assert.DoesNotContain(expectedSubstring: "= null", actualString: upgradedLine);
+        Assert.Contains(expectedSubstring: "500", actualString: upgradedLine);
     }
 
     [Fact]
@@ -80,12 +80,12 @@ public class KestrelLimitsTests
         // MaxRequestBufferSize = null is intentional — Kestrel manages it adaptively
         string[] lines = GetKestrelConfigLines();
 
-        string? bufferLine = lines.FirstOrDefault(l =>
-            l.Contains("MaxRequestBufferSize") && !l.TrimStart().StartsWith("//")
+        string? bufferLine = lines.FirstOrDefault(predicate: l =>
+            l.Contains(value: "MaxRequestBufferSize") && !l.TrimStart().StartsWith(value: "//")
         );
 
-        Assert.NotNull(bufferLine);
-        Assert.Contains("= null", bufferLine);
+        Assert.NotNull(@object: bufferLine);
+        Assert.Contains(expectedSubstring: "= null", actualString: bufferLine);
     }
 
     [Fact]
@@ -93,17 +93,17 @@ public class KestrelLimitsTests
     {
         string[] lines = GetKestrelConfigLines();
 
-        string? headerLine = lines.FirstOrDefault(l =>
-            l.Contains("AddServerHeader") && !l.TrimStart().StartsWith("//")
+        string? headerLine = lines.FirstOrDefault(predicate: l =>
+            l.Contains(value: "AddServerHeader") && !l.TrimStart().StartsWith(value: "//")
         );
 
-        Assert.NotNull(headerLine);
-        Assert.Contains("false", headerLine);
+        Assert.NotNull(@object: headerLine);
+        Assert.Contains(expectedSubstring: "false", actualString: headerLine);
     }
 
     private string[] GetKestrelConfigLines()
     {
-        string[] allLines = _source.Split('\n');
+        string[] allLines = _source.Split(separator: '\n');
 
         List<string> configLines = [];
         bool inMethod = false;
@@ -113,7 +113,7 @@ public class KestrelLimitsTests
         {
             string trimmed = line.Trim();
 
-            if (trimmed.Contains("void KestrelConfig"))
+            if (trimmed.Contains(value: "void KestrelConfig"))
             {
                 inMethod = true;
                 continue;
@@ -122,16 +122,16 @@ public class KestrelLimitsTests
             if (!inMethod)
                 continue;
 
-            if (trimmed.Contains('{'))
+            if (trimmed.Contains(value: '{'))
                 braceDepth++;
-            if (trimmed.Contains('}'))
+            if (trimmed.Contains(value: '}'))
             {
                 braceDepth--;
                 if (braceDepth <= 0)
                     break;
             }
 
-            configLines.Add(trimmed);
+            configLines.Add(item: trimmed);
         }
 
         return configLines.ToArray();
@@ -142,22 +142,22 @@ public class KestrelLimitsTests
         string? dir = AppDomain.CurrentDomain.BaseDirectory;
         while (dir != null)
         {
-            string candidate = Path.Combine(dir, relativePath);
-            if (File.Exists(candidate))
+            string candidate = Path.Combine(path1: dir, path2: relativePath);
+            if (File.Exists(path: candidate))
                 return candidate;
 
-            string repoCandidate = Path.Combine(dir, "..", "..", "..", "..", "..", relativePath);
-            string resolved = Path.GetFullPath(repoCandidate);
-            if (File.Exists(resolved))
+            string repoCandidate = Path.Combine(paths: [dir, "..", "..", "..", "..", "..", relativePath]);
+            string resolved = Path.GetFullPath(path: repoCandidate);
+            if (File.Exists(path: resolved))
                 return resolved;
 
-            dir = Directory.GetParent(dir)?.FullName;
+            dir = Directory.GetParent(path: dir)?.FullName;
         }
 
-        string fallback = Path.Combine("/workspaces/NoMercyMediaServer", relativePath);
-        if (File.Exists(fallback))
+        string fallback = Path.Combine(path1: "/workspaces/NoMercyMediaServer", path2: relativePath);
+        if (File.Exists(path: fallback))
             return fallback;
 
-        throw new FileNotFoundException($"Could not find source file: {relativePath}");
+        throw new FileNotFoundException(message: $"Could not find source file: {relativePath}");
     }
 }

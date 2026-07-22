@@ -24,49 +24,49 @@ namespace NoMercy.Api.DTOs.Media.Components;
 /// </summary>
 public record GenreCardData
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public dynamic? Id { get; set; }
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string? Title { get; set; } = string.Empty;
 
-    [JsonProperty("titleSort")]
+    [JsonProperty(propertyName: "titleSort")]
     public string? TitleSort { get; set; }
 
-    [JsonProperty("overview")]
+    [JsonProperty(propertyName: "overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty("link")]
+    [JsonProperty(propertyName: "link")]
     public Uri Link { get; set; } = null!;
 
-    [JsonProperty("rating")]
+    [JsonProperty(propertyName: "rating")]
     public RatingClass? Rating { get; set; }
 
-    [JsonProperty("year")]
+    [JsonProperty(propertyName: "year")]
     public int? Year { get; set; }
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string? Type { get; set; }
 
-    [JsonProperty("backdrop")]
+    [JsonProperty(propertyName: "backdrop")]
     public string? Backdrop { get; set; }
 
-    [JsonProperty("poster")]
+    [JsonProperty(propertyName: "poster")]
     public string? Poster { get; set; }
 
-    [JsonProperty("logo")]
+    [JsonProperty(propertyName: "logo")]
     public string? Logo { get; set; }
 
-    [JsonProperty("color_palette")]
+    [JsonProperty(propertyName: "color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty("content_ratings")]
+    [JsonProperty(propertyName: "content_ratings")]
     public IEnumerable<ContentRating> ContentRatings { get; set; } = [];
 
-    [JsonProperty("have_items")]
+    [JsonProperty(propertyName: "have_items")]
     public int? HaveItems { get; set; }
 
-    [JsonProperty("number_of_items")]
+    [JsonProperty(propertyName: "number_of_items")]
     public int? NumberOfItems { get; set; }
 
     public GenreCardData() { }
@@ -77,16 +77,16 @@ public record GenreCardData
         Title = genre.Name;
         TitleSort = genre.Name;
         Type = "genre";
-        Link = new($"/genres/{genre.Id}", UriKind.Relative);
+        Link = new(uriString: $"/genres/{genre.Id}", uriKind: UriKind.Relative);
         NumberOfItems = genre.GenreMovies.Count + genre.GenreTvShows.Count;
         HaveItems =
-            genre.GenreMovies.Count(gm => gm.Movie.VideoFiles.Any(v => v.Folder != null))
-            + genre.GenreTvShows.Count(gt =>
-                gt.Tv.Episodes.Any(e => (
-                    e.VideoFiles.Any(v => v.Folder != null)
-                    || e.Tv.Episodes.Any(o =>
+            genre.GenreMovies.Count(predicate: gm => gm.Movie.VideoFiles.Any(predicate: v => v.Folder != null))
+            + genre.GenreTvShows.Count(predicate: gt =>
+                gt.Tv.Episodes.Any(predicate: e => (
+                    e.VideoFiles.Any(predicate: v => v.Folder != null)
+                    || e.Tv.Episodes.Any(predicate: o =>
                         o.SeasonNumber == e.SeasonNumber
-                        && o.VideoFiles.Any(w =>
+                        && o.VideoFiles.Any(predicate: w =>
                             w is { Folder: not null, LastEpisodeNumber: not null }
                             && o.EpisodeNumber <= e.EpisodeNumber
                             && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)))
@@ -100,11 +100,11 @@ public record GenreCardData
         Title = musicGenre.Name.ToTitleCase();
         TitleSort = musicGenre.Name.TitleSort();
         Type = "genre";
-        Link = new($"/music/genres/{musicGenre.Id}", UriKind.Relative);
+        Link = new(uriString: $"/music/genres/{musicGenre.Id}", uriKind: UriKind.Relative);
         NumberOfItems = musicGenre.AlbumMusicGenres.Count + musicGenre.ArtistMusicGenres.Count;
         HaveItems =
-            musicGenre.AlbumMusicGenres.Count(ga => ga.Album.AlbumTrack.Count != 0)
-            + musicGenre.ArtistMusicGenres.Count(ga => ga.Artist.ArtistTrack.Count != 0);
+            musicGenre.AlbumMusicGenres.Count(predicate: ga => ga.Album.AlbumTrack.Count != 0)
+            + musicGenre.ArtistMusicGenres.Count(predicate: ga => ga.Artist.ArtistTrack.Count != 0);
     }
 
     public GenreCardData(GenreWithCountsDto dto)
@@ -113,7 +113,7 @@ public record GenreCardData
         Title = dto.Name.ToTitleCase();
         TitleSort = dto.Name.ToTitleCase();
         Type = "genre";
-        Link = new($"/genres/{dto.Id}", UriKind.Relative);
+        Link = new(uriString: $"/genres/{dto.Id}", uriKind: UriKind.Relative);
         NumberOfItems = dto.TotalMovies + dto.TotalTvShows;
         HaveItems = dto.MoviesWithVideo + dto.TvShowsWithVideo;
     }

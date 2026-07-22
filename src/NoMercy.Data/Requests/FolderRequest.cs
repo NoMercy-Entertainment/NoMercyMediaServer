@@ -15,9 +15,9 @@ namespace NoMercy.Data.Requests;
 
 public class FolderRequest
 {
-    [JsonProperty("path")]
+    [JsonProperty(propertyName: "path")]
     public string Path { get; set; } = string.Empty;
 
-    [JsonProperty("driver_id")]
+    [JsonProperty(propertyName: "driver_id")]
     public Ulid DriverId { get; set; }
 }

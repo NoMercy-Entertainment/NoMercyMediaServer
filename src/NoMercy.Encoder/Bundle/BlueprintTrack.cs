@@ -21,21 +21,21 @@ namespace NoMercy.Encoder.Bundle;
 /// </summary>
 public record BlueprintTrack(
     /// <summary>Joins into <c>source.ffprobe.streams[index]</c> in this same file.</summary>
-    [property: JsonProperty("source_stream_index")] int SourceStreamIndex,
+    [property: JsonProperty(propertyName: "source_stream_index")] int SourceStreamIndex,
     /// <summary>"video" | "audio" | "subtitle".</summary>
-    [property: JsonProperty("kind")] string Kind,
-    [property: JsonProperty("source_codec")] string SourceCodec,
-    [property: JsonProperty("source_language")] string? SourceLanguage,
+    [property: JsonProperty(propertyName: "kind")] string Kind,
+    [property: JsonProperty(propertyName: "source_codec")] string SourceCodec,
+    [property: JsonProperty(propertyName: "source_language")] string? SourceLanguage,
     /// <summary>"copy" | "extract" | "transcode" | "burn_in" | "acquire".</summary>
-    [property: JsonProperty("policy")] string Policy,
+    [property: JsonProperty(propertyName: "policy")] string Policy,
     /// <summary>"lossless" | "lossy" | "irreversible" | "external".</summary>
-    [property: JsonProperty("fidelity")] string Fidelity,
+    [property: JsonProperty(propertyName: "fidelity")] string Fidelity,
     /// <summary>False when the accepted-loss transcode is the only retained payload.</summary>
-    [property: JsonProperty("reconstructable")] bool? Reconstructable,
+    [property: JsonProperty(propertyName: "reconstructable")] bool? Reconstructable,
     /// <summary>Original codec/params recorded when the stream was an accepted loss.</summary>
-    [property: JsonProperty("original_params")] JObject? OriginalParams,
-    [property: JsonProperty("container")] string? Container,
-    [property: JsonProperty("files")] IReadOnlyList<string> Files,
+    [property: JsonProperty(propertyName: "original_params")] JObject? OriginalParams,
+    [property: JsonProperty(propertyName: "container")] string? Container,
+    [property: JsonProperty(propertyName: "files")] IReadOnlyList<string> Files,
     /// <summary>Set only for copied or extracted (lossless) assets — see spec "Verification".</summary>
-    [property: JsonProperty("sha256")] string? Sha256
+    [property: JsonProperty(propertyName: "sha256")] string? Sha256
 );

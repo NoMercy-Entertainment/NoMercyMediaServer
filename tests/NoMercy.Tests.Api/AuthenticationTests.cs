@@ -15,7 +15,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api;
 
-[Trait("Category", "Characterization")]
+[Trait(name: "Category", value: "Characterization")]
 public class AuthenticationTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -30,9 +30,9 @@ public class AuthenticationTests : IClassFixture<NoMercyApiFactory>
     {
         HttpClient client = _factory.CreateClient().AsUnauthenticated();
 
-        HttpResponseMessage response = await client.GetAsync("/status");
+        HttpResponseMessage response = await client.GetAsync(requestUri: "/status");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
     }
 
     [Fact]
@@ -40,15 +40,15 @@ public class AuthenticationTests : IClassFixture<NoMercyApiFactory>
     {
         HttpClient client = _factory.CreateClient().AsAuthenticated();
 
-        HttpResponseMessage response = await client.GetAsync("/api/v1/setup/permissions");
+        HttpResponseMessage response = await client.GetAsync(requestUri: "/api/v1/setup/permissions");
 
         string content = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {content}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {content}"
         );
-        Assert.Contains("owner", content);
-        Assert.Contains("allowed", content);
+        Assert.Contains(expectedSubstring: "owner", actualString: content);
+        Assert.Contains(expectedSubstring: "allowed", actualString: content);
     }
 
     [Fact]
@@ -56,11 +56,11 @@ public class AuthenticationTests : IClassFixture<NoMercyApiFactory>
     {
         HttpClient client = _factory.CreateClient().AsUnauthenticated();
 
-        HttpResponseMessage response = await client.GetAsync("/api/v1/setup/permissions");
+        HttpResponseMessage response = await client.GetAsync(requestUri: "/api/v1/setup/permissions");
 
         Assert.True(
-            response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
-            $"Expected 401 or 403, got {(int)response.StatusCode}"
+            condition: response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
+            userMessage: $"Expected 401 or 403, got {(int)response.StatusCode}"
         );
     }
 }

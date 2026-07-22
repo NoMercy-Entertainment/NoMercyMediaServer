@@ -18,15 +18,15 @@ public static class WallpaperServiceExtensions
 {
     public static IServiceCollection AddWallpaperService(this IServiceCollection services)
     {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
             services.AddSingleton<IWallpaperService, WindowsWallpaperService>();
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        else if (RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.OSX))
             services.AddSingleton<IWallpaperService, MacWallpaperService>();
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        else if (RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Linux))
         {
             bool hasDisplay =
-                Environment.GetEnvironmentVariable("DISPLAY") is not null
-                || Environment.GetEnvironmentVariable("WAYLAND_DISPLAY") is not null;
+                Environment.GetEnvironmentVariable(variable: "DISPLAY") is not null
+                || Environment.GetEnvironmentVariable(variable: "WAYLAND_DISPLAY") is not null;
 
             if (hasDisplay)
                 services.AddSingleton<IWallpaperService, LinuxWallpaperService>();

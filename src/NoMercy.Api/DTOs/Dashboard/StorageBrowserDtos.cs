@@ -15,16 +15,16 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record StorageProbeRequest
 {
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string? Type { get; set; }
 
-    [JsonProperty("config")]
+    [JsonProperty(propertyName: "config")]
     public StorageProbeConfigDto? Config { get; set; }
 }
 
 public record StorageProbeConfigDto
 {
-    [JsonProperty("server")]
+    [JsonProperty(propertyName: "server")]
     public string? Server { get; set; }
 
     /// <summary>
@@ -32,28 +32,28 @@ public record StorageProbeConfigDto
     /// to "test-mount this export" mode and returns ok=true only if the
     /// configured export actually mounts.
     /// </summary>
-    [JsonProperty("export")]
+    [JsonProperty(propertyName: "export")]
     public string? Export { get; set; }
 
-    [JsonProperty("version")]
+    [JsonProperty(propertyName: "version")]
     public int? Version { get; set; }
 
-    [JsonProperty("uid")]
+    [JsonProperty(propertyName: "uid")]
     public int? Uid { get; set; }
 
-    [JsonProperty("gid")]
+    [JsonProperty(propertyName: "gid")]
     public int? Gid { get; set; }
 }
 
 public record StorageProbeResponse
 {
-    [JsonProperty("ok")]
+    [JsonProperty(propertyName: "ok")]
     public bool Ok { get; set; }
 
-    [JsonProperty("exports")]
+    [JsonProperty(propertyName: "exports")]
     public List<string>? Exports { get; set; }
 
-    [JsonProperty("error")]
+    [JsonProperty(propertyName: "error")]
     public string? Error { get; set; }
 }
 
@@ -64,72 +64,72 @@ public record StorageListRequest
     /// credentials via IStorageFactory — the client never handles
     /// secret material.
     /// </summary>
-    [JsonProperty("driver_id")]
+    [JsonProperty(propertyName: "driver_id")]
     public string? DriverId { get; set; }
 
-    [JsonProperty("path")]
+    [JsonProperty(propertyName: "path")]
     public string? Path { get; set; }
 }
 
 public record StorageListConfigDto
 {
-    [JsonProperty("server")]
+    [JsonProperty(propertyName: "server")]
     public string? Server { get; set; }
 
-    [JsonProperty("export")]
+    [JsonProperty(propertyName: "export")]
     public string? Export { get; set; }
 
-    [JsonProperty("version")]
+    [JsonProperty(propertyName: "version")]
     public int? Version { get; set; }
 
-    [JsonProperty("uid")]
+    [JsonProperty(propertyName: "uid")]
     public int? Uid { get; set; }
 
-    [JsonProperty("gid")]
+    [JsonProperty(propertyName: "gid")]
     public int? Gid { get; set; }
 }
 
 public record StorageListResponse
 {
-    [JsonProperty("ok")]
+    [JsonProperty(propertyName: "ok")]
     public bool Ok { get; set; }
 
-    [JsonProperty("path")]
+    [JsonProperty(propertyName: "path")]
     public string? Path { get; set; }
 
-    [JsonProperty("entries")]
+    [JsonProperty(propertyName: "entries")]
     public List<StorageEntryDto>? Entries { get; set; }
 
-    [JsonProperty("error")]
+    [JsonProperty(propertyName: "error")]
     public string? Error { get; set; }
 }
 
 public record StorageEntryDto
 {
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("is_directory")]
+    [JsonProperty(propertyName: "is_directory")]
     public bool IsDirectory { get; set; }
 }
 
 public record StorageMkdirRequest
 {
-    [JsonProperty("driver_id")]
+    [JsonProperty(propertyName: "driver_id")]
     public string? DriverId { get; set; }
 
-    [JsonProperty("path")]
+    [JsonProperty(propertyName: "path")]
     public string? Path { get; set; }
 }
 
 public record StorageMkdirResponse
 {
-    [JsonProperty("ok")]
+    [JsonProperty(propertyName: "ok")]
     public bool Ok { get; set; }
 
-    [JsonProperty("path")]
+    [JsonProperty(propertyName: "path")]
     public string? Path { get; set; }
 
-    [JsonProperty("error")]
+    [JsonProperty(propertyName: "error")]
     public string? Error { get; set; }
 }

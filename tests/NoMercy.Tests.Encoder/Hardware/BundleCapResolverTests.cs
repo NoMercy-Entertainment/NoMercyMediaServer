@@ -33,22 +33,22 @@ public class BundleCapResolverTests
         );
 
     private static IHardwareCapabilities MakeHardware(GpuDevice? gpu, int cpuCores = 16) =>
-        new HardwareCapabilities(gpu is null ? [] : [gpu], cpuCores);
+        new HardwareCapabilities(Gpus: gpu is null ? [] : [gpu], CpuCores: cpuCores);
 
     private static IHardwareBenchmark MakeBenchmark(SpeedIndex? index)
     {
         Mock<IHardwareBenchmark> mock = new();
-        mock.Setup(b => b.GetCachedIndex()).Returns(index!);
+        mock.Setup(expression: b => b.GetCachedIndex()).Returns(value: index!);
         return mock.Object;
     }
 
     private static SpeedIndex IndexWith(params (SpeedKey key, double speed)[] entries)
     {
         Dictionary<SpeedKey, SpeedMeasurement> dict = entries.ToDictionary(
-            t => t.key,
-            t => new SpeedMeasurement(t.speed * 30, t.speed, DateTime.UtcNow)
+            keySelector: t => t.key,
+            elementSelector: t => new SpeedMeasurement(Fps: t.speed * 30, SpeedMultiplier: t.speed, MeasuredAt: DateTime.UtcNow)
         );
-        return new(dict);
+        return new(Measurements: dict);
     }
 
     // ── Fallbacks when no benchmark or hardware available ───────────────────
@@ -56,24 +56,24 @@ public class BundleCapResolverTests
     [Fact]
     public void Resolve_NoBenchmark_UsesConservativeFallback()
     {
-        BundleCapResolver.PlannedRung[] rungs = [Rung("hevc_nvenc", 1920, isGpu: true)];
-        IHardwareCapabilities hw = MakeHardware(MakeGpu());
+        BundleCapResolver.PlannedRung[] rungs = [Rung(encoder: "hevc_nvenc", width: 1920, isGpu: true)];
+        IHardwareCapabilities hw = MakeHardware(gpu: MakeGpu());
 
-        (int gpuCap, int cpuCap) = BundleCapResolver.Resolve(rungs, benchmark: null, hardware: hw);
+        (int gpuCap, int cpuCap) = BundleCapResolver.Resolve(rungs: rungs, benchmark: null, hardware: hw);
 
-        gpuCap.Should().Be(2); // UnknownGpuCapFallback
-        cpuCap.Should().Be(1); // UnknownCpuCapFallback
+        gpuCap.Should().Be(expected: 2); // UnknownGpuCapFallback
+        cpuCap.Should().Be(expected: 1); // UnknownCpuCapFallback
     }
 
     [Fact]
     public void Resolve_NoHardware_GpuCapFalls()
     {
-        BundleCapResolver.PlannedRung[] rungs = [Rung("hevc_nvenc", 1920, isGpu: true)];
-        IHardwareBenchmark benchmark = MakeBenchmark(null);
+        BundleCapResolver.PlannedRung[] rungs = [Rung(encoder: "hevc_nvenc", width: 1920, isGpu: true)];
+        IHardwareBenchmark benchmark = MakeBenchmark(index: null);
 
-        (int gpuCap, _) = BundleCapResolver.Resolve(rungs, benchmark, hardware: null);
+        (int gpuCap, _) = BundleCapResolver.Resolve(rungs: rungs, benchmark: benchmark, hardware: null);
 
-        gpuCap.Should().Be(2);
+        gpuCap.Should().Be(expected: 2);
     }
 
     [Fact]
@@ -81,15 +81,15 @@ public class BundleCapResolverTests
     {
         // Benchmark has data for a different codec/width than what's in the plan.
         SpeedIndex index = IndexWith(
-            (new(VideoCodecType.H264, "h264_nvenc", 1280, "RTX 4080"), 10.0)
+            entries: (new(Codec: VideoCodecType.H264, Encoder: "h264_nvenc", Width: 1280, DeviceName: "RTX 4080"), 10.0)
         );
-        IHardwareBenchmark benchmark = MakeBenchmark(index);
-        IHardwareCapabilities hw = MakeHardware(MakeGpu());
-        BundleCapResolver.PlannedRung[] rungs = [Rung("hevc_nvenc", 1920, isGpu: true)];
+        IHardwareBenchmark benchmark = MakeBenchmark(index: index);
+        IHardwareCapabilities hw = MakeHardware(gpu: MakeGpu());
+        BundleCapResolver.PlannedRung[] rungs = [Rung(encoder: "hevc_nvenc", width: 1920, isGpu: true)];
 
-        (int gpuCap, _) = BundleCapResolver.Resolve(rungs, benchmark, hw);
+        (int gpuCap, _) = BundleCapResolver.Resolve(rungs: rungs, benchmark: benchmark, hardware: hw);
 
-        gpuCap.Should().Be(2);
+        gpuCap.Should().Be(expected: 2);
     }
 
     // ── Benchmark-driven caps ───────────────────────────────────────────────
@@ -99,15 +99,15 @@ public class BundleCapResolverTests
     {
         // 12× realtime / 1.5× target = 8 streams per bundle.
         SpeedIndex index = IndexWith(
-            (new(VideoCodecType.H265, "hevc_nvenc", 1920, "RTX 4080"), 12.0)
+            entries: (new(Codec: VideoCodecType.H265, Encoder: "hevc_nvenc", Width: 1920, DeviceName: "RTX 4080"), 12.0)
         );
-        IHardwareBenchmark benchmark = MakeBenchmark(index);
-        IHardwareCapabilities hw = MakeHardware(MakeGpu());
-        BundleCapResolver.PlannedRung[] rungs = [Rung("hevc_nvenc", 1920, isGpu: true)];
+        IHardwareBenchmark benchmark = MakeBenchmark(index: index);
+        IHardwareCapabilities hw = MakeHardware(gpu: MakeGpu());
+        BundleCapResolver.PlannedRung[] rungs = [Rung(encoder: "hevc_nvenc", width: 1920, isGpu: true)];
 
-        (int gpuCap, _) = BundleCapResolver.Resolve(rungs, benchmark, hw);
+        (int gpuCap, _) = BundleCapResolver.Resolve(rungs: rungs, benchmark: benchmark, hardware: hw);
 
-        gpuCap.Should().Be(8);
+        gpuCap.Should().Be(expected: 8);
     }
 
     [Fact]
@@ -115,36 +115,34 @@ public class BundleCapResolverTests
     {
         // 1× realtime / 1.5× target = 0 → floor at 1.
         SpeedIndex index = IndexWith(
-            (new(VideoCodecType.H265, "hevc_nvenc", 1920, "RTX 4080"), 1.0)
+            entries: (new(Codec: VideoCodecType.H265, Encoder: "hevc_nvenc", Width: 1920, DeviceName: "RTX 4080"), 1.0)
         );
-        IHardwareBenchmark benchmark = MakeBenchmark(index);
-        IHardwareCapabilities hw = MakeHardware(MakeGpu());
-        BundleCapResolver.PlannedRung[] rungs = [Rung("hevc_nvenc", 1920, isGpu: true)];
+        IHardwareBenchmark benchmark = MakeBenchmark(index: index);
+        IHardwareCapabilities hw = MakeHardware(gpu: MakeGpu());
+        BundleCapResolver.PlannedRung[] rungs = [Rung(encoder: "hevc_nvenc", width: 1920, isGpu: true)];
 
-        (int gpuCap, _) = BundleCapResolver.Resolve(rungs, benchmark, hw);
+        (int gpuCap, _) = BundleCapResolver.Resolve(rungs: rungs, benchmark: benchmark, hardware: hw);
 
-        gpuCap.Should().Be(1);
+        gpuCap.Should().Be(expected: 1);
     }
 
     [Fact]
     public void Resolve_MultipleRungs_PickedByTheSlowest()
     {
         // 4K HEVC (slow) + 1080p HEVC (fast) — slowest sets the cap.
-        SpeedIndex index = IndexWith(
-            (new(VideoCodecType.H265, "hevc_nvenc", 3840, "RTX 4080"), 3.0),
-            (new(VideoCodecType.H265, "hevc_nvenc", 1920, "RTX 4080"), 12.0)
+        SpeedIndex index = IndexWith(entries: [(new(Codec: VideoCodecType.H265, Encoder: "hevc_nvenc", Width: 3840, DeviceName: "RTX 4080"), 3.0), (new(Codec: VideoCodecType.H265, Encoder: "hevc_nvenc", Width: 1920, DeviceName: "RTX 4080"), 12.0)]
         );
-        IHardwareBenchmark benchmark = MakeBenchmark(index);
-        IHardwareCapabilities hw = MakeHardware(MakeGpu());
+        IHardwareBenchmark benchmark = MakeBenchmark(index: index);
+        IHardwareCapabilities hw = MakeHardware(gpu: MakeGpu());
         BundleCapResolver.PlannedRung[] rungs =
         [
-            Rung("hevc_nvenc", 3840, isGpu: true),
-            Rung("hevc_nvenc", 1920, isGpu: true),
+            Rung(encoder: "hevc_nvenc", width: 3840, isGpu: true),
+            Rung(encoder: "hevc_nvenc", width: 1920, isGpu: true),
         ];
 
-        (int gpuCap, _) = BundleCapResolver.Resolve(rungs, benchmark, hw);
+        (int gpuCap, _) = BundleCapResolver.Resolve(rungs: rungs, benchmark: benchmark, hardware: hw);
 
-        gpuCap.Should().Be(2); // floor(3.0 / 1.5) = 2
+        gpuCap.Should().Be(expected: 2); // floor(3.0 / 1.5) = 2
     }
 
     [Fact]
@@ -152,15 +150,15 @@ public class BundleCapResolverTests
     {
         // Benchmark says 12 / 1.5 = 8 but driver caps at 5 → 5.
         SpeedIndex index = IndexWith(
-            (new(VideoCodecType.H265, "hevc_nvenc", 1920, "RTX 4080"), 12.0)
+            entries: (new(Codec: VideoCodecType.H265, Encoder: "hevc_nvenc", Width: 1920, DeviceName: "RTX 4080"), 12.0)
         );
-        IHardwareBenchmark benchmark = MakeBenchmark(index);
-        IHardwareCapabilities hw = MakeHardware(MakeGpu(maxSessions: 5));
-        BundleCapResolver.PlannedRung[] rungs = [Rung("hevc_nvenc", 1920, isGpu: true)];
+        IHardwareBenchmark benchmark = MakeBenchmark(index: index);
+        IHardwareCapabilities hw = MakeHardware(gpu: MakeGpu(maxSessions: 5));
+        BundleCapResolver.PlannedRung[] rungs = [Rung(encoder: "hevc_nvenc", width: 1920, isGpu: true)];
 
-        (int gpuCap, _) = BundleCapResolver.Resolve(rungs, benchmark, hw);
+        (int gpuCap, _) = BundleCapResolver.Resolve(rungs: rungs, benchmark: benchmark, hardware: hw);
 
-        gpuCap.Should().Be(5);
+        gpuCap.Should().Be(expected: 5);
     }
 
     [Fact]
@@ -168,30 +166,30 @@ public class BundleCapResolverTests
     {
         // Professional/datacenter cards report MaxEncoderSessions = int.MaxValue.
         SpeedIndex index = IndexWith(
-            (new(VideoCodecType.H265, "hevc_nvenc", 1920, "L40"), 30.0)
+            entries: (new(Codec: VideoCodecType.H265, Encoder: "hevc_nvenc", Width: 1920, DeviceName: "L40"), 30.0)
         );
-        IHardwareBenchmark benchmark = MakeBenchmark(index);
-        IHardwareCapabilities hw = MakeHardware(MakeGpu("L40", maxSessions: int.MaxValue));
-        BundleCapResolver.PlannedRung[] rungs = [Rung("hevc_nvenc", 1920, isGpu: true)];
+        IHardwareBenchmark benchmark = MakeBenchmark(index: index);
+        IHardwareCapabilities hw = MakeHardware(gpu: MakeGpu(name: "L40", maxSessions: int.MaxValue));
+        BundleCapResolver.PlannedRung[] rungs = [Rung(encoder: "hevc_nvenc", width: 1920, isGpu: true)];
 
-        (int gpuCap, _) = BundleCapResolver.Resolve(rungs, benchmark, hw);
+        (int gpuCap, _) = BundleCapResolver.Resolve(rungs: rungs, benchmark: benchmark, hardware: hw);
 
-        gpuCap.Should().Be(20); // 30/1.5 = 20, no driver clamp
+        gpuCap.Should().Be(expected: 20); // 30/1.5 = 20, no driver clamp
     }
 
     [Fact]
     public void Resolve_CpuRungsScoredSeparately()
     {
         SpeedIndex index = IndexWith(
-            (new(VideoCodecType.H265, "libx265", 1920, null), 6.0)
+            entries: (new(Codec: VideoCodecType.H265, Encoder: "libx265", Width: 1920, DeviceName: null), 6.0)
         );
-        IHardwareBenchmark benchmark = MakeBenchmark(index);
-        IHardwareCapabilities hw = MakeHardware(MakeGpu());
-        BundleCapResolver.PlannedRung[] rungs = [Rung("libx265", 1920, isGpu: false)];
+        IHardwareBenchmark benchmark = MakeBenchmark(index: index);
+        IHardwareCapabilities hw = MakeHardware(gpu: MakeGpu());
+        BundleCapResolver.PlannedRung[] rungs = [Rung(encoder: "libx265", width: 1920, isGpu: false)];
 
-        (_, int cpuCap) = BundleCapResolver.Resolve(rungs, benchmark, hw);
+        (_, int cpuCap) = BundleCapResolver.Resolve(rungs: rungs, benchmark: benchmark, hardware: hw);
 
-        cpuCap.Should().Be(4); // floor(6/1.5)
+        cpuCap.Should().Be(expected: 4); // floor(6/1.5)
     }
 
     [Fact]
@@ -200,24 +198,24 @@ public class BundleCapResolverTests
         // CPU plan has nothing — should hit the CPU fallback (1) regardless
         // of how good the GPU benchmark looks.
         SpeedIndex index = IndexWith(
-            (new(VideoCodecType.H265, "hevc_nvenc", 1920, "RTX 4080"), 12.0)
+            entries: (new(Codec: VideoCodecType.H265, Encoder: "hevc_nvenc", Width: 1920, DeviceName: "RTX 4080"), 12.0)
         );
-        IHardwareBenchmark benchmark = MakeBenchmark(index);
-        IHardwareCapabilities hw = MakeHardware(MakeGpu());
-        BundleCapResolver.PlannedRung[] rungs = [Rung("hevc_nvenc", 1920, isGpu: true)];
+        IHardwareBenchmark benchmark = MakeBenchmark(index: index);
+        IHardwareCapabilities hw = MakeHardware(gpu: MakeGpu());
+        BundleCapResolver.PlannedRung[] rungs = [Rung(encoder: "hevc_nvenc", width: 1920, isGpu: true)];
 
-        (int gpuCap, int cpuCap) = BundleCapResolver.Resolve(rungs, benchmark, hw);
+        (int gpuCap, int cpuCap) = BundleCapResolver.Resolve(rungs: rungs, benchmark: benchmark, hardware: hw);
 
-        gpuCap.Should().Be(8);
-        cpuCap.Should().Be(1);
+        gpuCap.Should().Be(expected: 8);
+        cpuCap.Should().Be(expected: 1);
     }
 
     private static BundleCapResolver.PlannedRung Rung(string encoder, int width, bool isGpu)
     {
         VideoCodecType codec =
-            encoder.Contains("hevc") || encoder.Contains("x265") ? VideoCodecType.H265
-            : encoder.Contains("av1") ? VideoCodecType.Av1
-            : encoder.Contains("vp9") ? VideoCodecType.Vp9
+            encoder.Contains(value: "hevc") || encoder.Contains(value: "x265") ? VideoCodecType.H265
+            : encoder.Contains(value: "av1") ? VideoCodecType.Av1
+            : encoder.Contains(value: "vp9") ? VideoCodecType.Vp9
             : VideoCodecType.H264;
         return new(Codec: codec, EncoderName: encoder, Width: width, IsGpu: isGpu);
     }

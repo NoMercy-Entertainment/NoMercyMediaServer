@@ -26,11 +26,11 @@ public class TrackPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        Guid id = Guid.Parse(entityId);
+        Guid id = Guid.Parse(input: entityId);
         return await db
-            .Tracks.Where(t => t.Id == id)
-            .Select(t => t._colorPalette)
-            .FirstOrDefaultAsync(ct);
+            .Tracks.Where(predicate: t => t.Id == id)
+            .Select(selector: t => t._colorPalette)
+            .FirstOrDefaultAsync(cancellationToken: ct);
     }
 
     public async Task<PaletteResult> GenerateAsync(
@@ -39,15 +39,15 @@ public class TrackPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        Guid id = Guid.Parse(entityId);
-        Track? track = await db.Tracks.FirstOrDefaultAsync(t => t.Id == id, ct);
+        Guid id = Guid.Parse(input: entityId);
+        Track? track = await db.Tracks.FirstOrDefaultAsync(predicate: t => t.Id == id, cancellationToken: ct);
         if (track is null)
             return PaletteResult.NoImage();
 
         AlbumTrack? link = await db
-            .AlbumTrack.Include(at => at.Album)
-            .Where(at => at.TrackId == id)
-            .FirstOrDefaultAsync(ct);
+            .AlbumTrack.Include(navigationPropertyPath: at => at.Album)
+            .Where(predicate: at => at.TrackId == id)
+            .FirstOrDefaultAsync(cancellationToken: ct);
         Album? album = link?.Album;
 
         // A track almost always shares its album's stored cover file — both are
@@ -58,22 +58,22 @@ public class TrackPaletteSource : IPaletteSource
             album is not null && (track.Cover is null || track.Cover == album.Cover);
         if (
             sharesAlbumArt
-            && !string.IsNullOrEmpty(album!._colorPalette)
+            && !string.IsNullOrEmpty(value: album!._colorPalette)
             && album._colorPalette != "{}"
         )
-            return PaletteResult.Success(album._colorPalette);
+            return PaletteResult.Success(json: album._colorPalette);
 
         if (track.Cover is null)
             return PaletteResult.NoImage();
 
         string filePath = AppFiles.MusicImagesPath + track.Cover;
-        if (!File.Exists(filePath))
+        if (!File.Exists(path: filePath))
             return PaletteResult.NoImage();
 
-        string json = await CoverArtImageManagerManager.ColorPalette("cover", new(filePath));
-        return string.IsNullOrWhiteSpace(json)
+        string json = await CoverArtImageManagerManager.ColorPalette(type: "cover", url: new(uriString: filePath));
+        return string.IsNullOrWhiteSpace(value: json)
             ? PaletteResult.NoImage()
-            : PaletteResult.Success(json);
+            : PaletteResult.Success(json: json);
     }
 
     public async Task PersistAsync(
@@ -83,9 +83,9 @@ public class TrackPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        Guid id = Guid.Parse(entityId);
+        Guid id = Guid.Parse(input: entityId);
         await db
-            .Tracks.Where(t => t.Id == id)
-            .ExecuteUpdateAsync(s => s.SetProperty(t => t._colorPalette, json), ct);
+            .Tracks.Where(predicate: t => t.Id == id)
+            .ExecuteUpdateAsync(setPropertyCalls: s => s.SetProperty(propertyExpression: t => t._colorPalette, valueExpression: json), cancellationToken: ct);
     }
 }

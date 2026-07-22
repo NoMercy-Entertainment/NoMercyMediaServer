@@ -27,11 +27,11 @@ namespace NoMercy.Tests.App.EmbeddedStaticAssets;
 /// gzip/brotli negotiation, cache-header selection, and HTML injection are all
 /// exercised against genuine embedded bytes, never a mocked <see cref="IFileProvider"/>.
 /// </summary>
-[Trait("Category", "Middleware")]
+[Trait(name: "Category", value: "Middleware")]
 public sealed class EmbeddedStaticAssetsMiddlewareTests
 {
     private static ManifestEmbeddedFileProvider CreateFileProvider() =>
-        new(Assembly.GetExecutingAssembly(), "wwwroot");
+        new(assembly: Assembly.GetExecutingAssembly(), root: "wwwroot");
 
     private static (
         EmbeddedStaticAssetsMiddleware Middleware,
@@ -43,14 +43,14 @@ public sealed class EmbeddedStaticAssetsMiddlewareTests
         FakeLogger logger = new();
 
         EmbeddedStaticAssetsMiddleware middleware = new(
-            _ =>
+            next: _ =>
             {
                 nextCalled[0] = true;
                 return Task.CompletedTask;
             },
-            CreateFileProvider(),
-            options ?? new(),
-            logger
+            fileProvider: CreateFileProvider(),
+            options: options ?? new(),
+            logger: logger
         );
 
         return (middleware, logger, nextCalled);
@@ -80,41 +80,41 @@ public sealed class EmbeddedStaticAssetsMiddlewareTests
     private static string ReadBody(DefaultHttpContext context)
     {
         MemoryStream stream = (MemoryStream)context.Response.Body;
-        return Encoding.UTF8.GetString(stream.ToArray());
+        return Encoding.UTF8.GetString(bytes: stream.ToArray());
     }
 
     [Fact]
     public async Task InvokeAsync_NonGetNonHeadMethod_CallsNextWithoutServing()
     {
         (EmbeddedStaticAssetsMiddleware middleware, _, bool[] nextCalled) = CreateMiddleware();
-        DefaultHttpContext context = CreateContext("/index.html", method: "POST");
+        DefaultHttpContext context = CreateContext(path: "/index.html", method: "POST");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
         nextCalled[0].Should().BeTrue();
-        ((MemoryStream)context.Response.Body).Length.Should().Be(0);
+        ((MemoryStream)context.Response.Body).Length.Should().Be(expected: 0);
     }
 
     [Fact]
     public async Task InvokeAsync_RootPath_ServesIndexHtml()
     {
         (EmbeddedStaticAssetsMiddleware middleware, _, bool[] nextCalled) = CreateMiddleware();
-        DefaultHttpContext context = CreateContext("/");
+        DefaultHttpContext context = CreateContext(path: "/");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
         nextCalled[0].Should().BeFalse();
-        context.Response.ContentType.Should().Be("text/html");
-        ReadBody(context).Should().Contain("Fixture Index");
+        context.Response.ContentType.Should().Be(expected: "text/html");
+        ReadBody(context: context).Should().Contain(expected: "Fixture Index");
     }
 
     [Fact]
     public async Task InvokeAsync_UnknownPathWithExtension_CallsNext()
     {
         (EmbeddedStaticAssetsMiddleware middleware, _, bool[] nextCalled) = CreateMiddleware();
-        DefaultHttpContext context = CreateContext("/does-not-exist.js");
+        DefaultHttpContext context = CreateContext(path: "/does-not-exist.js");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
         nextCalled[0].Should().BeTrue();
     }
@@ -123,110 +123,110 @@ public sealed class EmbeddedStaticAssetsMiddlewareTests
     public async Task InvokeAsync_UnknownPathWithoutExtension_SpaFallbackServesIndexHtml()
     {
         (EmbeddedStaticAssetsMiddleware middleware, _, bool[] nextCalled) = CreateMiddleware();
-        DefaultHttpContext context = CreateContext("/some/client/route");
+        DefaultHttpContext context = CreateContext(path: "/some/client/route");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
         nextCalled[0].Should().BeFalse();
-        context.Response.StatusCode.Should().Be(200);
-        ReadBody(context).Should().Contain("Fixture Index");
+        context.Response.StatusCode.Should().Be(expected: 200);
+        ReadBody(context: context).Should().Contain(expected: "Fixture Index");
     }
 
     [Fact]
     public async Task InvokeAsync_KnownAsset_SetsETagAndLastModifiedAndContentLength()
     {
         (EmbeddedStaticAssetsMiddleware middleware, _, _) = CreateMiddleware();
-        DefaultHttpContext context = CreateContext("/styles.css");
+        DefaultHttpContext context = CreateContext(path: "/styles.css");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
-        context.Response.ContentType.Should().Be("text/css");
+        context.Response.ContentType.Should().Be(expected: "text/css");
         context.Response.Headers.ETag.ToString().Should().NotBeNullOrEmpty();
         context.Response.Headers.LastModified.ToString().Should().NotBeNullOrEmpty();
-        context.Response.ContentLength.Should().BeGreaterThan(0);
+        context.Response.ContentLength.Should().BeGreaterThan(expected: 0);
     }
 
     [Fact]
     public async Task InvokeAsync_ConditionalRequestMatchingETag_Returns304WithNoBody()
     {
         (EmbeddedStaticAssetsMiddleware middleware, _, _) = CreateMiddleware();
-        DefaultHttpContext first = CreateContext("/styles.css");
-        await middleware.InvokeAsync(first);
+        DefaultHttpContext first = CreateContext(path: "/styles.css");
+        await middleware.InvokeAsync(context: first);
         string etag = first.Response.Headers.ETag.ToString();
 
-        DefaultHttpContext second = CreateContext("/styles.css", ifNoneMatch: etag);
-        await middleware.InvokeAsync(second);
+        DefaultHttpContext second = CreateContext(path: "/styles.css", ifNoneMatch: etag);
+        await middleware.InvokeAsync(context: second);
 
-        second.Response.StatusCode.Should().Be(StatusCodes.Status304NotModified);
-        ((MemoryStream)second.Response.Body).Length.Should().Be(0);
+        second.Response.StatusCode.Should().Be(expected: StatusCodes.Status304NotModified);
+        ((MemoryStream)second.Response.Body).Length.Should().Be(expected: 0);
     }
 
     [Fact]
     public async Task InvokeAsync_ConditionalRequestMismatchedETag_Returns200WithBody()
     {
         (EmbeddedStaticAssetsMiddleware middleware, _, _) = CreateMiddleware();
-        DefaultHttpContext context = CreateContext("/styles.css", ifNoneMatch: "\"stale-etag\"");
+        DefaultHttpContext context = CreateContext(path: "/styles.css", ifNoneMatch: "\"stale-etag\"");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
-        context.Response.StatusCode.Should().Be(200);
-        ((MemoryStream)context.Response.Body).Length.Should().BeGreaterThan(0);
+        context.Response.StatusCode.Should().Be(expected: 200);
+        ((MemoryStream)context.Response.Body).Length.Should().BeGreaterThan(expected: 0);
     }
 
     [Fact]
     public async Task InvokeAsync_HashedFilename_SetsImmutableCacheControl()
     {
         (EmbeddedStaticAssetsMiddleware middleware, _, _) = CreateMiddleware();
-        DefaultHttpContext context = CreateContext("/app-8f3a9c2b.js");
+        DefaultHttpContext context = CreateContext(path: "/app-8f3a9c2b.js");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
-        context.Response.Headers.CacheControl.ToString().Should().Contain("immutable");
+        context.Response.Headers.CacheControl.ToString().Should().Contain(expected: "immutable");
     }
 
     [Fact]
     public async Task InvokeAsync_NonHashedFilename_SetsShortRevalidateCacheControl()
     {
         (EmbeddedStaticAssetsMiddleware middleware, _, _) = CreateMiddleware();
-        DefaultHttpContext context = CreateContext("/styles.css");
+        DefaultHttpContext context = CreateContext(path: "/styles.css");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
         string cacheControl = context.Response.Headers.CacheControl.ToString();
-        cacheControl.Should().Contain("must-revalidate");
-        cacheControl.Should().NotContain("immutable");
+        cacheControl.Should().Contain(expected: "must-revalidate");
+        cacheControl.Should().NotContain(unexpected: "immutable");
     }
 
     [Fact]
     public async Task InvokeAsync_AcceptEncodingBrotli_ReturnsBrotliEncodedBody()
     {
         (EmbeddedStaticAssetsMiddleware middleware, _, _) = CreateMiddleware();
-        DefaultHttpContext context = CreateContext("/app-8f3a9c2b.js", acceptEncoding: "br");
+        DefaultHttpContext context = CreateContext(path: "/app-8f3a9c2b.js", acceptEncoding: "br");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
-        context.Response.Headers.ContentEncoding.ToString().Should().Be("br");
-        context.Response.Headers.Vary.ToString().Should().Be("Accept-Encoding");
+        context.Response.Headers.ContentEncoding.ToString().Should().Be(expected: "br");
+        context.Response.Headers.Vary.ToString().Should().Be(expected: "Accept-Encoding");
     }
 
     [Fact]
     public async Task InvokeAsync_AcceptEncodingGzip_ReturnsGzipEncodedBody()
     {
         (EmbeddedStaticAssetsMiddleware middleware, _, _) = CreateMiddleware();
-        DefaultHttpContext context = CreateContext("/app-8f3a9c2b.js", acceptEncoding: "gzip");
+        DefaultHttpContext context = CreateContext(path: "/app-8f3a9c2b.js", acceptEncoding: "gzip");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
-        context.Response.Headers.ContentEncoding.ToString().Should().Be("gzip");
+        context.Response.Headers.ContentEncoding.ToString().Should().Be(expected: "gzip");
     }
 
     [Fact]
     public async Task InvokeAsync_NoAcceptEncoding_ReturnsUncompressedBodyWithNoEncodingHeader()
     {
         (EmbeddedStaticAssetsMiddleware middleware, _, _) = CreateMiddleware();
-        DefaultHttpContext context = CreateContext("/app-8f3a9c2b.js");
+        DefaultHttpContext context = CreateContext(path: "/app-8f3a9c2b.js");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
         context.Response.Headers.ContentEncoding.ToString().Should().BeEmpty();
     }
@@ -235,9 +235,9 @@ public sealed class EmbeddedStaticAssetsMiddlewareTests
     public async Task InvokeAsync_SmallFile_NeverCompressedRegardlessOfAcceptEncoding()
     {
         (EmbeddedStaticAssetsMiddleware middleware, _, _) = CreateMiddleware();
-        DefaultHttpContext context = CreateContext("/index.html", acceptEncoding: "br, gzip");
+        DefaultHttpContext context = CreateContext(path: "/index.html", acceptEncoding: "br, gzip");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
         context.Response.Headers.ContentEncoding.ToString().Should().BeEmpty();
     }
@@ -246,11 +246,11 @@ public sealed class EmbeddedStaticAssetsMiddlewareTests
     public async Task InvokeAsync_AlreadyCompressedContentType_SkipsCompressionEvenWhenLarge()
     {
         (EmbeddedStaticAssetsMiddleware middleware, _, _) = CreateMiddleware();
-        DefaultHttpContext context = CreateContext("/image.png", acceptEncoding: "br, gzip");
+        DefaultHttpContext context = CreateContext(path: "/image.png", acceptEncoding: "br, gzip");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
-        context.Response.ContentType.Should().Be("image/png");
+        context.Response.ContentType.Should().Be(expected: "image/png");
         context.Response.Headers.ContentEncoding.ToString().Should().BeEmpty();
     }
 
@@ -258,106 +258,106 @@ public sealed class EmbeddedStaticAssetsMiddlewareTests
     public async Task InvokeAsync_WebmanifestExtension_UsesCustomMimeMapping()
     {
         (EmbeddedStaticAssetsMiddleware middleware, _, _) = CreateMiddleware();
-        DefaultHttpContext context = CreateContext("/manifest.webmanifest");
+        DefaultHttpContext context = CreateContext(path: "/manifest.webmanifest");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
-        context.Response.ContentType.Should().Be("application/manifest+json");
+        context.Response.ContentType.Should().Be(expected: "application/manifest+json");
     }
 
     [Fact]
     public async Task InvokeAsync_Woff2Extension_UsesCustomMimeMapping()
     {
         (EmbeddedStaticAssetsMiddleware middleware, _, _) = CreateMiddleware();
-        DefaultHttpContext context = CreateContext("/font.woff2");
+        DefaultHttpContext context = CreateContext(path: "/font.woff2");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
-        context.Response.ContentType.Should().Be("font/woff2");
+        context.Response.ContentType.Should().Be(expected: "font/woff2");
     }
 
     [Fact]
     public async Task InvokeAsync_HeadRequest_SetsHeadersButWritesNoBody()
     {
         (EmbeddedStaticAssetsMiddleware middleware, _, _) = CreateMiddleware();
-        DefaultHttpContext context = CreateContext("/index.html", method: "HEAD");
+        DefaultHttpContext context = CreateContext(path: "/index.html", method: "HEAD");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
-        context.Response.ContentLength.Should().BeGreaterThan(0);
-        ((MemoryStream)context.Response.Body).Length.Should().Be(0);
+        context.Response.ContentLength.Should().BeGreaterThan(expected: 0);
+        ((MemoryStream)context.Response.Body).Length.Should().Be(expected: 0);
     }
 
     [Fact]
     public async Task InvokeAsync_HtmlInjection_InsertsMetaStylesBeforeHeadAndScriptsBeforeBody()
     {
         EmbeddedStaticAssetsOptions options = new();
-        options.InjectMetaTags.Add("<meta name=\"x\" content=\"y\">");
-        options.InjectStyles.Add("/bar.css");
-        options.InjectScripts.Add("/foo.js");
-        (EmbeddedStaticAssetsMiddleware middleware, _, _) = CreateMiddleware(options);
-        DefaultHttpContext context = CreateContext("/index.html");
+        options.InjectMetaTags.Add(item: "<meta name=\"x\" content=\"y\">");
+        options.InjectStyles.Add(item: "/bar.css");
+        options.InjectScripts.Add(item: "/foo.js");
+        (EmbeddedStaticAssetsMiddleware middleware, _, _) = CreateMiddleware(options: options);
+        DefaultHttpContext context = CreateContext(path: "/index.html");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
-        string body = ReadBody(context);
+        string body = ReadBody(context: context);
         body.Should()
             .Contain(
-                "<meta name=\"x\" content=\"y\"><link rel=\"stylesheet\" href=\"/bar.css\"></head>"
+                expected: "<meta name=\"x\" content=\"y\"><link rel=\"stylesheet\" href=\"/bar.css\"></head>"
             );
-        body.Should().Contain("<script src=\"/foo.js\"></script></body>");
+        body.Should().Contain(expected: "<script src=\"/foo.js\"></script></body>");
     }
 
     [Fact]
     public async Task InvokeAsync_HtmlInjection_DefaultPatternDoesNotMatchNonIndexHtml()
     {
         (EmbeddedStaticAssetsMiddleware middleware, _, _) = CreateMiddleware(
-            new() { InjectScripts = ["/foo.js"] }
+            options: new() { InjectScripts = ["/foo.js"] }
         );
-        DefaultHttpContext context = CreateContext("/pages/nested.html");
+        DefaultHttpContext context = CreateContext(path: "/pages/nested.html");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
-        ReadBody(context).Should().NotContain("/foo.js");
+        ReadBody(context: context).Should().NotContain(unexpected: "/foo.js");
     }
 
     [Fact]
     public async Task InvokeAsync_HtmlInjection_GlobPatternMatchesNestedHtmlFiles()
     {
         (EmbeddedStaticAssetsMiddleware middleware, _, _) = CreateMiddleware(
-            new() { InjectScripts = ["/foo.js"], HtmlFilePatterns = ["**/*.html"] }
+            options: new() { InjectScripts = ["/foo.js"], HtmlFilePatterns = ["**/*.html"] }
         );
-        DefaultHttpContext context = CreateContext("/pages/nested.html");
+        DefaultHttpContext context = CreateContext(path: "/pages/nested.html");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
-        ReadBody(context).Should().Contain("<script src=\"/foo.js\"></script></body>");
+        ReadBody(context: context).Should().Contain(expected: "<script src=\"/foo.js\"></script></body>");
     }
 
     [Fact]
     public async Task InvokeAsync_HtmlInjection_MinifyTrimsCompleteTagWhitespace()
     {
         (EmbeddedStaticAssetsMiddleware middleware, _, _) = CreateMiddleware(
-            new() { InjectScripts = ["  <script>window.x=1;</script>  "], MinifyInjections = true }
+            options: new() { InjectScripts = ["  <script>window.x=1;</script>  "], MinifyInjections = true }
         );
-        DefaultHttpContext context = CreateContext("/index.html");
+        DefaultHttpContext context = CreateContext(path: "/index.html");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
-        ReadBody(context).Should().Contain("<script>window.x=1;</script></body>");
+        ReadBody(context: context).Should().Contain(expected: "<script>window.x=1;</script></body>");
     }
 
     [Fact]
     public async Task InvokeAsync_HtmlInjection_NoMinifyPreservesCompleteTagWhitespace()
     {
         (EmbeddedStaticAssetsMiddleware middleware, _, _) = CreateMiddleware(
-            new() { InjectScripts = ["  <script>window.x=1;</script>  "], MinifyInjections = false }
+            options: new() { InjectScripts = ["  <script>window.x=1;</script>  "], MinifyInjections = false }
         );
-        DefaultHttpContext context = CreateContext("/index.html");
+        DefaultHttpContext context = CreateContext(path: "/index.html");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
-        ReadBody(context).Should().Contain("  <script>window.x=1;</script>  </body>");
+        ReadBody(context: context).Should().Contain(expected: "  <script>window.x=1;</script>  </body>");
     }
 
     [Fact]
@@ -365,10 +365,10 @@ public sealed class EmbeddedStaticAssetsMiddlewareTests
     {
         (EmbeddedStaticAssetsMiddleware middleware, FakeLogger logger, _) = CreateMiddleware();
 
-        await middleware.InvokeAsync(CreateContext("/styles.css"));
-        await middleware.InvokeAsync(CreateContext("/styles.css"));
+        await middleware.InvokeAsync(context: CreateContext(path: "/styles.css"));
+        await middleware.InvokeAsync(context: CreateContext(path: "/styles.css"));
 
-        logger.Messages.Count(message => message.Contains("Cached embedded asset")).Should().Be(1);
+        logger.Messages.Count(predicate: message => message.Contains(value: "Cached embedded asset")).Should().Be(expected: 1);
     }
 
     /// <summary>
@@ -392,7 +392,7 @@ public sealed class EmbeddedStaticAssetsMiddlewareTests
             Func<TState, Exception?, string> formatter
         )
         {
-            Messages.Add(formatter(state, exception));
+            Messages.Add(item: formatter(arg1: state, arg2: exception));
         }
     }
 }

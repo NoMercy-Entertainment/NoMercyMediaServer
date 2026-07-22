@@ -25,7 +25,7 @@ namespace NoMercy.Tests.Cli;
 /// Windows — so a regression in the success/error/empty-body branching is
 /// caught against the real wire format, not a mock of the client under test.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class CliClientTests
 {
     private static Task<string> RespondWith(
@@ -35,8 +35,8 @@ public sealed class CliClientTests
         string body
     )
     {
-        return server.RunOnceAsync(stream =>
-            FakeManagementPipeServer.WriteResponseAsync(stream, status, reason, body)
+        return server.RunOnceAsync(respond: stream =>
+            FakeManagementPipeServer.WriteResponseAsync(stream: stream, statusCode: status, reasonPhrase: reason, body: body)
         );
     }
 
@@ -45,20 +45,20 @@ public sealed class CliClientTests
     {
         FakeManagementPipeServer server = new();
         Task<string> requestTask = RespondWith(
-            server,
-            200,
-            "OK",
-            """{"status":"running","server_name":"nomercy-test"}"""
+            server: server,
+            status: 200,
+            reason: "OK",
+            body: """{"status":"running","server_name":"nomercy-test"}"""
         );
 
-        using CliClient client = new(server.PipeName);
-        StatusResponse? result = await client.GetAsync<StatusResponse>("/manage/status");
+        using CliClient client = new(pipeNameOrSocketPath: server.PipeName);
+        StatusResponse? result = await client.GetAsync<StatusResponse>(path: "/manage/status");
 
         string request = await requestTask;
-        request.Should().StartWith("GET /manage/status");
+        request.Should().StartWith(expected: "GET /manage/status");
         result.Should().NotBeNull();
-        result!.Status.Should().Be("running");
-        result.ServerName.Should().Be("nomercy-test");
+        result!.Status.Should().Be(expected: "running");
+        result.ServerName.Should().Be(expected: "nomercy-test");
     }
 
     [Fact]
@@ -66,80 +66,80 @@ public sealed class CliClientTests
     {
         FakeManagementPipeServer server = new();
         Task<string> requestTask = RespondWith(
-            server,
-            404,
-            "Not Found",
-            """{"error":"no such route"}"""
+            server: server,
+            status: 404,
+            reason: "Not Found",
+            body: """{"error":"no such route"}"""
         );
 
         using ConsoleCapture console = new();
-        using CliClient client = new(server.PipeName);
-        StatusResponse? result = await client.GetAsync<StatusResponse>("/manage/missing");
+        using CliClient client = new(pipeNameOrSocketPath: server.PipeName);
+        StatusResponse? result = await client.GetAsync<StatusResponse>(path: "/manage/missing");
 
         await requestTask;
         result.Should().BeNull();
-        console.Error.Should().Contain("Error: 404 Not Found");
-        console.Error.Should().Contain("no such route");
+        console.Error.Should().Contain(expected: "Error: 404 Not Found");
+        console.Error.Should().Contain(expected: "no such route");
     }
 
     [Fact]
     public async Task GetAsync_ErrorResponseWithEmptyBody_PrintsOnlyStatusLine()
     {
         FakeManagementPipeServer server = new();
-        Task<string> requestTask = RespondWith(server, 500, "Internal Server Error", "");
+        Task<string> requestTask = RespondWith(server: server, status: 500, reason: "Internal Server Error", body: "");
 
         using ConsoleCapture console = new();
-        using CliClient client = new(server.PipeName);
-        StatusResponse? result = await client.GetAsync<StatusResponse>("/manage/status");
+        using CliClient client = new(pipeNameOrSocketPath: server.PipeName);
+        StatusResponse? result = await client.GetAsync<StatusResponse>(path: "/manage/status");
 
         await requestTask;
         result.Should().BeNull();
         string[] lines = console
             .Error.ToString()
-            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            .Split(separator: '\n', options: StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         lines.Should().ContainSingle();
-        lines[0].Should().Contain("Error: 500");
+        lines[0].Should().Contain(expected: "Error: 500");
     }
 
     [Fact]
     public async Task GetRawAsync_SuccessResponse_ReturnsRawBody()
     {
         FakeManagementPipeServer server = new();
-        Task<string> requestTask = RespondWith(server, 200, "OK", "plain-text-body");
+        Task<string> requestTask = RespondWith(server: server, status: 200, reason: "OK", body: "plain-text-body");
 
-        using CliClient client = new(server.PipeName);
-        string? result = await client.GetRawAsync("/manage/status");
+        using CliClient client = new(pipeNameOrSocketPath: server.PipeName);
+        string? result = await client.GetRawAsync(path: "/manage/status");
 
         await requestTask;
-        result.Should().Be("plain-text-body");
+        result.Should().Be(expected: "plain-text-body");
     }
 
     [Fact]
     public async Task GetRawAsync_ErrorResponse_ReturnsNull_AndPrintsStatusLine()
     {
         FakeManagementPipeServer server = new();
-        Task<string> requestTask = RespondWith(server, 503, "Service Unavailable", "down");
+        Task<string> requestTask = RespondWith(server: server, status: 503, reason: "Service Unavailable", body: "down");
 
         using ConsoleCapture console = new();
-        using CliClient client = new(server.PipeName);
-        string? result = await client.GetRawAsync("/manage/status");
+        using CliClient client = new(pipeNameOrSocketPath: server.PipeName);
+        string? result = await client.GetRawAsync(path: "/manage/status");
 
         await requestTask;
         result.Should().BeNull();
-        console.Error.Should().Contain("Error: 503 Service Unavailable");
+        console.Error.Should().Contain(expected: "Error: 503 Service Unavailable");
     }
 
     [Fact]
     public async Task PostAsync_SuccessResponse_ReturnsTrue()
     {
         FakeManagementPipeServer server = new();
-        Task<string> requestTask = RespondWith(server, 200, "OK", """{"status":"ok"}""");
+        Task<string> requestTask = RespondWith(server: server, status: 200, reason: "OK", body: """{"status":"ok"}""");
 
-        using CliClient client = new(server.PipeName);
-        bool result = await client.PostAsync("/manage/stop");
+        using CliClient client = new(pipeNameOrSocketPath: server.PipeName);
+        bool result = await client.PostAsync(path: "/manage/stop");
 
         string request = await requestTask;
-        request.Should().StartWith("POST /manage/stop");
+        request.Should().StartWith(expected: "POST /manage/stop");
         result.Should().BeTrue();
     }
 
@@ -147,16 +147,16 @@ public sealed class CliClientTests
     public async Task PostAsync_ErrorResponseWithBody_ReturnsFalse_AndPrintsBody()
     {
         FakeManagementPipeServer server = new();
-        Task<string> requestTask = RespondWith(server, 400, "Bad Request", "malformed request");
+        Task<string> requestTask = RespondWith(server: server, status: 400, reason: "Bad Request", body: "malformed request");
 
         using ConsoleCapture console = new();
-        using CliClient client = new(server.PipeName);
-        bool result = await client.PostAsync("/manage/stop");
+        using CliClient client = new(pipeNameOrSocketPath: server.PipeName);
+        bool result = await client.PostAsync(path: "/manage/stop");
 
         await requestTask;
         result.Should().BeFalse();
-        console.Error.Should().Contain("Error: 400 Bad Request");
-        console.Error.Should().Contain("malformed request");
+        console.Error.Should().Contain(expected: "Error: 400 Bad Request");
+        console.Error.Should().Contain(expected: "malformed request");
     }
 
     [Fact]
@@ -164,58 +164,58 @@ public sealed class CliClientTests
     {
         FakeManagementPipeServer server = new();
         Task<string> requestTask = RespondWith(
-            server,
-            200,
-            "OK",
-            """{"status":"ok","message":"Update downloaded"}"""
+            server: server,
+            status: 200,
+            reason: "OK",
+            body: """{"status":"ok","message":"Update downloaded"}"""
         );
 
-        using CliClient client = new(server.PipeName);
+        using CliClient client = new(pipeNameOrSocketPath: server.PipeName);
         UpdateStatusResponse? result = await client.PostAsync<UpdateStatusResponse>(
-            "/manage/update"
+            path: "/manage/update"
         );
 
         await requestTask;
         result.Should().NotBeNull();
-        result!.Status.Should().Be("ok");
-        result.Message.Should().Be("Update downloaded");
+        result!.Status.Should().Be(expected: "ok");
+        result.Message.Should().Be(expected: "Update downloaded");
     }
 
     [Fact]
     public async Task PostAsyncGeneric_ErrorResponseWithBody_ReturnsNull_AndPrintsBody()
     {
         FakeManagementPipeServer server = new();
-        Task<string> requestTask = RespondWith(server, 409, "Conflict", "update already staged");
+        Task<string> requestTask = RespondWith(server: server, status: 409, reason: "Conflict", body: "update already staged");
 
         using ConsoleCapture console = new();
-        using CliClient client = new(server.PipeName);
+        using CliClient client = new(pipeNameOrSocketPath: server.PipeName);
         UpdateStatusResponse? result = await client.PostAsync<UpdateStatusResponse>(
-            "/manage/update"
+            path: "/manage/update"
         );
 
         await requestTask;
         result.Should().BeNull();
-        console.Error.Should().Contain("Error: 409 Conflict");
-        console.Error.Should().Contain("update already staged");
+        console.Error.Should().Contain(expected: "Error: 409 Conflict");
+        console.Error.Should().Contain(expected: "update already staged");
     }
 
     [Fact]
     public async Task PostAsyncGeneric_ErrorResponseWithEmptyBody_ReturnsNull_WithoutBodyLine()
     {
         FakeManagementPipeServer server = new();
-        Task<string> requestTask = RespondWith(server, 500, "Internal Server Error", "");
+        Task<string> requestTask = RespondWith(server: server, status: 500, reason: "Internal Server Error", body: "");
 
         using ConsoleCapture console = new();
-        using CliClient client = new(server.PipeName);
+        using CliClient client = new(pipeNameOrSocketPath: server.PipeName);
         UpdateStatusResponse? result = await client.PostAsync<UpdateStatusResponse>(
-            "/manage/update"
+            path: "/manage/update"
         );
 
         await requestTask;
         result.Should().BeNull();
         string[] lines = console
             .Error.ToString()
-            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            .Split(separator: '\n', options: StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         lines.Should().ContainSingle();
     }
 
@@ -223,13 +223,13 @@ public sealed class CliClientTests
     public async Task PutAsync_SuccessResponse_ReturnsTrue()
     {
         FakeManagementPipeServer server = new();
-        Task<string> requestTask = RespondWith(server, 200, "OK", """{"status":"ok"}""");
+        Task<string> requestTask = RespondWith(server: server, status: 200, reason: "OK", body: """{"status":"ok"}""");
 
-        using CliClient client = new(server.PipeName);
-        bool result = await client.PutAsync("/manage/config");
+        using CliClient client = new(pipeNameOrSocketPath: server.PipeName);
+        bool result = await client.PutAsync(path: "/manage/config");
 
         string request = await requestTask;
-        request.Should().StartWith("PUT /manage/config");
+        request.Should().StartWith(expected: "PUT /manage/config");
         result.Should().BeTrue();
     }
 
@@ -237,24 +237,24 @@ public sealed class CliClientTests
     public async Task PutAsync_ErrorResponseWithBody_ReturnsFalse_AndPrintsBody()
     {
         FakeManagementPipeServer server = new();
-        Task<string> requestTask = RespondWith(server, 422, "Unprocessable Entity", "bad key");
+        Task<string> requestTask = RespondWith(server: server, status: 422, reason: "Unprocessable Entity", body: "bad key");
 
         using ConsoleCapture console = new();
-        using CliClient client = new(server.PipeName);
-        bool result = await client.PutAsync("/manage/config");
+        using CliClient client = new(pipeNameOrSocketPath: server.PipeName);
+        bool result = await client.PutAsync(path: "/manage/config");
 
         await requestTask;
         result.Should().BeFalse();
-        console.Error.Should().Contain("Error: 422 Unprocessable Entity");
-        console.Error.Should().Contain("bad key");
+        console.Error.Should().Contain(expected: "Error: 422 Unprocessable Entity");
+        console.Error.Should().Contain(expected: "bad key");
     }
 
     [Fact]
     public void Dispose_CalledTwice_DoesNotThrow()
     {
-        CliClient client = new("nomercy-test-dispose-pipe");
+        CliClient client = new(pipeNameOrSocketPath: "nomercy-test-dispose-pipe");
 
-        Exception? ex = Record.Exception(() =>
+        Exception? ex = Record.Exception(testCode: () =>
         {
             client.Dispose();
             client.Dispose();
@@ -265,10 +265,10 @@ public sealed class CliClientTests
 
     private sealed class UpdateStatusResponse
     {
-        [JsonProperty("status")]
+        [JsonProperty(propertyName: "status")]
         public string Status { get; set; } = string.Empty;
 
-        [JsonProperty("message")]
+        [JsonProperty(propertyName: "message")]
         public string Message { get; set; } = string.Empty;
     }
 }

@@ -23,7 +23,7 @@ public class StorageMonitorTests
         List<ResourceMonitorDto> result = StorageMonitor.Main();
 
         result.Should().NotBeNull();
-        result.Should().NotBeEmpty("every host has at least one drive");
+        result.Should().NotBeEmpty(because: "every host has at least one drive");
     }
 
     [Fact]
@@ -33,7 +33,7 @@ public class StorageMonitorTests
 
         foreach (ResourceMonitorDto dto in result)
         {
-            dto.Name.Should().NotBeNullOrWhiteSpace("drive name must be populated from DriveInfo");
+            dto.Name.Should().NotBeNullOrWhiteSpace(because: "drive name must be populated from DriveInfo");
         }
     }
 
@@ -45,7 +45,7 @@ public class StorageMonitorTests
         foreach (ResourceMonitorDto dto in result)
         {
             dto.Type.Should()
-                .NotBeNullOrWhiteSpace("drive type is derived from DriveInfo.DriveType.ToString()");
+                .NotBeNullOrWhiteSpace(because: "drive type is derived from DriveInfo.DriveType.ToString()");
         }
     }
 
@@ -54,17 +54,17 @@ public class StorageMonitorTests
     {
         List<ResourceMonitorDto> result = StorageMonitor.Main();
 
-        List<ResourceMonitorDto> readyDrives = result.Where(d => d.Total > 0).ToList();
+        List<ResourceMonitorDto> readyDrives = result.Where(predicate: d => d.Total > 0).ToList();
 
         readyDrives
             .Should()
-            .NotBeEmpty("at least one ready drive must report a positive total size");
+            .NotBeEmpty(because: "at least one ready drive must report a positive total size");
 
         foreach (ResourceMonitorDto dto in readyDrives)
         {
-            dto.Total.Should().BeGreaterThan(0, "ready drive has a positive total capacity");
-            dto.Available.Should().BeGreaterThanOrEqualTo(0, "available space is never negative");
-            dto.Available.Should().BeLessThanOrEqualTo(dto.Total, "available cannot exceed total");
+            dto.Total.Should().BeGreaterThan(expected: 0, because: "ready drive has a positive total capacity");
+            dto.Available.Should().BeGreaterThanOrEqualTo(expected: 0, because: "available space is never negative");
+            dto.Available.Should().BeLessThanOrEqualTo(expected: dto.Total, because: "available cannot exceed total");
         }
     }
 
@@ -73,15 +73,15 @@ public class StorageMonitorTests
     {
         List<ResourceMonitorDto> result = StorageMonitor.Main();
 
-        List<ResourceMonitorDto> readyDrives = result.Where(d => d.Total > 0).ToList();
+        List<ResourceMonitorDto> readyDrives = result.Where(predicate: d => d.Total > 0).ToList();
 
         foreach (ResourceMonitorDto dto in readyDrives)
         {
             dto.Percentage.Should()
                 .BeInRange(
-                    0f,
-                    100f,
-                    "Percentage = Available/Total*100 must be in [0, 100] for a ready drive"
+                    minimumValue: 0f,
+                    maximumValue: 100f,
+                    because: "Percentage = Available/Total*100 must be in [0, 100] for a ready drive"
                 );
         }
     }
@@ -99,10 +99,10 @@ public class StorageMonitorTests
 
         usage
             .Movies.Should()
-            .Be(0, "CalculatePercentage guards against division by zero when Used == 0");
-        usage.Shows.Should().Be(0);
-        usage.Music.Should().Be(0);
-        usage.Other.Should().Be(0);
+            .Be(expected: 0, because: "CalculatePercentage guards against division by zero when Used == 0");
+        usage.Shows.Should().Be(expected: 0);
+        usage.Music.Should().Be(expected: 0);
+        usage.Other.Should().Be(expected: 0);
     }
 
     [Fact]
@@ -118,10 +118,10 @@ public class StorageMonitorTests
             Other = 1 * gbInUnits,
         };
 
-        usage.Movies.Should().Be(50, "5/10 = 50%");
-        usage.Shows.Should().Be(30, "3/10 = 30%");
-        usage.Music.Should().Be(10, "1/10 = 10%");
-        usage.Other.Should().Be(10, "1/10 = 10%");
+        usage.Movies.Should().Be(expected: 50, because: "5/10 = 50%");
+        usage.Shows.Should().Be(expected: 30, because: "3/10 = 30%");
+        usage.Music.Should().Be(expected: 10, because: "1/10 = 10%");
+        usage.Other.Should().Be(expected: 10, because: "1/10 = 10%");
     }
 
     [Fact]

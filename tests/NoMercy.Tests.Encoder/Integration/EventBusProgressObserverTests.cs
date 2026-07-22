@@ -22,17 +22,17 @@ namespace NoMercy.Tests.Encoder.Integration;
 /// an EncodingProgressBroadcastedEvent to the configured event bus, and that
 /// it is silent when no bus is configured.
 /// </summary>
-[Collection("EventBusProgressObserver")]
+[Collection(name: "EventBusProgressObserver")]
 public sealed class EventBusProgressObserverTests : IDisposable
 {
     // Reset the static EventBusProvider between tests via reflection.
     private static void ResetEventBusProvider()
     {
         FieldInfo? field = typeof(EventBusProvider).GetField(
-            "_instance",
-            BindingFlags.NonPublic | BindingFlags.Static
+            name: "_instance",
+            bindingAttr: BindingFlags.NonPublic | BindingFlags.Static
         );
-        field?.SetValue(null, null);
+        field?.SetValue(obj: null, value: null);
     }
 
     public EventBusProgressObserverTests()
@@ -49,8 +49,8 @@ public sealed class EventBusProgressObserverTests : IDisposable
         new(
             CorrelationId: "test-corr-1",
             PercentComplete: percent,
-            Elapsed: TimeSpan.FromSeconds(10),
-            EstimatedRemaining: TimeSpan.FromSeconds(14),
+            Elapsed: TimeSpan.FromSeconds(seconds: 10),
+            EstimatedRemaining: TimeSpan.FromSeconds(seconds: 14),
             CurrentFps: 24.0,
             CurrentSpeed: 1.5,
             CurrentStage: "video",
@@ -70,14 +70,14 @@ public sealed class EventBusProgressObserverTests : IDisposable
         List<EncodingProgressBroadcastedEvent> captured = [];
 
         bus.Subscribe<EncodingProgressBroadcastedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                captured.Add(evt);
+                captured.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
 
-        EventBusProvider.Configure(bus);
+        EventBusProvider.Configure(eventBus: bus);
 
         EventBusProgressObserver observer = new(
             jobId: 99,
@@ -94,32 +94,32 @@ public sealed class EventBusProgressObserverTests : IDisposable
         EncodingProgress progress = MakeProgress(percent: 42.5, pid: 1234);
 
         // Act
-        observer.OnProgress(progress);
+        observer.OnProgress(progress: progress);
 
         // Assert
-        captured.Should().HaveCount(1);
-        EncodingProgressBroadcastedEvent published = captured[0];
+        captured.Should().HaveCount(expected: 1);
+        EncodingProgressBroadcastedEvent published = captured[index: 0];
         published.Should().NotBeNull();
-        published.Source.Should().Be("Encoder");
+        published.Source.Should().Be(expected: "Encoder");
         published.ProgressData.Should().NotBeNull();
 
         // Verify key fields via dynamic reflection on the anonymous ProgressData object.
         object data = published.ProgressData;
         Type dataType = data.GetType();
 
-        int id = (int)(dataType.GetProperty("id")?.GetValue(data) ?? -1);
-        id.Should().Be(99);
+        int id = (int)(dataType.GetProperty(name: "id")?.GetValue(obj: data) ?? -1);
+        id.Should().Be(expected: 99);
 
-        string title = (string)(dataType.GetProperty("title")?.GetValue(data) ?? "");
-        title.Should().Be("Test Movie");
+        string title = (string)(dataType.GetProperty(name: "title")?.GetValue(obj: data) ?? "");
+        title.Should().Be(expected: "Test Movie");
 
-        double pct = (double)(dataType.GetProperty("progress")?.GetValue(data) ?? -1.0);
-        pct.Should().BeApproximately(42.5, 0.001);
+        double pct = (double)(dataType.GetProperty(name: "progress")?.GetValue(obj: data) ?? -1.0);
+        pct.Should().BeApproximately(expectedValue: 42.5, precision: 0.001);
 
-        int processId = (int)(dataType.GetProperty("process_id")?.GetValue(data) ?? -1);
-        processId.Should().Be(1234);
+        int processId = (int)(dataType.GetProperty(name: "process_id")?.GetValue(obj: data) ?? -1);
+        processId.Should().Be(expected: 1234);
 
-        bool hasGpu = (bool)(dataType.GetProperty("has_gpu")?.GetValue(data) ?? false);
+        bool hasGpu = (bool)(dataType.GetProperty(name: "has_gpu")?.GetValue(obj: data) ?? false);
         hasGpu.Should().BeTrue();
     }
 
@@ -134,7 +134,7 @@ public sealed class EventBusProgressObserverTests : IDisposable
         EncodingProgress progress = MakeProgress();
 
         // Act + Assert — must not throw.
-        Action act = () => observer.OnProgress(progress);
+        Action act = () => observer.OnProgress(progress: progress);
         act.Should().NotThrow();
     }
 }

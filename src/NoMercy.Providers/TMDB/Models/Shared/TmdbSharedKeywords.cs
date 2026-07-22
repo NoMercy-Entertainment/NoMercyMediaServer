@@ -15,9 +15,9 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbSharedKeywords
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("results")]
+    [JsonProperty(propertyName: "results")]
     public virtual TmdbKeyword[] Results { get; set; } = [];
 }

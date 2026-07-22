@@ -16,26 +16,26 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record GenreRowDto<T>
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public dynamic Id { get; set; } = string.Empty;
 
-    [JsonProperty("next_id")]
+    [JsonProperty(propertyName: "next_id")]
     public dynamic NextId { get; set; } = Ulid.NewUlid();
 
-    [JsonProperty("previous_id")]
+    [JsonProperty(propertyName: "previous_id")]
     public dynamic PreviousId { get; set; } = Ulid.NewUlid();
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty("more_link")]
+    [JsonProperty(propertyName: "more_link")]
     public Uri? MoreLink { get; set; }
 
-    [JsonProperty("items")]
+    [JsonProperty(propertyName: "items")]
     public IEnumerable<T?> Items { get; set; } = [];
 
     [NotMapped]
     [System.Text.Json.Serialization.JsonIgnore]
-    [JsonProperty("source")]
+    [JsonProperty(propertyName: "source")]
     public IEnumerable<HomeSourceDto> Source { get; set; } = [];
 }

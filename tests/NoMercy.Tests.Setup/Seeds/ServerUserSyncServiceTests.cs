@@ -27,7 +27,7 @@ namespace NoMercy.Tests.Setup.Seeds;
 /// every run regardless of table state, and must revoke access for users no
 /// longer returned upstream without ever touching the owner.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class ServerUserSyncServiceTests : IDisposable
 {
     private readonly SqliteConnection _connection;
@@ -36,12 +36,12 @@ public class ServerUserSyncServiceTests : IDisposable
 
     public ServerUserSyncServiceTests()
     {
-        _connection = new("DataSource=:memory:");
+        _connection = new(connectionString: "DataSource=:memory:");
         _connection.Open();
 
-        _options = new DbContextOptionsBuilder<MediaContext>().UseSqlite(_connection).Options;
+        _options = new DbContextOptionsBuilder<MediaContext>().UseSqlite(connection: _connection).Options;
 
-        using MediaContext ctx = new(_options);
+        using MediaContext ctx = new(options: _options);
         ctx.Database.EnsureCreated();
 
         // No libraries.jsonc on disk in these tests — Exists() defaults to
@@ -51,10 +51,10 @@ public class ServerUserSyncServiceTests : IDisposable
 
     public void Dispose() => _connection.Dispose();
 
-    private MediaContext CreateContext() => new(_options);
+    private MediaContext CreateContext() => new(options: _options);
 
-    private static readonly Guid OwnerId = Guid.Parse("11111111-1111-1111-1111-111111111111");
-    private static readonly Guid InvitedUserId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+    private static readonly Guid OwnerId = Guid.Parse(input: "11111111-1111-1111-1111-111111111111");
+    private static readonly Guid InvitedUserId = Guid.Parse(input: "22222222-2222-2222-2222-222222222222");
 
     private static User OwnerUser() =>
         new()
@@ -76,10 +76,11 @@ public class ServerUserSyncServiceTests : IDisposable
         // boot) when a second person accepts an invite. The old UsersSeed.Init
         // would never re-run once any user existed — this must not.
         await using MediaContext seedCtx = CreateContext();
-        seedCtx.Users.Add(OwnerUser());
+        seedCtx.Users.Add(entity: OwnerUser());
         await seedCtx.SaveChangesAsync();
 
-        FakeServerUserApiClient api = new([
+        FakeServerUserApiClient api = new(response:
+        [
             new()
             {
                 UserId = OwnerId.ToString(),
@@ -97,34 +98,34 @@ public class ServerUserSyncServiceTests : IDisposable
                 Enabled = true,
             },
         ]);
-        ServerUserSyncService sut = new(api);
+        ServerUserSyncService sut = new(apiClient: api);
 
         await using MediaContext runCtx = CreateContext();
         ServerUserSyncResult result = await sut.SyncAsync(
-            runCtx,
-            NoLibrariesStorage.Object,
-            "valid-token"
+            dbContext: runCtx,
+            storage: NoLibrariesStorage.Object,
+            accessToken: "valid-token"
         );
 
-        Assert.True(result.Attempted);
-        Assert.Equal(2, result.UpstreamUserCount);
+        Assert.True(condition: result.Attempted);
+        Assert.Equal(expected: 2, actual: result.UpstreamUserCount);
 
         await using MediaContext assertCtx = CreateContext();
-        User? invited = await assertCtx.Users.FirstOrDefaultAsync(u => u.Id == InvitedUserId);
-        Assert.NotNull(invited);
-        Assert.True(invited!.Allowed);
-        Assert.False(invited.Owner);
+        User? invited = await assertCtx.Users.FirstOrDefaultAsync(predicate: u => u.Id == InvitedUserId);
+        Assert.NotNull(@object: invited);
+        Assert.True(condition: invited!.Allowed);
+        Assert.False(condition: invited.Owner);
 
-        Assert.Equal(2, await assertCtx.Users.CountAsync());
+        Assert.Equal(expected: 2, actual: await assertCtx.Users.CountAsync());
     }
 
     [Fact]
     public async Task SyncAsync_RevokesAccess_ForUserNoLongerReturnedUpstream_OwnerPreserved()
     {
         await using MediaContext seedCtx = CreateContext();
-        seedCtx.Users.Add(OwnerUser());
+        seedCtx.Users.Add(entity: OwnerUser());
         seedCtx.Users.Add(
-            new()
+            entity: new()
             {
                 Id = InvitedUserId,
                 Email = "invited@example.com",
@@ -139,7 +140,8 @@ public class ServerUserSyncServiceTests : IDisposable
         await seedCtx.SaveChangesAsync();
 
         // Upstream now only returns the owner — the invite was removed/declined.
-        FakeServerUserApiClient api = new([
+        FakeServerUserApiClient api = new(response:
+        [
             new()
             {
                 UserId = OwnerId.ToString(),
@@ -149,53 +151,54 @@ public class ServerUserSyncServiceTests : IDisposable
                 Enabled = true,
             },
         ]);
-        ServerUserSyncService sut = new(api);
+        ServerUserSyncService sut = new(apiClient: api);
 
         await using MediaContext runCtx = CreateContext();
         ServerUserSyncResult result = await sut.SyncAsync(
-            runCtx,
-            NoLibrariesStorage.Object,
-            "valid-token"
+            dbContext: runCtx,
+            storage: NoLibrariesStorage.Object,
+            accessToken: "valid-token"
         );
 
-        Assert.Equal(1, result.RevokedCount);
+        Assert.Equal(expected: 1, actual: result.RevokedCount);
 
         await using MediaContext assertCtx = CreateContext();
-        User? revoked = await assertCtx.Users.FirstOrDefaultAsync(u => u.Id == InvitedUserId);
-        Assert.NotNull(revoked);
-        Assert.False(revoked!.Allowed);
-        Assert.False(revoked.AudioTranscoding);
-        Assert.False(revoked.VideoTranscoding);
-        Assert.False(revoked.NoTranscoding);
+        User? revoked = await assertCtx.Users.FirstOrDefaultAsync(predicate: u => u.Id == InvitedUserId);
+        Assert.NotNull(@object: revoked);
+        Assert.False(condition: revoked!.Allowed);
+        Assert.False(condition: revoked.AudioTranscoding);
+        Assert.False(condition: revoked.VideoTranscoding);
+        Assert.False(condition: revoked.NoTranscoding);
 
-        User? owner = await assertCtx.Users.FirstOrDefaultAsync(u => u.Id == OwnerId);
-        Assert.NotNull(owner);
-        Assert.True(owner!.Owner);
-        Assert.True(owner.Allowed);
+        User? owner = await assertCtx.Users.FirstOrDefaultAsync(predicate: u => u.Id == OwnerId);
+        Assert.NotNull(@object: owner);
+        Assert.True(condition: owner!.Owner);
+        Assert.True(condition: owner.Allowed);
     }
 
     [Fact]
     public async Task SyncAsync_NoAccessToken_SkipsWithoutThrowing_AndNeverCallsApi()
     {
-        FakeServerUserApiClient api = new([]);
-        ServerUserSyncService sut = new(api);
+        FakeServerUserApiClient api = new(response: []);
+        ServerUserSyncService sut = new(apiClient: api);
 
         await using MediaContext runCtx = CreateContext();
         ServerUserSyncResult result = await sut.SyncAsync(
-            runCtx,
-            NoLibrariesStorage.Object,
+            dbContext: runCtx,
+            storage: NoLibrariesStorage.Object,
             accessToken: null
         );
 
-        Assert.False(result.Attempted);
-        Assert.Equal(0, result.UpstreamUserCount);
-        Assert.False(api.WasCalled);
+        Assert.False(condition: result.Attempted);
+        Assert.Equal(expected: 0, actual: result.UpstreamUserCount);
+        Assert.False(condition: api.WasCalled);
     }
 
     [Fact]
     public async Task SyncAsync_IsIdempotent_RunningTwiceKeepsSingleRowPerUser()
     {
-        FakeServerUserApiClient api = new([
+        FakeServerUserApiClient api = new(response:
+        [
             new()
             {
                 UserId = OwnerId.ToString(),
@@ -205,16 +208,16 @@ public class ServerUserSyncServiceTests : IDisposable
                 Enabled = true,
             },
         ]);
-        ServerUserSyncService sut = new(api);
+        ServerUserSyncService sut = new(apiClient: api);
 
         await using MediaContext firstRun = CreateContext();
-        await sut.SyncAsync(firstRun, NoLibrariesStorage.Object, "valid-token");
+        await sut.SyncAsync(dbContext: firstRun, storage: NoLibrariesStorage.Object, accessToken: "valid-token");
 
         await using MediaContext secondRun = CreateContext();
-        await sut.SyncAsync(secondRun, NoLibrariesStorage.Object, "valid-token");
+        await sut.SyncAsync(dbContext: secondRun, storage: NoLibrariesStorage.Object, accessToken: "valid-token");
 
         await using MediaContext assertCtx = CreateContext();
-        Assert.Equal(1, await assertCtx.Users.CountAsync());
+        Assert.Equal(expected: 1, actual: await assertCtx.Users.CountAsync());
     }
 
     /// <summary>
@@ -227,9 +230,9 @@ public class ServerUserSyncServiceTests : IDisposable
     public async Task SyncAsync_ApiClientThrows_PropagatesException_AndRevokesNoOne()
     {
         await using MediaContext seedCtx = CreateContext();
-        seedCtx.Users.Add(OwnerUser());
+        seedCtx.Users.Add(entity: OwnerUser());
         seedCtx.Users.Add(
-            new()
+            entity: new()
             {
                 Id = InvitedUserId,
                 Email = "invited@example.com",
@@ -244,22 +247,22 @@ public class ServerUserSyncServiceTests : IDisposable
         await seedCtx.SaveChangesAsync();
 
         FakeServerUserApiClient api = new(
-            [],
+            response: [],
             throwInstead: new InvalidOperationException(
-                "server-users response was empty or unparseable"
+                message: "server-users response was empty or unparseable"
             )
         );
-        ServerUserSyncService sut = new(api);
+        ServerUserSyncService sut = new(apiClient: api);
 
         await using MediaContext runCtx = CreateContext();
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            sut.SyncAsync(runCtx, NoLibrariesStorage.Object, "valid-token")
+        await Assert.ThrowsAsync<InvalidOperationException>(testCode: () =>
+            sut.SyncAsync(dbContext: runCtx, storage: NoLibrariesStorage.Object, accessToken: "valid-token")
         );
 
         await using MediaContext assertCtx = CreateContext();
-        User? invited = await assertCtx.Users.FirstOrDefaultAsync(u => u.Id == InvitedUserId);
-        Assert.NotNull(invited);
-        Assert.True(invited!.Allowed);
+        User? invited = await assertCtx.Users.FirstOrDefaultAsync(predicate: u => u.Id == InvitedUserId);
+        Assert.NotNull(@object: invited);
+        Assert.True(condition: invited!.Allowed);
     }
 
     /// <summary>
@@ -272,9 +275,9 @@ public class ServerUserSyncServiceTests : IDisposable
     public async Task SyncAsync_ResponseOmitsLocalOwner_AbortsReconcile_NoRevoke()
     {
         await using MediaContext seedCtx = CreateContext();
-        seedCtx.Users.Add(OwnerUser());
+        seedCtx.Users.Add(entity: OwnerUser());
         seedCtx.Users.Add(
-            new()
+            entity: new()
             {
                 Id = InvitedUserId,
                 Email = "invited@example.com",
@@ -290,27 +293,27 @@ public class ServerUserSyncServiceTests : IDisposable
 
         // A well-formed but empty payload — the "silently treated as zero users"
         // shape the compat-gate flagged, not a thrown exception.
-        FakeServerUserApiClient api = new([]);
-        ServerUserSyncService sut = new(api);
+        FakeServerUserApiClient api = new(response: []);
+        ServerUserSyncService sut = new(apiClient: api);
 
         await using MediaContext runCtx = CreateContext();
         ServerUserSyncResult result = await sut.SyncAsync(
-            runCtx,
-            NoLibrariesStorage.Object,
-            "valid-token"
+            dbContext: runCtx,
+            storage: NoLibrariesStorage.Object,
+            accessToken: "valid-token"
         );
 
-        Assert.False(result.Attempted);
-        Assert.Equal(0, result.RevokedCount);
+        Assert.False(condition: result.Attempted);
+        Assert.Equal(expected: 0, actual: result.RevokedCount);
 
         await using MediaContext assertCtx = CreateContext();
-        User? invited = await assertCtx.Users.FirstOrDefaultAsync(u => u.Id == InvitedUserId);
-        Assert.NotNull(invited);
-        Assert.True(invited!.Allowed);
+        User? invited = await assertCtx.Users.FirstOrDefaultAsync(predicate: u => u.Id == InvitedUserId);
+        Assert.NotNull(@object: invited);
+        Assert.True(condition: invited!.Allowed);
 
-        User? owner = await assertCtx.Users.FirstOrDefaultAsync(u => u.Id == OwnerId);
-        Assert.NotNull(owner);
-        Assert.True(owner!.Owner);
+        User? owner = await assertCtx.Users.FirstOrDefaultAsync(predicate: u => u.Id == OwnerId);
+        Assert.NotNull(@object: owner);
+        Assert.True(condition: owner!.Owner);
     }
 
     /// <summary>
@@ -322,9 +325,9 @@ public class ServerUserSyncServiceTests : IDisposable
     public async Task SyncAsync_PreservesLocalTranscodingOverride_AcrossSync()
     {
         await using MediaContext seedCtx = CreateContext();
-        seedCtx.Users.Add(OwnerUser());
+        seedCtx.Users.Add(entity: OwnerUser());
         seedCtx.Users.Add(
-            new()
+            entity: new()
             {
                 Id = InvitedUserId,
                 Email = "invited@example.com",
@@ -339,7 +342,8 @@ public class ServerUserSyncServiceTests : IDisposable
         );
         await seedCtx.SaveChangesAsync();
 
-        FakeServerUserApiClient api = new([
+        FakeServerUserApiClient api = new(response:
+        [
             new()
             {
                 UserId = OwnerId.ToString(),
@@ -357,17 +361,17 @@ public class ServerUserSyncServiceTests : IDisposable
                 Enabled = true,
             },
         ]);
-        ServerUserSyncService sut = new(api);
+        ServerUserSyncService sut = new(apiClient: api);
 
         await using MediaContext runCtx = CreateContext();
-        await sut.SyncAsync(runCtx, NoLibrariesStorage.Object, "valid-token");
+        await sut.SyncAsync(dbContext: runCtx, storage: NoLibrariesStorage.Object, accessToken: "valid-token");
 
         await using MediaContext assertCtx = CreateContext();
-        User? invited = await assertCtx.Users.FirstOrDefaultAsync(u => u.Id == InvitedUserId);
-        Assert.NotNull(invited);
-        Assert.True(invited!.Allowed);
-        Assert.False(invited.AudioTranscoding);
-        Assert.False(invited.NoTranscoding);
-        Assert.False(invited.VideoTranscoding);
+        User? invited = await assertCtx.Users.FirstOrDefaultAsync(predicate: u => u.Id == InvitedUserId);
+        Assert.NotNull(@object: invited);
+        Assert.True(condition: invited!.Allowed);
+        Assert.False(condition: invited.AudioTranscoding);
+        Assert.False(condition: invited.NoTranscoding);
+        Assert.False(condition: invited.VideoTranscoding);
     }
 }

@@ -42,16 +42,16 @@ public class PlanStageCustomArgumentsTests
 
     public PlanStageCustomArgumentsTests()
     {
-        _hardware.Setup(h => h.HasGpu).Returns(false);
-        _hardware.Setup(h => h.CpuCores).Returns(8);
-        _hardware.Setup(h => h.Gpus).Returns([]);
-        _hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
+        _hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
+        _hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
+        _hardware.Setup(expression: h => h.Gpus).Returns(value: []);
+        _hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
         _hardware
-            .Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
-            .Returns((GpuDevice?)null);
+            .Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
+            .Returns(value: (GpuDevice?)null);
 
         _codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<IHardwareCapabilities>(),
@@ -59,7 +59,7 @@ public class PlanStageCustomArgumentsTests
                 )
             )
             .Returns(
-                new ResolvedCodec(
+                value: new ResolvedCodec(
                     FfmpegEncoderName: "libx264",
                     EncoderInfo: new(
                         FfmpegName: "libx264",
@@ -67,7 +67,7 @@ public class PlanStageCustomArgumentsTests
                         Presets: ["medium"],
                         Profiles: ["high"],
                         Levels: ["4.1"],
-                        QualityRange: new(0, 51, 23),
+                        QualityRange: new(Min: 0, Max: 51, Default: 23),
                         SupportedRateControl: [RateControlMode.Crf],
                         Supports10Bit: false,
                         SupportsHdr: false,
@@ -81,16 +81,16 @@ public class PlanStageCustomArgumentsTests
             );
 
         _stage = new(
-            new(),
-            new(),
-            new(),
-            _codecResolver.Object,
-            _hardware.Object,
-            new TonemapSelector(),
-            _ffmpegCapabilities.Object,
-            new AbrLadderGenerator(),
-            new NoOpCropDetector(),
-            NullLogger<PlanStage>.Instance
+            graphBuilder: new(),
+            groupingStrategy: new(),
+            costEstimator: new(),
+            codecResolver: _codecResolver.Object,
+            hardware: _hardware.Object,
+            tonemapSelector: new TonemapSelector(),
+            ffmpegCapabilities: _ffmpegCapabilities.Object,
+            abrLadderGenerator: new AbrLadderGenerator(),
+            cropDetector: new NoOpCropDetector(),
+            logger: NullLogger<PlanStage>.Instance
         );
     }
 
@@ -98,17 +98,17 @@ public class PlanStageCustomArgumentsTests
     public async Task VideoCustomArguments_ReachTheOutputExtraFlags()
     {
         EncodingProfile profile = BuildProfile(
-            customArgs: new() { ["-x264-params"] = "keyint=48:min-keyint=48" }
+            customArgs: new() { [key: "-x264-params"] = "keyint=48:min-keyint=48" }
         );
 
-        OutputPlan plan = await RunPlan(profile);
+        OutputPlan plan = await RunPlan(profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
         video
             .ExtraFlags.Should()
-            .ContainKey("-x264-params", "video CustomArguments must reach the encode")
+            .ContainKey(expected: "-x264-params", because: "video CustomArguments must reach the encode")
             .WhoseValue.Should()
-            .Be("keyint=48:min-keyint=48");
+            .Be(expected: "keyint=48:min-keyint=48");
     }
 
     [Fact]
@@ -116,17 +116,17 @@ public class PlanStageCustomArgumentsTests
     {
         EncodingProfile profile = BuildProfile(customArgs: null) with
         {
-            CustomArguments = new() { ["-max_muxing_queue_size"] = "1024" },
+            CustomArguments = new() { [key: "-max_muxing_queue_size"] = "1024" },
         };
 
-        OutputPlan plan = await RunPlan(profile);
+        OutputPlan plan = await RunPlan(profile: profile);
 
         plan.GlobalExtraFlags.Should()
-            .NotBeNull("profile-level CustomArguments is the global escape hatch");
+            .NotBeNull(because: "profile-level CustomArguments is the global escape hatch");
         plan.GlobalExtraFlags!.Should()
-            .ContainKey("-max_muxing_queue_size")
+            .ContainKey(expected: "-max_muxing_queue_size")
             .WhoseValue.Should()
-            .Be("1024");
+            .Be(expected: "1024");
     }
 
     [Fact]
@@ -148,15 +148,15 @@ public class PlanStageCustomArgumentsTests
                     Downmix: null,
                     SegmentNameTemplate: "audio/{lang}",
                     PlaylistNameTemplate: "audio/{lang}/playlist",
-                    CustomArguments: new() { ["-aac_coder"] = "twoloop" }
+                    CustomArguments: new() { [key: "-aac_coder"] = "twoloop" }
                 ),
             ],
         };
 
-        OutputPlan plan = await RunPlan(profile, BuildMediaWithStreams());
+        OutputPlan plan = await RunPlan(profile: profile, media: BuildMediaWithStreams());
 
-        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
-        audio.ExtraFlags.Should().ContainKey("-aac_coder").WhoseValue.Should().Be("twoloop");
+        AudioOutputPlan audio = Assert.Single(collection: plan.AudioOutputs);
+        audio.ExtraFlags.Should().ContainKey(expected: "-aac_coder").WhoseValue.Should().Be(expected: "twoloop");
     }
 
     [Fact]
@@ -173,26 +173,26 @@ public class PlanStageCustomArgumentsTests
                     IncludeForced: false,
                     OcrLanguage: null,
                     PlaylistNameTemplate: "subtitles/{lang}",
-                    CustomArguments: new() { ["-canvas_size"] = "1920x1080" }
+                    CustomArguments: new() { [key: "-canvas_size"] = "1920x1080" }
                 ),
             ],
         };
 
-        OutputPlan plan = await RunPlan(profile, BuildMediaWithStreams());
+        OutputPlan plan = await RunPlan(profile: profile, media: BuildMediaWithStreams());
 
-        SubtitleOutputPlan subtitle = Assert.Single(plan.SubtitleOutputs);
-        subtitle.ExtraFlags.Should().ContainKey("-canvas_size").WhoseValue.Should().Be("1920x1080");
+        SubtitleOutputPlan subtitle = Assert.Single(collection: plan.SubtitleOutputs);
+        subtitle.ExtraFlags.Should().ContainKey(expected: "-canvas_size").WhoseValue.Should().Be(expected: "1920x1080");
     }
 
     private async Task<OutputPlan> RunPlan(EncodingProfile profile) =>
-        await RunPlan(profile, BuildSdrMedia());
+        await RunPlan(profile: profile, media: BuildSdrMedia());
 
     private async Task<OutputPlan> RunPlan(EncodingProfile profile, MediaInfo media)
     {
-        ValidateInput input = new(media, profile);
+        ValidateInput input = new(Media: media, Profile: profile);
         EncodingContext context = EncodingContext.Create();
-        StageResult result = await _stage.ExecuteAsync(input, context, CancellationToken.None);
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: CancellationToken.None);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
         return success.Value.OutputPlan;
     }
 
@@ -222,7 +222,7 @@ public class PlanStageCustomArgumentsTests
         new(
             FilePath: "/media/sdr.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(90),
+            Duration: TimeSpan.FromMinutes(minutes: 90),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 4_000_000_000,
             VideoStreams:

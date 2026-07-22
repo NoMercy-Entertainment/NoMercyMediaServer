@@ -24,60 +24,60 @@ public class TvdbListTranslationResponse : TvdbResponse<TvdbTranslationData> { }
 
 public class TvdbList
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public long Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("overview")]
+    [JsonProperty(propertyName: "overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty("url")]
+    [JsonProperty(propertyName: "url")]
     public string? Url { get; set; }
 
-    [JsonProperty("isOfficial")]
+    [JsonProperty(propertyName: "isOfficial")]
     public bool IsOfficial { get; set; }
 
-    [JsonProperty("nameTranslations")]
+    [JsonProperty(propertyName: "nameTranslations")]
     public string[] NameTranslations { get; set; } = [];
 
-    [JsonProperty("overviewTranslations")]
+    [JsonProperty(propertyName: "overviewTranslations")]
     public string[] OverviewTranslations { get; set; } = [];
 
-    [JsonProperty("aliases")]
+    [JsonProperty(propertyName: "aliases")]
     public TvdbAlias[] Aliases { get; set; } = [];
 
-    [JsonProperty("score")]
+    [JsonProperty(propertyName: "score")]
     public int Score { get; set; }
 
-    [JsonProperty("image")]
+    [JsonProperty(propertyName: "image")]
     public Uri? Image { get; set; }
 
-    [JsonProperty("imageIsFallback")]
+    [JsonProperty(propertyName: "imageIsFallback")]
     public bool ImageIsFallback { get; set; }
 
-    [JsonProperty("remoteIds")]
+    [JsonProperty(propertyName: "remoteIds")]
     public TvdbRemoteId[]? RemoteIds { get; set; }
 
-    [JsonProperty("tags")]
+    [JsonProperty(propertyName: "tags")]
     public TvdbTagOption[]? Tags { get; set; }
 }
 
 public class TvdbListExtended : TvdbList
 {
-    [JsonProperty("entities")]
+    [JsonProperty(propertyName: "entities")]
     public TvdbListEntity[]? Entities { get; set; }
 }
 
 public class TvdbListEntity
 {
-    [JsonProperty("order")]
+    [JsonProperty(propertyName: "order")]
     public int Order { get; set; }
 
-    [JsonProperty("seriesId")]
+    [JsonProperty(propertyName: "seriesId")]
     public long? SeriesId { get; set; }
 
-    [JsonProperty("movieId")]
+    [JsonProperty(propertyName: "movieId")]
     public long? MovieId { get; set; }
 }

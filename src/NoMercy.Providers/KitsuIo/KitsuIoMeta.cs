@@ -15,6 +15,6 @@ namespace NoMercy.Providers.KitsuIo;
 
 public class KitsuIoMeta
 {
-    [JsonProperty("count")]
+    [JsonProperty(propertyName: "count")]
     public int Count { get; set; }
 }

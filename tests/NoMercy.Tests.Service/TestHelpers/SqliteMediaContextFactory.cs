@@ -32,21 +32,21 @@ public sealed class SqliteMediaContextFactory : IDbContextFactory<MediaContext>,
 
     public SqliteMediaContextFactory()
     {
-        _connection = new("DataSource=:memory:");
+        _connection = new(connectionString: "DataSource=:memory:");
         _connection.Open();
 
         _options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(
-                _connection,
-                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+                connection: _connection,
+                sqliteOptionsAction: o => o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery)
             )
             .Options;
 
-        using MediaContext ctx = new(_options);
+        using MediaContext ctx = new(options: _options);
         ctx.Database.EnsureCreated();
     }
 
-    public MediaContext CreateDbContext() => new(_options);
+    public MediaContext CreateDbContext() => new(options: _options);
 
     public ValueTask DisposeAsync()
     {

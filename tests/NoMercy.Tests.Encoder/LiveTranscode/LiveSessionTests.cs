@@ -37,19 +37,19 @@ public class LiveSessionTests
     [Fact]
     public void Session_StartsInStartingState()
     {
-        LiveSession session = new("sess-001", MakeQuality());
+        LiveSession session = new(sessionId: "sess-001", quality: MakeQuality());
 
-        session.State.Should().Be(LiveSessionState.Starting);
+        session.State.Should().Be(expected: LiveSessionState.Starting);
     }
 
     [Fact]
     public void SetState_ChangesState()
     {
-        LiveSession session = new("sess-001", MakeQuality());
+        LiveSession session = new(sessionId: "sess-001", quality: MakeQuality());
 
-        session.SetState(LiveSessionState.Transcoding);
+        session.SetState(state: LiveSessionState.Transcoding);
 
-        session.State.Should().Be(LiveSessionState.Transcoding);
+        session.State.Should().Be(expected: LiveSessionState.Transcoding);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -59,14 +59,14 @@ public class LiveSessionTests
     [Fact]
     public void PushSegment_UpdatesTranscodedPosition()
     {
-        LiveSession session = new("sess-001", MakeQuality());
-        TimeSpan start = TimeSpan.FromSeconds(10);
-        TimeSpan duration = TimeSpan.FromSeconds(6);
-        Segment segment = new(0, start, duration, "/tmp/seg0.ts", 500_000);
+        LiveSession session = new(sessionId: "sess-001", quality: MakeQuality());
+        TimeSpan start = TimeSpan.FromSeconds(seconds: 10);
+        TimeSpan duration = TimeSpan.FromSeconds(seconds: 6);
+        Segment segment = new(Index: 0, StartTime: start, Duration: duration, FilePath: "/tmp/seg0.ts", SizeBytes: 500_000);
 
-        session.PushSegment(segment);
+        session.PushSegment(segment: segment);
 
-        session.TranscodedPosition.Should().Be(start + duration);
+        session.TranscodedPosition.Should().Be(expected: start + duration);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -76,45 +76,45 @@ public class LiveSessionTests
     [Fact]
     public void Suspend_WhenTranscoding_ChangesToBuffered()
     {
-        LiveSession session = new("sess-001", MakeQuality());
-        session.SetState(LiveSessionState.Transcoding);
+        LiveSession session = new(sessionId: "sess-001", quality: MakeQuality());
+        session.SetState(state: LiveSessionState.Transcoding);
 
         session.Suspend();
 
-        session.State.Should().Be(LiveSessionState.Buffered);
+        session.State.Should().Be(expected: LiveSessionState.Buffered);
     }
 
     [Fact]
     public void Suspend_WhenNotTranscoding_DoesNotChange()
     {
-        LiveSession session = new("sess-001", MakeQuality());
-        session.SetState(LiveSessionState.Starting);
+        LiveSession session = new(sessionId: "sess-001", quality: MakeQuality());
+        session.SetState(state: LiveSessionState.Starting);
 
         session.Suspend();
 
-        session.State.Should().Be(LiveSessionState.Starting);
+        session.State.Should().Be(expected: LiveSessionState.Starting);
     }
 
     [Fact]
     public void Resume_WhenBuffered_ChangesToTranscoding()
     {
-        LiveSession session = new("sess-001", MakeQuality());
-        session.SetState(LiveSessionState.Buffered);
+        LiveSession session = new(sessionId: "sess-001", quality: MakeQuality());
+        session.SetState(state: LiveSessionState.Buffered);
 
         session.Resume();
 
-        session.State.Should().Be(LiveSessionState.Transcoding);
+        session.State.Should().Be(expected: LiveSessionState.Transcoding);
     }
 
     [Fact]
     public void Resume_WhenNotBuffered_DoesNotChange()
     {
-        LiveSession session = new("sess-001", MakeQuality());
-        session.SetState(LiveSessionState.Starting);
+        LiveSession session = new(sessionId: "sess-001", quality: MakeQuality());
+        session.SetState(state: LiveSessionState.Starting);
 
         session.Resume();
 
-        session.State.Should().Be(LiveSessionState.Starting);
+        session.State.Should().Be(expected: LiveSessionState.Starting);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -124,28 +124,28 @@ public class LiveSessionTests
     [Fact]
     public void ReportPlaybackPosition_UpdatesBufferAhead()
     {
-        LiveSession session = new("sess-001", MakeQuality());
+        LiveSession session = new(sessionId: "sess-001", quality: MakeQuality());
         Segment segment = new(
-            0,
-            TimeSpan.Zero,
-            TimeSpan.FromSeconds(30),
-            "/tmp/seg0.ts",
-            1_000_000
+            Index: 0,
+            StartTime: TimeSpan.Zero,
+            Duration: TimeSpan.FromSeconds(seconds: 30),
+            FilePath: "/tmp/seg0.ts",
+            SizeBytes: 1_000_000
         );
-        session.PushSegment(segment);
+        session.PushSegment(segment: segment);
 
-        session.ReportPlaybackPosition(TimeSpan.FromSeconds(10), authoritative: true);
+        session.ReportPlaybackPosition(position: TimeSpan.FromSeconds(seconds: 10), authoritative: true);
 
         // TranscodedPosition = 30s, PlaybackPosition = 10s → BufferAhead = 20s
-        session.BufferAhead.Should().Be(TimeSpan.FromSeconds(20));
+        session.BufferAhead.Should().Be(expected: TimeSpan.FromSeconds(seconds: 20));
     }
 
     [Fact]
     public void BufferAhead_BeforeAnyReport_IsZeroOrPositive()
     {
-        LiveSession session = new("sess-001", MakeQuality());
+        LiveSession session = new(sessionId: "sess-001", quality: MakeQuality());
 
-        session.BufferAhead.TotalSeconds.Should().BeGreaterThanOrEqualTo(0);
+        session.BufferAhead.TotalSeconds.Should().BeGreaterThanOrEqualTo(expected: 0);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -155,11 +155,11 @@ public class LiveSessionTests
     [Fact]
     public async Task SeekAsync_SetsSeekingState()
     {
-        LiveSession session = new("sess-001", MakeQuality());
+        LiveSession session = new(sessionId: "sess-001", quality: MakeQuality());
 
-        await session.SeekAsync(TimeSpan.FromSeconds(60), CancellationToken.None);
+        await session.SeekAsync(position: TimeSpan.FromSeconds(seconds: 60), ct: CancellationToken.None);
 
-        session.State.Should().Be(LiveSessionState.Seeking);
+        session.State.Should().Be(expected: LiveSessionState.Seeking);
     }
 
     [Fact]
@@ -170,11 +170,11 @@ public class LiveSessionTests
         // callback here is what used to wipe the coverage-aware buffer/on-disk
         // state on every seek and made re-watching already-transcoded ground
         // re-encode. Only ChangeQualityAsync still resets.
-        LiveSession session = new("sess-001", MakeQuality());
+        LiveSession session = new(sessionId: "sess-001", quality: MakeQuality());
         bool resetCalled = false;
-        session.AttachBufferResetCallback(() => resetCalled = true);
+        session.AttachBufferResetCallback(callback: () => resetCalled = true);
 
-        await session.SeekAsync(TimeSpan.FromSeconds(30), CancellationToken.None);
+        await session.SeekAsync(position: TimeSpan.FromSeconds(seconds: 30), ct: CancellationToken.None);
 
         resetCalled.Should().BeFalse();
     }
@@ -182,9 +182,9 @@ public class LiveSessionTests
     [Fact]
     public async Task ChangeQualityAsync_InvokesBufferResetCallback()
     {
-        LiveSession session = new("sess-001", MakeQuality());
+        LiveSession session = new(sessionId: "sess-001", quality: MakeQuality());
         bool resetCalled = false;
-        session.AttachBufferResetCallback(() => resetCalled = true);
+        session.AttachBufferResetCallback(callback: () => resetCalled = true);
 
         LiveQuality newQuality = new(
             Id: "720p",
@@ -199,7 +199,7 @@ public class LiveSessionTests
             CanRealtime: true
         );
 
-        await session.ChangeQualityAsync("720p", newQuality, CancellationToken.None);
+        await session.ChangeQualityAsync(qualityId: "720p", newQuality: newQuality, ct: CancellationToken.None);
 
         resetCalled.Should().BeTrue();
     }
@@ -211,26 +211,26 @@ public class LiveSessionTests
         // nothing — the buffer-reset callback (wired to LiveRuntimeSession.ResetBuffer
         // by LiveStreamingService.Register) fires on quality change only, so a
         // segment buffered before the seek must still be there after it.
-        LiveSession session = new("sess-001", MakeQuality());
-        LiveRuntimeSession runtime = new(session, TimeSpan.FromSeconds(6));
-        session.AttachBufferResetCallback(() => runtime.ResetBuffer());
+        LiveSession session = new(sessionId: "sess-001", quality: MakeQuality());
+        LiveRuntimeSession runtime = new(session: session, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 6));
+        session.AttachBufferResetCallback(callback: () => runtime.ResetBuffer());
 
-        Segment seg0 = new(0, TimeSpan.Zero, TimeSpan.FromSeconds(6), "/tmp/seg0.ts", 100);
+        Segment seg0 = new(Index: 0, StartTime: TimeSpan.Zero, Duration: TimeSpan.FromSeconds(seconds: 6), FilePath: "/tmp/seg0.ts", SizeBytes: 100);
         Segment seg1 = new(
-            1,
-            TimeSpan.FromSeconds(6),
-            TimeSpan.FromSeconds(6),
-            "/tmp/seg1.ts",
-            100
+            Index: 1,
+            StartTime: TimeSpan.FromSeconds(seconds: 6),
+            Duration: TimeSpan.FromSeconds(seconds: 6),
+            FilePath: "/tmp/seg1.ts",
+            SizeBytes: 100
         );
-        runtime.BufferSegment(seg0);
-        runtime.BufferSegment(seg1);
-        runtime.HighestSegmentIndex.Should().Be(1);
+        runtime.BufferSegment(segment: seg0);
+        runtime.BufferSegment(segment: seg1);
+        runtime.HighestSegmentIndex.Should().Be(expected: 1);
 
-        await session.SeekAsync(TimeSpan.FromSeconds(60), CancellationToken.None);
+        await session.SeekAsync(position: TimeSpan.FromSeconds(seconds: 60), ct: CancellationToken.None);
 
-        runtime.SnapshotSegments().Should().HaveCount(2);
-        runtime.HighestSegmentIndex.Should().Be(1);
+        runtime.SnapshotSegments().Should().HaveCount(expected: 2);
+        runtime.HighestSegmentIndex.Should().Be(expected: 1);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -240,11 +240,11 @@ public class LiveSessionTests
     [Fact]
     public async Task DisposeAsync_SetsEndedState()
     {
-        LiveSession session = new("sess-001", MakeQuality());
+        LiveSession session = new(sessionId: "sess-001", quality: MakeQuality());
 
         await session.DisposeAsync();
 
-        session.State.Should().Be(LiveSessionState.Ended);
+        session.State.Should().Be(expected: LiveSessionState.Ended);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -254,28 +254,28 @@ public class LiveSessionTests
     [Fact]
     public async Task Segments_ReadsFromChannel_AfterPushAndComplete()
     {
-        LiveSession session = new("sess-001", MakeQuality());
-        Segment seg0 = new(0, TimeSpan.Zero, TimeSpan.FromSeconds(6), "/tmp/seg0.ts", 300_000);
+        LiveSession session = new(sessionId: "sess-001", quality: MakeQuality());
+        Segment seg0 = new(Index: 0, StartTime: TimeSpan.Zero, Duration: TimeSpan.FromSeconds(seconds: 6), FilePath: "/tmp/seg0.ts", SizeBytes: 300_000);
         Segment seg1 = new(
-            1,
-            TimeSpan.FromSeconds(6),
-            TimeSpan.FromSeconds(6),
-            "/tmp/seg1.ts",
-            300_000
+            Index: 1,
+            StartTime: TimeSpan.FromSeconds(seconds: 6),
+            Duration: TimeSpan.FromSeconds(seconds: 6),
+            FilePath: "/tmp/seg1.ts",
+            SizeBytes: 300_000
         );
 
-        session.PushSegment(seg0);
-        session.PushSegment(seg1);
+        session.PushSegment(segment: seg0);
+        session.PushSegment(segment: seg1);
         session.Complete();
 
         List<Segment> received = [];
         await foreach (Segment segment in session.Segments)
         {
-            received.Add(segment);
+            received.Add(item: segment);
         }
 
-        received.Should().HaveCount(2);
-        received[0].Index.Should().Be(0);
-        received[1].Index.Should().Be(1);
+        received.Should().HaveCount(expected: 2);
+        received[index: 0].Index.Should().Be(expected: 0);
+        received[index: 1].Index.Should().Be(expected: 1);
     }
 }

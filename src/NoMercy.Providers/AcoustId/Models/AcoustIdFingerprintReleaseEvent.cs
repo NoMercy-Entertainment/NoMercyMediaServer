@@ -15,9 +15,9 @@ namespace NoMercy.Providers.AcoustId.Models;
 
 public class AcoustIdFingerprintReleaseEvent
 {
-    [JsonProperty("country")]
+    [JsonProperty(propertyName: "country")]
     public string Country { get; set; } = string.Empty;
 
-    [JsonProperty("date")]
+    [JsonProperty(propertyName: "date")]
     public AcoustIdFingerprintDate Date { get; set; } = new();
 }

@@ -30,7 +30,7 @@ public class EpisodeExtrasJob : AbstractShowExtraDataJob<TmdbEpisodeAppends, str
     public EpisodeExtrasJob() { }
 
     public EpisodeExtrasJob(ILoggerFactory loggerFactory)
-        : base(loggerFactory) { }
+        : base(loggerFactory: loggerFactory) { }
 
     public override string QueueName => "extras";
     public override int Priority => 1;
@@ -40,21 +40,21 @@ public class EpisodeExtrasJob : AbstractShowExtraDataJob<TmdbEpisodeAppends, str
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
-        EpisodeRepository episodeRepository = new(context);
+        EpisodeRepository episodeRepository = new(context: context);
         EpisodeManager episodeManager = new(
-            episodeRepository,
-            jobDispatcher,
-            LoggerFactory.CreateLogger<EpisodeManager>()
+            episodeRepository: episodeRepository,
+            jobDispatcher: jobDispatcher,
+            logger: LoggerFactory.CreateLogger<EpisodeManager>()
         );
 
         PersonRepository personRepository = new(
-            context,
-            LoggerFactory.CreateLogger<PersonRepository>()
+            context: context,
+            logger: LoggerFactory.CreateLogger<PersonRepository>()
         );
         PersonManager personManager = new(
-            personRepository,
-            jobDispatcher,
-            LoggerFactory.CreateLogger<PersonManager>()
+            personRepository: personRepository,
+            jobDispatcher: jobDispatcher,
+            logger: LoggerFactory.CreateLogger<PersonManager>()
         );
 
         foreach (TmdbEpisodeAppends episode in Storage)
@@ -62,19 +62,17 @@ public class EpisodeExtrasJob : AbstractShowExtraDataJob<TmdbEpisodeAppends, str
             // Bounded so a stalled TMDB/NFS call fails this episode's pass
             // instead of hanging the whole job — see
             // JobOperationTimeoutExtensions.
-            await personManager.Store(episode).WithTimeout(nameof(PersonManager.Store));
+            await personManager.Store(episode: episode).WithTimeout(operationName: nameof(PersonManager.Store));
             await episodeManager
-                .StoreTranslations(Name, episode)
-                .WithTimeout(nameof(EpisodeManager.StoreTranslations));
+                .StoreTranslations(showName: Name, episode: episode)
+                .WithTimeout(operationName: nameof(EpisodeManager.StoreTranslations));
             await episodeManager
-                .StoreImages(Name, episode)
-                .WithTimeout(nameof(EpisodeManager.StoreImages));
+                .StoreImages(showName: Name, episode: episode)
+                .WithTimeout(operationName: nameof(EpisodeManager.StoreImages));
         }
 
         Log.LogDebug(
-            "Show {Name}: Season {SeasonNumber} Episodes: Images and Translations stored",
-            Name,
-            Storage.FirstOrDefault()?.SeasonNumber
+            message: "Show {Name}: Season {SeasonNumber} Episodes: Images and Translations stored", args: [Name, Storage.FirstOrDefault()?.SeasonNumber]
         );
     }
 }

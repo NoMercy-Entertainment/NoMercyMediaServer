@@ -39,16 +39,16 @@ public class PlanStageAudioFilterTests
 
     public PlanStageAudioFilterTests()
     {
-        _hardware.Setup(h => h.HasGpu).Returns(false);
-        _hardware.Setup(h => h.CpuCores).Returns(8);
-        _hardware.Setup(h => h.Gpus).Returns([]);
-        _hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
+        _hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
+        _hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
+        _hardware.Setup(expression: h => h.Gpus).Returns(value: []);
+        _hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
         _hardware
-            .Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
-            .Returns((GpuDevice?)null);
+            .Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
+            .Returns(value: (GpuDevice?)null);
 
         _codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<IHardwareCapabilities>(),
@@ -56,7 +56,7 @@ public class PlanStageAudioFilterTests
                 )
             )
             .Returns(
-                new ResolvedCodec(
+                value: new ResolvedCodec(
                     FfmpegEncoderName: "libx264",
                     EncoderInfo: new(
                         FfmpegName: "libx264",
@@ -64,7 +64,7 @@ public class PlanStageAudioFilterTests
                         Presets: ["medium"],
                         Profiles: ["high"],
                         Levels: ["4.1"],
-                        QualityRange: new(0, 51, 23),
+                        QualityRange: new(Min: 0, Max: 51, Default: 23),
                         SupportedRateControl: [RateControlMode.Crf],
                         Supports10Bit: false,
                         SupportsHdr: false,
@@ -78,47 +78,47 @@ public class PlanStageAudioFilterTests
             );
 
         _stage = new(
-            new(),
-            new(),
-            new(),
-            _codecResolver.Object,
-            _hardware.Object,
-            new TonemapSelector(),
-            new Mock<IFfmpegCapabilities>().Object,
-            new AbrLadderGenerator(),
-            new NoOpCropDetector(),
-            NullLogger<PlanStage>.Instance
+            graphBuilder: new(),
+            groupingStrategy: new(),
+            costEstimator: new(),
+            codecResolver: _codecResolver.Object,
+            hardware: _hardware.Object,
+            tonemapSelector: new TonemapSelector(),
+            ffmpegCapabilities: new Mock<IFfmpegCapabilities>().Object,
+            abrLadderGenerator: new AbrLadderGenerator(),
+            cropDetector: new NoOpCropDetector(),
+            logger: NullLogger<PlanStage>.Instance
         );
     }
 
     [Fact]
     public async Task LoudnessNone_NoAudioFilter()
     {
-        EncodingProfile profile = BuildProfile(LoudnessMode.None);
-        OutputPlan plan = await RunPlan(profile);
+        EncodingProfile profile = BuildProfile(loudness: LoudnessMode.None);
+        OutputPlan plan = await RunPlan(profile: profile);
 
-        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
-        Assert.Null(audio.AudioFilter);
+        AudioOutputPlan audio = Assert.Single(collection: plan.AudioOutputs);
+        Assert.Null(@object: audio.AudioFilter);
     }
 
     [Fact]
     public async Task LoudnessEbuR128_EmitsLoudnormWithR128Targets()
     {
-        EncodingProfile profile = BuildProfile(LoudnessMode.EbuR128);
-        OutputPlan plan = await RunPlan(profile);
+        EncodingProfile profile = BuildProfile(loudness: LoudnessMode.EbuR128);
+        OutputPlan plan = await RunPlan(profile: profile);
 
-        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
-        Assert.Equal("loudnorm=I=-16:TP=-1.5:LRA=11", audio.AudioFilter);
+        AudioOutputPlan audio = Assert.Single(collection: plan.AudioOutputs);
+        Assert.Equal(expected: "loudnorm=I=-16:TP=-1.5:LRA=11", actual: audio.AudioFilter);
     }
 
     [Fact]
     public async Task LoudnessReplayGain_EmitsLoudnormWithRgTargets()
     {
-        EncodingProfile profile = BuildProfile(LoudnessMode.ReplayGain);
-        OutputPlan plan = await RunPlan(profile);
+        EncodingProfile profile = BuildProfile(loudness: LoudnessMode.ReplayGain);
+        OutputPlan plan = await RunPlan(profile: profile);
 
-        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
-        Assert.Equal("loudnorm=I=-18:TP=-1.5:LRA=11", audio.AudioFilter);
+        AudioOutputPlan audio = Assert.Single(collection: plan.AudioOutputs);
+        Assert.Equal(expected: "loudnorm=I=-18:TP=-1.5:LRA=11", actual: audio.AudioFilter);
     }
 
     [Fact]
@@ -126,11 +126,11 @@ public class PlanStageAudioFilterTests
     {
         // Custom mode means the profile's CustomArguments carry the filter — the mapper
         // does not emit one automatically.
-        EncodingProfile profile = BuildProfile(LoudnessMode.Custom);
-        OutputPlan plan = await RunPlan(profile);
+        EncodingProfile profile = BuildProfile(loudness: LoudnessMode.Custom);
+        OutputPlan plan = await RunPlan(profile: profile);
 
-        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
-        Assert.Null(audio.AudioFilter);
+        AudioOutputPlan audio = Assert.Single(collection: plan.AudioOutputs);
+        Assert.Null(@object: audio.AudioFilter);
     }
 
     [Fact]
@@ -139,16 +139,16 @@ public class PlanStageAudioFilterTests
         // loudnorm expects the post-downmix channel layout, so pan must run
         // first. The two filters chain as "pan=...,loudnorm=..." in that order.
         EncodingProfile profile = BuildProfile(
-            LoudnessMode.EbuR128,
-            new(DownmixMode.StereoItuR128)
+            loudness: LoudnessMode.EbuR128,
+            downmix: new(Mode: DownmixMode.StereoItuR128)
         );
-        OutputPlan plan = await RunPlan(profile);
+        OutputPlan plan = await RunPlan(profile: profile);
 
-        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
+        AudioOutputPlan audio = Assert.Single(collection: plan.AudioOutputs);
         Assert.Equal(
-            "pan=stereo|FL<FL+0.707*FC+0.707*BL+0.707*SL|FR<FR+0.707*FC+0.707*BR+0.707*SR,"
-                + "loudnorm=I=-16:TP=-1.5:LRA=11",
-            audio.AudioFilter
+            expected: "pan=stereo|FL<FL+0.707*FC+0.707*BL+0.707*SL|FR<FR+0.707*FC+0.707*BR+0.707*SR,"
+                      + "loudnorm=I=-16:TP=-1.5:LRA=11",
+            actual: audio.AudioFilter
         );
     }
 
@@ -156,23 +156,23 @@ public class PlanStageAudioFilterTests
     public async Task DownmixOnly_EmitsPanWithoutLoudnorm()
     {
         EncodingProfile profile = BuildProfile(
-            LoudnessMode.None,
-            new(DownmixMode.Mono)
+            loudness: LoudnessMode.None,
+            downmix: new(Mode: DownmixMode.Mono)
         );
-        OutputPlan plan = await RunPlan(profile);
+        OutputPlan plan = await RunPlan(profile: profile);
 
-        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
-        audio.AudioFilter.Should().StartWith("pan=mono|");
-        audio.AudioFilter.Should().NotContain("loudnorm");
+        AudioOutputPlan audio = Assert.Single(collection: plan.AudioOutputs);
+        audio.AudioFilter.Should().StartWith(expected: "pan=mono|");
+        audio.AudioFilter.Should().NotContain(unexpected: "loudnorm");
     }
 
     private async Task<OutputPlan> RunPlan(EncodingProfile profile)
     {
-        ValidateInput input = new(BuildMedia(), profile);
+        ValidateInput input = new(Media: BuildMedia(), Profile: profile);
         EncodingContext context = EncodingContext.Create();
-        StageResult result = await _stage.ExecuteAsync(input, context, CancellationToken.None);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: CancellationToken.None);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
         return success.Value.OutputPlan;
     }
 
@@ -180,7 +180,7 @@ public class PlanStageAudioFilterTests
         new(
             FilePath: "/media/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(90),
+            Duration: TimeSpan.FromMinutes(minutes: 90),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 4_000_000_000,
             VideoStreams:
@@ -256,7 +256,7 @@ public class PlanStageAudioFilterTests
                     SampleRateHz: 48000,
                     AllowedLanguages: [],
                     DefaultLanguage: null,
-                    Loudness: loudness == LoudnessMode.None ? null : new LoudnessConfig(loudness),
+                    Loudness: loudness == LoudnessMode.None ? null : new LoudnessConfig(Mode: loudness),
                     Downmix: downmix,
                     SegmentNameTemplate: "audio/{lang}-{codec}",
                     PlaylistNameTemplate: "audio/{lang}-{codec}/playlist"

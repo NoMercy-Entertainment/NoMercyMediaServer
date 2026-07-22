@@ -16,9 +16,9 @@ namespace NoMercy.Providers.TMDB.Models.Episode;
 
 public class Videos
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("results")]
+    [JsonProperty(propertyName: "results")]
     public TmdbVideo[] Results { get; set; } = [];
 }

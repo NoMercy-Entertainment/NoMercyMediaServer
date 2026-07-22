@@ -30,7 +30,7 @@ public class LiveEncoderTests
         new(
             FilePath: "/media/test.mkv",
             Format: "matroska,webm",
-            Duration: TimeSpan.FromMinutes(90),
+            Duration: TimeSpan.FromMinutes(minutes: 90),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 5_000_000_000L,
             VideoStreams:
@@ -81,7 +81,7 @@ public class LiveEncoderTests
             CanRealtime: true
         );
 
-    private static SpeedIndex MakeSpeedIndex() => new(new());
+    private static SpeedIndex MakeSpeedIndex() => new(Measurements: new());
 
     private static IResourceBudget MakeBudget() => new ResourceBudget(gpuDevices: [], cpuCores: 8);
 
@@ -104,7 +104,7 @@ public class LiveEncoderTests
         LiveQuality defaultQuality = MakeQuality();
 
         ILiveQualitySelector selector =
-            qualitySelector ?? CreateAlwaysReturnSelector(defaultQuality);
+            qualitySelector ?? CreateAlwaysReturnSelector(quality: defaultQuality);
 
         ISessionManager manager = sessionManager ?? CreateUnlimitedSessionManager();
 
@@ -112,26 +112,26 @@ public class LiveEncoderTests
         {
             FfmpegPathOverride = "ffmpeg",
             FfprobePathOverride = "ffprobe",
-            LiveTranscodeCachePath = Path.Combine(Path.GetTempPath(), "nomercy-live-tests"),
+            LiveTranscodeCachePath = Path.Combine(path1: Path.GetTempPath(), path2: "nomercy-live-tests"),
         };
 
         NoMercy.Storage.IStorage storage = TestStorageFactory.CreateLocal();
-        ILiveSegmentInventory segmentInventory = TestStorageFactory.CreateSegmentInventory(storage);
+        ILiveSegmentInventory segmentInventory = TestStorageFactory.CreateSegmentInventory(storage: storage);
 
         return new(
-            selector,
-            manager,
-            new LiveStreamingService(
-                NullLogger<LiveStreamingService>.Instance,
-                storage,
-                segmentInventory
+            qualitySelector: selector,
+            sessionManager: manager,
+            streamingService: new LiveStreamingService(
+                logger: NullLogger<LiveStreamingService>.Instance,
+                storage: storage,
+                segmentInventory: segmentInventory
             ),
-            new NoOpLiveFfmpegRunner(),
-            segmentInventory,
-            encoderOptions,
-            speedIndex,
-            budget,
-            NullLogger<LiveEncoder>.Instance
+            runner: new NoOpLiveFfmpegRunner(),
+            segmentInventory: segmentInventory,
+            options: encoderOptions,
+            speedIndex: speedIndex,
+            budget: budget,
+            logger: NullLogger<LiveEncoder>.Instance
         );
     }
 
@@ -148,7 +148,7 @@ public class LiveEncoderTests
     {
         Mock<ILiveQualitySelector> mock = new();
 
-        mock.Setup(s =>
+        mock.Setup(expression: s =>
                 s.SelectOptimal(
                     It.IsAny<MediaInfo>(),
                     It.IsAny<ClientCapabilities>(),
@@ -156,9 +156,9 @@ public class LiveEncoderTests
                     It.IsAny<IResourceBudget>()
                 )
             )
-            .Returns(quality);
+            .Returns(value: quality);
 
-        mock.Setup(s =>
+        mock.Setup(expression: s =>
                 s.GetAvailableQualities(
                     It.IsAny<MediaInfo>(),
                     It.IsAny<ClientCapabilities>(),
@@ -166,7 +166,7 @@ public class LiveEncoderTests
                     It.IsAny<IResourceBudget>()
                 )
             )
-            .Returns([quality]);
+            .Returns(value: [quality]);
 
         return mock.Object;
     }
@@ -174,7 +174,7 @@ public class LiveEncoderTests
     private static ISessionManager CreateUnlimitedSessionManager()
     {
         SessionManager manager = new(
-            new() { MaxConcurrentSessions = 100, MaxSessionsPerUser = 100 }
+            limits: new() { MaxConcurrentSessions = 100, MaxSessionsPerUser = 100 }
         );
         return manager;
     }
@@ -189,7 +189,7 @@ public class LiveEncoderTests
         LiveEncoder encoder = BuildEncoder();
         LiveEncodeRequest request = MakeRequest();
 
-        ILiveSession session = await encoder.StartAsync(request, CancellationToken.None);
+        ILiveSession session = await encoder.StartAsync(request: request, ct: CancellationToken.None);
 
         session.Should().NotBeNull();
         session.SessionId.Should().NotBeNullOrWhiteSpace();
@@ -201,9 +201,9 @@ public class LiveEncoderTests
         LiveEncoder encoder = BuildEncoder();
         LiveEncodeRequest request = MakeRequest();
 
-        ILiveSession session = await encoder.StartAsync(request, CancellationToken.None);
+        ILiveSession session = await encoder.StartAsync(request: request, ct: CancellationToken.None);
 
-        session.State.Should().Be(LiveSessionState.Transcoding);
+        session.State.Should().Be(expected: LiveSessionState.Transcoding);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -215,27 +215,27 @@ public class LiveEncoderTests
     {
         // Cap of zero: a normal StartAsync would be refused, but an audio child
         // rides on an already-admitted video session and must not be capped.
-        SessionManager capped = new(new() { MaxConcurrentSessions = 0, MaxSessionsPerUser = 0 });
+        SessionManager capped = new(limits: new() { MaxConcurrentSessions = 0, MaxSessionsPerUser = 0 });
         LiveEncoder encoder = BuildEncoder(sessionManager: capped);
         LiveEncodeRequest request = MakeRequest() with { AudioStreamIndex = 2 };
 
         ILiveSession child = await encoder.StartAudioRenditionAsync(
-            request,
-            CancellationToken.None
+            request: request,
+            ct: CancellationToken.None
         );
 
         child.Should().NotBeNull();
-        child.State.Should().Be(LiveSessionState.Transcoding);
-        child.CurrentAudioStreamIndex.Should().Be(2);
+        child.State.Should().Be(expected: LiveSessionState.Transcoding);
+        child.CurrentAudioStreamIndex.Should().Be(expected: 2);
     }
 
     [Fact]
     public async Task StartAsync_WhenCapExhausted_Throws()
     {
-        SessionManager capped = new(new() { MaxConcurrentSessions = 0, MaxSessionsPerUser = 0 });
+        SessionManager capped = new(limits: new() { MaxConcurrentSessions = 0, MaxSessionsPerUser = 0 });
         LiveEncoder encoder = BuildEncoder(sessionManager: capped);
 
-        Func<Task> act = () => encoder.StartAsync(MakeRequest(), CancellationToken.None);
+        Func<Task> act = () => encoder.StartAsync(request: MakeRequest(), ct: CancellationToken.None);
 
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
@@ -243,26 +243,26 @@ public class LiveEncoderTests
     [Fact]
     public async Task StartAsync_UsesOptimalQuality_WhenNoPreference()
     {
-        LiveQuality expectedQuality = MakeQuality("720p");
+        LiveQuality expectedQuality = MakeQuality(id: "720p");
         LiveEncoder encoder = BuildEncoder(
-            qualitySelector: CreateAlwaysReturnSelector(expectedQuality)
+            qualitySelector: CreateAlwaysReturnSelector(quality: expectedQuality)
         );
         LiveEncodeRequest request = MakeRequest(preferredQuality: null);
 
-        ILiveSession session = await encoder.StartAsync(request, CancellationToken.None);
+        ILiveSession session = await encoder.StartAsync(request: request, ct: CancellationToken.None);
 
-        session.CurrentQuality.Id.Should().Be("720p");
+        session.CurrentQuality.Id.Should().Be(expected: "720p");
     }
 
     [Fact]
     public async Task StartAsync_WithPreferredQuality_UsesItWhenAvailable()
     {
         LiveQuality preferred = MakeQuality();
-        LiveQuality fallback = MakeQuality("720p");
+        LiveQuality fallback = MakeQuality(id: "720p");
 
         Mock<ILiveQualitySelector> selectorMock = new();
         selectorMock
-            .Setup(s =>
+            .Setup(expression: s =>
                 s.GetAvailableQualities(
                     It.IsAny<MediaInfo>(),
                     It.IsAny<ClientCapabilities>(),
@@ -270,10 +270,10 @@ public class LiveEncoderTests
                     It.IsAny<IResourceBudget>()
                 )
             )
-            .Returns([preferred]);
+            .Returns(value: [preferred]);
 
         selectorMock
-            .Setup(s =>
+            .Setup(expression: s =>
                 s.SelectOptimal(
                     It.IsAny<MediaInfo>(),
                     It.IsAny<ClientCapabilities>(),
@@ -281,25 +281,25 @@ public class LiveEncoderTests
                     It.IsAny<IResourceBudget>()
                 )
             )
-            .Returns(fallback);
+            .Returns(value: fallback);
 
         LiveEncoder encoder = BuildEncoder(qualitySelector: selectorMock.Object);
         LiveEncodeRequest request = MakeRequest(preferredQuality: "1080p");
 
-        ILiveSession session = await encoder.StartAsync(request, CancellationToken.None);
+        ILiveSession session = await encoder.StartAsync(request: request, ct: CancellationToken.None);
 
-        session.CurrentQuality.Id.Should().Be("1080p");
+        session.CurrentQuality.Id.Should().Be(expected: "1080p");
     }
 
     [Fact]
     public async Task StartAsync_WithPreferredQualityNotAvailable_FallsBackToOptimal()
     {
-        LiveQuality available = MakeQuality("480p");
-        LiveQuality optimal = MakeQuality("720p");
+        LiveQuality available = MakeQuality(id: "480p");
+        LiveQuality optimal = MakeQuality(id: "720p");
 
         Mock<ILiveQualitySelector> selectorMock = new();
         selectorMock
-            .Setup(s =>
+            .Setup(expression: s =>
                 s.GetAvailableQualities(
                     It.IsAny<MediaInfo>(),
                     It.IsAny<ClientCapabilities>(),
@@ -307,10 +307,10 @@ public class LiveEncoderTests
                     It.IsAny<IResourceBudget>()
                 )
             )
-            .Returns([available]);
+            .Returns(value: [available]);
 
         selectorMock
-            .Setup(s =>
+            .Setup(expression: s =>
                 s.SelectOptimal(
                     It.IsAny<MediaInfo>(),
                     It.IsAny<ClientCapabilities>(),
@@ -318,14 +318,14 @@ public class LiveEncoderTests
                     It.IsAny<IResourceBudget>()
                 )
             )
-            .Returns(optimal);
+            .Returns(value: optimal);
 
         LiveEncoder encoder = BuildEncoder(qualitySelector: selectorMock.Object);
         LiveEncodeRequest request = MakeRequest(preferredQuality: "4k");
 
-        ILiveSession session = await encoder.StartAsync(request, CancellationToken.None);
+        ILiveSession session = await encoder.StartAsync(request: request, ct: CancellationToken.None);
 
-        session.CurrentQuality.Id.Should().Be("720p");
+        session.CurrentQuality.Id.Should().Be(expected: "720p");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -335,13 +335,13 @@ public class LiveEncoderTests
     [Fact]
     public async Task StartAsync_DoesNotRegisterSessionInSessionManager()
     {
-        SessionManager sessionManager = new(new() { MaxConcurrentSessions = 10 });
+        SessionManager sessionManager = new(limits: new() { MaxConcurrentSessions = 10 });
         LiveEncoder encoder = BuildEncoder(sessionManager: sessionManager);
         LiveEncodeRequest request = MakeRequest();
 
-        await encoder.StartAsync(request, CancellationToken.None);
+        await encoder.StartAsync(request: request, ct: CancellationToken.None);
 
-        sessionManager.ActiveSessionCount.Should().Be(0);
+        sessionManager.ActiveSessionCount.Should().Be(expected: 0);
     }
 
     [Fact]
@@ -349,30 +349,30 @@ public class LiveEncoderTests
     {
         LiveEncoder encoder = BuildEncoder();
 
-        ILiveSession first = await encoder.StartAsync(MakeRequest(), CancellationToken.None);
-        ILiveSession second = await encoder.StartAsync(MakeRequest(), CancellationToken.None);
+        ILiveSession first = await encoder.StartAsync(request: MakeRequest(), ct: CancellationToken.None);
+        ILiveSession second = await encoder.StartAsync(request: MakeRequest(), ct: CancellationToken.None);
 
-        first.SessionId.Should().NotBe(second.SessionId);
+        first.SessionId.Should().NotBe(unexpected: second.SessionId);
     }
 
     [Fact]
     public async Task StartAsync_ControllerRegistersExactlyOnce_WhenControllerCallsRegister()
     {
-        SessionManager sessionManager = new(new() { MaxConcurrentSessions = 10 });
+        SessionManager sessionManager = new(limits: new() { MaxConcurrentSessions = 10 });
         LiveEncoder encoder = BuildEncoder(sessionManager: sessionManager);
         LiveEncodeRequest request = MakeRequest();
 
-        ILiveSession session = await encoder.StartAsync(request, CancellationToken.None);
+        ILiveSession session = await encoder.StartAsync(request: request, ct: CancellationToken.None);
 
         // Encoder must NOT have registered — count stays 0.
-        sessionManager.ActiveSessionCount.Should().Be(0);
+        sessionManager.ActiveSessionCount.Should().Be(expected: 0);
 
         // Controller registers once with userId.
-        sessionManager.RegisterSession(session, userId: "user-abc");
+        sessionManager.RegisterSession(session: session, userId: "user-abc");
 
         // Now exactly one registration exists.
-        sessionManager.ActiveSessionCount.Should().Be(1);
-        sessionManager.ActiveSessions.Should().ContainSingle(s => s.SessionId == session.SessionId);
+        sessionManager.ActiveSessionCount.Should().Be(expected: 1);
+        sessionManager.ActiveSessions.Should().ContainSingle(predicate: s => s.SessionId == session.SessionId);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -382,15 +382,15 @@ public class LiveEncoderTests
     [Fact]
     public async Task StartAsync_ThrowsWhenSessionLimitReached()
     {
-        SessionManager sessionManager = new(new() { MaxConcurrentSessions = 1 });
+        SessionManager sessionManager = new(limits: new() { MaxConcurrentSessions = 1 });
         LiveEncoder encoder = BuildEncoder(sessionManager: sessionManager);
 
         // Simulate the controller having registered a session against the cap.
-        LiveSession existing = new("existing-session", MakeQuality());
-        sessionManager.RegisterSession(existing, userId: "user-1");
+        LiveSession existing = new(sessionId: "existing-session", quality: MakeQuality());
+        sessionManager.RegisterSession(session: existing, userId: "user-1");
 
-        Func<Task> act = () => encoder.StartAsync(MakeRequest(), CancellationToken.None);
+        Func<Task> act = () => encoder.StartAsync(request: MakeRequest(), ct: CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*concurrent*");
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage(expectedWildcardPattern: "*concurrent*");
     }
 }

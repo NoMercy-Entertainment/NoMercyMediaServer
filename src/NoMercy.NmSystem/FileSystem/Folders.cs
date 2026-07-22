@@ -15,7 +15,7 @@ public static class Folders
 {
     public static void EmptyFolder(string folderPath)
     {
-        DirectoryInfo directory = new(folderPath);
+        DirectoryInfo directory = new(path: folderPath);
         if (!directory.Exists)
             return;
 
@@ -23,7 +23,7 @@ public static class Folders
             file.Delete();
 
         foreach (DirectoryInfo subDirectory in directory.GetDirectories())
-            subDirectory.Delete(true);
+            subDirectory.Delete(recursive: true);
     }
 
     public static long GetDirectorySize(this DirectoryInfo directoryInfo, bool recursive = true)
@@ -35,16 +35,16 @@ public static class Folders
         try
         {
             foreach (FileInfo fileInfo in directoryInfo.GetFiles())
-                Interlocked.Add(ref startDirectorySize, fileInfo.Length);
+                Interlocked.Add(location1: ref startDirectorySize, value: fileInfo.Length);
 
             if (recursive)
                 Parallel.ForEach(
-                    directoryInfo.GetDirectories(),
-                    SystemParallelism.Options,
-                    subDirectory =>
+                    source: directoryInfo.GetDirectories(),
+                    parallelOptions: SystemParallelism.Options,
+                    body: subDirectory =>
                         Interlocked.Add(
-                            ref startDirectorySize,
-                            subDirectory.GetDirectorySize(recursive)
+                            location1: ref startDirectorySize,
+                            value: subDirectory.GetDirectorySize(recursive: recursive)
                         )
                 );
 

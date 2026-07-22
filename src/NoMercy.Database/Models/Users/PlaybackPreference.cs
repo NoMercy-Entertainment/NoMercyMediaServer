@@ -15,37 +15,37 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Users;
 
-[PrimaryKey(nameof(Id))]
-[Index(nameof(UserId), nameof(LibraryId), IsUnique = true)]
-[Index(nameof(UserId), nameof(TvId), IsUnique = true)]
-[Index(nameof(UserId), nameof(MovieId), IsUnique = true)]
+[PrimaryKey(propertyName: nameof(Id))]
+[Index(propertyName: nameof(UserId), additionalPropertyNames: nameof(LibraryId), IsUnique = true)]
+[Index(propertyName: nameof(UserId), additionalPropertyNames: nameof(TvId), IsUnique = true)]
+[Index(propertyName: nameof(UserId), additionalPropertyNames: nameof(MovieId), IsUnique = true)]
 public class PlaybackPreference : MetadataTrack
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.None)]
-    [JsonProperty("id")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
+    [JsonProperty(propertyName: "id")]
     public Ulid Id { get; set; } = Ulid.NewUlid();
 
-    [JsonProperty("user_id")]
+    [JsonProperty(propertyName: "user_id")]
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
 
-    [JsonProperty("library_id")]
+    [JsonProperty(propertyName: "library_id")]
     public Ulid? LibraryId { get; set; }
     public Library? Library { get; set; }
 
-    [JsonProperty("tv_id")]
+    [JsonProperty(propertyName: "tv_id")]
     public int? TvId { get; set; }
     public Tv? Tv { get; set; }
 
-    [JsonProperty("movie_id")]
+    [JsonProperty(propertyName: "movie_id")]
     public int? MovieId { get; set; }
     public Movie? Movie { get; set; }
 
-    [JsonProperty("collection_id")]
+    [JsonProperty(propertyName: "collection_id")]
     public int? CollectionId { get; set; }
     public Collection? Collection { get; set; }
 
-    [JsonProperty("special_id")]
+    [JsonProperty(propertyName: "special_id")]
     public Ulid? SpecialId { get; set; }
     public Special? Special { get; set; }
 }

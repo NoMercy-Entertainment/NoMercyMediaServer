@@ -20,8 +20,8 @@ public static class BootstrapStorageFactory
     public static (IStorage storage, IStorageDriver driver) Create()
     {
         IStorageDriver driver = new LocalStorageDriver();
-        StoragePathGuard guard = new([], driver);
-        IStorage storage = new LocalStorage(driver, guard);
+        StoragePathGuard guard = new(allowedRoots: [], driver: driver);
+        IStorage storage = new LocalStorage(driver: driver, guard: guard);
         
         return (storage, driver);
     }

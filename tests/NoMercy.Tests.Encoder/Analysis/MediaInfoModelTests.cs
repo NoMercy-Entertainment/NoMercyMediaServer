@@ -133,13 +133,13 @@ public class MediaInfoModelTests
         List<SubtitleStreamInfo> subtitleStreams = [CreateSubtitleStream()];
         List<ChapterInfo> chapters =
         [
-            new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(5), Title: "Intro"),
+            new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(minutes: 5), Title: "Intro"),
         ];
 
         MediaInfo info = new(
             FilePath: "/media/movie.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromHours(2),
+            Duration: TimeSpan.FromHours(hours: 2),
             OverallBitRateKbps: 20000,
             FileSizeBytes: 18_000_000_000L,
             VideoStreams: videoStreams,
@@ -148,10 +148,10 @@ public class MediaInfoModelTests
             Chapters: chapters
         );
 
-        info.VideoStreams.Should().HaveCount(1);
-        info.AudioStreams.Should().HaveCount(1);
-        info.SubtitleStreams.Should().HaveCount(1);
-        info.Chapters.Should().HaveCount(1);
+        info.VideoStreams.Should().HaveCount(expected: 1);
+        info.AudioStreams.Should().HaveCount(expected: 1);
+        info.SubtitleStreams.Should().HaveCount(expected: 1);
+        info.Chapters.Should().HaveCount(expected: 1);
         info.HasVideo.Should().BeTrue();
         info.HasAudio.Should().BeTrue();
         info.HasSubtitles.Should().BeTrue();
@@ -163,7 +163,7 @@ public class MediaInfoModelTests
         MediaInfo info = new(
             FilePath: "/media/song.flac",
             Format: "flac",
-            Duration: TimeSpan.FromMinutes(4),
+            Duration: TimeSpan.FromMinutes(minutes: 4),
             OverallBitRateKbps: 1411,
             FileSizeBytes: 42_000_000L,
             VideoStreams: [],

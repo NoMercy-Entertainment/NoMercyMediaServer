@@ -22,103 +22,103 @@ public class H265DefinitionTests
     [Fact]
     public void CodecType_IsH265()
     {
-        _definition.CodecType.Should().Be(VideoCodecType.H265);
+        _definition.CodecType.Should().Be(expected: VideoCodecType.H265);
     }
 
     [Fact]
     public void Has_Exactly6_Encoders()
     {
-        _definition.Encoders.Should().HaveCount(6);
+        _definition.Encoders.Should().HaveCount(expected: 6);
     }
 
     [Fact]
     public void Libx265_HasCorrectFields()
     {
-        EncoderInfo sw = _definition.Encoders.Single(e => e.FfmpegName == "libx265");
+        EncoderInfo sw = _definition.Encoders.Single(predicate: e => e.FfmpegName == "libx265");
 
         sw.RequiredVendor.Should().BeNull();
-        sw.Presets.Should().HaveCount(10);
-        sw.Presets.Should().Contain("ultrafast");
-        sw.Presets.Should().Contain("veryslow");
-        sw.Presets.Should().Contain("placebo");
-        sw.Profiles.Should().Contain("main");
-        sw.Profiles.Should().Contain("main10");
-        sw.Profiles.Should().Contain("main12");
-        sw.Profiles.Should().Contain("main422-10");
-        sw.Profiles.Should().Contain("main444-10");
-        sw.QualityRange.Min.Should().Be(0);
-        sw.QualityRange.Max.Should().Be(51);
-        sw.QualityRange.Default.Should().Be(28);
-        sw.SupportedRateControl.Should().Contain(RateControlMode.Crf);
+        sw.Presets.Should().HaveCount(expected: 10);
+        sw.Presets.Should().Contain(expected: "ultrafast");
+        sw.Presets.Should().Contain(expected: "veryslow");
+        sw.Presets.Should().Contain(expected: "placebo");
+        sw.Profiles.Should().Contain(expected: "main");
+        sw.Profiles.Should().Contain(expected: "main10");
+        sw.Profiles.Should().Contain(expected: "main12");
+        sw.Profiles.Should().Contain(expected: "main422-10");
+        sw.Profiles.Should().Contain(expected: "main444-10");
+        sw.QualityRange.Min.Should().Be(expected: 0);
+        sw.QualityRange.Max.Should().Be(expected: 51);
+        sw.QualityRange.Default.Should().Be(expected: 28);
+        sw.SupportedRateControl.Should().Contain(expected: RateControlMode.Crf);
         sw.Supports10Bit.Should().BeTrue();
         sw.SupportsHdr.Should().BeTrue();
-        sw.PixelFormat10Bit.Should().Be("yuv420p10le");
-        sw.MaxConcurrentSessions.Should().Be(int.MaxValue);
+        sw.PixelFormat10Bit.Should().Be(expected: "yuv420p10le");
+        sw.MaxConcurrentSessions.Should().Be(expected: int.MaxValue);
     }
 
     [Fact]
     public void HevcNvenc_HasCorrectFields()
     {
-        EncoderInfo nvenc = _definition.Encoders.Single(e => e.FfmpegName == "hevc_nvenc");
+        EncoderInfo nvenc = _definition.Encoders.Single(predicate: e => e.FfmpegName == "hevc_nvenc");
 
-        nvenc.RequiredVendor.Should().Be(GpuVendor.Nvidia);
-        nvenc.Presets.Should().BeEquivalentTo("p1", "p2", "p3", "p4", "p5", "p6", "p7");
-        nvenc.Profiles.Should().Contain("main");
-        nvenc.Profiles.Should().Contain("main10");
-        nvenc.Profiles.Should().Contain("rext");
-        nvenc.QualityRange.Min.Should().Be(0);
-        nvenc.QualityRange.Max.Should().Be(51);
-        nvenc.SupportedRateControl.Should().Contain(RateControlMode.Cq);
+        nvenc.RequiredVendor.Should().Be(expected: GpuVendor.Nvidia);
+        nvenc.Presets.Should().BeEquivalentTo(expectation: ["p1", "p2", "p3", "p4", "p5", "p6", "p7"]);
+        nvenc.Profiles.Should().Contain(expected: "main");
+        nvenc.Profiles.Should().Contain(expected: "main10");
+        nvenc.Profiles.Should().Contain(expected: "rext");
+        nvenc.QualityRange.Min.Should().Be(expected: 0);
+        nvenc.QualityRange.Max.Should().Be(expected: 51);
+        nvenc.SupportedRateControl.Should().Contain(expected: RateControlMode.Cq);
         nvenc.Supports10Bit.Should().BeTrue();
         nvenc.SupportsHdr.Should().BeTrue();
-        nvenc.MaxConcurrentSessions.Should().Be(12);
+        nvenc.MaxConcurrentSessions.Should().Be(expected: 12);
     }
 
     [Fact]
     public void HevcAmf_HasCorrectFields()
     {
-        EncoderInfo amf = _definition.Encoders.Single(e => e.FfmpegName == "hevc_amf");
+        EncoderInfo amf = _definition.Encoders.Single(predicate: e => e.FfmpegName == "hevc_amf");
 
-        amf.RequiredVendor.Should().Be(GpuVendor.Amd);
-        amf.Presets.Should().BeEquivalentTo("speed", "balanced", "quality");
-        amf.Profiles.Should().Contain("main");
-        amf.Profiles.Should().Contain("main10");
-        amf.QualityRange.Min.Should().Be(0);
-        amf.QualityRange.Max.Should().Be(51);
+        amf.RequiredVendor.Should().Be(expected: GpuVendor.Amd);
+        amf.Presets.Should().BeEquivalentTo(expectation: ["speed", "balanced", "quality"]);
+        amf.Profiles.Should().Contain(expected: "main");
+        amf.Profiles.Should().Contain(expected: "main10");
+        amf.QualityRange.Min.Should().Be(expected: 0);
+        amf.QualityRange.Max.Should().Be(expected: 51);
         amf.Supports10Bit.Should().BeTrue();
         amf.SupportsHdr.Should().BeTrue();
-        amf.MaxConcurrentSessions.Should().Be(int.MaxValue);
-        amf.VendorSpecificFlags.Should().ContainKey("-usage");
+        amf.MaxConcurrentSessions.Should().Be(expected: int.MaxValue);
+        amf.VendorSpecificFlags.Should().ContainKey(expected: "-usage");
     }
 
     [Fact]
     public void HevcQsv_HasCorrectFields()
     {
-        EncoderInfo qsv = _definition.Encoders.Single(e => e.FfmpegName == "hevc_qsv");
+        EncoderInfo qsv = _definition.Encoders.Single(predicate: e => e.FfmpegName == "hevc_qsv");
 
-        qsv.RequiredVendor.Should().Be(GpuVendor.Intel);
+        qsv.RequiredVendor.Should().Be(expected: GpuVendor.Intel);
         qsv.Presets.Should()
-            .BeEquivalentTo("veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow");
-        qsv.Profiles.Should().Contain("main");
-        qsv.Profiles.Should().Contain("main10");
-        qsv.Profiles.Should().Contain("mainsp");
-        qsv.Profiles.Should().Contain("rext");
-        qsv.Profiles.Should().Contain("scc");
-        qsv.QualityRange.Min.Should().Be(1);
-        qsv.QualityRange.Max.Should().Be(51);
-        qsv.SupportedRateControl.Should().Contain(RateControlMode.Icq);
-        qsv.MaxConcurrentSessions.Should().Be(int.MaxValue);
+            .BeEquivalentTo(expectation: ["veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"]);
+        qsv.Profiles.Should().Contain(expected: "main");
+        qsv.Profiles.Should().Contain(expected: "main10");
+        qsv.Profiles.Should().Contain(expected: "mainsp");
+        qsv.Profiles.Should().Contain(expected: "rext");
+        qsv.Profiles.Should().Contain(expected: "scc");
+        qsv.QualityRange.Min.Should().Be(expected: 1);
+        qsv.QualityRange.Max.Should().Be(expected: 51);
+        qsv.SupportedRateControl.Should().Contain(expected: RateControlMode.Icq);
+        qsv.MaxConcurrentSessions.Should().Be(expected: int.MaxValue);
     }
 
     [Fact]
     public void HevcVaapi_HasCorrectFields()
     {
-        EncoderInfo vaapi = _definition.Encoders.Single(e => e.FfmpegName == "hevc_vaapi");
+        EncoderInfo vaapi = _definition.Encoders.Single(predicate: e => e.FfmpegName == "hevc_vaapi");
 
-        vaapi.RequiredVendor.Should().Be(GpuVendor.Intel);
+        vaapi.RequiredVendor.Should().Be(expected: GpuVendor.Intel);
         vaapi.Presets.Should().BeEmpty();
-        vaapi.Profiles.Should().Contain("main");
-        vaapi.Profiles.Should().Contain("main10");
+        vaapi.Profiles.Should().Contain(expected: "main");
+        vaapi.Profiles.Should().Contain(expected: "main10");
         vaapi.Supports10Bit.Should().BeTrue();
         vaapi.SupportsHdr.Should().BeTrue();
     }
@@ -126,17 +126,17 @@ public class H265DefinitionTests
     [Fact]
     public void HevcVideoToolbox_HasCorrectFields()
     {
-        EncoderInfo vtb = _definition.Encoders.Single(e => e.FfmpegName == "hevc_videotoolbox");
+        EncoderInfo vtb = _definition.Encoders.Single(predicate: e => e.FfmpegName == "hevc_videotoolbox");
 
-        vtb.RequiredVendor.Should().Be(GpuVendor.Apple);
+        vtb.RequiredVendor.Should().Be(expected: GpuVendor.Apple);
         vtb.Presets.Should().BeEmpty();
         // HEVC VTB profiles are numeric: "1" = Main, "2" = Main10
-        vtb.Profiles.Should().BeEquivalentTo("1", "2");
-        vtb.QualityRange.Min.Should().Be(0);
-        vtb.QualityRange.Max.Should().Be(100);
-        vtb.SupportedRateControl.Should().Contain(RateControlMode.QualityLevel);
+        vtb.Profiles.Should().BeEquivalentTo(expectation: ["1", "2"]);
+        vtb.QualityRange.Min.Should().Be(expected: 0);
+        vtb.QualityRange.Max.Should().Be(expected: 100);
+        vtb.SupportedRateControl.Should().Contain(expected: RateControlMode.QualityLevel);
         // hevc_videotoolbox REQUIRES -tag:v hvc1
-        vtb.VendorSpecificFlags.Should().ContainKey("-tag:v");
-        vtb.VendorSpecificFlags["-tag:v"].Should().Be("hvc1");
+        vtb.VendorSpecificFlags.Should().ContainKey(expected: "-tag:v");
+        vtb.VendorSpecificFlags[key: "-tag:v"].Should().Be(expected: "hvc1");
     }
 }

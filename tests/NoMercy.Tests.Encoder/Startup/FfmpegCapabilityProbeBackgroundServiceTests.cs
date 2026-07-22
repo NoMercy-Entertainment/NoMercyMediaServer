@@ -30,8 +30,8 @@ public class FfmpegCapabilityProbeBackgroundServiceTests
     {
         Mock<IServerPhaseTracker> tracker = new();
         tracker
-            .Setup(t => t.WhenReachedAsync(It.IsAny<BootStage>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .Setup(expression: t => t.WhenReachedAsync(It.IsAny<BootStage>(), It.IsAny<CancellationToken>()))
+            .Returns(value: Task.CompletedTask);
         return tracker.Object;
     }
 
@@ -40,42 +40,42 @@ public class FfmpegCapabilityProbeBackgroundServiceTests
     {
         // Until the host signals ApplicationStarted, the probe MUST NOT run.
         TestLifetime lifetime = new();
-        TaskCompletionSource probeCalled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource probeCalled = new(creationOptions: TaskCreationOptions.RunContinuationsAsynchronously);
         Mock<IFfmpegCapabilityProbe> probe = new();
         probe
-            .Setup(p => p.ProbeAsync(It.IsAny<CancellationToken>()))
-            .Returns(() =>
+            .Setup(expression: p => p.ProbeAsync(It.IsAny<CancellationToken>()))
+            .Returns(valueFunction: () =>
             {
                 probeCalled.TrySetResult();
                 return Task.CompletedTask;
             });
 
         FfmpegCapabilityProbeBackgroundService service = new(
-            probe.Object,
-            lifetime,
-            NullLogger<FfmpegCapabilityProbeBackgroundService>.Instance,
-            CompletedPhaseTracker(),
+            probe: probe.Object,
+            lifetime: lifetime,
+            logger: NullLogger<FfmpegCapabilityProbeBackgroundService>.Instance,
+            phaseTracker: CompletedPhaseTracker(),
             initialGrace: TimeSpan.Zero
         );
 
         using CancellationTokenSource cts = new();
-        await StartExecuteAsync(service, cts.Token);
+        await StartExecuteAsync(service: service, ct: cts.Token);
 
         // Allow the wait-for-start path to register the callback.
-        await Task.Delay(50);
+        await Task.Delay(millisecondsDelay: 50);
         probe.Verify(
-            p => p.ProbeAsync(It.IsAny<CancellationToken>()),
-            Times.Never,
-            "probe must not fire before ApplicationStarted"
+            expression: p => p.ProbeAsync(It.IsAny<CancellationToken>()),
+            times: Times.Never,
+            failMessage: "probe must not fire before ApplicationStarted"
         );
 
         lifetime.SignalStarted();
         // Wait deterministically on the probe-call TCS — BackgroundService's
         // StartAsync returns when ExecuteAsync yields (not when it completes),
         // so awaiting StartAsync's task races against the post-start probe.
-        await probeCalled.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await probeCalled.Task.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 2));
 
-        probe.Verify(p => p.ProbeAsync(It.IsAny<CancellationToken>()), Times.Once);
+        probe.Verify(expression: p => p.ProbeAsync(It.IsAny<CancellationToken>()), times: Times.Once);
     }
 
     [Fact]
@@ -87,18 +87,18 @@ public class FfmpegCapabilityProbeBackgroundServiceTests
         lifetime.SignalStarted();
         Mock<IFfmpegCapabilityProbe> probe = new();
         probe
-            .Setup(p => p.ProbeAsync(It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("ffmpeg not on PATH"));
+            .Setup(expression: p => p.ProbeAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(exception: new InvalidOperationException(message: "ffmpeg not on PATH"));
 
         FfmpegCapabilityProbeBackgroundService service = new(
-            probe.Object,
-            lifetime,
-            NullLogger<FfmpegCapabilityProbeBackgroundService>.Instance,
-            CompletedPhaseTracker(),
+            probe: probe.Object,
+            lifetime: lifetime,
+            logger: NullLogger<FfmpegCapabilityProbeBackgroundService>.Instance,
+            phaseTracker: CompletedPhaseTracker(),
             initialGrace: TimeSpan.Zero
         );
 
-        Func<Task> act = () => StartExecuteAsync(service, CancellationToken.None);
+        Func<Task> act = () => StartExecuteAsync(service: service, ct: CancellationToken.None);
 
         await act.Should().NotThrowAsync();
     }
@@ -111,24 +111,24 @@ public class FfmpegCapabilityProbeBackgroundServiceTests
         Mock<IFfmpegCapabilityProbe> probe = new();
 
         FfmpegCapabilityProbeBackgroundService service = new(
-            probe.Object,
-            lifetime,
-            NullLogger<FfmpegCapabilityProbeBackgroundService>.Instance,
-            CompletedPhaseTracker(),
+            probe: probe.Object,
+            lifetime: lifetime,
+            logger: NullLogger<FfmpegCapabilityProbeBackgroundService>.Instance,
+            phaseTracker: CompletedPhaseTracker(),
             initialGrace: TimeSpan.Zero
         );
 
         using CancellationTokenSource cts = new();
-        Task executeTask = StartExecuteAsync(service, cts.Token);
-        await Task.Delay(50);
+        Task executeTask = StartExecuteAsync(service: service, ct: cts.Token);
+        await Task.Delay(millisecondsDelay: 50);
 
         await cts.CancelAsync();
         // ExecuteAsync should observe the cancellation and return without
         // running the probe — host is shutting down.
-        Func<Task> waitForExit = () => executeTask.WaitAsync(TimeSpan.FromSeconds(2));
+        Func<Task> waitForExit = () => executeTask.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 2));
         await waitForExit.Should().NotThrowAsync();
 
-        probe.Verify(p => p.ProbeAsync(It.IsAny<CancellationToken>()), Times.Never);
+        probe.Verify(expression: p => p.ProbeAsync(It.IsAny<CancellationToken>()), times: Times.Never);
     }
 
     [Fact]
@@ -141,21 +141,21 @@ public class FfmpegCapabilityProbeBackgroundServiceTests
         Mock<IFfmpegCapabilityProbe> probe = new();
 
         FfmpegCapabilityProbeBackgroundService service = new(
-            probe.Object,
-            lifetime,
-            NullLogger<FfmpegCapabilityProbeBackgroundService>.Instance,
-            CompletedPhaseTracker(),
-            initialGrace: TimeSpan.FromSeconds(5)
+            probe: probe.Object,
+            lifetime: lifetime,
+            logger: NullLogger<FfmpegCapabilityProbeBackgroundService>.Instance,
+            phaseTracker: CompletedPhaseTracker(),
+            initialGrace: TimeSpan.FromSeconds(seconds: 5)
         );
 
         using CancellationTokenSource cts = new();
-        Task executeTask = StartExecuteAsync(service, cts.Token);
-        await Task.Delay(20);
+        Task executeTask = StartExecuteAsync(service: service, ct: cts.Token);
+        await Task.Delay(millisecondsDelay: 20);
         await cts.CancelAsync();
 
-        await executeTask.WaitAsync(TimeSpan.FromSeconds(2));
+        await executeTask.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 2));
 
-        probe.Verify(p => p.ProbeAsync(It.IsAny<CancellationToken>()), Times.Never);
+        probe.Verify(expression: p => p.ProbeAsync(It.IsAny<CancellationToken>()), times: Times.Never);
     }
 
     [Fact]
@@ -168,18 +168,18 @@ public class FfmpegCapabilityProbeBackgroundServiceTests
         lifetime.SignalStarted();
         Mock<IFfmpegCapabilityProbe> probe = new();
         probe
-            .Setup(p => p.ProbeAsync(It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new OperationCanceledException());
+            .Setup(expression: p => p.ProbeAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(exception: new OperationCanceledException());
 
         FfmpegCapabilityProbeBackgroundService service = new(
-            probe.Object,
-            lifetime,
-            NullLogger<FfmpegCapabilityProbeBackgroundService>.Instance,
-            CompletedPhaseTracker(),
+            probe: probe.Object,
+            lifetime: lifetime,
+            logger: NullLogger<FfmpegCapabilityProbeBackgroundService>.Instance,
+            phaseTracker: CompletedPhaseTracker(),
             initialGrace: TimeSpan.Zero
         );
 
-        Func<Task> act = () => StartExecuteAsync(service, CancellationToken.None);
+        Func<Task> act = () => StartExecuteAsync(service: service, ct: CancellationToken.None);
 
         await act.Should().NotThrowAsync();
     }
@@ -193,7 +193,7 @@ public class FfmpegCapabilityProbeBackgroundServiceTests
         // are ready by the time the first /capabilities request lands.
         FfmpegCapabilityProbeBackgroundService
             .DefaultInitialGrace.Should()
-            .Be(TimeSpan.FromSeconds(5));
+            .Be(expected: TimeSpan.FromSeconds(seconds: 5));
     }
 
     // ── helpers ─────────────────────────────────────────────────────────────
@@ -203,7 +203,7 @@ public class FfmpegCapabilityProbeBackgroundServiceTests
         // BackgroundService.ExecuteAsync is protected; StartAsync is the
         // public entry that hooks it up. Use the public surface to mirror
         // what IHost actually does in production.
-        return service.StartAsync(ct);
+        return service.StartAsync(cancellationToken: ct);
     }
 
     private sealed class TestLifetime : IHostApplicationLifetime

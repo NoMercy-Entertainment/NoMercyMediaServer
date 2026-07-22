@@ -21,7 +21,7 @@ using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;
 
-[Trait("Category", "Characterization")]
+[Trait(name: "Category", value: "Characterization")]
 public class FolderRepositoryTests : IDisposable
 {
     private readonly MediaContext _context;
@@ -31,24 +31,24 @@ public class FolderRepositoryTests : IDisposable
     public FolderRepositoryTests()
     {
         _context = TestMediaContextFactory.CreateSeededContext();
-        _repository = new(_context);
-        _connection = new("Data Source=:memory:");
+        _repository = new(context: _context);
+        _connection = new(connectionString: "Data Source=:memory:");
     }
 
     [Fact]
     public async Task GetFolderByIdAsync_ReturnsFolderWithDriver()
     {
-        Folder? result = await _repository.GetFolderByIdAsync(SeedConstants.MovieFolderId);
+        Folder? result = await _repository.GetFolderByIdAsync(folderId: SeedConstants.MovieFolderId);
 
         result.Should().NotBeNull();
-        result!.Path.Should().Be("/media/movies");
+        result!.Path.Should().Be(expected: "/media/movies");
         result.Driver.Should().NotBeNull();
     }
 
     [Fact]
     public async Task GetFolderByIdAsync_ReturnsFolderWithLibraries()
     {
-        Folder? result = await _repository.GetFolderByIdAsync(SeedConstants.MovieFolderId);
+        Folder? result = await _repository.GetFolderByIdAsync(folderId: SeedConstants.MovieFolderId);
 
         result.Should().NotBeNull();
         result!.FolderLibraries.Should().NotBeEmpty();
@@ -57,7 +57,7 @@ public class FolderRepositoryTests : IDisposable
     [Fact]
     public async Task GetFolderByIdAsync_ReturnsNull_WhenIdDoesNotExist()
     {
-        Folder? result = await _repository.GetFolderByIdAsync(Ulid.NewUlid());
+        Folder? result = await _repository.GetFolderByIdAsync(folderId: Ulid.NewUlid());
 
         result.Should().BeNull();
     }
@@ -65,16 +65,16 @@ public class FolderRepositoryTests : IDisposable
     [Fact]
     public async Task GetFolderByPathAsync_ReturnsFolderByPath()
     {
-        Folder? result = await _repository.GetFolderByPathAsync("/media/movies");
+        Folder? result = await _repository.GetFolderByPathAsync(requestPath: "/media/movies");
 
         result.Should().NotBeNull();
-        result!.Path.Should().Be("/media/movies");
+        result!.Path.Should().Be(expected: "/media/movies");
     }
 
     [Fact]
     public async Task GetFolderByPathAsync_ReturnsNull_WhenPathDoesNotExist()
     {
-        Folder? result = await _repository.GetFolderByPathAsync("/nonexistent/path");
+        Folder? result = await _repository.GetFolderByPathAsync(requestPath: "/nonexistent/path");
 
         result.Should().BeNull();
     }
@@ -83,13 +83,13 @@ public class FolderRepositoryTests : IDisposable
     public async Task GetFolderByDriverAndPathAsync_ReturnsFolderByComposite()
     {
         Folder? result = await _repository.GetFolderByDriverAndPathAsync(
-            Driver.SystemLocalDriverId,
-            "/media/movies"
+            driverId: Driver.SystemLocalDriverId,
+            requestPath: "/media/movies"
         );
 
         result.Should().NotBeNull();
-        result!.Path.Should().Be("/media/movies");
-        result.DriverId.Should().Be(Driver.SystemLocalDriverId);
+        result!.Path.Should().Be(expected: "/media/movies");
+        result.DriverId.Should().Be(expected: Driver.SystemLocalDriverId);
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public class FolderRepositoryTests : IDisposable
     {
         Ulid otherDriverId = Ulid.NewUlid();
         _context.Drivers.Add(
-            new()
+            entity: new()
             {
                 Id = otherDriverId,
                 Name = "Other Driver",
@@ -108,7 +108,7 @@ public class FolderRepositoryTests : IDisposable
             }
         );
         _context.Folders.Add(
-            new()
+            entity: new()
             {
                 Id = Ulid.NewUlid(),
                 Path = "/media/movies",
@@ -118,18 +118,18 @@ public class FolderRepositoryTests : IDisposable
         await _context.SaveChangesAsync();
 
         Folder? result = await _repository.GetFolderByDriverAndPathAsync(
-            otherDriverId,
-            "/media/movies"
+            driverId: otherDriverId,
+            requestPath: "/media/movies"
         );
 
         result.Should().NotBeNull();
-        result!.DriverId.Should().Be(otherDriverId);
+        result!.DriverId.Should().Be(expected: otherDriverId);
 
         Folder? wrongDriver = await _repository.GetFolderByDriverAndPathAsync(
-            Driver.SystemLocalDriverId,
-            "/media/movies"
+            driverId: Driver.SystemLocalDriverId,
+            requestPath: "/media/movies"
         );
-        wrongDriver!.DriverId.Should().Be(Driver.SystemLocalDriverId);
+        wrongDriver!.DriverId.Should().Be(expected: Driver.SystemLocalDriverId);
     }
 
     [Fact]
@@ -140,21 +140,21 @@ public class FolderRepositoryTests : IDisposable
             new FolderLibraryDto { FolderId = SeedConstants.MovieFolderId },
         };
 
-        List<Folder> result = await _repository.GetFoldersByLibraryIdAsync(dtos);
+        List<Folder> result = await _repository.GetFoldersByLibraryIdAsync(folderLibraries: dtos);
 
         result.Should().NotBeEmpty();
-        result.Should().Contain(f => f.Id == SeedConstants.MovieFolderId);
+        result.Should().Contain(predicate: f => f.Id == SeedConstants.MovieFolderId);
     }
 
     [Fact]
     public async Task GetFoldersByLibraryIdAsync_WithUlid_ReturnsFoldersByLibrary()
     {
         List<Folder> result = await _repository.GetFoldersByLibraryIdAsync(
-            SeedConstants.MovieLibraryId
+            libraryId: SeedConstants.MovieLibraryId
         );
 
         result.Should().NotBeEmpty();
-        result.Should().Contain(f => f.Id == SeedConstants.MovieFolderId);
+        result.Should().Contain(predicate: f => f.Id == SeedConstants.MovieFolderId);
     }
 
     [Fact]
@@ -162,39 +162,39 @@ public class FolderRepositoryTests : IDisposable
     {
         Ulid folder2Id = Ulid.NewUlid();
         _context.Folders.Add(
-            new()
+            entity: new()
             {
                 Id = folder2Id,
                 Path = "/media/tv",
                 DriverId = Driver.SystemLocalDriverId,
             }
         );
-        _context.FolderLibrary.Add(new(folder2Id, SeedConstants.MovieLibraryId));
+        _context.FolderLibrary.Add(entity: new(folderId: folder2Id, libraryId: SeedConstants.MovieLibraryId));
         await _context.SaveChangesAsync();
 
         List<Folder> result = await _repository.GetFoldersByLibraryIdAsync(
-            SeedConstants.MovieLibraryId
+            libraryId: SeedConstants.MovieLibraryId
         );
 
-        result.Should().HaveCountGreaterThanOrEqualTo(2);
+        result.Should().HaveCountGreaterThanOrEqualTo(expected: 2);
     }
 
     [Fact]
     public async Task GetFolderById_ReturnsFolderWithoutRelations()
     {
-        Folder? result = await _repository.GetFolderById(SeedConstants.MovieFolderId);
+        Folder? result = await _repository.GetFolderById(folderId: SeedConstants.MovieFolderId);
 
         result.Should().NotBeNull();
-        result!.Id.Should().Be(SeedConstants.MovieFolderId);
+        result!.Id.Should().Be(expected: SeedConstants.MovieFolderId);
     }
 
     [Fact]
     public async Task GetFolderByPath_ReturnsFolderWithoutRelations()
     {
-        Folder? result = await _repository.GetFolderByPath("/media/movies");
+        Folder? result = await _repository.GetFolderByPath(path: "/media/movies");
 
         result.Should().NotBeNull();
-        result!.Path.Should().Be("/media/movies");
+        result!.Path.Should().Be(expected: "/media/movies");
     }
 
     [Fact]
@@ -208,9 +208,9 @@ public class FolderRepositoryTests : IDisposable
             DriverId = Driver.SystemLocalDriverId,
         };
 
-        await _repository.AddFolderAsync(folder);
+        await _repository.AddFolderAsync(folder: folder);
 
-        Folder? result = await _repository.GetFolderById(newFolderId);
+        Folder? result = await _repository.GetFolderById(folderId: newFolderId);
         result.Should().NotBeNull();
     }
 
@@ -225,10 +225,10 @@ public class FolderRepositoryTests : IDisposable
             DriverId = Driver.SystemLocalDriverId,
         };
 
-        await _repository.AddFolderAsync(update);
+        await _repository.AddFolderAsync(folder: update);
 
         List<Folder> allFolders = await _context.Folders.ToListAsync();
-        allFolders.Should().NotContain(f => f.Id != existingFolderId && f.Path == "/media/movies");
+        allFolders.Should().NotContain(predicate: f => f.Id != existingFolderId && f.Path == "/media/movies");
     }
 
     [Fact]
@@ -236,7 +236,7 @@ public class FolderRepositoryTests : IDisposable
     {
         Ulid folderId = Ulid.NewUlid();
         _context.Folders.Add(
-            new()
+            entity: new()
             {
                 Id = folderId,
                 Path = "/test",
@@ -245,10 +245,10 @@ public class FolderRepositoryTests : IDisposable
         );
         await _context.SaveChangesAsync();
 
-        FolderLibrary fl = new(folderId, SeedConstants.MovieLibraryId);
-        await _repository.AddFolderLibraryAsync(fl);
+        FolderLibrary fl = new(folderId: folderId, libraryId: SeedConstants.MovieLibraryId);
+        await _repository.AddFolderLibraryAsync(folderLibrary: fl);
 
-        FolderLibrary? result = await _context.FolderLibrary.FirstOrDefaultAsync(x =>
+        FolderLibrary? result = await _context.FolderLibrary.FirstOrDefaultAsync(predicate: x =>
             x.FolderId == folderId && x.LibraryId == SeedConstants.MovieLibraryId
         );
         result.Should().NotBeNull();
@@ -259,50 +259,52 @@ public class FolderRepositoryTests : IDisposable
     {
         Ulid folder1Id = Ulid.NewUlid();
         Ulid folder2Id = Ulid.NewUlid();
-        _context.Folders.AddRange(
-            new Folder
-            {
-                Id = folder1Id,
-                Path = "/test1",
-                DriverId = Driver.SystemLocalDriverId,
-            },
-            new Folder
-            {
-                Id = folder2Id,
-                Path = "/test2",
-                DriverId = Driver.SystemLocalDriverId,
-            }
+        _context.Folders.AddRange(entities:
+            [
+                new Folder
+                {
+                    Id = folder1Id,
+                    Path = "/test1",
+                    DriverId = Driver.SystemLocalDriverId,
+                },
+                new Folder
+                {
+                    Id = folder2Id,
+                    Path = "/test2",
+                    DriverId = Driver.SystemLocalDriverId,
+                }
+            ]
         );
         await _context.SaveChangesAsync();
 
         FolderLibrary[] fls = new[]
         {
-            new FolderLibrary(folder1Id, SeedConstants.MovieLibraryId),
-            new FolderLibrary(folder2Id, SeedConstants.MovieLibraryId),
+            new FolderLibrary(folderId: folder1Id, libraryId: SeedConstants.MovieLibraryId),
+            new FolderLibrary(folderId: folder2Id, libraryId: SeedConstants.MovieLibraryId),
         };
-        await _repository.AddFolderLibraryAsync(fls);
+        await _repository.AddFolderLibraryAsync(folderLibraries: fls);
 
         List<FolderLibrary> results = await _context
-            .FolderLibrary.Where(x =>
+            .FolderLibrary.Where(predicate: x =>
                 x.LibraryId == SeedConstants.MovieLibraryId
                 && (x.FolderId == folder1Id || x.FolderId == folder2Id)
             )
             .ToListAsync();
-        results.Should().HaveCount(2);
+        results.Should().HaveCount(expected: 2);
     }
 
     [Fact]
     public async Task UpdateFolderAsync_PersistsChanges()
     {
-        Folder folder = await _context.Folders.FirstAsync(f => f.Id == SeedConstants.MovieFolderId);
+        Folder folder = await _context.Folders.FirstAsync(predicate: f => f.Id == SeedConstants.MovieFolderId);
         folder.Path = "/updated/path";
 
-        await _repository.UpdateFolderAsync(folder);
+        await _repository.UpdateFolderAsync(folder: folder);
 
-        Folder? updated = await _context.Folders.FirstOrDefaultAsync(f =>
+        Folder? updated = await _context.Folders.FirstOrDefaultAsync(predicate: f =>
             f.Id == SeedConstants.MovieFolderId
         );
-        updated!.Path.Should().Be("/updated/path");
+        updated!.Path.Should().Be(expected: "/updated/path");
     }
 
     [Fact]
@@ -315,12 +317,12 @@ public class FolderRepositoryTests : IDisposable
             Path = "/to/delete",
             DriverId = Driver.SystemLocalDriverId,
         };
-        _context.Folders.Add(folder);
+        _context.Folders.Add(entity: folder);
         await _context.SaveChangesAsync();
 
-        await _repository.DeleteFolderAsync(folder);
+        await _repository.DeleteFolderAsync(folder: folder);
 
-        Folder? result = await _context.Folders.FirstOrDefaultAsync(f => f.Id == folderId);
+        Folder? result = await _context.Folders.FirstOrDefaultAsync(predicate: f => f.Id == folderId);
         result.Should().BeNull();
     }
 
@@ -336,18 +338,18 @@ public class FolderRepositoryTests : IDisposable
         try
         {
             await using MediaContext deleteContext = factory.CreateDbContext();
-            FolderRepository isolatedRepository = new(deleteContext);
+            FolderRepository isolatedRepository = new(context: deleteContext);
 
-            Folder folder = await deleteContext.Folders.FirstAsync(f =>
+            Folder folder = await deleteContext.Folders.FirstAsync(predicate: f =>
                 f.Id == SeedConstants.MovieFolderId
             );
 
-            Func<Task> act = async () => await isolatedRepository.DeleteFolderAsync(folder);
+            Func<Task> act = async () => await isolatedRepository.DeleteFolderAsync(folder: folder);
 
             await act.Should().NotThrowAsync();
 
             await using MediaContext verifyContext = factory.CreateDbContext();
-            Folder? result = await verifyContext.Folders.FirstOrDefaultAsync(f =>
+            Folder? result = await verifyContext.Folders.FirstOrDefaultAsync(predicate: f =>
                 f.Id == SeedConstants.MovieFolderId
             );
             result.Should().BeNull();
@@ -367,18 +369,18 @@ public class FolderRepositoryTests : IDisposable
         // throws HandleConceptualNulls in the change tracker before any SQL runs —
         // which a DB-level PRAGMA foreign_keys=OFF cannot prevent. The set-based
         // delete must survive a folder loaded with its dependents.
-        Folder folder = (await _repository.GetFolderByIdAsync(SeedConstants.MovieFolderId))!;
+        Folder folder = (await _repository.GetFolderByIdAsync(folderId: SeedConstants.MovieFolderId))!;
         folder.FolderLibraries.Should().NotBeEmpty();
 
-        Func<Task> act = async () => await _repository.DeleteFolderAsync(folder);
+        Func<Task> act = async () => await _repository.DeleteFolderAsync(folder: folder);
         await act.Should().NotThrowAsync();
 
-        Folder? deleted = await _context.Folders.FirstOrDefaultAsync(f =>
+        Folder? deleted = await _context.Folders.FirstOrDefaultAsync(predicate: f =>
             f.Id == SeedConstants.MovieFolderId
         );
         deleted.Should().BeNull();
 
-        bool orphanLinks = await _context.FolderLibrary.AnyAsync(fl =>
+        bool orphanLinks = await _context.FolderLibrary.AnyAsync(predicate: fl =>
             fl.FolderId == SeedConstants.MovieFolderId
         );
         orphanLinks.Should().BeFalse();
@@ -390,7 +392,7 @@ public class FolderRepositoryTests : IDisposable
         List<Folder> result = await _repository.GetAllFoldersAsync();
 
         result.Should().NotBeEmpty();
-        result.Should().Contain(f => f.Path == "/media/movies");
+        result.Should().Contain(predicate: f => f.Path == "/media/movies");
     }
 
     [Fact]
@@ -403,17 +405,17 @@ public class FolderRepositoryTests : IDisposable
             Path = "/sync/test",
             DriverId = Driver.SystemLocalDriverId,
         };
-        _context.Folders.Add(folder);
-        _context.FolderLibrary.Add(new(folderId, SeedConstants.MovieLibraryId));
+        _context.Folders.Add(entity: folder);
+        _context.FolderLibrary.Add(entity: new(folderId: folderId, libraryId: SeedConstants.MovieLibraryId));
         await _context.SaveChangesAsync();
 
-        FolderLibrary[] newFls = new[] { new FolderLibrary(folderId, SeedConstants.TvLibraryId) };
-        await _repository.SyncFolderLibraryAsync(newFls, new() { folder });
+        FolderLibrary[] newFls = new[] { new FolderLibrary(folderId: folderId, libraryId: SeedConstants.TvLibraryId) };
+        await _repository.SyncFolderLibraryAsync(folderLibraries: newFls, folders: new() { folder });
 
-        FolderLibrary? oldMapping = await _context.FolderLibrary.FirstOrDefaultAsync(x =>
+        FolderLibrary? oldMapping = await _context.FolderLibrary.FirstOrDefaultAsync(predicate: x =>
             x.FolderId == folderId && x.LibraryId == SeedConstants.MovieLibraryId
         );
-        FolderLibrary? newMapping = await _context.FolderLibrary.FirstOrDefaultAsync(x =>
+        FolderLibrary? newMapping = await _context.FolderLibrary.FirstOrDefaultAsync(predicate: x =>
             x.FolderId == folderId && x.LibraryId == SeedConstants.TvLibraryId
         );
 

@@ -36,18 +36,18 @@ public record TranslationDto
         Biography = translation.Data.Biography.OrEmpty();
     }
 
-    [JsonProperty("iso_3166_1")]
+    [JsonProperty(propertyName: "iso_3166_1")]
     public string Iso31661 { get; set; } = string.Empty;
 
-    [JsonProperty("iso_639_1")]
+    [JsonProperty(propertyName: "iso_639_1")]
     public string Iso6391 { get; set; } = string.Empty;
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("english_name")]
+    [JsonProperty(propertyName: "english_name")]
     public string EnglishName { get; set; } = string.Empty;
 
-    [JsonProperty("biography")]
+    [JsonProperty(propertyName: "biography")]
     public string Biography { get; set; } = string.Empty;
 }

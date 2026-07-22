@@ -73,7 +73,7 @@ public class HttpRemoteWorker : IRemoteWorker
         _logger = logger;
 
         if (encoderOptions?.IsDistributedEncodingEnabled == true)
-            _hmacSigner = new(encoderOptions.DistributedEncodingSigningKey!);
+            _hmacSigner = new(secret: encoderOptions.DistributedEncodingSigningKey!);
     }
 
     /// <summary>
@@ -93,26 +93,26 @@ public class HttpRemoteWorker : IRemoteWorker
 
     public async Task<DispatchResult> ExecuteTaskAsync(EncodeTask task, CancellationToken ct)
     {
-        string payload = _serializer.Serialize(task, _signingKey);
-        byte[] bodyBytes = Encoding.UTF8.GetBytes(payload);
-        HttpContent content = new ByteArrayContent(bodyBytes);
-        content.Headers.ContentType = new("application/json") { CharSet = "utf-8" };
+        string payload = _serializer.Serialize(task: task, signingKey: _signingKey);
+        byte[] bodyBytes = Encoding.UTF8.GetBytes(s: payload);
+        HttpContent content = new ByteArrayContent(content: bodyBytes);
+        content.Headers.ContentType = new(mediaType: "application/json") { CharSet = "utf-8" };
 
         const string path = "api/v1/worker/tasks";
-        HttpRequestMessage request = new(HttpMethod.Post, path) { Content = content };
+        HttpRequestMessage request = new(method: HttpMethod.Post, requestUri: path) { Content = content };
 
         if (_hmacSigner is not null)
         {
             long timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            string signature = _hmacSigner.Sign("POST", "/" + path, timestamp, bodyBytes);
-            request.Headers.Add("X-NoMercy-Timestamp", timestamp.ToString());
-            request.Headers.Add("X-NoMercy-Signature", signature);
+            string signature = _hmacSigner.Sign(method: "POST", path: "/" + path, timestamp: timestamp, body: bodyBytes);
+            request.Headers.Add(name: "X-NoMercy-Timestamp", value: timestamp.ToString());
+            request.Headers.Add(name: "X-NoMercy-Signature", value: signature);
         }
 
         HttpResponseMessage response;
         try
         {
-            response = await _http.SendAsync(request, ct).ConfigureAwait(false);
+            response = await _http.SendAsync(request: request, cancellationToken: ct).ConfigureAwait(continueOnCapturedContext: false);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -121,10 +121,8 @@ public class HttpRemoteWorker : IRemoteWorker
         catch (HttpRequestException ex)
         {
             _logger.LogWarning(
-                ex,
-                "HTTP error dispatching task {TaskId} to worker {WorkerId}",
-                task.TaskId,
-                WorkerId
+                exception: ex,
+                message: "HTTP error dispatching task {TaskId} to worker {WorkerId}", args: [task.TaskId, WorkerId]
             );
             return new(
                 TaskId: task.TaskId,
@@ -138,13 +136,9 @@ public class HttpRemoteWorker : IRemoteWorker
 
         if (!response.IsSuccessStatusCode)
         {
-            string body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            string body = await response.Content.ReadAsStringAsync(cancellationToken: ct).ConfigureAwait(continueOnCapturedContext: false);
             _logger.LogWarning(
-                "Worker {WorkerId} returned {StatusCode} for task {TaskId}: {Body}",
-                WorkerId,
-                (int)response.StatusCode,
-                task.TaskId,
-                Truncate(body, 500)
+                message: "Worker {WorkerId} returned {StatusCode} for task {TaskId}: {Body}", args: [WorkerId, (int)response.StatusCode, task.TaskId, Truncate(s: body, max: 500)]
             );
             return new(
                 TaskId: task.TaskId,
@@ -156,14 +150,12 @@ public class HttpRemoteWorker : IRemoteWorker
             );
         }
 
-        string responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-        DispatchResult? result = _serializer.DeserializeResult(responseBody, _signingKey);
+        string responseBody = await response.Content.ReadAsStringAsync(cancellationToken: ct).ConfigureAwait(continueOnCapturedContext: false);
+        DispatchResult? result = _serializer.DeserializeResult(payload: responseBody, signingKey: _signingKey);
         if (result is null)
         {
             _logger.LogWarning(
-                "Worker {WorkerId} returned an unsignable / expired response for task {TaskId}",
-                WorkerId,
-                task.TaskId
+                message: "Worker {WorkerId} returned an unsignable / expired response for task {TaskId}", args: [WorkerId, task.TaskId]
             );
             return new(
                 TaskId: task.TaskId,
@@ -193,11 +185,11 @@ public class HttpRemoteWorker : IRemoteWorker
     )
     {
         _logger.LogWarning(
-            "ExecuteJobAsync called on HttpRemoteWorker {WorkerId} — job-level remote dispatch is not supported; use task-level ExecuteTaskAsync",
-            WorkerId
+            message: "ExecuteJobAsync called on HttpRemoteWorker {WorkerId} — job-level remote dispatch is not supported; use task-level ExecuteTaskAsync",
+            args: WorkerId
         );
         return Task.FromResult(
-            new RemoteEncodingResult(
+            result: new RemoteEncodingResult(
                 Success: false,
                 WorkerId: WorkerId,
                 OutputPath: string.Empty,

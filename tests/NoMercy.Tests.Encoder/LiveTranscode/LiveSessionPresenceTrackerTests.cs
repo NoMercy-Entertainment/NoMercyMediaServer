@@ -51,19 +51,19 @@ public class LiveSessionPresenceTrackerTests
     {
         NoMercy.Storage.IStorage storage = TestStorageFactory.CreateLocal();
         LiveStreamingService service = new(
-            NullLogger<LiveStreamingService>.Instance,
-            storage,
-            TestStorageFactory.CreateSegmentInventory(storage)
+            logger: NullLogger<LiveStreamingService>.Instance,
+            storage: storage,
+            segmentInventory: TestStorageFactory.CreateSegmentInventory(storage: storage)
         );
 
-        LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
-        service.Register(session, TimeSpan.FromSeconds(4));
+        LiveSession session = new(sessionId: Ulid.NewUlid().ToString(), quality: MakeQuality());
+        service.Register(session: session, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 4));
 
         LiveSessionLimits limits = new() { DisconnectGraceSeconds = graceSeconds };
         LiveSessionPresenceTracker tracker = new(
-            service,
-            limits,
-            NullLogger<LiveSessionPresenceTracker>.Instance
+            streamingService: service,
+            limits: limits,
+            logger: NullLogger<LiveSessionPresenceTracker>.Instance
         );
 
         return (service, tracker, session.SessionId);
@@ -79,11 +79,11 @@ public class LiveSessionPresenceTrackerTests
         Stopwatch sw = Stopwatch.StartNew();
         while (sw.Elapsed < timeout)
         {
-            if (!service.ActiveSessionIds.Contains(sessionId))
+            if (!service.ActiveSessionIds.Contains(value: sessionId))
                 return true;
-            await Task.Delay(50);
+            await Task.Delay(millisecondsDelay: 50);
         }
-        return service.ActiveSessionIds.Contains(sessionId) == false;
+        return service.ActiveSessionIds.Contains(value: sessionId) == false;
     }
 
     [Fact]
@@ -92,12 +92,12 @@ public class LiveSessionPresenceTrackerTests
         (LiveStreamingService service, LiveSessionPresenceTracker tracker, string sessionId) =
             Build(graceSeconds: 1);
 
-        tracker.OnSubscribed(ConnA, sessionId);
-        tracker.OnConnectionClosed(ConnA);
+        tracker.OnSubscribed(connectionId: ConnA, sessionId: sessionId);
+        tracker.OnConnectionClosed(connectionId: ConnA);
 
-        bool removed = await WaitForRemovalAsync(service, sessionId, TimeSpan.FromSeconds(3));
+        bool removed = await WaitForRemovalAsync(service: service, sessionId: sessionId, timeout: TimeSpan.FromSeconds(seconds: 3));
 
-        removed.Should().BeTrue("the watching connection closed and no reconnect arrived");
+        removed.Should().BeTrue(because: "the watching connection closed and no reconnect arrived");
     }
 
     [Fact]
@@ -106,20 +106,20 @@ public class LiveSessionPresenceTrackerTests
         (LiveStreamingService service, LiveSessionPresenceTracker tracker, string sessionId) =
             Build(graceSeconds: 1);
 
-        tracker.OnSubscribed(ConnA, sessionId);
-        tracker.OnConnectionClosed(ConnA);
+        tracker.OnSubscribed(connectionId: ConnA, sessionId: sessionId);
+        tracker.OnConnectionClosed(connectionId: ConnA);
 
         // A network blip: the client reconnects on a fresh connection and
         // re-subscribes well inside the grace window.
-        tracker.OnSubscribed(ConnB, sessionId);
+        tracker.OnSubscribed(connectionId: ConnB, sessionId: sessionId);
 
         // Wait out the original grace window plus margin — the reconnect must
         // have cancelled the pending disposal.
-        await Task.Delay(TimeSpan.FromMilliseconds(1600));
+        await Task.Delay(delay: TimeSpan.FromMilliseconds(milliseconds: 1600));
 
         service
             .ActiveSessionIds.Should()
-            .Contain(sessionId, "the reconnect re-subscribed before the grace window elapsed");
+            .Contain(expected: sessionId, because: "the reconnect re-subscribed before the grace window elapsed");
     }
 
     [Fact]
@@ -128,20 +128,20 @@ public class LiveSessionPresenceTrackerTests
         (LiveStreamingService service, LiveSessionPresenceTracker tracker, string sessionId) =
             Build(graceSeconds: 1);
 
-        tracker.OnSubscribed(ConnA, sessionId);
+        tracker.OnSubscribed(connectionId: ConnA, sessionId: sessionId);
 
         // Graceful player teardown: the client unsubscribes (its own DELETE will
         // dispose the session) and only then does the socket close.
-        tracker.OnUnsubscribed(ConnA, sessionId);
-        tracker.OnConnectionClosed(ConnA);
+        tracker.OnUnsubscribed(connectionId: ConnA, sessionId: sessionId);
+        tracker.OnConnectionClosed(connectionId: ConnA);
 
-        await Task.Delay(TimeSpan.FromMilliseconds(1600));
+        await Task.Delay(delay: TimeSpan.FromMilliseconds(milliseconds: 1600));
 
         service
             .ActiveSessionIds.Should()
             .Contain(
-                sessionId,
-                "an explicit unsubscribe hands teardown to the caller, so the tracker must not dispose it"
+                expected: sessionId,
+                because: "an explicit unsubscribe hands teardown to the caller, so the tracker must not dispose it"
             );
     }
 }

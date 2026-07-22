@@ -27,11 +27,11 @@ public static class PaletteJsonExtensions
     /// </summary>
     public static JToken? ToRaw(this string? json)
     {
-        if (string.IsNullOrEmpty(json) || json == "{}")
+        if (string.IsNullOrEmpty(value: json) || json == "{}")
             return null;
         try
         {
-            return JToken.Parse(json);
+            return JToken.Parse(json: json);
         }
         catch (JsonException)
         {

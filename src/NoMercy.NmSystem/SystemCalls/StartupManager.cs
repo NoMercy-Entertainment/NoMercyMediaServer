@@ -21,7 +21,7 @@ public class StartupManager : IStartupManager
     {
         if (Screen.IsDocker)
         {
-            Logger.App("Auto-start is managed by Docker restart policy; skipping registration.");
+            Logger.App(message: "Auto-start is managed by Docker restart policy; skipping registration.");
             return;
         }
 

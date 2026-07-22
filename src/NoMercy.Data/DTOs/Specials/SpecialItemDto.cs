@@ -15,9 +15,9 @@ namespace NoMercy.Data.DTOs.Specials;
 
 public class SpecialItemDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; } = string.Empty;
 }

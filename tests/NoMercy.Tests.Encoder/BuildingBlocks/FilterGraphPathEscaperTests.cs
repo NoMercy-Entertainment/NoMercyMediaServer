@@ -29,56 +29,56 @@ public class FilterGraphPathEscaperTests
     [Fact]
     public void Escape_PlainUnixPath_WrapsInQuotesUnchanged()
     {
-        string result = FilterGraphPathEscaper.Escape("/usr/media/sub.ass");
+        string result = FilterGraphPathEscaper.Escape(path: "/usr/media/sub.ass");
 
-        Assert.Equal("'/usr/media/sub.ass'", result);
+        Assert.Equal(expected: "'/usr/media/sub.ass'", actual: result);
     }
 
     [Fact]
     public void Escape_WindowsDriveColon_EscapesColonAfterNormalisingSeparators()
     {
-        string result = FilterGraphPathEscaper.Escape(@"C:\movies\file.ass");
+        string result = FilterGraphPathEscaper.Escape(path: @"C:\movies\file.ass");
 
-        Assert.Equal("'C\\:/movies/file.ass'", result);
+        Assert.Equal(expected: "'C\\:/movies/file.ass'", actual: result);
     }
 
     [Fact]
     public void Escape_PathWithSingleQuote_EscapesQuote()
     {
-        string result = FilterGraphPathEscaper.Escape("/media/it's a show.ass");
+        string result = FilterGraphPathEscaper.Escape(path: "/media/it's a show.ass");
 
-        Assert.Equal("'/media/it\\'s a show.ass'", result);
+        Assert.Equal(expected: "'/media/it\\'s a show.ass'", actual: result);
     }
 
     [Fact]
     public void Escape_PathWithBrackets_SurvivesUnescapedInsideQuotes()
     {
-        string result = FilterGraphPathEscaper.Escape("/media/[Group]release.ass");
+        string result = FilterGraphPathEscaper.Escape(path: "/media/[Group]release.ass");
 
-        Assert.Equal("'/media/[Group]release.ass'", result);
+        Assert.Equal(expected: "'/media/[Group]release.ass'", actual: result);
     }
 
     [Fact]
     public void Escape_PathWithCommaAndSemicolon_SurvivesUnescapedInsideQuotes()
     {
-        string result = FilterGraphPathEscaper.Escape("/media/a,b;c.ass");
+        string result = FilterGraphPathEscaper.Escape(path: "/media/a,b;c.ass");
 
-        Assert.Equal("'/media/a,b;c.ass'", result);
+        Assert.Equal(expected: "'/media/a,b;c.ass'", actual: result);
     }
 
     [Fact]
     public void Escape_PathWithSpaces_SurvivesUnescapedInsideQuotes()
     {
-        string result = FilterGraphPathEscaper.Escape("/movies/my film/subtitle.ass");
+        string result = FilterGraphPathEscaper.Escape(path: "/movies/my film/subtitle.ass");
 
-        Assert.Equal("'/movies/my film/subtitle.ass'", result);
+        Assert.Equal(expected: "'/movies/my film/subtitle.ass'", actual: result);
     }
 
     [Fact]
     public void Escape_CombinedSpecialCharacters_EscapesOnlyColonBackslashAndQuote()
     {
-        string result = FilterGraphPathEscaper.Escape(@"C:\media\[grp] it's a, show;1.ass");
+        string result = FilterGraphPathEscaper.Escape(path: @"C:\media\[grp] it's a, show;1.ass");
 
-        Assert.Equal("'C\\:/media/[grp] it\\'s a, show;1.ass'", result);
+        Assert.Equal(expected: "'C\\:/media/[grp] it\\'s a, show;1.ass'", actual: result);
     }
 }

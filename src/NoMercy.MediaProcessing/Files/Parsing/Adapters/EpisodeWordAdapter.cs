@@ -25,23 +25,23 @@ public sealed class EpisodeWordAdapter : IFilenameParseAdapter
     {
         string fileNameNoParens = StringExtensions
             .RemoveParenthesizedString()
-            .Replace(context.CleanedFileName, string.Empty)
+            .Replace(input: context.CleanedFileName, replacement: string.Empty)
             .Trim();
 
-        Match match = StringExtensions.MatchEpisodeWord().Match(fileNameNoParens);
+        Match match = StringExtensions.MatchEpisodeWord().Match(input: fileNameNoParens);
         if (!match.Success)
             return null;
 
-        int episodeNumber = int.Parse(match.Groups[1].Value);
-        string showTitle = fileNameNoParens[..match.Index].TrimEnd('-', '.', '_', ' ');
+        int episodeNumber = int.Parse(s: match.Groups[groupnum: 1].Value);
+        string showTitle = fileNameNoParens[..match.Index].TrimEnd(trimChars: ['-', '.', '_', ' ']);
 
 
         showTitle = showTitle.CleanSeriesTitle();
 
-        if (string.IsNullOrWhiteSpace(showTitle) || showTitle.Length <= 1)
+        if (string.IsNullOrWhiteSpace(value: showTitle) || showTitle.Length <= 1)
             showTitle = context.FolderTitle;
 
-        return new(context.Title)
+        return new(filePath: context.Title)
         {
             Title = showTitle,
             Season = 1,

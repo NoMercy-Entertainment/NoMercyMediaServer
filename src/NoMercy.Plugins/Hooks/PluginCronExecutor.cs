@@ -26,5 +26,5 @@ public class PluginCronExecutor(IScheduledTaskPlugin plugin) : ICronJobExecutor
     public string CronExpression => plugin.CronExpression;
 
     public Task ExecuteAsync(string parameters, CancellationToken cancellationToken = default) =>
-        plugin.ExecuteAsync(cancellationToken);
+        plugin.ExecuteAsync(ct: cancellationToken);
 }

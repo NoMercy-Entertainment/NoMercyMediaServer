@@ -15,18 +15,18 @@ namespace NoMercy.Cli.Models;
 
 internal class QueueStatusResponse
 {
-    [JsonProperty("workers")]
+    [JsonProperty(propertyName: "workers")]
     public Dictionary<string, WorkerStatusResponse> Workers { get; set; } = new();
 
-    [JsonProperty("pending_jobs")]
+    [JsonProperty(propertyName: "pending_jobs")]
     public int PendingJobs { get; set; }
 
-    [JsonProperty("failed_jobs")]
+    [JsonProperty(propertyName: "failed_jobs")]
     public int FailedJobs { get; set; }
 }
 
 internal class WorkerStatusResponse
 {
-    [JsonProperty("active_threads")]
+    [JsonProperty(propertyName: "active_threads")]
     public int ActiveThreads { get; set; }
 }

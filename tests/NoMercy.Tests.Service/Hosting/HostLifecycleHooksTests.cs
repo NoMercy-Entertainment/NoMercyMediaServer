@@ -30,14 +30,14 @@ namespace NoMercy.Tests.Service.Hosting;
 /// not never. A missed <c>MarkStarted</c> call would leave Docker's HEALTHCHECK
 /// failing forever even though the server is genuinely up.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class HostLifecycleHooksTests
 {
     private static WebApplication BuildApp(IBootStatus bootStatus)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
-        builder.Services.AddSingleton(bootStatus);
+        builder.Services.AddSingleton(implementationInstance: bootStatus);
         return builder.Build();
     }
 
@@ -45,16 +45,16 @@ public class HostLifecycleHooksTests
     public async Task Register_ApplicationStarted_MarksBootStatusStarted()
     {
         Mock<IBootStatus> bootStatus = new();
-        WebApplication app = BuildApp(bootStatus.Object);
+        WebApplication app = BuildApp(bootStatus: bootStatus.Object);
         Stopwatch stopwatch = new();
         stopwatch.Start();
 
-        HostLifecycleHooks.Register(app, stopwatch);
+        HostLifecycleHooks.Register(app: app, stopWatch: stopwatch);
 
         await app.StartAsync();
         try
         {
-            bootStatus.Verify(b => b.MarkStarted(), Times.Once);
+            bootStatus.Verify(expression: b => b.MarkStarted(), times: Times.Once);
             stopwatch.IsRunning.Should().BeFalse();
         }
         finally
@@ -68,13 +68,13 @@ public class HostLifecycleHooksTests
     public async Task Register_BeforeApplicationStarted_NeverCallsMarkStarted()
     {
         Mock<IBootStatus> bootStatus = new();
-        WebApplication app = BuildApp(bootStatus.Object);
+        WebApplication app = BuildApp(bootStatus: bootStatus.Object);
         Stopwatch stopwatch = new();
         stopwatch.Start();
 
-        HostLifecycleHooks.Register(app, stopwatch);
+        HostLifecycleHooks.Register(app: app, stopWatch: stopwatch);
 
-        bootStatus.Verify(b => b.MarkStarted(), Times.Never);
+        bootStatus.Verify(expression: b => b.MarkStarted(), times: Times.Never);
         await app.DisposeAsync();
     }
 
@@ -82,10 +82,10 @@ public class HostLifecycleHooksTests
     public async Task Register_ApplicationStopping_DoesNotThrow()
     {
         Mock<IBootStatus> bootStatus = new();
-        WebApplication app = BuildApp(bootStatus.Object);
+        WebApplication app = BuildApp(bootStatus: bootStatus.Object);
         Stopwatch stopwatch = new();
 
-        HostLifecycleHooks.Register(app, stopwatch);
+        HostLifecycleHooks.Register(app: app, stopWatch: stopwatch);
         await app.StartAsync();
 
         Func<Task> stopping = async () => await app.StopAsync();

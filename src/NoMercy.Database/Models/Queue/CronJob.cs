@@ -13,8 +13,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace NoMercy.Database.Models.Queue;
 
-[PrimaryKey(nameof(Id))]
-[Index(nameof(Name), IsUnique = true)]
+[PrimaryKey(propertyName: nameof(Id))]
+[Index(propertyName: nameof(Name), IsUnique = true)]
 public class CronJob : Timestamps
 {
     public int Id { get; set; }

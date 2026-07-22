@@ -33,11 +33,11 @@ public class FfmpegCapabilityProbeTests
         EncoderOptions? options = null
     ) =>
         new(
-            caps.Object,
-            runner.Object,
-            storage.Object,
-            options ?? new EncoderOptions(),
-            NullLogger<FfmpegCapabilityProbe>.Instance
+            ffmpegCapabilities: caps.Object,
+            processRunner: runner.Object,
+            storage: storage.Object,
+            options: options ?? new EncoderOptions(),
+            logger: NullLogger<FfmpegCapabilityProbe>.Instance
         );
 
     /// <summary>
@@ -47,7 +47,7 @@ public class FfmpegCapabilityProbeTests
     private static void SetupMuxerOutput(Mock<IProcessRunner> runner, string stdout)
     {
         runner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.Is<string[]>(a =>
@@ -57,13 +57,13 @@ public class FfmpegCapabilityProbeTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(new ProcessResult(0, stdout, "", TimeSpan.Zero));
+            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: stdout, StdErr: "", Duration: TimeSpan.Zero));
     }
 
     private static void SetupFpcalc(Mock<IProcessRunner> runner, int exitCode)
     {
         runner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.Is<string[]>(a => a.Length == 1 && a[0] == "--version"),
@@ -71,36 +71,36 @@ public class FfmpegCapabilityProbeTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(new ProcessResult(exitCode, "", "", TimeSpan.Zero));
+            .ReturnsAsync(value: new ProcessResult(ExitCode: exitCode, StdOut: "", StdErr: "", Duration: TimeSpan.Zero));
     }
 
     private static Mock<IFfmpegCapabilities> CapsWithProtocol(bool bluray, bool dvdread)
     {
         Mock<IFfmpegCapabilities> caps = new();
-        caps.Setup(c => c.AvailableEncoders).Returns(new HashSet<string> { "libx264" });
-        caps.Setup(c => c.AvailableDecoders).Returns(new HashSet<string>());
-        caps.Setup(c => c.AvailableFilters).Returns(new HashSet<string>());
-        caps.Setup(c => c.AvailableProtocols).Returns(new HashSet<string>());
-        caps.Setup(c => c.HasProtocol("bluray")).Returns(bluray);
-        caps.Setup(c => c.HasProtocol("dvdread")).Returns(dvdread);
+        caps.Setup(expression: c => c.AvailableEncoders).Returns(value: new HashSet<string> { "libx264" });
+        caps.Setup(expression: c => c.AvailableDecoders).Returns(value: new HashSet<string>());
+        caps.Setup(expression: c => c.AvailableFilters).Returns(value: new HashSet<string>());
+        caps.Setup(expression: c => c.AvailableProtocols).Returns(value: new HashSet<string>());
+        caps.Setup(expression: c => c.HasProtocol("bluray")).Returns(value: bluray);
+        caps.Setup(expression: c => c.HasProtocol("dvdread")).Returns(value: dvdread);
         // ffmpeg ≥ 6.1 routes libdvdread through the `dvdvideo` demuxer instead
         // of the dvdread:// protocol — the probe checks demuxer presence.
-        caps.Setup(c => c.HasDemuxer("dvdvideo")).Returns(dvdread);
-        caps.Setup(c => c.HasFilter(It.IsAny<string>())).Returns(false);
+        caps.Setup(expression: c => c.HasDemuxer("dvdvideo")).Returns(value: dvdread);
+        caps.Setup(expression: c => c.HasFilter(It.IsAny<string>())).Returns(value: false);
         return caps;
     }
 
     private static Mock<IFfmpegCapabilities> CapsWithFilter(string filter)
     {
         Mock<IFfmpegCapabilities> caps = new();
-        caps.Setup(c => c.AvailableEncoders).Returns(new HashSet<string> { "libx264" });
-        caps.Setup(c => c.AvailableDecoders).Returns(new HashSet<string>());
-        caps.Setup(c => c.AvailableFilters).Returns(new HashSet<string>());
-        caps.Setup(c => c.AvailableProtocols).Returns(new HashSet<string>());
-        caps.Setup(c => c.HasProtocol(It.IsAny<string>())).Returns(false);
+        caps.Setup(expression: c => c.AvailableEncoders).Returns(value: new HashSet<string> { "libx264" });
+        caps.Setup(expression: c => c.AvailableDecoders).Returns(value: new HashSet<string>());
+        caps.Setup(expression: c => c.AvailableFilters).Returns(value: new HashSet<string>());
+        caps.Setup(expression: c => c.AvailableProtocols).Returns(value: new HashSet<string>());
+        caps.Setup(expression: c => c.HasProtocol(It.IsAny<string>())).Returns(value: false);
         // Only the named filter is present; everything else is absent.
-        caps.Setup(c => c.HasFilter(filter)).Returns(true);
-        caps.Setup(c => c.HasFilter(It.Is<string>(f => f != filter))).Returns(false);
+        caps.Setup(expression: c => c.HasFilter(filter)).Returns(value: true);
+        caps.Setup(expression: c => c.HasFilter(It.Is<string>(f => f != filter))).Returns(value: false);
         return caps;
     }
 
@@ -129,11 +129,11 @@ public class FfmpegCapabilityProbeTests
         Mock<IFfmpegCapabilities> caps = CapsWithProtocol(bluray: true, dvdread: false);
         Mock<IProcessRunner> runner = new();
         Mock<IStorage> storage = new();
-        SetupMuxerOutput(runner, AllMuxersOutput());
-        SetupFpcalc(runner, 0);
-        storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(false);
+        SetupMuxerOutput(runner: runner, stdout: AllMuxersOutput());
+        SetupFpcalc(runner: runner, exitCode: 0);
+        storage.Setup(expression: s => s.Exists(It.IsAny<string>())).Returns(value: false);
 
-        FfmpegCapabilityProbe probe = BuildProbe(caps, runner, storage);
+        FfmpegCapabilityProbe probe = BuildProbe(caps: caps, runner: runner, storage: storage);
         await probe.ProbeAsync();
 
         probe.GetCachedReport()!.BluRayProtocol.Should().BeTrue();
@@ -145,11 +145,11 @@ public class FfmpegCapabilityProbeTests
         Mock<IFfmpegCapabilities> caps = CapsWithProtocol(bluray: false, dvdread: false);
         Mock<IProcessRunner> runner = new();
         Mock<IStorage> storage = new();
-        SetupMuxerOutput(runner, AllMuxersOutput());
-        SetupFpcalc(runner, 0);
-        storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(false);
+        SetupMuxerOutput(runner: runner, stdout: AllMuxersOutput());
+        SetupFpcalc(runner: runner, exitCode: 0);
+        storage.Setup(expression: s => s.Exists(It.IsAny<string>())).Returns(value: false);
 
-        FfmpegCapabilityProbe probe = BuildProbe(caps, runner, storage);
+        FfmpegCapabilityProbe probe = BuildProbe(caps: caps, runner: runner, storage: storage);
         await probe.ProbeAsync();
 
         probe.GetCachedReport()!.BluRayProtocol.Should().BeFalse();
@@ -162,19 +162,19 @@ public class FfmpegCapabilityProbeTests
     [Fact]
     public async Task ProbeAsync_emits_CapabilityFpcalcMissing_rule_on_nonzero_exit()
     {
-        Mock<IFfmpegCapabilities> caps = CapsWithProtocol(false, false);
+        Mock<IFfmpegCapabilities> caps = CapsWithProtocol(bluray: false, dvdread: false);
         Mock<IProcessRunner> runner = new();
         Mock<IStorage> storage = new();
-        SetupMuxerOutput(runner, AllMuxersOutput());
-        SetupFpcalc(runner, exitCode: 1);
-        storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(false);
+        SetupMuxerOutput(runner: runner, stdout: AllMuxersOutput());
+        SetupFpcalc(runner: runner, exitCode: 1);
+        storage.Setup(expression: s => s.Exists(It.IsAny<string>())).Returns(value: false);
 
-        FfmpegCapabilityProbe probe = BuildProbe(caps, runner, storage);
+        FfmpegCapabilityProbe probe = BuildProbe(caps: caps, runner: runner, storage: storage);
         await probe.ProbeAsync();
 
         CapabilityReport report = probe.GetCachedReport()!;
         report.FpcalcPresent.Should().BeFalse();
-        report.Issues.Should().Contain(r => r.Id == EncoderRuleId.CapabilityFpcalcMissing);
+        report.Issues.Should().Contain(predicate: r => r.Id == EncoderRuleId.CapabilityFpcalcMissing);
     }
 
     // -------------------------------------------------------------------------
@@ -184,24 +184,24 @@ public class FfmpegCapabilityProbeTests
     [Fact]
     public async Task ProbeAsync_emits_CapabilityWhisperMissing_rule_when_model_absent()
     {
-        Mock<IFfmpegCapabilities> caps = CapsWithProtocol(false, false);
+        Mock<IFfmpegCapabilities> caps = CapsWithProtocol(bluray: false, dvdread: false);
         Mock<IProcessRunner> runner = new();
         Mock<IStorage> storage = new();
-        SetupMuxerOutput(runner, AllMuxersOutput());
-        SetupFpcalc(runner, 0);
+        SetupMuxerOutput(runner: runner, stdout: AllMuxersOutput());
+        SetupFpcalc(runner: runner, exitCode: 0);
 
         EncoderOptions options = new() { WhisperModelPath = "/models/ggml-large.bin" };
-        storage.Setup(s => s.Exists("/models/ggml-large.bin")).Returns(false);
+        storage.Setup(expression: s => s.Exists("/models/ggml-large.bin")).Returns(value: false);
         storage
-            .Setup(s => s.Exists(It.Is<string>(p => p != "/models/ggml-large.bin")))
-            .Returns(false);
+            .Setup(expression: s => s.Exists(It.Is<string>(p => p != "/models/ggml-large.bin")))
+            .Returns(value: false);
 
-        FfmpegCapabilityProbe probe = BuildProbe(caps, runner, storage, options);
+        FfmpegCapabilityProbe probe = BuildProbe(caps: caps, runner: runner, storage: storage, options: options);
         await probe.ProbeAsync();
 
         CapabilityReport report = probe.GetCachedReport()!;
         report.WhisperModelPresent.Should().BeFalse();
-        report.Issues.Should().Contain(r => r.Id == EncoderRuleId.CapabilityWhisperMissing);
+        report.Issues.Should().Contain(predicate: r => r.Id == EncoderRuleId.CapabilityWhisperMissing);
     }
 
     // -------------------------------------------------------------------------
@@ -211,24 +211,24 @@ public class FfmpegCapabilityProbeTests
     [Fact]
     public async Task ProbeAsync_emits_CapabilityTesseractModelMissing_when_eng_traineddata_absent()
     {
-        Mock<IFfmpegCapabilities> caps = CapsWithProtocol(false, false);
+        Mock<IFfmpegCapabilities> caps = CapsWithProtocol(bluray: false, dvdread: false);
         Mock<IProcessRunner> runner = new();
         Mock<IStorage> storage = new();
-        SetupMuxerOutput(runner, AllMuxersOutput());
-        SetupFpcalc(runner, 0);
+        SetupMuxerOutput(runner: runner, stdout: AllMuxersOutput());
+        SetupFpcalc(runner: runner, exitCode: 0);
 
         EncoderOptions options = new() { TesseractModelsDirectory = "/tessdata" };
-        storage.Setup(s => s.Exists("/tessdata/eng.traineddata")).Returns(false);
+        storage.Setup(expression: s => s.Exists("/tessdata/eng.traineddata")).Returns(value: false);
         storage
-            .Setup(s => s.Exists(It.Is<string>(p => p != "/tessdata/eng.traineddata")))
-            .Returns(false);
+            .Setup(expression: s => s.Exists(It.Is<string>(p => p != "/tessdata/eng.traineddata")))
+            .Returns(value: false);
 
-        FfmpegCapabilityProbe probe = BuildProbe(caps, runner, storage, options);
+        FfmpegCapabilityProbe probe = BuildProbe(caps: caps, runner: runner, storage: storage, options: options);
         await probe.ProbeAsync();
 
         CapabilityReport report = probe.GetCachedReport()!;
         report.TesseractEngTraineddataPresent.Should().BeFalse();
-        report.Issues.Should().Contain(r => r.Id == EncoderRuleId.CapabilityTesseractModelMissing);
+        report.Issues.Should().Contain(predicate: r => r.Id == EncoderRuleId.CapabilityTesseractModelMissing);
     }
 
     // -------------------------------------------------------------------------
@@ -239,20 +239,20 @@ public class FfmpegCapabilityProbeTests
     public async Task ProbeAsync_emits_MissingFilters_for_libplacebo_when_absent()
     {
         // libplacebo absent — all other required filters also absent for simplicity.
-        Mock<IFfmpegCapabilities> caps = CapsWithProtocol(false, false);
+        Mock<IFfmpegCapabilities> caps = CapsWithProtocol(bluray: false, dvdread: false);
         // Override: libplacebo specifically absent.
-        caps.Setup(c => c.HasFilter("libplacebo")).Returns(false);
+        caps.Setup(expression: c => c.HasFilter("libplacebo")).Returns(value: false);
 
         Mock<IProcessRunner> runner = new();
         Mock<IStorage> storage = new();
-        SetupMuxerOutput(runner, AllMuxersOutput());
-        SetupFpcalc(runner, 0);
-        storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(false);
+        SetupMuxerOutput(runner: runner, stdout: AllMuxersOutput());
+        SetupFpcalc(runner: runner, exitCode: 0);
+        storage.Setup(expression: s => s.Exists(It.IsAny<string>())).Returns(value: false);
 
-        FfmpegCapabilityProbe probe = BuildProbe(caps, runner, storage);
+        FfmpegCapabilityProbe probe = BuildProbe(caps: caps, runner: runner, storage: storage);
         await probe.ProbeAsync();
 
-        probe.GetCachedReport()!.MissingFilters.Should().Contain("libplacebo");
+        probe.GetCachedReport()!.MissingFilters.Should().Contain(expected: "libplacebo");
     }
 
     // -------------------------------------------------------------------------
@@ -262,11 +262,11 @@ public class FfmpegCapabilityProbeTests
     [Fact]
     public void GetCachedReport_returns_null_before_first_probe()
     {
-        Mock<IFfmpegCapabilities> caps = CapsWithProtocol(false, false);
+        Mock<IFfmpegCapabilities> caps = CapsWithProtocol(bluray: false, dvdread: false);
         Mock<IProcessRunner> runner = new();
         Mock<IStorage> storage = new();
 
-        FfmpegCapabilityProbe probe = BuildProbe(caps, runner, storage);
+        FfmpegCapabilityProbe probe = BuildProbe(caps: caps, runner: runner, storage: storage);
 
         probe.GetCachedReport().Should().BeNull();
     }
@@ -277,13 +277,13 @@ public class FfmpegCapabilityProbeTests
         Mock<IFfmpegCapabilities> caps = CapsWithProtocol(bluray: true, dvdread: true);
         Mock<IProcessRunner> runner = new();
         Mock<IStorage> storage = new();
-        SetupMuxerOutput(runner, AllMuxersOutput());
-        SetupFpcalc(runner, 0);
-        storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(false);
+        SetupMuxerOutput(runner: runner, stdout: AllMuxersOutput());
+        SetupFpcalc(runner: runner, exitCode: 0);
+        storage.Setup(expression: s => s.Exists(It.IsAny<string>())).Returns(value: false);
 
-        FfmpegCapabilityProbe probe = BuildProbe(caps, runner, storage);
+        FfmpegCapabilityProbe probe = BuildProbe(caps: caps, runner: runner, storage: storage);
 
-        probe.GetCachedReport().Should().BeNull("probe has not run yet");
+        probe.GetCachedReport().Should().BeNull(because: "probe has not run yet");
 
         await probe.ProbeAsync();
 

@@ -17,19 +17,19 @@ namespace NoMercy.Api.DTOs.Common;
 
 public record VideoDto
 {
-    [JsonProperty("src")]
+    [JsonProperty(propertyName: "src")]
     public string? Src { get; set; }
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string? Type { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string? Name { get; set; }
 
-    [JsonProperty("site")]
+    [JsonProperty(propertyName: "site")]
     public string? Site { get; set; }
 
-    [JsonProperty("size")]
+    [JsonProperty(propertyName: "size")]
     public int Size { get; set; }
 
     public VideoDto(Database.Models.Media.Media media)

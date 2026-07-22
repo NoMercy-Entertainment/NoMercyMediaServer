@@ -29,7 +29,7 @@ namespace NoMercy.Tests.Api;
 /// CastPanelWakeLauncher. These tests go red if that gate is ever dropped
 /// again, regardless of what MusicHub itself does around it.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class CastPanelWakeLauncherTests
 {
     private const string TargetIp = "192.168.1.50";
@@ -42,18 +42,18 @@ public class CastPanelWakeLauncherTests
     {
         Mock<IChromeCastService> chromeCast = new();
         CastPanelWakeLauncher launcher = new(
-            chromeCast.Object,
-            NullLogger<CastPanelWakeLauncher>.Instance
+            chromeCast: chromeCast.Object,
+            logger: NullLogger<CastPanelWakeLauncher>.Instance
         );
         return (launcher, chromeCast);
     }
 
     [Theory]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
+    [InlineData(data: [true, false])]
+    [InlineData(data: [false, true])]
     public void ShouldFireCastWake_ReflectsInverseOfTargetIsLive(bool targetIsLive, bool expected)
     {
-        CastPanelWakeLauncher.ShouldFireCastWake(targetIsLive).Should().Be(expected);
+        CastPanelWakeLauncher.ShouldFireCastWake(targetIsLive: targetIsLive).Should().Be(expected: expected);
     }
 
     [Fact]
@@ -69,42 +69,42 @@ public class CastPanelWakeLauncherTests
             resolveLaunchData: () =>
             {
                 resolveLaunchDataCalled = true;
-                return Task.FromResult<LaunchCustomData?>(null);
+                return Task.FromResult<LaunchCustomData?>(result: null);
             }
         );
 
         resolveLaunchDataCalled
             .Should()
-            .BeFalse("a live target must never pay for a token-exchange call it would discard");
-        chromeCast.Verify(c => c.FindReceiverNameByIpAsync(It.IsAny<string>()), Times.Never);
-        chromeCast.Verify(c => c.SelectChromecast(It.IsAny<string>()), Times.Never);
+            .BeFalse(because: "a live target must never pay for a token-exchange call it would discard");
+        chromeCast.Verify(expression: c => c.FindReceiverNameByIpAsync(It.IsAny<string>()), times: Times.Never);
+        chromeCast.Verify(expression: c => c.SelectChromecast(It.IsAny<string>()), times: Times.Never);
         chromeCast.Verify(
-            c =>
+            expression: c =>
                 c.LaunchAndroidReceiver(It.IsAny<string?>(), It.IsAny<object?>(), It.IsAny<bool>()),
-            Times.Never
+            times: Times.Never
         );
     }
 
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
+    [InlineData(data: true)]
+    [InlineData(data: false)]
     public async Task LaunchIfColdAsync_InvokesSelectAndLaunch_WhenTargetIsNotLive(bool apkOnline)
     {
         (CastPanelWakeLauncher launcher, Mock<IChromeCastService> chromeCast) = MakeLauncher();
         LaunchCustomData launchData = new() { AccessToken = "token" };
-        chromeCast.Setup(c => c.FindReceiverNameByIpAsync(TargetIp)).ReturnsAsync(ReceiverName);
+        chromeCast.Setup(expression: c => c.FindReceiverNameByIpAsync(TargetIp)).ReturnsAsync(value: ReceiverName);
 
         await launcher.LaunchIfColdAsync(
             targetIsLive: false,
             targetIp: TargetIp,
             useAndroidReceiver: apkOnline,
-            resolveLaunchData: () => Task.FromResult<LaunchCustomData?>(launchData)
+            resolveLaunchData: () => Task.FromResult<LaunchCustomData?>(result: launchData)
         );
 
-        chromeCast.Verify(c => c.SelectChromecast(ReceiverName), Times.Once);
+        chromeCast.Verify(expression: c => c.SelectChromecast(ReceiverName), times: Times.Once);
         chromeCast.Verify(
-            c => c.LaunchAndroidReceiver(ReceiverName, launchData, apkOnline),
-            Times.Once
+            expression: c => c.LaunchAndroidReceiver(ReceiverName, launchData, apkOnline),
+            times: Times.Once
         );
     }
 
@@ -112,7 +112,7 @@ public class CastPanelWakeLauncherTests
     public async Task LaunchIfColdAsync_ResolvesLaunchData_OnlyWhenTargetIsNotLive()
     {
         (CastPanelWakeLauncher launcher, Mock<IChromeCastService> chromeCast) = MakeLauncher();
-        chromeCast.Setup(c => c.FindReceiverNameByIpAsync(TargetIp)).ReturnsAsync(ReceiverName);
+        chromeCast.Setup(expression: c => c.FindReceiverNameByIpAsync(TargetIp)).ReturnsAsync(value: ReceiverName);
         int resolveCallCount = 0;
 
         await launcher.LaunchIfColdAsync(
@@ -122,31 +122,31 @@ public class CastPanelWakeLauncherTests
             resolveLaunchData: () =>
             {
                 resolveCallCount++;
-                return Task.FromResult<LaunchCustomData?>(null);
+                return Task.FromResult<LaunchCustomData?>(result: null);
             }
         );
 
-        resolveCallCount.Should().Be(1);
+        resolveCallCount.Should().Be(expected: 1);
     }
 
     [Fact]
     public async Task LaunchIfColdAsync_SkipsLaunch_WhenNoReceiverDiscoveredAtTargetIp()
     {
         (CastPanelWakeLauncher launcher, Mock<IChromeCastService> chromeCast) = MakeLauncher();
-        chromeCast.Setup(c => c.FindReceiverNameByIpAsync(TargetIp)).ReturnsAsync((string?)null);
+        chromeCast.Setup(expression: c => c.FindReceiverNameByIpAsync(TargetIp)).ReturnsAsync(value: (string?)null);
 
         await launcher.LaunchIfColdAsync(
             targetIsLive: false,
             targetIp: TargetIp,
             useAndroidReceiver: true,
-            resolveLaunchData: () => Task.FromResult<LaunchCustomData?>(null)
+            resolveLaunchData: () => Task.FromResult<LaunchCustomData?>(result: null)
         );
 
-        chromeCast.Verify(c => c.SelectChromecast(It.IsAny<string>()), Times.Never);
+        chromeCast.Verify(expression: c => c.SelectChromecast(It.IsAny<string>()), times: Times.Never);
         chromeCast.Verify(
-            c =>
+            expression: c =>
                 c.LaunchAndroidReceiver(It.IsAny<string?>(), It.IsAny<object?>(), It.IsAny<bool>()),
-            Times.Never
+            times: Times.Never
         );
     }
 }

@@ -21,15 +21,15 @@ namespace NoMercy.Tests.Api.Media.Components;
 /// public API surface reachable via LoloMoResponseDto&lt;T&gt; wiring, so it is
 /// exercised directly here rather than left untested.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class ComponentBuilderLegacyTests
 {
     [Fact]
     public void WithComponent_SetsComponentName()
     {
-        ComponentDto<string> dto = new ComponentBuilder<string>().WithComponent("NMCard").Build();
+        ComponentDto<string> dto = new ComponentBuilder<string>().WithComponent(componentName: "NMCard").Build();
 
-        dto.Component.Should().Be("NMCard");
+        dto.Component.Should().Be(expected: "NMCard");
     }
 
     [Fact]
@@ -37,9 +37,9 @@ public class ComponentBuilderLegacyTests
     {
         Ulid explicitId = Ulid.NewUlid();
 
-        ComponentDto<string> dto = new ComponentBuilder<string>().WithId(explicitId).Build();
+        ComponentDto<string> dto = new ComponentBuilder<string>().WithId(id: explicitId).Build();
 
-        dto.Id.Should().Be(explicitId);
+        dto.Id.Should().Be(expected: explicitId);
     }
 
     [Fact]
@@ -48,10 +48,10 @@ public class ComponentBuilderLegacyTests
         Ulid replacingId = Ulid.NewUlid();
 
         ComponentDto<string> dto = new ComponentBuilder<string>()
-            .WithReplacing(replacingId)
+            .WithReplacing(replacingId: replacingId)
             .Build();
 
-        dto.Replacing.Should().Be(replacingId);
+        dto.Replacing.Should().Be(expected: replacingId);
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public class ComponentBuilderLegacyTests
 
         ComponentDto<string> dto = new ComponentBuilder<string>().WithUpdate().Build();
 
-        dto.Update.When.Should().Be(whenBefore);
+        dto.Update.When.Should().Be(expected: whenBefore);
     }
 
     [Fact]
@@ -72,8 +72,8 @@ public class ComponentBuilderLegacyTests
             .WithUpdate(when: "always", link: "/some/link")
             .Build();
 
-        dto.Update.When.Should().Be("always");
-        dto.Update.Link.ToString().Should().Be("/some/link");
+        dto.Update.When.Should().Be(expected: "always");
+        dto.Update.Link.ToString().Should().Be(expected: "/some/link");
     }
 
     [Fact]
@@ -83,18 +83,18 @@ public class ComponentBuilderLegacyTests
             .WithUpdate(when: "always")
             .Build();
 
-        dto.Update.When.Should().Be("always");
+        dto.Update.When.Should().Be(expected: "always");
     }
 
     [Fact]
     public void WithProps_PropsBuilderMutatesTheSameComponentInstance()
     {
         ComponentDto<string> dto = new ComponentBuilder<string>()
-            .WithProps((props, _) => props.WithTitle("My Title").WithData("payload").WithWatch())
+            .WithProps(propsBuilder: (props, _) => props.WithTitle(title: "My Title").WithData(data: "payload").WithWatch())
             .Build();
 
-        dto.Props.Title.Should().Be("My Title");
-        dto.Props.Data.Should().Be("payload");
+        dto.Props.Title.Should().Be(expected: "My Title");
+        dto.Props.Data.Should().Be(expected: "payload");
         dto.Props.Watch.Should().BeTrue();
     }
 
@@ -105,14 +105,14 @@ public class ComponentBuilderLegacyTests
 
         ComponentDto<string> dto = new ComponentBuilder<string>()
             .WithProps(
-                (_, componentId) =>
+                propsBuilder: (_, componentId) =>
                 {
                     seenId = componentId;
                 }
             )
             .Build();
 
-        seenId.Should().Be(dto.Id);
+        seenId.Should().Be(expected: dto.Id);
     }
 
     // =========================================================================
@@ -128,14 +128,14 @@ public class ComponentBuilderLegacyTests
         Ulid nextId = Ulid.NewUlid();
         Ulid previousId = Ulid.NewUlid();
 
-        new ComponentPropsBuilder<string>(props)
-            .WithId(id)
-            .WithNextId(nextId)
-            .WithPreviousId(previousId);
+        new ComponentPropsBuilder<string>(props: props)
+            .WithId(id: id)
+            .WithNextId(nextId: nextId)
+            .WithPreviousId(previousId: previousId);
 
-        ((Ulid)props.Id).Should().Be(id);
-        ((Ulid)props.NextId).Should().Be(nextId);
-        ((Ulid)props.PreviousId).Should().Be(previousId);
+        ((Ulid)props.Id).Should().Be(expected: id);
+        ((Ulid)props.NextId).Should().Be(expected: nextId);
+        ((Ulid)props.PreviousId).Should().Be(expected: previousId);
     }
 
     [Fact]
@@ -143,9 +143,9 @@ public class ComponentBuilderLegacyTests
     {
         RenderProps<string> props = new();
 
-        new ComponentPropsBuilder<string>(props).WithMoreLink(new("/more", UriKind.Relative));
+        new ComponentPropsBuilder<string>(props: props).WithMoreLink(moreLink: new(uriString: "/more", uriKind: UriKind.Relative));
 
-        props.MoreLink!.ToString().Should().Be("/more");
+        props.MoreLink!.ToString().Should().Be(expected: "/more");
         props.MoreText.Should().NotBeNull();
     }
 
@@ -161,22 +161,22 @@ public class ComponentBuilderLegacyTests
     public void PropsBuilder_WithContextMenuItems_SetsItems()
     {
         RenderProps<string> props = new();
-        Dictionary<string, object>[] items = [new() { ["id"] = "remove" }];
+        Dictionary<string, object>[] items = [new() { [key: "id"] = "remove" }];
 
-        new ComponentPropsBuilder<string>(props).WithContextMenuItems(items);
+        new ComponentPropsBuilder<string>(props: props).WithContextMenuItems(items: items);
 
-        props.ContextMenuItems.Should().BeEquivalentTo(items);
+        props.ContextMenuItems.Should().BeEquivalentTo(expectation: items);
     }
 
     [Fact]
     public void PropsBuilder_WithProperties_SetsPropertiesDictionary()
     {
         RenderProps<string> props = new();
-        Dictionary<string, dynamic> properties = new() { ["key"] = "value" };
+        Dictionary<string, dynamic> properties = new() { [key: "key"] = "value" };
 
-        new ComponentPropsBuilder<string>(props).WithProperties(properties);
+        new ComponentPropsBuilder<string>(props: props).WithProperties(o: properties);
 
-        ((string)props.Properties["key"]).Should().Be("value");
+        ((string)props.Properties[key: "key"]).Should().Be(expected: "value");
     }
 
     [Fact]
@@ -185,12 +185,12 @@ public class ComponentBuilderLegacyTests
         RenderProps<string> props = new();
         List<ComponentDto<string>> children =
         [
-            new ComponentBuilder<string>().WithComponent("Child").Build(),
+            new ComponentBuilder<string>().WithComponent(componentName: "Child").Build(),
         ];
 
-        new ComponentPropsBuilder<string>(props).WithItems<string>(children);
+        new ComponentPropsBuilder<string>(props: props).WithItems<string>(items: children);
 
-        props.Items.Should().ContainSingle(item => item.Component == "Child");
+        props.Items.Should().ContainSingle(predicate: item => item.Component == "Child");
     }
 
     [Fact]
@@ -199,12 +199,12 @@ public class ComponentBuilderLegacyTests
         RenderProps<string> props = new();
         List<ComponentDto<string>> children =
         [
-            new ComponentBuilder<string>().WithComponent("ChildTwo").Build(),
+            new ComponentBuilder<string>().WithComponent(componentName: "ChildTwo").Build(),
         ];
 
-        new ComponentPropsBuilder<string>(props).WithItems(children);
+        new ComponentPropsBuilder<string>(props: props).WithItems(items: children);
 
-        props.Items.Should().ContainSingle(item => item.Component == "ChildTwo");
+        props.Items.Should().ContainSingle(predicate: item => item.Component == "ChildTwo");
     }
 
     [Fact]
@@ -212,7 +212,7 @@ public class ComponentBuilderLegacyTests
     {
         RenderProps<string> props = new();
 
-        new ComponentPropsBuilder<string>(props).WithWatch();
+        new ComponentPropsBuilder<string>(props: props).WithWatch();
 
         props.Watch.Should().BeTrue();
     }
@@ -222,7 +222,7 @@ public class ComponentBuilderLegacyTests
     {
         RenderProps<string> props = new() { Watch = true };
 
-        new ComponentPropsBuilder<string>(props).WithWatch(false);
+        new ComponentPropsBuilder<string>(props: props).WithWatch(watch: false);
 
         props.Watch.Should().BeFalse();
     }

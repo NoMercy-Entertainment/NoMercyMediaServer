@@ -74,8 +74,8 @@ public class BackedProfileValidatorTests
     [Fact]
     public void Validate_ValidProfile_ReturnsValidResult()
     {
-        EncodingProfile profile = Profile(Video());
-        ValidationResult result = _validator.Validate(profile);
+        EncodingProfile profile = Profile(video: Video());
+        ValidationResult result = _validator.Validate(profile: profile);
 
         result.IsValid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
@@ -101,18 +101,18 @@ public class BackedProfileValidatorTests
             SegmentNameTemplate: "audio",
             PlaylistNameTemplate: "audio/p"
         );
-        EncodingProfile profile = Profile(Video(), audio: [audio]);
-        ValidationResult result = _validator.Validate(profile);
+        EncodingProfile profile = Profile(video: Video(), audio: [audio]);
+        ValidationResult result = _validator.Validate(profile: profile);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Severity == ValidationSeverity.Error);
+        result.Errors.Should().Contain(predicate: e => e.Severity == ValidationSeverity.Error);
     }
 
     [Fact]
     public void ValidateAsEnvelope_ValidProfile_ReturnsValidEnvelope()
     {
-        EncodingProfile profile = Profile(Video());
-        ValidationEnvelope env = _validator.ValidateAsEnvelope(profile);
+        EncodingProfile profile = Profile(video: Video());
+        ValidationEnvelope env = _validator.ValidateAsEnvelope(profile: profile);
 
         env.Valid.Should().BeTrue();
         env.Errors.Should().BeEmpty();
@@ -121,15 +121,15 @@ public class BackedProfileValidatorTests
     [Fact]
     public void ValidateAsEnvelope_StructuredRuleFires_KeepsItsCataloguedId()
     {
-        EncodingProfile profile = Profile(Video(rc: RateControlMode.Crf, crf: 0));
-        ValidationEnvelope env = _validator.ValidateAsEnvelope(profile);
+        EncodingProfile profile = Profile(video: Video(rc: RateControlMode.Crf, crf: 0));
+        ValidationEnvelope env = _validator.ValidateAsEnvelope(profile: profile);
 
         env.Valid.Should().BeFalse();
-        env.Errors.Select(r => r.Id)
+        env.Errors.Select(selector: r => r.Id)
             .Should()
             .Contain(
-                EncoderRuleId.VideoRateControlMissing,
-                "structured rules retain their catalogued IDs so the dashboard can deep-link"
+                expected: EncoderRuleId.VideoRateControlMissing,
+                because: "structured rules retain their catalogued IDs so the dashboard can deep-link"
             );
     }
 
@@ -152,17 +152,17 @@ public class BackedProfileValidatorTests
             SegmentNameTemplate: "audio",
             PlaylistNameTemplate: "audio/p"
         );
-        EncodingProfile profile = Profile(Video(), audio: [audio]);
-        ValidationEnvelope env = _validator.ValidateAsEnvelope(profile);
+        EncodingProfile profile = Profile(video: Video(), audio: [audio]);
+        ValidationEnvelope env = _validator.ValidateAsEnvelope(profile: profile);
 
         // Both layers fire at zero-bitrate AAC — the structured AudioBitrateMissing
         // rule AND the legacy string-bucketed entry. Verify both shapes surface.
-        env.Errors.Select(r => r.Id).Should().Contain(EncoderRuleId.AudioBitrateMissing);
+        env.Errors.Select(selector: r => r.Id).Should().Contain(expected: EncoderRuleId.AudioBitrateMissing);
         // Legacy strings bucketed under ProfileNoOutputs id.
-        env.Errors.Where(r => r.Id == EncoderRuleId.ProfileNoOutputs)
+        env.Errors.Where(predicate: r => r.Id == EncoderRuleId.ProfileNoOutputs)
             .Should()
             .NotBeEmpty(
-                "legacy ProfileValidator strings appear as ProfileNoOutputs-bucketed entries"
+                because: "legacy ProfileValidator strings appear as ProfileNoOutputs-bucketed entries"
             );
     }
 
@@ -172,9 +172,9 @@ public class BackedProfileValidatorTests
         // ProfileNoOutputs is a structured-only rule — only the envelope
         // path catches it (legacy ProfileValidator doesn't have the check).
         EncodingProfile profile = Profile(video: null);
-        ValidationEnvelope env = _validator.ValidateAsEnvelope(profile);
+        ValidationEnvelope env = _validator.ValidateAsEnvelope(profile: profile);
 
         env.Valid.Should().BeFalse();
-        env.Errors.Select(r => r.Id).Should().Contain(EncoderRuleId.ProfileNoOutputs);
+        env.Errors.Select(selector: r => r.Id).Should().Contain(expected: EncoderRuleId.ProfileNoOutputs);
     }
 }

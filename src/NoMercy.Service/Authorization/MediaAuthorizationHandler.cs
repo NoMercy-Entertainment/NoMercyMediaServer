@@ -35,23 +35,23 @@ public class MediaAuthorizationHandler(
             {
                 switch (requirement)
                 {
-                    case OwnerRequirement when policy.IsOwner(context.User):
-                        context.Succeed(requirement);
+                    case OwnerRequirement when policy.IsOwner(principal: context.User):
+                        context.Succeed(requirement: requirement);
                         break;
-                    case ModeratorRequirement when policy.IsModerator(context.User):
-                        context.Succeed(requirement);
+                    case ModeratorRequirement when policy.IsModerator(principal: context.User):
+                        context.Succeed(requirement: requirement);
                         break;
-                    case MediaAccessRequirement when policy.IsAllowed(context.User):
-                        context.Succeed(requirement);
+                    case MediaAccessRequirement when policy.IsAllowed(principal: context.User):
+                        context.Succeed(requirement: requirement);
                         break;
                 }
             }
             catch (Exception ex)
             {
                 logger.LogError(
-                    ex,
-                    "Authorization check {Requirement} threw — denying",
-                    requirement.GetType().Name
+                    exception: ex,
+                    message: "Authorization check {Requirement} threw — denying",
+                    args: requirement.GetType().Name
                 );
             }
         }

@@ -20,34 +20,34 @@ public class ProfileFingerprintTests
     public void Compute_SameResolvedProfile_ProducesTheSameHash()
     {
         Ulid id = Ulid.NewUlid();
-        EncodingProfile first = Build(id, segmentDurationSeconds: 6);
-        EncodingProfile second = Build(id, segmentDurationSeconds: 6);
+        EncodingProfile first = Build(id: id, segmentDurationSeconds: 6);
+        EncodingProfile second = Build(id: id, segmentDurationSeconds: 6);
 
-        ProfileFingerprint.Compute(first).Should().Be(ProfileFingerprint.Compute(second));
+        ProfileFingerprint.Compute(profile: first).Should().Be(expected: ProfileFingerprint.Compute(profile: second));
     }
 
     [Fact]
     public void Compute_ChangedSetting_ProducesADifferentHash()
     {
         Ulid id = Ulid.NewUlid();
-        EncodingProfile original = Build(id, segmentDurationSeconds: 6);
-        EncodingProfile editedInPlace = Build(id, segmentDurationSeconds: 4);
+        EncodingProfile original = Build(id: id, segmentDurationSeconds: 6);
+        EncodingProfile editedInPlace = Build(id: id, segmentDurationSeconds: 4);
 
         ProfileFingerprint
-            .Compute(original)
+            .Compute(profile: original)
             .Should()
             .NotBe(
-                ProfileFingerprint.Compute(editedInPlace),
-                "a preset edited in place keeps its id — the fingerprint, not the id, must catch the change"
+                unexpected: ProfileFingerprint.Compute(profile: editedInPlace),
+                because: "a preset edited in place keeps its id — the fingerprint, not the id, must catch the change"
             );
     }
 
     [Fact]
     public void Compute_ReturnsALowercaseHexSha256()
     {
-        string fingerprint = ProfileFingerprint.Compute(Build(Ulid.NewUlid(), 6));
+        string fingerprint = ProfileFingerprint.Compute(profile: Build(id: Ulid.NewUlid(), segmentDurationSeconds: 6));
 
-        fingerprint.Should().MatchRegex("^[0-9a-f]{64}$");
+        fingerprint.Should().MatchRegex(regularExpression: "^[0-9a-f]{64}$");
     }
 
     private static EncodingProfile Build(Ulid id, int segmentDurationSeconds) =>

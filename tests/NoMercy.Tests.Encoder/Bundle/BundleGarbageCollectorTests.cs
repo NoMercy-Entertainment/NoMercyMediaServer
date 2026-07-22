@@ -41,8 +41,8 @@ public class BundleGarbageCollectorTests
             encoder_version = "3.0.0",
             target_container = "matroska",
             output_location = outputLocation,
-            created_at = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            completed_at = new DateTime(2026, 1, 1, 1, 0, 0, DateTimeKind.Utc),
+            created_at = new DateTime(year: 2026, month: 1, day: 1, hour: 0, minute: 0, second: 0, kind: DateTimeKind.Utc),
+            completed_at = new DateTime(year: 2026, month: 1, day: 1, hour: 1, minute: 0, second: 0, kind: DateTimeKind.Utc),
             tracks = Array.Empty<object>(),
             reconstruction_command_template = "ffmpeg -i in -c copy out.mkv",
             lossy_warnings = Array.Empty<string>(),
@@ -73,7 +73,7 @@ public class BundleGarbageCollectorTests
         };
 
     private static byte[] ToJsonBytes(object value) =>
-        Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(value));
+        Encoding.UTF8.GetBytes(s: JsonConvert.SerializeObject(value: value));
 
     // Seed a .nomercy.json at {mediaFolder}/.nomercy.json under the library root.
     private static void SeedBlueprint(
@@ -83,7 +83,7 @@ public class BundleGarbageCollectorTests
     )
     {
         string path = $"{LibraryRoot}/{mediaFolder}/.nomercy.json";
-        storage.Seed(path, ToJsonBytes(MakeBlueprint(mediaFolder, encodes)));
+        storage.Seed(path: path, bytes: ToJsonBytes(value: MakeBlueprint(mediaFolder: mediaFolder, encodes: encodes)));
     }
 
     // Build an in-memory MediaContext with an optional set of preset IDs.
@@ -92,15 +92,15 @@ public class BundleGarbageCollectorTests
     )
     {
         DbContextOptions<MediaContext> opts = new DbContextOptionsBuilder<MediaContext>()
-            .UseInMemoryDatabase($"gc-test-{Guid.NewGuid()}")
+            .UseInMemoryDatabase(databaseName: $"gc-test-{Guid.NewGuid()}")
             .Options;
-        MediaContext ctx = new(opts);
+        MediaContext ctx = new(options: opts);
         foreach (string id in presentPresetIds)
         {
             ctx.EncodingPresets.Add(
-                new()
+                entity: new()
                 {
-                    Id = Ulid.Parse(id),
+                    Id = Ulid.Parse(base32: id),
                     Name = $"Preset {id}",
                     ProfileJson = "{}",
                 }
@@ -111,15 +111,15 @@ public class BundleGarbageCollectorTests
         // Wrap in a mock factory so the GC can call CreateDbContextAsync.
         Mock<IDbContextFactory<MediaContext>> factoryMock = new();
         factoryMock
-            .Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(ctx);
+            .Setup(expression: f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: ctx);
         return (ctx, factoryMock.Object);
     }
 
     private static BundleGarbageCollector MakeCollector(
         TestStorage storage,
         IDbContextFactory<MediaContext> factory
-    ) => new(storage, factory, NullLogger<BundleGarbageCollector>.Instance);
+    ) => new(storage: storage, contextFactory: factory, logger: NullLogger<BundleGarbageCollector>.Instance);
 
     // -----------------------------------------------------------------------
     // Test 1: preset present in DB — no orphan
@@ -133,17 +133,17 @@ public class BundleGarbageCollectorTests
 
         TestStorage storage = new();
         SeedBlueprint(
-            storage,
-            mediaFolder,
-            MakeEncode(presetId, "web-1080p", $"{LibraryRoot}/{mediaFolder}")
+            storage: storage,
+            mediaFolder: mediaFolder,
+            encodes: MakeEncode(presetId: presetId, presetSlug: "web-1080p", outputLocation: $"{LibraryRoot}/{mediaFolder}")
         );
 
-        (MediaContext _, IDbContextFactory<MediaContext> factory) = MakeDb(presetId);
-        BundleGarbageCollector gc = MakeCollector(storage, factory);
+        (MediaContext _, IDbContextFactory<MediaContext> factory) = MakeDb(presentPresetIds: presetId);
+        BundleGarbageCollector gc = MakeCollector(storage: storage, factory: factory);
 
         IReadOnlyList<BundleOrphan> orphans = await gc.SweepAsync(
-            LibraryRoot,
-            CancellationToken.None
+            libraryRoot: LibraryRoot,
+            ct: CancellationToken.None
         );
 
         orphans.Should().BeEmpty();
@@ -161,23 +161,23 @@ public class BundleGarbageCollectorTests
         string outputLocation = $"{LibraryRoot}/{mediaFolder}";
 
         TestStorage storage = new();
-        SeedBlueprint(storage, mediaFolder, MakeEncode(presetId, "web-4k", outputLocation));
+        SeedBlueprint(storage: storage, mediaFolder: mediaFolder, encodes: MakeEncode(presetId: presetId, presetSlug: "web-4k", outputLocation: outputLocation));
 
         // DB has no preset with this ID.
         (MediaContext _, IDbContextFactory<MediaContext> factory) = MakeDb();
-        BundleGarbageCollector gc = MakeCollector(storage, factory);
+        BundleGarbageCollector gc = MakeCollector(storage: storage, factory: factory);
 
         IReadOnlyList<BundleOrphan> orphans = await gc.SweepAsync(
-            LibraryRoot,
-            CancellationToken.None
+            libraryRoot: LibraryRoot,
+            ct: CancellationToken.None
         );
 
         orphans.Should().ContainSingle();
-        BundleOrphan orphan = orphans[0];
-        orphan.Reason.Should().Be("preset deleted");
-        orphan.PresetSlug.Should().Be("web-4k");
-        orphan.PresetId.Should().Be(presetId);
-        orphan.Path.Should().Be(outputLocation);
+        BundleOrphan orphan = orphans[index: 0];
+        orphan.Reason.Should().Be(expected: "preset deleted");
+        orphan.PresetSlug.Should().Be(expected: "web-4k");
+        orphan.PresetId.Should().Be(expected: presetId);
+        orphan.Path.Should().Be(expected: outputLocation);
     }
 
     // -----------------------------------------------------------------------
@@ -194,23 +194,21 @@ public class BundleGarbageCollectorTests
 
         TestStorage storage = new();
         SeedBlueprint(
-            storage,
-            mediaFolder,
-            MakeEncode(aliveId, "web-1080p", $"{LibraryRoot}/{mediaFolder}"),
-            MakeEncode(deadId, "web-720p-legacy", $"{LibraryRoot}/{mediaFolder}")
+            storage: storage,
+            mediaFolder: mediaFolder, encodes: [MakeEncode(presetId: aliveId, presetSlug: "web-1080p", outputLocation: $"{LibraryRoot}/{mediaFolder}"), MakeEncode(presetId: deadId, presetSlug: "web-720p-legacy", outputLocation: $"{LibraryRoot}/{mediaFolder}")]
         );
 
-        (MediaContext _, IDbContextFactory<MediaContext> factory) = MakeDb(aliveId);
-        BundleGarbageCollector gc = MakeCollector(storage, factory);
+        (MediaContext _, IDbContextFactory<MediaContext> factory) = MakeDb(presentPresetIds: aliveId);
+        BundleGarbageCollector gc = MakeCollector(storage: storage, factory: factory);
 
         IReadOnlyList<BundleOrphan> orphans = await gc.SweepAsync(
-            LibraryRoot,
-            CancellationToken.None
+            libraryRoot: LibraryRoot,
+            ct: CancellationToken.None
         );
 
         orphans.Should().ContainSingle();
-        orphans[0].PresetSlug.Should().Be("web-720p-legacy");
-        orphans[0].PresetId.Should().Be(deadId);
+        orphans[index: 0].PresetSlug.Should().Be(expected: "web-720p-legacy");
+        orphans[index: 0].PresetId.Should().Be(expected: deadId);
     }
 
     // -----------------------------------------------------------------------
@@ -226,28 +224,28 @@ public class BundleGarbageCollectorTests
         string outputLocation = $"{LibraryRoot}/{mediaFolder}";
 
         TestStorage storage = new();
-        SeedBlueprint(storage, mediaFolder, MakeEncode(presetId, "web-1080p", outputLocation));
+        SeedBlueprint(storage: storage, mediaFolder: mediaFolder, encodes: MakeEncode(presetId: presetId, presetSlug: "web-1080p", outputLocation: outputLocation));
 
         // Vestigial old-layout file left behind by a pre-migration install —
         // never inspected because its filename isn't ".nomercy.json".
         storage.Seed(
-            $"{LibraryRoot}/{mediaFolder}/encodes/web-1080p/manifest.json",
-            Encoding.UTF8.GetBytes("{\"preset_slug\":\"web-1080p\"}")
+            path: $"{LibraryRoot}/{mediaFolder}/encodes/web-1080p/manifest.json",
+            bytes: Encoding.UTF8.GetBytes(s: "{\"preset_slug\":\"web-1080p\"}")
         );
 
         // Preset is missing from DB — the blueprint entry (not the legacy
         // file) is the one that must produce exactly one orphan.
         (MediaContext _, IDbContextFactory<MediaContext> factory) = MakeDb();
-        BundleGarbageCollector gc = MakeCollector(storage, factory);
+        BundleGarbageCollector gc = MakeCollector(storage: storage, factory: factory);
 
         IReadOnlyList<BundleOrphan> orphans = await gc.SweepAsync(
-            LibraryRoot,
-            CancellationToken.None
+            libraryRoot: LibraryRoot,
+            ct: CancellationToken.None
         );
 
         orphans.Should().ContainSingle();
-        orphans[0].Reason.Should().Be("preset deleted");
-        orphans[0].PresetSlug.Should().Be("web-1080p");
+        orphans[index: 0].Reason.Should().Be(expected: "preset deleted");
+        orphans[index: 0].PresetSlug.Should().Be(expected: "web-1080p");
     }
 
     // -----------------------------------------------------------------------
@@ -260,11 +258,11 @@ public class BundleGarbageCollectorTests
         TestStorage storage = new();
 
         (MediaContext _, IDbContextFactory<MediaContext> factory) = MakeDb();
-        BundleGarbageCollector gc = MakeCollector(storage, factory);
+        BundleGarbageCollector gc = MakeCollector(storage: storage, factory: factory);
 
         IReadOnlyList<BundleOrphan> orphans = await gc.SweepAsync(
-            LibraryRoot,
-            CancellationToken.None
+            libraryRoot: LibraryRoot,
+            ct: CancellationToken.None
         );
 
         orphans.Should().BeEmpty();
@@ -281,16 +279,16 @@ public class BundleGarbageCollectorTests
 
         TestStorage storage = new();
         storage.Seed(
-            $"{LibraryRoot}/{mediaFolder}/.nomercy.json",
-            Encoding.UTF8.GetBytes("not valid json")
+            path: $"{LibraryRoot}/{mediaFolder}/.nomercy.json",
+            bytes: Encoding.UTF8.GetBytes(s: "not valid json")
         );
 
         (MediaContext _, IDbContextFactory<MediaContext> factory) = MakeDb();
-        BundleGarbageCollector gc = MakeCollector(storage, factory);
+        BundleGarbageCollector gc = MakeCollector(storage: storage, factory: factory);
 
         IReadOnlyList<BundleOrphan> orphans = await gc.SweepAsync(
-            LibraryRoot,
-            CancellationToken.None
+            libraryRoot: LibraryRoot,
+            ct: CancellationToken.None
         );
 
         orphans.Should().BeEmpty();

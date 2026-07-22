@@ -38,23 +38,23 @@ public class OpenSubtitlesAdapter(
     {
         try
         {
-            using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            cts.CancelAfter(timeout);
+            using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(token: ct);
+            cts.CancelAfter(delay: timeout);
 
             IReadOnlyList<OpenSubtitlesSearchResult> results = await provider
-                .SearchByHashAsync(movieHash, fileSize, languages, cts.Token, priority)
-                .ConfigureAwait(false);
+                .SearchByHashAsync(movieHash: movieHash, fileSize: fileSize, languages: languages, ct: cts.Token, priority: priority)
+                .ConfigureAwait(continueOnCapturedContext: false);
 
-            return Translate(results, trustedOnly);
+            return Translate(results: results, trustedOnly: trustedOnly);
         }
         catch (OpenSubtitlesRateLimitException)
         {
-            logger?.LogWarning("OpenSubtitles rate-limited during hash search");
+            logger?.LogWarning(message: "OpenSubtitles rate-limited during hash search");
             return [];
         }
         catch (OperationCanceledException)
         {
-            logger?.LogInformation("OpenSubtitles hash search timed out");
+            logger?.LogInformation(message: "OpenSubtitles hash search timed out");
             return [];
         }
     }
@@ -70,23 +70,23 @@ public class OpenSubtitlesAdapter(
     {
         try
         {
-            using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            cts.CancelAfter(timeout);
+            using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(token: ct);
+            cts.CancelAfter(delay: timeout);
 
             IReadOnlyList<OpenSubtitlesSearchResult> results = await provider
-                .SearchByFilenameAsync(filename, languages, cts.Token, priority)
-                .ConfigureAwait(false);
+                .SearchByFilenameAsync(filename: filename, languages: languages, ct: cts.Token, priority: priority)
+                .ConfigureAwait(continueOnCapturedContext: false);
 
-            return Translate(results, trustedOnly);
+            return Translate(results: results, trustedOnly: trustedOnly);
         }
         catch (OpenSubtitlesRateLimitException)
         {
-            logger?.LogWarning("OpenSubtitles rate-limited during filename search");
+            logger?.LogWarning(message: "OpenSubtitles rate-limited during filename search");
             return [];
         }
         catch (OperationCanceledException)
         {
-            logger?.LogInformation("OpenSubtitles filename search timed out");
+            logger?.LogInformation(message: "OpenSubtitles filename search timed out");
             return [];
         }
     }
@@ -105,23 +105,23 @@ public class OpenSubtitlesAdapter(
     {
         try
         {
-            using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            cts.CancelAfter(timeout);
+            using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(token: ct);
+            cts.CancelAfter(delay: timeout);
 
             IReadOnlyList<OpenSubtitlesSearchResult> results = await provider
-                .SearchByTitleAsync(title, season, episode, year, languages, cts.Token, priority)
-                .ConfigureAwait(false);
+                .SearchByTitleAsync(title: title, season: season, episode: episode, year: year, languages: languages, ct: cts.Token, priority: priority)
+                .ConfigureAwait(continueOnCapturedContext: false);
 
-            return Translate(results, trustedOnly);
+            return Translate(results: results, trustedOnly: trustedOnly);
         }
         catch (OpenSubtitlesRateLimitException)
         {
-            logger?.LogWarning("OpenSubtitles rate-limited during title search");
+            logger?.LogWarning(message: "OpenSubtitles rate-limited during title search");
             return [];
         }
         catch (OperationCanceledException)
         {
-            logger?.LogInformation("OpenSubtitles title search timed out");
+            logger?.LogInformation(message: "OpenSubtitles title search timed out");
             return [];
         }
     }
@@ -133,8 +133,8 @@ public class OpenSubtitlesAdapter(
     )
     {
         return await provider
-            .DownloadSubtitleAsync(candidate.DownloadUrl, ct, priority)
-            .ConfigureAwait(false);
+            .DownloadSubtitleAsync(downloadUrl: candidate.DownloadUrl, ct: ct, priority: priority)
+            .ConfigureAwait(continueOnCapturedContext: false);
     }
 
     private static IReadOnlyList<SubtitleCandidate> Translate(
@@ -150,12 +150,12 @@ public class OpenSubtitlesAdapter(
             if (trustedOnly && !isTrusted)
                 continue;
 
-            double rating = TryParseDouble(r.SubRating) ?? 0.0;
-            int downloads = TryParseInt(r.SubDownloadsCnt) ?? 0;
-            double? fps = TryParseDouble(r.MovieFPS);
+            double rating = TryParseDouble(value: r.SubRating) ?? 0.0;
+            int downloads = TryParseInt(value: r.SubDownloadsCnt) ?? 0;
+            double? fps = TryParseDouble(value: r.MovieFPS);
 
             candidates.Add(
-                new(
+                item: new(
                     Provider: ProviderName,
                     Language: r.Language,
                     Rating: rating,
@@ -163,7 +163,7 @@ public class OpenSubtitlesAdapter(
                     IsTrustedUploader: isTrusted,
                     Fps: fps,
                     DownloadUrl: r.SubDownloadLink ?? string.Empty,
-                    Format: NormalizeFormat(r.SubFormat),
+                    Format: NormalizeFormat(format: r.SubFormat),
                     FileName: r.SubFileName,
                     ReleaseName: r.MovieReleaseName,
                     HearingImpaired: r.SubHearingImpaired == "1",
@@ -177,13 +177,13 @@ public class OpenSubtitlesAdapter(
 
     private static double? TryParseDouble(string? value)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        if (string.IsNullOrWhiteSpace(value: value))
             return null;
         return double.TryParse(
-            value,
-            System.Globalization.NumberStyles.Any,
-            System.Globalization.CultureInfo.InvariantCulture,
-            out double d
+            s: value,
+            style: System.Globalization.NumberStyles.Any,
+            provider: System.Globalization.CultureInfo.InvariantCulture,
+            result: out double d
         )
             ? d
             : null;
@@ -191,9 +191,9 @@ public class OpenSubtitlesAdapter(
 
     private static int? TryParseInt(string? value)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        if (string.IsNullOrWhiteSpace(value: value))
             return null;
-        return int.TryParse(value, out int i) ? i : null;
+        return int.TryParse(s: value, result: out int i) ? i : null;
     }
 
     private static string NormalizeFormat(string? format)

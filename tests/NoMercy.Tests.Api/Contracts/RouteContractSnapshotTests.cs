@@ -18,7 +18,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Contracts;
 
-[Trait("Category", "Contract")]
+[Trait(name: "Category", value: "Contract")]
 public class RouteContractSnapshotTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -454,12 +454,12 @@ public class RouteContractSnapshotTests : IClassFixture<NoMercyApiFactory>
                 endpoint.Metadata.GetMetadata<HttpMethodMetadata>();
             string methods = methodMetadata is null
                 ? "(any)"
-                : string.Join("|", methodMetadata.HttpMethods);
+                : string.Join(separator: "|", values: methodMetadata.HttpMethods);
 
-            lines.Add($"{methods} {routeEndpoint.RoutePattern.RawText} [{owner}]");
+            lines.Add(item: $"{methods} {routeEndpoint.RoutePattern.RawText} [{owner}]");
         }
 
-        lines.Sort(StringComparer.Ordinal);
+        lines.Sort(comparer: StringComparer.Ordinal);
         return lines;
     }
 
@@ -470,23 +470,23 @@ public class RouteContractSnapshotTests : IClassFixture<NoMercyApiFactory>
         EndpointDataSource dataSource =
             scope.ServiceProvider.GetRequiredService<EndpointDataSource>();
 
-        List<string> actualRoutes = DescribeLiveRoutes(dataSource);
+        List<string> actualRoutes = DescribeLiveRoutes(dataSource: dataSource);
         List<string> expectedRoutes = ExpectedRoutes
-            .OrderBy(r => r, StringComparer.Ordinal)
+            .OrderBy(keySelector: r => r, comparer: StringComparer.Ordinal)
             .ToList();
 
-        List<string> missing = expectedRoutes.Except(actualRoutes, StringComparer.Ordinal).ToList();
+        List<string> missing = expectedRoutes.Except(second: actualRoutes, comparer: StringComparer.Ordinal).ToList();
         List<string> unexpected = actualRoutes
-            .Except(expectedRoutes, StringComparer.Ordinal)
+            .Except(second: expectedRoutes, comparer: StringComparer.Ordinal)
             .ToList();
 
         Assert.True(
-            missing.Count == 0,
-            $"Route(s) removed or changed from the locked contract (breaks older self-hosted clients): {string.Join(", ", missing)}"
+            condition: missing.Count == 0,
+            userMessage: $"Route(s) removed or changed from the locked contract (breaks older self-hosted clients): {string.Join(separator: ", ", values: missing)}"
         );
         Assert.True(
-            unexpected.Count == 0,
-            $"New route(s) not yet locked into the contract snapshot — add them to ExpectedRoutes once intentional: {string.Join(", ", unexpected)}"
+            condition: unexpected.Count == 0,
+            userMessage: $"New route(s) not yet locked into the contract snapshot — add them to ExpectedRoutes once intentional: {string.Join(separator: ", ", values: unexpected)}"
         );
     }
 
@@ -501,18 +501,18 @@ public class RouteContractSnapshotTests : IClassFixture<NoMercyApiFactory>
         EndpointDataSource dataSource =
             scope.ServiceProvider.GetRequiredService<EndpointDataSource>();
 
-        List<string> unversioned = DescribeLiveRoutes(dataSource)
-            .Where(route => route.Contains(" api/", StringComparison.Ordinal))
-            .Where(route => !route.Contains("v{version:apiVersion}", StringComparison.Ordinal))
+        List<string> unversioned = DescribeLiveRoutes(dataSource: dataSource)
+            .Where(predicate: route => route.Contains(value: " api/", comparisonType: StringComparison.Ordinal))
+            .Where(predicate: route => !route.Contains(value: "v{version:apiVersion}", comparisonType: StringComparison.Ordinal))
             .ToList();
 
         List<string> unexpectedlyUnversioned = unversioned
-            .Except(KnownUnversionedApiRoutes, StringComparer.Ordinal)
+            .Except(second: KnownUnversionedApiRoutes, comparer: StringComparer.Ordinal)
             .ToList();
 
         Assert.True(
-            unexpectedlyUnversioned.Count == 0,
-            $"api/ route(s) missing the v{{version:apiVersion}} segment — an unversioned API route cannot be evolved without breaking every existing client: {string.Join(", ", unexpectedlyUnversioned)}"
+            condition: unexpectedlyUnversioned.Count == 0,
+            userMessage: $"api/ route(s) missing the v{{version:apiVersion}} segment — an unversioned API route cannot be evolved without breaking every existing client: {string.Join(separator: ", ", values: unexpectedlyUnversioned)}"
         );
     }
 }

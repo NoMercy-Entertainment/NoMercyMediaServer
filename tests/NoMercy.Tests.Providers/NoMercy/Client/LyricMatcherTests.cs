@@ -20,7 +20,7 @@ namespace NoMercy.Tests.Providers.NoMercy.Client;
 /// lyrics from a completely different song, and synced lyrics from a different
 /// release whose timing is off.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class LyricMatcherTests
 {
     private static LyricLine[] SyncedLines() =>
@@ -55,120 +55,120 @@ public class LyricMatcherTests
         string title = "Bohemian Rhapsody",
         string artist = "Queen",
         int? duration = 354
-    ) => new(title, [artist], "A Night at the Opera", duration);
+    ) => new(Title: title, Artists: [artist], Album: "A Night at the Opera", DurationSeconds: duration);
 
     [Fact]
     public void Score_ExactMatch_IsAccepted()
     {
-        LyricCandidate candidate = new("Bohemian Rhapsody", "Queen", 354, true, SyncedLines());
+        LyricCandidate candidate = new(Title: "Bohemian Rhapsody", Artist: "Queen", DurationSeconds: 354, HasSyncedLyrics: true, Lines: SyncedLines());
 
-        double score = LyricMatcher.Score(Query(), candidate);
+        double score = LyricMatcher.Score(query: Query(), candidate: candidate);
 
-        score.Should().BeGreaterThanOrEqualTo(0);
+        score.Should().BeGreaterThanOrEqualTo(expected: 0);
     }
 
     [Fact]
     public void Score_DifferentSong_IsRejected()
     {
-        LyricCandidate candidate = new("We Will Rock You", "Queen", 122, true, SyncedLines());
+        LyricCandidate candidate = new(Title: "We Will Rock You", Artist: "Queen", DurationSeconds: 122, HasSyncedLyrics: true, Lines: SyncedLines());
 
-        double score = LyricMatcher.Score(Query(), candidate);
+        double score = LyricMatcher.Score(query: Query(), candidate: candidate);
 
-        score.Should().BeLessThan(0);
+        score.Should().BeLessThan(expected: 0);
     }
 
     [Fact]
     public void Score_DifferentArtist_IsRejected()
     {
         LyricCandidate candidate = new(
-            "Bohemian Rhapsody",
-            "Panic! at the Disco",
-            354,
-            true,
-            SyncedLines()
+            Title: "Bohemian Rhapsody",
+            Artist: "Panic! at the Disco",
+            DurationSeconds: 354,
+            HasSyncedLyrics: true,
+            Lines: SyncedLines()
         );
 
-        double score = LyricMatcher.Score(Query(), candidate);
+        double score = LyricMatcher.Score(query: Query(), candidate: candidate);
 
-        score.Should().BeLessThan(0);
+        score.Should().BeLessThan(expected: 0);
     }
 
     [Fact]
     public void Score_SyncedWrongRelease_IsRejectedOnDuration()
     {
         // Same song and artist, but a live release 40s longer: synced timing would drift.
-        LyricCandidate candidate = new("Bohemian Rhapsody", "Queen", 394, true, SyncedLines());
+        LyricCandidate candidate = new(Title: "Bohemian Rhapsody", Artist: "Queen", DurationSeconds: 394, HasSyncedLyrics: true, Lines: SyncedLines());
 
-        double score = LyricMatcher.Score(Query(), candidate);
+        double score = LyricMatcher.Score(query: Query(), candidate: candidate);
 
-        score.Should().BeLessThan(0);
+        score.Should().BeLessThan(expected: 0);
     }
 
     [Fact]
     public void Score_SyncedWithinTolerance_IsAccepted()
     {
-        LyricCandidate candidate = new("Bohemian Rhapsody", "Queen", 357, true, SyncedLines());
+        LyricCandidate candidate = new(Title: "Bohemian Rhapsody", Artist: "Queen", DurationSeconds: 357, HasSyncedLyrics: true, Lines: SyncedLines());
 
-        double score = LyricMatcher.Score(Query(), candidate);
+        double score = LyricMatcher.Score(query: Query(), candidate: candidate);
 
-        score.Should().BeGreaterThanOrEqualTo(0);
+        score.Should().BeGreaterThanOrEqualTo(expected: 0);
     }
 
     [Fact]
     public void Score_PlainLyricsIgnoreDuration()
     {
         // Unsynced lyrics carry no timing, so a length difference must not reject them.
-        LyricCandidate candidate = new("Bohemian Rhapsody", "Queen", 420, false, PlainLines());
+        LyricCandidate candidate = new(Title: "Bohemian Rhapsody", Artist: "Queen", DurationSeconds: 420, HasSyncedLyrics: false, Lines: PlainLines());
 
-        double score = LyricMatcher.Score(Query(), candidate);
+        double score = LyricMatcher.Score(query: Query(), candidate: candidate);
 
-        score.Should().BeGreaterThanOrEqualTo(0);
+        score.Should().BeGreaterThanOrEqualTo(expected: 0);
     }
 
     [Fact]
     public void Score_DecoratedTitle_StillMatches()
     {
         LyricCandidate candidate = new(
-            "Bohemian Rhapsody (Remastered 2011)",
-            "Queen",
-            354,
-            true,
-            SyncedLines()
+            Title: "Bohemian Rhapsody (Remastered 2011)",
+            Artist: "Queen",
+            DurationSeconds: 354,
+            HasSyncedLyrics: true,
+            Lines: SyncedLines()
         );
 
-        double score = LyricMatcher.Score(Query(), candidate);
+        double score = LyricMatcher.Score(query: Query(), candidate: candidate);
 
-        score.Should().BeGreaterThanOrEqualTo(0);
+        score.Should().BeGreaterThanOrEqualTo(expected: 0);
     }
 
     [Fact]
     public void PickBest_PrefersClosestDuration()
     {
-        LyricCandidate near = new("Bohemian Rhapsody", "Queen", 355, true, SyncedLines());
-        LyricCandidate far = new("Bohemian Rhapsody", "Queen", 360, true, SyncedLines());
+        LyricCandidate near = new(Title: "Bohemian Rhapsody", Artist: "Queen", DurationSeconds: 355, HasSyncedLyrics: true, Lines: SyncedLines());
+        LyricCandidate far = new(Title: "Bohemian Rhapsody", Artist: "Queen", DurationSeconds: 360, HasSyncedLyrics: true, Lines: SyncedLines());
 
-        LyricCandidate? best = LyricMatcher.PickBest(Query(), [far, near]);
+        LyricCandidate? best = LyricMatcher.PickBest(query: Query(), candidates: [far, near]);
 
-        best.Should().BeSameAs(near);
+        best.Should().BeSameAs(expected: near);
     }
 
     [Fact]
     public void PickBest_PrefersSyncedOverPlain()
     {
-        LyricCandidate plain = new("Bohemian Rhapsody", "Queen", 354, false, PlainLines());
-        LyricCandidate synced = new("Bohemian Rhapsody", "Queen", 354, true, SyncedLines());
+        LyricCandidate plain = new(Title: "Bohemian Rhapsody", Artist: "Queen", DurationSeconds: 354, HasSyncedLyrics: false, Lines: PlainLines());
+        LyricCandidate synced = new(Title: "Bohemian Rhapsody", Artist: "Queen", DurationSeconds: 354, HasSyncedLyrics: true, Lines: SyncedLines());
 
-        LyricCandidate? best = LyricMatcher.PickBest(Query(), [plain, synced]);
+        LyricCandidate? best = LyricMatcher.PickBest(query: Query(), candidates: [plain, synced]);
 
-        best.Should().BeSameAs(synced);
+        best.Should().BeSameAs(expected: synced);
     }
 
     [Fact]
     public void PickBest_AllMismatches_ReturnsNull()
     {
-        LyricCandidate wrong = new("Some Other Song", "Another Band", 200, true, SyncedLines());
+        LyricCandidate wrong = new(Title: "Some Other Song", Artist: "Another Band", DurationSeconds: 200, HasSyncedLyrics: true, Lines: SyncedLines());
 
-        LyricCandidate? best = LyricMatcher.PickBest(Query(), [wrong]);
+        LyricCandidate? best = LyricMatcher.PickBest(query: Query(), candidates: [wrong]);
 
         best.Should().BeNull();
     }
@@ -176,10 +176,10 @@ public class LyricMatcherTests
     [Fact]
     public void Score_EmptyLines_IsRejected()
     {
-        LyricCandidate candidate = new("Bohemian Rhapsody", "Queen", 354, true, []);
+        LyricCandidate candidate = new(Title: "Bohemian Rhapsody", Artist: "Queen", DurationSeconds: 354, HasSyncedLyrics: true, Lines: []);
 
-        double score = LyricMatcher.Score(Query(), candidate);
+        double score = LyricMatcher.Score(query: Query(), candidate: candidate);
 
-        score.Should().BeLessThan(0);
+        score.Should().BeLessThan(expected: 0);
     }
 }

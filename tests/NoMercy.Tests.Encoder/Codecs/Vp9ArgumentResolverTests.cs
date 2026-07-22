@@ -34,19 +34,19 @@ public class Vp9ArgumentResolverTests
     {
         // -preset isn't accepted by libvpx-vp9. Speed tuning happens via
         // -deadline / -cpu-used which are not part of the preset array.
-        EncoderInfo vpx = Get("libvpx-vp9");
+        EncoderInfo vpx = Get(ffmpegName: "libvpx-vp9");
         vpx.Presets.Should().BeEmpty();
-        EncoderArgumentResolver.ResolvePreset("medium", vpx).Should().BeNull();
+        EncoderArgumentResolver.ResolvePreset(profilePreset: "medium", encoder: vpx).Should().BeNull();
     }
 
     [Fact]
     public void LibVpxVp9_UsesNumericProfiles()
     {
-        EncoderInfo vpx = Get("libvpx-vp9");
-        vpx.Profiles.Should().BeEquivalentTo("0", "1", "2", "3");
+        EncoderInfo vpx = Get(ffmpegName: "libvpx-vp9");
+        vpx.Profiles.Should().BeEquivalentTo(expectation: ["0", "1", "2", "3"]);
         // "main" from H264/HEVC profile strings must fall back to profile "0"
         // (the first profile) — the value ffmpeg's -profile actually accepts.
-        EncoderArgumentResolver.ResolveProfile("main", vpx).Should().Be("0");
+        EncoderArgumentResolver.ResolveProfile(profileValue: "main", encoder: vpx).Should().Be(expected: "0");
     }
 
     [Fact]
@@ -55,7 +55,7 @@ public class Vp9ArgumentResolverTests
         // VP9 profile2/profile3 carry 10-bit but VP9 doesn't define HDR10
         // static metadata semantics, so SupportsHdr must be false even
         // though bit depth goes to 10.
-        EncoderInfo vpx = Get("libvpx-vp9");
+        EncoderInfo vpx = Get(ffmpegName: "libvpx-vp9");
         vpx.Supports10Bit.Should().BeTrue();
         vpx.SupportsHdr.Should().BeFalse();
     }
@@ -65,14 +65,14 @@ public class Vp9ArgumentResolverTests
     {
         EncoderInfo[] hwEncoders = Registry
             .EnumerateVideoEncoders()
-            .Where(t => t is { CodecType: VideoCodecType.Vp9, Encoder.RequiredVendor: not null })
-            .Select(t => t.Encoder)
+            .Where(predicate: t => t is { CodecType: VideoCodecType.Vp9, Encoder.RequiredVendor: not null })
+            .Select(selector: t => t.Encoder)
             .ToArray();
 
-        hwEncoders.Should().OnlyContain(e => e.RequiredVendor == GpuVendor.Intel);
-        hwEncoders.Should().NotContain(e => e.RequiredVendor == GpuVendor.Nvidia);
-        hwEncoders.Should().NotContain(e => e.RequiredVendor == GpuVendor.Amd);
-        hwEncoders.Should().NotContain(e => e.RequiredVendor == GpuVendor.Apple);
+        hwEncoders.Should().OnlyContain(predicate: e => e.RequiredVendor == GpuVendor.Intel);
+        hwEncoders.Should().NotContain(predicate: e => e.RequiredVendor == GpuVendor.Nvidia);
+        hwEncoders.Should().NotContain(predicate: e => e.RequiredVendor == GpuVendor.Amd);
+        hwEncoders.Should().NotContain(predicate: e => e.RequiredVendor == GpuVendor.Apple);
     }
 
     [Fact]
@@ -80,21 +80,21 @@ public class Vp9ArgumentResolverTests
     {
         // vp9_qsv uses 1-51 ICQ, but the profile's CRF is written in the VP9
         // software reference scale (0-63). Scaled: round(33/63*51)=27.
-        ResolvedCodec qsv = Resolve("vp9_qsv", GpuVendor.Intel, RateControlMode.Icq);
+        ResolvedCodec qsv = Resolve(ffmpegName: "vp9_qsv", vendor: GpuVendor.Intel, defaultRateControl: RateControlMode.Icq);
         Dictionary<string, string> flags = [];
 
-        EncoderArgumentResolver.ResolveQuality(33, qsv, flags);
+        EncoderArgumentResolver.ResolveQuality(profileCrf: 33, resolved: qsv, extraFlags: flags);
 
-        flags["-global_quality"]
+        flags[key: "-global_quality"]
             .Should()
-            .Be("27", "33 on the 0-63 VP9 reference scale maps to 27 on the 1-51 QSV scale");
+            .Be(expected: "27", because: "33 on the 0-63 VP9 reference scale maps to 27 on the 1-51 QSV scale");
     }
 
     [Fact]
     public void Vp9Vaapi_UsesFullQpRange_LacksPresets()
     {
-        EncoderInfo vaapi = Get("vp9_vaapi");
-        vaapi.QualityRange.Max.Should().Be(255);
+        EncoderInfo vaapi = Get(ffmpegName: "vp9_vaapi");
+        vaapi.QualityRange.Max.Should().Be(expected: 255);
         vaapi.Presets.Should().BeEmpty();
     }
 
@@ -105,7 +105,7 @@ public class Vp9ArgumentResolverTests
             if (c == VideoCodecType.Vp9 && encoder.FfmpegName == ffmpegName)
                 return encoder;
         }
-        throw new InvalidOperationException($"VP9 encoder {ffmpegName} not registered");
+        throw new InvalidOperationException(message: $"VP9 encoder {ffmpegName} not registered");
     }
 
     private static ResolvedCodec Resolve(
@@ -114,7 +114,7 @@ public class Vp9ArgumentResolverTests
         RateControlMode defaultRateControl
     )
     {
-        EncoderInfo encoder = Get(ffmpegName);
+        EncoderInfo encoder = Get(ffmpegName: ffmpegName);
         GpuDevice? device = vendor is null
             ? null
             : new GpuDevice(
@@ -124,6 +124,6 @@ public class Vp9ArgumentResolverTests
                 MaxEncoderSessions: 12,
                 SupportedCodecs: [VideoCodecType.Vp9]
             );
-        return new(ffmpegName, encoder, device, defaultRateControl);
+        return new(FfmpegEncoderName: ffmpegName, EncoderInfo: encoder, Device: device, DefaultRateControl: defaultRateControl);
     }
 }

@@ -18,33 +18,33 @@ public class TvdbUpdatesResponse : TvdbResponse<TvdbUpdate[]> { }
 
 public class TvdbUpdate
 {
-    [JsonProperty("recordType")]
+    [JsonProperty(propertyName: "recordType")]
     public string RecordType { get; set; } = string.Empty;
 
-    [JsonProperty("recordId")]
+    [JsonProperty(propertyName: "recordId")]
     public long RecordId { get; set; }
 
-    [JsonProperty("methodInt")]
+    [JsonProperty(propertyName: "methodInt")]
     public int MethodInt { get; set; }
 
-    [JsonProperty("method")]
+    [JsonProperty(propertyName: "method")]
     public string Method { get; set; } = string.Empty;
 
-    [JsonProperty("extraInfo")]
+    [JsonProperty(propertyName: "extraInfo")]
     public string? ExtraInfo { get; set; }
 
-    [JsonProperty("userId")]
+    [JsonProperty(propertyName: "userId")]
     public long? UserId { get; set; }
 
-    [JsonProperty("timeStamp")]
+    [JsonProperty(propertyName: "timeStamp")]
     public long TimeStamp { get; set; }
 
-    [JsonProperty("entityType")]
+    [JsonProperty(propertyName: "entityType")]
     public string? EntityType { get; set; }
 
-    [JsonProperty("mergeToId")]
+    [JsonProperty(propertyName: "mergeToId")]
     public long? MergeToId { get; set; }
 
-    [JsonProperty("mergeToEntityType")]
+    [JsonProperty(propertyName: "mergeToEntityType")]
     public string? MergeToEntityType { get; set; }
 }

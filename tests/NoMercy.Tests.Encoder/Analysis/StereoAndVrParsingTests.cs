@@ -41,10 +41,10 @@ public class StereoAndVrParsingTests
             }
             """;
 
-        JArray streams = (JArray)JObject.Parse(json)["streams"]!;
-        string? result = MediaAnalyzer.ParseStereoMode(streams);
+        JArray streams = (JArray)JObject.Parse(json: json)[propertyName: "streams"]!;
+        string? result = MediaAnalyzer.ParseStereoMode(streams: streams);
 
-        result.Should().Be("side_by_side_left");
+        result.Should().Be(expected: "side_by_side_left");
     }
 
     // ------------------------------------------------------------------
@@ -71,10 +71,10 @@ public class StereoAndVrParsingTests
             }
             """;
 
-        JArray streams = (JArray)JObject.Parse(json)["streams"]!;
-        string? result = MediaAnalyzer.ParseStereoMode(streams);
+        JArray streams = (JArray)JObject.Parse(json: json)[propertyName: "streams"]!;
+        string? result = MediaAnalyzer.ParseStereoMode(streams: streams);
 
-        result.Should().Be("top_bottom_left");
+        result.Should().Be(expected: "top_bottom_left");
     }
 
     // ------------------------------------------------------------------
@@ -95,8 +95,8 @@ public class StereoAndVrParsingTests
             }
             """;
 
-        JArray streams = (JArray)JObject.Parse(json)["streams"]!;
-        MediaAnalyzer.ParseStereoMode(streams).Should().BeNull();
+        JArray streams = (JArray)JObject.Parse(json: json)[propertyName: "streams"]!;
+        MediaAnalyzer.ParseStereoMode(streams: streams).Should().BeNull();
     }
 
     // ------------------------------------------------------------------
@@ -114,8 +114,8 @@ public class StereoAndVrParsingTests
             }
             """;
 
-        JArray streams = (JArray)JObject.Parse(json)["streams"]!;
-        MediaAnalyzer.ParseStereoMode(streams).Should().BeNull();
+        JArray streams = (JArray)JObject.Parse(json: json)[propertyName: "streams"]!;
+        MediaAnalyzer.ParseStereoMode(streams: streams).Should().BeNull();
     }
 
     // ------------------------------------------------------------------
@@ -142,10 +142,10 @@ public class StereoAndVrParsingTests
             }
             """;
 
-        JArray streams = (JArray)JObject.Parse(json)["streams"]!;
-        string? result = MediaAnalyzer.ParseSphericalProjection(streams);
+        JArray streams = (JArray)JObject.Parse(json: json)[propertyName: "streams"]!;
+        string? result = MediaAnalyzer.ParseSphericalProjection(streams: streams);
 
-        result.Should().Be("equirectangular");
+        result.Should().Be(expected: "equirectangular");
     }
 
     // ------------------------------------------------------------------
@@ -171,8 +171,8 @@ public class StereoAndVrParsingTests
             }
             """;
 
-        JArray streams = (JArray)JObject.Parse(json)["streams"]!;
-        MediaAnalyzer.ParseSphericalProjection(streams).Should().Be("cubemap");
+        JArray streams = (JArray)JObject.Parse(json: json)[propertyName: "streams"]!;
+        MediaAnalyzer.ParseSphericalProjection(streams: streams).Should().Be(expected: "cubemap");
     }
 
     // ------------------------------------------------------------------
@@ -198,8 +198,8 @@ public class StereoAndVrParsingTests
             }
             """;
 
-        JArray streams = (JArray)JObject.Parse(json)["streams"]!;
-        MediaAnalyzer.ParseSphericalProjection(streams).Should().BeNull();
+        JArray streams = (JArray)JObject.Parse(json: json)[propertyName: "streams"]!;
+        MediaAnalyzer.ParseSphericalProjection(streams: streams).Should().BeNull();
     }
 
     // ------------------------------------------------------------------
@@ -217,8 +217,8 @@ public class StereoAndVrParsingTests
             }
             """;
 
-        JArray streams = (JArray)JObject.Parse(json)["streams"]!;
-        MediaAnalyzer.ParseSphericalProjection(streams).Should().BeNull();
+        JArray streams = (JArray)JObject.Parse(json: json)[propertyName: "streams"]!;
+        MediaAnalyzer.ParseSphericalProjection(streams: streams).Should().BeNull();
     }
 
     // ------------------------------------------------------------------
@@ -252,9 +252,9 @@ public class StereoAndVrParsingTests
             }
             """;
 
-        MediaInfo media = MediaAnalyzer.ParseFfprobeJson(json, "/media/3d.mkv");
+        MediaInfo media = MediaAnalyzer.ParseFfprobeJson(json: json, filePath: "/media/3d.mkv");
 
-        media.StereoMode.Should().Be("side_by_side_left");
+        media.StereoMode.Should().Be(expected: "side_by_side_left");
         media.SphericalProjection.Should().BeNull();
     }
 
@@ -294,9 +294,9 @@ public class StereoAndVrParsingTests
             }
             """;
 
-        MediaInfo media = MediaAnalyzer.ParseFfprobeJson(json, "/media/vr360.mp4");
+        MediaInfo media = MediaAnalyzer.ParseFfprobeJson(json: json, filePath: "/media/vr360.mp4");
 
-        media.SphericalProjection.Should().Be("equirectangular");
+        media.SphericalProjection.Should().Be(expected: "equirectangular");
         media.StereoMode.Should().BeNull();
     }
 }

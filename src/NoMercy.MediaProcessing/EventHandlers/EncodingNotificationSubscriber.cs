@@ -39,43 +39,43 @@ public class EncodingNotificationSubscriber(
         // service free when nobody's listening.
         if (options.NotificationWebhookUrls.Count == 0)
         {
-            logger.LogDebug("No notification webhook URLs configured; subscriber idle");
+            logger.LogDebug(message: "No notification webhook URLs configured; subscriber idle");
             return Task.CompletedTask;
         }
 
         _subscriptions.Add(
-            eventBus.Subscribe<EncodingStartedEvent>(
-                (evt, ct) =>
+            item: eventBus.Subscribe<EncodingStartedEvent>(
+                handler: (evt, ct) =>
                     dispatcher.NotifyStartedAsync(
-                        new(evt.JobId, evt.InputPath, evt.OutputPath, evt.ProfileName),
-                        ct
+                        notification: new(JobId: evt.JobId, InputPath: evt.InputPath, OutputPath: evt.OutputPath, ProfileName: evt.ProfileName),
+                        ct: ct
                     )
             )
         );
 
         _subscriptions.Add(
-            eventBus.Subscribe<EncodingCompletedEvent>(
-                (evt, ct) =>
+            item: eventBus.Subscribe<EncodingCompletedEvent>(
+                handler: (evt, ct) =>
                     dispatcher.NotifyCompletedAsync(
-                        new(evt.JobId, evt.OutputPath, evt.Duration),
-                        ct
+                        notification: new(JobId: evt.JobId, OutputPath: evt.OutputPath, Duration: evt.Duration),
+                        ct: ct
                     )
             )
         );
 
         _subscriptions.Add(
-            eventBus.Subscribe<EncodingFailedEvent>(
-                (evt, ct) =>
+            item: eventBus.Subscribe<EncodingFailedEvent>(
+                handler: (evt, ct) =>
                     dispatcher.NotifyFailedAsync(
-                        new(evt.JobId, evt.InputPath, evt.ErrorMessage, evt.ExceptionType),
-                        ct
+                        notification: new(JobId: evt.JobId, InputPath: evt.InputPath, ErrorMessage: evt.ErrorMessage, ExceptionType: evt.ExceptionType),
+                        ct: ct
                     )
             )
         );
 
         logger.LogInformation(
-            "Encoding notification subscriber active — {Count} webhook URL(s) configured",
-            options.NotificationWebhookUrls.Count
+            message: "Encoding notification subscriber active — {Count} webhook URL(s) configured",
+            args: options.NotificationWebhookUrls.Count
         );
         return Task.CompletedTask;
     }
@@ -90,7 +90,7 @@ public class EncodingNotificationSubscriber(
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Could not dispose notification subscription");
+                logger.LogWarning(exception: ex, message: "Could not dispose notification subscription");
             }
         }
         _subscriptions.Clear();

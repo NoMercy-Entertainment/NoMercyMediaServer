@@ -46,7 +46,7 @@ public class TwoPassStatsFileTests
     )
     {
         Mock<IEncoder> mock = new();
-        mock.Setup(e =>
+        mock.Setup(expression: e =>
                 e.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
@@ -54,21 +54,21 @@ public class TwoPassStatsFileTests
                 )
             )
             .Callback<EncodingRequest, IProgressObserver?, CancellationToken>(
-                (req, _, _) => captured.Add(req)
+                action: (req, _, _) => captured.Add(item: req)
             )
             .ReturnsAsync(
-                (EncodingRequest _, IProgressObserver? _, CancellationToken _) =>
+                valueFunction: (EncodingRequest _, IProgressObserver? _, CancellationToken _) =>
                     failPass
                         ? new(
                             Success: false,
                             OutputPath: string.Empty,
                             Duration: TimeSpan.Zero,
                             Error: new(
-                                EncodingErrorKind.Unknown,
-                                "simulated failure",
-                                null,
-                                "test",
-                                false
+                                Kind: EncodingErrorKind.Unknown,
+                                Message: "simulated failure",
+                                FfmpegStderr: null,
+                                StageName: "test",
+                                Recoverable: false
                             ),
                             Metrics: null
                         )
@@ -77,7 +77,7 @@ public class TwoPassStatsFileTests
                             OutputPath: "/out",
                             Duration: TimeSpan.Zero,
                             Error: null,
-                            Metrics: new(0, 0, 0, "test", null)
+                            Metrics: new(OutputSizeBytes: 0, AverageSpeed: 0, AverageFps: 0, EncoderUsed: "test", GpuUsed: null)
                         )
             );
         return mock;
@@ -86,22 +86,22 @@ public class TwoPassStatsFileTests
     private static Mock<ICheckpointStore> BuildNoOpCheckpointStore()
     {
         Mock<ICheckpointStore> mock = new();
-        mock.Setup(s => s.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((JobCheckpoint?)null);
-        mock.Setup(s => s.SaveAsync(It.IsAny<JobCheckpoint>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-        mock.Setup(s => s.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+        mock.Setup(expression: s => s.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: (JobCheckpoint?)null);
+        mock.Setup(expression: s => s.SaveAsync(It.IsAny<JobCheckpoint>(), It.IsAny<CancellationToken>()))
+            .Returns(value: Task.CompletedTask);
+        mock.Setup(expression: s => s.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(value: Task.CompletedTask);
         return mock;
     }
 
     private static Mock<IStorage> BuildPermissiveStorage()
     {
         Mock<IStorage> mock = new();
-        mock.Setup(s => s.CreateDirectory(It.IsAny<string>()));
-        mock.Setup(s => s.Exists(It.IsAny<string>())).Returns(false);
-        mock.Setup(s => s.List(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
-            .Returns([]);
+        mock.Setup(expression: s => s.CreateDirectory(It.IsAny<string>()));
+        mock.Setup(expression: s => s.Exists(It.IsAny<string>())).Returns(value: false);
+        mock.Setup(expression: s => s.List(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+            .Returns(value: []);
         return mock;
     }
 
@@ -146,31 +146,31 @@ public class TwoPassStatsFileTests
         where TStrategy : TwoPassStrategyBase
     {
         List<EncodingRequest> captured = [];
-        Mock<IEncoder> encoder = BuildCapturingEncoder(captured);
+        Mock<IEncoder> encoder = BuildCapturingEncoder(captured: captured);
         Mock<ICheckpointStore> checkpoint = BuildNoOpCheckpointStore();
         Mock<IStorage> storage = BuildPermissiveStorage();
 
         TwoPassStrategyBase strategy = typeof(TStrategy).Name switch
         {
             nameof(HlsTwoPassStrategy) => new HlsTwoPassStrategy(
-                encoder.Object,
-                checkpoint.Object,
-                NullLogger<HlsTwoPassStrategy>.Instance,
-                storage.Object
+                encoder: encoder.Object,
+                checkpointStore: checkpoint.Object,
+                logger: NullLogger<HlsTwoPassStrategy>.Instance,
+                storage: storage.Object
             ),
             nameof(Mp4TwoPassStrategy) => new Mp4TwoPassStrategy(
-                encoder.Object,
-                checkpoint.Object,
-                NullLogger<Mp4TwoPassStrategy>.Instance,
-                storage.Object
+                encoder: encoder.Object,
+                checkpointStore: checkpoint.Object,
+                logger: NullLogger<Mp4TwoPassStrategy>.Instance,
+                storage: storage.Object
             ),
             nameof(DashTwoPassStrategy) => new DashTwoPassStrategy(
-                encoder.Object,
-                checkpoint.Object,
-                NullLogger<DashTwoPassStrategy>.Instance,
-                storage.Object
+                encoder: encoder.Object,
+                checkpointStore: checkpoint.Object,
+                logger: NullLogger<DashTwoPassStrategy>.Instance,
+                storage: storage.Object
             ),
-            _ => throw new InvalidOperationException($"Unknown strategy {typeof(TStrategy).Name}"),
+            _ => throw new InvalidOperationException(message: $"Unknown strategy {typeof(TStrategy).Name}"),
         };
 
         return (strategy, captured);
@@ -186,9 +186,9 @@ public class TwoPassStatsFileTests
         (TwoPassStrategyBase strategy, List<EncodingRequest> captured) =
             BuildStrategy<HlsTwoPassStrategy>();
 
-        await strategy.EncodeAsync(FakeRequest(), progress: null, ct: CancellationToken.None);
+        await strategy.EncodeAsync(request: FakeRequest(), progress: null, ct: CancellationToken.None);
 
-        EncodingRequest pass1 = captured.First(r =>
+        EncodingRequest pass1 = captured.First(predicate: r =>
             r.Options is { Pass: EncodingPass.One }
         );
         pass1.Options!.StatsFilePath.Should().NotBeNullOrEmpty();
@@ -200,42 +200,42 @@ public class TwoPassStatsFileTests
         (TwoPassStrategyBase strategy, List<EncodingRequest> captured) =
             BuildStrategy<HlsTwoPassStrategy>();
 
-        await strategy.EncodeAsync(FakeRequest(), progress: null, ct: CancellationToken.None);
+        await strategy.EncodeAsync(request: FakeRequest(), progress: null, ct: CancellationToken.None);
 
-        EncodingRequest pass1 = captured.First(r =>
+        EncodingRequest pass1 = captured.First(predicate: r =>
             r.Options is { Pass: EncodingPass.One }
         );
-        EncodingRequest pass2 = captured.First(r =>
+        EncodingRequest pass2 = captured.First(predicate: r =>
             r.Options is { Pass: EncodingPass.Two }
         );
 
         pass2.Options!.StatsFilePath.Should().NotBeNullOrEmpty();
         // Both passes share the SAME base stats path so pass-2 can read pass-1's data.
-        pass2.Options.StatsFilePath.Should().Be(pass1.Options!.StatsFilePath);
+        pass2.Options.StatsFilePath.Should().Be(expected: pass1.Options!.StatsFilePath);
     }
 
     [Fact]
     public async Task HlsTwoPassStrategy_stats_file_path_is_under_temp_or_storage_root()
     {
-        string outputDir = Path.Combine(Path.GetTempPath(), "nm_test_hls");
+        string outputDir = Path.Combine(path1: Path.GetTempPath(), path2: "nm_test_hls");
         (TwoPassStrategyBase strategy, List<EncodingRequest> captured) =
-            BuildStrategy<HlsTwoPassStrategy>(outputDir);
+            BuildStrategy<HlsTwoPassStrategy>(outputDir: outputDir);
 
         await strategy.EncodeAsync(
-            FakeRequest(outputDir),
+            request: FakeRequest(outputDir: outputDir),
             progress: null,
             ct: CancellationToken.None
         );
 
-        EncodingRequest pass1 = captured.First(r =>
+        EncodingRequest pass1 = captured.First(predicate: r =>
             r.Options is { Pass: EncodingPass.One }
         );
         string statsPath = pass1.Options!.StatsFilePath!;
 
         // Path must be rooted (absolute) and anchored under the output directory —
         // never a raw global temp path unrelated to the encode job.
-        Path.IsPathRooted(statsPath).Should().BeTrue();
-        statsPath.Should().Contain(".2pass");
+        Path.IsPathRooted(path: statsPath).Should().BeTrue();
+        statsPath.Should().Contain(expected: ".2pass");
     }
 
     // ----------------------------------------------------------------
@@ -248,9 +248,9 @@ public class TwoPassStatsFileTests
         (TwoPassStrategyBase strategy, List<EncodingRequest> captured) =
             BuildStrategy<Mp4TwoPassStrategy>();
 
-        await strategy.EncodeAsync(FakeRequest(), progress: null, ct: CancellationToken.None);
+        await strategy.EncodeAsync(request: FakeRequest(), progress: null, ct: CancellationToken.None);
 
-        EncodingRequest pass1 = captured.First(r =>
+        EncodingRequest pass1 = captured.First(predicate: r =>
             r.Options is { Pass: EncodingPass.One }
         );
         pass1.Options!.StatsFilePath.Should().NotBeNullOrEmpty();
@@ -262,38 +262,38 @@ public class TwoPassStatsFileTests
         (TwoPassStrategyBase strategy, List<EncodingRequest> captured) =
             BuildStrategy<Mp4TwoPassStrategy>();
 
-        await strategy.EncodeAsync(FakeRequest(), progress: null, ct: CancellationToken.None);
+        await strategy.EncodeAsync(request: FakeRequest(), progress: null, ct: CancellationToken.None);
 
-        EncodingRequest pass1 = captured.First(r =>
+        EncodingRequest pass1 = captured.First(predicate: r =>
             r.Options is { Pass: EncodingPass.One }
         );
-        EncodingRequest pass2 = captured.First(r =>
+        EncodingRequest pass2 = captured.First(predicate: r =>
             r.Options is { Pass: EncodingPass.Two }
         );
 
-        pass2.Options!.StatsFilePath.Should().Be(pass1.Options!.StatsFilePath);
+        pass2.Options!.StatsFilePath.Should().Be(expected: pass1.Options!.StatsFilePath);
     }
 
     [Fact]
     public async Task Mp4TwoPassStrategy_stats_file_path_is_under_temp_or_storage_root()
     {
-        string outputDir = Path.Combine(Path.GetTempPath(), "nm_test_mp4");
+        string outputDir = Path.Combine(path1: Path.GetTempPath(), path2: "nm_test_mp4");
         (TwoPassStrategyBase strategy, List<EncodingRequest> captured) =
-            BuildStrategy<Mp4TwoPassStrategy>(outputDir);
+            BuildStrategy<Mp4TwoPassStrategy>(outputDir: outputDir);
 
         await strategy.EncodeAsync(
-            FakeRequest(outputDir),
+            request: FakeRequest(outputDir: outputDir),
             progress: null,
             ct: CancellationToken.None
         );
 
-        EncodingRequest pass1 = captured.First(r =>
+        EncodingRequest pass1 = captured.First(predicate: r =>
             r.Options is { Pass: EncodingPass.One }
         );
         string statsPath = pass1.Options!.StatsFilePath!;
 
-        Path.IsPathRooted(statsPath).Should().BeTrue();
-        statsPath.Should().Contain(".2pass");
+        Path.IsPathRooted(path: statsPath).Should().BeTrue();
+        statsPath.Should().Contain(expected: ".2pass");
     }
 
     // ----------------------------------------------------------------
@@ -306,9 +306,9 @@ public class TwoPassStatsFileTests
         (TwoPassStrategyBase strategy, List<EncodingRequest> captured) =
             BuildStrategy<DashTwoPassStrategy>();
 
-        await strategy.EncodeAsync(FakeRequest(), progress: null, ct: CancellationToken.None);
+        await strategy.EncodeAsync(request: FakeRequest(), progress: null, ct: CancellationToken.None);
 
-        EncodingRequest pass1 = captured.First(r =>
+        EncodingRequest pass1 = captured.First(predicate: r =>
             r.Options is { Pass: EncodingPass.One }
         );
         pass1.Options!.StatsFilePath.Should().NotBeNullOrEmpty();
@@ -320,38 +320,38 @@ public class TwoPassStatsFileTests
         (TwoPassStrategyBase strategy, List<EncodingRequest> captured) =
             BuildStrategy<DashTwoPassStrategy>();
 
-        await strategy.EncodeAsync(FakeRequest(), progress: null, ct: CancellationToken.None);
+        await strategy.EncodeAsync(request: FakeRequest(), progress: null, ct: CancellationToken.None);
 
-        EncodingRequest pass1 = captured.First(r =>
+        EncodingRequest pass1 = captured.First(predicate: r =>
             r.Options is { Pass: EncodingPass.One }
         );
-        EncodingRequest pass2 = captured.First(r =>
+        EncodingRequest pass2 = captured.First(predicate: r =>
             r.Options is { Pass: EncodingPass.Two }
         );
 
-        pass2.Options!.StatsFilePath.Should().Be(pass1.Options!.StatsFilePath);
+        pass2.Options!.StatsFilePath.Should().Be(expected: pass1.Options!.StatsFilePath);
     }
 
     [Fact]
     public async Task DashTwoPassStrategy_stats_file_path_is_under_temp_or_storage_root()
     {
-        string outputDir = Path.Combine(Path.GetTempPath(), "nm_test_dash");
+        string outputDir = Path.Combine(path1: Path.GetTempPath(), path2: "nm_test_dash");
         (TwoPassStrategyBase strategy, List<EncodingRequest> captured) =
-            BuildStrategy<DashTwoPassStrategy>(outputDir);
+            BuildStrategy<DashTwoPassStrategy>(outputDir: outputDir);
 
         await strategy.EncodeAsync(
-            FakeRequest(outputDir),
+            request: FakeRequest(outputDir: outputDir),
             progress: null,
             ct: CancellationToken.None
         );
 
-        EncodingRequest pass1 = captured.First(r =>
+        EncodingRequest pass1 = captured.First(predicate: r =>
             r.Options is { Pass: EncodingPass.One }
         );
         string statsPath = pass1.Options!.StatsFilePath!;
 
-        Path.IsPathRooted(statsPath).Should().BeTrue();
-        statsPath.Should().Contain(".2pass");
+        Path.IsPathRooted(path: statsPath).Should().BeTrue();
+        statsPath.Should().Contain(expected: ".2pass");
     }
 
     // ----------------------------------------------------------------
@@ -362,24 +362,24 @@ public class TwoPassStatsFileTests
     public async Task TwoPassStrategy_pass1_failure_does_not_invoke_pass2()
     {
         List<EncodingRequest> captured = [];
-        Mock<IEncoder> encoder = BuildCapturingEncoder(captured, failPass: true);
+        Mock<IEncoder> encoder = BuildCapturingEncoder(captured: captured, failPass: true);
         Mock<ICheckpointStore> checkpoint = BuildNoOpCheckpointStore();
         Mock<IStorage> storage = BuildPermissiveStorage();
 
         HlsTwoPassStrategy strategy = new(
-            encoder.Object,
-            checkpoint.Object,
-            NullLogger<HlsTwoPassStrategy>.Instance,
-            storage.Object
+            encoder: encoder.Object,
+            checkpointStore: checkpoint.Object,
+            logger: NullLogger<HlsTwoPassStrategy>.Instance,
+            storage: storage.Object
         );
 
         EncodingResult result = await strategy.EncodeAsync(
-            FakeRequest(),
+            request: FakeRequest(),
             progress: null,
             ct: CancellationToken.None
         );
 
         result.Success.Should().BeFalse();
-        captured.Should().NotContain(r => r.Options != null && r.Options.Pass == EncodingPass.Two);
+        captured.Should().NotContain(predicate: r => r.Options != null && r.Options.Pass == EncodingPass.Two);
     }
 }

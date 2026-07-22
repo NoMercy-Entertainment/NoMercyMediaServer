@@ -17,39 +17,39 @@ namespace NoMercy.Providers.TMDB.Models.TV;
 
 public class TmdbTvShowAppends : TmdbTvShowDetails
 {
-    [JsonProperty("aggregate_credits")]
+    [JsonProperty(propertyName: "aggregate_credits")]
     public TmdbTvAggregatedCredits AggregateCredits { get; set; } = new();
 
-    [JsonProperty("alternative_titles")]
+    [JsonProperty(propertyName: "alternative_titles")]
     public TmdbTvAlternativeTitles AlternativeTitles { get; set; } = new();
 
-    [JsonProperty("content_ratings")]
+    [JsonProperty(propertyName: "content_ratings")]
     public TmdbTvContentRatings ContentRatings { get; set; } = new();
 
-    [JsonProperty("credits")]
+    [JsonProperty(propertyName: "credits")]
     public TmdbTvCredits Credits { get; set; } = new();
 
-    [JsonProperty("external_ids")]
+    [JsonProperty(propertyName: "external_ids")]
     public TmdbTvExternalIds ExternalIds { get; set; } = new();
 
-    [JsonProperty("images")]
+    [JsonProperty(propertyName: "images")]
     public TmdbImages Images { get; set; } = new();
 
-    [JsonProperty("keywords")]
+    [JsonProperty(propertyName: "keywords")]
     public TmdbTvKeywords Keywords { get; set; } = new();
 
-    [JsonProperty("recommendations")]
+    [JsonProperty(propertyName: "recommendations")]
     public TmdbTvRecommendations Recommendations { get; set; } = new();
 
-    [JsonProperty("similar")]
+    [JsonProperty(propertyName: "similar")]
     public TmdbTvSimilar Similar { get; set; } = new();
 
-    [JsonProperty("translations")]
+    [JsonProperty(propertyName: "translations")]
     public TmdbCombinedTranslations Translations { get; set; } = new();
 
-    [JsonProperty("videos")]
+    [JsonProperty(propertyName: "videos")]
     public TmdbTvVideos Videos { get; set; } = new();
 
-    [JsonProperty("watch/providers")]
+    [JsonProperty(propertyName: "watch/providers")]
     public TmdbWatchProviders WatchProviders { get; set; } = new();
 }

@@ -44,7 +44,7 @@ public class LinuxResourceProviderTests
     {
         Action act = () => CreateProvider();
 
-        act.Should().NotThrow("the constructor's initial snapshot read must degrade, not crash");
+        act.Should().NotThrow(because: "the constructor's initial snapshot read must degrade, not crash");
     }
 
     [Fact]
@@ -56,11 +56,11 @@ public class LinuxResourceProviderTests
 
         resource
             .Cpu.Total.Should()
-            .Be(0.0, "/proc/stat is unavailable — CPU total must degrade to zero, not throw");
-        resource.Cpu.Core.Should().BeEmpty("no /proc/stat means no per-core samples can exist");
+            .Be(expected: 0.0, because: "/proc/stat is unavailable — CPU total must degrade to zero, not throw");
+        resource.Cpu.Core.Should().BeEmpty(because: "no /proc/stat means no per-core samples can exist");
         resource
             .Memory.Total.Should()
-            .Be(0.0, "/proc/meminfo is unavailable — memory must degrade to zero, not throw");
+            .Be(expected: 0.0, because: "/proc/meminfo is unavailable — memory must degrade to zero, not throw");
     }
 
     [Fact]
@@ -76,7 +76,7 @@ public class LinuxResourceProviderTests
         provider.Collect();
         Resource second = provider.Collect();
 
-        second.Cpu.Total.Should().Be(0.0);
+        second.Cpu.Total.Should().Be(expected: 0.0);
     }
 
     [Fact]
@@ -95,8 +95,8 @@ public class LinuxResourceProviderTests
         foreach (Gpu gpu in resource.Gpu)
         {
             gpu.Name.Should().NotBeNullOrWhiteSpace();
-            gpu.Index.Should().BeGreaterThanOrEqualTo(0);
-            gpu.Core.Should().BeGreaterThanOrEqualTo(0.0);
+            gpu.Index.Should().BeGreaterThanOrEqualTo(expected: 0);
+            gpu.Core.Should().BeGreaterThanOrEqualTo(expected: 0.0);
         }
     }
 
@@ -119,33 +119,22 @@ public class LinuxResourceProviderTests
         long steal
     ) =>
         ReflectionHelpers.CreateNested(
-            typeof(LinuxResourceProvider),
-            "CpuSnapshot",
-            label,
-            user,
-            nice,
-            system,
-            idle,
-            ioWait,
-            irq,
-            softIrq,
-            steal
+            outerType: typeof(LinuxResourceProvider),
+            nestedTypeName: "CpuSnapshot", args: [label, user, nice, system, idle, ioWait, irq, softIrq, steal]
         );
 
     private static double CalculatePercent(object prev, object curr) =>
         (double)
             ReflectionHelpers.InvokeStatic(
-                typeof(LinuxResourceProvider),
-                "CalculatePercent",
-                prev,
-                curr
+                type: typeof(LinuxResourceProvider),
+                methodName: "CalculatePercent", args: [prev, curr]
             )!;
 
     [Fact]
     public void CalculatePercent_ComputesBusyFractionOfDelta()
     {
         object prev = CreateCpuSnapshot(
-            "cpu",
+            label: "cpu",
             user: 0,
             nice: 0,
             system: 0,
@@ -156,7 +145,7 @@ public class LinuxResourceProviderTests
             steal: 0
         );
         object curr = CreateCpuSnapshot(
-            "cpu",
+            label: "cpu",
             user: 500,
             nice: 0,
             system: 0,
@@ -168,20 +157,20 @@ public class LinuxResourceProviderTests
         );
 
         // prevTotal=1000 busy=0 ; currTotal=2000 busy=500 => delta 1000/500 = 50%
-        double percent = CalculatePercent(prev, curr);
+        double percent = CalculatePercent(prev: prev, curr: curr);
 
-        percent.Should().Be(50.0);
+        percent.Should().Be(expected: 50.0);
     }
 
     [Fact]
     public void CalculatePercent_FullyIdleDelta_IsZero()
     {
-        object prev = CreateCpuSnapshot("cpu", 0, 0, 0, 1000, 0, 0, 0, 0);
-        object curr = CreateCpuSnapshot("cpu", 0, 0, 0, 2000, 0, 0, 0, 0);
+        object prev = CreateCpuSnapshot(label: "cpu", user: 0, nice: 0, system: 0, idle: 1000, ioWait: 0, irq: 0, softIrq: 0, steal: 0);
+        object curr = CreateCpuSnapshot(label: "cpu", user: 0, nice: 0, system: 0, idle: 2000, ioWait: 0, irq: 0, softIrq: 0, steal: 0);
 
-        double percent = CalculatePercent(prev, curr);
+        double percent = CalculatePercent(prev: prev, curr: curr);
 
-        percent.Should().Be(0.0, "all of the delta went to Idle — busy delta is zero");
+        percent.Should().Be(expected: 0.0, because: "all of the delta went to Idle — busy delta is zero");
     }
 
     [Fact]
@@ -189,131 +178,123 @@ public class LinuxResourceProviderTests
     {
         // A counter reset (reboot, wraparound) can make curr.Total <= prev.Total.
         // The guard must return 0, never divide by a non-positive delta.
-        object prev = CreateCpuSnapshot("cpu", 100, 0, 0, 900, 0, 0, 0, 0);
-        object curr = CreateCpuSnapshot("cpu", 100, 0, 0, 900, 0, 0, 0, 0);
+        object prev = CreateCpuSnapshot(label: "cpu", user: 100, nice: 0, system: 0, idle: 900, ioWait: 0, irq: 0, softIrq: 0, steal: 0);
+        object curr = CreateCpuSnapshot(label: "cpu", user: 100, nice: 0, system: 0, idle: 900, ioWait: 0, irq: 0, softIrq: 0, steal: 0);
 
-        double percent = CalculatePercent(prev, curr);
+        double percent = CalculatePercent(prev: prev, curr: curr);
 
-        percent.Should().Be(0.0);
+        percent.Should().Be(expected: 0.0);
     }
 
     [Fact]
     public void CalculatePercent_FullyBusyDelta_IsOneHundred()
     {
-        object prev = CreateCpuSnapshot("cpu", 0, 0, 0, 1000, 0, 0, 0, 0);
-        object curr = CreateCpuSnapshot("cpu", 1000, 0, 0, 1000, 0, 0, 0, 0);
+        object prev = CreateCpuSnapshot(label: "cpu", user: 0, nice: 0, system: 0, idle: 1000, ioWait: 0, irq: 0, softIrq: 0, steal: 0);
+        object curr = CreateCpuSnapshot(label: "cpu", user: 1000, nice: 0, system: 0, idle: 1000, ioWait: 0, irq: 0, softIrq: 0, steal: 0);
 
-        double percent = CalculatePercent(prev, curr);
+        double percent = CalculatePercent(prev: prev, curr: curr);
 
-        percent.Should().Be(100.0);
+        percent.Should().Be(expected: 100.0);
     }
 
     [Theory]
-    [InlineData(new[] { "cpu", "10", "20", "30" }, 1, 10L)]
-    [InlineData(new[] { "cpu", "10", "20", "30" }, 3, 30L)]
-    [InlineData(new[] { "cpu", "10", "20", "30" }, 9, 0L)] // out of range
-    [InlineData(new[] { "cpu", "not-a-number" }, 1, 0L)] // unparsable
+    [InlineData(data: [new[] { "cpu", "10", "20", "30" }, 1, 10L])]
+    [InlineData(data: [new[] { "cpu", "10", "20", "30" }, 3, 30L])]
+    [InlineData(data: [new[] { "cpu", "10", "20", "30" }, 9, 0L])] // out of range
+    [InlineData(data: [new[] { "cpu", "not-a-number" }, 1, 0L])] // unparsable
     public void ParseLong_HandlesBoundsAndMalformedInput(string[] parts, int index, long expected)
     {
         long result = (long)
             ReflectionHelpers.InvokeStatic(
-                typeof(LinuxResourceProvider),
-                "ParseLong",
-                parts,
-                index
+                type: typeof(LinuxResourceProvider),
+                methodName: "ParseLong", args: [parts, index]
             )!;
 
-        result.Should().Be(expected);
+        result.Should().Be(expected: expected);
     }
 
     [Theory]
-    [InlineData("55.55", 55.6)]
-    [InlineData("0", 0.0)]
-    [InlineData("100", 100.0)]
-    [InlineData("not-a-number", 0.0)]
-    [InlineData("", 0.0)]
+    [InlineData(data: ["55.55", 55.6])]
+    [InlineData(data: ["0", 0.0])]
+    [InlineData(data: ["100", 100.0])]
+    [InlineData(data: ["not-a-number", 0.0])]
+    [InlineData(data: ["", 0.0])]
     public void ParseDouble_RoundsToOneDecimal_OrZeroOnFailure(string input, double expected)
     {
         double result = (double)
-            ReflectionHelpers.InvokeStatic(typeof(LinuxResourceProvider), "ParseDouble", input)!;
+            ReflectionHelpers.InvokeStatic(type: typeof(LinuxResourceProvider), methodName: "ParseDouble", args: input)!;
 
-        result.Should().Be(expected);
+        result.Should().Be(expected: expected);
     }
 
     [Fact]
     public void ReadAmdGpuName_WhenProductNameFileExists_ReturnsItsContent()
     {
-        string cardPath = Path.Combine(Path.GetTempPath(), $"nm-amd-card-{Guid.NewGuid():N}");
-        string devicePath = Path.Combine(cardPath, "device");
-        Directory.CreateDirectory(devicePath);
-        File.WriteAllText(Path.Combine(devicePath, "product_name"), "Radeon RX 6800\n");
+        string cardPath = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-amd-card-{Guid.NewGuid():N}");
+        string devicePath = Path.Combine(path1: cardPath, path2: "device");
+        Directory.CreateDirectory(path: devicePath);
+        File.WriteAllText(path: Path.Combine(path1: devicePath, path2: "product_name"), contents: "Radeon RX 6800\n");
 
         try
         {
             string name = (string)
                 ReflectionHelpers.InvokeStatic(
-                    typeof(LinuxResourceProvider),
-                    "ReadAmdGpuName",
-                    cardPath,
-                    7
+                    type: typeof(LinuxResourceProvider),
+                    methodName: "ReadAmdGpuName", args: [cardPath, 7]
                 )!;
 
-            name.Should().Be("Radeon RX 6800");
+            name.Should().Be(expected: "Radeon RX 6800");
         }
         finally
         {
-            Directory.Delete(cardPath, recursive: true);
+            Directory.Delete(path: cardPath, recursive: true);
         }
     }
 
     [Fact]
     public void ReadAmdGpuName_WhenProductNameFileMissing_FallsBackToGpuIndex()
     {
-        string cardPath = Path.Combine(Path.GetTempPath(), $"nm-amd-card-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(cardPath);
+        string cardPath = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-amd-card-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: cardPath);
 
         try
         {
             string name = (string)
                 ReflectionHelpers.InvokeStatic(
-                    typeof(LinuxResourceProvider),
-                    "ReadAmdGpuName",
-                    cardPath,
-                    3
+                    type: typeof(LinuxResourceProvider),
+                    methodName: "ReadAmdGpuName", args: [cardPath, 3]
                 )!;
 
-            name.Should().Be("GPU 3");
+            name.Should().Be(expected: "GPU 3");
         }
         finally
         {
-            Directory.Delete(cardPath, recursive: true);
+            Directory.Delete(path: cardPath, recursive: true);
         }
     }
 
     [Fact]
     public void ReadAmdGpuName_WhenProductNameFileIsBlank_FallsBackToGpuIndex()
     {
-        string cardPath = Path.Combine(Path.GetTempPath(), $"nm-amd-card-{Guid.NewGuid():N}");
-        string devicePath = Path.Combine(cardPath, "device");
-        Directory.CreateDirectory(devicePath);
-        File.WriteAllText(Path.Combine(devicePath, "product_name"), "   \n");
+        string cardPath = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-amd-card-{Guid.NewGuid():N}");
+        string devicePath = Path.Combine(path1: cardPath, path2: "device");
+        Directory.CreateDirectory(path: devicePath);
+        File.WriteAllText(path: Path.Combine(path1: devicePath, path2: "product_name"), contents: "   \n");
 
         try
         {
             string name = (string)
                 ReflectionHelpers.InvokeStatic(
-                    typeof(LinuxResourceProvider),
-                    "ReadAmdGpuName",
-                    cardPath,
-                    9
+                    type: typeof(LinuxResourceProvider),
+                    methodName: "ReadAmdGpuName", args: [cardPath, 9]
                 )!;
 
             name.Should()
-                .Be("GPU 9", "a blank product_name file must fall back, not surface whitespace");
+                .Be(expected: "GPU 9", because: "a blank product_name file must fall back, not surface whitespace");
         }
         finally
         {
-            Directory.Delete(cardPath, recursive: true);
+            Directory.Delete(path: cardPath, recursive: true);
         }
     }
 
@@ -321,11 +302,11 @@ public class LinuxResourceProviderTests
     public void ReadCpuSnapshots_OnHostWithoutProcStat_ReturnsEmptyList()
     {
         object result = ReflectionHelpers.InvokeStatic(
-            typeof(LinuxResourceProvider),
-            "ReadCpuSnapshots"
+            type: typeof(LinuxResourceProvider),
+            methodName: "ReadCpuSnapshots"
         )!;
 
-        ((System.Collections.ICollection)result).Count.Should().Be(0);
+        ((System.Collections.ICollection)result).Count.Should().Be(expected: 0);
     }
 
     [Fact]
@@ -337,11 +318,11 @@ public class LinuxResourceProviderTests
             Memory = new(),
         };
 
-        ReflectionHelpers.InvokeStatic(typeof(LinuxResourceProvider), "TryCollectAmdGpu", resource);
+        ReflectionHelpers.InvokeStatic(type: typeof(LinuxResourceProvider), methodName: "TryCollectAmdGpu", args: resource);
 
         resource
             .Gpu.Should()
-            .BeEmpty("/sys/class/drm does not exist off Linux — no AMD GPU can surface");
+            .BeEmpty(because: "/sys/class/drm does not exist off Linux — no AMD GPU can surface");
     }
 
     [Fact]
@@ -355,14 +336,14 @@ public class LinuxResourceProviderTests
 
         Action act = () =>
             ReflectionHelpers.InvokeStatic(
-                typeof(LinuxResourceProvider),
-                "TryCollectNvidiaGpu",
-                resource
+                type: typeof(LinuxResourceProvider),
+                methodName: "TryCollectNvidiaGpu",
+                args: resource
             );
 
         act.Should()
             .NotThrow(
-                "nvidia-smi may or may not be reachable on the host — either way this must not throw"
+                because: "nvidia-smi may or may not be reachable on the host — either way this must not throw"
             );
     }
 }

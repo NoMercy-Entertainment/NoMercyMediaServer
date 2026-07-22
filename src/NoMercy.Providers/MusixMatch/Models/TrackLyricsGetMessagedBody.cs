@@ -15,6 +15,6 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class TrackLyricsGetMessagedBody
 {
-    [JsonProperty("lyrics")]
+    [JsonProperty(propertyName: "lyrics")]
     public MusixMatchLyrics? Lyrics { get; set; }
 }

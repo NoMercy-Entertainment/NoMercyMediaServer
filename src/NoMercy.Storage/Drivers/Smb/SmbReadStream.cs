@@ -69,22 +69,22 @@ internal sealed class SmbReadStream : Stream
 
         // Serve from carry-over first.
         if (_carryPos < _carry.Length)
-            return DrainCarry(buffer, offset, count);
+            return DrainCarry(buffer: buffer, offset: offset, count: count);
 
         if (_eof)
             return 0;
 
-        NTStatus st = _session.Store.ReadFile(out byte[] chunk, _handle, _serverOffset, _chunkSize);
+        NTStatus st = _session.Store.ReadFile(data: out byte[] chunk, handle: _handle, offset: _serverOffset, maxCount: _chunkSize);
         if (st == NTStatus.STATUS_END_OF_FILE || chunk is null || chunk.Length == 0)
         {
             _eof = true;
             return 0;
         }
-        SmbStatus.EnsureSuccess(st, $"read '{_path}'");
+        SmbStatus.EnsureSuccess(status: st, what: $"read '{_path}'");
         _serverOffset += chunk.Length;
         _carry = chunk;
         _carryPos = 0;
-        return DrainCarry(buffer, offset, count);
+        return DrainCarry(buffer: buffer, offset: offset, count: count);
     }
 
     public override async Task<int> ReadAsync(
@@ -95,23 +95,23 @@ internal sealed class SmbReadStream : Stream
     )
     {
         ct.ThrowIfCancellationRequested();
-        return await Task.FromResult(Read(buffer, offset, count));
+        return await Task.FromResult(result: Read(buffer: buffer, offset: offset, count: count));
     }
 
     public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
         byte[] tmp = new byte[buffer.Length];
-        int read = Read(tmp, 0, tmp.Length);
-        tmp.AsSpan(0, read).CopyTo(buffer.Span);
-        return ValueTask.FromResult(read);
+        int read = Read(buffer: tmp, offset: 0, count: tmp.Length);
+        tmp.AsSpan(start: 0, length: read).CopyTo(destination: buffer.Span);
+        return ValueTask.FromResult(result: read);
     }
 
     private int DrainCarry(byte[] buffer, int offset, int count)
     {
         int available = _carry.Length - _carryPos;
-        int take = Math.Min(available, count);
-        Array.Copy(_carry, _carryPos, buffer, offset, take);
+        int take = Math.Min(val1: available, val2: count);
+        Array.Copy(sourceArray: _carry, sourceIndex: _carryPos, destinationArray: buffer, destinationIndex: offset, length: take);
         _carryPos += take;
         return take;
     }
@@ -134,13 +134,13 @@ internal sealed class SmbReadStream : Stream
         {
             try
             {
-                _session.Store.CloseFile(_handle);
+                _session.Store.CloseFile(handle: _handle);
             }
             finally
             {
                 _session.Dispose();
             }
         }
-        base.Dispose(disposing);
+        base.Dispose(disposing: disposing);
     }
 }

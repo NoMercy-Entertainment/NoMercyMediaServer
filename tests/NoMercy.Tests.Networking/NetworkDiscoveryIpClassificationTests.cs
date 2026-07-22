@@ -26,94 +26,94 @@ namespace NoMercy.Tests.Networking;
 /// WSL, VPN, VMware, VirtualBox) as the routable interface. These are pure
 /// classification rules — no NIC hardware needed to prove them.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class NetworkDiscoveryIpClassificationTests
 {
     [Theory]
-    [InlineData("172.17.0.1")]
-    [InlineData("172.18.5.5")]
-    [InlineData("172.20.0.1")]
-    [InlineData("172.31.255.255")]
-    [InlineData("172.16.0.1")] // WSL range
+    [InlineData(data: "172.17.0.1")]
+    [InlineData(data: "172.18.5.5")]
+    [InlineData(data: "172.20.0.1")]
+    [InlineData(data: "172.31.255.255")]
+    [InlineData(data: "172.16.0.1")] // WSL range
     public void IsDockerOrWslAddress_ContainerRanges_ReturnsTrue(string ip)
     {
-        IPAddress address = IPAddress.Parse(ip);
+        IPAddress address = IPAddress.Parse(ipString: ip);
 
-        bool result = NetworkDiscovery.IsDockerOrWslAddress(address);
+        bool result = NetworkDiscovery.IsDockerOrWslAddress(address: address);
 
-        Assert.True(result);
+        Assert.True(condition: result);
     }
 
     [Theory]
-    [InlineData("192.168.1.1")]
-    [InlineData("10.0.0.5")]
-    [InlineData("172.15.0.1")] // just below the Docker/WSL band
-    [InlineData("172.32.0.1")] // just above the Docker band
-    [InlineData("127.0.0.1")]
-    [InlineData("8.8.8.8")]
+    [InlineData(data: "192.168.1.1")]
+    [InlineData(data: "10.0.0.5")]
+    [InlineData(data: "172.15.0.1")] // just below the Docker/WSL band
+    [InlineData(data: "172.32.0.1")] // just above the Docker band
+    [InlineData(data: "127.0.0.1")]
+    [InlineData(data: "8.8.8.8")]
     public void IsDockerOrWslAddress_NonContainerRanges_ReturnsFalse(string ip)
     {
-        IPAddress address = IPAddress.Parse(ip);
+        IPAddress address = IPAddress.Parse(ipString: ip);
 
-        bool result = NetworkDiscovery.IsDockerOrWslAddress(address);
+        bool result = NetworkDiscovery.IsDockerOrWslAddress(address: address);
 
-        Assert.False(result);
+        Assert.False(condition: result);
     }
 
     [Fact]
     public void IsDockerOrWslAddress_Ipv6Address_ReturnsFalse()
     {
-        IPAddress address = IPAddress.Parse("2001:db8::1");
+        IPAddress address = IPAddress.Parse(ipString: "2001:db8::1");
 
-        bool result = NetworkDiscovery.IsDockerOrWslAddress(address);
+        bool result = NetworkDiscovery.IsDockerOrWslAddress(address: address);
 
-        Assert.False(result);
+        Assert.False(condition: result);
     }
 
     [Theory]
-    [InlineData("Hyper-V Virtual Ethernet Adapter", "vEthernet")]
-    [InlineData("Docker Desktop Virtual Adapter", "docker0")]
-    [InlineData("Windows Subsystem for Linux", "wsl-eth")]
-    [InlineData("Cisco AnyConnect VPN adapter", "vpn0")]
-    [InlineData("VMware Virtual Ethernet Adapter", "vmnet1")]
-    [InlineData("VirtualBox Host-Only Ethernet Adapter", "vbox0")]
+    [InlineData(data: ["Hyper-V Virtual Ethernet Adapter", "vEthernet"])]
+    [InlineData(data: ["Docker Desktop Virtual Adapter", "docker0"])]
+    [InlineData(data: ["Windows Subsystem for Linux", "wsl-eth"])]
+    [InlineData(data: ["Cisco AnyConnect VPN adapter", "vpn0"])]
+    [InlineData(data: ["VMware Virtual Ethernet Adapter", "vmnet1"])]
+    [InlineData(data: ["VirtualBox Host-Only Ethernet Adapter", "vbox0"])]
     public void IsVirtualNetworkInterface_KnownVirtualAdapters_ReturnsTrue(
         string description,
         string name
     )
     {
-        bool result = NetworkDiscovery.IsVirtualNetworkInterface(description, name);
+        bool result = NetworkDiscovery.IsVirtualNetworkInterface(description: description, name: name);
 
-        Assert.True(result);
+        Assert.True(condition: result);
     }
 
     [Theory]
-    [InlineData("Realtek PCIe GbE Family Controller", "Ethernet")]
-    [InlineData("Intel(R) Wi-Fi 6 AX201", "Wi-Fi")]
+    [InlineData(data: ["Realtek PCIe GbE Family Controller", "Ethernet"])]
+    [InlineData(data: ["Intel(R) Wi-Fi 6 AX201", "Wi-Fi"])]
     public void IsVirtualNetworkInterface_RealAdapters_ReturnsFalse(string description, string name)
     {
-        bool result = NetworkDiscovery.IsVirtualNetworkInterface(description, name);
+        bool result = NetworkDiscovery.IsVirtualNetworkInterface(description: description, name: name);
 
-        Assert.False(result);
+        Assert.False(condition: result);
     }
 
     [Fact]
     public void IsVirtualNetworkInterface_MatchIsCaseInsensitive()
     {
-        bool result = NetworkDiscovery.IsVirtualNetworkInterface("DOCKER Adapter", "ETH0");
+        bool result = NetworkDiscovery.IsVirtualNetworkInterface(description: "DOCKER Adapter", name: "ETH0");
 
-        Assert.True(result);
+        Assert.True(condition: result);
     }
 
     [Fact]
     public void IsVirtualNetworkInterface_KeywordOnlyInName_StillMatches()
     {
         bool result = NetworkDiscovery.IsVirtualNetworkInterface(
-            "Generic network adapter",
-            "docker0"
+            description: "Generic network adapter",
+            name: "docker0"
         );
 
-        Assert.True(result);
+        Assert.True(condition: result);
     }
 
     // -- Real (non-mocked) socket-based resolution: exercises GetInternalIp /
@@ -124,11 +124,11 @@ public sealed class NetworkDiscoveryIpClassificationTests
     private static NetworkDiscovery BuildDiscovery()
     {
         return new(
-            NullLogger<NetworkDiscovery>.Instance,
-            new LocalStorageDriver(),
-            new AuthTokenStore(),
-            new ConnectivityStatus(),
-            new()
+            logger: NullLogger<NetworkDiscovery>.Instance,
+            driver: new LocalStorageDriver(),
+            authTokenStore: new AuthTokenStore(),
+            connectivityStatus: new ConnectivityStatus(),
+            networkProbeConfig: new()
         );
     }
 
@@ -140,10 +140,10 @@ public sealed class NetworkDiscoveryIpClassificationTests
         string ip = discovery.InternalIp;
 
         Assert.True(
-            IPAddress.TryParse(ip, out IPAddress? parsed),
-            $"'{ip}' must be a parseable IP address"
+            condition: IPAddress.TryParse(ipString: ip, address: out IPAddress? parsed),
+            userMessage: $"'{ip}' must be a parseable IP address"
         );
-        Assert.Equal(System.Net.Sockets.AddressFamily.InterNetwork, parsed!.AddressFamily);
+        Assert.Equal(expected: System.Net.Sockets.AddressFamily.InterNetwork, actual: parsed!.AddressFamily);
     }
 
     [Fact]
@@ -153,7 +153,7 @@ public sealed class NetworkDiscoveryIpClassificationTests
 
         string ip = discovery.InternalIp;
 
-        Assert.False(NetworkDiscovery.IsDockerOrWslAddress(IPAddress.Parse(ip)));
+        Assert.False(condition: NetworkDiscovery.IsDockerOrWslAddress(address: IPAddress.Parse(ipString: ip)));
     }
 
     [Fact]
@@ -164,7 +164,7 @@ public sealed class NetworkDiscoveryIpClassificationTests
         string first = discovery.InternalIp;
         string second = discovery.InternalIp;
 
-        Assert.Equal(first, second);
+        Assert.Equal(expected: first, actual: second);
     }
 
     [Fact]
@@ -177,7 +177,7 @@ public sealed class NetworkDiscoveryIpClassificationTests
         if (ip is null)
             return;
 
-        Assert.True(IPAddress.TryParse(ip, out IPAddress? parsed));
-        Assert.Equal(System.Net.Sockets.AddressFamily.InterNetworkV6, parsed!.AddressFamily);
+        Assert.True(condition: IPAddress.TryParse(ipString: ip, address: out IPAddress? parsed));
+        Assert.Equal(expected: System.Net.Sockets.AddressFamily.InterNetworkV6, actual: parsed!.AddressFamily);
     }
 }

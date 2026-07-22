@@ -32,22 +32,22 @@ public class GpuResidentActivationTests
         );
 
         plan.Should().NotBeNull();
-        plan!.ScaleFilter.Should().Be("scale_cuda");
+        plan!.ScaleFilter.Should().Be(expected: "scale_cuda");
     }
 
     [Fact]
     public void Resolve_Disabled_ReturnsNull()
     {
         GpuResidentActivation
-            .Resolve(false, true, GpuVendor.Nvidia, EligiblePlan(), HasCuda)
+            .Resolve(enabled: false, hasGpu: true, vendor: GpuVendor.Nvidia, plan: EligiblePlan(), hasFilter: HasCuda)
             .Should()
-            .BeNull("dark by default — opt-in required");
+            .BeNull(because: "dark by default — opt-in required");
     }
 
     [Fact]
     public void Resolve_NoGpu_ReturnsNull()
     {
-        GpuResidentActivation.Resolve(true, false, null, EligiblePlan(), HasCuda).Should().BeNull();
+        GpuResidentActivation.Resolve(enabled: true, hasGpu: false, vendor: null, plan: EligiblePlan(), hasFilter: HasCuda).Should().BeNull();
     }
 
     [Fact]
@@ -55,12 +55,12 @@ public class GpuResidentActivationTests
     {
         OutputPlan withThumbs = EligiblePlan() with
         {
-            Thumbnails = new(320, 180, 10),
+            Thumbnails = new(Width: 320, Height: 180, IntervalSeconds: 10),
         };
         GpuResidentActivation
-            .Resolve(true, true, GpuVendor.Nvidia, withThumbs, HasCuda)
+            .Resolve(enabled: true, hasGpu: true, vendor: GpuVendor.Nvidia, plan: withThumbs, hasFilter: HasCuda)
             .Should()
-            .BeNull("sprite generation needs a CPU download");
+            .BeNull(because: "sprite generation needs a CPU download");
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class GpuResidentActivationTests
     {
         OutputPlan hdr = EligiblePlan();
         hdr = hdr with { VideoOutputs = [hdr.VideoOutputs[0] with { ConvertHdrToSdr = true }] };
-        GpuResidentActivation.Resolve(true, true, GpuVendor.Nvidia, hdr, HasCuda).Should().BeNull();
+        GpuResidentActivation.Resolve(enabled: true, hasGpu: true, vendor: GpuVendor.Nvidia, plan: hdr, hasFilter: HasCuda).Should().BeNull();
     }
 
     private static OutputPlan EligiblePlan() =>

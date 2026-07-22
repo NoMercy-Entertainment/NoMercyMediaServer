@@ -49,20 +49,20 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
         _options = options;
         _logger = logger;
         _contentTypeProvider = new();
-        _assetCache = new(StringComparer.OrdinalIgnoreCase);
+        _assetCache = new(comparer: StringComparer.OrdinalIgnoreCase);
 
         // Pre-build injection strings
-        _scriptsToInject = BuildScriptInjection(options.InjectScripts, options.MinifyInjections);
-        _stylesToInject = BuildStyleInjection(options.InjectStyles, options.MinifyInjections);
-        _metaTagsToInject = BuildMetaTagInjection(options.InjectMetaTags, options.MinifyInjections);
+        _scriptsToInject = BuildScriptInjection(scripts: options.InjectScripts, minify: options.MinifyInjections);
+        _stylesToInject = BuildStyleInjection(styles: options.InjectStyles, minify: options.MinifyInjections);
+        _metaTagsToInject = BuildMetaTagInjection(metaTags: options.InjectMetaTags, minify: options.MinifyInjections);
 
         // Add additional MIME types
-        _contentTypeProvider.Mappings[".webmanifest"] = "application/manifest+json";
-        _contentTypeProvider.Mappings[".woff2"] = "font/woff2";
-        _contentTypeProvider.Mappings[".woff"] = "font/woff";
-        _contentTypeProvider.Mappings[".ttf"] = "font/ttf";
-        _contentTypeProvider.Mappings[".otf"] = "font/otf";
-        _contentTypeProvider.Mappings[".eot"] = "application/vnd.ms-fontobject";
+        _contentTypeProvider.Mappings[key: ".webmanifest"] = "application/manifest+json";
+        _contentTypeProvider.Mappings[key: ".woff2"] = "font/woff2";
+        _contentTypeProvider.Mappings[key: ".woff"] = "font/woff";
+        _contentTypeProvider.Mappings[key: ".ttf"] = "font/ttf";
+        _contentTypeProvider.Mappings[key: ".otf"] = "font/otf";
+        _contentTypeProvider.Mappings[key: ".eot"] = "application/vnd.ms-fontobject";
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -71,56 +71,56 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
 
         // Skip if not a GET or HEAD request
         if (
-            !HttpMethods.IsGet(context.Request.Method)
-            && !HttpMethods.IsHead(context.Request.Method)
+            !HttpMethods.IsGet(method: context.Request.Method)
+            && !HttpMethods.IsHead(method: context.Request.Method)
         )
         {
-            await _next(context);
+            await _next(context: context);
             return;
         }
 
         // Normalize path - remove leading slash for file provider
-        string filePath = path.TrimStart('/');
-        if (string.IsNullOrEmpty(filePath))
+        string filePath = path.TrimStart(trimChar: '/');
+        if (string.IsNullOrEmpty(value: filePath))
         {
             filePath = "index.html";
         }
 
         // Try to get or create cached asset
-        CachedAsset? asset = await GetOrCreateCachedAssetAsync(filePath);
+        CachedAsset? asset = await GetOrCreateCachedAssetAsync(filePath: filePath);
 
         // SPA fallback: if no file found and request looks like a page navigation
         // (no file extension), serve index.html — the Vue router handles the route
-        if (asset == null && !Path.HasExtension(filePath))
+        if (asset == null && !Path.HasExtension(path: filePath))
         {
-            asset = await GetOrCreateCachedAssetAsync("index.html");
+            asset = await GetOrCreateCachedAssetAsync(filePath: "index.html");
         }
 
         if (asset == null)
         {
-            await _next(context);
+            await _next(context: context);
             return;
         }
 
         // Check for conditional request (If-None-Match)
         string requestETag = context.Request.Headers.IfNoneMatch.ToString();
-        if (!string.IsNullOrEmpty(requestETag) && requestETag == asset.ETag)
+        if (!string.IsNullOrEmpty(value: requestETag) && requestETag == asset.ETag)
         {
             context.Response.StatusCode = StatusCodes.Status304NotModified;
             return;
         }
 
         // Determine best encoding based on Accept-Encoding header
-        (byte[] content, string? encoding) = SelectBestEncoding(context, asset);
+        (byte[] content, string? encoding) = SelectBestEncoding(context: context, asset: asset);
 
         // Set response headers
         context.Response.ContentType = asset.ContentType;
         context.Response.ContentLength = content.Length;
         context.Response.Headers.ETag = asset.ETag;
-        context.Response.Headers.LastModified = asset.LastModified.ToString("R");
+        context.Response.Headers.LastModified = asset.LastModified.ToString(format: "R");
 
         // Set cache control based on whether file has a hash in its name
-        if (HasContentHash(filePath))
+        if (HasContentHash(path: filePath))
         {
             // Immutable cache for fingerprinted assets
             context.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
@@ -131,27 +131,27 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
             context.Response.Headers.CacheControl = "public, max-age=3600, must-revalidate";
         }
 
-        if (!string.IsNullOrEmpty(encoding))
+        if (!string.IsNullOrEmpty(value: encoding))
         {
             context.Response.Headers.ContentEncoding = encoding;
             context.Response.Headers.Vary = "Accept-Encoding";
         }
 
         // Write content for GET requests (not HEAD)
-        if (HttpMethods.IsGet(context.Request.Method))
+        if (HttpMethods.IsGet(method: context.Request.Method))
         {
-            await context.Response.Body.WriteAsync(content);
+            await context.Response.Body.WriteAsync(buffer: content);
         }
     }
 
     private async Task<CachedAsset?> GetOrCreateCachedAssetAsync(string filePath)
     {
-        if (_assetCache.TryGetValue(filePath, out CachedAsset? cached))
+        if (_assetCache.TryGetValue(key: filePath, value: out CachedAsset? cached))
         {
             return cached;
         }
 
-        IFileInfo fileInfo = _fileProvider.GetFileInfo(filePath);
+        IFileInfo fileInfo = _fileProvider.GetFileInfo(subpath: filePath);
         if (!fileInfo.Exists)
         {
             return null;
@@ -161,30 +161,30 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
         await using (Stream stream = fileInfo.CreateReadStream())
         using (MemoryStream ms = new())
         {
-            await stream.CopyToAsync(ms);
+            await stream.CopyToAsync(destination: ms);
             content = ms.ToArray();
         }
 
         // Determine content type
-        if (!_contentTypeProvider.TryGetContentType(filePath, out string? contentType))
+        if (!_contentTypeProvider.TryGetContentType(subpath: filePath, contentType: out string? contentType))
         {
             contentType = "application/octet-stream";
         }
 
         // Apply HTML injection if this is an HTML file matching our patterns
-        if (contentType == "text/html" && ShouldInjectHtml(filePath))
+        if (contentType == "text/html" && ShouldInjectHtml(filePath: filePath))
         {
-            content = InjectHtmlContent(content);
-            _logger.LogDebug("Injected scripts/styles into: {Path}", filePath);
+            content = InjectHtmlContent(content: content);
+            _logger.LogDebug(message: "Injected scripts/styles into: {Path}", args: filePath);
         }
 
         // Generate ETag from content hash (after injection)
-        byte[] hashBytes = SHA256.HashData(content);
-        string etag = $"\"{Convert.ToBase64String(hashBytes)}\"";
+        byte[] hashBytes = SHA256.HashData(source: content);
+        string etag = $"\"{Convert.ToBase64String(inArray: hashBytes)}\"";
 
         // Pre-compress content
-        byte[] gzipContent = CompressGzip(content);
-        byte[] brotliContent = CompressBrotli(content);
+        byte[] gzipContent = CompressGzip(data: content);
+        byte[] brotliContent = CompressBrotli(data: content);
 
         CachedAsset asset = new()
         {
@@ -196,8 +196,8 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
             LastModified = fileInfo.LastModified.UtcDateTime,
         };
 
-        _assetCache.TryAdd(filePath, asset);
-        _logger.LogDebug("Cached embedded asset: {Path} ({Size} bytes)", filePath, content.Length);
+        _assetCache.TryAdd(key: filePath, value: asset);
+        _logger.LogDebug(message: "Cached embedded asset: {Path} ({Size} bytes)", args: [filePath, content.Length]);
 
         return asset;
     }
@@ -206,19 +206,19 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
     {
         // Check if we have anything to inject
         if (
-            string.IsNullOrEmpty(_scriptsToInject)
-            && string.IsNullOrEmpty(_stylesToInject)
-            && string.IsNullOrEmpty(_metaTagsToInject)
+            string.IsNullOrEmpty(value: _scriptsToInject)
+            && string.IsNullOrEmpty(value: _stylesToInject)
+            && string.IsNullOrEmpty(value: _metaTagsToInject)
         )
         {
             return false;
         }
 
         // Check if file matches any of our patterns
-        string fileName = Path.GetFileName(filePath);
+        string fileName = Path.GetFileName(path: filePath);
         foreach (string pattern in _options.HtmlFilePatterns)
         {
-            if (MatchesPattern(filePath, pattern) || MatchesPattern(fileName, pattern))
+            if (MatchesPattern(path: filePath, pattern: pattern) || MatchesPattern(path: fileName, pattern: pattern))
             {
                 return true;
             }
@@ -231,29 +231,29 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
     {
         // Simple glob matching: * matches any characters, ** matches any path
         string regexPattern =
-            "^" + Regex.Escape(pattern).Replace(@"\*\*", ".*").Replace("\\*", "[^/]*") + "$";
+            "^" + Regex.Escape(str: pattern).Replace(oldValue: @"\*\*", newValue: ".*").Replace(oldValue: "\\*", newValue: "[^/]*") + "$";
 
-        return Regex.IsMatch(path, regexPattern, RegexOptions.IgnoreCase);
+        return Regex.IsMatch(input: path, pattern: regexPattern, options: RegexOptions.IgnoreCase);
     }
 
     private byte[] InjectHtmlContent(byte[] content)
     {
-        string html = Encoding.UTF8.GetString(content);
+        string html = Encoding.UTF8.GetString(bytes: content);
 
         // Inject meta tags and styles before </head>
-        if (!string.IsNullOrEmpty(_metaTagsToInject) || !string.IsNullOrEmpty(_stylesToInject))
+        if (!string.IsNullOrEmpty(value: _metaTagsToInject) || !string.IsNullOrEmpty(value: _stylesToInject))
         {
             string headInjection = _metaTagsToInject + _stylesToInject;
-            html = HeadCloseRegex().Replace(html, headInjection + "</head>", 1);
+            html = HeadCloseRegex().Replace(input: html, replacement: headInjection + "</head>", count: 1);
         }
 
         // Inject scripts before </body>
-        if (!string.IsNullOrEmpty(_scriptsToInject))
+        if (!string.IsNullOrEmpty(value: _scriptsToInject))
         {
-            html = BodyCloseRegex().Replace(html, _scriptsToInject + "</body>", 1);
+            html = BodyCloseRegex().Replace(input: html, replacement: _scriptsToInject + "</body>", count: 1);
         }
 
-        return Encoding.UTF8.GetBytes(html);
+        return Encoding.UTF8.GetBytes(s: html);
     }
 
     private static string BuildScriptInjection(List<string> scripts, bool minify)
@@ -264,15 +264,15 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
         StringBuilder sb = new();
         foreach (string script in scripts)
         {
-            if (script.TrimStart().StartsWith("<script", StringComparison.OrdinalIgnoreCase))
+            if (script.TrimStart().StartsWith(value: "<script", comparisonType: StringComparison.OrdinalIgnoreCase))
             {
                 // Already a complete script tag
-                sb.Append(minify ? script.Trim() : script);
+                sb.Append(value: minify ? script.Trim() : script);
             }
             else
             {
                 // Just a path, wrap in script tag
-                sb.Append($"<script src=\"{script}\"></script>");
+                sb.Append(handler: $"<script src=\"{script}\"></script>");
             }
         }
         return sb.ToString();
@@ -287,17 +287,17 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
         foreach (string style in styles)
         {
             if (
-                style.TrimStart().StartsWith("<link", StringComparison.OrdinalIgnoreCase)
-                || style.TrimStart().StartsWith("<style", StringComparison.OrdinalIgnoreCase)
+                style.TrimStart().StartsWith(value: "<link", comparisonType: StringComparison.OrdinalIgnoreCase)
+                || style.TrimStart().StartsWith(value: "<style", comparisonType: StringComparison.OrdinalIgnoreCase)
             )
             {
                 // Already a complete tag
-                sb.Append(minify ? style.Trim() : style);
+                sb.Append(value: minify ? style.Trim() : style);
             }
             else
             {
                 // Just a path, wrap in link tag
-                sb.Append($"<link rel=\"stylesheet\" href=\"{style}\">");
+                sb.Append(handler: $"<link rel=\"stylesheet\" href=\"{style}\">");
             }
         }
         return sb.ToString();
@@ -311,15 +311,15 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
         StringBuilder sb = new();
         foreach (string meta in metaTags)
         {
-            sb.Append(minify ? meta.Trim() : meta);
+            sb.Append(value: minify ? meta.Trim() : meta);
         }
         return sb.ToString();
     }
 
-    [GeneratedRegex("</head>", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(pattern: "</head>", options: RegexOptions.IgnoreCase)]
     private static partial Regex HeadCloseRegex();
 
-    [GeneratedRegex("</body>", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(pattern: "</body>", options: RegexOptions.IgnoreCase)]
     private static partial Regex BodyCloseRegex();
 
     private static (byte[] content, string? encoding) SelectBestEncoding(
@@ -330,7 +330,7 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
         string acceptEncoding = context.Request.Headers.AcceptEncoding.ToString();
 
         // Don't compress already compressed content types
-        if (IsAlreadyCompressed(asset.ContentType))
+        if (IsAlreadyCompressed(contentType: asset.ContentType))
         {
             return (asset.OriginalContent, null);
         }
@@ -343,7 +343,7 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
 
         // Prefer Brotli over Gzip
         if (
-            acceptEncoding.Contains("br", StringComparison.OrdinalIgnoreCase)
+            acceptEncoding.Contains(value: "br", comparisonType: StringComparison.OrdinalIgnoreCase)
             && asset.BrotliContent.Length < asset.OriginalContent.Length
         )
         {
@@ -351,7 +351,7 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
         }
 
         if (
-            acceptEncoding.Contains("gzip", StringComparison.OrdinalIgnoreCase)
+            acceptEncoding.Contains(value: "gzip", comparisonType: StringComparison.OrdinalIgnoreCase)
             && asset.GzipContent.Length < asset.OriginalContent.Length
         )
         {
@@ -363,27 +363,27 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
 
     private static bool IsAlreadyCompressed(string contentType)
     {
-        return contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
-            || contentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase)
-            || contentType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase)
-            || contentType.Contains("zip", StringComparison.OrdinalIgnoreCase)
-            || contentType.Contains("compressed", StringComparison.OrdinalIgnoreCase);
+        return contentType.StartsWith(value: "image/", comparisonType: StringComparison.OrdinalIgnoreCase)
+            || contentType.StartsWith(value: "video/", comparisonType: StringComparison.OrdinalIgnoreCase)
+            || contentType.StartsWith(value: "audio/", comparisonType: StringComparison.OrdinalIgnoreCase)
+            || contentType.Contains(value: "zip", comparisonType: StringComparison.OrdinalIgnoreCase)
+            || contentType.Contains(value: "compressed", comparisonType: StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool HasContentHash(string path)
     {
         // Check for common fingerprint patterns like file-abc123.js or file.abc123.js
-        string fileName = Path.GetFileNameWithoutExtension(path);
-        string extension = Path.GetExtension(path);
+        string fileName = Path.GetFileNameWithoutExtension(path: path);
+        string extension = Path.GetExtension(path: path);
 
         // Pattern: name-hash.ext (e.g., app-DxhB2PJG.js)
-        int lastDash = fileName.LastIndexOf('-');
+        int lastDash = fileName.LastIndexOf(value: '-');
         if (lastDash > 0 && lastDash < fileName.Length - 1)
         {
             string potentialHash = fileName[(lastDash + 1)..];
             if (
                 potentialHash.Length >= 6
-                && potentialHash.All(c => char.IsLetterOrDigit(c) || c == '_')
+                && potentialHash.All(predicate: c => char.IsLetterOrDigit(c: c) || c == '_')
             )
             {
                 return true;
@@ -391,13 +391,13 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
         }
 
         // Pattern: name.hash.ext (e.g., workbox-f456e5ee.js)
-        int lastDot = fileName.LastIndexOf('.');
+        int lastDot = fileName.LastIndexOf(value: '.');
         if (lastDot > 0 && lastDot < fileName.Length - 1)
         {
             string potentialHash = fileName[(lastDot + 1)..];
             if (
                 potentialHash.Length >= 6
-                && potentialHash.All(c => char.IsLetterOrDigit(c) || c == '_')
+                && potentialHash.All(predicate: c => char.IsLetterOrDigit(c: c) || c == '_')
             )
             {
                 return true;
@@ -410,9 +410,9 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
     private static byte[] CompressGzip(byte[] data)
     {
         using MemoryStream output = new();
-        using (GZipStream gzip = new(output, CompressionLevel.SmallestSize))
+        using (GZipStream gzip = new(stream: output, compressionLevel: CompressionLevel.SmallestSize))
         {
-            gzip.Write(data, 0, data.Length);
+            gzip.Write(buffer: data, offset: 0, count: data.Length);
         }
         return output.ToArray();
     }
@@ -420,9 +420,9 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
     private static byte[] CompressBrotli(byte[] data)
     {
         using MemoryStream output = new();
-        using (BrotliStream brotli = new(output, CompressionLevel.SmallestSize))
+        using (BrotliStream brotli = new(stream: output, compressionLevel: CompressionLevel.SmallestSize))
         {
-            brotli.Write(data, 0, data.Length);
+            brotli.Write(buffer: data, offset: 0, count: data.Length);
         }
         return output.ToArray();
     }

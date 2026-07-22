@@ -18,24 +18,24 @@ public class TvdbContentRatingsResponse : TvdbResponse<TvdbContentRating[]> { }
 
 public class TvdbContentRating
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("description")]
+    [JsonProperty(propertyName: "description")]
     public string Description { get; set; } = string.Empty;
 
-    [JsonProperty("country")]
+    [JsonProperty(propertyName: "country")]
     public string Country { get; set; } = string.Empty;
 
-    [JsonProperty("contentType")]
+    [JsonProperty(propertyName: "contentType")]
     public string ContentType { get; set; } = string.Empty;
 
-    [JsonProperty("order")]
+    [JsonProperty(propertyName: "order")]
     public int Order { get; set; }
 
-    [JsonProperty("fullName")]
+    [JsonProperty(propertyName: "fullName")]
     public string FullName { get; set; } = string.Empty;
 }

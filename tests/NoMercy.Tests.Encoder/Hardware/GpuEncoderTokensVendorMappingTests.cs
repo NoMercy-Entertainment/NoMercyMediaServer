@@ -23,44 +23,44 @@ namespace NoMercy.Tests.Encoder.Hardware;
 public class GpuEncoderTokensVendorMappingTests
 {
     [Theory]
-    [InlineData("h264_nvenc", GpuVendor.Nvidia)]
-    [InlineData("hevc_nvenc", GpuVendor.Nvidia)]
-    [InlineData("av1_nvenc", GpuVendor.Nvidia)]
-    [InlineData("h264_amf", GpuVendor.Amd)]
-    [InlineData("hevc_amf", GpuVendor.Amd)]
-    [InlineData("av1_amf", GpuVendor.Amd)]
-    [InlineData("h264_qsv", GpuVendor.Intel)]
-    [InlineData("hevc_qsv", GpuVendor.Intel)]
-    [InlineData("vp9_qsv", GpuVendor.Intel)]
-    [InlineData("h264_vaapi", GpuVendor.Intel)]
-    [InlineData("vp9_vaapi", GpuVendor.Intel)]
-    [InlineData("h264_videotoolbox", GpuVendor.Apple)]
-    [InlineData("hevc_videotoolbox", GpuVendor.Apple)]
+    [InlineData(data: ["h264_nvenc", GpuVendor.Nvidia])]
+    [InlineData(data: ["hevc_nvenc", GpuVendor.Nvidia])]
+    [InlineData(data: ["av1_nvenc", GpuVendor.Nvidia])]
+    [InlineData(data: ["h264_amf", GpuVendor.Amd])]
+    [InlineData(data: ["hevc_amf", GpuVendor.Amd])]
+    [InlineData(data: ["av1_amf", GpuVendor.Amd])]
+    [InlineData(data: ["h264_qsv", GpuVendor.Intel])]
+    [InlineData(data: ["hevc_qsv", GpuVendor.Intel])]
+    [InlineData(data: ["vp9_qsv", GpuVendor.Intel])]
+    [InlineData(data: ["h264_vaapi", GpuVendor.Intel])]
+    [InlineData(data: ["vp9_vaapi", GpuVendor.Intel])]
+    [InlineData(data: ["h264_videotoolbox", GpuVendor.Apple])]
+    [InlineData(data: ["hevc_videotoolbox", GpuVendor.Apple])]
     public void VendorForEncoderName_MapsKnownHardwareEncoders(
         string encoderName,
         GpuVendor expectedVendor
     )
     {
-        GpuEncoderTokens.VendorForEncoderName(encoderName).Should().Be(expectedVendor);
+        GpuEncoderTokens.VendorForEncoderName(ffmpegEncoderName: encoderName).Should().Be(expected: expectedVendor);
     }
 
     [Theory]
-    [InlineData("H264_AMF")]
-    [InlineData("H264_NVENC")]
+    [InlineData(data: "H264_AMF")]
+    [InlineData(data: "H264_NVENC")]
     public void VendorForEncoderName_IsCaseInsensitive(string encoderName)
     {
-        GpuEncoderTokens.VendorForEncoderName(encoderName).Should().NotBeNull();
+        GpuEncoderTokens.VendorForEncoderName(ffmpegEncoderName: encoderName).Should().NotBeNull();
     }
 
     [Theory]
-    [InlineData("libx264")]
-    [InlineData("libx265")]
-    [InlineData("libsvtav1")]
-    [InlineData("libvpx-vp9")]
-    [InlineData("copy")]
-    [InlineData("some_future_encoder")]
+    [InlineData(data: "libx264")]
+    [InlineData(data: "libx265")]
+    [InlineData(data: "libsvtav1")]
+    [InlineData(data: "libvpx-vp9")]
+    [InlineData(data: "copy")]
+    [InlineData(data: "some_future_encoder")]
     public void VendorForEncoderName_ReturnsNullForSoftwareOrUnknownEncoders(string encoderName)
     {
-        GpuEncoderTokens.VendorForEncoderName(encoderName).Should().BeNull();
+        GpuEncoderTokens.VendorForEncoderName(ffmpegEncoderName: encoderName).Should().BeNull();
     }
 }

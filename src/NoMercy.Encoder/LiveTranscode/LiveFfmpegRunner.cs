@@ -37,7 +37,7 @@ public class LiveFfmpegRunner(
 {
     internal const string PlaylistFileName = "index.m3u8";
     internal const string SegmentPrefix = "seg_";
-    private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(milliseconds: 500);
 
     public async Task RunAsync(LiveRunInput input, LiveSession session, CancellationToken ct)
     {
@@ -45,11 +45,11 @@ public class LiveFfmpegRunner(
         // Hardware-accelerated live encodes use the first GPU device name for
         // the error message; software encodes skip the check.
         bool requiresGpu = input.Quality.IsHardwareAccelerated;
-        string gpuName = hardware.Gpus.Count > 0 ? hardware.Gpus[0].Name : "GPU";
+        string gpuName = hardware.Gpus.Count > 0 ? hardware.Gpus[index: 0].Name : "GPU";
 
         try
         {
-            nvencSessionCap.EnforceForGpuEncode(gpuName, requiresGpu);
+            nvencSessionCap.EnforceForGpuEncode(gpuName: gpuName, requiresGpu: requiresGpu);
         }
         catch (EncoderRuntimeException) when (requiresGpu)
         {
@@ -57,7 +57,7 @@ public class LiveFfmpegRunner(
             // encoder for THIS session instead of failing it outright. A
             // saturated GPU is a capacity problem, not a reason to break an
             // in-progress watch session when the CPU can pick up the slack.
-            input = await FallBackToSoftwareAsync(input, session, ct).ConfigureAwait(false);
+            input = await FallBackToSoftwareAsync(input: input, session: session, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
             requiresGpu = false;
         }
 
@@ -68,8 +68,8 @@ public class LiveFfmpegRunner(
         // and starve the video encoder.
         int cpuThreads = input.AudioRenditionOnly ? 1 : 2;
         ResourceRequirement requirement = requiresGpu
-            ? new(gpuName, GpuSlots: 1, CpuThreads: 2)
-            : new ResourceRequirement(null, GpuSlots: 0, CpuThreads: cpuThreads);
+            ? new(GpuDeviceKey: gpuName, GpuSlots: 1, CpuThreads: 2)
+            : new ResourceRequirement(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: cpuThreads);
 
         // Declared outside the try so the outer finally can always see whether
         // a lease was actually granted. Acquisition now happens INSIDE the try
@@ -80,87 +80,82 @@ public class LiveFfmpegRunner(
 
         try
         {
-            lease = await resourceBudget.AcquireAsync(requirement, ct).ConfigureAwait(false);
+            lease = await resourceBudget.AcquireAsync(requirement: requirement, cancellationToken: ct).ConfigureAwait(continueOnCapturedContext: false);
 
-            storage.CreateDirectory(input.OutputDirectory);
+            storage.CreateDirectory(path: input.OutputDirectory);
 
             await using LocalPathLease outputLease = storage.AcquireLocalPath(
-                input.OutputDirectory
+                path: input.OutputDirectory
             );
 
-            string[] arguments = BuildArguments(input);
+            string[] arguments = BuildArguments(input: input);
 
             logger.LogInformation(
-                "Live FFmpeg starting for session {SessionId} → {Dir}",
-                session.SessionId,
-                input.OutputDirectory
+                message: "Live FFmpeg starting for session {SessionId} → {Dir}", args: [session.SessionId, input.OutputDirectory]
             );
 
             ProgressParser progressParser = new();
             HashSet<int> pushedSegments = [];
             using CancellationTokenSource stopPolling =
-                CancellationTokenSource.CreateLinkedTokenSource(ct);
+                CancellationTokenSource.CreateLinkedTokenSource(token: ct);
 
             Task pollingTask = Task.Run(
-                () => PollForSegmentsAsync(input, session, pushedSegments, stopPolling.Token),
-                stopPolling.Token
+                function: () => PollForSegmentsAsync(input: input, session: session, seen: pushedSegments, ct: stopPolling.Token),
+                cancellationToken: stopPolling.Token
             );
 
             void OnStdOut(string line)
             {
-                FfmpegProgressSnapshot? snapshot = progressParser.FeedLine(line);
+                FfmpegProgressSnapshot? snapshot = progressParser.FeedLine(line: line);
                 if (snapshot is not null && snapshot.Speed > 0)
                 {
-                    session.SetSpeed(snapshot.Speed);
+                    session.SetSpeed(speed: snapshot.Speed);
                 }
             }
 
             try
             {
                 ProcessResult result = await processRunner.RunAsync(
-                    options.FfmpegPath,
-                    arguments,
-                    OnStdOut,
-                    null,
-                    outputLease.Path,
-                    ct
+                    executable: options.FfmpegPath,
+                    arguments: arguments,
+                    onStdOut: OnStdOut,
+                    onStdErr: null,
+                    workingDirectory: outputLease.Path,
+                    cancellationToken: ct
                 );
 
                 if (!result.IsSuccess && !ct.IsCancellationRequested)
                 {
                     logger.LogWarning(
-                        "Live FFmpeg for session {SessionId} exited with code {Code}. stderr: {StdErr}",
-                        session.SessionId,
-                        result.ExitCode,
-                        Truncate(result.StdErr, 1000)
+                        message: "Live FFmpeg for session {SessionId} exited with code {Code}. stderr: {StdErr}", args: [session.SessionId, result.ExitCode, Truncate(value: result.StdErr, max: 1000)]
                     );
-                    session.SetState(LiveSessionState.Error);
+                    session.SetState(state: LiveSessionState.Error);
                     await PushTranscodeErrorAsync(
-                            session.SessionId,
-                            $"FFmpeg exited with code {result.ExitCode}"
+                            sessionId: session.SessionId,
+                            message: $"FFmpeg exited with code {result.ExitCode}"
                         )
-                        .ConfigureAwait(false);
+                        .ConfigureAwait(continueOnCapturedContext: false);
                 }
             }
             catch (OperationCanceledException)
             {
                 logger.LogInformation(
-                    "Live FFmpeg cancelled for session {SessionId}",
-                    session.SessionId
+                    message: "Live FFmpeg cancelled for session {SessionId}",
+                    args: session.SessionId
                 );
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Live FFmpeg threw for session {SessionId}", session.SessionId);
-                session.SetState(LiveSessionState.Error);
-                await PushTranscodeErrorAsync(session.SessionId, ex.Message).ConfigureAwait(false);
+                logger.LogError(exception: ex, message: "Live FFmpeg threw for session {SessionId}", args: session.SessionId);
+                session.SetState(state: LiveSessionState.Error);
+                await PushTranscodeErrorAsync(sessionId: session.SessionId, message: ex.Message).ConfigureAwait(continueOnCapturedContext: false);
             }
             finally
             {
                 try
                 {
                     await stopPolling.CancelAsync();
-                    await pollingTask.ConfigureAwait(false);
+                    await pollingTask.ConfigureAwait(continueOnCapturedContext: false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -169,9 +164,9 @@ public class LiveFfmpegRunner(
                 catch (Exception ex)
                 {
                     logger.LogWarning(
-                        ex,
-                        "Segment poller for session {SessionId} faulted",
-                        session.SessionId
+                        exception: ex,
+                        message: "Segment poller for session {SessionId} faulted",
+                        args: session.SessionId
                     );
                 }
 
@@ -179,14 +174,14 @@ public class LiveFfmpegRunner(
                 // segments between the last scheduled poll and its exit.
                 try
                 {
-                    PushNewSegments(input, session, pushedSegments);
+                    PushNewSegments(input: input, session: session, seen: pushedSegments);
                 }
                 catch (Exception ex)
                 {
                     logger.LogDebug(
-                        ex,
-                        "Final segment drain raised for session {SessionId}",
-                        session.SessionId
+                        exception: ex,
+                        message: "Final segment drain raised for session {SessionId}",
+                        args: session.SessionId
                     );
                 }
             }
@@ -194,7 +189,7 @@ public class LiveFfmpegRunner(
         finally
         {
             if (lease is not null)
-                resourceBudget.Release(lease);
+                resourceBudget.Release(lease: lease);
 
             // A bounded run (LiveRunInput.StopPosition set) finished the gap it was
             // spawned to fill, not the file — it reached content an earlier runner
@@ -205,9 +200,9 @@ public class LiveFfmpegRunner(
             // ran to EOF, so CompleteIfCurrentRunner's superseded-generation guard
             // applies as before — see LiveSession.CompleteIfCurrentRunner.
             if (input.StopPosition is null)
-                session.CompleteIfCurrentRunner(ct);
+                session.CompleteIfCurrentRunner(runnerToken: ct);
             else
-                session.MarkRunnerIdle(ct);
+                session.MarkRunnerIdle(runnerToken: ct);
         }
     }
 
@@ -219,7 +214,7 @@ public class LiveFfmpegRunner(
     // alignment, rate control, remux/audio-only branching, CustomArguments
     // merge — see LiveFfmpegArgumentBuilder for the reasoning behind each).
     internal static string[] BuildArguments(LiveRunInput input) =>
-        LiveFfmpegArgumentBuilder.Build(input);
+        LiveFfmpegArgumentBuilder.Build(input: input);
 
     // Resolves the software equivalent of the requested quality's codec and
     // swaps it in for THIS run when the GPU's NVENC session cap is exhausted.
@@ -234,9 +229,9 @@ public class LiveFfmpegRunner(
     )
     {
         ResolvedCodec software = codecResolver.Resolve(
-            input.Quality.Codec,
-            hardware,
-            EncoderPreference.ForceSoftware
+            codec: input.Quality.Codec,
+            hardware: hardware,
+            preference: EncoderPreference.ForceSoftware
         );
 
         LiveQuality fallbackQuality = input.Quality with
@@ -245,21 +240,19 @@ public class LiveFfmpegRunner(
             IsHardwareAccelerated = false,
         };
 
-        session.SetQuality(fallbackQuality);
+        session.SetQuality(quality: fallbackQuality);
 
         logger.LogWarning(
-            "GPU session cap exhausted for session {SessionId} — falling back to {Encoder}",
-            session.SessionId,
-            fallbackQuality.Encoder
+            message: "GPU session cap exhausted for session {SessionId} — falling back to {Encoder}", args: [session.SessionId, fallbackQuality.Encoder]
         );
 
         await PushQualityChangedAsync(
-                session.SessionId,
-                fallbackQuality,
-                QualityChangeReason.GpuFallbackToCpu,
-                ct
+                sessionId: session.SessionId,
+                quality: fallbackQuality,
+                reason: QualityChangeReason.GpuFallbackToCpu,
+                ct: ct
             )
-            .ConfigureAwait(false);
+            .ConfigureAwait(continueOnCapturedContext: false);
 
         return input with
         {
@@ -281,14 +274,14 @@ public class LiveFfmpegRunner(
 
         try
         {
-            await transport.SendToClientAsync(sessionId, message, ct).ConfigureAwait(false);
+            await transport.SendToClientAsync(sessionId: sessionId, message: message, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
         }
         catch (Exception ex)
         {
             logger.LogDebug(
-                ex,
-                "Transport push failed for QualityChanged on session {SessionId}",
-                sessionId
+                exception: ex,
+                message: "Transport push failed for QualityChanged on session {SessionId}",
+                args: sessionId
             );
         }
     }
@@ -304,20 +297,20 @@ public class LiveFfmpegRunner(
         {
             try
             {
-                PushNewSegments(input, session, seen);
+                PushNewSegments(input: input, session: session, seen: seen);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 logger.LogDebug(
-                    ex,
-                    "Segment poll transient error for session {SessionId}",
-                    session.SessionId
+                    exception: ex,
+                    message: "Segment poll transient error for session {SessionId}",
+                    args: session.SessionId
                 );
             }
 
             try
             {
-                await Task.Delay(PollInterval, ct).ConfigureAwait(false);
+                await Task.Delay(delay: PollInterval, cancellationToken: ct).ConfigureAwait(continueOnCapturedContext: false);
             }
             catch (OperationCanceledException)
             {
@@ -328,23 +321,23 @@ public class LiveFfmpegRunner(
 
     private void PushNewSegments(LiveRunInput input, LiveSession session, HashSet<int> seen)
     {
-        string playlistPath = Path.Combine(input.OutputDirectory, PlaylistFileName);
-        if (!storage.Exists(playlistPath))
+        string playlistPath = Path.Combine(path1: input.OutputDirectory, path2: PlaylistFileName);
+        if (!storage.Exists(path: playlistPath))
             return;
 
-        IReadOnlyList<(int Index, TimeSpan Duration)> entries = ParsePlaylist(playlistPath);
+        IReadOnlyList<(int Index, TimeSpan Duration)> entries = ParsePlaylist(playlistPath: playlistPath);
 
         foreach ((int index, TimeSpan duration) in entries)
         {
             string segmentFile = Path.Combine(
-                input.OutputDirectory,
-                $"{SegmentPrefix}{index:D5}.ts"
+                path1: input.OutputDirectory,
+                path2: $"{SegmentPrefix}{index:D5}.ts"
             );
 
-            if (seen.Contains(index))
+            if (seen.Contains(item: index))
                 continue;
 
-            if (!storage.Exists(segmentFile))
+            if (!storage.Exists(path: segmentFile))
             {
                 // The m3u8 can reference a segment before the file has finished
                 // its atomic rename — wait for the next poll.
@@ -354,7 +347,7 @@ public class LiveFfmpegRunner(
             long size = 0;
             try
             {
-                size = storage.Size(segmentFile);
+                size = storage.Size(path: segmentFile);
             }
             catch (Exception)
             {
@@ -365,10 +358,10 @@ public class LiveFfmpegRunner(
             // a segment's start is its index times the target duration — not a sum
             // accumulated from this runner's first segment, which would be wrong
             // for a runner spawned mid-file by a seek.
-            TimeSpan startTime = TimeSpan.FromSeconds((double)index * input.SegmentDurationSeconds);
-            Segment segment = new(index, startTime, duration, segmentFile, size);
-            session.PushSegment(segment);
-            seen.Add(index);
+            TimeSpan startTime = TimeSpan.FromSeconds(value: (double)index * input.SegmentDurationSeconds);
+            Segment segment = new(Index: index, StartTime: startTime, Duration: duration, FilePath: segmentFile, SizeBytes: size);
+            session.PushSegment(segment: segment);
+            seen.Add(item: index);
         }
     }
 
@@ -379,11 +372,11 @@ public class LiveFfmpegRunner(
         string[] lines;
         try
         {
-            using Stream stream = storage.OpenRead(playlistPath);
-            using StreamReader reader = new(stream, Encoding.UTF8);
+            using Stream stream = storage.OpenRead(path: playlistPath);
+            using StreamReader reader = new(stream: stream, encoding: Encoding.UTF8);
             List<string> lineList = [];
             while (reader.ReadLine() is string rawLine)
-                lineList.Add(rawLine);
+                lineList.Add(item: rawLine);
             lines = [.. lineList];
         }
         catch (IOException)
@@ -392,7 +385,7 @@ public class LiveFfmpegRunner(
             return entries;
         }
 
-        return ParsePlaylistLines(lines);
+        return ParsePlaylistLines(lines: lines);
     }
 
     internal static IReadOnlyList<(int Index, TimeSpan Duration)> ParsePlaylistLines(string[] lines)
@@ -406,29 +399,29 @@ public class LiveFfmpegRunner(
             if (line.Length == 0)
                 continue;
 
-            if (line.StartsWith("#EXTINF:", StringComparison.Ordinal))
+            if (line.StartsWith(value: "#EXTINF:", comparisonType: StringComparison.Ordinal))
             {
                 string payload = line[8..];
-                int commaIdx = payload.IndexOf(',');
+                int commaIdx = payload.IndexOf(value: ',');
                 string durationToken = commaIdx >= 0 ? payload[..commaIdx] : payload;
 
                 if (
                     double.TryParse(
-                        durationToken,
-                        NumberStyles.Float,
-                        CultureInfo.InvariantCulture,
-                        out double seconds
+                        s: durationToken,
+                        style: NumberStyles.Float,
+                        provider: CultureInfo.InvariantCulture,
+                        result: out double seconds
                     )
                 )
                 {
-                    pendingDuration = TimeSpan.FromSeconds(seconds);
+                    pendingDuration = TimeSpan.FromSeconds(value: seconds);
                 }
             }
-            else if (pendingDuration is not null && !line.StartsWith('#'))
+            else if (pendingDuration is not null && !line.StartsWith(value: '#'))
             {
-                int? index = ExtractIndex(line);
+                int? index = ExtractIndex(segmentLine: line);
                 if (index is int idx)
-                    entries.Add((idx, pendingDuration.Value));
+                    entries.Add(item: (idx, pendingDuration.Value));
 
                 pendingDuration = null;
             }
@@ -439,17 +432,17 @@ public class LiveFfmpegRunner(
 
     private static int? ExtractIndex(string segmentLine)
     {
-        int prefixIdx = segmentLine.IndexOf(SegmentPrefix, StringComparison.Ordinal);
+        int prefixIdx = segmentLine.IndexOf(value: SegmentPrefix, comparisonType: StringComparison.Ordinal);
         if (prefixIdx < 0)
             return null;
 
         int start = prefixIdx + SegmentPrefix.Length;
-        int end = segmentLine.IndexOf('.', start);
+        int end = segmentLine.IndexOf(value: '.', startIndex: start);
         if (end < 0)
             return null;
 
         string digits = segmentLine[start..end];
-        return int.TryParse(digits, CultureInfo.InvariantCulture, out int value) ? value : null;
+        return int.TryParse(s: digits, provider: CultureInfo.InvariantCulture, result: out int value) ? value : null;
     }
 
     private static string Truncate(string value, int max) =>
@@ -469,15 +462,15 @@ public class LiveFfmpegRunner(
         try
         {
             await transport
-                .SendToClientAsync(sessionId, errorMessage, CancellationToken.None)
-                .ConfigureAwait(false);
+                .SendToClientAsync(sessionId: sessionId, message: errorMessage, ct: CancellationToken.None)
+                .ConfigureAwait(continueOnCapturedContext: false);
         }
         catch (Exception ex)
         {
             logger.LogDebug(
-                ex,
-                "Transport push failed for TranscodeError on session {SessionId}",
-                sessionId
+                exception: ex,
+                message: "Transport push failed for TranscodeError on session {SessionId}",
+                args: sessionId
             );
         }
     }

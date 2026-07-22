@@ -68,7 +68,7 @@ public partial class VideoHub : ConnectionHub
         IUserDataRepository userDataRepository,
         INetworkDiscovery? networkDiscovery = null
     )
-        : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
+        : base(httpContextAccessor: httpContextAccessor, contextFactory: contextFactory, connectedClients: connectedClients, activityLogger: activityLogger)
     {
         _logger = logger;
         _httpContextAccessor = httpContextAccessor;
@@ -93,7 +93,7 @@ public partial class VideoHub : ConnectionHub
     private string ResolveServerUrl()
     {
         string? external = _networkDiscovery?.ExternalAddress;
-        return string.IsNullOrEmpty(external)
+        return string.IsNullOrEmpty(value: external)
             ? ExternalServicesConfig.Current.ApiBaseUrl
             : external;
     }
@@ -102,37 +102,37 @@ public partial class VideoHub : ConnectionHub
     {
         string? header =
             _httpContextAccessor.HttpContext?.Request.Headers.AcceptLanguage.ToString();
-        if (string.IsNullOrEmpty(header))
+        if (string.IsNullOrEmpty(value: header))
             return "en-US";
 
-        string first = header.Split(',')[0].Split(';')[0].Trim();
-        return string.IsNullOrEmpty(first) ? "en-US" : first;
+        string first = header.Split(separator: ',')[0].Split(separator: ';')[0].Trim();
+        return string.IsNullOrEmpty(value: first) ? "en-US" : first;
     }
 
     private CastIntent ResolveVideoIntent(Guid userId)
     {
         // If the user has a live video player state when handing off to the TV,
         // resume that exact item. Otherwise idle — receiver shows the splash.
-        if (!_videoPlayerStateManager.TryGetValue(userId, out VideoPlayerState? state))
+        if (!_videoPlayerStateManager.TryGetValue(userId: userId, state: out VideoPlayerState? state))
             return CastIntent.Idle();
         if (state.CurrentItem is null)
             return CastIntent.Idle();
 
         // CurrentList is "/{type}/{listId}/watch" — extract type for navigation.
-        string path = state.CurrentList.ToString().TrimStart('/');
-        string[] parts = path.Split('/');
+        string path = state.CurrentList.ToString().TrimStart(trimChar: '/');
+        string[] parts = path.Split(separator: '/');
         if (parts.Length < 2)
             return CastIntent.Idle();
 
         string mediaType = parts[0];
         string mediaId = state.CurrentItem.Id.ToString();
         int? resumeAt = state.Time > 0 ? state.Time / 1000 : null;
-        return CastIntent.PlayVideo(mediaType, mediaId, resumeAt);
+        return CastIntent.PlayVideo(mediaType: mediaType, mediaId: mediaId, resumeAt: resumeAt);
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        User? user = UserCacheService.GetUser(Context.User.UserId());
+        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
         if (user == null)
             return;
 
@@ -141,13 +141,13 @@ public partial class VideoHub : ConnectionHub
         Ulid stoppedMediaId = Ulid.Empty;
         string? stoppedTitle = null;
 
-        if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
-            if (_videoPlayerStateManager.TryGetValue(user.Id, out VideoPlayerState? state))
+        if (ConnectedClients.Clients.TryGetValue(key: Context.ConnectionId, value: out Client? client))
+            if (_videoPlayerStateManager.TryGetValue(userId: user.Id, state: out VideoPlayerState? state))
                 if (state.DeviceId == client.DeviceId)
                 {
-                    _videoPlaybackService.RemoveTimer(user.Id);
+                    _videoPlaybackService.RemoveTimer(userId: user.Id);
 
-                    _videoDeviceManager.RemoveUserDevice(user.Id);
+                    _videoDeviceManager.RemoveUserDevice(userId: user.Id);
 
                     stopPlayback = true;
                     stoppedDeviceId = client.Id;
@@ -155,9 +155,9 @@ public partial class VideoHub : ConnectionHub
                     stoppedTitle = state.CurrentItem?.Title;
                 }
 
-        await base.OnDisconnectedAsync(exception);
+        await base.OnDisconnectedAsync(exception: exception);
 
-        if (_videoPlayerStateManager.TryGetValue(user.Id, out VideoPlayerState? playerState))
+        if (_videoPlayerStateManager.TryGetValue(userId: user.Id, state: out VideoPlayerState? playerState))
         {
             List<Device> connectedDevices = Devices();
 
@@ -193,36 +193,36 @@ public partial class VideoHub : ConnectionHub
                         Muting = true,
                         Previous =
                             playerState.CurrentItem is null
-                            || playerState.Playlist.IndexOf(playerState.CurrentItem) == 0,
+                            || playerState.Playlist.IndexOf(item: playerState.CurrentItem) == 0,
                         Next =
                             playerState.CurrentItem is null
-                            || playerState.Playlist.IndexOf(playerState.CurrentItem)
+                            || playerState.Playlist.IndexOf(item: playerState.CurrentItem)
                                 == playerState.Playlist.Count - 1,
                     },
                 };
             }
         }
 
-        await _videoPlaybackService.UpdatePlaybackState(user, playerState);
+        await _videoPlaybackService.UpdatePlaybackState(user: user, state: playerState);
 
         if (stopPlayback && stoppedDeviceId != Ulid.Empty)
         {
             try
             {
                 await ActivityLogger.LogPlaybackAsync(
-                    "playback.stopped",
-                    user.Id,
-                    stoppedDeviceId,
-                    stoppedMediaId,
-                    new { media_type = "video", title = stoppedTitle }
+                    type: "playback.stopped",
+                    userId: user.Id,
+                    deviceId: stoppedDeviceId,
+                    mediaId: stoppedMediaId,
+                    metadata: new { media_type = "video", title = stoppedTitle }
                 );
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Failed to log playback.stopped: {Message}", ex.Message);
+                _logger.LogWarning(message: "Failed to log playback.stopped: {Message}", args: ex.Message);
             }
         }
 
-        _logger.LogDebug("Video client disconnected");
+        _logger.LogDebug(message: "Video client disconnected");
     }
 }

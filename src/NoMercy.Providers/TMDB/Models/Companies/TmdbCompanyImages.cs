@@ -16,9 +16,9 @@ namespace NoMercy.Providers.TMDB.Models.Companies;
 
 public class TmdbCompanyImages
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("logos")]
+    [JsonProperty(propertyName: "logos")]
     public TmdbLogo[] Logos { get; set; } = [];
 }

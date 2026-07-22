@@ -36,7 +36,7 @@ public class LibraryRescanJob : AbstractMediaJob
         ILoggerFactory loggerFactory,
         IMediaAnalyzer mediaAnalyzer
     )
-        : base(storageFactory, storageDriver, loggerFactory)
+        : base(storageFactory: storageFactory, storageDriver: storageDriver, loggerFactory: loggerFactory)
     {
         _mediaAnalyzer = mediaAnalyzer;
     }
@@ -56,18 +56,18 @@ public class LibraryRescanJob : AbstractMediaJob
 
         IEventBus? eventBus = EventBusProvider.IsConfigured ? EventBusProvider.Current : null;
 
-        LibraryRepository libraryRepository = new(context, StorageDriver);
+        LibraryRepository libraryRepository = new(context: context, storageDriver: StorageDriver);
         LibraryManager libraryManager = new(
-            libraryRepository,
-            jobDispatcher,
-            context,
-            StorageDriver,
-            StorageFactory,
-            _mediaAnalyzer,
-            LoggerFactory.CreateLogger<LibraryManager>(),
-            eventBus
+            libraryRepository: libraryRepository,
+            jobDispatcher: jobDispatcher,
+            mediaContext: context,
+            storageDriver: StorageDriver,
+            storageFactory: StorageFactory,
+            mediaAnalyzer: _mediaAnalyzer,
+            logger: LoggerFactory.CreateLogger<LibraryManager>(),
+            eventBus: eventBus
         );
 
-        await libraryManager.ProcessLibrary(LibraryId);
+        await libraryManager.ProcessLibrary(id: LibraryId);
     }
 }

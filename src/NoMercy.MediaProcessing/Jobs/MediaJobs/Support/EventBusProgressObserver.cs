@@ -32,8 +32,8 @@ internal static class EventBusFireAndForget
         // next progress tick; faults are observed via ContinueWith so the
         // task scheduler doesn't surface them as UnobservedTaskException.
         _ = EventBusProvider
-            .Current.PublishAsync(evt)
-            .ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
+            .Current.PublishAsync(@event: evt)
+            .ContinueWith(continuationFunction: t => _ = t.Exception, continuationOptions: TaskContinuationOptions.OnlyOnFaulted);
     }
 }
 
@@ -85,11 +85,11 @@ public class EventBusProgressObserver : IProgressObserver
     )
     {
         _videoStreams.Clear();
-        _videoStreams.AddRange(videoStreams);
+        _videoStreams.AddRange(collection: videoStreams);
         _audioStreams.Clear();
-        _audioStreams.AddRange(audioStreams);
+        _audioStreams.AddRange(collection: audioStreams);
         _subtitleStreams.Clear();
-        _subtitleStreams.AddRange(subtitleStreams);
+        _subtitleStreams.AddRange(collection: subtitleStreams);
         _hasGpu = hasGpu;
         _isHdr = isHdr;
     }
@@ -125,7 +125,7 @@ public class EventBusProgressObserver : IProgressObserver
             && progress.ProcessId != _lastRegisteredPid
         )
         {
-            _registry.Register(_jobId, progress.ProcessId);
+            _registry.Register(jobId: _jobId, processId: progress.ProcessId);
             _lastRegisteredPid = progress.ProcessId;
         }
 
@@ -135,7 +135,7 @@ public class EventBusProgressObserver : IProgressObserver
         TimeSpan remaining = progress.EstimatedRemaining ?? TimeSpan.Zero;
 
         EventBusFireAndForget.Publish(
-            new()
+            evt: new()
             {
                 ProgressData = new
                 {
@@ -179,13 +179,13 @@ public class EventBusProgressObserver : IProgressObserver
         // numeric fields below — keep it period-decimal regardless of host locale.
         Publish(
             status: "encoding",
-            message: $"Completed: {stageName} ({duration.TotalSeconds.ToString("F1", CultureInfo.InvariantCulture)}s)"
+            message: $"Completed: {stageName} ({duration.TotalSeconds.ToString(format: "F1", provider: CultureInfo.InvariantCulture)}s)"
         );
     }
 
     public void OnCompleted()
     {
-        _registry?.UnregisterJob(_jobId);
+        _registry?.UnregisterJob(jobId: _jobId);
         // Stay in the "encoding" inflight set so the dashboard card stays
         // visible while VideoEncodeJob runs the post-processing phases
         // (history insert, OCR, library refresh). The card is removed by
@@ -195,14 +195,14 @@ public class EventBusProgressObserver : IProgressObserver
 
     public void OnError(EncodingError error)
     {
-        _registry?.UnregisterJob(_jobId);
+        _registry?.UnregisterJob(jobId: _jobId);
         Publish(status: "failed", message: error.Message);
     }
 
     private void Publish(string status, string message)
     {
         EventBusFireAndForget.Publish(
-            new()
+            evt: new()
             {
                 ProgressData = new
                 {

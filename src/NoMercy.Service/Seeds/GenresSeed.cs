@@ -31,7 +31,7 @@ public static class GenresSeed
         if (hasGenres)
             return;
 
-        Logger.Setup("Adding Genres", LogEventLevel.Verbose);
+        Logger.Setup(message: "Adding Genres", level: LogEventLevel.Verbose);
 
         TmdbMovieClient tmdbMovieClient = new();
         TmdbTvClient tmdbTvClient = new();
@@ -40,24 +40,24 @@ public static class GenresSeed
         {
             List<Genre> genres = [];
             List<Genre>? movieGenres = (await tmdbMovieClient.Genres())
-                ?.Genres.Select(genre => new Genre { Id = genre.Id, Name = genre.Name.OrEmpty() })
+                ?.Genres.Select(selector: genre => new Genre { Id = genre.Id, Name = genre.Name.OrEmpty() })
                 .ToList();
-            genres.AddRange(movieGenres ?? []);
+            genres.AddRange(collection: movieGenres ?? []);
 
             List<Genre>? tvGenres = (await tmdbTvClient.Genres())
-                ?.Genres.Select(genre => new Genre { Id = genre.Id, Name = genre.Name.OrEmpty() })
+                ?.Genres.Select(selector: genre => new Genre { Id = genre.Id, Name = genre.Name.OrEmpty() })
                 .ToList();
-            genres.AddRange(tvGenres ?? []);
+            genres.AddRange(collection: tvGenres ?? []);
 
             await dbContext
-                .Genres.UpsertRange(genres)
-                .On(v => new { v.Id })
-                .WhenMatched(v => new() { Id = v.Id, Name = v.Name })
+                .Genres.UpsertRange(entities: genres)
+                .On(match: v => new { v.Id })
+                .WhenMatched(updater: v => new() { Id = v.Id, Name = v.Name })
                 .RunAsync();
         }
         catch (Exception e)
         {
-            Logger.Setup($"Genres seed failed: {e.Message}", LogEventLevel.Warning);
+            Logger.Setup(message: $"Genres seed failed: {e.Message}", level: LogEventLevel.Warning);
         }
 
         try
@@ -65,22 +65,22 @@ public static class GenresSeed
             ConcurrentBag<Translation> translations = [];
 
             List<Language> languages = await dbContext
-                .Languages.Where(l => l.Iso6391 != "en")
+                .Languages.Where(predicate: l => l.Iso6391 != "en")
                 .ToListAsync();
 
             await Parallel.ForEachAsync(
-                languages,
-                SystemParallelism.Options,
-                async (language, _) =>
+                source: languages,
+                parallelOptions: SystemParallelism.Options,
+                body: async (language, _) =>
                 {
                     Logger.Setup(
-                        $"Adding Genres for {language.EnglishName}",
-                        LogEventLevel.Verbose
+                        message: $"Adding Genres for {language.EnglishName}",
+                        level: LogEventLevel.Verbose
                     );
 
-                    IEnumerable<Translation>? mg = (await tmdbMovieClient.Genres(language.Iso6391))
-                        ?.Genres.Where(g => g.Name != null)
-                        .Select(genre => new Translation
+                    IEnumerable<Translation>? mg = (await tmdbMovieClient.Genres(language: language.Iso6391))
+                        ?.Genres.Where(predicate: g => g.Name != null)
+                        .Select(selector: genre => new Translation
                         {
                             GenreId = genre.Id,
                             Name = genre.Name.OrEmpty(),
@@ -90,12 +90,12 @@ public static class GenresSeed
                     if (mg != null)
                     {
                         foreach (Translation translation in mg)
-                            translations.Add(translation);
+                            translations.Add(item: translation);
                     }
 
-                    IEnumerable<Translation>? tg = (await tmdbTvClient.Genres(language.Iso6391))
-                        ?.Genres.Where(g => g.Name != null)
-                        .Select(genre => new Translation
+                    IEnumerable<Translation>? tg = (await tmdbTvClient.Genres(language: language.Iso6391))
+                        ?.Genres.Where(predicate: g => g.Name != null)
+                        .Select(selector: genre => new Translation
                         {
                             GenreId = genre.Id,
                             Name = genre.Name.OrEmpty(),
@@ -105,17 +105,17 @@ public static class GenresSeed
                     if (tg != null)
                     {
                         foreach (Translation translation in tg)
-                            translations.Add(translation);
+                            translations.Add(item: translation);
                     }
                 }
             );
 
-            Logger.Setup($"Adding {translations.Count} genre translations", LogEventLevel.Verbose);
+            Logger.Setup(message: $"Adding {translations.Count} genre translations", level: LogEventLevel.Verbose);
 
             await dbContext
-                .Translations.UpsertRange(translations.Where(genre => genre.Name != null))
-                .On(v => new { v.GenreId, v.Iso6391 })
-                .WhenMatched(v =>
+                .Translations.UpsertRange(entities: translations.Where(predicate: genre => genre.Name != null))
+                .On(match: v => new { v.GenreId, v.Iso6391 })
+                .WhenMatched(updater: v =>
                     new()
                     {
                         GenreId = v.GenreId,
@@ -127,7 +127,7 @@ public static class GenresSeed
         }
         catch (Exception e)
         {
-            Logger.Setup($"Genres seed failed: {e.Message}", LogEventLevel.Warning);
+            Logger.Setup(message: $"Genres seed failed: {e.Message}", level: LogEventLevel.Warning);
         }
     }
 }

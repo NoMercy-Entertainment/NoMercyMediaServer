@@ -15,39 +15,39 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Authorization;
 
-[Trait("Category", "Authorization")]
+[Trait(name: "Category", value: "Authorization")]
 public sealed class ClaimsPrincipalExtensionsTests
 {
     [Fact]
     public void UserId_ReturnsGuid_WhenSubClaimIsValidGuid()
     {
-        Guid expected = Guid.Parse("11111111-1111-1111-1111-111111111111");
-        ClaimsPrincipal principal = PrincipalWithSub(expected.ToString());
+        Guid expected = Guid.Parse(input: "11111111-1111-1111-1111-111111111111");
+        ClaimsPrincipal principal = PrincipalWithSub(sub: expected.ToString());
 
         Guid result = principal.UserId();
 
-        result.Should().Be(expected);
+        result.Should().Be(expected: expected);
     }
 
     [Fact]
     public void UserId_ReturnsEmpty_WhenSubClaimIsMalformed()
     {
-        ClaimsPrincipal principal = PrincipalWithSub("definitely-not-a-guid");
+        ClaimsPrincipal principal = PrincipalWithSub(sub: "definitely-not-a-guid");
 
         Guid result = principal.UserId();
 
-        result.Should().Be(Guid.Empty);
+        result.Should().Be(expected: Guid.Empty);
     }
 
     [Fact]
     public void UserId_ReturnsEmpty_WhenSubClaimMissing()
     {
-        ClaimsIdentity identity = new([], "TestScheme");
-        ClaimsPrincipal principal = new(identity);
+        ClaimsIdentity identity = new(claims: [], authenticationType: "TestScheme");
+        ClaimsPrincipal principal = new(identity: identity);
 
         Guid result = principal.UserId();
 
-        result.Should().Be(Guid.Empty);
+        result.Should().Be(expected: Guid.Empty);
     }
 
     [Fact]
@@ -57,16 +57,16 @@ public sealed class ClaimsPrincipalExtensionsTests
 
         Guid result = principal.UserId();
 
-        result.Should().Be(Guid.Empty);
+        result.Should().Be(expected: Guid.Empty);
     }
 
     [Fact]
     public void IsSelf_ReturnsTrue_WhenPrincipalSubMatchesUserId()
     {
-        Guid userId = Guid.Parse("22222222-2222-2222-2222-222222222222");
-        ClaimsPrincipal principal = PrincipalWithSub(userId.ToString());
+        Guid userId = Guid.Parse(input: "22222222-2222-2222-2222-222222222222");
+        ClaimsPrincipal principal = PrincipalWithSub(sub: userId.ToString());
 
-        bool result = principal.IsSelf(userId);
+        bool result = principal.IsSelf(userId: userId);
 
         result.Should().BeTrue();
     }
@@ -74,11 +74,11 @@ public sealed class ClaimsPrincipalExtensionsTests
     [Fact]
     public void IsSelf_ReturnsFalse_WhenPrincipalSubDoesNotMatchUserId()
     {
-        Guid principalId = Guid.Parse("22222222-2222-2222-2222-222222222222");
-        Guid otherId = Guid.Parse("33333333-3333-3333-3333-333333333333");
-        ClaimsPrincipal principal = PrincipalWithSub(principalId.ToString());
+        Guid principalId = Guid.Parse(input: "22222222-2222-2222-2222-222222222222");
+        Guid otherId = Guid.Parse(input: "33333333-3333-3333-3333-333333333333");
+        ClaimsPrincipal principal = PrincipalWithSub(sub: principalId.ToString());
 
-        bool result = principal.IsSelf(otherId);
+        bool result = principal.IsSelf(userId: otherId);
 
         result.Should().BeFalse();
     }
@@ -86,10 +86,10 @@ public sealed class ClaimsPrincipalExtensionsTests
     [Fact]
     public void IsSelf_ReturnsFalse_WhenPrincipalIsNull()
     {
-        Guid userId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        Guid userId = Guid.Parse(input: "22222222-2222-2222-2222-222222222222");
         ClaimsPrincipal? principal = null;
 
-        bool result = principal.IsSelf(userId);
+        bool result = principal.IsSelf(userId: userId);
 
         result.Should().BeFalse();
     }
@@ -97,18 +97,18 @@ public sealed class ClaimsPrincipalExtensionsTests
     [Fact]
     public void Role_ReturnsRoleClaim_WhenPresent()
     {
-        List<Claim> claims = [new(ClaimTypes.Role, "Administrator")];
-        ClaimsPrincipal principal = new(new ClaimsIdentity(claims, "TestScheme"));
+        List<Claim> claims = [new(type: ClaimTypes.Role, value: "Administrator")];
+        ClaimsPrincipal principal = new(identity: new ClaimsIdentity(claims: claims, authenticationType: "TestScheme"));
 
         string result = principal.Role();
 
-        result.Should().Be("Administrator");
+        result.Should().Be(expected: "Administrator");
     }
 
     [Fact]
     public void Role_ReturnsEmpty_WhenRoleClaimAbsent()
     {
-        ClaimsPrincipal principal = new(new ClaimsIdentity([], "TestScheme"));
+        ClaimsPrincipal principal = new(identity: new ClaimsIdentity(claims: [], authenticationType: "TestScheme"));
 
         string result = principal.Role();
 
@@ -130,15 +130,15 @@ public sealed class ClaimsPrincipalExtensionsTests
     {
         List<Claim> claims =
         [
-            new("name", "Full Name"),
-            new(ClaimTypes.GivenName, "Given"),
-            new(ClaimTypes.Surname, "Family"),
+            new(type: "name", value: "Full Name"),
+            new(type: ClaimTypes.GivenName, value: "Given"),
+            new(type: ClaimTypes.Surname, value: "Family"),
         ];
-        ClaimsPrincipal principal = new(new ClaimsIdentity(claims, "TestScheme"));
+        ClaimsPrincipal principal = new(identity: new ClaimsIdentity(claims: claims, authenticationType: "TestScheme"));
 
         string result = principal.UserName();
 
-        result.Should().Be("Full Name");
+        result.Should().Be(expected: "Full Name");
     }
 
     [Fact]
@@ -146,42 +146,42 @@ public sealed class ClaimsPrincipalExtensionsTests
     {
         List<Claim> claims =
         [
-            new(ClaimTypes.GivenName, "Jane"),
-            new(ClaimTypes.Surname, "Doe"),
+            new(type: ClaimTypes.GivenName, value: "Jane"),
+            new(type: ClaimTypes.Surname, value: "Doe"),
         ];
-        ClaimsPrincipal principal = new(new ClaimsIdentity(claims, "TestScheme"));
+        ClaimsPrincipal principal = new(identity: new ClaimsIdentity(claims: claims, authenticationType: "TestScheme"));
 
         string result = principal.UserName();
 
-        result.Should().Be("Jane Doe");
+        result.Should().Be(expected: "Jane Doe");
     }
 
     [Fact]
     public void UserName_ReturnsTrimmedGivenName_WhenSurnameAbsent()
     {
-        List<Claim> claims = [new(ClaimTypes.GivenName, "John")];
-        ClaimsPrincipal principal = new(new ClaimsIdentity(claims, "TestScheme"));
+        List<Claim> claims = [new(type: ClaimTypes.GivenName, value: "John")];
+        ClaimsPrincipal principal = new(identity: new ClaimsIdentity(claims: claims, authenticationType: "TestScheme"));
 
         string result = principal.UserName();
 
-        result.Should().Be("John");
+        result.Should().Be(expected: "John");
     }
 
     [Fact]
     public void UserName_ReturnsTrimmedSurname_WhenGivenNameAbsent()
     {
-        List<Claim> claims = [new(ClaimTypes.Surname, "Smith")];
-        ClaimsPrincipal principal = new(new ClaimsIdentity(claims, "TestScheme"));
+        List<Claim> claims = [new(type: ClaimTypes.Surname, value: "Smith")];
+        ClaimsPrincipal principal = new(identity: new ClaimsIdentity(claims: claims, authenticationType: "TestScheme"));
 
         string result = principal.UserName();
 
-        result.Should().Be("Smith");
+        result.Should().Be(expected: "Smith");
     }
 
     [Fact]
     public void UserName_ReturnsEmpty_WhenAllNameClaimsAbsent()
     {
-        ClaimsPrincipal principal = new(new ClaimsIdentity([], "TestScheme"));
+        ClaimsPrincipal principal = new(identity: new ClaimsIdentity(claims: [], authenticationType: "TestScheme"));
 
         string result = principal.UserName();
 
@@ -201,18 +201,18 @@ public sealed class ClaimsPrincipalExtensionsTests
     [Fact]
     public void Email_ReturnsEmailClaim()
     {
-        List<Claim> claims = [new(ClaimTypes.Email, "user@nomercy.tv")];
-        ClaimsPrincipal principal = new(new ClaimsIdentity(claims, "TestScheme"));
+        List<Claim> claims = [new(type: ClaimTypes.Email, value: "user@nomercy.tv")];
+        ClaimsPrincipal principal = new(identity: new ClaimsIdentity(claims: claims, authenticationType: "TestScheme"));
 
         string result = principal.Email();
 
-        result.Should().Be("user@nomercy.tv");
+        result.Should().Be(expected: "user@nomercy.tv");
     }
 
     [Fact]
     public void Email_ReturnsEmpty_WhenEmailClaimAbsent()
     {
-        ClaimsPrincipal principal = new(new ClaimsIdentity([], "TestScheme"));
+        ClaimsPrincipal principal = new(identity: new ClaimsIdentity(claims: [], authenticationType: "TestScheme"));
 
         string result = principal.Email();
 
@@ -231,7 +231,7 @@ public sealed class ClaimsPrincipalExtensionsTests
 
     private static ClaimsPrincipal PrincipalWithSub(string sub)
     {
-        List<Claim> claims = [new(ClaimTypes.NameIdentifier, sub)];
-        return new(new ClaimsIdentity(claims, "TestScheme"));
+        List<Claim> claims = [new(type: ClaimTypes.NameIdentifier, value: sub)];
+        return new(identity: new ClaimsIdentity(claims: claims, authenticationType: "TestScheme"));
     }
 }

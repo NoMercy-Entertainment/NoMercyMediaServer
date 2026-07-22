@@ -24,13 +24,13 @@
         /// </exception>
         public MovieFile(string filePath)
         {
-            if (string.IsNullOrWhiteSpace(filePath))
+            if (string.IsNullOrWhiteSpace(value: filePath))
             {
-                throw new ArgumentException($"'{nameof(filePath)}' cannot be null or whitespace", nameof(filePath));
+                throw new ArgumentException(message: $"'{nameof(filePath)}' cannot be null or whitespace", paramName: nameof(filePath));
             }
 
             Path = filePath;
-            Extension = System.IO.Path.GetExtension(filePath);
+            Extension = System.IO.Path.GetExtension(path: filePath);
         }
 
         /// <summary>
@@ -58,13 +58,13 @@
         /// </summary>
         public int? Episode
         {
-            get => _episodes.Count == 0 ? null : _episodes[0];
+            get => _episodes.Count == 0 ? null : _episodes[index: 0];
             set
             {
                 _episodes.Clear();
                 if (value.HasValue)
                 {
-                    _episodes.Add(value.Value);
+                    _episodes.Add(item: value.Value);
                 }
             }
         }
@@ -105,7 +105,7 @@
         /// <param name="episode">The episode number.</param>
         public void AddEpisode(int episode)
         {
-            _episodes.Add(episode);
+            _episodes.Add(item: episode);
         }
     }
 }

@@ -37,11 +37,11 @@ public sealed record CapturedRequest(
     // resolve unambiguously against Should().
     public Dictionary<string, string?> Query =>
         QueryHelpers
-            .ParseQuery(Uri.Query)
-            .ToDictionary(pair => pair.Key, pair => (string?)pair.Value.ToString());
+            .ParseQuery(queryString: Uri.Query)
+            .ToDictionary(keySelector: pair => pair.Key, elementSelector: pair => (string?)pair.Value.ToString());
 
     public bool HasHeader(string name) =>
-        Headers.Keys.Any(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase));
+        Headers.Keys.Any(predicate: key => string.Equals(a: key, b: name, comparisonType: StringComparison.OrdinalIgnoreCase));
 
     // HttpHeaders re-tokenizes some well-known headers (User-Agent's product/
     // comment tokens, for one) into several entries in the values list even
@@ -50,11 +50,11 @@ public sealed record CapturedRequest(
     public string? HeaderValue(string name)
     {
         List<string> values = Headers
-            .Where(kv => string.Equals(kv.Key, name, StringComparison.OrdinalIgnoreCase))
-            .SelectMany(kv => kv.Value)
+            .Where(predicate: kv => string.Equals(a: kv.Key, b: name, comparisonType: StringComparison.OrdinalIgnoreCase))
+            .SelectMany(selector: kv => kv.Value)
             .ToList();
 
-        return values.Count == 0 ? null : string.Join(" ", values);
+        return values.Count == 0 ? null : string.Join(separator: " ", values: values);
     }
 }
 
@@ -71,18 +71,18 @@ internal sealed class HandlerRoute(
 )
 {
     private readonly Queue<Func<HttpRequestMessage, HttpResponseMessage>> _responses = new(
-        responses
+        collection: responses
     );
     private Func<HttpRequestMessage, HttpResponseMessage>? _last;
 
-    public bool Matches(HttpRequestMessage request) => match(request);
+    public bool Matches(HttpRequestMessage request) => match(arg: request);
 
     public HttpResponseMessage Respond(HttpRequestMessage request)
     {
         Func<HttpRequestMessage, HttpResponseMessage> respond =
             _responses.Count > 0 ? _responses.Dequeue() : _last!;
         _last = respond;
-        return respond(request);
+        return respond(arg: request);
     }
 }
 
@@ -114,7 +114,7 @@ public sealed class ScriptableHttpMessageHandler : HttpMessageHandler
     }
 
     public int RequestCountFor(string pathContains) =>
-        Requests.Count(r => r.Path.Contains(pathContains, StringComparison.Ordinal));
+        Requests.Count(predicate: r => r.Path.Contains(value: pathContains, comparisonType: StringComparison.Ordinal));
 
     public void When(
         Func<HttpRequestMessage, bool> match,
@@ -122,7 +122,7 @@ public sealed class ScriptableHttpMessageHandler : HttpMessageHandler
     )
     {
         lock (_gate)
-            _routes.Add(new(match, responses));
+            _routes.Add(item: new(match: match, responses: responses));
     }
 
     public void WhenGet(
@@ -130,15 +130,15 @@ public sealed class ScriptableHttpMessageHandler : HttpMessageHandler
         params Func<HttpRequestMessage, HttpResponseMessage>[] responses
     ) =>
         When(
-            request =>
+            match: request =>
                 request.Method == HttpMethod.Get
                 && (
                     request.RequestUri?.AbsolutePath.Contains(
-                        pathContains,
-                        StringComparison.Ordinal
+                        value: pathContains,
+                        comparisonType: StringComparison.Ordinal
                     ) ?? false
                 ),
-            responses
+            responses: responses
         );
 
     public void WhenPost(
@@ -146,15 +146,15 @@ public sealed class ScriptableHttpMessageHandler : HttpMessageHandler
         params Func<HttpRequestMessage, HttpResponseMessage>[] responses
     ) =>
         When(
-            request =>
+            match: request =>
                 request.Method == HttpMethod.Post
                 && (
                     request.RequestUri?.AbsolutePath.Contains(
-                        pathContains,
-                        StringComparison.Ordinal
+                        value: pathContains,
+                        comparisonType: StringComparison.Ordinal
                     ) ?? false
                 ),
-            responses
+            responses: responses
         );
 
     protected override Task<HttpResponseMessage> SendAsync(
@@ -163,34 +163,34 @@ public sealed class ScriptableHttpMessageHandler : HttpMessageHandler
     )
     {
         CapturedRequest snapshot = new(
-            request.Method,
-            request.RequestUri ?? throw new InvalidOperationException("Request has no URI."),
-            request
+            Method: request.Method,
+            Uri: request.RequestUri ?? throw new InvalidOperationException(message: "Request has no URI."),
+            Headers: request
                 .Headers.Concat(
-                    request.Content?.Headers
-                        ?? Enumerable.Empty<KeyValuePair<string, IEnumerable<string>>>()
+                    second: request.Content?.Headers
+                            ?? Enumerable.Empty<KeyValuePair<string, IEnumerable<string>>>()
                 )
-                .ToDictionary(h => h.Key, h => h.Value)
+                .ToDictionary(keySelector: h => h.Key, elementSelector: h => h.Value)
         );
 
         HandlerRoute? route;
         lock (_gate)
         {
-            _requests.Add(snapshot);
-            route = _routes.FirstOrDefault(r => r.Matches(request));
+            _requests.Add(item: snapshot);
+            route = _routes.FirstOrDefault(predicate: r => r.Matches(request: request));
         }
 
         if (route is null)
             return Task.FromResult(
-                new HttpResponseMessage(HttpStatusCode.NotFound)
+                result: new HttpResponseMessage(statusCode: HttpStatusCode.NotFound)
                 {
                     Content = new StringContent(
-                        $"ScriptableHttpMessageHandler: no route scripted for {request.Method} {request.RequestUri}"
+                        content: $"ScriptableHttpMessageHandler: no route scripted for {request.Method} {request.RequestUri}"
                     ),
                 }
             );
 
-        return Task.FromResult(route.Respond(request));
+        return Task.FromResult(result: route.Respond(request: request));
     }
 }
 
@@ -201,27 +201,27 @@ public static class MockResponse
         HttpStatusCode status,
         string body
     ) =>
-        _ => new HttpResponseMessage(status)
+        _ => new HttpResponseMessage(statusCode: status)
         {
-            Content = new StringContent(body, Encoding.UTF8, "application/json"),
+            Content = new StringContent(content: body, encoding: Encoding.UTF8, mediaType: "application/json"),
         };
 
     public static Func<HttpRequestMessage, HttpResponseMessage> Json<T>(
         HttpStatusCode status,
         T body
-    ) => Json(status, body!.ToJson());
+    ) => Json(status: status, body: body!.ToJson());
 
     public static Func<HttpRequestMessage, HttpResponseMessage> Status(HttpStatusCode status) =>
-        _ => new HttpResponseMessage(status) { Content = new StringContent(string.Empty) };
+        _ => new HttpResponseMessage(statusCode: status) { Content = new StringContent(content: string.Empty) };
 
     /// <summary>200 OK with a body that fails JSON deserialization.</summary>
     public static Func<HttpRequestMessage, HttpResponseMessage> Malformed() =>
-        _ => new HttpResponseMessage(HttpStatusCode.OK)
+        _ => new HttpResponseMessage(statusCode: HttpStatusCode.OK)
         {
             Content = new StringContent(
-                "{ this is not valid json",
-                Encoding.UTF8,
-                "application/json"
+                content: "{ this is not valid json",
+                encoding: Encoding.UTF8,
+                mediaType: "application/json"
             ),
         };
 }

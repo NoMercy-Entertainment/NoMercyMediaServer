@@ -19,10 +19,10 @@ using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;
 
-[Trait("Category", "Characterization")]
+[Trait(name: "Category", value: "Characterization")]
 public class UserRepositoryTests : IDisposable
 {
-    private static readonly Guid ActingUserId = Guid.Parse("99999999-9999-9999-9999-999999999999");
+    private static readonly Guid ActingUserId = Guid.Parse(input: "99999999-9999-9999-9999-999999999999");
 
     private readonly MediaContext _context;
     private readonly IDbContextFactory<MediaContext> _factory;
@@ -38,7 +38,7 @@ public class UserRepositoryTests : IDisposable
         // mis-targeted LibraryUser write would satisfy the FK and surface as a
         // wrong-owner row rather than a constraint failure.
         _context.Users.Add(
-            new()
+            entity: new()
             {
                 Id = ActingUserId,
                 Email = "admin@nomercy.tv",
@@ -49,7 +49,7 @@ public class UserRepositoryTests : IDisposable
         );
         _context.SaveChanges();
 
-        _repository = new(_context, _factory);
+        _repository = new(context: _context, contextFactory: _factory);
     }
 
     [Fact]
@@ -68,11 +68,11 @@ public class UserRepositoryTests : IDisposable
 
         await using MediaContext verify = _factory.CreateDbContext();
         List<LibraryUser> rows = await verify
-            .LibraryUser.Where(lu => lu.LibraryId == SeedConstants.MovieLibraryId)
+            .LibraryUser.Where(predicate: lu => lu.LibraryId == SeedConstants.MovieLibraryId)
             .ToListAsync();
 
-        Assert.Contains(rows, lu => lu.UserId == SeedConstants.UserId);
-        Assert.DoesNotContain(rows, lu => lu.UserId == ActingUserId);
+        Assert.Contains(collection: rows, filter: lu => lu.UserId == SeedConstants.UserId);
+        Assert.DoesNotContain(collection: rows, filter: lu => lu.UserId == ActingUserId);
     }
 
     public void Dispose()

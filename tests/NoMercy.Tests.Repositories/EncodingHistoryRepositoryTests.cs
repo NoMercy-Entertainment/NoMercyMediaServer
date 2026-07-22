@@ -16,7 +16,7 @@ using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;
 
-[Trait("Category", "Characterization")]
+[Trait(name: "Category", value: "Characterization")]
 public class EncodingHistoryRepositoryTests : IDisposable
 {
     private readonly MediaContext _context;
@@ -25,7 +25,7 @@ public class EncodingHistoryRepositoryTests : IDisposable
     public EncodingHistoryRepositoryTests()
     {
         _context = TestMediaContextFactory.CreateSeededContext();
-        _repository = new(_context);
+        _repository = new(context: _context);
     }
 
     [Fact]
@@ -33,12 +33,12 @@ public class EncodingHistoryRepositoryTests : IDisposable
     {
         EncodingHistory entry = Build();
 
-        await _repository.AddAsync(entry);
+        await _repository.AddAsync(entry: entry);
 
-        EncodingHistory? loaded = await _repository.GetByIdAsync(entry.Id);
-        Assert.NotNull(loaded);
-        Assert.Equal(entry.InputPath, loaded!.InputPath);
-        Assert.Equal(entry.ProfileName, loaded.ProfileName);
+        EncodingHistory? loaded = await _repository.GetByIdAsync(id: entry.Id);
+        Assert.NotNull(@object: loaded);
+        Assert.Equal(expected: entry.InputPath, actual: loaded!.InputPath);
+        Assert.Equal(expected: entry.ProfileName, actual: loaded.ProfileName);
     }
 
     [Fact]
@@ -46,20 +46,20 @@ public class EncodingHistoryRepositoryTests : IDisposable
     {
         EncodingHistory older = Build(
             profileName: "older",
-            createdAt: new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            createdAt: new DateTime(year: 2026, month: 1, day: 1, hour: 0, minute: 0, second: 0, kind: DateTimeKind.Utc)
         );
         EncodingHistory newer = Build(
             profileName: "newer",
-            createdAt: new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc)
+            createdAt: new DateTime(year: 2026, month: 6, day: 1, hour: 0, minute: 0, second: 0, kind: DateTimeKind.Utc)
         );
 
-        await _repository.AddAsync(older);
-        await _repository.AddAsync(newer);
+        await _repository.AddAsync(entry: older);
+        await _repository.AddAsync(entry: newer);
 
         List<EncodingHistory> page = await _repository.GetRecentAsync(pageSize: 10, pageIndex: 0);
 
-        Assert.Equal("newer", page[0].ProfileName);
-        Assert.Equal("older", page[1].ProfileName);
+        Assert.Equal(expected: "newer", actual: page[index: 0].ProfileName);
+        Assert.Equal(expected: "older", actual: page[index: 1].ProfileName);
     }
 
     [Fact]
@@ -67,93 +67,93 @@ public class EncodingHistoryRepositoryTests : IDisposable
     {
         for (int i = 0; i < 15; i++)
             await _repository.AddAsync(
-                Build(profileName: $"profile-{i:D2}", createdAt: DateTime.UtcNow.AddMinutes(i))
+                entry: Build(profileName: $"profile-{i:D2}", createdAt: DateTime.UtcNow.AddMinutes(value: i))
             );
 
         List<EncodingHistory> page1 = await _repository.GetRecentAsync(pageSize: 5, pageIndex: 0);
         List<EncodingHistory> page2 = await _repository.GetRecentAsync(pageSize: 5, pageIndex: 1);
 
-        Assert.Equal(5, page1.Count);
-        Assert.Equal(5, page2.Count);
-        Assert.DoesNotContain(page1.Select(p => p.Id), id => page2.Select(p => p.Id).Contains(id));
+        Assert.Equal(expected: 5, actual: page1.Count);
+        Assert.Equal(expected: 5, actual: page2.Count);
+        Assert.DoesNotContain(collection: page1.Select(selector: p => p.Id), filter: id => page2.Select(selector: p => p.Id).Contains(value: id));
     }
 
     [Fact]
     public async Task GetRecentAsync_NormalizesBadArguments()
     {
-        await _repository.AddAsync(Build());
+        await _repository.AddAsync(entry: Build());
 
         List<EncodingHistory> result = await _repository.GetRecentAsync(
             pageSize: -1,
             pageIndex: -5
         );
 
-        Assert.NotEmpty(result);
+        Assert.NotEmpty(collection: result);
     }
 
     [Fact]
     public async Task GetTotalCountAsync_ReturnsRowCount()
     {
-        await _repository.AddAsync(Build());
-        await _repository.AddAsync(Build());
-        await _repository.AddAsync(Build());
+        await _repository.AddAsync(entry: Build());
+        await _repository.AddAsync(entry: Build());
+        await _repository.AddAsync(entry: Build());
 
         int count = await _repository.GetTotalCountAsync();
 
-        Assert.Equal(3, count);
+        Assert.Equal(expected: 3, actual: count);
     }
 
     [Fact]
     public async Task GetByIdAsync_UnknownId_ReturnsNull()
     {
-        EncodingHistory? loaded = await _repository.GetByIdAsync(Ulid.NewUlid());
+        EncodingHistory? loaded = await _repository.GetByIdAsync(id: Ulid.NewUlid());
 
-        Assert.Null(loaded);
+        Assert.Null(@object: loaded);
     }
 
     [Fact]
     public async Task DeleteAsync_ExistingRow_Removes()
     {
         EncodingHistory entry = Build();
-        await _repository.AddAsync(entry);
+        await _repository.AddAsync(entry: entry);
 
-        bool removed = await _repository.DeleteAsync(entry.Id);
+        bool removed = await _repository.DeleteAsync(id: entry.Id);
 
-        Assert.True(removed);
-        Assert.Null(await _repository.GetByIdAsync(entry.Id));
+        Assert.True(condition: removed);
+        Assert.Null(@object: await _repository.GetByIdAsync(id: entry.Id));
     }
 
     [Fact]
     public async Task DeleteAsync_UnknownId_ReturnsFalse()
     {
-        bool removed = await _repository.DeleteAsync(Ulid.NewUlid());
+        bool removed = await _repository.DeleteAsync(id: Ulid.NewUlid());
 
-        Assert.False(removed);
+        Assert.False(condition: removed);
     }
 
     [Fact]
     public async Task DeleteOlderThanAsync_RemovesOnlyOlderEntries()
     {
-        await _repository.AddAsync(Build(createdAt: DateTime.UtcNow.AddDays(-60)));
-        await _repository.AddAsync(Build(createdAt: DateTime.UtcNow.AddDays(-30)));
-        await _repository.AddAsync(Build(createdAt: DateTime.UtcNow.AddDays(-5)));
+        await _repository.AddAsync(entry: Build(createdAt: DateTime.UtcNow.AddDays(value: -60)));
+        await _repository.AddAsync(entry: Build(createdAt: DateTime.UtcNow.AddDays(value: -30)));
+        await _repository.AddAsync(entry: Build(createdAt: DateTime.UtcNow.AddDays(value: -5)));
 
-        int removed = await _repository.DeleteOlderThanAsync(DateTime.UtcNow.AddDays(-15));
+        int removed = await _repository.DeleteOlderThanAsync(olderThan: DateTime.UtcNow.AddDays(value: -15));
 
-        Assert.Equal(2, removed);
-        Assert.Equal(1, await _repository.GetTotalCountAsync());
+        Assert.Equal(expected: 2, actual: removed);
+        Assert.Equal(expected: 1, actual: await _repository.GetTotalCountAsync());
     }
 
     [Fact]
     public async Task DeleteAllAsync_RemovesEverything()
     {
-        await _repository.AddAsync(Build());
-        await _repository.AddAsync(Build());
+        await _repository.AddAsync(entry: Build());
+        await _repository.AddAsync(entry: Build());
 
         int removed = await _repository.DeleteAllAsync();
 
-        Assert.Equal(2, removed);
-        Assert.Equal(0, await _repository.GetTotalCountAsync());
+        Assert.Equal(expected: 2, actual: removed);
+        Assert.Equal(expected: 0, actual: await _repository.GetTotalCountAsync());
     }
 
     [Fact]
@@ -161,33 +161,33 @@ public class EncodingHistoryRepositoryTests : IDisposable
     {
         EncodingHistoryStats stats = await _repository.GetAggregateStatsAsync();
 
-        Assert.Equal(0, stats.TotalEncodes);
-        Assert.Equal(0, stats.TotalInputBytes);
-        Assert.Equal(0, stats.TotalOutputBytes);
+        Assert.Equal(expected: 0, actual: stats.TotalEncodes);
+        Assert.Equal(expected: 0, actual: stats.TotalInputBytes);
+        Assert.Equal(expected: 0, actual: stats.TotalOutputBytes);
     }
 
     [Fact]
     public async Task GetAggregateStatsAsync_AggregatesAcrossRows()
     {
         await _repository.AddAsync(
-            Build(profileName: "a", createdAt: DateTime.UtcNow.AddHours(-1))
+            entry: Build(profileName: "a", createdAt: DateTime.UtcNow.AddHours(value: -1))
         );
         await _repository.AddAsync(
-            Build(profileName: "b", createdAt: DateTime.UtcNow.AddHours(-2))
+            entry: Build(profileName: "b", createdAt: DateTime.UtcNow.AddHours(value: -2))
         );
 
         EncodingHistoryStats stats = await _repository.GetAggregateStatsAsync();
 
-        Assert.Equal(2, stats.TotalEncodes);
-        Assert.Equal(16_000_000_000, stats.TotalInputBytes);
-        Assert.Equal(8_000_000_000, stats.TotalOutputBytes);
-        Assert.Equal(2.0, stats.AverageSpeed);
+        Assert.Equal(expected: 2, actual: stats.TotalEncodes);
+        Assert.Equal(expected: 16_000_000_000, actual: stats.TotalInputBytes);
+        Assert.Equal(expected: 8_000_000_000, actual: stats.TotalOutputBytes);
+        Assert.Equal(expected: 2.0, actual: stats.AverageSpeed);
     }
 
     public void Dispose()
     {
         _context.Dispose();
-        GC.SuppressFinalize(this);
+        GC.SuppressFinalize(obj: this);
     }
 
     private static EncodingHistory Build(

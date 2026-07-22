@@ -26,7 +26,7 @@ namespace NoMercy.Tests.Networking;
 /// tear down the active strategy on stop/dispose so a stopped server never
 /// leaves a tunnel or port mapping dangling.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class ConnectivityManagerLifecycleTests
 {
     private sealed class FastNetworkDiscovery : INetworkDiscovery
@@ -52,7 +52,7 @@ public sealed class ConnectivityManagerLifecycleTests
 
         public Task ForceRediscoveryAsync() => Task.CompletedTask;
 
-        public Task<bool> IsPortOpenAsync() => Task.FromResult(false);
+        public Task<bool> IsPortOpenAsync() => Task.FromResult(result: false);
     }
 
     private sealed class RecordingStrategy(bool succeeds) : IConnectivityStrategy
@@ -62,7 +62,7 @@ public sealed class ConnectivityManagerLifecycleTests
         public int Priority => 1;
         public ConnectivityType Type => ConnectivityType.PortForward;
 
-        public Task<bool> TryEstablishAsync(CancellationToken ct) => Task.FromResult(succeeds);
+        public Task<bool> TryEstablishAsync(CancellationToken ct) => Task.FromResult(result: succeeds);
 
         public Task TeardownAsync()
         {
@@ -79,11 +79,11 @@ public sealed class ConnectivityManagerLifecycleTests
     )
     {
         return new(
-            NullLogger<ConnectivityManager>.Instance,
-            tokenStore,
-            discovery,
-            strategies,
-            boot
+            logger: NullLogger<ConnectivityManager>.Instance,
+            authTokenStore: tokenStore,
+            networkDiscovery: discovery,
+            strategies: strategies,
+            bootStatus: boot
         );
     }
 
@@ -94,21 +94,21 @@ public sealed class ConnectivityManagerLifecycleTests
         BootStatus boot = new();
         boot.MarkStarted();
         AuthTokenStore tokenStore = new();
-        tokenStore.SetAccessToken("test-token");
+        tokenStore.SetAccessToken(token: "test-token");
         RecordingStrategy strategy = new(succeeds: true);
-        ConnectivityManager manager = BuildManager(discovery, boot, tokenStore, strategy);
+        ConnectivityManager manager = BuildManager(discovery: discovery, boot: boot, tokenStore: tokenStore, strategies: strategy);
 
-        await manager.StartAsync(CancellationToken.None);
+        await manager.StartAsync(cancellationToken: CancellationToken.None);
 
         // ExecuteAsync runs on the background task; give it a moment to reach
         // EvaluateAsync (no real I/O — this is a fast in-process transition).
         for (int i = 0; i < 50 && manager.CurrentState != ConnectivityState.DirectAccess; i++)
-            await Task.Delay(20);
+            await Task.Delay(millisecondsDelay: 20);
 
-        Assert.Equal(ConnectivityState.DirectAccess, manager.CurrentState);
-        Assert.Equal(1, discovery.DiscoverCallCount);
+        Assert.Equal(expected: ConnectivityState.DirectAccess, actual: manager.CurrentState);
+        Assert.Equal(expected: 1, actual: discovery.DiscoverCallCount);
 
-        await manager.StopAsync(CancellationToken.None);
+        await manager.StopAsync(cancellationToken: CancellationToken.None);
     }
 
     [Fact]
@@ -118,18 +118,18 @@ public sealed class ConnectivityManagerLifecycleTests
         BootStatus boot = new();
         boot.MarkStarted();
         AuthTokenStore tokenStore = new(); // AccessToken stays null
-        ConnectivityManager manager = BuildManager(discovery, boot, tokenStore);
+        ConnectivityManager manager = BuildManager(discovery: discovery, boot: boot, tokenStore: tokenStore);
 
-        await manager.StartAsync(CancellationToken.None);
-        await Task.Delay(50); // let ExecuteAsync enter the "waiting for auth" loop
+        await manager.StartAsync(cancellationToken: CancellationToken.None);
+        await Task.Delay(millisecondsDelay: 50); // let ExecuteAsync enter the "waiting for auth" loop
 
-        Exception? ex = await Record.ExceptionAsync(() =>
-            manager.StopAsync(CancellationToken.None)
+        Exception? ex = await Record.ExceptionAsync(testCode: () =>
+            manager.StopAsync(cancellationToken: CancellationToken.None)
         );
 
-        Assert.Null(ex);
+        Assert.Null(@object: ex);
         // Never reached DiscoverExternalIpAsync — auth never arrived.
-        Assert.Equal(0, discovery.DiscoverCallCount);
+        Assert.Equal(expected: 0, actual: discovery.DiscoverCallCount);
     }
 
     [Fact]
@@ -138,18 +138,18 @@ public sealed class ConnectivityManagerLifecycleTests
         FastNetworkDiscovery discovery = new();
         BootStatus boot = new(); // never marked started
         AuthTokenStore tokenStore = new();
-        tokenStore.SetAccessToken("test-token");
-        ConnectivityManager manager = BuildManager(discovery, boot, tokenStore);
+        tokenStore.SetAccessToken(token: "test-token");
+        ConnectivityManager manager = BuildManager(discovery: discovery, boot: boot, tokenStore: tokenStore);
 
-        await manager.StartAsync(CancellationToken.None);
-        await Task.Delay(50);
+        await manager.StartAsync(cancellationToken: CancellationToken.None);
+        await Task.Delay(millisecondsDelay: 50);
 
-        Exception? ex = await Record.ExceptionAsync(() =>
-            manager.StopAsync(CancellationToken.None)
+        Exception? ex = await Record.ExceptionAsync(testCode: () =>
+            manager.StopAsync(cancellationToken: CancellationToken.None)
         );
 
-        Assert.Null(ex);
-        Assert.Equal(0, discovery.DiscoverCallCount);
+        Assert.Null(@object: ex);
+        Assert.Equal(expected: 0, actual: discovery.DiscoverCallCount);
     }
 
     [Fact]
@@ -158,13 +158,13 @@ public sealed class ConnectivityManagerLifecycleTests
         FastNetworkDiscovery discovery = new();
         BootStatus boot = new();
         AuthTokenStore tokenStore = new();
-        ConnectivityManager manager = BuildManager(discovery, boot, tokenStore);
+        ConnectivityManager manager = BuildManager(discovery: discovery, boot: boot, tokenStore: tokenStore);
 
-        Exception? ex = await Record.ExceptionAsync(() =>
-            manager.StopAsync(CancellationToken.None)
+        Exception? ex = await Record.ExceptionAsync(testCode: () =>
+            manager.StopAsync(cancellationToken: CancellationToken.None)
         );
 
-        Assert.Null(ex);
+        Assert.Null(@object: ex);
     }
 
     [Fact]
@@ -179,17 +179,17 @@ public sealed class ConnectivityManagerLifecycleTests
         BootStatus boot = new();
         boot.MarkStarted();
         AuthTokenStore tokenStore = new();
-        tokenStore.SetAccessToken("test-token");
+        tokenStore.SetAccessToken(token: "test-token");
         RecordingStrategy strategy = new(succeeds: true);
-        ConnectivityManager manager = BuildManager(discovery, boot, tokenStore, strategy);
+        ConnectivityManager manager = BuildManager(discovery: discovery, boot: boot, tokenStore: tokenStore, strategies: strategy);
 
-        await manager.StartAsync(CancellationToken.None);
+        await manager.StartAsync(cancellationToken: CancellationToken.None);
         for (int i = 0; i < 50 && manager.CurrentState != ConnectivityState.DirectAccess; i++)
-            await Task.Delay(20);
+            await Task.Delay(millisecondsDelay: 20);
 
-        await manager.StopAsync(CancellationToken.None);
+        await manager.StopAsync(cancellationToken: CancellationToken.None);
 
-        Assert.True(strategy.TeardownCalled);
+        Assert.True(condition: strategy.TeardownCalled);
     }
 
     [Fact]
@@ -198,15 +198,15 @@ public sealed class ConnectivityManagerLifecycleTests
         FastNetworkDiscovery discovery = new();
         BootStatus boot = new();
         AuthTokenStore tokenStore = new();
-        ConnectivityManager manager = BuildManager(discovery, boot, tokenStore);
+        ConnectivityManager manager = BuildManager(discovery: discovery, boot: boot, tokenStore: tokenStore);
 
-        Exception? ex = Record.Exception(() =>
+        Exception? ex = Record.Exception(testCode: () =>
         {
             manager.Dispose();
             manager.Dispose();
         });
 
-        Assert.Null(ex);
+        Assert.Null(@object: ex);
     }
 
     [Fact]
@@ -215,9 +215,9 @@ public sealed class ConnectivityManagerLifecycleTests
         FastNetworkDiscovery discovery = new();
         BootStatus boot = new();
         AuthTokenStore tokenStore = new();
-        ConnectivityManager manager = BuildManager(discovery, boot, tokenStore);
+        ConnectivityManager manager = BuildManager(discovery: discovery, boot: boot, tokenStore: tokenStore);
 
-        Assert.Equal(ConnectivityType.LocalOnly, manager.ActiveStrategy);
+        Assert.Equal(expected: ConnectivityType.LocalOnly, actual: manager.ActiveStrategy);
     }
 
     [Fact]
@@ -226,8 +226,8 @@ public sealed class ConnectivityManagerLifecycleTests
         FastNetworkDiscovery discovery = new();
         BootStatus boot = new();
         AuthTokenStore tokenStore = new();
-        ConnectivityManager manager = BuildManager(discovery, boot, tokenStore);
+        ConnectivityManager manager = BuildManager(discovery: discovery, boot: boot, tokenStore: tokenStore);
 
-        Assert.Equal(ConnectivityState.Starting, manager.CurrentState);
+        Assert.Equal(expected: ConnectivityState.Starting, actual: manager.CurrentState);
     }
 }

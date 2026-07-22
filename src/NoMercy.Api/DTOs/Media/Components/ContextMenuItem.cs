@@ -18,18 +18,18 @@ namespace NoMercy.Api.DTOs.Media.Components;
 /// </summary>
 public record ContextMenuItem
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public string? Id { get; set; }
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string? Title { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty(propertyName: "action")]
     public string? Action { get; set; }
 
-    [JsonProperty("icon")]
+    [JsonProperty(propertyName: "icon")]
     public string? Icon { get; set; }
 
-    [JsonProperty("destructive")]
+    [JsonProperty(propertyName: "destructive")]
     public bool Destructive { get; set; }
 }

@@ -15,21 +15,21 @@ namespace NoMercy.Providers.TMDB.Models.Season;
 
 public class TmdbSeasonChangeItem
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty("action")]
+    [JsonProperty(propertyName: "action")]
     public Action? Action { get; set; }
 
-    [JsonProperty("time")]
+    [JsonProperty(propertyName: "time")]
     public string Time { get; set; } = string.Empty;
 
-    [JsonProperty("value")]
+    [JsonProperty(propertyName: "value")]
     public string? Value { get; set; }
 
-    [JsonProperty("original_value")]
+    [JsonProperty(propertyName: "original_value")]
     public string OriginalValue { get; set; } = string.Empty;
 
-    [JsonProperty("iso_639_1")]
+    [JsonProperty(propertyName: "iso_639_1")]
     public string Iso6391 { get; set; } = string.Empty;
 }

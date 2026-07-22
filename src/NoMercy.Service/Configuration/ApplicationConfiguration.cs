@@ -43,43 +43,43 @@ public static class ApplicationConfiguration
         IWebHostEnvironment env = app.ApplicationServices.GetRequiredService<IWebHostEnvironment>();
 
         HttpClientProvider.Initialize(
-            app.ApplicationServices.GetRequiredService<IHttpClientFactory>()
+            factory: app.ApplicationServices.GetRequiredService<IHttpClientFactory>()
         );
         IStorage storage = app.ApplicationServices.GetRequiredService<IStorage>();
-        CacheController.Initialize(storage);
-        TmdbImageClient.Initialize(storage);
-        NoMercyImageClient.Initialize(storage);
-        FanArtImageClient.Initialize(storage);
-        CoverArtCoverArtClient.Initialize(storage);
+        CacheController.Initialize(storage: storage);
+        TmdbImageClient.Initialize(storage: storage);
+        NoMercyImageClient.Initialize(storage: storage);
+        FanArtImageClient.Initialize(storage: storage);
+        CoverArtCoverArtClient.Initialize(storage: storage);
 
         // Skip eager singleton resolution in the test environment — event handlers use
         // IClientMessenger which captures ConnectedClients at construction time.  During
         // integration tests the ConnectedClients instance may be replaced by the test
         // harness after service collection construction; eagerly resolving here would
         // pin the original instance and prevent test-supplied instances from being used.
-        if (!env.IsEnvironment("Testing"))
+        if (!env.IsEnvironment(environmentName: "Testing"))
             app.ApplicationServices.InitializeSignalREventHandlers();
 
-        ConfigureLocalization(app);
-        ConfigureMiddleware(app);
-        ConfigureStaticFiles(app);
-        ConfigureDynamicStaticFiles(app);
-        ConfigureEndpoints(app);
-        SwaggerConfiguration.UseSwaggerUi(app, provider);
+        ConfigureLocalization(app: app);
+        ConfigureMiddleware(app: app);
+        ConfigureStaticFiles(app: app);
+        ConfigureDynamicStaticFiles(app: app);
+        ConfigureEndpoints(app: app);
+        SwaggerConfiguration.UseSwaggerUi(app: app, provider: provider);
     }
 
     private static void ConfigureLocalization(IApplicationBuilder app)
     {
         string[] supportedCultures = ["en-US", "nl-NL"]; // Add other supported locales
         RequestLocalizationOptions localizationOptions = new RequestLocalizationOptions()
-            .SetDefaultCulture(supportedCultures[0])
-            .AddSupportedCultures(supportedCultures)
-            .AddSupportedUICultures(supportedCultures);
+            .SetDefaultCulture(defaultCulture: supportedCultures[0])
+            .AddSupportedCultures(cultures: supportedCultures)
+            .AddSupportedUICultures(uiCultures: supportedCultures);
 
         localizationOptions.FallBackToParentCultures = true;
         localizationOptions.FallBackToParentUICultures = true;
 
-        app.UseRequestLocalization(localizationOptions);
+        app.UseRequestLocalization(options: localizationOptions);
     }
 
     private static void ConfigureMiddleware(IApplicationBuilder app)
@@ -96,11 +96,11 @@ public static class ApplicationConfiguration
         {
             app.UseHsts();
             app.UseWhen(
-                context =>
-                    !context.Request.Path.StartsWithSegments("/manage")
+                predicate: context =>
+                    !context.Request.Path.StartsWithSegments(other: "/manage")
                     && context.Connection.LocalPort
                         != RuntimeServerSettings.Current.InternalServerPort + 1,
-                branch => branch.UseHttpsRedirection()
+                configuration: branch => branch.UseHttpsRedirection()
             );
         }
         app.UseResponseCompression();
@@ -109,25 +109,25 @@ public static class ApplicationConfiguration
         // Must precede UseCors: it sets the Private Network Access opt-in header on
         // preflights so a public-origin page may reach this server on a LAN address.
         app.UseMiddleware<PrivateNetworkAccessMiddleware>();
-        app.UseCors("AllowNoMercyOrigins");
+        app.UseCors(policyName: "AllowNoMercyOrigins");
         app.UseRouting();
 
         // Serve Keycloak silent SSO check page — must be available before auth middleware.
         // The web app's Keycloak adapter loads this in a hidden iframe for token refresh.
         app.Use(
-            async (context, next) =>
+            middleware: async (context, next) =>
             {
                 if (
                     context.Request.Path.Value?.EndsWith(
-                        "/silent-check-sso.html",
-                        StringComparison.OrdinalIgnoreCase
+                        value: "/silent-check-sso.html",
+                        comparisonType: StringComparison.OrdinalIgnoreCase
                     ) == true
                 )
                 {
                     context.Response.ContentType = "text/html; charset=utf-8";
                     context.Response.Headers.CacheControl = "no-store";
                     await context.Response.WriteAsync(
-                        "<html><body><script>parent.postMessage(location.href, location.origin)</script></body></html>"
+                        text: "<html><body><script>parent.postMessage(location.href, location.origin)</script></body></html>"
                     );
                     return;
                 }
@@ -148,18 +148,18 @@ public static class ApplicationConfiguration
         app.UseWebSockets();
 
         app.Use(
-            async (context, next) =>
+            middleware: async (context, next) =>
             {
                 if (
                     !RuntimeServerSettings.Current.Swagger
                     && (
-                        context.Request.Path.StartsWithSegments("/swagger")
-                        || context.Request.Path.StartsWithSegments("/index.html")
+                        context.Request.Path.StartsWithSegments(other: "/swagger")
+                        || context.Request.Path.StartsWithSegments(other: "/index.html")
                     )
                 )
                 {
                     context.Response.StatusCode = StatusCodes.Status410Gone;
-                    await context.Response.WriteAsync("Swagger is disabled.");
+                    await context.Response.WriteAsync(text: "Swagger is disabled.");
                     return;
                 }
 
@@ -170,88 +170,88 @@ public static class ApplicationConfiguration
 
     private static void ConfigureEndpoints(IApplicationBuilder app)
     {
-        app.UseEndpoints(endpoints =>
+        app.UseEndpoints(configure: endpoints =>
         {
             // Map API controllers
             endpoints.MapControllers();
 
             // Map SignalR hubs
             endpoints.MapHub<VideoHub>(
-                "/videoHub",
-                options =>
+                pattern: "/videoHub",
+                configureOptions: options =>
                 {
                     options.Transports = HttpTransportType.WebSockets;
-                    options.TransportSendTimeout = TimeSpan.FromSeconds(40);
+                    options.TransportSendTimeout = TimeSpan.FromSeconds(seconds: 40);
                     options.CloseOnAuthenticationExpiration = true;
                 }
             );
 
             endpoints.MapHub<MusicHub>(
-                "/musicHub",
-                options =>
+                pattern: "/musicHub",
+                configureOptions: options =>
                 {
                     options.Transports = HttpTransportType.WebSockets;
-                    options.TransportSendTimeout = TimeSpan.FromSeconds(40);
+                    options.TransportSendTimeout = TimeSpan.FromSeconds(seconds: 40);
                     options.CloseOnAuthenticationExpiration = true;
                 }
             );
 
             endpoints.MapHub<CastHub>(
-                "/castHub",
-                options =>
+                pattern: "/castHub",
+                configureOptions: options =>
                 {
                     options.Transports = HttpTransportType.WebSockets;
-                    options.TransportSendTimeout = TimeSpan.FromSeconds(40);
+                    options.TransportSendTimeout = TimeSpan.FromSeconds(seconds: 40);
                     options.CloseOnAuthenticationExpiration = true;
                 }
             );
 
             endpoints.MapHub<DashboardHub>(
-                "/dashboardHub",
-                options =>
+                pattern: "/dashboardHub",
+                configureOptions: options =>
                 {
                     options.Transports = HttpTransportType.WebSockets;
-                    options.TransportSendTimeout = TimeSpan.FromSeconds(40);
+                    options.TransportSendTimeout = TimeSpan.FromSeconds(seconds: 40);
                     options.CloseOnAuthenticationExpiration = true;
                 }
             );
 
             endpoints.MapHub<RipperHub>(
-                "/ripperHub",
-                options =>
+                pattern: "/ripperHub",
+                configureOptions: options =>
                 {
                     options.Transports = HttpTransportType.WebSockets;
-                    options.TransportSendTimeout = TimeSpan.FromSeconds(40);
+                    options.TransportSendTimeout = TimeSpan.FromSeconds(seconds: 40);
                     options.CloseOnAuthenticationExpiration = true;
                 }
             );
 
             endpoints.MapHub<DrivesHub>(
-                "/drivesHub",
-                options =>
+                pattern: "/drivesHub",
+                configureOptions: options =>
                 {
                     options.Transports = HttpTransportType.WebSockets;
-                    options.TransportSendTimeout = TimeSpan.FromSeconds(40);
+                    options.TransportSendTimeout = TimeSpan.FromSeconds(seconds: 40);
                     options.CloseOnAuthenticationExpiration = true;
                 }
             );
 
             endpoints.MapHub<DeviceHub>(
-                "/deviceHub",
-                options =>
+                pattern: "/deviceHub",
+                configureOptions: options =>
                 {
                     options.Transports = HttpTransportType.WebSockets;
-                    options.TransportSendTimeout = TimeSpan.FromSeconds(40);
+                    options.TransportSendTimeout = TimeSpan.FromSeconds(seconds: 40);
                     options.CloseOnAuthenticationExpiration = true;
                 }
             );
 
             endpoints.MapHub<LiveTranscodeHub>(
-                "/liveTranscodeHub",
-                options =>
+                pattern: "/liveTranscodeHub",
+                configureOptions: options =>
                 {
                     options.Transports = HttpTransportType.WebSockets;
-                    options.TransportSendTimeout = TimeSpan.FromSeconds(40);
+                    options.TransportSendTimeout = TimeSpan.FromSeconds(seconds: 40);
                     options.CloseOnAuthenticationExpiration = true;
                 }
             );
@@ -262,11 +262,11 @@ public static class ApplicationConfiguration
             // broadcasts reached no client. Map it like every other hub so the
             // content-analysis progress stream is actually deliverable.
             endpoints.MapHub<ContentAnalysisHub>(
-                "/contentAnalysisHub",
-                options =>
+                pattern: "/contentAnalysisHub",
+                configureOptions: options =>
                 {
                     options.Transports = HttpTransportType.WebSockets;
-                    options.TransportSendTimeout = TimeSpan.FromSeconds(40);
+                    options.TransportSendTimeout = TimeSpan.FromSeconds(seconds: 40);
                     options.CloseOnAuthenticationExpiration = true;
                 }
             );
@@ -281,11 +281,11 @@ public static class ApplicationConfiguration
         // Bearer header and UseAuthentication has validated it before this branch runs,
         // so an authenticated player still streams while anonymous callers get 401.
         app.UseWhen(
-            context => context.Request.Path.StartsWithSegments("/transcodes"),
-            branch =>
+            predicate: context => context.Request.Path.StartsWithSegments(other: "/transcodes"),
+            configuration: branch =>
             {
                 branch.Use(
-                    async (context, next) =>
+                    middleware: async (context, next) =>
                     {
                         if (context.User.Identity?.IsAuthenticated != true)
                         {
@@ -298,10 +298,10 @@ public static class ApplicationConfiguration
                 );
 
                 branch.UseStaticFiles(
-                    new StaticFileOptions
+                    options: new StaticFileOptions
                     {
-                        FileProvider = new PhysicalFileProvider(AppFiles.TranscodePath),
-                        RequestPath = new("/transcodes"),
+                        FileProvider = new PhysicalFileProvider(root: AppFiles.TranscodePath),
+                        RequestPath = new(value: "/transcodes"),
                         ServeUnknownFileTypes = true,
                         HttpsCompression = HttpsCompressionMode.Compress,
                     }
@@ -311,10 +311,10 @@ public static class ApplicationConfiguration
                 // never expose the listing on a reachable server.
                 if (Config.IsDev)
                     branch.UseDirectoryBrowser(
-                        new DirectoryBrowserOptions
+                        options: new DirectoryBrowserOptions
                         {
-                            FileProvider = new PhysicalFileProvider(AppFiles.TranscodePath),
-                            RequestPath = new("/transcodes"),
+                            FileProvider = new PhysicalFileProvider(root: AppFiles.TranscodePath),
+                            RequestPath = new(value: "/transcodes"),
                         }
                     );
             }
@@ -335,7 +335,7 @@ public static class ApplicationConfiguration
             // here, which we don't have access to in the sync startup path).
             List<Folder> folderLibraries = mediaContext.Folders.ToList();
             foreach (Folder folder in folderLibraries)
-                DynamicStaticFilesMiddleware.AddFolder(folder.Id, folder.DriverId, folder.Path);
+                DynamicStaticFilesMiddleware.AddFolder(folderId: folder.Id, driverId: folder.DriverId, subPath: folder.Path);
 
             // Refresh the cached folder IDs so AccessLogMiddleware allows
             // requests through before the background seeder finishes.
@@ -343,7 +343,7 @@ public static class ApplicationConfiguration
             // ASP.NET Core middleware pipeline (IApplicationBuilder.Use*) and cannot be
             // made async without refactoring the entire startup chain. This is startup-only,
             // before any requests are served, so blocking here is safe.
-            UserCache.Current.RefreshFolderIdsAsync(mediaContext).GetAwaiter().GetResult();
+            UserCache.Current.RefreshFolderIdsAsync(context: mediaContext).GetAwaiter().GetResult();
         }
         catch (SqliteException)
         {

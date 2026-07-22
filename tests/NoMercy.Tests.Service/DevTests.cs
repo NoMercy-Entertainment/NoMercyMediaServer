@@ -23,14 +23,14 @@ namespace NoMercy.Tests.Service;
 /// it are unreachable dead code (nothing un-comments them) and are intentionally
 /// not exercised here — see the coverage report for that residue.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class DevTests
 {
     [Fact]
     public async Task Run_CompletesWithoutThrowing()
     {
-        Exception? thrown = await Record.ExceptionAsync(() => Dev.Run());
+        Exception? thrown = await Record.ExceptionAsync(testCode: () => Dev.Run());
 
-        Assert.Null(thrown);
+        Assert.Null(@object: thrown);
     }
 }

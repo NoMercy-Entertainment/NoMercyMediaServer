@@ -44,59 +44,59 @@ public class PalettePriorityTests
         // The reported bug: an image (entityId 29076) reserved ahead of the
         // episode (6111114) it belongs to.
         PalettePriority
-            .ForImport("episode")
+            .ForImport(entityType: "episode")
             .Should()
             .BeGreaterThan(
-                PalettePriority.ForImport("image"),
-                "a live import must paint the episode before its images"
+                expected: PalettePriority.ForImport(entityType: "image"),
+                because: "a live import must paint the episode before its images"
             );
 
         foreach (string main in new[] { "movie", "tv", "season", "episode", "artist", "album" })
             PalettePriority
-                .ForImport(main)
+                .ForImport(entityType: main)
                 .Should()
-                .BeGreaterThan(PalettePriority.ForImport("image"), $"{main} outranks its images");
+                .BeGreaterThan(expected: PalettePriority.ForImport(entityType: "image"), because: $"{main} outranks its images");
     }
 
     [Fact]
     public void Tiers_drain_in_order_on_demand_import_backfill_coordinator()
     {
-        PalettePriority.OnDemand.Should().BeGreaterThan(PalettePriority.ForImport("episode"));
+        PalettePriority.OnDemand.Should().BeGreaterThan(expected: PalettePriority.ForImport(entityType: "episode"));
         PalettePriority
-            .ForImport("episode")
+            .ForImport(entityType: "episode")
             .Should()
-            .BeGreaterThan(PalettePriority.ForImport("image"));
+            .BeGreaterThan(expected: PalettePriority.ForImport(entityType: "image"));
         PalettePriority
-            .ForImport("image")
+            .ForImport(entityType: "image")
             .Should()
             .BeGreaterThan(
-                PalettePriority.ForBackfill("episode"),
-                "a live import outranks any backfill"
+                expected: PalettePriority.ForBackfill(entityType: "episode"),
+                because: "a live import outranks any backfill"
             );
         PalettePriority
-            .ForBackfill("episode")
+            .ForBackfill(entityType: "episode")
             .Should()
-            .BeGreaterThan(PalettePriority.ForBackfill("image"));
+            .BeGreaterThan(expected: PalettePriority.ForBackfill(entityType: "image"));
         PalettePriority
-            .ForBackfill("image")
+            .ForBackfill(entityType: "image")
             .Should()
             .BeGreaterThan(
-                PalettePriority.BackfillCoordinator,
-                "the coordinator yields to the jobs it dispatches"
+                expected: PalettePriority.BackfillCoordinator,
+                because: "the coordinator yields to the jobs it dispatches"
             );
     }
 
     [Fact]
     public void Image_is_not_treated_as_a_main_entity()
     {
-        PalettePriority.IsMain("image").Should().BeFalse();
-        PalettePriority.IsMain("episode").Should().BeTrue();
+        PalettePriority.IsMain(entityType: "image").Should().BeFalse();
+        PalettePriority.IsMain(entityType: "episode").Should().BeTrue();
     }
 
     [Fact]
     public void Track_is_treated_as_a_main_entity()
     {
-        PalettePriority.IsMain("track").Should().BeTrue();
+        PalettePriority.IsMain(entityType: "track").Should().BeTrue();
     }
 
     [Fact]
@@ -104,12 +104,12 @@ public class PalettePriorityTests
     {
         foreach (string entityType in AllTypes)
         {
-            PalettePriority.ForImport(entityType).Should().BeInRange(0, 10);
-            PalettePriority.ForBackfill(entityType).Should().BeInRange(0, 10);
+            PalettePriority.ForImport(entityType: entityType).Should().BeInRange(minimumValue: 0, maximumValue: 10);
+            PalettePriority.ForBackfill(entityType: entityType).Should().BeInRange(minimumValue: 0, maximumValue: 10);
         }
 
-        PalettePriority.OnDemand.Should().BeInRange(0, 10);
-        PalettePriority.BackfillCoordinator.Should().BeInRange(0, 10);
+        PalettePriority.OnDemand.Should().BeInRange(minimumValue: 0, maximumValue: 10);
+        PalettePriority.BackfillCoordinator.Should().BeInRange(minimumValue: 0, maximumValue: 10);
     }
 
     [Fact]
@@ -118,11 +118,11 @@ public class PalettePriorityTests
         foreach (string importType in AllTypes)
         foreach (string backfillType in AllTypes)
             PalettePriority
-                .ForImport(importType)
+                .ForImport(entityType: importType)
                 .Should()
                 .BeGreaterThan(
-                    PalettePriority.ForBackfill(backfillType),
-                    $"any live import ({importType}) must outrank any backfill ({backfillType})"
+                    expected: PalettePriority.ForBackfill(entityType: backfillType),
+                    because: $"any live import ({importType}) must outrank any backfill ({backfillType})"
                 );
     }
 
@@ -131,47 +131,47 @@ public class PalettePriorityTests
     {
         foreach (string entityType in AllTypes)
         {
-            PalettePriority.OnDemand.Should().BeGreaterThan(PalettePriority.ForImport(entityType));
+            PalettePriority.OnDemand.Should().BeGreaterThan(expected: PalettePriority.ForImport(entityType: entityType));
             PalettePriority
-                .ForBackfill(entityType)
+                .ForBackfill(entityType: entityType)
                 .Should()
-                .BeGreaterThan(PalettePriority.BackfillCoordinator);
+                .BeGreaterThan(expected: PalettePriority.BackfillCoordinator);
         }
     }
 
     [Theory]
-    [InlineData("movie", "episode")]
-    [InlineData("tv", "episode")]
-    [InlineData("artist", "track")]
-    [InlineData("album", "track")]
-    [InlineData("episode", "season")]
-    [InlineData("track", "season")]
-    [InlineData("season", "person")]
-    [InlineData("season", "collection")]
-    [InlineData("season", "image")]
+    [InlineData(data: ["movie", "episode"])]
+    [InlineData(data: ["tv", "episode"])]
+    [InlineData(data: ["artist", "track"])]
+    [InlineData(data: ["album", "track"])]
+    [InlineData(data: ["episode", "season"])]
+    [InlineData(data: ["track", "season"])]
+    [InlineData(data: ["season", "person"])]
+    [InlineData(data: ["season", "collection"])]
+    [InlineData(data: ["season", "image"])]
     public void Entity_rank_hierarchy_holds_within_the_import_band(string higher, string lower)
     {
         PalettePriority
-            .ForImport(higher)
+            .ForImport(entityType: higher)
             .Should()
-            .BeGreaterThan(PalettePriority.ForImport(lower), $"{higher} outranks {lower}");
+            .BeGreaterThan(expected: PalettePriority.ForImport(entityType: lower), because: $"{higher} outranks {lower}");
     }
 
     [Theory]
-    [InlineData("movie", "episode")]
-    [InlineData("tv", "episode")]
-    [InlineData("artist", "track")]
-    [InlineData("album", "track")]
-    [InlineData("episode", "season")]
-    [InlineData("track", "season")]
-    [InlineData("season", "person")]
-    [InlineData("season", "collection")]
-    [InlineData("season", "image")]
+    [InlineData(data: ["movie", "episode"])]
+    [InlineData(data: ["tv", "episode"])]
+    [InlineData(data: ["artist", "track"])]
+    [InlineData(data: ["album", "track"])]
+    [InlineData(data: ["episode", "season"])]
+    [InlineData(data: ["track", "season"])]
+    [InlineData(data: ["season", "person"])]
+    [InlineData(data: ["season", "collection"])]
+    [InlineData(data: ["season", "image"])]
     public void Entity_rank_hierarchy_holds_within_the_backfill_band(string higher, string lower)
     {
         PalettePriority
-            .ForBackfill(higher)
+            .ForBackfill(entityType: higher)
             .Should()
-            .BeGreaterThan(PalettePriority.ForBackfill(lower), $"{higher} outranks {lower}");
+            .BeGreaterThan(expected: PalettePriority.ForBackfill(entityType: lower), because: $"{higher} outranks {lower}");
     }
 }

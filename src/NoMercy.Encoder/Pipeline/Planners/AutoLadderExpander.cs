@@ -46,8 +46,8 @@ public static class AutoLadderExpander
         if (existingRungs.Length > 1)
         {
             logger.LogWarning(
-                "AutoLadder with {Count} rungs: falling back to Manual mode.",
-                existingRungs.Length
+                message: "AutoLadder with {Count} rungs: falling back to Manual mode.",
+                args: existingRungs.Length
             );
             return profile with
             {
@@ -59,14 +59,14 @@ public static class AutoLadderExpander
             profile.Video
             ?? (
                 existingRungs.Length == 1
-                    ? PlanStageHelpers.BuildSyntheticReference(existingRungs[0])
+                    ? PlanStageHelpers.BuildSyntheticReference(rung: existingRungs[0])
                     : null
             );
 
         if (reference is null)
         {
             logger.LogWarning(
-                "AutoLadder requires a reference Video output or at least one rung; profile has neither. Falling back to no video outputs."
+                message: "AutoLadder requires a reference Video output or at least one rung; profile has neither. Falling back to no video outputs."
             );
             return profile;
         }
@@ -76,23 +76,23 @@ public static class AutoLadderExpander
         if (profile.Ladder.AutoConfig is not null)
         {
             rungs = abrLadderGenerator.GenerateLadder(
-                media,
-                reference.Codec,
-                profile.Ladder.AutoConfig,
-                reference
+                media: media,
+                profileCodec: reference.Codec,
+                autoConfig: profile.Ladder.AutoConfig,
+                reference: reference
             );
         }
         else
         {
-            VideoOutput[] ladder = abrLadderGenerator.Generate(media, reference);
+            VideoOutput[] ladder = abrLadderGenerator.Generate(media: media, reference: reference);
             if (ladder.Length == 0)
                 return profile;
 
             rungs = ladder
-                .Select(v => new LadderRung(
+                .Select(selector: v => new LadderRung(
                     // v.Width null (or legacy 0) means "keep source width" —
                     // a ladder rung always carries a concrete resolution.
-                    Width: v.Width is int w and > 0 ? w : media.VideoStreams[0].Width,
+                    Width: v.Width is int w and > 0 ? w : media.VideoStreams[index: 0].Width,
                     Height: v.Height ?? 0,
                     Codec: v.Codec,
                     BitrateKbps: v.BitrateKbps,
@@ -111,9 +111,7 @@ public static class AutoLadderExpander
             return profile;
 
         logger.LogInformation(
-            "AutoLadder expanded 1 reference profile → {Count} variants for {Source}",
-            rungs.Length,
-            media.FilePath
+            message: "AutoLadder expanded 1 reference profile → {Count} variants for {Source}", args: [rungs.Length, media.FilePath]
         );
 
         return profile with

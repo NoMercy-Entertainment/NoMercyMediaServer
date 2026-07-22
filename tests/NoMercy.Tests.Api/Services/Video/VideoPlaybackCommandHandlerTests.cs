@@ -35,7 +35,7 @@ namespace NoMercy.Tests.Api.Services.Video;
 /// wiring matches production, and preference-persisting branches exercise the
 /// real seeded SQLite database rather than a mock.
 /// </summary>
-[Trait("Category", "Playback")]
+[Trait(name: "Category", value: "Playback")]
 public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -66,7 +66,7 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
             IDbContextFactory<MediaContext>
         >();
         await using MediaContext ctx = await contextFactory.CreateDbContextAsync();
-        return await ctx.VideoFiles.Where(v => v.MovieId == movieId).Select(v => v.Id).FirstAsync();
+        return await ctx.VideoFiles.Where(predicate: v => v.MovieId == movieId).Select(selector: v => v.Id).FirstAsync();
     }
 
     private async Task<VideoPlaylistResponseDto> BuildMovieItemAsync(
@@ -82,7 +82,7 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
             PlaylistType = MediaTypes.MovieMediaType,
             LibraryType = MediaTypes.MovieMediaType,
             PlaylistId = movieId,
-            VideoId = await SeededVideoFileIdAsync(movieId),
+            VideoId = await SeededVideoFileIdAsync(movieId: movieId),
             Duration = duration,
         };
     }
@@ -95,8 +95,8 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
 
     private void Cleanup(Guid userId)
     {
-        _factory.Services.GetRequiredService<VideoPlaybackService>().RemoveTimer(userId);
-        _factory.Services.GetRequiredService<VideoPlayerStateManager>().RemoveState(userId);
+        _factory.Services.GetRequiredService<VideoPlaybackService>().RemoveTimer(userId: userId);
+        _factory.Services.GetRequiredService<VideoPlayerStateManager>().RemoveState(userId: userId);
     }
 
     // =========================================================================
@@ -109,10 +109,10 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         User user = SeededUser();
         VideoPlayerState state = new() { PlayState = false };
 
-        await CreateHandler().HandleCommand(user, "play", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "play", data: null, state: state, device: null);
 
         state.PlayState.Should().BeTrue();
-        Cleanup(user.Id);
+        Cleanup(userId: user.Id);
     }
 
     [Fact]
@@ -121,10 +121,10 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         User user = SeededUser();
         VideoPlayerState state = new() { PlayState = true };
 
-        await CreateHandler().HandleCommand(user, "pause", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "pause", data: null, state: state, device: null);
 
         state.PlayState.Should().BeFalse();
-        Cleanup(user.Id);
+        Cleanup(userId: user.Id);
     }
 
     // =========================================================================
@@ -135,11 +135,11 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
     public async Task Seek_ParsesSecondsAndSetsAbsoluteTimeInMilliseconds()
     {
         User user = SeededUser();
-        VideoPlayerState state = new() { CurrentItem = await BuildMovieItemAsync(SeededMovieId) };
+        VideoPlayerState state = new() { CurrentItem = await BuildMovieItemAsync(movieId: SeededMovieId) };
 
-        await CreateHandler().HandleCommand(user, "seek", "42", state, null);
+        await CreateHandler().HandleCommand(user: user, command: "seek", data: "42", state: state, device: null);
 
-        state.Time.Should().Be(42_000);
+        state.Time.Should().Be(expected: 42_000);
     }
 
     [Fact]
@@ -148,13 +148,13 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         User user = SeededUser();
         VideoPlayerState state = new()
         {
-            CurrentItem = await BuildMovieItemAsync(SeededMovieId),
+            CurrentItem = await BuildMovieItemAsync(movieId: SeededMovieId),
             Time = 5_000,
         };
 
-        await CreateHandler().HandleCommand(user, "seek", "not-a-number", state, null);
+        await CreateHandler().HandleCommand(user: user, command: "seek", data: "not-a-number", state: state, device: null);
 
-        state.Time.Should().Be(5_000);
+        state.Time.Should().Be(expected: 5_000);
     }
 
     [Fact]
@@ -163,13 +163,13 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         User user = SeededUser();
         VideoPlayerState state = new()
         {
-            CurrentItem = await BuildMovieItemAsync(SeededMovieId),
+            CurrentItem = await BuildMovieItemAsync(movieId: SeededMovieId),
             Time = 1_000,
         };
 
-        await CreateHandler().HandleCommand(user, "forward", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "forward", data: null, state: state, device: null);
 
-        state.Time.Should().Be(1_000 + 10_000);
+        state.Time.Should().Be(expected: 1_000 + 10_000);
     }
 
     [Fact]
@@ -178,13 +178,13 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         User user = SeededUser();
         VideoPlayerState state = new()
         {
-            CurrentItem = await BuildMovieItemAsync(SeededMovieId),
+            CurrentItem = await BuildMovieItemAsync(movieId: SeededMovieId),
             Time = 5,
         };
 
-        await CreateHandler().HandleCommand(user, "backward", "10", state, null);
+        await CreateHandler().HandleCommand(user: user, command: "backward", data: "10", state: state, device: null);
 
-        state.Time.Should().Be(0);
+        state.Time.Should().Be(expected: 0);
     }
 
     [Fact]
@@ -193,13 +193,13 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         User user = SeededUser();
         VideoPlayerState state = new()
         {
-            CurrentItem = await BuildMovieItemAsync(SeededMovieId),
+            CurrentItem = await BuildMovieItemAsync(movieId: SeededMovieId),
             Time = 30_000,
         };
 
-        await CreateHandler().HandleCommand(user, "backward", "5", state, null);
+        await CreateHandler().HandleCommand(user: user, command: "backward", data: "5", state: state, device: null);
 
-        state.Time.Should().Be(30_000 - 5_000);
+        state.Time.Should().Be(expected: 30_000 - 5_000);
     }
 
     // =========================================================================
@@ -210,8 +210,8 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
     public async Task Next_MidPlaylist_AdvancesToNextItemAndResetsTime()
     {
         User user = SeededUser();
-        VideoPlaylistResponseDto first = await BuildMovieItemAsync(SeededMovieId);
-        VideoPlaylistResponseDto second = await BuildMovieItemAsync(SecondSeededMovieId);
+        VideoPlaylistResponseDto first = await BuildMovieItemAsync(movieId: SeededMovieId);
+        VideoPlaylistResponseDto second = await BuildMovieItemAsync(movieId: SecondSeededMovieId);
         VideoPlayerState state = new()
         {
             CurrentItem = first,
@@ -219,17 +219,17 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
             Time = 50_000,
         };
 
-        await CreateHandler().HandleCommand(user, "next", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "next", data: null, state: state, device: null);
 
-        state.CurrentItem.Should().Be(second);
-        state.Time.Should().Be(0);
+        state.CurrentItem.Should().Be(expected: second);
+        state.Time.Should().Be(expected: 0);
     }
 
     [Fact]
     public async Task Next_LastItem_CompletesPlaylist()
     {
         User user = SeededUser();
-        VideoPlaylistResponseDto only = await BuildMovieItemAsync(SeededMovieId);
+        VideoPlaylistResponseDto only = await BuildMovieItemAsync(movieId: SeededMovieId);
         VideoPlayerState state = new()
         {
             CurrentItem = only,
@@ -238,11 +238,11 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
             Time = 50_000,
         };
 
-        await CreateHandler().HandleCommand(user, "next", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "next", data: null, state: state, device: null);
 
         state.CurrentItem.Should().BeNull();
         state.PlayState.Should().BeFalse();
-        state.Time.Should().Be(0);
+        state.Time.Should().Be(expected: 0);
     }
 
     [Fact]
@@ -251,17 +251,17 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         User user = SeededUser();
         VideoPlayerState state = new() { CurrentItem = null, Time = 1_000 };
 
-        await CreateHandler().HandleCommand(user, "next", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "next", data: null, state: state, device: null);
 
-        state.Time.Should().Be(1_000);
+        state.Time.Should().Be(expected: 1_000);
     }
 
     [Fact]
     public async Task Previous_TimeAtLeast3Seconds_RestartsCurrentItem()
     {
         User user = SeededUser();
-        VideoPlaylistResponseDto first = await BuildMovieItemAsync(SeededMovieId);
-        VideoPlaylistResponseDto second = await BuildMovieItemAsync(SecondSeededMovieId);
+        VideoPlaylistResponseDto first = await BuildMovieItemAsync(movieId: SeededMovieId);
+        VideoPlaylistResponseDto second = await BuildMovieItemAsync(movieId: SecondSeededMovieId);
         VideoPlayerState state = new()
         {
             CurrentItem = second,
@@ -269,18 +269,18 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
             Time = 3_500,
         };
 
-        await CreateHandler().HandleCommand(user, "previous", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "previous", data: null, state: state, device: null);
 
-        state.CurrentItem.Should().Be(second);
-        state.Time.Should().Be(0);
+        state.CurrentItem.Should().Be(expected: second);
+        state.Time.Should().Be(expected: 0);
     }
 
     [Fact]
     public async Task Previous_EarlyInTrack_MovesToPriorPlaylistItem()
     {
         User user = SeededUser();
-        VideoPlaylistResponseDto first = await BuildMovieItemAsync(SeededMovieId);
-        VideoPlaylistResponseDto second = await BuildMovieItemAsync(SecondSeededMovieId);
+        VideoPlaylistResponseDto first = await BuildMovieItemAsync(movieId: SeededMovieId);
+        VideoPlaylistResponseDto second = await BuildMovieItemAsync(movieId: SecondSeededMovieId);
         VideoPlayerState state = new()
         {
             CurrentItem = second,
@@ -288,17 +288,17 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
             Time = 1_000,
         };
 
-        await CreateHandler().HandleCommand(user, "previous", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "previous", data: null, state: state, device: null);
 
-        state.CurrentItem.Should().Be(first);
-        state.Time.Should().Be(0);
+        state.CurrentItem.Should().Be(expected: first);
+        state.Time.Should().Be(expected: 0);
     }
 
     [Fact]
     public async Task Previous_AlreadyFirstItem_IsNoOp()
     {
         User user = SeededUser();
-        VideoPlaylistResponseDto first = await BuildMovieItemAsync(SeededMovieId);
+        VideoPlaylistResponseDto first = await BuildMovieItemAsync(movieId: SeededMovieId);
         VideoPlayerState state = new()
         {
             CurrentItem = first,
@@ -306,10 +306,10 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
             Time = 1_000,
         };
 
-        await CreateHandler().HandleCommand(user, "previous", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "previous", data: null, state: state, device: null);
 
-        state.CurrentItem.Should().Be(first);
-        state.Time.Should().Be(1_000);
+        state.CurrentItem.Should().Be(expected: first);
+        state.Time.Should().Be(expected: 1_000);
     }
 
     // =========================================================================
@@ -320,8 +320,8 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
     public async Task Item_ValidIndex_SwitchesCurrentItemAndResetsTime()
     {
         User user = SeededUser();
-        VideoPlaylistResponseDto first = await BuildMovieItemAsync(SeededMovieId);
-        VideoPlaylistResponseDto second = await BuildMovieItemAsync(SecondSeededMovieId);
+        VideoPlaylistResponseDto first = await BuildMovieItemAsync(movieId: SeededMovieId);
+        VideoPlaylistResponseDto second = await BuildMovieItemAsync(movieId: SecondSeededMovieId);
         VideoPlayerState state = new()
         {
             CurrentItem = first,
@@ -329,17 +329,17 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
             Time = 20_000,
         };
 
-        await CreateHandler().HandleCommand(user, "item", "1", state, null);
+        await CreateHandler().HandleCommand(user: user, command: "item", data: "1", state: state, device: null);
 
-        state.CurrentItem.Should().Be(second);
-        state.Time.Should().Be(0);
+        state.CurrentItem.Should().Be(expected: second);
+        state.Time.Should().Be(expected: 0);
     }
 
     [Fact]
     public async Task Item_OutOfRangeIndex_IsNoOp()
     {
         User user = SeededUser();
-        VideoPlaylistResponseDto first = await BuildMovieItemAsync(SeededMovieId);
+        VideoPlaylistResponseDto first = await BuildMovieItemAsync(movieId: SeededMovieId);
         VideoPlayerState state = new()
         {
             CurrentItem = first,
@@ -347,22 +347,22 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
             Time = 20_000,
         };
 
-        await CreateHandler().HandleCommand(user, "item", "99", state, null);
+        await CreateHandler().HandleCommand(user: user, command: "item", data: "99", state: state, device: null);
 
-        state.CurrentItem.Should().Be(first);
-        state.Time.Should().Be(20_000);
+        state.CurrentItem.Should().Be(expected: first);
+        state.Time.Should().Be(expected: 20_000);
     }
 
     [Fact]
     public async Task Item_NullData_IsNoOp()
     {
         User user = SeededUser();
-        VideoPlaylistResponseDto first = await BuildMovieItemAsync(SeededMovieId);
+        VideoPlaylistResponseDto first = await BuildMovieItemAsync(movieId: SeededMovieId);
         VideoPlayerState state = new() { CurrentItem = first, Playlist = [first] };
 
-        await CreateHandler().HandleCommand(user, "item", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "item", data: null, state: state, device: null);
 
-        state.CurrentItem.Should().Be(first);
+        state.CurrentItem.Should().Be(expected: first);
     }
 
     // =========================================================================
@@ -402,10 +402,10 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         };
 
         await CreateHandler()
-            .HandleCommand(user, "episode", """{"season":1,"episode":2}""", state, null);
+            .HandleCommand(user: user, command: "episode", data: """{"season":1,"episode":2}""", state: state, device: null);
 
-        state.CurrentItem.Should().Be(episode2);
-        state.Time.Should().Be(0);
+        state.CurrentItem.Should().Be(expected: episode2);
+        state.Time.Should().Be(expected: 0);
         state.PlayState.Should().BeTrue();
     }
 
@@ -429,10 +429,10 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         };
 
         await CreateHandler()
-            .HandleCommand(user, "episode", """{"season":9,"episode":9}""", state, null);
+            .HandleCommand(user: user, command: "episode", data: """{"season":9,"episode":9}""", state: state, device: null);
 
-        state.CurrentItem.Should().Be(episode1);
-        state.Time.Should().Be(5_000);
+        state.CurrentItem.Should().Be(expected: episode1);
+        state.Time.Should().Be(expected: 5_000);
     }
 
     [Fact]
@@ -450,9 +450,9 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         VideoPlayerState state = new() { CurrentItem = episode1, Playlist = [episode1] };
 
         await CreateHandler()
-            .HandleCommand(user, "episode", """{"season":0,"episode":0}""", state, null);
+            .HandleCommand(user: user, command: "episode", data: """{"season":0,"episode":0}""", state: state, device: null);
 
-        state.CurrentItem.Should().Be(episode1);
+        state.CurrentItem.Should().Be(expected: episode1);
     }
 
     // =========================================================================
@@ -502,55 +502,55 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
     public async Task NextChapter_WithinCurrentChapter_JumpsToNextChapterStart()
     {
         User user = SeededUser();
-        VideoPlayerState state = BuildChapteredState(5_000);
+        VideoPlayerState state = BuildChapteredState(timeMs: 5_000);
 
-        await CreateHandler().HandleCommand(user, "nextChapter", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "nextChapter", data: null, state: state, device: null);
 
-        state.Time.Should().Be(10_000);
+        state.Time.Should().Be(expected: 10_000);
     }
 
     [Fact]
     public async Task NextChapter_OnLastChapter_IsNoOp()
     {
         User user = SeededUser();
-        VideoPlayerState state = BuildChapteredState(25_000);
+        VideoPlayerState state = BuildChapteredState(timeMs: 25_000);
 
-        await CreateHandler().HandleCommand(user, "nextChapter", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "nextChapter", data: null, state: state, device: null);
 
-        state.Time.Should().Be(25_000);
+        state.Time.Should().Be(expected: 25_000);
     }
 
     [Fact]
     public async Task PreviousChapter_FarIntoChapter_RestartsCurrentChapter()
     {
         User user = SeededUser();
-        VideoPlayerState state = BuildChapteredState(15_000);
+        VideoPlayerState state = BuildChapteredState(timeMs: 15_000);
 
-        await CreateHandler().HandleCommand(user, "previousChapter", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "previousChapter", data: null, state: state, device: null);
 
-        state.Time.Should().Be(10_000);
+        state.Time.Should().Be(expected: 10_000);
     }
 
     [Fact]
     public async Task PreviousChapter_NearChapterStart_JumpsToPriorChapterStart()
     {
         User user = SeededUser();
-        VideoPlayerState state = BuildChapteredState(11_000);
+        VideoPlayerState state = BuildChapteredState(timeMs: 11_000);
 
-        await CreateHandler().HandleCommand(user, "previousChapter", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "previousChapter", data: null, state: state, device: null);
 
-        state.Time.Should().Be(0);
+        state.Time.Should().Be(expected: 0);
     }
 
     [Fact]
     public async Task PreviousChapter_NoCurrentChapterMatch_IsNoOp()
     {
         User user = SeededUser();
-        VideoPlayerState state = BuildChapteredState(99_000);
+        VideoPlayerState state = BuildChapteredState(timeMs: 99_000);
 
-        await CreateHandler().HandleCommand(user, "previousChapter", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "previousChapter", data: null, state: state, device: null);
 
-        state.Time.Should().Be(99_000);
+        state.Time.Should().Be(expected: 99_000);
     }
 
     // =========================================================================
@@ -561,7 +561,7 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
     public async Task Stop_ResetsStateAndDisallowsEverything()
     {
         User user = SeededUser();
-        VideoPlaylistResponseDto item = await BuildMovieItemAsync(SeededMovieId);
+        VideoPlaylistResponseDto item = await BuildMovieItemAsync(movieId: SeededMovieId);
         VideoPlayerState state = new()
         {
             CurrentItem = item,
@@ -571,11 +571,11 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
             DeviceId = "tv-1",
         };
 
-        await CreateHandler().HandleCommand(user, "stop", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "stop", data: null, state: state, device: null);
 
         state.CurrentItem.Should().BeNull();
         state.PlayState.Should().BeFalse();
-        state.Time.Should().Be(0);
+        state.Time.Should().Be(expected: 0);
         state.Playlist.Should().BeEmpty();
         state.DeviceId.Should().BeNull();
         state.Actions.Disallows.Stopping.Should().BeTrue();
@@ -588,10 +588,10 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         User user = SeededUser();
         VideoPlayerState state = new() { Muted = false };
 
-        await CreateHandler().HandleCommand(user, "mute", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "mute", data: null, state: state, device: null);
         state.Muted.Should().BeTrue();
 
-        await CreateHandler().HandleCommand(user, "mute", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "mute", data: null, state: state, device: null);
         state.Muted.Should().BeFalse();
     }
 
@@ -605,13 +605,13 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         User user = SeededUser();
         VideoPlayerState state = new()
         {
-            CurrentItem = await BuildMovieItemAsync(SeededMovieId),
+            CurrentItem = await BuildMovieItemAsync(movieId: SeededMovieId),
             Muted = true,
         };
 
-        await CreateHandler().HandleCommand(user, "volume", "150", state, null);
+        await CreateHandler().HandleCommand(user: user, command: "volume", data: "150", state: state, device: null);
 
-        state.VolumePercentage.Should().Be(100);
+        state.VolumePercentage.Should().Be(expected: 100);
         state.Muted.Should().BeFalse();
     }
 
@@ -619,18 +619,18 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
     public async Task Volume_ClampsBelowZeroTo0()
     {
         User user = SeededUser();
-        VideoPlayerState state = new() { CurrentItem = await BuildMovieItemAsync(SeededMovieId) };
+        VideoPlayerState state = new() { CurrentItem = await BuildMovieItemAsync(movieId: SeededMovieId) };
 
-        await CreateHandler().HandleCommand(user, "volume", "-20", state, null);
+        await CreateHandler().HandleCommand(user: user, command: "volume", data: "-20", state: state, device: null);
 
-        state.VolumePercentage.Should().Be(0);
+        state.VolumePercentage.Should().Be(expected: 0);
     }
 
     [Fact]
     public async Task Volume_WithConnectedDevice_PersistsVolumeOnDeviceRow()
     {
         User user = SeededUser();
-        VideoPlayerState state = new() { CurrentItem = await BuildMovieItemAsync(SeededMovieId) };
+        VideoPlayerState state = new() { CurrentItem = await BuildMovieItemAsync(movieId: SeededMovieId) };
         Client device = new()
         {
             Id = Ulid.NewUlid(),
@@ -641,10 +641,10 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
             Socket = Mock.Of<ISingleClientProxy>(),
         };
 
-        await CreateHandler().HandleCommand(user, "volume", "55", state, device);
+        await CreateHandler().HandleCommand(user: user, command: "volume", data: "55", state: state, device: device);
 
-        state.VolumePercentage.Should().Be(55);
-        device.VolumePercent.Should().Be(55);
+        state.VolumePercentage.Should().Be(expected: 55);
+        device.VolumePercent.Should().Be(expected: 55);
     }
 
     [Fact]
@@ -653,9 +653,9 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         User user = SeededUser();
         VideoPlayerState state = new() { CurrentItem = null, VolumePercentage = 30 };
 
-        await CreateHandler().HandleCommand(user, "volume", "80", state, null);
+        await CreateHandler().HandleCommand(user: user, command: "volume", data: "80", state: state, device: null);
 
-        state.VolumePercentage.Should().Be(30);
+        state.VolumePercentage.Should().Be(expected: 30);
     }
 
     // =========================================================================
@@ -671,13 +671,13 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         User user = SeededUser();
         VideoPlayerState state = new()
         {
-            CurrentItem = await BuildMovieItemAsync(SeededMovieId),
+            CurrentItem = await BuildMovieItemAsync(movieId: SeededMovieId),
             Audio = ThreeAudioTracks(),
         };
 
-        await CreateHandler().HandleCommand(user, "audio", "1", state, null);
+        await CreateHandler().HandleCommand(user: user, command: "audio", data: "1", state: state, device: null);
 
-        state.CurrentAudio!.Language.Should().Be("ja");
+        state.CurrentAudio!.Language.Should().Be(expected: "ja");
     }
 
     [Fact]
@@ -686,12 +686,12 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         User user = SeededUser();
         VideoPlayerState state = new()
         {
-            CurrentItem = await BuildMovieItemAsync(SeededMovieId),
+            CurrentItem = await BuildMovieItemAsync(movieId: SeededMovieId),
             Audio = ThreeAudioTracks(),
-            CurrentAudio = ThreeAudioTracks()[0],
+            CurrentAudio = ThreeAudioTracks()[index: 0],
         };
 
-        await CreateHandler().HandleCommand(user, "audio", "-1", state, null);
+        await CreateHandler().HandleCommand(user: user, command: "audio", data: "-1", state: state, device: null);
 
         state.CurrentAudio.Should().BeNull();
     }
@@ -703,14 +703,14 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         List<IAudio> tracks = ThreeAudioTracks();
         VideoPlayerState state = new()
         {
-            CurrentItem = await BuildMovieItemAsync(SeededMovieId),
+            CurrentItem = await BuildMovieItemAsync(movieId: SeededMovieId),
             Audio = tracks,
             CurrentAudio = tracks[^1],
         };
 
-        await CreateHandler().HandleCommand(user, "cycleAudio", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "cycleAudio", data: null, state: state, device: null);
 
-        state.CurrentAudio.Should().Be(tracks[0]);
+        state.CurrentAudio.Should().Be(expected: tracks[index: 0]);
     }
 
     [Fact]
@@ -720,14 +720,14 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         List<IAudio> tracks = ThreeAudioTracks();
         VideoPlayerState state = new()
         {
-            CurrentItem = await BuildMovieItemAsync(SeededMovieId),
+            CurrentItem = await BuildMovieItemAsync(movieId: SeededMovieId),
             Audio = tracks,
             CurrentAudio = null,
         };
 
-        await CreateHandler().HandleCommand(user, "cycleAudio", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "cycleAudio", data: null, state: state, device: null);
 
-        state.CurrentAudio.Should().Be(tracks[0]);
+        state.CurrentAudio.Should().Be(expected: tracks[index: 0]);
     }
 
     [Fact]
@@ -736,7 +736,7 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         User user = SeededUser();
         VideoPlayerState state = new() { CurrentItem = null, Audio = ThreeAudioTracks() };
 
-        await CreateHandler().HandleCommand(user, "cycleAudio", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "cycleAudio", data: null, state: state, device: null);
 
         state.CurrentAudio.Should().BeNull();
     }
@@ -754,13 +754,13 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         User user = SeededUser();
         VideoPlayerState state = new()
         {
-            CurrentItem = await BuildMovieItemAsync(SeededMovieId),
+            CurrentItem = await BuildMovieItemAsync(movieId: SeededMovieId),
             Captions = TwoCaptionTracks(),
         };
 
-        await CreateHandler().HandleCommand(user, "caption", "1", state, null);
+        await CreateHandler().HandleCommand(user: user, command: "caption", data: "1", state: state, device: null);
 
-        state.CurrentCaption!.Language.Should().Be("nl");
+        state.CurrentCaption!.Language.Should().Be(expected: "nl");
     }
 
     [Fact]
@@ -769,12 +769,12 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         User user = SeededUser();
         VideoPlayerState state = new()
         {
-            CurrentItem = await BuildMovieItemAsync(SeededMovieId),
+            CurrentItem = await BuildMovieItemAsync(movieId: SeededMovieId),
             Captions = TwoCaptionTracks(),
-            CurrentCaption = TwoCaptionTracks()[0],
+            CurrentCaption = TwoCaptionTracks()[index: 0],
         };
 
-        await CreateHandler().HandleCommand(user, "caption", "-1", state, null);
+        await CreateHandler().HandleCommand(user: user, command: "caption", data: "-1", state: state, device: null);
 
         state.CurrentCaption.Should().BeNull();
     }
@@ -783,9 +783,9 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
     public async Task Caption_NullData_IsNoOp()
     {
         User user = SeededUser();
-        VideoPlayerState state = new() { CurrentItem = await BuildMovieItemAsync(SeededMovieId) };
+        VideoPlayerState state = new() { CurrentItem = await BuildMovieItemAsync(movieId: SeededMovieId) };
 
-        await CreateHandler().HandleCommand(user, "caption", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "caption", data: null, state: state, device: null);
 
         state.CurrentCaption.Should().BeNull();
     }
@@ -797,12 +797,12 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         List<ISubtitle> tracks = TwoCaptionTracks();
         VideoPlayerState state = new()
         {
-            CurrentItem = await BuildMovieItemAsync(SeededMovieId),
+            CurrentItem = await BuildMovieItemAsync(movieId: SeededMovieId),
             Captions = tracks,
             CurrentCaption = tracks[^1],
         };
 
-        await CreateHandler().HandleCommand(user, "cycleCaption", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "cycleCaption", data: null, state: state, device: null);
 
         state.CurrentCaption.Should().BeNull();
     }
@@ -814,14 +814,14 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         List<ISubtitle> tracks = TwoCaptionTracks();
         VideoPlayerState state = new()
         {
-            CurrentItem = await BuildMovieItemAsync(SeededMovieId),
+            CurrentItem = await BuildMovieItemAsync(movieId: SeededMovieId),
             Captions = tracks,
             CurrentCaption = null,
         };
 
-        await CreateHandler().HandleCommand(user, "cycleCaption", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "cycleCaption", data: null, state: state, device: null);
 
-        state.CurrentCaption.Should().Be(tracks[0]);
+        state.CurrentCaption.Should().Be(expected: tracks[index: 0]);
     }
 
     [Fact]
@@ -836,14 +836,14 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         ];
         VideoPlayerState state = new()
         {
-            CurrentItem = await BuildMovieItemAsync(SeededMovieId),
+            CurrentItem = await BuildMovieItemAsync(movieId: SeededMovieId),
             Captions = tracks,
-            CurrentCaption = tracks[0],
+            CurrentCaption = tracks[index: 0],
         };
 
-        await CreateHandler().HandleCommand(user, "cycleCaption", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "cycleCaption", data: null, state: state, device: null);
 
-        state.CurrentCaption.Should().Be(tracks[1]);
+        state.CurrentCaption.Should().Be(expected: tracks[index: 1]);
     }
 
     [Fact]
@@ -852,7 +852,7 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         User user = SeededUser();
         VideoPlayerState state = new() { CurrentItem = null, Captions = TwoCaptionTracks() };
 
-        await CreateHandler().HandleCommand(user, "cycleCaption", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "cycleCaption", data: null, state: state, device: null);
 
         state.CurrentCaption.Should().BeNull();
     }
@@ -869,13 +869,13 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         User user = SeededUser();
         VideoPlayerState state = new()
         {
-            CurrentItem = await BuildMovieItemAsync(SeededMovieId),
+            CurrentItem = await BuildMovieItemAsync(movieId: SeededMovieId),
             Qualities = TwoQualities(),
         };
 
-        await CreateHandler().HandleCommand(user, "quality", "1", state, null);
+        await CreateHandler().HandleCommand(user: user, command: "quality", data: "1", state: state, device: null);
 
-        state.CurrentQuality!.Width.Should().Be(1280);
+        state.CurrentQuality!.Width.Should().Be(expected: 1280);
     }
 
     [Fact]
@@ -884,12 +884,12 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         User user = SeededUser();
         VideoPlayerState state = new()
         {
-            CurrentItem = await BuildMovieItemAsync(SeededMovieId),
+            CurrentItem = await BuildMovieItemAsync(movieId: SeededMovieId),
             Qualities = TwoQualities(),
-            CurrentQuality = TwoQualities()[0],
+            CurrentQuality = TwoQualities()[index: 0],
         };
 
-        await CreateHandler().HandleCommand(user, "quality", "-1", state, null);
+        await CreateHandler().HandleCommand(user: user, command: "quality", data: "-1", state: state, device: null);
 
         state.CurrentQuality.Should().BeNull();
     }
@@ -898,9 +898,9 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
     public async Task Quality_NullData_IsNoOp()
     {
         User user = SeededUser();
-        VideoPlayerState state = new() { CurrentItem = await BuildMovieItemAsync(SeededMovieId) };
+        VideoPlayerState state = new() { CurrentItem = await BuildMovieItemAsync(movieId: SeededMovieId) };
 
-        await CreateHandler().HandleCommand(user, "quality", null, state, null);
+        await CreateHandler().HandleCommand(user: user, command: "quality", data: null, state: state, device: null);
 
         state.CurrentQuality.Should().BeNull();
     }
@@ -916,11 +916,11 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         VideoPlayerState state = new() { PlayState = true, Time = 12_345 };
 
         Func<Task> act = async () =>
-            await CreateHandler().HandleCommand(user, "not-a-real-command", null, state, null);
+            await CreateHandler().HandleCommand(user: user, command: "not-a-real-command", data: null, state: state, device: null);
 
         await act.Should().NotThrowAsync();
         state.PlayState.Should().BeTrue();
-        state.Time.Should().Be(12_345);
+        state.Time.Should().Be(expected: 12_345);
     }
 
     [Fact]
@@ -930,7 +930,7 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
         VideoPlayerState state = new();
 
         Func<Task> act = async () =>
-            await CreateHandler().HandleCommand(user, "", null, state, null);
+            await CreateHandler().HandleCommand(user: user, command: "", data: null, state: state, device: null);
 
         await act.Should().NotThrowAsync();
     }

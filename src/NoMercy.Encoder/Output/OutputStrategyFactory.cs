@@ -27,9 +27,9 @@ public class OutputStrategyFactory(IEnumerable<IOutputStrategy> strategies) : IO
         }
 
         throw new ArgumentOutOfRangeException(
-            nameof(format),
-            format,
-            $"No IOutputStrategy is registered for format {format}"
+            paramName: nameof(format),
+            actualValue: format,
+            message: $"No IOutputStrategy is registered for format {format}"
         );
     }
 }

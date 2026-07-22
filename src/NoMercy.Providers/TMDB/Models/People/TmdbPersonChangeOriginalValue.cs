@@ -15,6 +15,6 @@ namespace NoMercy.Providers.TMDB.Models.People;
 
 public class TmdbPersonChangeOriginalValue
 {
-    [JsonProperty("profile")]
+    [JsonProperty(propertyName: "profile")]
     public string Profile { get; set; } = string.Empty;
 }

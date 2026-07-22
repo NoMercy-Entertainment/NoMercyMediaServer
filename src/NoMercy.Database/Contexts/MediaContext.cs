@@ -23,7 +23,7 @@ namespace NoMercy.Database;
 public class MediaContext : DbContext
 {
     public MediaContext(DbContextOptions<MediaContext> options)
-        : base(options)
+        : base(options: options)
     {
         //
     }
@@ -36,37 +36,34 @@ public class MediaContext : DbContext
     // freeze the value at first build and ignore a runtime toggle.
     public bool ShowAdultContent => RuntimeServerSettings.Current.ShowAdultContent;
 
-    [DbFunction("normalize_search", IsBuiltIn = true)]
+    [DbFunction(name: "normalize_search", IsBuiltIn = true)]
     public static string NormalizeSearch(string? input) =>
-        throw new NotSupportedException("This method is for EF Core query translation only.");
+        throw new NotSupportedException(message: "This method is for EF Core query translation only.");
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {
         if (!options.IsConfigured)
             options.UseSqlite(
-                $"Data Source={AppFiles.MediaDatabase}; Pooling=True; Foreign Keys=True; Default Timeout=30;",
-                o =>
+                connectionString: $"Data Source={AppFiles.MediaDatabase}; Pooling=True; Foreign Keys=True; Default Timeout=30;",
+                sqliteOptionsAction: o =>
                 {
-                    o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
-                    o.ExecutionStrategy(deps => new SqliteRetryingExecutionStrategy(deps));
+                    o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery);
+                    o.ExecutionStrategy(getExecutionStrategy: deps => new SqliteRetryingExecutionStrategy(dependencies: deps));
                 }
             );
 
         if (Config.IsDev)
             options.EnableSensitiveDataLogging();
 
-        options.AddInterceptors(
-            new EntityBaseUpdatedAtInterceptor(),
-            new SqliteNormalizeSearchInterceptor(),
-            new SqliteConnectionInterceptor()
+        options.AddInterceptors(interceptors: [new EntityBaseUpdatedAtInterceptor(), new SqliteNormalizeSearchInterceptor(), new SqliteConnectionInterceptor()]
         );
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
-        base.ConfigureConventions(configurationBuilder);
+        base.ConfigureConventions(configurationBuilder: configurationBuilder);
 
-        configurationBuilder.Properties<string>().HaveMaxLength(256);
+        configurationBuilder.Properties<string>().HaveMaxLength(maxLength: 256);
 
         configurationBuilder.Properties<Ulid>().HaveConversion<UlidToStringConverter>();
     }
@@ -74,51 +71,51 @@ public class MediaContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDbFunction(
-            typeof(MediaContext).GetMethod(nameof(NormalizeSearch), [typeof(string)])!
+            methodInfo: typeof(MediaContext).GetMethod(name: nameof(NormalizeSearch), types: [typeof(string)])!
         );
 
         modelBuilder
             .Model.GetEntityTypes()
-            .SelectMany(t => t.GetProperties())
-            .Where(p => p.Name is "CreatedAt" or "UpdatedAt")
+            .SelectMany(selector: t => t.GetProperties())
+            .Where(predicate: p => p.Name is "CreatedAt" or "UpdatedAt")
             .ToList()
-            .ForEach(p => p.SetDefaultValueSql("CURRENT_TIMESTAMP"));
+            .ForEach(action: p => p.SetDefaultValueSql(value: "CURRENT_TIMESTAMP"));
 
         // Default to Restrict to prevent accidental cascading deletes across the schema.
         // Relationships that genuinely need cascading (e.g. owned/dependent records) are
         // configured explicitly below with OnDelete(DeleteBehavior.Cascade).
         modelBuilder
             .Model.GetEntityTypes()
-            .SelectMany(t => t.GetForeignKeys())
+            .SelectMany(selector: t => t.GetForeignKeys())
             .ToList()
-            .ForEach(p => p.DeleteBehavior = DeleteBehavior.Restrict);
+            .ForEach(action: p => p.DeleteBehavior = DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<Cast>().Property(t => t.RoleId).IsRequired(false);
+        modelBuilder.Entity<Cast>().Property(propertyExpression: t => t.RoleId).IsRequired(required: false);
 
-        modelBuilder.Entity<Crew>().Property(t => t.JobId).IsRequired(false);
+        modelBuilder.Entity<Crew>().Property(propertyExpression: t => t.JobId).IsRequired(required: false);
 
         // Driver.Config is free-form JSON — no max-length cap.
-        modelBuilder.Entity<Driver>().Property(d => d.Config).HasMaxLength(int.MaxValue);
+        modelBuilder.Entity<Driver>().Property(propertyExpression: d => d.Config).HasMaxLength(maxLength: int.MaxValue);
 
         // Folder.DriverId FK — Restrict deletion if any folder references the driver.
         // The DriversController already returns 409 before reaching DELETE, so Restrict
         // is the correct DB-level enforcement: drivers cannot be deleted while in use.
         modelBuilder
             .Entity<Folder>()
-            .HasOne(f => f.Driver)
-            .WithMany(d => d.Folders)
-            .HasForeignKey(f => f.DriverId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .HasOne(navigationExpression: f => f.Driver)
+            .WithMany(navigationExpression: d => d.Folders)
+            .HasForeignKey(foreignKeyExpression: f => f.DriverId)
+            .OnDelete(deleteBehavior: DeleteBehavior.Restrict);
 
         // Metadata optionally designates one Track as its AudioTrack; it does not own that
         // Track. AudioTrackId is nullable, so deleting the Track clears the pointer instead
         // of destroying the Metadata row — Metadata legitimately survives without one.
         modelBuilder
             .Entity<Metadata>()
-            .HasOne(m => m.AudioTrack)
+            .HasOne(navigationExpression: m => m.AudioTrack)
             .WithOne()
-            .HasForeignKey<Metadata>(m => m.AudioTrackId)
-            .OnDelete(DeleteBehavior.SetNull);
+            .HasForeignKey<Metadata>(foreignKeyExpression: m => m.AudioTrackId)
+            .OnDelete(deleteBehavior: DeleteBehavior.SetNull);
 
         // Metadata is shared, reference-style data: many Tracks in the same folder can
         // point at the same Metadata row via MetadataId, so no single Track owns it (same
@@ -127,10 +124,10 @@ public class MediaContext : DbContext
         // cascading and wiping every other Track that shares it.
         modelBuilder
             .Entity<Track>()
-            .HasOne(t => t.Metadata)
+            .HasOne(navigationExpression: t => t.Metadata)
             .WithMany()
-            .HasForeignKey(t => t.MetadataId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .HasForeignKey(foreignKeyExpression: t => t.MetadataId)
+            .OnDelete(deleteBehavior: DeleteBehavior.Restrict);
 
         // PlaylistItem is owned by its UserPlaylist (the video-only playlist
         // container — entirely separate from the music Playlist table): deleting a
@@ -143,28 +140,28 @@ public class MediaContext : DbContext
         // this schema.
         modelBuilder
             .Entity<PlaylistItem>()
-            .HasOne(pi => pi.UserPlaylist)
+            .HasOne(navigationExpression: pi => pi.UserPlaylist)
             .WithMany()
-            .HasForeignKey(pi => pi.UserPlaylistId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .HasForeignKey(foreignKeyExpression: pi => pi.UserPlaylistId)
+            .OnDelete(deleteBehavior: DeleteBehavior.Cascade);
 
         modelBuilder
             .Model.GetEntityTypes()
-            .SelectMany(t => t.GetProperties())
-            .Where(p => p.ClrType == typeof(string))
+            .SelectMany(selector: t => t.GetProperties())
+            .Where(predicate: p => p.ClrType == typeof(string))
             .ToList()
-            .ForEach(p =>
+            .ForEach(action: p =>
             {
                 MaxLengthAttribute? maxLengthAttr =
                     p.PropertyInfo?.GetCustomAttribute<MaxLengthAttribute>();
                 if (maxLengthAttr is not null)
-                    p.SetMaxLength(maxLengthAttr.Length);
+                    p.SetMaxLength(maxLength: maxLengthAttr.Length);
             });
 
         List<IMutableEntityType> entityTypes = modelBuilder
             .Model.GetEntityTypes()
-            .Where(t =>
-                t.ClrType.IsSubclassOf(typeof(Timestamps)) || t.ClrType == typeof(Timestamps)
+            .Where(predicate: t =>
+                t.ClrType.IsSubclassOf(c: typeof(Timestamps)) || t.ClrType == typeof(Timestamps)
             )
             .ToList();
 
@@ -172,8 +169,8 @@ public class MediaContext : DbContext
         {
             string? tableName = entityType.GetTableName();
             modelBuilder
-                .Entity(entityType.ClrType)
-                .ToTable(tb => tb.HasTrigger($"update_{tableName}_updated_at"));
+                .Entity(type: entityType.ClrType)
+                .ToTable(buildAction: tb => tb.HasTrigger(modelName: $"update_{tableName}_updated_at"));
         }
 
         // Explicit cascade for direct entity → Library FKs. These use ConfigurationSource.Explicit
@@ -181,24 +178,24 @@ public class MediaContext : DbContext
         // ConventionSource and gets overridden when HasTrigger calls re-process those entities).
         modelBuilder
             .Entity<Movie>()
-            .HasOne(m => m.Library)
+            .HasOne(navigationExpression: m => m.Library)
             .WithMany()
-            .HasForeignKey(m => m.LibraryId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .HasForeignKey(foreignKeyExpression: m => m.LibraryId)
+            .OnDelete(deleteBehavior: DeleteBehavior.Cascade);
 
         modelBuilder
             .Entity<Tv>()
-            .HasOne(t => t.Library)
+            .HasOne(navigationExpression: t => t.Library)
             .WithMany()
-            .HasForeignKey(t => t.LibraryId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .HasForeignKey(foreignKeyExpression: t => t.LibraryId)
+            .OnDelete(deleteBehavior: DeleteBehavior.Cascade);
 
         modelBuilder
             .Entity<Collection>()
-            .HasOne(c => c.Library)
+            .HasOne(navigationExpression: c => c.Library)
             .WithMany()
-            .HasForeignKey(c => c.LibraryId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .HasForeignKey(foreignKeyExpression: c => c.LibraryId)
+            .OnDelete(deleteBehavior: DeleteBehavior.Cascade);
 
         // Base adult-content filter: entities carrying an Adult column never surface
         // explicit rows unless the server explicitly enables it. Filters reference the
@@ -208,81 +205,81 @@ public class MediaContext : DbContext
         // processes.
         modelBuilder
             .Entity<Movie>()
-            .HasQueryFilter(movie => ShowAdultContent || !movie.Adult);
-        modelBuilder.Entity<Person>().HasQueryFilter(person => ShowAdultContent || !person.Adult);
+            .HasQueryFilter(filter: movie => ShowAdultContent || !movie.Adult);
+        modelBuilder.Entity<Person>().HasQueryFilter(filter: person => ShowAdultContent || !person.Adult);
 
         // Required dependents mirror their principal's filter. EF Core needs a matching
         // filter on the required end of a filtered relationship, otherwise a hidden adult
         // Movie/Person still surfaces its join rows (the linkid=2131316 warning).
         modelBuilder
             .Entity<CertificationMovie>()
-            .HasQueryFilter(certificationMovie =>
+            .HasQueryFilter(filter: certificationMovie =>
                 ShowAdultContent || !certificationMovie.Movie.Adult
             );
         modelBuilder
             .Entity<CollectionMovie>()
-            .HasQueryFilter(collectionMovie => ShowAdultContent || !collectionMovie.Movie.Adult);
+            .HasQueryFilter(filter: collectionMovie => ShowAdultContent || !collectionMovie.Movie.Adult);
         modelBuilder
             .Entity<CompanyMovie>()
-            .HasQueryFilter(companyMovie => ShowAdultContent || !companyMovie.Movie.Adult);
+            .HasQueryFilter(filter: companyMovie => ShowAdultContent || !companyMovie.Movie.Adult);
         modelBuilder
             .Entity<GenreMovie>()
-            .HasQueryFilter(genreMovie => ShowAdultContent || !genreMovie.Movie.Adult);
+            .HasQueryFilter(filter: genreMovie => ShowAdultContent || !genreMovie.Movie.Adult);
         modelBuilder
             .Entity<KeywordMovie>()
-            .HasQueryFilter(keywordMovie => ShowAdultContent || !keywordMovie.Movie.Adult);
+            .HasQueryFilter(filter: keywordMovie => ShowAdultContent || !keywordMovie.Movie.Adult);
         modelBuilder
             .Entity<LibraryMovie>()
-            .HasQueryFilter(libraryMovie => ShowAdultContent || !libraryMovie.Movie.Adult);
+            .HasQueryFilter(filter: libraryMovie => ShowAdultContent || !libraryMovie.Movie.Adult);
         modelBuilder
             .Entity<MovieUser>()
-            .HasQueryFilter(movieUser => ShowAdultContent || !movieUser.Movie.Adult);
-        modelBuilder.Entity<Cast>().HasQueryFilter(cast => ShowAdultContent || !cast.Person.Adult);
-        modelBuilder.Entity<Crew>().HasQueryFilter(crew => ShowAdultContent || !crew.Person.Adult);
+            .HasQueryFilter(filter: movieUser => ShowAdultContent || !movieUser.Movie.Adult);
+        modelBuilder.Entity<Cast>().HasQueryFilter(filter: cast => ShowAdultContent || !cast.Person.Adult);
+        modelBuilder.Entity<Crew>().HasQueryFilter(filter: crew => ShowAdultContent || !crew.Person.Adult);
         modelBuilder
             .Entity<Creator>()
-            .HasQueryFilter(creator => ShowAdultContent || !creator.Person.Adult);
+            .HasQueryFilter(filter: creator => ShowAdultContent || !creator.Person.Adult);
         modelBuilder
             .Entity<GuestStar>()
-            .HasQueryFilter(guestStar => ShowAdultContent || !guestStar.Person.Adult);
+            .HasQueryFilter(filter: guestStar => ShowAdultContent || !guestStar.Person.Adult);
 
         modelBuilder
             .Entity<Album>()
-            .HasOne(a => a.Library)
+            .HasOne(navigationExpression: a => a.Library)
             .WithMany()
-            .HasForeignKey(a => a.LibraryId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .HasForeignKey(foreignKeyExpression: a => a.LibraryId)
+            .OnDelete(deleteBehavior: DeleteBehavior.Cascade);
 
         // Content-ownership cascades: when a Movie/VideoFile is deleted, remove its owned records.
         // Use the correct WithMany() collection navigation to match the convention-discovered
         // relationship — otherwise EF Core creates a duplicate FK property (e.g. MovieId1).
         modelBuilder
             .Entity<GenreMovie>()
-            .HasOne(gm => gm.Movie)
-            .WithMany(m => m.GenreMovies)
-            .HasForeignKey(gm => gm.MovieId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .HasOne(navigationExpression: gm => gm.Movie)
+            .WithMany(navigationExpression: m => m.GenreMovies)
+            .HasForeignKey(foreignKeyExpression: gm => gm.MovieId)
+            .OnDelete(deleteBehavior: DeleteBehavior.Cascade);
 
         modelBuilder
             .Entity<VideoFile>()
-            .HasOne(v => v.Movie)
-            .WithMany(m => m.VideoFiles)
-            .HasForeignKey(v => v.MovieId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .HasOne(navigationExpression: v => v.Movie)
+            .WithMany(navigationExpression: m => m.VideoFiles)
+            .HasForeignKey(foreignKeyExpression: v => v.MovieId)
+            .OnDelete(deleteBehavior: DeleteBehavior.Cascade);
 
         modelBuilder
             .Entity<UserData>()
-            .HasOne(u => u.Movie)
-            .WithMany(m => m.UserData)
-            .HasForeignKey(u => u.MovieId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .HasOne(navigationExpression: u => u.Movie)
+            .WithMany(navigationExpression: m => m.UserData)
+            .HasForeignKey(foreignKeyExpression: u => u.MovieId)
+            .OnDelete(deleteBehavior: DeleteBehavior.Cascade);
 
         modelBuilder
             .Entity<UserData>()
-            .HasOne(u => u.VideoFile)
-            .WithMany(v => v.UserData)
-            .HasForeignKey(u => u.VideoFileId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .HasOne(navigationExpression: u => u.VideoFile)
+            .WithMany(navigationExpression: v => v.UserData)
+            .HasForeignKey(foreignKeyExpression: u => u.VideoFileId)
+            .OnDelete(deleteBehavior: DeleteBehavior.Cascade);
 
         // Ownership cascades: deleting a parent removes all dependent records.
         // Tv → (seasons, episodes, casts, images, translations, join tables, etc.)
@@ -302,74 +299,74 @@ public class MediaContext : DbContext
 
         modelBuilder
             .Model.GetEntityTypes()
-            .SelectMany(t => t.GetForeignKeys())
-            .Where(fk => cascadeParents.Contains(fk.PrincipalEntityType.ClrType))
+            .SelectMany(selector: t => t.GetForeignKeys())
+            .Where(predicate: fk => cascadeParents.Contains(value: fk.PrincipalEntityType.ClrType))
             .ToList()
-            .ForEach(fk => fk.DeleteBehavior = DeleteBehavior.Cascade);
+            .ForEach(action: fk => fk.DeleteBehavior = DeleteBehavior.Cascade);
 
         // Server-orchestrated cast: device fingerprint uniqueness scoped to
         // owner; SET NULL on owner delete so devices survive but become unowned.
         modelBuilder
             .Entity<Device>()
-            .HasIndex(d => new { d.OwnerUserId, d.Fingerprint })
+            .HasIndex(indexExpression: d => new { d.OwnerUserId, d.Fingerprint })
             .IsUnique()
-            .HasFilter("Fingerprint IS NOT NULL");
+            .HasFilter(sql: "Fingerprint IS NOT NULL");
 
         modelBuilder
             .Entity<Device>()
-            .HasOne(d => d.OwnerUser)
+            .HasOne(navigationExpression: d => d.OwnerUser)
             .WithMany()
-            .HasForeignKey(d => d.OwnerUserId)
-            .OnDelete(DeleteBehavior.SetNull);
+            .HasForeignKey(foreignKeyExpression: d => d.OwnerUserId)
+            .OnDelete(deleteBehavior: DeleteBehavior.SetNull);
 
         // ActivityLog is owned by its device — a connection history entry is
         // meaningless once the device is deleted.  DeviceId is non-nullable, so
         // SetNull is not an option; Cascade is the only correct behaviour here.
         modelBuilder
             .Entity<ActivityLog>()
-            .HasOne(al => al.Device)
-            .WithMany(d => d.ActivityLogs)
-            .HasForeignKey(al => al.DeviceId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .HasOne(navigationExpression: al => al.Device)
+            .WithMany(navigationExpression: d => d.ActivityLogs)
+            .HasForeignKey(foreignKeyExpression: al => al.DeviceId)
+            .OnDelete(deleteBehavior: DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<EncodingPresetFolder>(b =>
+        modelBuilder.Entity<EncodingPresetFolder>(buildAction: b =>
         {
-            b.HasOne(epf => epf.Preset)
+            b.HasOne(navigationExpression: epf => epf.Preset)
                 .WithMany()
-                .HasForeignKey(epf => epf.PresetId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .HasForeignKey(foreignKeyExpression: epf => epf.PresetId)
+                .OnDelete(deleteBehavior: DeleteBehavior.Cascade);
             // Folder.EncodingPresetFolders is the inverse — without naming it
             // EF Core fabricates a shadow FK (FolderId1) for the new collection
             // navigation and queries fail with "no such column: e1.FolderId1".
-            b.HasOne(epf => epf.Folder)
-                .WithMany(f => f.EncodingPresetFolders)
-                .HasForeignKey(epf => epf.FolderId)
-                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(navigationExpression: epf => epf.Folder)
+                .WithMany(navigationExpression: f => f.EncodingPresetFolders)
+                .HasForeignKey(foreignKeyExpression: epf => epf.FolderId)
+                .OnDelete(deleteBehavior: DeleteBehavior.Cascade);
         });
 
         // EncodeTaskOutcome.OutputArtifactsJson is free-form concatenated paths
         // and must exceed the global 256-char string cap.
         modelBuilder
             .Entity<EncodeTaskOutcome>()
-            .Property(o => o.OutputArtifactsJson)
-            .HasMaxLength(int.MaxValue);
+            .Property(propertyExpression: o => o.OutputArtifactsJson)
+            .HasMaxLength(maxLength: int.MaxValue);
 
         // EncodeTaskOutcome.ErrorMessage may hold detailed error text up to 4096 chars.
-        modelBuilder.Entity<EncodeTaskOutcome>().Property(o => o.ErrorMessage).HasMaxLength(4096);
+        modelBuilder.Entity<EncodeTaskOutcome>().Property(propertyExpression: o => o.ErrorMessage).HasMaxLength(maxLength: 4096);
 
-        ConfigureColorPaletteIndexes(modelBuilder);
-        ConfigureImageForeignKeyIndexes(modelBuilder);
-        ConfigureCreditForeignKeyIndexes(modelBuilder);
-        ConfigurePlaylistItemForeignKeyIndexes(modelBuilder);
+        ConfigureColorPaletteIndexes(modelBuilder: modelBuilder);
+        ConfigureImageForeignKeyIndexes(modelBuilder: modelBuilder);
+        ConfigureCreditForeignKeyIndexes(modelBuilder: modelBuilder);
+        ConfigurePlaylistItemForeignKeyIndexes(modelBuilder: modelBuilder);
 
-        modelBuilder.Entity<InboxItem>().Property(i => i.CandidatesJson).HasMaxLength(int.MaxValue);
+        modelBuilder.Entity<InboxItem>().Property(propertyExpression: i => i.CandidatesJson).HasMaxLength(maxLength: int.MaxValue);
         modelBuilder
             .Entity<InboxItem>()
-            .Property(i => i.SelectedMatchJson)
-            .HasMaxLength(int.MaxValue);
-        modelBuilder.Entity<InboxItem>().Property(i => i.Error).HasMaxLength(4096);
+            .Property(propertyExpression: i => i.SelectedMatchJson)
+            .HasMaxLength(maxLength: int.MaxValue);
+        modelBuilder.Entity<InboxItem>().Property(propertyExpression: i => i.Error).HasMaxLength(maxLength: 4096);
 
-        base.OnModelCreating(modelBuilder);
+        base.OnModelCreating(modelBuilder: modelBuilder);
     }
 
     public virtual DbSet<Driver> Drivers { get; init; }
@@ -495,9 +492,9 @@ public class MediaContext : DbContext
         foreach ((string column, string name) in foreignKeyIndexes)
             modelBuilder
                 .Entity<PlaylistItem>()
-                .HasIndex(column)
-                .HasDatabaseName(name)
-                .HasFilter($"{column} IS NOT NULL");
+                .HasIndex(propertyNames: column)
+                .HasDatabaseName(name: name)
+                .HasFilter(sql: $"{column} IS NOT NULL");
     }
 
     private static void ConfigureImageForeignKeyIndexes(ModelBuilder modelBuilder)
@@ -529,9 +526,9 @@ public class MediaContext : DbContext
         foreach ((string column, string name) in foreignKeyIndexes)
             modelBuilder
                 .Entity<Image>()
-                .HasIndex(column)
-                .HasDatabaseName(name)
-                .HasFilter($"{column} IS NOT NULL");
+                .HasIndex(propertyNames: column)
+                .HasDatabaseName(name: name)
+                .HasFilter(sql: $"{column} IS NOT NULL");
     }
 
     // Cast/Crew rows each belong to exactly one of Movie/Tv/Season/Episode, so those
@@ -556,9 +553,9 @@ public class MediaContext : DbContext
         foreach ((string column, string name) in castIndexes)
             modelBuilder
                 .Entity<Cast>()
-                .HasIndex(column)
-                .HasDatabaseName(name)
-                .HasFilter($"{column} IS NOT NULL");
+                .HasIndex(propertyNames: column)
+                .HasDatabaseName(name: name)
+                .HasFilter(sql: $"{column} IS NOT NULL");
 
         (string Column, string Name)[] crewIndexes =
         [
@@ -571,16 +568,16 @@ public class MediaContext : DbContext
         foreach ((string column, string name) in crewIndexes)
             modelBuilder
                 .Entity<Crew>()
-                .HasIndex(column)
-                .HasDatabaseName(name)
-                .HasFilter($"{column} IS NOT NULL");
+                .HasIndex(propertyNames: column)
+                .HasDatabaseName(name: name)
+                .HasFilter(sql: $"{column} IS NOT NULL");
 
         modelBuilder
             .Entity<Role>()
-            .HasIndex(nameof(Role.GuestStarId))
-            .HasDatabaseName("IX_Roles_GuestStarId")
+            .HasIndex(propertyNames: nameof(Role.GuestStarId))
+            .HasDatabaseName(name: "IX_Roles_GuestStarId")
             .IsUnique()
-            .HasFilter("GuestStarId IS NOT NULL");
+            .HasFilter(sql: "GuestStarId IS NOT NULL");
     }
 
     private static void ConfigureColorPaletteIndexes(ModelBuilder modelBuilder)
@@ -589,86 +586,86 @@ public class MediaContext : DbContext
         // Allows the backfill cursor query to use an index scan instead of a full table scan.
         modelBuilder
             .Entity<Movie>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_Movies_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+            .HasIndex(propertyNames: nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName(name: "IX_Movies_ColorPalette_pending")
+            .HasFilter(sql: "ColorPalette IS NULL OR ColorPalette = ''");
 
         modelBuilder
             .Entity<Tv>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_TvShows_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+            .HasIndex(propertyNames: nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName(name: "IX_TvShows_ColorPalette_pending")
+            .HasFilter(sql: "ColorPalette IS NULL OR ColorPalette = ''");
 
         modelBuilder
             .Entity<Season>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_Seasons_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+            .HasIndex(propertyNames: nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName(name: "IX_Seasons_ColorPalette_pending")
+            .HasFilter(sql: "ColorPalette IS NULL OR ColorPalette = ''");
 
         modelBuilder
             .Entity<Episode>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_Episodes_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+            .HasIndex(propertyNames: nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName(name: "IX_Episodes_ColorPalette_pending")
+            .HasFilter(sql: "ColorPalette IS NULL OR ColorPalette = ''");
 
         modelBuilder
             .Entity<Collection>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_Collections_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+            .HasIndex(propertyNames: nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName(name: "IX_Collections_ColorPalette_pending")
+            .HasFilter(sql: "ColorPalette IS NULL OR ColorPalette = ''");
 
         modelBuilder
             .Entity<Person>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_People_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+            .HasIndex(propertyNames: nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName(name: "IX_People_ColorPalette_pending")
+            .HasFilter(sql: "ColorPalette IS NULL OR ColorPalette = ''");
 
         modelBuilder
             .Entity<Recommendation>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_Recommendations_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+            .HasIndex(propertyNames: nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName(name: "IX_Recommendations_ColorPalette_pending")
+            .HasFilter(sql: "ColorPalette IS NULL OR ColorPalette = ''");
 
         modelBuilder
             .Entity<Similar>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_Similar_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+            .HasIndex(propertyNames: nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName(name: "IX_Similar_ColorPalette_pending")
+            .HasFilter(sql: "ColorPalette IS NULL OR ColorPalette = ''");
 
         modelBuilder
             .Entity<Image>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_Images_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+            .HasIndex(propertyNames: nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName(name: "IX_Images_ColorPalette_pending")
+            .HasFilter(sql: "ColorPalette IS NULL OR ColorPalette = ''");
 
         modelBuilder
             .Entity<Artist>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_Artists_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+            .HasIndex(propertyNames: nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName(name: "IX_Artists_ColorPalette_pending")
+            .HasFilter(sql: "ColorPalette IS NULL OR ColorPalette = ''");
 
         modelBuilder
             .Entity<Album>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_Albums_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+            .HasIndex(propertyNames: nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName(name: "IX_Albums_ColorPalette_pending")
+            .HasFilter(sql: "ColorPalette IS NULL OR ColorPalette = ''");
 
         modelBuilder
             .Entity<Track>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_Tracks_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+            .HasIndex(propertyNames: nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName(name: "IX_Tracks_ColorPalette_pending")
+            .HasFilter(sql: "ColorPalette IS NULL OR ColorPalette = ''");
 
         modelBuilder
             .Entity<Playlist>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_Playlists_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+            .HasIndex(propertyNames: nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName(name: "IX_Playlists_ColorPalette_pending")
+            .HasFilter(sql: "ColorPalette IS NULL OR ColorPalette = ''");
 
         modelBuilder
             .Entity<ReleaseGroup>()
-            .HasIndex(nameof(ColorPalettes._colorPalette))
-            .HasDatabaseName("IX_ReleaseGroups_ColorPalette_pending")
-            .HasFilter("ColorPalette IS NULL OR ColorPalette = ''");
+            .HasIndex(propertyNames: nameof(ColorPalettes._colorPalette))
+            .HasDatabaseName(name: "IX_ReleaseGroups_ColorPalette_pending")
+            .HasFilter(sql: "ColorPalette IS NULL OR ColorPalette = ''");
     }
 }

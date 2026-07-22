@@ -33,120 +33,120 @@ public class EncodingOrchestratorTests
     {
         // Pass-through lease so tests that reach the staging step don't null-ref.
         _storage
-            .Setup(s => s.AcquireLocalPathAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string path, CancellationToken _) => new(path));
+            .Setup(expression: s => s.AcquireLocalPathAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(valueFunction: (string path, CancellationToken _) => new(path: path));
 
         // Driver is accessed when naming the publish stage — provide a non-null stub.
-        _storage.Setup(s => s.Driver).Returns(new LocalStorageDriver());
+        _storage.Setup(expression: s => s.Driver).Returns(value: new LocalStorageDriver());
     }
 
     [Fact]
     public async Task EncodeAsync_DispatchesToResolvedStrategy()
     {
-        EncodingRequest request = BuildRequest(OutputFormat.Hls, EncodeMode.SinglePass);
+        EncodingRequest request = BuildRequest(format: OutputFormat.Hls, mode: EncodeMode.SinglePass);
         Mock<IEncodingStrategy> strategy = BuildStrategy(
-            OutputFormat.Hls,
-            EncodeMode.SinglePass,
+            format: OutputFormat.Hls,
+            mode: EncodeMode.SinglePass,
             success: true
         );
 
         _resolver
-            .Setup(r => r.Resolve(OutputFormat.Hls, EncodeMode.SinglePass))
-            .Returns(strategy.Object);
+            .Setup(expression: r => r.Resolve(OutputFormat.Hls, EncodeMode.SinglePass))
+            .Returns(value: strategy.Object);
 
         EncodingOrchestrator orchestrator = new(
-            _resolver.Object,
-            _storage.Object,
-            _encoder.Object,
-            NullLogger<EncodingOrchestrator>.Instance
+            resolver: _resolver.Object,
+            storage: _storage.Object,
+            encoder: _encoder.Object,
+            logger: NullLogger<EncodingOrchestrator>.Instance
         );
 
-        EncodingResult result = await orchestrator.EncodeAsync(request);
+        EncodingResult result = await orchestrator.EncodeAsync(request: request);
 
-        Assert.True(result.Success);
+        Assert.True(condition: result.Success);
         strategy.Verify(
-            s =>
+            expression: s =>
                 s.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Once
+            times: Times.Once
         );
     }
 
     [Fact]
     public async Task EncodeAsync_NoStrategyRegistered_ReturnsErrorResult()
     {
-        EncodingRequest request = BuildRequest(OutputFormat.Dash, EncodeMode.TwoPass);
+        EncodingRequest request = BuildRequest(format: OutputFormat.Dash, mode: EncodeMode.TwoPass);
         _resolver
-            .Setup(r => r.Resolve(OutputFormat.Dash, EncodeMode.TwoPass))
-            .Returns((IEncodingStrategy?)null);
+            .Setup(expression: r => r.Resolve(OutputFormat.Dash, EncodeMode.TwoPass))
+            .Returns(value: (IEncodingStrategy?)null);
 
         EncodingOrchestrator orchestrator = new(
-            _resolver.Object,
-            _storage.Object,
-            _encoder.Object,
-            NullLogger<EncodingOrchestrator>.Instance
+            resolver: _resolver.Object,
+            storage: _storage.Object,
+            encoder: _encoder.Object,
+            logger: NullLogger<EncodingOrchestrator>.Instance
         );
 
-        EncodingResult result = await orchestrator.EncodeAsync(request);
+        EncodingResult result = await orchestrator.EncodeAsync(request: request);
 
-        Assert.False(result.Success);
-        Assert.NotNull(result.Error);
-        Assert.Contains("No strategy registered", result.Error!.Message);
-        Assert.Contains("Dash", result.Error.Message);
-        Assert.Contains("TwoPass", result.Error.Message);
+        Assert.False(condition: result.Success);
+        Assert.NotNull(@object: result.Error);
+        Assert.Contains(expectedSubstring: "No strategy registered", actualString: result.Error!.Message);
+        Assert.Contains(expectedSubstring: "Dash", actualString: result.Error.Message);
+        Assert.Contains(expectedSubstring: "TwoPass", actualString: result.Error.Message);
     }
 
     [Fact]
     public async Task EncodeAsync_NoStrategy_NotifiesProgressObserverOfError()
     {
-        EncodingRequest request = BuildRequest(OutputFormat.Mp4, EncodeMode.TwoPass);
+        EncodingRequest request = BuildRequest(format: OutputFormat.Mp4, mode: EncodeMode.TwoPass);
         _resolver
-            .Setup(r => r.Resolve(It.IsAny<OutputFormat>(), It.IsAny<EncodeMode>()))
-            .Returns((IEncodingStrategy?)null);
+            .Setup(expression: r => r.Resolve(It.IsAny<OutputFormat>(), It.IsAny<EncodeMode>()))
+            .Returns(value: (IEncodingStrategy?)null);
 
         Mock<IProgressObserver> progress = new();
         EncodingOrchestrator orchestrator = new(
-            _resolver.Object,
-            _storage.Object,
-            _encoder.Object,
-            NullLogger<EncodingOrchestrator>.Instance
+            resolver: _resolver.Object,
+            storage: _storage.Object,
+            encoder: _encoder.Object,
+            logger: NullLogger<EncodingOrchestrator>.Instance
         );
 
-        await orchestrator.EncodeAsync(request, progress.Object);
+        await orchestrator.EncodeAsync(request: request, progress: progress.Object);
 
-        progress.Verify(p => p.OnError(It.IsAny<EncodingError>()), Times.Once);
+        progress.Verify(expression: p => p.OnError(It.IsAny<EncodingError>()), times: Times.Once);
     }
 
     [Fact]
     public async Task EncodeAsync_ResolvesStrategyBasedOnProfileFormatAndMode()
     {
         // Profile says DASH+TwoPass → resolver must be called with those, not something else.
-        EncodingRequest request = BuildRequest(OutputFormat.Dash, EncodeMode.TwoPass);
+        EncodingRequest request = BuildRequest(format: OutputFormat.Dash, mode: EncodeMode.TwoPass);
         Mock<IEncodingStrategy> strategy = BuildStrategy(
-            OutputFormat.Dash,
-            EncodeMode.TwoPass,
+            format: OutputFormat.Dash,
+            mode: EncodeMode.TwoPass,
             success: true
         );
         _resolver
-            .Setup(r => r.Resolve(OutputFormat.Dash, EncodeMode.TwoPass))
-            .Returns(strategy.Object);
+            .Setup(expression: r => r.Resolve(OutputFormat.Dash, EncodeMode.TwoPass))
+            .Returns(value: strategy.Object);
 
         EncodingOrchestrator orchestrator = new(
-            _resolver.Object,
-            _storage.Object,
-            _encoder.Object,
-            NullLogger<EncodingOrchestrator>.Instance
+            resolver: _resolver.Object,
+            storage: _storage.Object,
+            encoder: _encoder.Object,
+            logger: NullLogger<EncodingOrchestrator>.Instance
         );
 
-        await orchestrator.EncodeAsync(request);
+        await orchestrator.EncodeAsync(request: request);
 
-        _resolver.Verify(r => r.Resolve(OutputFormat.Dash, EncodeMode.TwoPass), Times.Once);
+        _resolver.Verify(expression: r => r.Resolve(OutputFormat.Dash, EncodeMode.TwoPass), times: Times.Once);
         _resolver.Verify(
-            r => r.Resolve(It.IsNotIn(OutputFormat.Dash), It.IsAny<EncodeMode>()),
-            Times.Never
+            expression: r => r.Resolve(It.IsNotIn(OutputFormat.Dash), It.IsAny<EncodeMode>()),
+            times: Times.Never
         );
     }
 
@@ -161,57 +161,52 @@ public class EncodingOrchestratorTests
     [Fact]
     public async Task EncodeAsync_OutputDirectoryTraversesAboveTranscodeRoot_FailsWithoutTouchingFilesystem()
     {
-        string escapeTarget = Path.Combine(
-            Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar),
-            "..",
-            "..",
-            "..",
-            $"nm-orch-escape-{Guid.NewGuid():N}"
+        string escapeTarget = Path.Combine(paths: [Path.GetTempPath().TrimEnd(trimChar: Path.DirectorySeparatorChar), "..", "..", "..", $"nm-orch-escape-{Guid.NewGuid():N}"]
         );
-        string resolvedEscapeTarget = Path.GetFullPath(escapeTarget);
+        string resolvedEscapeTarget = Path.GetFullPath(path: escapeTarget);
 
-        EncodingRequest request = BuildRequest(OutputFormat.Hls, EncodeMode.SinglePass) with
+        EncodingRequest request = BuildRequest(format: OutputFormat.Hls, mode: EncodeMode.SinglePass) with
         {
-            OutputDirectory = "../../../" + Path.GetFileName(resolvedEscapeTarget),
+            OutputDirectory = "../../../" + Path.GetFileName(path: resolvedEscapeTarget),
         };
         Mock<IEncodingStrategy> strategy = BuildStrategy(
-            OutputFormat.Hls,
-            EncodeMode.SinglePass,
+            format: OutputFormat.Hls,
+            mode: EncodeMode.SinglePass,
             success: true
         );
         _resolver
-            .Setup(r => r.Resolve(OutputFormat.Hls, EncodeMode.SinglePass))
-            .Returns(strategy.Object);
+            .Setup(expression: r => r.Resolve(OutputFormat.Hls, EncodeMode.SinglePass))
+            .Returns(value: strategy.Object);
 
         EncodingOrchestrator orchestrator = new(
-            _resolver.Object,
-            _storage.Object,
-            _encoder.Object,
-            NullLogger<EncodingOrchestrator>.Instance
+            resolver: _resolver.Object,
+            storage: _storage.Object,
+            encoder: _encoder.Object,
+            logger: NullLogger<EncodingOrchestrator>.Instance
         );
 
         try
         {
-            EncodingResult result = await orchestrator.EncodeAsync(request);
+            EncodingResult result = await orchestrator.EncodeAsync(request: request);
 
             result.Success.Should().BeFalse();
-            result.Status.Should().Be("failed");
-            Directory.Exists(resolvedEscapeTarget).Should().BeFalse();
+            result.Status.Should().Be(expected: "failed");
+            Directory.Exists(path: resolvedEscapeTarget).Should().BeFalse();
             strategy.Verify(
-                s =>
+                expression: s =>
                     s.EncodeAsync(
                         It.IsAny<EncodingRequest>(),
                         It.IsAny<IProgressObserver?>(),
                         It.IsAny<CancellationToken>()
                     ),
-                Times.Never,
-                "the containment check must reject the temp dir before the strategy ever runs"
+                times: Times.Never,
+                failMessage: "the containment check must reject the temp dir before the strategy ever runs"
             );
         }
         finally
         {
-            if (Directory.Exists(resolvedEscapeTarget))
-                Directory.Delete(resolvedEscapeTarget, recursive: true);
+            if (Directory.Exists(path: resolvedEscapeTarget))
+                Directory.Delete(path: resolvedEscapeTarget, recursive: true);
         }
     }
 
@@ -222,42 +217,42 @@ public class EncodingOrchestratorTests
         // the '/' trim untouched, and Path.Combine(root, rooted) discards
         // root entirely per .NET's documented behavior.
         string rootedEscapeTarget = Path.Combine(
-            Directory.GetParent(Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar))!.FullName,
-            $"nm-orch-rooted-escape-{Guid.NewGuid():N}"
+            path1: Directory.GetParent(path: Path.GetTempPath().TrimEnd(trimChar: Path.DirectorySeparatorChar))!.FullName,
+            path2: $"nm-orch-rooted-escape-{Guid.NewGuid():N}"
         );
 
-        EncodingRequest request = BuildRequest(OutputFormat.Hls, EncodeMode.SinglePass) with
+        EncodingRequest request = BuildRequest(format: OutputFormat.Hls, mode: EncodeMode.SinglePass) with
         {
             OutputDirectory = rootedEscapeTarget,
         };
         Mock<IEncodingStrategy> strategy = BuildStrategy(
-            OutputFormat.Hls,
-            EncodeMode.SinglePass,
+            format: OutputFormat.Hls,
+            mode: EncodeMode.SinglePass,
             success: true
         );
         _resolver
-            .Setup(r => r.Resolve(OutputFormat.Hls, EncodeMode.SinglePass))
-            .Returns(strategy.Object);
+            .Setup(expression: r => r.Resolve(OutputFormat.Hls, EncodeMode.SinglePass))
+            .Returns(value: strategy.Object);
 
         EncodingOrchestrator orchestrator = new(
-            _resolver.Object,
-            _storage.Object,
-            _encoder.Object,
-            NullLogger<EncodingOrchestrator>.Instance
+            resolver: _resolver.Object,
+            storage: _storage.Object,
+            encoder: _encoder.Object,
+            logger: NullLogger<EncodingOrchestrator>.Instance
         );
 
         try
         {
-            EncodingResult result = await orchestrator.EncodeAsync(request);
+            EncodingResult result = await orchestrator.EncodeAsync(request: request);
 
             result.Success.Should().BeFalse();
-            result.Status.Should().Be("failed");
-            Directory.Exists(rootedEscapeTarget).Should().BeFalse();
+            result.Status.Should().Be(expected: "failed");
+            Directory.Exists(path: rootedEscapeTarget).Should().BeFalse();
         }
         finally
         {
-            if (Directory.Exists(rootedEscapeTarget))
-                Directory.Delete(rootedEscapeTarget, recursive: true);
+            if (Directory.Exists(path: rootedEscapeTarget))
+                Directory.Delete(path: rootedEscapeTarget, recursive: true);
         }
     }
 
@@ -284,7 +279,7 @@ public class EncodingOrchestratorTests
             Profile: new(
                 Id: Ulid.NewUlid(),
                 Name: "Test",
-                Container: ToContainer(format),
+                Container: ToContainer(format: format),
                 Video: null,
                 Audio: [],
                 Subtitles: [],
@@ -299,9 +294,9 @@ public class EncodingOrchestratorTests
     )
     {
         Mock<IEncodingStrategy> mock = new();
-        mock.Setup(s => s.Format).Returns(format);
-        mock.Setup(s => s.EncodeMode).Returns(mode);
-        mock.Setup(s =>
+        mock.Setup(expression: s => s.Format).Returns(value: format);
+        mock.Setup(expression: s => s.EncodeMode).Returns(value: mode);
+        mock.Setup(expression: s =>
                 s.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
@@ -309,12 +304,12 @@ public class EncodingOrchestratorTests
                 )
             )
             .ReturnsAsync(
-                new EncodingResult(
+                value: new EncodingResult(
                     Success: success,
                     OutputPath: "/out",
                     Duration: TimeSpan.Zero,
                     Error: null,
-                    Metrics: new(0, 0, 0, "test", null)
+                    Metrics: new(OutputSizeBytes: 0, AverageSpeed: 0, AverageFps: 0, EncoderUsed: "test", GpuUsed: null)
                 )
             );
         return mock;

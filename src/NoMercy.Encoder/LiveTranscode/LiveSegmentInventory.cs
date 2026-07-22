@@ -27,7 +27,7 @@ public class LiveSegmentInventory(IStorage storage, ILogger<LiveSegmentInventory
         IReadOnlyList<StorageEntry> entries;
         try
         {
-            entries = storage.List(scratchDirectory, SegmentGlob, recursive: false);
+            entries = storage.List(path: scratchDirectory, pattern: SegmentGlob, recursive: false);
         }
         catch (Exception ex)
         {
@@ -35,7 +35,7 @@ public class LiveSegmentInventory(IStorage storage, ILogger<LiveSegmentInventory
             // the same as "nothing on disk" rather than surfaced — a missing
             // directory is the expected state before the first runner ever writes
             // to it, not an error.
-            logger.LogDebug(ex, "Could not list {Dir} for segment inventory", scratchDirectory);
+            logger.LogDebug(exception: ex, message: "Could not list {Dir} for segment inventory", args: scratchDirectory);
             return indices;
         }
 
@@ -44,9 +44,9 @@ public class LiveSegmentInventory(IStorage storage, ILogger<LiveSegmentInventory
             if (entry.IsDirectory)
                 continue;
 
-            int? index = ParseIndex(storage.GetName(entry.Path));
+            int? index = ParseIndex(fileName: storage.GetName(path: entry.Path));
             if (index is int value)
-                indices.Add(value);
+                indices.Add(item: value);
         }
 
         return indices;
@@ -57,11 +57,11 @@ public class LiveSegmentInventory(IStorage storage, ILogger<LiveSegmentInventory
         IReadOnlyList<StorageEntry> entries;
         try
         {
-            entries = storage.List(scratchDirectory, SegmentGlob, recursive: false);
+            entries = storage.List(path: scratchDirectory, pattern: SegmentGlob, recursive: false);
         }
         catch (Exception ex)
         {
-            logger.LogDebug(ex, "Could not list {Dir} for segment purge", scratchDirectory);
+            logger.LogDebug(exception: ex, message: "Could not list {Dir} for segment purge", args: scratchDirectory);
             return;
         }
 
@@ -72,7 +72,7 @@ public class LiveSegmentInventory(IStorage storage, ILogger<LiveSegmentInventory
 
             try
             {
-                storage.Delete(entry.Path);
+                storage.Delete(path: entry.Path);
             }
             catch (Exception ex)
             {
@@ -80,21 +80,21 @@ public class LiveSegmentInventory(IStorage storage, ILogger<LiveSegmentInventory
                 // response still holds open. Best-effort: the file is picked up
                 // by the next purge, or by scratch-directory teardown on session
                 // end.
-                logger.LogDebug(ex, "Could not delete segment {Path}", entry.Path);
+                logger.LogDebug(exception: ex, message: "Could not delete segment {Path}", args: entry.Path);
             }
         }
     }
 
     private static int? ParseIndex(string fileName)
     {
-        if (!fileName.StartsWith(SegmentPrefix, StringComparison.Ordinal))
+        if (!fileName.StartsWith(value: SegmentPrefix, comparisonType: StringComparison.Ordinal))
             return null;
 
-        int dot = fileName.IndexOf('.', SegmentPrefix.Length);
+        int dot = fileName.IndexOf(value: '.', startIndex: SegmentPrefix.Length);
         if (dot < 0)
             return null;
 
         string digits = fileName[SegmentPrefix.Length..dot];
-        return int.TryParse(digits, out int value) ? value : null;
+        return int.TryParse(s: digits, result: out int value) ? value : null;
     }
 }

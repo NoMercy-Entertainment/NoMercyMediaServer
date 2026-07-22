@@ -31,8 +31,8 @@ internal static class AudioFilterBuilder
         string? customPanMatrix
     )
     {
-        string? pan = BuildPanFilter(downmix, customPanMatrix);
-        string? loudnorm = BuildLoudnormFilter(loudness);
+        string? pan = BuildPanFilter(mode: downmix, customPanMatrix: customPanMatrix);
+        string? loudnorm = BuildLoudnormFilter(loudness: loudness);
 
         return (pan, loudnorm) switch
         {
@@ -51,7 +51,7 @@ internal static class AudioFilterBuilder
                 "pan=stereo|FL<FL+0.707*FC+0.707*BL+0.707*SL|FR<FR+0.707*FC+0.707*BR+0.707*SR",
             // Simple equal-weight sum; safe for any input channel layout.
             DownmixMode.Mono => "pan=mono|c0<0.5*FL+0.5*FR+0.5*FC+0.25*BL+0.25*BR+0.25*SL+0.25*SR",
-            DownmixMode.Custom => string.IsNullOrWhiteSpace(customPanMatrix)
+            DownmixMode.Custom => string.IsNullOrWhiteSpace(value: customPanMatrix)
                 ? null
                 : $"pan={customPanMatrix}",
             _ => null,

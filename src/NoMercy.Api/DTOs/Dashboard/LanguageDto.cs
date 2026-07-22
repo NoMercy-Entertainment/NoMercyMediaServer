@@ -15,15 +15,15 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record LanguageDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("iso_639_1")]
+    [JsonProperty(propertyName: "iso_639_1")]
     public string? Iso6391 { get; set; }
 
-    [JsonProperty("english_name")]
+    [JsonProperty(propertyName: "english_name")]
     public string? EnglishName { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string? Name { get; set; }
 }

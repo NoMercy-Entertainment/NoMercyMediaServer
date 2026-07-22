@@ -17,7 +17,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api;
 
-[Trait("Category", "Characterization")]
+[Trait(name: "Category", value: "Characterization")]
 public class ManagementControllerTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly HttpClient _client;
@@ -30,115 +30,115 @@ public class ManagementControllerTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task ManageStatus_ReturnsOk_WithServerStatus()
     {
-        HttpResponseMessage response = await _client.GetAsync("/manage/status");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/manage/status");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
 
         string content = await response.Content.ReadAsStringAsync();
-        JsonDocument json = JsonDocument.Parse(content);
+        JsonDocument json = JsonDocument.Parse(json: content);
         JsonElement root = json.RootElement;
 
-        Assert.True(root.TryGetProperty("status", out JsonElement status));
-        Assert.False(string.IsNullOrEmpty(status.GetString()));
+        Assert.True(condition: root.TryGetProperty(propertyName: "status", value: out JsonElement status));
+        Assert.False(condition: string.IsNullOrEmpty(value: status.GetString()));
 
-        Assert.True(root.TryGetProperty("server_name", out _));
-        Assert.True(root.TryGetProperty("version", out _));
-        Assert.True(root.TryGetProperty("platform", out _));
-        Assert.True(root.TryGetProperty("architecture", out _));
-        Assert.True(root.TryGetProperty("os", out _));
-        Assert.True(root.TryGetProperty("uptime_seconds", out JsonElement uptime));
-        Assert.True(uptime.GetInt64() >= 0);
-        Assert.True(root.TryGetProperty("start_time", out _));
-        Assert.True(root.TryGetProperty("is_dev", out _));
+        Assert.True(condition: root.TryGetProperty(propertyName: "server_name", value: out _));
+        Assert.True(condition: root.TryGetProperty(propertyName: "version", value: out _));
+        Assert.True(condition: root.TryGetProperty(propertyName: "platform", value: out _));
+        Assert.True(condition: root.TryGetProperty(propertyName: "architecture", value: out _));
+        Assert.True(condition: root.TryGetProperty(propertyName: "os", value: out _));
+        Assert.True(condition: root.TryGetProperty(propertyName: "uptime_seconds", value: out JsonElement uptime));
+        Assert.True(condition: uptime.GetInt64() >= 0);
+        Assert.True(condition: root.TryGetProperty(propertyName: "start_time", value: out _));
+        Assert.True(condition: root.TryGetProperty(propertyName: "is_dev", value: out _));
     }
 
     [Fact]
     public async Task ManageLogs_ReturnsOk_WithLogEntries()
     {
-        HttpResponseMessage response = await _client.GetAsync("/manage/logs?tail=10");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/manage/logs?tail=10");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
 
         string content = await response.Content.ReadAsStringAsync();
-        JsonDocument json = JsonDocument.Parse(content);
+        JsonDocument json = JsonDocument.Parse(json: content);
 
-        Assert.Equal(JsonValueKind.Array, json.RootElement.ValueKind);
+        Assert.Equal(expected: JsonValueKind.Array, actual: json.RootElement.ValueKind);
     }
 
     [Fact]
     public async Task ManageLogs_WithTypeFilter_ReturnsOk()
     {
-        HttpResponseMessage response = await _client.GetAsync("/manage/logs?tail=10&types=app");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/manage/logs?tail=10&types=app");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
     }
 
     [Fact]
     public async Task ManageLogs_WithLevelFilter_ReturnsOk()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            "/manage/logs?tail=10&levels=Information,Error"
+            requestUri: "/manage/logs?tail=10&levels=Information,Error"
         );
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
     }
 
     [Fact]
     public async Task ManageConfig_ReturnsOk_WithConfiguration()
     {
-        HttpResponseMessage response = await _client.GetAsync("/manage/config");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/manage/config");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
 
         string content = await response.Content.ReadAsStringAsync();
-        JsonDocument json = JsonDocument.Parse(content);
+        JsonDocument json = JsonDocument.Parse(json: content);
         JsonElement root = json.RootElement;
 
-        Assert.True(root.TryGetProperty("internal_port", out JsonElement port));
-        Assert.True(port.GetInt32() > 0);
+        Assert.True(condition: root.TryGetProperty(propertyName: "internal_port", value: out JsonElement port));
+        Assert.True(condition: port.GetInt32() > 0);
 
-        Assert.True(root.TryGetProperty("external_port", out _));
-        Assert.True(root.TryGetProperty("server_name", out _));
-        Assert.True(root.TryGetProperty("library_workers", out _));
-        Assert.True(root.TryGetProperty("import_workers", out _));
-        Assert.True(root.TryGetProperty("extras_workers", out _));
-        Assert.True(root.TryGetProperty("encoder_workers", out _));
-        Assert.True(root.TryGetProperty("cron_workers", out _));
-        Assert.True(root.TryGetProperty("image_workers", out _));
-        Assert.True(root.TryGetProperty("file_workers", out _));
-        Assert.True(root.TryGetProperty("music_workers", out _));
-        Assert.True(root.TryGetProperty("swagger", out _));
+        Assert.True(condition: root.TryGetProperty(propertyName: "external_port", value: out _));
+        Assert.True(condition: root.TryGetProperty(propertyName: "server_name", value: out _));
+        Assert.True(condition: root.TryGetProperty(propertyName: "library_workers", value: out _));
+        Assert.True(condition: root.TryGetProperty(propertyName: "import_workers", value: out _));
+        Assert.True(condition: root.TryGetProperty(propertyName: "extras_workers", value: out _));
+        Assert.True(condition: root.TryGetProperty(propertyName: "encoder_workers", value: out _));
+        Assert.True(condition: root.TryGetProperty(propertyName: "cron_workers", value: out _));
+        Assert.True(condition: root.TryGetProperty(propertyName: "image_workers", value: out _));
+        Assert.True(condition: root.TryGetProperty(propertyName: "file_workers", value: out _));
+        Assert.True(condition: root.TryGetProperty(propertyName: "music_workers", value: out _));
+        Assert.True(condition: root.TryGetProperty(propertyName: "swagger", value: out _));
     }
 
     [Fact]
     public async Task ManagePlugins_ReturnsOk_WithArray()
     {
-        HttpResponseMessage response = await _client.GetAsync("/manage/plugins");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/manage/plugins");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
 
         string content = await response.Content.ReadAsStringAsync();
-        JsonDocument json = JsonDocument.Parse(content);
+        JsonDocument json = JsonDocument.Parse(json: content);
 
-        Assert.Equal(JsonValueKind.Array, json.RootElement.ValueKind);
+        Assert.Equal(expected: JsonValueKind.Array, actual: json.RootElement.ValueKind);
     }
 
     [Fact]
     public async Task ManageQueue_ReturnsOk_WithQueueStatus()
     {
-        HttpResponseMessage response = await _client.GetAsync("/manage/queue");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/manage/queue");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
 
         string content = await response.Content.ReadAsStringAsync();
-        JsonDocument json = JsonDocument.Parse(content);
+        JsonDocument json = JsonDocument.Parse(json: content);
         JsonElement root = json.RootElement;
 
-        Assert.True(root.TryGetProperty("workers", out _));
-        Assert.True(root.TryGetProperty("pending_jobs", out JsonElement pending));
-        Assert.True(pending.GetInt32() >= 0);
-        Assert.True(root.TryGetProperty("failed_jobs", out JsonElement failed));
-        Assert.True(failed.GetInt32() >= 0);
+        Assert.True(condition: root.TryGetProperty(propertyName: "workers", value: out _));
+        Assert.True(condition: root.TryGetProperty(propertyName: "pending_jobs", value: out JsonElement pending));
+        Assert.True(condition: pending.GetInt32() >= 0);
+        Assert.True(condition: root.TryGetProperty(propertyName: "failed_jobs", value: out JsonElement failed));
+        Assert.True(condition: failed.GetInt32() >= 0);
     }
 
     [Fact]
@@ -147,32 +147,32 @@ public class ManagementControllerTests : IClassFixture<NoMercyApiFactory>
         // Only verify the endpoint is reachable and returns correct shape
         // We don't actually want to stop the test server, so we check the response format
         // by reading the restart endpoint (which is a no-op) instead
-        HttpResponseMessage response = await _client.PostAsync("/manage/restart", null);
+        HttpResponseMessage response = await _client.PostAsync(requestUri: "/manage/restart", content: null);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
 
         string content = await response.Content.ReadAsStringAsync();
-        JsonDocument json = JsonDocument.Parse(content);
+        JsonDocument json = JsonDocument.Parse(json: content);
 
-        Assert.Equal("ok", json.RootElement.GetProperty("status").GetString());
+        Assert.Equal(expected: "ok", actual: json.RootElement.GetProperty(propertyName: "status").GetString());
     }
 
     [Fact]
     public async Task ManageConfigUpdate_ReturnsOk()
     {
         StringContent body = new(
-            JsonSerializer.Serialize(new { server_name = "TestServer" }),
-            Encoding.UTF8,
-            "application/json"
+            content: JsonSerializer.Serialize(value: new { server_name = "TestServer" }),
+            encoding: Encoding.UTF8,
+            mediaType: "application/json"
         );
 
-        HttpResponseMessage response = await _client.PutAsync("/manage/config", body);
+        HttpResponseMessage response = await _client.PutAsync(requestUri: "/manage/config", content: body);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
 
         string content = await response.Content.ReadAsStringAsync();
-        JsonDocument json = JsonDocument.Parse(content);
+        JsonDocument json = JsonDocument.Parse(json: content);
 
-        Assert.Equal("ok", json.RootElement.GetProperty("status").GetString());
+        Assert.Equal(expected: "ok", actual: json.RootElement.GetProperty(propertyName: "status").GetString());
     }
 }

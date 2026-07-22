@@ -54,17 +54,14 @@ public class EncoderRuntimeExceptionMiddleware
     {
         try
         {
-            await _next(context);
+            await _next(context: context);
         }
         catch (EncoderRuntimeException ex)
         {
             string traceId = context.TraceIdentifier;
 
             _logger.LogWarning(
-                "[{TraceId}] EncoderRuntimeException [{Id}]: {Message}",
-                traceId,
-                ex.Shape.Id,
-                ex.Message
+                message: "[{TraceId}] EncoderRuntimeException [{Id}]: {Message}", args: [traceId, ex.Shape.Id, ex.Message]
             );
 
             // Response already in flight — can't safely overwrite headers.
@@ -76,8 +73,8 @@ public class EncoderRuntimeExceptionMiddleware
             context.Response.StatusCode = ex.HttpStatusCode;
             context.Response.ContentType = MediaTypeNames.Application.Json;
 
-            string json = JsonConvert.SerializeObject(ex.Shape, SerializerSettings);
-            await context.Response.WriteAsync(json);
+            string json = JsonConvert.SerializeObject(value: ex.Shape, settings: SerializerSettings);
+            await context.Response.WriteAsync(text: json);
         }
     }
 }

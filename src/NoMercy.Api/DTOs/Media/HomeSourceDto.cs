@@ -15,19 +15,19 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record HomeSourceDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("media_type")]
+    [JsonProperty(propertyName: "media_type")]
     public string MediaType { get; set; }
 
-    [JsonProperty("link")]
+    [JsonProperty(propertyName: "link")]
     public Uri Link { get; set; }
 
     public HomeSourceDto(int id, string type)
     {
         Id = id;
         MediaType = type;
-        Link = new($"/{type}/{id}", UriKind.Relative);
+        Link = new(uriString: $"/{type}/{id}", uriKind: UriKind.Relative);
     }
 }

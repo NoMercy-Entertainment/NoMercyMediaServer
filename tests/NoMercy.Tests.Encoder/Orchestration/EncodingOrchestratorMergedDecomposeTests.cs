@@ -53,17 +53,17 @@ public class EncodingOrchestratorMergedDecomposeTests
     public EncodingOrchestratorMergedDecomposeTests()
     {
         _storage
-            .Setup(s => s.AcquireLocalPathAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string path, CancellationToken _) => new(path));
-        _storage.Setup(s => s.Driver).Returns(new LocalStorageDriver());
+            .Setup(expression: s => s.AcquireLocalPathAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(valueFunction: (string path, CancellationToken _) => new(path: path));
+        _storage.Setup(expression: s => s.Driver).Returns(value: new LocalStorageDriver());
     }
 
     private EncodingOrchestrator BuildOrchestrator() =>
         new(
-            _resolver.Object,
-            _storage.Object,
-            _encoder.Object,
-            NullLogger<EncodingOrchestrator>.Instance
+            resolver: _resolver.Object,
+            storage: _storage.Object,
+            encoder: _encoder.Object,
+            logger: NullLogger<EncodingOrchestrator>.Instance
         );
 
     private static EncodingRequest BuildRequest(string presetName, Container container) =>
@@ -105,7 +105,7 @@ public class EncodingOrchestratorMergedDecomposeTests
     ) =>
         new(
             Format: format,
-            VideoOutputs: [MakeVideo(width, height, isHdrOutput)],
+            VideoOutputs: [MakeVideo(width: width, height: height, isHdrOutput: isHdrOutput)],
             AudioOutputs: [],
             SubtitleOutputs: [],
             Thumbnails: null
@@ -118,20 +118,20 @@ public class EncodingOrchestratorMergedDecomposeTests
     [Fact]
     public async Task DecomposeMergedAsync_SingleRequest_MatchesDecomposeAsync()
     {
-        EncodingRequest request = BuildRequest("Solo", Container.HlsTs);
-        OutputPlan plan = MakePlan(OutputFormat.Hls, 1920, 1080, isHdrOutput: false);
+        EncodingRequest request = BuildRequest(presetName: "Solo", container: Container.HlsTs);
+        OutputPlan plan = MakePlan(format: OutputFormat.Hls, width: 1920, height: 1080, isHdrOutput: false);
 
         _encoder
-            .Setup(e => e.PlanAsync(It.IsAny<EncodingRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(plan);
+            .Setup(expression: e => e.PlanAsync(It.IsAny<EncodingRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: plan);
 
         Mock<IEncodingStrategy> strategy = new();
-        strategy.Setup(s => s.Format).Returns(OutputFormat.Hls);
-        strategy.Setup(s => s.EncodeMode).Returns(EncodeMode.SinglePass);
+        strategy.Setup(expression: s => s.Format).Returns(value: OutputFormat.Hls);
+        strategy.Setup(expression: s => s.EncodeMode).Returns(value: EncodeMode.SinglePass);
         strategy
-            .Setup(s => s.Decompose(It.IsAny<OutputPlan>(), It.IsAny<string>()))
+            .Setup(expression: s => s.Decompose(It.IsAny<OutputPlan>(), It.IsAny<string>()))
             .Returns(
-                (OutputPlan p, string tag) =>
+                valueFunction: (OutputPlan p, string tag) =>
                     [
                         new DecomposedTask(
                             TaskId: $"{tag}-video-0",
@@ -145,15 +145,15 @@ public class EncodingOrchestratorMergedDecomposeTests
                     ]
             );
         _resolver
-            .Setup(r => r.Resolve(OutputFormat.Hls, EncodeMode.SinglePass))
-            .Returns(strategy.Object);
+            .Setup(expression: r => r.Resolve(OutputFormat.Hls, EncodeMode.SinglePass))
+            .Returns(value: strategy.Object);
 
         EncodingOrchestrator orchestrator = BuildOrchestrator();
 
-        DecomposedTask[] viaDecomposeAsync = await orchestrator.DecomposeAsync(request, GroupTag);
-        DecomposedTask[] viaMerged = await orchestrator.DecomposeMergedAsync([request], GroupTag);
+        DecomposedTask[] viaDecomposeAsync = await orchestrator.DecomposeAsync(request: request, groupTag: GroupTag);
+        DecomposedTask[] viaMerged = await orchestrator.DecomposeMergedAsync(requests: [request], groupTag: GroupTag);
 
-        viaMerged.Should().BeEquivalentTo(viaDecomposeAsync);
+        viaMerged.Should().BeEquivalentTo(expectation: viaDecomposeAsync);
     }
 
     // ------------------------------------------------------------------
@@ -163,67 +163,67 @@ public class EncodingOrchestratorMergedDecomposeTests
     [Fact]
     public async Task DecomposeMergedAsync_TwoPresets_CallsDecomposeOnceWithMergedPlan()
     {
-        EncodingRequest fourKRequest = BuildRequest("4K HDR HEVC", Container.HlsTs);
-        EncodingRequest sdrRequest = BuildRequest("1080p SDR HEVC", Container.HlsTs);
+        EncodingRequest fourKRequest = BuildRequest(presetName: "4K HDR HEVC", container: Container.HlsTs);
+        EncodingRequest sdrRequest = BuildRequest(presetName: "1080p SDR HEVC", container: Container.HlsTs);
 
-        OutputPlan fourKPlan = MakePlan(OutputFormat.Hls, 3840, 2160, isHdrOutput: true);
-        OutputPlan sdrPlan = MakePlan(OutputFormat.Hls, 1920, 1080, isHdrOutput: false);
+        OutputPlan fourKPlan = MakePlan(format: OutputFormat.Hls, width: 3840, height: 2160, isHdrOutput: true);
+        OutputPlan sdrPlan = MakePlan(format: OutputFormat.Hls, width: 1920, height: 1080, isHdrOutput: false);
 
         _encoder
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.PlanAsync(
                     It.Is<EncodingRequest>(r => r.Profile.Name == "4K HDR HEVC"),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(fourKPlan);
+            .ReturnsAsync(value: fourKPlan);
         _encoder
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.PlanAsync(
                     It.Is<EncodingRequest>(r => r.Profile.Name == "1080p SDR HEVC"),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(sdrPlan);
+            .ReturnsAsync(value: sdrPlan);
 
         OutputPlan? capturedPlan = null;
         Mock<IEncodingStrategy> strategy = new();
-        strategy.Setup(s => s.Format).Returns(OutputFormat.Hls);
-        strategy.Setup(s => s.EncodeMode).Returns(EncodeMode.SinglePass);
+        strategy.Setup(expression: s => s.Format).Returns(value: OutputFormat.Hls);
+        strategy.Setup(expression: s => s.EncodeMode).Returns(value: EncodeMode.SinglePass);
         strategy
-            .Setup(s => s.Decompose(It.IsAny<OutputPlan>(), It.IsAny<string>()))
+            .Setup(expression: s => s.Decompose(It.IsAny<OutputPlan>(), It.IsAny<string>()))
             .Returns(
-                (OutputPlan p, string tag) =>
+                valueFunction: (OutputPlan p, string tag) =>
                 {
                     capturedPlan = p;
                     return
                     [
-                        new DecomposedTask($"{tag}-video-0", 0, tag, EncodeTaskKind.Video, 0, null),
-                        new DecomposedTask($"{tag}-video-1", 0, tag, EncodeTaskKind.Video, 1, null),
+                        new DecomposedTask(TaskId: $"{tag}-video-0", ParentJobId: 0, GroupTag: tag, Kind: EncodeTaskKind.Video, OutputIndex: 0, Resources: null),
+                        new DecomposedTask(TaskId: $"{tag}-video-1", ParentJobId: 0, GroupTag: tag, Kind: EncodeTaskKind.Video, OutputIndex: 1, Resources: null),
                     ];
                 }
             );
         _resolver
-            .Setup(r => r.Resolve(OutputFormat.Hls, EncodeMode.SinglePass))
-            .Returns(strategy.Object);
+            .Setup(expression: r => r.Resolve(OutputFormat.Hls, EncodeMode.SinglePass))
+            .Returns(value: strategy.Object);
 
         EncodingOrchestrator orchestrator = BuildOrchestrator();
 
         DecomposedTask[] tasks = await orchestrator.DecomposeMergedAsync(
-            [fourKRequest, sdrRequest],
-            GroupTag
+            requests: [fourKRequest, sdrRequest],
+            groupTag: GroupTag
         );
 
         strategy.Verify(
-            s => s.Decompose(It.IsAny<OutputPlan>(), GroupTag),
-            Times.Once,
-            "one coordinated encode means exactly one Decompose call, not one per preset"
+            expression: s => s.Decompose(It.IsAny<OutputPlan>(), GroupTag),
+            times: Times.Once,
+            failMessage: "one coordinated encode means exactly one Decompose call, not one per preset"
         );
         capturedPlan.Should().NotBeNull();
-        capturedPlan!.VideoOutputs.Should().HaveCount(2);
-        capturedPlan.VideoOutputs.Should().Contain(v => v.Width == 3840 && v.IsHdrOutput);
-        capturedPlan.VideoOutputs.Should().Contain(v => v.Width == 1920 && !v.IsHdrOutput);
-        tasks.Should().HaveCount(2);
+        capturedPlan!.VideoOutputs.Should().HaveCount(expected: 2);
+        capturedPlan.VideoOutputs.Should().Contain(predicate: v => v.Width == 3840 && v.IsHdrOutput);
+        capturedPlan.VideoOutputs.Should().Contain(predicate: v => v.Width == 1920 && !v.IsHdrOutput);
+        tasks.Should().HaveCount(expected: 2);
     }
 
     // ------------------------------------------------------------------
@@ -234,30 +234,30 @@ public class EncodingOrchestratorMergedDecomposeTests
     [Fact]
     public async Task DecomposeMergedAsync_DifferentContainers_Throws()
     {
-        EncodingRequest hlsRequest = BuildRequest("HLS preset", Container.HlsTs);
-        EncodingRequest mkvRequest = BuildRequest("MKV preset", Container.Mkv);
+        EncodingRequest hlsRequest = BuildRequest(presetName: "HLS preset", container: Container.HlsTs);
+        EncodingRequest mkvRequest = BuildRequest(presetName: "MKV preset", container: Container.Mkv);
 
         _encoder
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.PlanAsync(
                     It.Is<EncodingRequest>(r => r.Profile.Name == "HLS preset"),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(MakePlan(OutputFormat.Hls, 1920, 1080, isHdrOutput: false));
+            .ReturnsAsync(value: MakePlan(format: OutputFormat.Hls, width: 1920, height: 1080, isHdrOutput: false));
         _encoder
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.PlanAsync(
                     It.Is<EncodingRequest>(r => r.Profile.Name == "MKV preset"),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(MakePlan(OutputFormat.Mkv, 1920, 1080, isHdrOutput: false));
+            .ReturnsAsync(value: MakePlan(format: OutputFormat.Mkv, width: 1920, height: 1080, isHdrOutput: false));
 
         EncodingOrchestrator orchestrator = BuildOrchestrator();
 
         Func<Task> act = async () =>
-            await orchestrator.DecomposeMergedAsync([hlsRequest, mkvRequest], GroupTag);
+            await orchestrator.DecomposeMergedAsync(requests: [hlsRequest, mkvRequest], groupTag: GroupTag);
 
         await act.Should().ThrowAsync<MergedEncodingIncompatibleException>();
     }
@@ -265,7 +265,7 @@ public class EncodingOrchestratorMergedDecomposeTests
     [Fact]
     public async Task DecomposeMergedAsync_DifferentEncodeModes_Throws()
     {
-        EncodingRequest singlePass = BuildRequest("Single", Container.HlsTs) with
+        EncodingRequest singlePass = BuildRequest(presetName: "Single", container: Container.HlsTs) with
         {
             Profile = new(
                 Id: Ulid.NewUlid(),
@@ -277,7 +277,7 @@ public class EncodingOrchestratorMergedDecomposeTests
                 EncodeMode: EncodeMode.SinglePass
             ),
         };
-        EncodingRequest twoPass = BuildRequest("TwoPass", Container.HlsTs) with
+        EncodingRequest twoPass = BuildRequest(presetName: "TwoPass", container: Container.HlsTs) with
         {
             Profile = new(
                 Id: Ulid.NewUlid(),
@@ -293,7 +293,7 @@ public class EncodingOrchestratorMergedDecomposeTests
         EncodingOrchestrator orchestrator = BuildOrchestrator();
 
         Func<Task> act = async () =>
-            await orchestrator.DecomposeMergedAsync([singlePass, twoPass], GroupTag);
+            await orchestrator.DecomposeMergedAsync(requests: [singlePass, twoPass], groupTag: GroupTag);
 
         await act.Should().ThrowAsync<MergedEncodingIncompatibleException>();
     }
@@ -301,29 +301,29 @@ public class EncodingOrchestratorMergedDecomposeTests
     [Fact]
     public async Task DecomposeMergedAsync_OnePresetFailsToPlan_Throws()
     {
-        EncodingRequest good = BuildRequest("Good", Container.HlsTs);
-        EncodingRequest bad = BuildRequest("Bad", Container.HlsTs);
+        EncodingRequest good = BuildRequest(presetName: "Good", container: Container.HlsTs);
+        EncodingRequest bad = BuildRequest(presetName: "Bad", container: Container.HlsTs);
 
         _encoder
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.PlanAsync(
                     It.Is<EncodingRequest>(r => r.Profile.Name == "Good"),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(MakePlan(OutputFormat.Hls, 1920, 1080, isHdrOutput: false));
+            .ReturnsAsync(value: MakePlan(format: OutputFormat.Hls, width: 1920, height: 1080, isHdrOutput: false));
         _encoder
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.PlanAsync(
                     It.Is<EncodingRequest>(r => r.Profile.Name == "Bad"),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync((OutputPlan?)null);
+            .ReturnsAsync(value: (OutputPlan?)null);
 
         EncodingOrchestrator orchestrator = BuildOrchestrator();
 
-        Func<Task> act = async () => await orchestrator.DecomposeMergedAsync([good, bad], GroupTag);
+        Func<Task> act = async () => await orchestrator.DecomposeMergedAsync(requests: [good, bad], groupTag: GroupTag);
 
         await act.Should().ThrowAsync<MergedEncodingIncompatibleException>();
     }
@@ -333,7 +333,7 @@ public class EncodingOrchestratorMergedDecomposeTests
     {
         EncodingOrchestrator orchestrator = BuildOrchestrator();
 
-        OutputPlan? result = await orchestrator.PlanMergedAsync([]);
+        OutputPlan? result = await orchestrator.PlanMergedAsync(requests: []);
 
         result.Should().BeNull();
     }

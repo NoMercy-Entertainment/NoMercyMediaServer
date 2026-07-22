@@ -50,33 +50,33 @@ public class CappedCrfTests
     {
         Mock<ICodecResolver> codecResolver = new();
         codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<IHardwareCapabilities>(),
                     It.IsAny<EncoderPreference>()
                 )
             )
-            .Returns(codec);
+            .Returns(value: codec);
 
         Mock<IHardwareCapabilities> hardware = new();
-        hardware.Setup(h => h.HasGpu).Returns(false);
-        hardware.Setup(h => h.CpuCores).Returns(8);
-        hardware.Setup(h => h.Gpus).Returns([]);
-        hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
-        hardware.Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>())).Returns((GpuDevice?)null);
+        hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
+        hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
+        hardware.Setup(expression: h => h.Gpus).Returns(value: []);
+        hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
+        hardware.Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>())).Returns(value: (GpuDevice?)null);
 
         return new(
-            new(),
-            new(),
-            new(),
-            codecResolver.Object,
-            hardware.Object,
-            new TonemapSelector(),
-            new Mock<IFfmpegCapabilities>().Object,
-            new AbrLadderGenerator(),
-            new NoOpCropDetector(),
-            NullLogger<PlanStage>.Instance
+            graphBuilder: new(),
+            groupingStrategy: new(),
+            costEstimator: new(),
+            codecResolver: codecResolver.Object,
+            hardware: hardware.Object,
+            tonemapSelector: new TonemapSelector(),
+            ffmpegCapabilities: new Mock<IFfmpegCapabilities>().Object,
+            abrLadderGenerator: new AbrLadderGenerator(),
+            cropDetector: new NoOpCropDetector(),
+            logger: NullLogger<PlanStage>.Instance
         );
     }
 
@@ -84,7 +84,7 @@ public class CappedCrfTests
         new(
             FilePath: "/media/movie.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(90),
+            Duration: TimeSpan.FromMinutes(minutes: 90),
             OverallBitRateKbps: 10000,
             FileSizeBytes: 1_000_000_000,
             VideoStreams:
@@ -160,7 +160,7 @@ public class CappedCrfTests
                 Presets: ["slow", "medium", "fast"],
                 Profiles: ["high"],
                 Levels: ["4.1"],
-                QualityRange: new(0, qualityMax, qualityMax / 2),
+                QualityRange: new(Min: 0, Max: qualityMax, Default: qualityMax / 2),
                 SupportedRateControl: [RateControlMode.Crf, RateControlMode.Cbr],
                 Supports10Bit: false,
                 SupportsHdr: false,
@@ -185,7 +185,7 @@ public class CappedCrfTests
                 Presets: ["p1", "p4", "p7"],
                 Profiles: ["high"],
                 Levels: ["4.1"],
-                QualityRange: new(0, qualityMax, qualityMax / 2),
+                QualityRange: new(Min: 0, Max: qualityMax, Default: qualityMax / 2),
                 SupportedRateControl: [defaultRc],
                 Supports10Bit: false,
                 SupportsHdr: false,
@@ -206,7 +206,7 @@ public class CappedCrfTests
     private static async Task<VideoOutputPlan> RunPlanAsync(PlanStage stage, ValidateInput input)
     {
         EncodingContext ctx = EncodingContext.Create();
-        StageResult result = await stage.ExecuteAsync(input, ctx, CancellationToken.None);
+        StageResult result = await stage.ExecuteAsync(input: input, context: ctx, ct: CancellationToken.None);
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)result).Value;
         return plan.OutputPlan.VideoOutputs[0];
     }
@@ -218,19 +218,19 @@ public class CappedCrfTests
     [Fact]
     public async Task CrfCapped_emits_crf_maxrate_bufsize_for_libx264()
     {
-        PlanStage stage = BuildPlanStage(SoftwareCodec("libx264"));
+        PlanStage stage = BuildPlanStage(codec: SoftwareCodec(ffmpegName: "libx264"));
         VideoOutputPlan video = await RunPlanAsync(
-            stage,
-            FakeInput(VideoCodecType.H264, crf: 22, bitrateKbps: 4000)
+            stage: stage,
+            input: FakeInput(codec: VideoCodecType.H264, crf: 22, bitrateKbps: 4000)
         );
 
         // libx264: quality flows through VideoOutputPlan.Crf → -crf; ceiling via ExtraFlags.
-        video.Crf.Should().Be(22);
-        video.ExtraFlags.Should().ContainKey("-maxrate").WhoseValue.Should().Be("4000k");
-        video.ExtraFlags.Should().ContainKey("-bufsize").WhoseValue.Should().Be("8000k");
+        video.Crf.Should().Be(expected: 22);
+        video.ExtraFlags.Should().ContainKey(expected: "-maxrate").WhoseValue.Should().Be(expected: "4000k");
+        video.ExtraFlags.Should().ContainKey(expected: "-bufsize").WhoseValue.Should().Be(expected: "8000k");
         // The ceiling is the VBV cap (-maxrate/-bufsize), never a target bitrate:
         // BitrateKbps must be cleared so no -b:v collides with -crf and forces ABR.
-        video.BitrateKbps.Should().Be(0);
+        video.BitrateKbps.Should().Be(expected: 0);
     }
 
     // ----------------------------------------------------------------
@@ -240,15 +240,15 @@ public class CappedCrfTests
     [Fact]
     public async Task CrfCapped_emits_crf_maxrate_bufsize_for_libx265()
     {
-        PlanStage stage = BuildPlanStage(SoftwareCodec("libx265"));
+        PlanStage stage = BuildPlanStage(codec: SoftwareCodec(ffmpegName: "libx265"));
         VideoOutputPlan video = await RunPlanAsync(
-            stage,
-            FakeInput(VideoCodecType.H265, crf: 24, bitrateKbps: 3000)
+            stage: stage,
+            input: FakeInput(codec: VideoCodecType.H265, crf: 24, bitrateKbps: 3000)
         );
 
-        video.Crf.Should().Be(24);
-        video.ExtraFlags.Should().ContainKey("-maxrate").WhoseValue.Should().Be("3000k");
-        video.ExtraFlags.Should().ContainKey("-bufsize").WhoseValue.Should().Be("6000k");
+        video.Crf.Should().Be(expected: 24);
+        video.ExtraFlags.Should().ContainKey(expected: "-maxrate").WhoseValue.Should().Be(expected: "3000k");
+        video.ExtraFlags.Should().ContainKey(expected: "-bufsize").WhoseValue.Should().Be(expected: "6000k");
     }
 
     // ----------------------------------------------------------------
@@ -258,16 +258,16 @@ public class CappedCrfTests
     [Fact]
     public async Task CrfCapped_emits_cq_maxrate_bufsize_for_h264_nvenc()
     {
-        PlanStage stage = BuildPlanStage(HardwareCodec("h264_nvenc", RateControlMode.Cq));
+        PlanStage stage = BuildPlanStage(codec: HardwareCodec(ffmpegName: "h264_nvenc", defaultRc: RateControlMode.Cq));
         VideoOutputPlan video = await RunPlanAsync(
-            stage,
-            FakeInput(VideoCodecType.H264, crf: 22, bitrateKbps: 4000)
+            stage: stage,
+            input: FakeInput(codec: VideoCodecType.H264, crf: 22, bitrateKbps: 4000)
         );
 
         // NVENC: quality mapped to -cq in ExtraFlags, not -crf.
-        video.ExtraFlags.Should().ContainKey("-cq");
-        video.ExtraFlags.Should().ContainKey("-maxrate").WhoseValue.Should().Be("4000k");
-        video.ExtraFlags.Should().ContainKey("-bufsize").WhoseValue.Should().Be("8000k");
+        video.ExtraFlags.Should().ContainKey(expected: "-cq");
+        video.ExtraFlags.Should().ContainKey(expected: "-maxrate").WhoseValue.Should().Be(expected: "4000k");
+        video.ExtraFlags.Should().ContainKey(expected: "-bufsize").WhoseValue.Should().Be(expected: "8000k");
     }
 
     // ----------------------------------------------------------------
@@ -277,15 +277,15 @@ public class CappedCrfTests
     [Fact]
     public async Task CrfCapped_emits_cq_maxrate_bufsize_for_hevc_nvenc()
     {
-        PlanStage stage = BuildPlanStage(HardwareCodec("hevc_nvenc", RateControlMode.Cq));
+        PlanStage stage = BuildPlanStage(codec: HardwareCodec(ffmpegName: "hevc_nvenc", defaultRc: RateControlMode.Cq));
         VideoOutputPlan video = await RunPlanAsync(
-            stage,
-            FakeInput(VideoCodecType.H265, crf: 26, bitrateKbps: 2000)
+            stage: stage,
+            input: FakeInput(codec: VideoCodecType.H265, crf: 26, bitrateKbps: 2000)
         );
 
-        video.ExtraFlags.Should().ContainKey("-cq");
-        video.ExtraFlags.Should().ContainKey("-maxrate").WhoseValue.Should().Be("2000k");
-        video.ExtraFlags.Should().ContainKey("-bufsize").WhoseValue.Should().Be("4000k");
+        video.ExtraFlags.Should().ContainKey(expected: "-cq");
+        video.ExtraFlags.Should().ContainKey(expected: "-maxrate").WhoseValue.Should().Be(expected: "2000k");
+        video.ExtraFlags.Should().ContainKey(expected: "-bufsize").WhoseValue.Should().Be(expected: "4000k");
     }
 
     // ----------------------------------------------------------------
@@ -295,15 +295,15 @@ public class CappedCrfTests
     [Fact]
     public async Task CrfCapped_emits_global_quality_maxrate_bufsize_for_h264_qsv()
     {
-        PlanStage stage = BuildPlanStage(HardwareCodec("h264_qsv", RateControlMode.Icq));
+        PlanStage stage = BuildPlanStage(codec: HardwareCodec(ffmpegName: "h264_qsv", defaultRc: RateControlMode.Icq));
         VideoOutputPlan video = await RunPlanAsync(
-            stage,
-            FakeInput(VideoCodecType.H264, crf: 22, bitrateKbps: 5000)
+            stage: stage,
+            input: FakeInput(codec: VideoCodecType.H264, crf: 22, bitrateKbps: 5000)
         );
 
-        video.ExtraFlags.Should().ContainKey("-global_quality");
-        video.ExtraFlags.Should().ContainKey("-maxrate").WhoseValue.Should().Be("5000k");
-        video.ExtraFlags.Should().ContainKey("-bufsize").WhoseValue.Should().Be("10000k");
+        video.ExtraFlags.Should().ContainKey(expected: "-global_quality");
+        video.ExtraFlags.Should().ContainKey(expected: "-maxrate").WhoseValue.Should().Be(expected: "5000k");
+        video.ExtraFlags.Should().ContainKey(expected: "-bufsize").WhoseValue.Should().Be(expected: "10000k");
     }
 
     // ----------------------------------------------------------------
@@ -314,16 +314,16 @@ public class CappedCrfTests
     public async Task CrfCapped_emits_qv_maxrate_bufsize_for_h264_videotoolbox()
     {
         PlanStage stage = BuildPlanStage(
-            HardwareCodec("h264_videotoolbox", RateControlMode.QualityLevel, qualityMax: 100)
+            codec: HardwareCodec(ffmpegName: "h264_videotoolbox", defaultRc: RateControlMode.QualityLevel, qualityMax: 100)
         );
         VideoOutputPlan video = await RunPlanAsync(
-            stage,
-            FakeInput(VideoCodecType.H264, crf: 22, bitrateKbps: 3500)
+            stage: stage,
+            input: FakeInput(codec: VideoCodecType.H264, crf: 22, bitrateKbps: 3500)
         );
 
-        video.ExtraFlags.Should().ContainKey("-q:v");
-        video.ExtraFlags.Should().ContainKey("-maxrate").WhoseValue.Should().Be("3500k");
-        video.ExtraFlags.Should().ContainKey("-bufsize").WhoseValue.Should().Be("7000k");
+        video.ExtraFlags.Should().ContainKey(expected: "-q:v");
+        video.ExtraFlags.Should().ContainKey(expected: "-maxrate").WhoseValue.Should().Be(expected: "3500k");
+        video.ExtraFlags.Should().ContainKey(expected: "-bufsize").WhoseValue.Should().Be(expected: "7000k");
     }
 
     // ----------------------------------------------------------------
@@ -333,15 +333,15 @@ public class CappedCrfTests
     [Fact]
     public async Task PureCrf_does_not_emit_maxrate_or_bufsize()
     {
-        PlanStage stage = BuildPlanStage(SoftwareCodec("libx264"));
+        PlanStage stage = BuildPlanStage(codec: SoftwareCodec(ffmpegName: "libx264"));
         // bitrateKbps = 0 → pure CRF, no ceiling.
         VideoOutputPlan video = await RunPlanAsync(
-            stage,
-            FakeInput(VideoCodecType.H264, crf: 22, bitrateKbps: 0)
+            stage: stage,
+            input: FakeInput(codec: VideoCodecType.H264, crf: 22, bitrateKbps: 0)
         );
 
-        video.ExtraFlags.Should().NotContainKey("-maxrate");
-        video.ExtraFlags.Should().NotContainKey("-bufsize");
+        video.ExtraFlags.Should().NotContainKey(unexpected: "-maxrate");
+        video.ExtraFlags.Should().NotContainKey(unexpected: "-bufsize");
     }
 
     // ----------------------------------------------------------------
@@ -352,15 +352,15 @@ public class CappedCrfTests
     [Fact]
     public async Task PureBitrate_does_not_emit_maxrate_or_bufsize()
     {
-        PlanStage stage = BuildPlanStage(SoftwareCodec("libx264"));
+        PlanStage stage = BuildPlanStage(codec: SoftwareCodec(ffmpegName: "libx264"));
         // crf = 0 → pure ABR; -maxrate / -bufsize are not injected by the capped-CRF path.
         VideoOutputPlan video = await RunPlanAsync(
-            stage,
-            FakeInput(VideoCodecType.H264, crf: 0, bitrateKbps: 4000)
+            stage: stage,
+            input: FakeInput(codec: VideoCodecType.H264, crf: 0, bitrateKbps: 4000)
         );
 
-        video.ExtraFlags.Should().NotContainKey("-maxrate");
-        video.ExtraFlags.Should().NotContainKey("-bufsize");
+        video.ExtraFlags.Should().NotContainKey(unexpected: "-maxrate");
+        video.ExtraFlags.Should().NotContainKey(unexpected: "-bufsize");
     }
 
     // ----------------------------------------------------------------
@@ -370,19 +370,19 @@ public class CappedCrfTests
     [Fact]
     public async Task CrfCapped_bufsize_is_double_maxrate()
     {
-        PlanStage stage = BuildPlanStage(SoftwareCodec("libx264"));
+        PlanStage stage = BuildPlanStage(codec: SoftwareCodec(ffmpegName: "libx264"));
         VideoOutputPlan video = await RunPlanAsync(
-            stage,
-            FakeInput(VideoCodecType.H264, crf: 22, bitrateKbps: 6000)
+            stage: stage,
+            input: FakeInput(codec: VideoCodecType.H264, crf: 22, bitrateKbps: 6000)
         );
 
-        string maxrate = video.ExtraFlags["-maxrate"]; // "6000k"
-        string bufsize = video.ExtraFlags["-bufsize"]; // "12000k"
+        string maxrate = video.ExtraFlags[key: "-maxrate"]; // "6000k"
+        string bufsize = video.ExtraFlags[key: "-bufsize"]; // "12000k"
 
-        int maxKbps = int.Parse(maxrate.TrimEnd('k'));
-        int bufKbps = int.Parse(bufsize.TrimEnd('k'));
+        int maxKbps = int.Parse(s: maxrate.TrimEnd(trimChar: 'k'));
+        int bufKbps = int.Parse(s: bufsize.TrimEnd(trimChar: 'k'));
 
-        bufKbps.Should().Be(maxKbps * 2);
+        bufKbps.Should().Be(expected: maxKbps * 2);
     }
 
     // ----------------------------------------------------------------
@@ -395,47 +395,47 @@ public class CappedCrfTests
     private static async Task<string> BuildArgvAsync(PlanStage stage, ValidateInput input)
     {
         EncodingContext ctx = EncodingContext.Create();
-        StageResult result = await stage.ExecuteAsync(input, ctx, CancellationToken.None);
+        StageResult result = await stage.ExecuteAsync(input: input, context: ctx, ct: CancellationToken.None);
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)result).Value;
 
-        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new("/input.mkv"));
-        strategy.ConfigureOutput(builder, plan.OutputPlan, "/output");
+        builder.AddInput(input: new(FilePath: "/input.mkv"));
+        strategy.ConfigureOutput(builder: builder, plan: plan.OutputPlan, outputDirectory: "/output");
 
-        return string.Join(" ", builder.Build("ffmpeg").Arguments);
+        return string.Join(separator: " ", value: builder.Build(ffmpegPath: "ffmpeg").Arguments);
     }
 
     [Fact]
     public async Task CrfCapped_libx264_argv_has_crf_and_maxrate_but_no_target_bitrate()
     {
-        PlanStage stage = BuildPlanStage(SoftwareCodec("libx264"));
+        PlanStage stage = BuildPlanStage(codec: SoftwareCodec(ffmpegName: "libx264"));
         string argv = await BuildArgvAsync(
-            stage,
-            FakeInput(VideoCodecType.H264, crf: 22, bitrateKbps: 4000)
+            stage: stage,
+            input: FakeInput(codec: VideoCodecType.H264, crf: 22, bitrateKbps: 4000)
         );
 
-        argv.Should().Contain("-crf 22");
-        argv.Should().Contain("-maxrate 4000k");
-        argv.Should().Contain("-bufsize 8000k");
+        argv.Should().Contain(expected: "-crf 22");
+        argv.Should().Contain(expected: "-maxrate 4000k");
+        argv.Should().Contain(expected: "-bufsize 8000k");
         // The regression: -b:v alongside -crf makes libx264 switch to ABR and
         // silently voids the CRF quality target. It must never appear.
-        argv.Should().NotContain("-b:v");
+        argv.Should().NotContain(unexpected: "-b:v");
     }
 
     [Fact]
     public async Task CrfCapped_nvenc_argv_has_cq_and_maxrate_but_no_target_bitrate()
     {
-        PlanStage stage = BuildPlanStage(HardwareCodec("h264_nvenc", RateControlMode.Cq));
+        PlanStage stage = BuildPlanStage(codec: HardwareCodec(ffmpegName: "h264_nvenc", defaultRc: RateControlMode.Cq));
         string argv = await BuildArgvAsync(
-            stage,
-            FakeInput(VideoCodecType.H264, crf: 22, bitrateKbps: 4000)
+            stage: stage,
+            input: FakeInput(codec: VideoCodecType.H264, crf: 22, bitrateKbps: 4000)
         );
 
-        argv.Should().Contain("-cq");
-        argv.Should().Contain("-maxrate 4000k");
+        argv.Should().Contain(expected: "-cq");
+        argv.Should().Contain(expected: "-maxrate 4000k");
         // NVENC capped-quality must not carry a redundant -b:v target.
-        argv.Should().NotContain("-b:v");
+        argv.Should().NotContain(unexpected: "-b:v");
     }
 
     [Fact]
@@ -443,13 +443,13 @@ public class CappedCrfTests
     {
         // Guard the other direction: a pure-ABR profile (no CRF) MUST still
         // emit -b:v — the capped-CRF suppression must not swallow real ABR.
-        PlanStage stage = BuildPlanStage(SoftwareCodec("libx264"));
+        PlanStage stage = BuildPlanStage(codec: SoftwareCodec(ffmpegName: "libx264"));
         string argv = await BuildArgvAsync(
-            stage,
-            FakeInput(VideoCodecType.H264, crf: 0, bitrateKbps: 4000)
+            stage: stage,
+            input: FakeInput(codec: VideoCodecType.H264, crf: 0, bitrateKbps: 4000)
         );
 
-        argv.Should().Contain("-b:v 4000k");
-        argv.Should().NotContain("-maxrate");
+        argv.Should().Contain(expected: "-b:v 4000k");
+        argv.Should().NotContain(unexpected: "-maxrate");
     }
 }

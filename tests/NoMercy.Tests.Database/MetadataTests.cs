@@ -55,7 +55,7 @@ public class MetadataTests
         long totalSize = metadata.CalculateTotalSize();
 
         // Assert
-        Assert.Equal(expectedTotalSize, totalSize);
+        Assert.Equal(expected: expectedTotalSize, actual: totalSize);
 
         await Task.CompletedTask;
     }
@@ -103,7 +103,7 @@ public class MetadataTests
         long totalSize = metadata.CalculateTotalSize();
 
         // Assert
-        Assert.Equal(expectedTotalSize, totalSize);
+        Assert.Equal(expected: expectedTotalSize, actual: totalSize);
 
         await Task.CompletedTask;
     }

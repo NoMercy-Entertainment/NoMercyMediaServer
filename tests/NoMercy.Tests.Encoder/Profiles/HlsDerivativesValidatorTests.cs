@@ -82,55 +82,55 @@ public class HlsDerivativesValidatorTests
     public void Rule1_SpriteVtt_OnMkv_Rejects()
     {
         EncodingProfile profile = HlsProfile(
-            Container.Mkv,
+            container: Container.Mkv,
             hlsDerivatives: new() { GenerateSpriteVtt = true }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result.IsValid.Should().BeFalse();
         result
             .Errors.Should()
-            .Contain(e => e.Contains("GenerateSpriteVtt") && e.Contains("HLS container"));
+            .Contain(predicate: e => e.Contains("GenerateSpriteVtt") && e.Contains("HLS container"));
     }
 
     [Fact]
     public void Rule1_SpriteVtt_OnHlsFmp4_Passes()
     {
         EncodingProfile profile = HlsProfile(
-            Container.HlsFmp4,
+            container: Container.HlsFmp4,
             hlsDerivatives: new() { GenerateSpriteVtt = true }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Errors.Should().NotContain(e => e.Contains("GenerateSpriteVtt"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("GenerateSpriteVtt"));
     }
 
     [Fact]
     public void Rule1_SpriteVtt_OnHlsTs_Passes()
     {
         EncodingProfile profile = HlsProfile(
-            Container.HlsTs,
+            container: Container.HlsTs,
             hlsDerivatives: new() { GenerateSpriteVtt = true }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Errors.Should().NotContain(e => e.Contains("GenerateSpriteVtt"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("GenerateSpriteVtt"));
     }
 
     [Fact]
     public void Rule1_SpriteVtt_False_OnMkv_Passes()
     {
         EncodingProfile profile = HlsProfile(
-            Container.Mkv,
+            container: Container.Mkv,
             hlsDerivatives: new() { GenerateSpriteVtt = false }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Errors.Should().NotContain(e => e.Contains("GenerateSpriteVtt"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("GenerateSpriteVtt"));
     }
 
     // ── Rule 2 — IFramePlaylists + Copy video → reject ────────────────────────
@@ -139,31 +139,31 @@ public class HlsDerivativesValidatorTests
     public void Rule2_IFramePlaylists_WithCopyVideo_Rejects()
     {
         EncodingProfile profile = HlsProfile(
-            Container.HlsFmp4,
+            container: Container.HlsFmp4,
             hlsDerivatives: new() { GenerateIFramePlaylists = true },
             videoPolicy: StreamPolicy.Copy
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result.IsValid.Should().BeFalse();
         result
             .Errors.Should()
-            .Contain(e => e.Contains("GenerateIFramePlaylists") && e.Contains("Copy"));
+            .Contain(predicate: e => e.Contains("GenerateIFramePlaylists") && e.Contains("Copy"));
     }
 
     [Fact]
     public void Rule2_IFramePlaylists_WithTranscodeVideo_Passes()
     {
         EncodingProfile profile = HlsProfile(
-            Container.HlsFmp4,
+            container: Container.HlsFmp4,
             hlsDerivatives: new() { GenerateIFramePlaylists = true },
             videoPolicy: StreamPolicy.Transcode
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Errors.Should().NotContain(e => e.Contains("GenerateIFramePlaylists"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("GenerateIFramePlaylists"));
     }
 
     // ── Rule 3 — GenerateMasterPlaylist = false on HLS → warn (not reject) ────
@@ -172,23 +172,23 @@ public class HlsDerivativesValidatorTests
     public void Rule3_MasterPlaylistFalse_OnHls_EmitsWarning()
     {
         EncodingProfile profile = HlsProfile(
-            Container.HlsFmp4,
+            container: Container.HlsFmp4,
             hlsDerivatives: new() { GenerateMasterPlaylist = false }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result.IsValid.Should().BeTrue();
         result
             .Warnings.Should()
-            .Contain(w => w.Contains("GenerateMasterPlaylist") && w.Contains("false"));
+            .Contain(predicate: w => w.Contains("GenerateMasterPlaylist") && w.Contains("false"));
     }
 
     [Fact]
     public void Rule3_MasterPlaylistFalse_OnNonHls_NoWarning()
     {
         EncodingProfile profile = HlsProfile(
-            Container.Mkv,
+            container: Container.Mkv,
             hlsDerivatives: new()
             {
                 GenerateMasterPlaylist = false,
@@ -196,92 +196,92 @@ public class HlsDerivativesValidatorTests
             }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Warnings.Should().NotContain(w => w.Contains("GenerateMasterPlaylist"));
+        result.Warnings.Should().NotContain(predicate: w => w.Contains("GenerateMasterPlaylist"));
     }
 
     // ── Rule 4 — SpriteVtt numeric ranges ─────────────────────────────────────
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(601)]
+    [InlineData(data: 0)]
+    [InlineData(data: -1)]
+    [InlineData(data: 601)]
     public void Rule4_SpriteVttIntervalSeconds_OutOfRange_Rejects(int value)
     {
         EncodingProfile profile = HlsProfile(
-            Container.HlsFmp4,
+            container: Container.HlsFmp4,
             hlsDerivatives: new() { SpriteVttIntervalSeconds = value }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("SpriteVttIntervalSeconds"));
+        result.Errors.Should().Contain(predicate: e => e.Contains("SpriteVttIntervalSeconds"));
     }
 
     [Fact]
     public void Rule4_SpriteVttIntervalSeconds_Valid_Passes()
     {
         EncodingProfile profile = HlsProfile(
-            Container.HlsFmp4,
+            container: Container.HlsFmp4,
             hlsDerivatives: new() { SpriteVttIntervalSeconds = 10 }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Errors.Should().NotContain(e => e.Contains("SpriteVttIntervalSeconds"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("SpriteVttIntervalSeconds"));
     }
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(21)]
+    [InlineData(data: 0)]
+    [InlineData(data: -1)]
+    [InlineData(data: 21)]
     public void Rule4_SpriteVttColumns_OutOfRange_Rejects(int value)
     {
         EncodingProfile profile = HlsProfile(
-            Container.HlsFmp4,
+            container: Container.HlsFmp4,
             hlsDerivatives: new() { SpriteVttColumns = value }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("SpriteVttColumns"));
+        result.Errors.Should().Contain(predicate: e => e.Contains("SpriteVttColumns"));
     }
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(21)]
+    [InlineData(data: 0)]
+    [InlineData(data: -1)]
+    [InlineData(data: 21)]
     public void Rule4_SpriteVttRows_OutOfRange_Rejects(int value)
     {
         EncodingProfile profile = HlsProfile(
-            Container.HlsFmp4,
+            container: Container.HlsFmp4,
             hlsDerivatives: new() { SpriteVttRows = value }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("SpriteVttRows"));
+        result.Errors.Should().Contain(predicate: e => e.Contains("SpriteVttRows"));
     }
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(1921)]
+    [InlineData(data: 0)]
+    [InlineData(data: -1)]
+    [InlineData(data: 1921)]
     public void Rule4_SpriteVttThumbnailWidth_OutOfRange_Rejects(int value)
     {
         EncodingProfile profile = HlsProfile(
-            Container.HlsFmp4,
+            container: Container.HlsFmp4,
             hlsDerivatives: new() { SpriteVttThumbnailWidth = value }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("SpriteVttThumbnailWidth"));
+        result.Errors.Should().Contain(predicate: e => e.Contains("SpriteVttThumbnailWidth"));
     }
 
     // ── Rule 4 happy-path: all defaults pass ─────────────────────────────────
@@ -289,13 +289,13 @@ public class HlsDerivativesValidatorTests
     [Fact]
     public void Rule4_DefaultValues_AllPass()
     {
-        EncodingProfile profile = HlsProfile(Container.HlsFmp4, hlsDerivatives: new());
+        EncodingProfile profile = HlsProfile(container: Container.HlsFmp4, hlsDerivatives: new());
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result
             .Errors.Should()
-            .NotContain(e =>
+            .NotContain(predicate: e =>
                 e.Contains("SpriteVtt")
                 && (
                     e.Contains("IntervalSeconds")

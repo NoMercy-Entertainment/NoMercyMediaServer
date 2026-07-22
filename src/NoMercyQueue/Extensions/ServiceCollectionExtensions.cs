@@ -21,7 +21,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddCronWorker(this IServiceCollection services)
     {
         services.AddSingleton<CronWorker>();
-        services.AddHostedService<CronWorker>(provider =>
+        services.AddHostedService<CronWorker>(implementationFactory: provider =>
             provider.GetRequiredService<CronWorker>()
         );
 
@@ -46,7 +46,7 @@ public static class ServiceCollectionExtensions
         where T : class, ICronJobExecutor
     {
         services.AddScoped<T>();
-        services.AddSingleton(new CronJobRegistration(typeof(T), jobType, cronExpression));
+        services.AddSingleton(implementationInstance: new CronJobRegistration(ExecutorType: typeof(T), JobType: jobType, CronExpression: cronExpression));
         return services;
     }
 
@@ -60,6 +60,6 @@ public static class ServiceCollectionExtensions
         using IServiceScope scope = serviceProvider.CreateScope();
         T tempInstance = scope.ServiceProvider.GetRequiredService<T>();
 
-        cronWorker.RegisterJob<T>(jobType, tempInstance.JobName, tempInstance.CronExpression);
+        cronWorker.RegisterJob<T>(jobType: jobType, name: tempInstance.JobName, cronExpression: tempInstance.CronExpression);
     }
 }

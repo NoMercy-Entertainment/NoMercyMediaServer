@@ -36,16 +36,16 @@ namespace NoMercy.Tests.Cli.Commands;
 /// itemized residue this leaves in <c>StartCommand.Create()</c>'s action body
 /// (the <c>Process.Start()</c> call and its surrounding null/try-catch).
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class StartCommandTests
 {
     private static async Task<int> RunAlreadyRunningAsync(ICliClientFactory factory)
     {
-        Option<string?> pipeOption = new("--pipe", "-p");
-        RootCommand root = new("test");
-        root.Options.Add(pipeOption);
-        root.Subcommands.Add(StartCommand.Create(pipeOption, factory));
-        return await root.Parse(["start"]).InvokeAsync();
+        Option<string?> pipeOption = new(name: "--pipe", aliases: "-p");
+        RootCommand root = new(description: "test");
+        root.Options.Add(item: pipeOption);
+        root.Subcommands.Add(item: StartCommand.Create(pipeOption: pipeOption, clientFactory: factory));
+        return await root.Parse(args: ["start"]).InvokeAsync();
     }
 
     [Fact]
@@ -53,17 +53,17 @@ public sealed class StartCommandTests
     {
         Mock<ICliClient> client = new();
         client
-            .Setup(c => c.GetAsync<StatusResponse>(ApiRoutes.Status, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new StatusResponse { Status = "running" });
+            .Setup(expression: c => c.GetAsync<StatusResponse>(ApiRoutes.Status, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: new StatusResponse { Status = "running" });
 
         Mock<ICliClientFactory> factory = new();
-        factory.Setup(f => f.Create(It.IsAny<string?>())).Returns(client.Object);
+        factory.Setup(expression: f => f.Create(It.IsAny<string?>())).Returns(value: client.Object);
 
         using ConsoleCapture console = new();
-        int exitCode = await RunAlreadyRunningAsync(factory.Object);
+        int exitCode = await RunAlreadyRunningAsync(factory: factory.Object);
 
-        exitCode.Should().Be((int)ExitCode.Success);
-        console.Out.Should().Contain("Server is already running.");
+        exitCode.Should().Be(expected: (int)ExitCode.Success);
+        console.Out.Should().Contain(expected: "Server is already running.");
     }
 
     [Fact]
@@ -71,18 +71,15 @@ public sealed class StartCommandTests
     {
         Mock<ICliClient> client = new();
         client
-            .Setup(c => c.GetAsync<StatusResponse>(ApiRoutes.Status, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new StatusResponse { Status = "running" });
+            .Setup(expression: c => c.GetAsync<StatusResponse>(ApiRoutes.Status, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: new StatusResponse { Status = "running" });
 
         Mock<ICliClientFactory> factory = new();
-        factory.Setup(f => f.Create(It.IsAny<string?>())).Returns(client.Object);
+        factory.Setup(expression: f => f.Create(It.IsAny<string?>())).Returns(value: client.Object);
 
         bool? result = await PrivateReflection.InvokeStaticAsync<bool>(
-            typeof(StartCommand),
-            "IsServerRunning",
-            factory.Object,
-            null,
-            CancellationToken.None
+            type: typeof(StartCommand),
+            methodName: "IsServerRunning", args: [factory.Object, null, CancellationToken.None]
         );
 
         result.Should().BeTrue();
@@ -93,18 +90,15 @@ public sealed class StartCommandTests
     {
         Mock<ICliClient> client = new();
         client
-            .Setup(c => c.GetAsync<StatusResponse>(ApiRoutes.Status, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((StatusResponse?)null);
+            .Setup(expression: c => c.GetAsync<StatusResponse>(ApiRoutes.Status, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: (StatusResponse?)null);
 
         Mock<ICliClientFactory> factory = new();
-        factory.Setup(f => f.Create(It.IsAny<string?>())).Returns(client.Object);
+        factory.Setup(expression: f => f.Create(It.IsAny<string?>())).Returns(value: client.Object);
 
         bool? result = await PrivateReflection.InvokeStaticAsync<bool>(
-            typeof(StartCommand),
-            "IsServerRunning",
-            factory.Object,
-            null,
-            CancellationToken.None
+            type: typeof(StartCommand),
+            methodName: "IsServerRunning", args: [factory.Object, null, CancellationToken.None]
         );
 
         result.Should().BeFalse();
@@ -115,18 +109,15 @@ public sealed class StartCommandTests
     {
         Mock<ICliClient> client = new();
         client
-            .Setup(c => c.GetAsync<StatusResponse>(ApiRoutes.Status, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new HttpRequestException("connection refused"));
+            .Setup(expression: c => c.GetAsync<StatusResponse>(ApiRoutes.Status, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(exception: new HttpRequestException(message: "connection refused"));
 
         Mock<ICliClientFactory> factory = new();
-        factory.Setup(f => f.Create(It.IsAny<string?>())).Returns(client.Object);
+        factory.Setup(expression: f => f.Create(It.IsAny<string?>())).Returns(value: client.Object);
 
         bool? result = await PrivateReflection.InvokeStaticAsync<bool>(
-            typeof(StartCommand),
-            "IsServerRunning",
-            factory.Object,
-            null,
-            CancellationToken.None
+            type: typeof(StartCommand),
+            methodName: "IsServerRunning", args: [factory.Object, null, CancellationToken.None]
         );
 
         result.Should().BeFalse();

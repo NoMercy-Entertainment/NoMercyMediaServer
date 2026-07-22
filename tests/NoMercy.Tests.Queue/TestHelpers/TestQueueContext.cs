@@ -19,14 +19,14 @@ namespace NoMercy.Tests.Queue.TestHelpers;
 public class TestQueueContext : QueueContext
 {
     public TestQueueContext(DbContextOptions<QueueContext> options)
-        : base(options) { }
+        : base(options: options) { }
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {
         // Don't configure anything if options are already provided
         if (!options.IsConfigured)
         {
-            base.OnConfiguring(options);
+            base.OnConfiguring(options: options);
         }
     }
 }
@@ -39,7 +39,7 @@ public static class TestQueueContextFactory
             .UseInMemoryDatabase(databaseName: $"{databaseName}_{Guid.NewGuid()}")
             .Options;
 
-        TestQueueContext context = new(options);
+        TestQueueContext context = new(options: options);
         context.Database.EnsureCreated();
         return context;
     }
@@ -48,8 +48,8 @@ public static class TestQueueContextFactory
         string databaseName = "TestDatabase"
     )
     {
-        QueueContext context = CreateInMemoryContext(databaseName);
-        EfQueueContextAdapter adapter = new(context);
+        QueueContext context = CreateInMemoryContext(databaseName: databaseName);
+        EfQueueContextAdapter adapter = new(context: context);
         return (context, adapter);
     }
 }

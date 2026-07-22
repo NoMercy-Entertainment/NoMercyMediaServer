@@ -23,68 +23,68 @@ public class StrategyResolverTests
     [Fact]
     public void Resolve_MatchingFormatAndMode_ReturnsStrategy()
     {
-        IEncodingStrategy hlsSingle = BuildStrategy(OutputFormat.Hls, EncodeMode.SinglePass);
-        IEncodingStrategy hlsTwo = BuildStrategy(OutputFormat.Hls, EncodeMode.TwoPass);
-        StrategyResolver resolver = new([hlsSingle, hlsTwo]);
+        IEncodingStrategy hlsSingle = BuildStrategy(format: OutputFormat.Hls, mode: EncodeMode.SinglePass);
+        IEncodingStrategy hlsTwo = BuildStrategy(format: OutputFormat.Hls, mode: EncodeMode.TwoPass);
+        StrategyResolver resolver = new(strategies: [hlsSingle, hlsTwo]);
 
-        IEncodingStrategy? resolved = resolver.Resolve(OutputFormat.Hls, EncodeMode.TwoPass);
+        IEncodingStrategy? resolved = resolver.Resolve(format: OutputFormat.Hls, mode: EncodeMode.TwoPass);
 
-        Assert.Same(hlsTwo, resolved);
+        Assert.Same(expected: hlsTwo, actual: resolved);
     }
 
     [Fact]
     public void Resolve_UnknownCombination_ReturnsNull()
     {
-        StrategyResolver resolver = new([BuildStrategy(OutputFormat.Hls, EncodeMode.SinglePass)]);
+        StrategyResolver resolver = new(strategies: [BuildStrategy(format: OutputFormat.Hls, mode: EncodeMode.SinglePass)]);
 
-        IEncodingStrategy? resolved = resolver.Resolve(OutputFormat.Dash, EncodeMode.TwoPass);
+        IEncodingStrategy? resolved = resolver.Resolve(format: OutputFormat.Dash, mode: EncodeMode.TwoPass);
 
-        Assert.Null(resolved);
+        Assert.Null(@object: resolved);
     }
 
     [Fact]
     public void Resolve_LastRegistrationWins_PluginsOverrideBuiltIn()
     {
-        IEncodingStrategy builtIn = BuildStrategy(OutputFormat.Hls, EncodeMode.SinglePass);
-        IEncodingStrategy plugin = BuildStrategy(OutputFormat.Hls, EncodeMode.SinglePass);
-        StrategyResolver resolver = new([builtIn, plugin]);
+        IEncodingStrategy builtIn = BuildStrategy(format: OutputFormat.Hls, mode: EncodeMode.SinglePass);
+        IEncodingStrategy plugin = BuildStrategy(format: OutputFormat.Hls, mode: EncodeMode.SinglePass);
+        StrategyResolver resolver = new(strategies: [builtIn, plugin]);
 
-        IEncodingStrategy? resolved = resolver.Resolve(OutputFormat.Hls, EncodeMode.SinglePass);
+        IEncodingStrategy? resolved = resolver.Resolve(format: OutputFormat.Hls, mode: EncodeMode.SinglePass);
 
-        Assert.Same(plugin, resolved);
+        Assert.Same(expected: plugin, actual: resolved);
     }
 
     [Fact]
     public void Resolve_EmptyStrategyList_ReturnsNull()
     {
-        StrategyResolver resolver = new([]);
+        StrategyResolver resolver = new(strategies: []);
 
-        IEncodingStrategy? resolved = resolver.Resolve(OutputFormat.Hls, EncodeMode.SinglePass);
+        IEncodingStrategy? resolved = resolver.Resolve(format: OutputFormat.Hls, mode: EncodeMode.SinglePass);
 
-        Assert.Null(resolved);
+        Assert.Null(@object: resolved);
     }
 
     [Fact]
     public void Resolve_MultipleFormats_ReturnsCorrectOne()
     {
-        IEncodingStrategy hls = BuildStrategy(OutputFormat.Hls, EncodeMode.SinglePass);
-        IEncodingStrategy mkv = BuildStrategy(OutputFormat.Mkv, EncodeMode.SinglePass);
-        IEncodingStrategy mp4 = BuildStrategy(OutputFormat.Mp4, EncodeMode.SinglePass);
-        IEncodingStrategy dash = BuildStrategy(OutputFormat.Dash, EncodeMode.SinglePass);
-        StrategyResolver resolver = new([hls, mkv, mp4, dash]);
+        IEncodingStrategy hls = BuildStrategy(format: OutputFormat.Hls, mode: EncodeMode.SinglePass);
+        IEncodingStrategy mkv = BuildStrategy(format: OutputFormat.Mkv, mode: EncodeMode.SinglePass);
+        IEncodingStrategy mp4 = BuildStrategy(format: OutputFormat.Mp4, mode: EncodeMode.SinglePass);
+        IEncodingStrategy dash = BuildStrategy(format: OutputFormat.Dash, mode: EncodeMode.SinglePass);
+        StrategyResolver resolver = new(strategies: [hls, mkv, mp4, dash]);
 
-        Assert.Same(hls, resolver.Resolve(OutputFormat.Hls, EncodeMode.SinglePass));
-        Assert.Same(mkv, resolver.Resolve(OutputFormat.Mkv, EncodeMode.SinglePass));
-        Assert.Same(mp4, resolver.Resolve(OutputFormat.Mp4, EncodeMode.SinglePass));
-        Assert.Same(dash, resolver.Resolve(OutputFormat.Dash, EncodeMode.SinglePass));
+        Assert.Same(expected: hls, actual: resolver.Resolve(format: OutputFormat.Hls, mode: EncodeMode.SinglePass));
+        Assert.Same(expected: mkv, actual: resolver.Resolve(format: OutputFormat.Mkv, mode: EncodeMode.SinglePass));
+        Assert.Same(expected: mp4, actual: resolver.Resolve(format: OutputFormat.Mp4, mode: EncodeMode.SinglePass));
+        Assert.Same(expected: dash, actual: resolver.Resolve(format: OutputFormat.Dash, mode: EncodeMode.SinglePass));
     }
 
     private static IEncodingStrategy BuildStrategy(OutputFormat format, EncodeMode mode)
     {
         Mock<IEncodingStrategy> mock = new();
-        mock.Setup(s => s.Format).Returns(format);
-        mock.Setup(s => s.EncodeMode).Returns(mode);
-        mock.Setup(s =>
+        mock.Setup(expression: s => s.Format).Returns(value: format);
+        mock.Setup(expression: s => s.EncodeMode).Returns(value: mode);
+        mock.Setup(expression: s =>
                 s.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
@@ -92,12 +92,12 @@ public class StrategyResolverTests
                 )
             )
             .ReturnsAsync(
-                new EncodingResult(
+                value: new EncodingResult(
                     Success: true,
                     OutputPath: "/out",
                     Duration: TimeSpan.Zero,
                     Error: null,
-                    Metrics: new(0, 0, 0, "test", null)
+                    Metrics: new(OutputSizeBytes: 0, AverageSpeed: 0, AverageFps: 0, EncoderUsed: "test", GpuUsed: null)
                 )
             );
         return mock.Object;

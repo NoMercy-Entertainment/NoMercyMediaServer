@@ -15,30 +15,30 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class MusixMatchSnippet
 {
-    [JsonProperty("snippet_id")]
+    [JsonProperty(propertyName: "snippet_id")]
     public long SnippetId { get; set; }
 
-    [JsonProperty("snippet_language")]
+    [JsonProperty(propertyName: "snippet_language")]
     public string SnippetLanguage { get; set; } = string.Empty;
 
-    [JsonProperty("restricted")]
+    [JsonProperty(propertyName: "restricted")]
     public long Restricted { get; set; }
 
-    [JsonProperty("instrumental")]
+    [JsonProperty(propertyName: "instrumental")]
     public long Instrumental { get; set; }
 
-    [JsonProperty("snippet_body")]
+    [JsonProperty(propertyName: "snippet_body")]
     public string SnippetBody { get; set; } = string.Empty;
 
-    [JsonProperty("script_tracking_url")]
+    [JsonProperty(propertyName: "script_tracking_url")]
     public Uri ScriptTrackingUrl { get; set; } = null!;
 
-    [JsonProperty("pixel_tracking_url")]
+    [JsonProperty(propertyName: "pixel_tracking_url")]
     public Uri PixelTrackingUrl { get; set; } = null!;
 
-    [JsonProperty("html_tracking_url")]
+    [JsonProperty(propertyName: "html_tracking_url")]
     public Uri HtmlTrackingUrl { get; set; } = null!;
 
-    [JsonProperty("updated_time")]
+    [JsonProperty(propertyName: "updated_time")]
     public DateTimeOffset UpdatedTime { get; set; }
 }

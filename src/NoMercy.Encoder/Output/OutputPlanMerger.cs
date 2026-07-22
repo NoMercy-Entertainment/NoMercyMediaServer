@@ -46,22 +46,22 @@ public static class OutputPlanMerger
     public static OutputPlan Merge(IReadOnlyList<OutputPlan> plans)
     {
         if (plans.Count == 0)
-            throw new InvalidOperationException("Cannot merge an empty set of output plans.");
+            throw new InvalidOperationException(message: "Cannot merge an empty set of output plans.");
 
-        OutputPlan primary = plans[0];
+        OutputPlan primary = plans[index: 0];
 
-        if (plans.Any(plan => plan.Format != primary.Format))
+        if (plans.Any(predicate: plan => plan.Format != primary.Format))
             throw new InvalidOperationException(
-                "Cannot merge output plans with different formats — "
-                    + $"expected every plan to be {primary.Format}."
+                message: "Cannot merge output plans with different formats — "
+                         + $"expected every plan to be {primary.Format}."
             );
 
         VideoOutputPlan[] mergedVideo = PlanStageDisambiguation.DisambiguateVideo(
-            plans.SelectMany(plan => plan.VideoOutputs).ToArray()
+            plans: plans.SelectMany(selector: plan => plan.VideoOutputs).ToArray()
         );
 
         AudioOutputPlan[] mergedAudio = PlanStageDisambiguation
-            .DisambiguateAudio(DeduplicateAudio(plans.SelectMany(plan => plan.AudioOutputs)))
+            .DisambiguateAudio(plans: DeduplicateAudio(audios: plans.SelectMany(selector: plan => plan.AudioOutputs)))
             .ToArray();
 
         return primary with
@@ -93,7 +93,7 @@ public static class OutputPlanMerger
                 audio.Language ?? "und",
                 audio.CodecToken
             );
-            seen.TryAdd(key, audio);
+            seen.TryAdd(key: key, value: audio);
         }
 
         return seen.Values.ToList();

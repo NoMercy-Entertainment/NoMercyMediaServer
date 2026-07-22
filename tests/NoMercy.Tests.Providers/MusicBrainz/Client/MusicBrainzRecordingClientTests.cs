@@ -17,35 +17,35 @@ using NoMercy.Tests.Providers.Infrastructure;
 
 namespace NoMercy.Tests.Providers.MusicBrainz.Client;
 
-[Collection("HttpClientProvider")]
+[Collection(name: "HttpClientProvider")]
 public sealed class MusicBrainzRecordingClientTests : ProviderHttpHarness
 {
     public MusicBrainzRecordingClientTests()
-        : base(HttpClientNames.MusicBrainz) { }
+        : base(httpClientNames: HttpClientNames.MusicBrainz) { }
 
     [Fact]
     public async Task WithAllAppends_ById_RequestsRecordingPathAndMapsTitle()
     {
         Guid recordingId = Guid.NewGuid();
         MusicBrainzRecordingAppends body = new() { Id = recordingId, Title = "Reckoner" };
-        Handler.WhenGet($"recording/{recordingId}", MockResponse.Json(HttpStatusCode.OK, body));
+        Handler.WhenGet(pathContains: $"recording/{recordingId}", responses: MockResponse.Json(status: HttpStatusCode.OK, body: body));
 
         using MusicBrainzRecordingClient client = new();
-        MusicBrainzRecordingAppends? result = await client.WithAllAppends(recordingId);
+        MusicBrainzRecordingAppends? result = await client.WithAllAppends(id: recordingId);
 
         result.Should().NotBeNull();
-        result!.Id.Should().Be(recordingId);
-        result.Title.Should().Be("Reckoner");
+        result!.Id.Should().Be(expected: recordingId);
+        result.Title.Should().Be(expected: "Reckoner");
 
         CapturedRequest request = Handler
             .Requests.Should()
-            .ContainSingle(r => r.Path.Contains($"recording/{recordingId}"))
+            .ContainSingle(predicate: r => r.Path.Contains($"recording/{recordingId}"))
             .Which;
         request
             .Query.Should()
-            .ContainKey("inc")
+            .ContainKey(expected: "inc")
             .WhoseValue.Should()
-            .Be("artist-credits+artists+releases+tags+genres");
+            .Be(expected: "artist-credits+artists+releases+tags+genres");
     }
 
     [Fact]
@@ -69,27 +69,27 @@ public sealed class MusicBrainzRecordingClientTests : ProviderHttpHarness
                 },
             ],
         };
-        Handler.WhenGet("recording", MockResponse.Json(HttpStatusCode.OK, body));
+        Handler.WhenGet(pathContains: "recording", responses: MockResponse.Json(status: HttpStatusCode.OK, body: body));
 
         using MusicBrainzRecordingClient client = new();
-        MusicBrainzSearchResponse? result = await client.SearchRecordingsDynamic(query);
+        MusicBrainzSearchResponse? result = await client.SearchRecordingsDynamic(query: query);
 
         result.Should().NotBeNull();
-        result!.Count.Should().Be(1);
-        result.Recordings.Should().ContainSingle(r => r.Title == "Reckoner" && r.Score == 100);
+        result!.Count.Should().Be(expected: 1);
+        result.Recordings.Should().ContainSingle(predicate: r => r.Title == "Reckoner" && r.Score == 100);
 
         CapturedRequest request = Handler.Requests.Should().ContainSingle().Which;
-        request.Query.Should().ContainKey("query").WhoseValue.Should().Be(query);
-        request.Query.Should().ContainKey("inc").WhoseValue.Should().Be("releases");
+        request.Query.Should().ContainKey(expected: "query").WhoseValue.Should().Be(expected: query);
+        request.Query.Should().ContainKey(expected: "inc").WhoseValue.Should().Be(expected: "releases");
     }
 
     [Fact]
     public async Task WithAppends_UnknownMbid_ReturnsNull()
     {
         Guid unknownId = Guid.NewGuid();
-        Handler.WhenGet($"recording/{unknownId}", MockResponse.Status(HttpStatusCode.NotFound));
+        Handler.WhenGet(pathContains: $"recording/{unknownId}", responses: MockResponse.Status(status: HttpStatusCode.NotFound));
 
-        using MusicBrainzRecordingClient client = new(unknownId);
+        using MusicBrainzRecordingClient client = new(id: unknownId);
         MusicBrainzRecordingAppends? result = await client.WithAllAppends();
 
         result.Should().BeNull();

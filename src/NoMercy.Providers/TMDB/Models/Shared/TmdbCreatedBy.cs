@@ -15,18 +15,18 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbCreatedBy
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("credit_id")]
+    [JsonProperty(propertyName: "credit_id")]
     public string CreditId { get; set; } = string.Empty;
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("gender")]
+    [JsonProperty(propertyName: "gender")]
     public int Gender { get; set; }
 
-    [JsonProperty("profile_path")]
+    [JsonProperty(propertyName: "profile_path")]
     public string? ProfilePath { get; set; }
 }

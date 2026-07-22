@@ -32,22 +32,22 @@ public class MusicPlayerStateManager
 
     public MusicPlayerState? GetState(Guid userId)
     {
-        return _playerStates.TryGetValue(userId, out MusicPlayerState? state) ? state : null;
+        return _playerStates.TryGetValue(key: userId, value: out MusicPlayerState? state) ? state : null;
     }
 
     public void UpdateState(Guid userId, MusicPlayerState state)
     {
-        _playerStates.AddOrUpdate(userId, state, (_, _) => state);
+        _playerStates.AddOrUpdate(key: userId, addValue: state, updateValueFactory: (_, _) => state);
     }
 
     public bool RemoveState(Guid userId)
     {
-        return _playerStates.TryRemove(userId, out _);
+        return _playerStates.TryRemove(key: userId, value: out _);
     }
 
     public bool HasState(Guid userId)
     {
-        return _playerStates.ContainsKey(userId);
+        return _playerStates.ContainsKey(key: userId);
     }
 
     public void ClearAllStates()
@@ -57,16 +57,16 @@ public class MusicPlayerStateManager
 
     public void UpdateStateProperty(Guid userId, Action<MusicPlayerState> updateAction)
     {
-        if (_playerStates.TryGetValue(userId, out MusicPlayerState? state))
+        if (_playerStates.TryGetValue(key: userId, value: out MusicPlayerState? state))
         {
-            updateAction(state);
-            _playerStates[userId] = state;
+            updateAction(obj: state);
+            _playerStates[key: userId] = state;
         }
     }
 
-    public bool TryGetValue(Guid userId, [NotNullWhen(true)] out MusicPlayerState? state)
+    public bool TryGetValue(Guid userId, [NotNullWhen(returnValue: true)] out MusicPlayerState? state)
     {
-        return _playerStates.TryGetValue(userId, out state);
+        return _playerStates.TryGetValue(key: userId, value: out state);
     }
 
     /// <summary>
@@ -80,9 +80,9 @@ public class MusicPlayerStateManager
     {
         long nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         return _lastSeq.AddOrUpdate(
-            userId,
-            nowMs,
-            (_, previousSeq) => Math.Max(previousSeq + 1, nowMs)
+            key: userId,
+            addValue: nowMs,
+            updateValueFactory: (_, previousSeq) => Math.Max(val1: previousSeq + 1, val2: nowMs)
         );
     }
 }

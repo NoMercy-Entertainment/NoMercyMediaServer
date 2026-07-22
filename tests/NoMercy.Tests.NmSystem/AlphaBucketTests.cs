@@ -13,19 +13,19 @@ using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Tests.NmSystem;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class AlphaBucketTests
 {
     [Fact]
     public void Buckets_Contains27Elements()
     {
-        AlphaBucket.Buckets.Should().HaveCount(27);
+        AlphaBucket.Buckets.Should().HaveCount(expected: 27);
     }
 
     [Fact]
     public void Buckets_StartsWithHash()
     {
-        AlphaBucket.Buckets[0].Should().Be("#");
+        AlphaBucket.Buckets[0].Should().Be(expected: "#");
     }
 
     [Fact]
@@ -34,73 +34,73 @@ public class AlphaBucketTests
         const string letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         for (int i = 1; i < AlphaBucket.Buckets.Length; i++)
         {
-            AlphaBucket.Buckets[i].Should().Be(letters[i - 1].ToString());
+            AlphaBucket.Buckets[i].Should().Be(expected: letters[index: i - 1].ToString());
         }
     }
 
     [Theory]
-    [InlineData(null, "#", true)]
-    [InlineData("", "#", true)]
-    [InlineData("  ", "#", true)]
+    [InlineData(data: [null, "#", true])]
+    [InlineData(data: ["", "#", true])]
+    [InlineData(data: ["  ", "#", true])]
     public void Matches_EmptyTitleSort_MapsToHash(string? titleSort, string bucket, bool expected)
     {
-        AlphaBucket.Matches(titleSort, bucket).Should().Be(expected);
+        AlphaBucket.Matches(titleSort: titleSort, bucket: bucket).Should().Be(expected: expected);
     }
 
     [Theory]
-    [InlineData("apple", "A", true)]
-    [InlineData("apple", "B", false)]
-    [InlineData("alice", "A", true)]
-    [InlineData("zebra", "Z", true)]
-    [InlineData("movie", "M", true)]
+    [InlineData(data: ["apple", "A", true])]
+    [InlineData(data: ["apple", "B", false])]
+    [InlineData(data: ["alice", "A", true])]
+    [InlineData(data: ["zebra", "Z", true])]
+    [InlineData(data: ["movie", "M", true])]
     public void Matches_LetterBucket_CaseInsensitive(string titleSort, string bucket, bool expected)
     {
-        AlphaBucket.Matches(titleSort, bucket).Should().Be(expected);
+        AlphaBucket.Matches(titleSort: titleSort, bucket: bucket).Should().Be(expected: expected);
     }
 
     [Theory]
-    [InlineData("Apple", "A", true)]
-    [InlineData("APPLE", "A", true)]
-    [InlineData("aPpLe", "A", true)]
+    [InlineData(data: ["Apple", "A", true])]
+    [InlineData(data: ["APPLE", "A", true])]
+    [InlineData(data: ["aPpLe", "A", true])]
     public void Matches_LetterBucket_IgnoresCase(string titleSort, string bucket, bool expected)
     {
-        AlphaBucket.Matches(titleSort, bucket).Should().Be(expected);
+        AlphaBucket.Matches(titleSort: titleSort, bucket: bucket).Should().Be(expected: expected);
     }
 
     [Theory]
-    [InlineData("1234", "#", true)]
-    [InlineData("1234", "A", false)]
-    [InlineData("#hashtag", "#", true)]
-    [InlineData("@mention", "#", true)]
-    [InlineData("[bracket", "#", true)]
+    [InlineData(data: ["1234", "#", true])]
+    [InlineData(data: ["1234", "A", false])]
+    [InlineData(data: ["#hashtag", "#", true])]
+    [InlineData(data: ["@mention", "#", true])]
+    [InlineData(data: ["[bracket", "#", true])]
     public void Matches_NonLetterStartingTitle_MapsToHash(
         string titleSort,
         string bucket,
         bool expected
     )
     {
-        AlphaBucket.Matches(titleSort, bucket).Should().Be(expected);
+        AlphaBucket.Matches(titleSort: titleSort, bucket: bucket).Should().Be(expected: expected);
     }
 
     [Theory]
-    [InlineData("_underscore", "#", true)]
-    [InlineData("-dash", "#", true)]
-    [InlineData("(paren", "#", true)]
+    [InlineData(data: ["_underscore", "#", true])]
+    [InlineData(data: ["-dash", "#", true])]
+    [InlineData(data: ["(paren", "#", true])]
     public void Matches_SpecialCharacterStart_MapsToHash(
         string titleSort,
         string bucket,
         bool expected
     )
     {
-        AlphaBucket.Matches(titleSort, bucket).Should().Be(expected);
+        AlphaBucket.Matches(titleSort: titleSort, bucket: bucket).Should().Be(expected: expected);
     }
 
     [Fact]
     public void Matches_HashBucket_OnlyMatchesNonLetterStarts()
     {
-        AlphaBucket.Matches("apple", "#").Should().BeFalse();
-        AlphaBucket.Matches("123abc", "#").Should().BeTrue();
-        AlphaBucket.Matches("_apple", "#").Should().BeTrue();
-        AlphaBucket.Matches(null, "#").Should().BeTrue();
+        AlphaBucket.Matches(titleSort: "apple", bucket: "#").Should().BeFalse();
+        AlphaBucket.Matches(titleSort: "123abc", bucket: "#").Should().BeTrue();
+        AlphaBucket.Matches(titleSort: "_apple", bucket: "#").Should().BeTrue();
+        AlphaBucket.Matches(titleSort: null, bucket: "#").Should().BeTrue();
     }
 }

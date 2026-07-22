@@ -15,7 +15,7 @@ namespace NoMercy.Plugins.Capabilities;
 
 public static class PluginCapabilityGuard
 {
-    private static readonly HashSet<string> ImplicitBaseline = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> ImplicitBaseline = new(comparer: StringComparer.OrdinalIgnoreCase)
     {
         PluginHookCapability.MediaSource,
         PluginHookCapability.Metadata,
@@ -25,8 +25,8 @@ public static class PluginCapabilityGuard
     public static bool DeclaresHook(PluginCapabilities? capabilities, string hook)
     {
         if (capabilities is null)
-            return ImplicitBaseline.Contains(hook);
+            return ImplicitBaseline.Contains(item: hook);
 
-        return capabilities.Hooks.Contains(hook, StringComparer.OrdinalIgnoreCase);
+        return capabilities.Hooks.Contains(value: hook, comparer: StringComparer.OrdinalIgnoreCase);
     }
 }

@@ -27,22 +27,22 @@ namespace NoMercy.Tests.Cli.Commands;
 /// <see cref="FakeManagementPipeServer"/> instead, which exercises the exact
 /// same JSON contract the production server implements.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class AutoStartCommandTests
 {
     private static async Task<(int ExitCode, string Request)> RunAsync(params string[] subArgs)
     {
-        Option<string?> pipeOption = new("--pipe", "-p");
-        RootCommand root = new("test");
-        root.Options.Add(pipeOption);
-        root.Subcommands.Add(AutoStartCommand.Create(pipeOption, new CliClientFactory()));
+        Option<string?> pipeOption = new(name: "--pipe", aliases: "-p");
+        RootCommand root = new(description: "test");
+        root.Options.Add(item: pipeOption);
+        root.Subcommands.Add(item: AutoStartCommand.Create(pipeOption: pipeOption, clientFactory: new CliClientFactory()));
 
         FakeManagementPipeServer server = new();
-        Task<string> serverTask = server.RunOnceAsync(stream =>
-            FakeManagementPipeServer.WriteResponseAsync(stream, 200, "OK", """{"status":"ok"}""")
+        Task<string> serverTask = server.RunOnceAsync(respond: stream =>
+            FakeManagementPipeServer.WriteResponseAsync(stream: stream, statusCode: 200, reasonPhrase: "OK", body: """{"status":"ok"}""")
         );
 
-        int exitCode = await root.Parse(["--pipe", server.PipeName, "autostart", .. subArgs])
+        int exitCode = await root.Parse(args: ["--pipe", server.PipeName, "autostart", .. subArgs])
             .InvokeAsync();
 
         string capturedRequest = await serverTask;
@@ -52,96 +52,96 @@ public sealed class AutoStartCommandTests
     [Fact]
     public async Task Status_ServerReportsUnreachableViaErrorStatus_PrintsError_AndReturnsServerError()
     {
-        Option<string?> pipeOption = new("--pipe", "-p");
-        RootCommand root = new("test");
-        root.Options.Add(pipeOption);
-        root.Subcommands.Add(AutoStartCommand.Create(pipeOption, new CliClientFactory()));
+        Option<string?> pipeOption = new(name: "--pipe", aliases: "-p");
+        RootCommand root = new(description: "test");
+        root.Options.Add(item: pipeOption);
+        root.Subcommands.Add(item: AutoStartCommand.Create(pipeOption: pipeOption, clientFactory: new CliClientFactory()));
 
         FakeManagementPipeServer server = new();
-        Task<string> serverTask = server.RunOnceAsync(stream =>
-            FakeManagementPipeServer.WriteResponseAsync(stream, 500, "Internal Server Error", "")
+        Task<string> serverTask = server.RunOnceAsync(respond: stream =>
+            FakeManagementPipeServer.WriteResponseAsync(stream: stream, statusCode: 500, reasonPhrase: "Internal Server Error", body: "")
         );
 
         using ConsoleCapture console = new();
-        int exitCode = await root.Parse(["--pipe", server.PipeName, "autostart", "status"])
+        int exitCode = await root.Parse(args: ["--pipe", server.PipeName, "autostart", "status"])
             .InvokeAsync();
 
         await serverTask;
-        exitCode.Should().Be((int)ExitCode.ServerError);
-        console.Error.Should().Contain("Could not retrieve autostart status.");
+        exitCode.Should().Be(expected: (int)ExitCode.ServerError);
+        console.Error.Should().Contain(expected: "Could not retrieve autostart status.");
     }
 
     [Theory]
-    [InlineData(true, "enabled")]
-    [InlineData(false, "disabled")]
+    [InlineData(data: [true, "enabled"])]
+    [InlineData(data: [false, "disabled"])]
     public async Task Status_ServerReachable_PrintsReportedState(bool enabled, string expectedWord)
     {
-        Option<string?> pipeOption = new("--pipe", "-p");
-        RootCommand root = new("test");
-        root.Options.Add(pipeOption);
-        root.Subcommands.Add(AutoStartCommand.Create(pipeOption, new CliClientFactory()));
+        Option<string?> pipeOption = new(name: "--pipe", aliases: "-p");
+        RootCommand root = new(description: "test");
+        root.Options.Add(item: pipeOption);
+        root.Subcommands.Add(item: AutoStartCommand.Create(pipeOption: pipeOption, clientFactory: new CliClientFactory()));
 
         FakeManagementPipeServer server = new();
-        Task<string> serverTask = server.RunOnceAsync(stream =>
+        Task<string> serverTask = server.RunOnceAsync(respond: stream =>
             FakeManagementPipeServer.WriteResponseAsync(
-                stream,
-                200,
-                "OK",
-                $"{{\"enabled\":{(enabled ? "true" : "false")}}}"
+                stream: stream,
+                statusCode: 200,
+                reasonPhrase: "OK",
+                body: $"{{\"enabled\":{(enabled ? "true" : "false")}}}"
             )
         );
 
         using ConsoleCapture console = new();
-        int exitCode = await root.Parse(["--pipe", server.PipeName, "autostart", "status"])
+        int exitCode = await root.Parse(args: ["--pipe", server.PipeName, "autostart", "status"])
             .InvokeAsync();
 
         await serverTask;
-        exitCode.Should().Be((int)ExitCode.Success);
-        console.Out.Should().Contain($"Autostart:    {expectedWord}");
+        exitCode.Should().Be(expected: (int)ExitCode.Success);
+        console.Out.Should().Contain(expected: $"Autostart:    {expectedWord}");
     }
 
     [Fact]
     public async Task Enable_SendsEnabledTrue_AndReturnsSuccess()
     {
         using ConsoleCapture console = new();
-        (int exitCode, string request) = await RunAsync("enable");
+        (int exitCode, string request) = await RunAsync(subArgs: "enable");
 
-        exitCode.Should().Be((int)ExitCode.Success);
-        request.Should().StartWith("POST /manage/autostart");
-        request.Should().Contain("\"enabled\":true");
-        console.Out.Should().Contain("Autostart enabled.");
+        exitCode.Should().Be(expected: (int)ExitCode.Success);
+        request.Should().StartWith(expected: "POST /manage/autostart");
+        request.Should().Contain(expected: "\"enabled\":true");
+        console.Out.Should().Contain(expected: "Autostart enabled.");
     }
 
     [Fact]
     public async Task Disable_SendsEnabledFalse_AndReturnsSuccess()
     {
         using ConsoleCapture console = new();
-        (int exitCode, string request) = await RunAsync("disable");
+        (int exitCode, string request) = await RunAsync(subArgs: "disable");
 
-        exitCode.Should().Be((int)ExitCode.Success);
-        request.Should().Contain("\"enabled\":false");
-        console.Out.Should().Contain("Autostart disabled.");
+        exitCode.Should().Be(expected: (int)ExitCode.Success);
+        request.Should().Contain(expected: "\"enabled\":false");
+        console.Out.Should().Contain(expected: "Autostart disabled.");
     }
 
     [Fact]
     public async Task Enable_NotAcknowledged_ReturnsServerError_WithoutSuccessMessage()
     {
-        Option<string?> pipeOption = new("--pipe", "-p");
-        RootCommand root = new("test");
-        root.Options.Add(pipeOption);
-        root.Subcommands.Add(AutoStartCommand.Create(pipeOption, new CliClientFactory()));
+        Option<string?> pipeOption = new(name: "--pipe", aliases: "-p");
+        RootCommand root = new(description: "test");
+        root.Options.Add(item: pipeOption);
+        root.Subcommands.Add(item: AutoStartCommand.Create(pipeOption: pipeOption, clientFactory: new CliClientFactory()));
 
         FakeManagementPipeServer server = new();
-        Task<string> serverTask = server.RunOnceAsync(stream =>
-            FakeManagementPipeServer.WriteResponseAsync(stream, 400, "Bad Request", "")
+        Task<string> serverTask = server.RunOnceAsync(respond: stream =>
+            FakeManagementPipeServer.WriteResponseAsync(stream: stream, statusCode: 400, reasonPhrase: "Bad Request", body: "")
         );
 
         using ConsoleCapture console = new();
-        int exitCode = await root.Parse(["--pipe", server.PipeName, "autostart", "enable"])
+        int exitCode = await root.Parse(args: ["--pipe", server.PipeName, "autostart", "enable"])
             .InvokeAsync();
 
         await serverTask;
-        exitCode.Should().Be((int)ExitCode.ServerError);
-        console.Out.Should().NotContain("Autostart enabled.");
+        exitCode.Should().Be(expected: (int)ExitCode.ServerError);
+        console.Out.Should().NotContain(unexpected: "Autostart enabled.");
     }
 }

@@ -19,6 +19,6 @@ public class AniDbCallbackObject<T>(Action<T> callback) : IAniDBMessageResponseC
 {
     public void Callback(T messageItem)
     {
-        callback(messageItem);
+        callback(obj: messageItem);
     }
 }

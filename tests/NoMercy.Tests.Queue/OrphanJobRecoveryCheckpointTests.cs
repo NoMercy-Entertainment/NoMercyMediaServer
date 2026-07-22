@@ -42,13 +42,13 @@ public class OrphanJobRecoveryCheckpointTests
     {
         TestQueueContextAdapter context = new();
         ServiceCollection services = new();
-        services.AddSingleton<IQueueContext>(context);
+        services.AddSingleton<IQueueContext>(implementationInstance: context);
         if (lookup is not null)
-            services.AddSingleton<IOrphanCheckpointLookup>(lookup);
+            services.AddSingleton<IOrphanCheckpointLookup>(implementationInstance: lookup);
         ServiceProvider provider = services.BuildServiceProvider();
         OrphanJobRecoveryHostedService service = new(
-            provider.GetRequiredService<IServiceScopeFactory>(),
-            NullLogger<OrphanJobRecoveryHostedService>.Instance
+            scopeFactory: provider.GetRequiredService<IServiceScopeFactory>(),
+            logger: NullLogger<OrphanJobRecoveryHostedService>.Instance
         );
         return (service, context);
     }
@@ -60,11 +60,11 @@ public class OrphanJobRecoveryCheckpointTests
     {
         Mock<IOrphanCheckpointLookup> lookup = new();
         lookup
-            .Setup(l => l.HasCheckpointAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+            .Setup(expression: l => l.HasCheckpointAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: true);
 
         (OrphanJobRecoveryHostedService service, TestQueueContextAdapter context) = BuildService(
-            lookup.Object
+            lookup: lookup.Object
         );
 
         QueueJobModel orphan = new()
@@ -73,20 +73,20 @@ public class OrphanJobRecoveryCheckpointTests
             Payload = "{\"OutputDirectory\":\"/media/output\"}",
             Priority = 5,
             Attempts = 2,
-            ReservedAt = DateTime.UtcNow.AddMinutes(-5),
-            AvailableAt = DateTime.UtcNow.AddHours(-1),
+            ReservedAt = DateTime.UtcNow.AddMinutes(value: -5),
+            AvailableAt = DateTime.UtcNow.AddHours(value: -1),
         };
-        context.AddJob(orphan);
+        context.AddJob(job: orphan);
 
-        await service.StartAsync(CancellationToken.None);
+        await service.StartAsync(cancellationToken: CancellationToken.None);
         if (service.ExecuteTask is not null)
             await service.ExecuteTask;
 
         // Job stays in queue with Attempts=0, ready for resume.
-        Assert.Single(context.Jobs);
-        Assert.Empty(context.FailedJobs);
-        Assert.Equal(0, context.Jobs[0].Attempts);
-        Assert.Null(context.Jobs[0].ReservedAt);
+        Assert.Single(collection: context.Jobs);
+        Assert.Empty(collection: context.FailedJobs);
+        Assert.Equal(expected: 0, actual: context.Jobs[index: 0].Attempts);
+        Assert.Null(value: context.Jobs[index: 0].ReservedAt);
     }
 
     [Fact]
@@ -94,11 +94,11 @@ public class OrphanJobRecoveryCheckpointTests
     {
         Mock<IOrphanCheckpointLookup> lookup = new();
         lookup
-            .Setup(l => l.HasCheckpointAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+            .Setup(expression: l => l.HasCheckpointAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: true);
 
         (OrphanJobRecoveryHostedService service, TestQueueContextAdapter context) = BuildService(
-            lookup.Object
+            lookup: lookup.Object
         );
 
         QueueJobModel orphan = new()
@@ -107,18 +107,18 @@ public class OrphanJobRecoveryCheckpointTests
             Payload = "{\"OutputDirectory\":\"/media/output\"}",
             Priority = 5,
             Attempts = 1,
-            ReservedAt = DateTime.UtcNow.AddMinutes(-5),
-            AvailableAt = DateTime.UtcNow.AddHours(-1),
+            ReservedAt = DateTime.UtcNow.AddMinutes(value: -5),
+            AvailableAt = DateTime.UtcNow.AddHours(value: -1),
         };
-        context.AddJob(orphan);
+        context.AddJob(job: orphan);
 
-        await service.StartAsync(CancellationToken.None);
+        await service.StartAsync(cancellationToken: CancellationToken.None);
         if (service.ExecuteTask is not null)
             await service.ExecuteTask;
 
-        Assert.Single(context.Jobs);
-        Assert.Empty(context.FailedJobs);
-        Assert.Equal(0, context.Jobs[0].Attempts);
+        Assert.Single(collection: context.Jobs);
+        Assert.Empty(collection: context.FailedJobs);
+        Assert.Equal(expected: 0, actual: context.Jobs[index: 0].Attempts);
     }
 
     // ── Without checkpoint — original behaviour preserved ──────────────────
@@ -128,11 +128,11 @@ public class OrphanJobRecoveryCheckpointTests
     {
         Mock<IOrphanCheckpointLookup> lookup = new();
         lookup
-            .Setup(l => l.HasCheckpointAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+            .Setup(expression: l => l.HasCheckpointAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: false);
 
         (OrphanJobRecoveryHostedService service, TestQueueContextAdapter context) = BuildService(
-            lookup.Object
+            lookup: lookup.Object
         );
 
         QueueJobModel orphan = new()
@@ -141,18 +141,18 @@ public class OrphanJobRecoveryCheckpointTests
             Payload = "{\"OutputDirectory\":\"/media/output\"}",
             Priority = 5,
             Attempts = 2,
-            ReservedAt = DateTime.UtcNow.AddMinutes(-5),
-            AvailableAt = DateTime.UtcNow.AddHours(-1),
+            ReservedAt = DateTime.UtcNow.AddMinutes(value: -5),
+            AvailableAt = DateTime.UtcNow.AddHours(value: -1),
         };
-        context.AddJob(orphan);
+        context.AddJob(job: orphan);
 
-        await service.StartAsync(CancellationToken.None);
+        await service.StartAsync(cancellationToken: CancellationToken.None);
         if (service.ExecuteTask is not null)
             await service.ExecuteTask;
 
-        Assert.Empty(context.Jobs);
-        Assert.Single(context.FailedJobs);
-        Assert.Equal("job.interrupted_no_checkpoint", context.FailedJobs[0].Exception);
+        Assert.Empty(collection: context.Jobs);
+        Assert.Single(collection: context.FailedJobs);
+        Assert.Equal(expected: "job.interrupted_no_checkpoint", actual: context.FailedJobs[index: 0].Exception);
     }
 
     // ── Non-encoder queue — checkpoint lookup not consulted ────────────────
@@ -162,11 +162,11 @@ public class OrphanJobRecoveryCheckpointTests
     {
         Mock<IOrphanCheckpointLookup> lookup = new();
         lookup
-            .Setup(l => l.HasCheckpointAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+            .Setup(expression: l => l.HasCheckpointAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: true);
 
         (OrphanJobRecoveryHostedService service, TestQueueContextAdapter context) = BuildService(
-            lookup.Object
+            lookup: lookup.Object
         );
 
         QueueJobModel orphan = new()
@@ -175,21 +175,21 @@ public class OrphanJobRecoveryCheckpointTests
             Payload = "{\"Id\":\"job-lib\"}",
             Priority = 5,
             Attempts = 2,
-            ReservedAt = DateTime.UtcNow.AddMinutes(-5),
-            AvailableAt = DateTime.UtcNow.AddHours(-1),
+            ReservedAt = DateTime.UtcNow.AddMinutes(value: -5),
+            AvailableAt = DateTime.UtcNow.AddHours(value: -1),
         };
-        context.AddJob(orphan);
+        context.AddJob(job: orphan);
 
-        await service.StartAsync(CancellationToken.None);
+        await service.StartAsync(cancellationToken: CancellationToken.None);
         if (service.ExecuteTask is not null)
             await service.ExecuteTask;
 
         // A repeatedly-failing (Attempts > 1) library orphan always dead-letters — lookup is not consulted.
-        Assert.Empty(context.Jobs);
-        Assert.Single(context.FailedJobs);
+        Assert.Empty(collection: context.Jobs);
+        Assert.Single(collection: context.FailedJobs);
         lookup.Verify(
-            l => l.HasCheckpointAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never
+            expression: l => l.HasCheckpointAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            times: Times.Never
         );
     }
 
@@ -208,16 +208,16 @@ public class OrphanJobRecoveryCheckpointTests
             Payload = "{\"OutputDirectory\":\"/media/output\"}",
             Priority = 5,
             Attempts = 2,
-            ReservedAt = DateTime.UtcNow.AddMinutes(-5),
-            AvailableAt = DateTime.UtcNow.AddHours(-1),
+            ReservedAt = DateTime.UtcNow.AddMinutes(value: -5),
+            AvailableAt = DateTime.UtcNow.AddHours(value: -1),
         };
-        context.AddJob(orphan);
+        context.AddJob(job: orphan);
 
-        await service.StartAsync(CancellationToken.None);
+        await service.StartAsync(cancellationToken: CancellationToken.None);
         if (service.ExecuteTask is not null)
             await service.ExecuteTask;
 
-        Assert.Empty(context.Jobs);
-        Assert.Single(context.FailedJobs);
+        Assert.Empty(collection: context.Jobs);
+        Assert.Single(collection: context.FailedJobs);
     }
 }

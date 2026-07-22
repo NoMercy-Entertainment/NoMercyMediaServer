@@ -32,13 +32,13 @@ public class FanArtImageClient : FanArtBaseClient
     private static IStorage Storage =>
         _storage
         ?? throw new InvalidOperationException(
-            "FanArtImageClient has not been initialized. Call FanArtImageClient.Initialize() at startup."
+            message: "FanArtImageClient has not been initialized. Call FanArtImageClient.Initialize() at startup."
         );
 
     public FanArtImageClient() { }
 
     public FanArtImageClient(Guid id)
-        : base(id) { }
+        : base(id: id) { }
 
     public Task<CoverArtCovers?> Cover(bool priority = false)
     {
@@ -47,7 +47,7 @@ public class FanArtImageClient : FanArtBaseClient
             //
         };
 
-        return Get<CoverArtCovers>("release/" + Id, queryParams, priority);
+        return Get<CoverArtCovers>(url: "release/" + Id, query: queryParams, priority: priority);
     }
 
     public static async Task<Image<Rgba32>?> Download(
@@ -56,37 +56,37 @@ public class FanArtImageClient : FanArtBaseClient
         Size? maxDecodeSize = null
     )
     {
-        string filePath = Path.Combine(AppFiles.MusicImagesPath, Path.GetFileName(url.LocalPath));
+        string filePath = Path.Combine(path1: AppFiles.MusicImagesPath, path2: Path.GetFileName(path: url.LocalPath));
 
         IStorage storage = Storage;
-        if (await storage.ExistsAsync(filePath, CancellationToken.None))
+        if (await storage.ExistsAsync(path: filePath, ct: CancellationToken.None))
         {
             if (maxDecodeSize.HasValue)
             {
                 DecoderOptions options = new() { TargetSize = maxDecodeSize.Value };
-                return Image.Load<Rgba32>(options, filePath);
+                return Image.Load<Rgba32>(options: options, path: filePath);
             }
 
-            return Image.Load<Rgba32>(filePath);
+            return Image.Load<Rgba32>(path: filePath);
         }
 
-        HttpClient httpClient = HttpClientProvider.CreateClient(HttpClientNames.FanArtImage);
+        HttpClient httpClient = HttpClientProvider.CreateClient(name: HttpClientNames.FanArtImage);
 
-        using HttpResponseMessage response = await httpClient.GetAsync(url);
+        using HttpResponseMessage response = await httpClient.GetAsync(requestUri: url);
         if (!response.IsSuccessStatusCode)
             return null;
 
         byte[] bytes = await response.Content.ReadAsByteArrayAsync();
 
-        if (download is not false && !await storage.ExistsAsync(filePath, CancellationToken.None))
-            await storage.WriteAsync(filePath, bytes, CancellationToken.None);
+        if (download is not false && !await storage.ExistsAsync(path: filePath, ct: CancellationToken.None))
+            await storage.WriteAsync(path: filePath, bytes: bytes, ct: CancellationToken.None);
 
         if (maxDecodeSize.HasValue)
         {
             DecoderOptions options = new() { TargetSize = maxDecodeSize.Value };
-            return Image.Load<Rgba32>(options, bytes);
+            return Image.Load<Rgba32>(options: options, data: bytes);
         }
 
-        return Image.Load<Rgba32>(bytes);
+        return Image.Load<Rgba32>(data: bytes);
     }
 }

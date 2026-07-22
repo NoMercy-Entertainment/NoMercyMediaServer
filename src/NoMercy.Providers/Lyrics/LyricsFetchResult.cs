@@ -22,10 +22,10 @@ namespace NoMercy.Providers.Lyrics;
 /// </summary>
 public sealed record LyricsFetchResult(LyricLine[]? Lines, bool IsTransientError, string? Winner)
 {
-    public static readonly LyricsFetchResult NotFound = new(null, false, null);
+    public static readonly LyricsFetchResult NotFound = new(Lines: null, IsTransientError: false, Winner: null);
 
-    public static readonly LyricsFetchResult TransientFailure = new(null, true, null);
+    public static readonly LyricsFetchResult TransientFailure = new(Lines: null, IsTransientError: true, Winner: null);
 
     public static LyricsFetchResult Found(LyricLine[] lines, string winner) =>
-        new(lines, false, winner);
+        new(Lines: lines, IsTransientError: false, Winner: winner);
 }

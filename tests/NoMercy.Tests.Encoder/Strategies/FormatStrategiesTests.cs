@@ -26,30 +26,30 @@ namespace NoMercy.Tests.Encoder.Strategies;
 public class FormatStrategiesTests
 {
     [Theory]
-    [MemberData(nameof(StrategyExpectations))]
+    [MemberData(memberName: nameof(StrategyExpectations))]
     public void Strategy_ExposesExpectedFormatAndMode(
         IEncodingStrategy strategy,
         OutputFormat expectedFormat,
         EncodeMode expectedMode
     )
     {
-        Assert.Equal(expectedFormat, strategy.Format);
-        Assert.Equal(expectedMode, strategy.EncodeMode);
+        Assert.Equal(expected: expectedFormat, actual: strategy.Format);
+        Assert.Equal(expected: expectedMode, actual: strategy.EncodeMode);
     }
 
     [Theory]
-    [MemberData(nameof(Strategies))]
+    [MemberData(memberName: nameof(Strategies))]
     public async Task Strategy_DelegatesToInjectedEncoder(IEncodingStrategy strategy)
     {
         EncodingRequest request = FakeRequest();
         EncodingResult? result = await strategy.EncodeAsync(
-            request,
+            request: request,
             progress: null,
             ct: CancellationToken.None
         );
 
-        Assert.NotNull(result);
-        Assert.True(result.Success);
+        Assert.NotNull(@object: result);
+        Assert.True(condition: result.Success);
     }
 
     public static TheoryData<IEncodingStrategy, OutputFormat, EncodeMode> StrategyExpectations()
@@ -59,27 +59,27 @@ public class FormatStrategiesTests
         {
             {
                 new MkvStrategy(
-                    encoder,
-                    NullLogger<MkvStrategy>.Instance,
-                    TestStorageFactory.CreateLocal()
+                    encoder: encoder,
+                    logger: NullLogger<MkvStrategy>.Instance,
+                    storage: TestStorageFactory.CreateLocal()
                 ),
                 OutputFormat.Mkv,
                 EncodeMode.SinglePass
             },
             {
                 new Mp4SinglePassStrategy(
-                    encoder,
-                    NullLogger<Mp4SinglePassStrategy>.Instance,
-                    TestStorageFactory.CreateLocal()
+                    encoder: encoder,
+                    logger: NullLogger<Mp4SinglePassStrategy>.Instance,
+                    storage: TestStorageFactory.CreateLocal()
                 ),
                 OutputFormat.Mp4,
                 EncodeMode.SinglePass
             },
             {
                 new DashSinglePassStrategy(
-                    encoder,
-                    NullLogger<DashSinglePassStrategy>.Instance,
-                    TestStorageFactory.CreateLocal()
+                    encoder: encoder,
+                    logger: NullLogger<DashSinglePassStrategy>.Instance,
+                    storage: TestStorageFactory.CreateLocal()
                 ),
                 OutputFormat.Dash,
                 EncodeMode.SinglePass
@@ -93,19 +93,19 @@ public class FormatStrategiesTests
         return new()
         {
             new MkvStrategy(
-                encoder,
-                NullLogger<MkvStrategy>.Instance,
-                TestStorageFactory.CreateLocal()
+                encoder: encoder,
+                logger: NullLogger<MkvStrategy>.Instance,
+                storage: TestStorageFactory.CreateLocal()
             ),
             new Mp4SinglePassStrategy(
-                encoder,
-                NullLogger<Mp4SinglePassStrategy>.Instance,
-                TestStorageFactory.CreateLocal()
+                encoder: encoder,
+                logger: NullLogger<Mp4SinglePassStrategy>.Instance,
+                storage: TestStorageFactory.CreateLocal()
             ),
             new DashSinglePassStrategy(
-                encoder,
-                NullLogger<DashSinglePassStrategy>.Instance,
-                TestStorageFactory.CreateLocal()
+                encoder: encoder,
+                logger: NullLogger<DashSinglePassStrategy>.Instance,
+                storage: TestStorageFactory.CreateLocal()
             ),
         };
     }
@@ -113,7 +113,7 @@ public class FormatStrategiesTests
     private static IEncoder BuildMockEncoder()
     {
         Mock<IEncoder> mock = new();
-        mock.Setup(e =>
+        mock.Setup(expression: e =>
                 e.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
@@ -121,12 +121,12 @@ public class FormatStrategiesTests
                 )
             )
             .ReturnsAsync(
-                new EncodingResult(
+                value: new EncodingResult(
                     Success: true,
                     OutputPath: "/out",
                     Duration: TimeSpan.Zero,
                     Error: null,
-                    Metrics: new(0, 0, 0, "test", null)
+                    Metrics: new(OutputSizeBytes: 0, AverageSpeed: 0, AverageFps: 0, EncoderUsed: "test", GpuUsed: null)
                 )
             );
         return mock.Object;

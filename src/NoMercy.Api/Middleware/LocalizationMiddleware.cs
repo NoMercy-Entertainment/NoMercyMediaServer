@@ -30,44 +30,44 @@ public class LocalizationMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        string userLanguages = context.Request.Headers["Accept-Language"].ToString();
+        string userLanguages = context.Request.Headers[key: "Accept-Language"].ToString();
 
         // Empty / wildcard header — fall straight to en-US so the cache key
         // is never built from an empty/garbage prefix and downstream code
         // sees a real locale.
-        if (string.IsNullOrWhiteSpace(userLanguages) || userLanguages == "*")
+        if (string.IsNullOrWhiteSpace(value: userLanguages) || userLanguages == "*")
         {
-            context.Request.Headers.AcceptLanguage = "en-US".Split('-');
-            LocalizationHelper.GlobalLocalizer = LocalizerCache.GetOrAdd("en", LoadLocalizer);
-            await _next(context);
+            context.Request.Headers.AcceptLanguage = "en-US".Split(separator: '-');
+            LocalizationHelper.GlobalLocalizer = LocalizerCache.GetOrAdd(key: "en", valueFactory: LoadLocalizer);
+            await _next(context: context);
             return;
         }
 
         // Pick the highest quality-weighted language tag per RFC 7231 rather
         // than blindly taking the first comma-separated entry.
-        string bestLanguage = ParseBestLanguage(userLanguages);
+        string bestLanguage = ParseBestLanguage(acceptLanguageHeader: userLanguages);
 
         // if the language string does not match the format "{language}-{country}"
         // we add the uppercase version of the language
-        if (!bestLanguage.Contains("-"))
+        if (!bestLanguage.Contains(value: "-"))
             bestLanguage = bestLanguage + "-" + bestLanguage.ToUpper();
 
-        string[] langParts = bestLanguage.Split('-');
+        string[] langParts = bestLanguage.Split(separator: '-');
 
         context.Request.Headers.AcceptLanguage =
-            langParts.Length > 0 && !string.IsNullOrEmpty(langParts[0])
+            langParts.Length > 0 && !string.IsNullOrEmpty(value: langParts[0])
                 ? langParts
-                : "en-US".Split('-');
+                : "en-US".Split(separator: '-');
 
         string language = langParts.FirstOrDefault() ?? "en";
-        if (string.IsNullOrEmpty(language))
+        if (string.IsNullOrEmpty(value: language))
             language = "en";
 
-        Localizer localizer = LocalizerCache.GetOrAdd(language, LoadLocalizer);
+        Localizer localizer = LocalizerCache.GetOrAdd(key: language, valueFactory: LoadLocalizer);
 
         LocalizationHelper.GlobalLocalizer = localizer;
 
-        await _next(context);
+        await _next(context: context);
     }
 
     /// <summary>
@@ -77,31 +77,31 @@ public class LocalizationMiddleware
     /// </summary>
     public static string ParseBestLanguage(string acceptLanguageHeader)
     {
-        if (string.IsNullOrEmpty(acceptLanguageHeader))
+        if (string.IsNullOrEmpty(value: acceptLanguageHeader))
             return "en-US";
 
         return acceptLanguageHeader
-                .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(part =>
+                .Split(separator: ',', options: StringSplitOptions.RemoveEmptyEntries)
+                .Select(selector: part =>
                 {
                     ReadOnlySpan<char> p = part.AsSpan().Trim();
-                    int qIdx = p.IndexOf(";q=", StringComparison.OrdinalIgnoreCase);
+                    int qIdx = p.IndexOf(value: ";q=", comparisonType: StringComparison.OrdinalIgnoreCase);
                     string lang = (qIdx >= 0 ? p[..qIdx] : p).ToString().Trim();
                     double weight =
                         qIdx >= 0
                         && double.TryParse(
-                            p[(qIdx + 3)..],
-                            System.Globalization.NumberStyles.Float,
-                            System.Globalization.CultureInfo.InvariantCulture,
-                            out double q
+                            s: p[(qIdx + 3)..],
+                            style: System.Globalization.NumberStyles.Float,
+                            provider: System.Globalization.CultureInfo.InvariantCulture,
+                            result: out double q
                         )
                             ? q
                             : 1.0;
                     return (lang, weight);
                 })
-                .Where(x => x.lang != "*")
-                .OrderByDescending(x => x.weight)
-                .Select(x => x.lang)
+                .Where(predicate: x => x.lang != "*")
+                .OrderByDescending(keySelector: x => x.weight)
+                .Select(selector: x => x.lang)
                 .FirstOrDefault()
             ?? "en-US";
     }
@@ -109,7 +109,7 @@ public class LocalizationMiddleware
     private static Localizer LoadLocalizer(string lang)
     {
         Localizer newLocalizer = new();
-        newLocalizer.LoadXML(ResourceAssembly, "Resources.I18N.xml", lang);
+        newLocalizer.LoadXML(assembly: ResourceAssembly, resourceName: "Resources.I18N.xml", language: lang);
         return newLocalizer;
     }
 }

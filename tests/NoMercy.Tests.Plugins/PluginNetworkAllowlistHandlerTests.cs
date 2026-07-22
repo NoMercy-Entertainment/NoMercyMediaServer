@@ -18,22 +18,22 @@ namespace NoMercy.Tests.Plugins;
 public class PluginNetworkAllowlistHandlerTests
 {
     private static HttpClient Client(params string[] hosts) =>
-        new(new PluginNetworkAllowlistHandler(hosts) { InnerHandler = new AlwaysOkHandler() });
+        new(handler: new PluginNetworkAllowlistHandler(allowedHosts: hosts) { InnerHandler = new AlwaysOkHandler() });
 
     [Fact]
     public async Task Allowed_Host_PassesThrough()
     {
-        HttpClient client = Client("*.somafm.com");
-        HttpResponseMessage response = await client.GetAsync("https://ice1.somafm.com/groovesalad");
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        HttpClient client = Client(hosts: "*.somafm.com");
+        HttpResponseMessage response = await client.GetAsync(requestUri: "https://ice1.somafm.com/groovesalad");
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
     }
 
     [Fact]
     public async Task Disallowed_Host_Throws()
     {
-        HttpClient client = Client("*.somafm.com");
-        await Assert.ThrowsAsync<PluginNetworkDeniedException>(() =>
-            client.GetAsync("https://evil.example.com/x")
+        HttpClient client = Client(hosts: "*.somafm.com");
+        await Assert.ThrowsAsync<PluginNetworkDeniedException>(testCode: () =>
+            client.GetAsync(requestUri: "https://evil.example.com/x")
         );
     }
 
@@ -41,8 +41,8 @@ public class PluginNetworkAllowlistHandlerTests
     public async Task EmptyAllowlist_DeniesEverything()
     {
         HttpClient client = Client();
-        await Assert.ThrowsAsync<PluginNetworkDeniedException>(() =>
-            client.GetAsync("https://anything.com/")
+        await Assert.ThrowsAsync<PluginNetworkDeniedException>(testCode: () =>
+            client.GetAsync(requestUri: "https://anything.com/")
         );
     }
 
@@ -53,23 +53,23 @@ public class PluginNetworkAllowlistHandlerTests
         // and no BaseAddress, so the only way to exercise the handler's own
         // `request.RequestUri?.Host ?? string.Empty` null-conditional is to call
         // SendAsync directly against a message with RequestUri explicitly unset.
-        ExposedAllowlistHandler handler = new(["*.somafm.com"])
+        ExposedAllowlistHandler handler = new(allowedHosts: ["*.somafm.com"])
         {
             InnerHandler = new AlwaysOkHandler(),
         };
-        HttpRequestMessage request = new(HttpMethod.Get, (Uri?)null);
+        HttpRequestMessage request = new(method: HttpMethod.Get, requestUri: (Uri?)null);
 
-        Func<Task> act = () => handler.InvokeSendAsync(request, CancellationToken.None);
+        Func<Task> act = () => handler.InvokeSendAsync(request: request, ct: CancellationToken.None);
 
-        await Assert.ThrowsAsync<PluginNetworkDeniedException>(act);
+        await Assert.ThrowsAsync<PluginNetworkDeniedException>(testCode: act);
     }
 
     private sealed class ExposedAllowlistHandler(IReadOnlyList<string> allowedHosts)
-        : PluginNetworkAllowlistHandler(allowedHosts)
+        : PluginNetworkAllowlistHandler(allowedHosts: allowedHosts)
     {
         public Task<HttpResponseMessage> InvokeSendAsync(
             HttpRequestMessage request,
             CancellationToken ct
-        ) => SendAsync(request, ct);
+        ) => SendAsync(request: request, cancellationToken: ct);
     }
 }

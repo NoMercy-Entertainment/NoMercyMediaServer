@@ -16,16 +16,16 @@ namespace NoMercy.Encoder.Hardware;
 
 public sealed class NvmlGpuSampler : ProcessResourceMonitor
 {
-    private static readonly TimeSpan MinSampleInterval = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan MinSampleInterval = TimeSpan.FromSeconds(seconds: 2);
 
     private readonly IProcessRunner _processRunner;
     private readonly ILogger<NvmlGpuSampler> _logger;
-    private readonly SemaphoreSlim _sampleLock = new(1, 1);
+    private readonly SemaphoreSlim _sampleLock = new(initialCount: 1, maxCount: 1);
     private DateTime _lastSampleAt = DateTime.MinValue;
     private IReadOnlyList<GpuProcessSample> _lastSamples = [];
 
     public NvmlGpuSampler(IProcessRunner processRunner, ILogger<NvmlGpuSampler> logger)
-        : base(null)
+        : base(logger: null)
     {
         _processRunner = processRunner;
         _logger = logger;
@@ -35,13 +35,13 @@ public sealed class NvmlGpuSampler : ProcessResourceMonitor
         CancellationToken cancellationToken = default
     )
     {
-        await _sampleLock.WaitAsync(cancellationToken);
+        await _sampleLock.WaitAsync(cancellationToken: cancellationToken);
         try
         {
             if (DateTime.UtcNow - _lastSampleAt < MinSampleInterval)
                 return _lastSamples;
 
-            IReadOnlyList<GpuProcessSample> fresh = await RunNvidiaSmiAsync(cancellationToken);
+            IReadOnlyList<GpuProcessSample> fresh = await RunNvidiaSmiAsync(cancellationToken: cancellationToken);
             _lastSamples = fresh;
             _lastSampleAt = DateTime.UtcNow;
             return fresh;
@@ -58,33 +58,33 @@ public sealed class NvmlGpuSampler : ProcessResourceMonitor
     {
         try
         {
-            using CancellationTokenSource timeoutCts = new(TimeSpan.FromSeconds(5));
+            using CancellationTokenSource timeoutCts = new(delay: TimeSpan.FromSeconds(seconds: 5));
             using CancellationTokenSource linkedCts =
                 CancellationTokenSource.CreateLinkedTokenSource(
-                    cancellationToken,
-                    timeoutCts.Token
+                    token1: cancellationToken,
+                    token2: timeoutCts.Token
                 );
 
             ProcessResult result = await _processRunner.RunAsync(
-                "nvidia-smi",
-                ["--query-compute-apps=pid,used_gpu_memory", "--format=csv,noheader,nounits"],
+                executable: "nvidia-smi",
+                arguments: ["--query-compute-apps=pid,used_gpu_memory", "--format=csv,noheader,nounits"],
                 workingDirectory: null,
                 cancellationToken: linkedCts.Token
             );
 
-            if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.StdOut))
+            if (!result.IsSuccess || string.IsNullOrWhiteSpace(value: result.StdOut))
                 return [];
 
-            return ParseNvidiaSmiOutput(result.StdOut);
+            return ParseNvidiaSmiOutput(stdOut: result.StdOut);
         }
         catch (OperationCanceledException)
         {
-            _logger.LogDebug("nvidia-smi timed out — returning empty GPU sample");
+            _logger.LogDebug(message: "nvidia-smi timed out — returning empty GPU sample");
             return [];
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "nvidia-smi unavailable or failed — GPU utilization will read 0");
+            _logger.LogDebug(exception: ex, message: "nvidia-smi unavailable or failed — GPU utilization will read 0");
             return [];
         }
     }
@@ -93,24 +93,24 @@ public sealed class NvmlGpuSampler : ProcessResourceMonitor
     {
         List<GpuProcessSample> samples = [];
 
-        foreach (string line in stdOut.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        foreach (string line in stdOut.Split(separator: '\n', options: StringSplitOptions.RemoveEmptyEntries))
         {
             string trimmedLine = line.Trim();
-            if (string.IsNullOrEmpty(trimmedLine))
+            if (string.IsNullOrEmpty(value: trimmedLine))
                 continue;
 
-            string[] fields = trimmedLine.Split(',');
+            string[] fields = trimmedLine.Split(separator: ',');
             if (fields.Length < 2)
                 continue;
 
-            if (!int.TryParse(fields[0].Trim(), out int pid))
+            if (!int.TryParse(s: fields[0].Trim(), result: out int pid))
                 continue;
 
-            if (!long.TryParse(fields[1].Trim(), out long memoryMb))
+            if (!long.TryParse(s: fields[1].Trim(), result: out long memoryMb))
                 continue;
 
             samples.Add(
-                new(
+                item: new(
                     Pid: pid,
                     GpuIndex: 0,
                     EncoderUtilizationPercent: 0,

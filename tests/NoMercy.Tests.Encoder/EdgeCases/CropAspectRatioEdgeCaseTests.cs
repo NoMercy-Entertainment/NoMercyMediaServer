@@ -37,7 +37,7 @@ public class CropAspectRatioEdgeCaseTests
     {
         Mock<ICropDetector> detector = new();
         detector
-            .Setup(d =>
+            .Setup(expression: d =>
                 d.DetectAsync(
                     It.IsAny<string>(),
                     It.IsAny<Guid?>(),
@@ -45,14 +45,14 @@ public class CropAspectRatioEdgeCaseTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(new CropResult(Width: 1920, Height: 800, X: 0, Y: 140, ShouldCrop: true));
+            .ReturnsAsync(value: new CropResult(Width: 1920, Height: 800, X: 0, Y: 140, ShouldCrop: true));
 
-        PlanStage stage = BuildStage(detector.Object);
+        PlanStage stage = BuildStage(cropDetector: detector.Object);
         EncodingProfile profile = BuildProfile(autoDetectCrop: true);
-        OutputPlan plan = await RunPlan(stage, profile);
+        OutputPlan plan = await RunPlan(stage: stage, profile: profile);
 
-        plan.VideoOutputs.Should().HaveCountGreaterThan(0);
-        plan.VideoOutputs[0].CropFilter.Should().Be("1920:800:0:140");
+        plan.VideoOutputs.Should().HaveCountGreaterThan(expected: 0);
+        plan.VideoOutputs[0].CropFilter.Should().Be(expected: "1920:800:0:140");
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public class CropAspectRatioEdgeCaseTests
     {
         Mock<ICropDetector> detector = new();
         detector
-            .Setup(d =>
+            .Setup(expression: d =>
                 d.DetectAsync(
                     It.IsAny<string>(),
                     It.IsAny<Guid?>(),
@@ -68,30 +68,30 @@ public class CropAspectRatioEdgeCaseTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(new CropResult(Width: 1920, Height: 800, X: 0, Y: 140, ShouldCrop: true));
+            .ReturnsAsync(value: new CropResult(Width: 1920, Height: 800, X: 0, Y: 140, ShouldCrop: true));
 
-        PlanStage stage = BuildStage(detector.Object);
+        PlanStage stage = BuildStage(cropDetector: detector.Object);
         EncodingProfile profile = BuildProfile(autoDetectCrop: false);
-        OutputPlan plan = await RunPlan(stage, profile);
+        OutputPlan plan = await RunPlan(stage: stage, profile: profile);
 
-        plan.VideoOutputs.Should().HaveCountGreaterThan(0);
+        plan.VideoOutputs.Should().HaveCountGreaterThan(expected: 0);
         plan.VideoOutputs[0]
             .CropFilter.Should()
-            .BeNull("when auto-detect crop is disabled, no crop filter should be applied");
+            .BeNull(because: "when auto-detect crop is disabled, no crop filter should be applied");
     }
 
     private static PlanStage BuildStage(ICropDetector cropDetector)
     {
         Mock<IHardwareCapabilities> hardware = new();
-        hardware.Setup(h => h.HasGpu).Returns(false);
-        hardware.Setup(h => h.CpuCores).Returns(8);
-        hardware.Setup(h => h.Gpus).Returns([]);
-        hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
-        hardware.Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>())).Returns((GpuDevice?)null);
+        hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
+        hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
+        hardware.Setup(expression: h => h.Gpus).Returns(value: []);
+        hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
+        hardware.Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>())).Returns(value: (GpuDevice?)null);
 
         Mock<ICodecResolver> codecResolver = new();
         codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<IHardwareCapabilities>(),
@@ -99,7 +99,7 @@ public class CropAspectRatioEdgeCaseTests
                 )
             )
             .Returns(
-                new ResolvedCodec(
+                value: new ResolvedCodec(
                     FfmpegEncoderName: "libx264",
                     EncoderInfo: new(
                         FfmpegName: "libx264",
@@ -107,7 +107,7 @@ public class CropAspectRatioEdgeCaseTests
                         Presets: ["medium"],
                         Profiles: ["high"],
                         Levels: ["4.1"],
-                        QualityRange: new(0, 51, 23),
+                        QualityRange: new(Min: 0, Max: 51, Default: 23),
                         SupportedRateControl: [RateControlMode.Crf],
                         Supports10Bit: false,
                         SupportsHdr: false,
@@ -121,26 +121,26 @@ public class CropAspectRatioEdgeCaseTests
             );
 
         return new(
-            new(),
-            new(),
-            new(),
-            codecResolver.Object,
-            hardware.Object,
-            new TonemapSelector(),
-            new Mock<IFfmpegCapabilities>().Object,
-            new AbrLadderGenerator(),
-            cropDetector,
-            NullLogger<PlanStage>.Instance
+            graphBuilder: new(),
+            groupingStrategy: new(),
+            costEstimator: new(),
+            codecResolver: codecResolver.Object,
+            hardware: hardware.Object,
+            tonemapSelector: new TonemapSelector(),
+            ffmpegCapabilities: new Mock<IFfmpegCapabilities>().Object,
+            abrLadderGenerator: new AbrLadderGenerator(),
+            cropDetector: cropDetector,
+            logger: NullLogger<PlanStage>.Instance
         );
     }
 
     private static async Task<OutputPlan> RunPlan(PlanStage stage, EncodingProfile profile)
     {
-        ValidateInput input = new(BuildMedia(), profile);
+        ValidateInput input = new(Media: BuildMedia(), Profile: profile);
         EncodingContext context = EncodingContext.Create();
-        StageResult result = await stage.ExecuteAsync(input, context, CancellationToken.None);
+        StageResult result = await stage.ExecuteAsync(input: input, context: context, ct: CancellationToken.None);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
         return success.Value.OutputPlan;
     }
 
@@ -148,7 +148,7 @@ public class CropAspectRatioEdgeCaseTests
         new(
             FilePath: "/media/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(90),
+            Duration: TimeSpan.FromMinutes(minutes: 90),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 4_000_000_000,
             VideoStreams:

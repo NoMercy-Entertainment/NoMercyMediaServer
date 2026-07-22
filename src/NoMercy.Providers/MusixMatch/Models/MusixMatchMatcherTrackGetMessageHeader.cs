@@ -15,18 +15,18 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class MusixMatchMatcherTrackGetMessageHeader
 {
-    [JsonProperty("status_code")]
+    [JsonProperty(propertyName: "status_code")]
     public long StatusCode { get; set; }
 
-    [JsonProperty("execute_time")]
+    [JsonProperty(propertyName: "execute_time")]
     public double ExecuteTime { get; set; }
 
-    [JsonProperty("confidence")]
+    [JsonProperty(propertyName: "confidence")]
     public long Confidence { get; set; }
 
-    [JsonProperty("mode")]
+    [JsonProperty(propertyName: "mode")]
     public string Mode { get; set; } = string.Empty;
 
-    [JsonProperty("cached")]
+    [JsonProperty(propertyName: "cached")]
     public long Cached { get; set; }
 }

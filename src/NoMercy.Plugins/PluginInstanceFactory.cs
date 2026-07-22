@@ -24,6 +24,6 @@ internal static class PluginInstanceFactory
 {
     internal static IPlugin Create(IServiceProvider services, Type pluginType)
     {
-        return (IPlugin)ActivatorUtilities.CreateInstance(services, pluginType);
+        return (IPlugin)ActivatorUtilities.CreateInstance(provider: services, instanceType: pluginType);
     }
 }

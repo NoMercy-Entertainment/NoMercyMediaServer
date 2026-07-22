@@ -15,27 +15,27 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class MusicBrainzArea
 {
-    [JsonProperty("type-id")]
+    [JsonProperty(propertyName: "type-id")]
     public Guid? TypeId { get; set; }
 
-    [JsonProperty("disambiguation")]
+    [JsonProperty(propertyName: "disambiguation")]
     public string Disambiguation { get; set; } = string.Empty;
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public object Type { get; set; } = string.Empty;
 
-    [JsonProperty("sort-name")]
+    [JsonProperty(propertyName: "sort-name")]
     public string SortName { get; set; } = string.Empty;
 
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public Guid Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("iso-3166-1-codes")]
+    [JsonProperty(propertyName: "iso-3166-1-codes")]
     public string[] Iso31661Codes { get; set; } = [];
 
-    [JsonProperty("iso-3166-2-codes")]
+    [JsonProperty(propertyName: "iso-3166-2-codes")]
     public string[] Iso31662Codes { get; set; } = [];
 }

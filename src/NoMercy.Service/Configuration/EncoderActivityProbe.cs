@@ -37,8 +37,8 @@ internal sealed class EncoderActivityProbe(QueueRunner queueRunner, ISessionMana
             if (sessionManager.ActiveSessionCount > 0)
                 return true;
 
-            return queueRunner.CountWorkersProcessingJob(name =>
-                    name.StartsWith("encoder", StringComparison.OrdinalIgnoreCase)
+            return queueRunner.CountWorkersProcessingJob(namePredicate: name =>
+                    name.StartsWith(value: "encoder", comparisonType: StringComparison.OrdinalIgnoreCase)
                 ) > 0;
         }
     }

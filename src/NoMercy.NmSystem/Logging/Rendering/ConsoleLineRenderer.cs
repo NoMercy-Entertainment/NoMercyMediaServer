@@ -41,53 +41,53 @@ public static class ConsoleLineRenderer
         int width = 0
     )
     {
-        string dim = ConsoleThemeColors.Dim(theme);
-        (string marker, string levelHex) = ConsoleThemeColors.Level(level, theme);
-        string categoryHex = ConsoleThemeColors.Category(category, theme);
+        string dim = ConsoleThemeColors.Dim(theme: theme);
+        (string marker, string levelHex) = ConsoleThemeColors.Level(level: level, theme: theme);
+        string categoryHex = ConsoleThemeColors.Category(category: category, theme: theme);
 
-        string time = timestamp.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
-        string label = DisplayWidth.PadLeft(category.DisplayName, CategoryWidth);
+        string time = timestamp.ToString(format: "HH:mm:ss", provider: CultureInfo.InvariantCulture);
+        string label = DisplayWidth.PadLeft(text: category.DisplayName, width: CategoryWidth);
 
         StringBuilder head = new();
-        head.Append(Paint(time, dim, color)).Append(' ');
-        head.Append(Paint(marker, levelHex, color)).Append(' ');
-        head.Append(Paint(label, categoryHex, color)).Append(' ');
-        head.Append(Paint("│", dim, color)).Append(' ');
+        head.Append(value: Paint(text: time, hex: dim, color: color)).Append(value: ' ');
+        head.Append(value: Paint(text: marker, hex: levelHex, color: color)).Append(value: ' ');
+        head.Append(value: Paint(text: label, hex: categoryHex, color: color)).Append(value: ' ');
+        head.Append(value: Paint(text: "│", hex: dim, color: color)).Append(value: ' ');
 
-        string gutter = new string(' ', GutterColumn) + Paint("│", dim, color) + " ";
+        string gutter = new string(c: ' ', count: GutterColumn) + Paint(text: "│", hex: dim, color: color) + " ";
 
         int wrapWidth = width > GutterColumn + 4 ? width - GutterColumn - 2 : 0;
-        List<string> messageLines = SplitAndWrap(message ?? string.Empty, wrapWidth);
+        List<string> messageLines = SplitAndWrap(message: message ?? string.Empty, wrapWidth: wrapWidth);
 
         List<string> output = new();
         for (int i = 0; i < messageLines.Count; i++)
         {
-            string rendered = RenderMessage(messageLines[i], theme, color);
-            output.Add(i == 0 ? head.ToString() + rendered : gutter + rendered);
+            string rendered = RenderMessage(line: messageLines[index: i], theme: theme, color: color);
+            output.Add(item: i == 0 ? head.ToString() + rendered : gutter + rendered);
         }
 
         if (output.Count == 0)
-            output.Add(head.ToString());
+            output.Add(item: head.ToString());
 
         if (exception is not null)
         {
-            foreach (string raw in exception.ToString().Split('\n'))
-                output.Add(gutter + Paint("└ " + raw.TrimEnd('\r'), dim, color));
+            foreach (string raw in exception.ToString().Split(separator: '\n'))
+                output.Add(item: gutter + Paint(text: "└ " + raw.TrimEnd(trimChar: '\r'), hex: dim, color: color));
         }
 
-        return string.Join("\n", output);
+        return string.Join(separator: "\n", values: output);
     }
 
     private static List<string> SplitAndWrap(string message, int wrapWidth)
     {
         List<string> lines = new();
-        foreach (string raw in message.Split('\n'))
+        foreach (string raw in message.Split(separator: '\n'))
         {
-            string line = raw.TrimEnd('\r');
-            if (wrapWidth <= 0 || DisplayWidth.Of(line) <= wrapWidth)
-                lines.Add(line);
+            string line = raw.TrimEnd(trimChar: '\r');
+            if (wrapWidth <= 0 || DisplayWidth.Of(text: line) <= wrapWidth)
+                lines.Add(item: line);
             else
-                lines.AddRange(DisplayWidth.Wrap(line, wrapWidth));
+                lines.AddRange(collection: DisplayWidth.Wrap(text: line, width: wrapWidth));
         }
 
         return lines;
@@ -101,40 +101,40 @@ public static class ConsoleLineRenderer
         // Pre-coloured content (e.g. the startup banner) already carries ANSI
         // escape sequences. Re-tokenising it would split those sequences and
         // surface their raw characters, so pass such lines through untouched.
-        if (line.Contains('\u001b'))
+        if (line.Contains(value: '\u001b'))
             return line;
 
-        string text = ConsoleThemeColors.Text(theme);
-        string number = ConsoleThemeColors.Number(theme);
-        string str = ConsoleThemeColors.Str(theme);
+        string text = ConsoleThemeColors.Text(theme: theme);
+        string number = ConsoleThemeColors.Number(theme: theme);
+        string str = ConsoleThemeColors.Str(theme: theme);
 
         StringBuilder builder = new();
         int index = 0;
         while (index < line.Length)
         {
-            char current = line[index];
+            char current = line[index: index];
             if (current == '"')
             {
-                int end = line.IndexOf('"', index + 1);
+                int end = line.IndexOf(value: '"', startIndex: index + 1);
                 if (end < 0)
                     end = line.Length - 1;
-                builder.Append(line.Substring(index, end - index + 1).Pastel(str));
+                builder.Append(value: line.Substring(startIndex: index, length: end - index + 1).Pastel(hexColor: str));
                 index = end + 1;
             }
-            else if (char.IsDigit(current))
+            else if (char.IsDigit(c: current))
             {
                 int end = index;
-                while (end < line.Length && (char.IsDigit(line[end]) || line[end] == '.'))
+                while (end < line.Length && (char.IsDigit(c: line[index: end]) || line[index: end] == '.'))
                     end++;
-                builder.Append(line.Substring(index, end - index).Pastel(number));
+                builder.Append(value: line.Substring(startIndex: index, length: end - index).Pastel(hexColor: number));
                 index = end;
             }
             else
             {
                 int end = index;
-                while (end < line.Length && line[end] != '"' && !char.IsDigit(line[end]))
+                while (end < line.Length && line[index: end] != '"' && !char.IsDigit(c: line[index: end]))
                     end++;
-                builder.Append(line.Substring(index, end - index).Pastel(text));
+                builder.Append(value: line.Substring(startIndex: index, length: end - index).Pastel(hexColor: text));
                 index = end;
             }
         }
@@ -143,5 +143,5 @@ public static class ConsoleLineRenderer
     }
 
     private static string Paint(string text, string hex, bool color) =>
-        color ? text.Pastel(hex) : text;
+        color ? text.Pastel(hexColor: hex) : text;
 }

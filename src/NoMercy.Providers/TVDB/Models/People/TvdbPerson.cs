@@ -25,84 +25,84 @@ public class TvdbPersonTranslationResponse : TvdbResponse<TvdbTranslationData> {
 
 public class TvdbPerson
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public long Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("image")]
+    [JsonProperty(propertyName: "image")]
     public Uri? Image { get; set; }
 
-    [JsonProperty("score")]
+    [JsonProperty(propertyName: "score")]
     public int Score { get; set; }
 
-    [JsonProperty("nameTranslations")]
+    [JsonProperty(propertyName: "nameTranslations")]
     public string[] NameTranslations { get; set; } = [];
 
-    [JsonProperty("overviewTranslations")]
+    [JsonProperty(propertyName: "overviewTranslations")]
     public string[] OverviewTranslations { get; set; } = [];
 
-    [JsonProperty("aliases")]
+    [JsonProperty(propertyName: "aliases")]
     public TvdbAlias[] Aliases { get; set; } = [];
 
-    [JsonProperty("lastUpdated")]
+    [JsonProperty(propertyName: "lastUpdated")]
     public DateTimeOffset? LastUpdated { get; set; }
 }
 
 public class TvdbPersonExtended : TvdbPerson
 {
-    [JsonProperty("birth")]
+    [JsonProperty(propertyName: "birth")]
     public string? Birth { get; set; }
 
-    [JsonProperty("birthPlace")]
+    [JsonProperty(propertyName: "birthPlace")]
     public string? BirthPlace { get; set; }
 
-    [JsonProperty("death")]
+    [JsonProperty(propertyName: "death")]
     public string? Death { get; set; }
 
-    [JsonProperty("gender")]
+    [JsonProperty(propertyName: "gender")]
     public int Gender { get; set; }
 
-    [JsonProperty("characters")]
+    [JsonProperty(propertyName: "characters")]
     public TvdbCharacter[] Characters { get; set; } = [];
 
-    [JsonProperty("races")]
+    [JsonProperty(propertyName: "races")]
     public string[] Races { get; set; } = [];
 
-    [JsonProperty("remoteIds")]
+    [JsonProperty(propertyName: "remoteIds")]
     public TvdbRemoteId[] RemoteIds { get; set; } = [];
 
-    [JsonProperty("slug")]
+    [JsonProperty(propertyName: "slug")]
     public string Slug { get; set; } = string.Empty;
 
-    [JsonProperty("tagOptions")]
+    [JsonProperty(propertyName: "tagOptions")]
     public TvdbTagOption[] TagOptions { get; set; } = [];
 
-    [JsonProperty("translations")]
+    [JsonProperty(propertyName: "translations")]
     public TvdbTranslations? Translations { get; set; }
 
-    [JsonProperty("awards")]
+    [JsonProperty(propertyName: "awards")]
     public Awards.TvdbAward[] Awards { get; set; } = [];
 
-    [JsonProperty("biographies")]
+    [JsonProperty(propertyName: "biographies")]
     public TvdbBiography[] Biographies { get; set; } = [];
 }
 
 public class TvdbBiography
 {
-    [JsonProperty("biography")]
+    [JsonProperty(propertyName: "biography")]
     public string Biography { get; set; } = string.Empty;
 
-    [JsonProperty("language")]
+    [JsonProperty(propertyName: "language")]
     public string Language { get; set; } = string.Empty;
 }
 
 public class TvdbPersonType
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 }

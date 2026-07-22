@@ -28,26 +28,26 @@ public static class FingerPrint
         bool priority = false
     )
     {
-        return await AcoustIdFingerprintClient.Lookup(file, priority);
+        return await AcoustIdFingerprintClient.Lookup(file: file, priority: priority);
     }
 
     public static async Task<List<Guid>> GetReleaseIds(string file, string albumName = "")
     {
         List<Guid> releaseIds = [];
-        AcoustIdFingerprint? fingerprint = await GetFingerprint(file, true);
+        AcoustIdFingerprint? fingerprint = await GetFingerprint(file: file, priority: true);
         if (fingerprint is null)
             return releaseIds;
         object lockObject = new();
         await Parallel.ForEachAsync(
-            fingerprint.Results,
-            async (acoustIdFingerprint, t) =>
+            source: fingerprint.Results,
+            body: async (acoustIdFingerprint, t) =>
             {
                 if (acoustIdFingerprint.Id == Guid.Empty)
                     return;
                 await Parallel.ForEachAsync(
-                    acoustIdFingerprint.Recordings ?? [],
-                    t,
-                    async (acoustIdFingerprintRecording, y) =>
+                    source: acoustIdFingerprint.Recordings ?? [],
+                    cancellationToken: t,
+                    body: async (acoustIdFingerprintRecording, y) =>
                     {
                         if (acoustIdFingerprintRecording is null)
                             return;
@@ -56,22 +56,22 @@ public static class FingerPrint
                         if (acoustIdFingerprintRecording.Releases is null)
                             return;
                         await Parallel.ForEachAsync(
-                            acoustIdFingerprintRecording.Releases ?? [],
-                            y,
-                            (fingerprintRelease, _) =>
+                            source: acoustIdFingerprintRecording.Releases ?? [],
+                            cancellationToken: y,
+                            body: (fingerprintRelease, _) =>
                             {
                                 if (
                                     fingerprintRelease.Id == Guid.Empty
-                                    || releaseIds.Any(r => r == fingerprintRelease.Id)
+                                    || releaseIds.Any(predicate: r => r == fingerprintRelease.Id)
                                     || !fingerprintRelease
                                         .Title.OrEmpty()
-                                        .ContainsSanitized(albumName)
+                                        .ContainsSanitized(value: albumName)
                                 )
                                     return ValueTask.CompletedTask;
 
                                 lock (lockObject)
                                 {
-                                    releaseIds.Add(fingerprintRelease.Id);
+                                    releaseIds.Add(item: fingerprintRelease.Id);
                                 }
 
                                 return ValueTask.CompletedTask;

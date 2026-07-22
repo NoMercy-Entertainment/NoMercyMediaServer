@@ -46,11 +46,11 @@ public partial class HlsOnDiskPlanReconstructor(
     // site (this class is `new()`'d directly, never resolved through DI) to also
     // wire up the blueprint writer's dependency chain.
     private static readonly IMediaBlueprintWriter FallbackBlueprintReader =
-        new MediaBlueprintWriter(new MediaBlueprintBuilder());
+        new MediaBlueprintWriter(builder: new MediaBlueprintBuilder());
 
     private IMediaBlueprintWriter BlueprintReader => blueprintReader ?? FallbackBlueprintReader;
 
-    [GeneratedRegex(@"^video_(?<width>\d+)x(?<height>\d+)(?<sdr>_SDR)?$")]
+    [GeneratedRegex(pattern: @"^video_(?<width>\d+)x(?<height>\d+)(?<sdr>_SDR)?$")]
     private static partial Regex VideoRenditionDirRegex();
 
     // The codec suffix is optional: older encodes published `audio_<lang>/`
@@ -60,11 +60,11 @@ public partial class HlsOnDiskPlanReconstructor(
     // ReconstructAudio. Requiring the suffix here silently dropped every
     // old-naming rendition from the rebuilt master, which is what shipped a
     // title with a missing audio group (plays silent).
-    [GeneratedRegex(@"^audio_(?<lang>[a-zA-Z]{2,3})(?:_(?<codec>[a-zA-Z0-9]+))?(_\d+)?$")]
+    [GeneratedRegex(pattern: @"^audio_(?<lang>[a-zA-Z]{2,3})(?:_(?<codec>[a-zA-Z0-9]+))?(_\d+)?$")]
     private static partial Regex AudioRenditionDirRegex();
 
     private static readonly HashSet<string> HdrColorTransfers = new(
-        StringComparer.OrdinalIgnoreCase
+        comparer: StringComparer.OrdinalIgnoreCase
     )
     {
         "smpte2084",
@@ -78,9 +78,9 @@ public partial class HlsOnDiskPlanReconstructor(
     )
     {
         (VideoOutputPlan[] videoOutputs, bool anyFmp4) = await ReconstructVideoAsync(
-            storage,
-            outputDirectory,
-            ct
+            storage: storage,
+            outputDirectory: outputDirectory,
+            ct: ct
         );
 
         // The blueprint is read once and shared: it is the naming-independent
@@ -97,15 +97,15 @@ public partial class HlsOnDiskPlanReconstructor(
         // Subtitles are matched purely by file extension under
         // `subtitles/{lang}/` (never a codec-suffixed name), so they were
         // never exposed to this bug class either.
-        MediaBlueprint? blueprint = await BlueprintReader.ReadAsync(storage, outputDirectory, ct);
+        MediaBlueprint? blueprint = await BlueprintReader.ReadAsync(storage: storage, mediaRootPath: outputDirectory, ct: ct);
         IReadOnlyList<BlueprintTrack> blueprintTracks =
-            blueprint?.Encodes.SelectMany(encode => encode.Tracks).ToList() ?? [];
+            blueprint?.Encodes.SelectMany(selector: encode => encode.Tracks).ToList() ?? [];
 
         return new OutputPlan(
             Format: OutputFormat.Hls,
             VideoOutputs: videoOutputs,
-            AudioOutputs: ReconstructAudio(storage, outputDirectory, blueprintTracks),
-            SubtitleOutputs: ReconstructSubtitles(storage, outputDirectory),
+            AudioOutputs: ReconstructAudio(storage: storage, outputDirectory: outputDirectory, blueprintTracks: blueprintTracks),
+            SubtitleOutputs: ReconstructSubtitles(storage: storage, outputDirectory: outputDirectory),
             Thumbnails: null,
             HlsOptions: new HlsPlanOptions(SegmentType: anyFmp4 ? "fmp4" : "mpegts"),
             // Advertise the WebVTT subtitle renditions in the master. The master
@@ -128,17 +128,17 @@ public partial class HlsOnDiskPlanReconstructor(
         List<VideoOutputPlan> outputs = [];
         bool anyFmp4 = false;
 
-        foreach (string dirName in ListRenditionDirs(storage, outputDirectory, "video_*"))
+        foreach (string dirName in ListRenditionDirs(storage: storage, outputDirectory: outputDirectory, pattern: "video_*"))
         {
-            Match match = VideoRenditionDirRegex().Match(dirName);
+            Match match = VideoRenditionDirRegex().Match(input: dirName);
             if (!match.Success)
                 continue;
 
-            int dirWidth = int.Parse(match.Groups["width"].Value);
-            int dirHeight = int.Parse(match.Groups["height"].Value);
-            bool isSdrByName = match.Groups["sdr"].Success;
+            int dirWidth = int.Parse(s: match.Groups[groupname: "width"].Value);
+            int dirHeight = int.Parse(s: match.Groups[groupname: "height"].Value);
+            bool isSdrByName = match.Groups[groupname: "sdr"].Success;
 
-            string dir = storage.CombinePath(outputDirectory, dirName);
+            string dir = storage.CombinePath(parent: outputDirectory, child: dirName);
             (
                 string? codec,
                 int probedWidth,
@@ -147,7 +147,7 @@ public partial class HlsOnDiskPlanReconstructor(
                 string? colorTransfer,
                 double frameRate,
                 bool isFmp4
-            ) = await ProbeVideoAsync(storage, dir, ct);
+            ) = await ProbeVideoAsync(storage: storage, dir: dir, ct: ct);
 
             if (isFmp4)
                 anyFmp4 = true;
@@ -163,11 +163,11 @@ public partial class HlsOnDiskPlanReconstructor(
             // defaulting to SDR — a probe hiccup must never mislabel a real
             // HDR rendition and strip its PQ signaling from the master.
             bool isHdrOutput = colorTransfer is not null
-                ? !isSdrByName && HdrColorTransfers.Contains(colorTransfer)
+                ? !isSdrByName && HdrColorTransfers.Contains(item: colorTransfer)
                 : !isSdrByName;
 
             outputs.Add(
-                new VideoOutputPlan(
+                item: new VideoOutputPlan(
                     Width: width,
                     Height: height,
                     EncoderName: codec ?? "hevc",
@@ -207,10 +207,10 @@ public partial class HlsOnDiskPlanReconstructor(
         IReadOnlyList<BlueprintTrack> blueprintTracks
     )
     {
-        AudioOutputPlan[] fromBlueprint = ReconstructAudioFromBlueprint(blueprintTracks);
+        AudioOutputPlan[] fromBlueprint = ReconstructAudioFromBlueprint(blueprintTracks: blueprintTracks);
         return fromBlueprint.Length > 0
             ? fromBlueprint
-            : ReconstructAudioFromDisk(storage, outputDirectory);
+            : ReconstructAudioFromDisk(storage: storage, outputDirectory: outputDirectory);
     }
 
     private static AudioOutputPlan[] ReconstructAudioFromBlueprint(
@@ -223,25 +223,25 @@ public partial class HlsOnDiskPlanReconstructor(
         // produced a live artifact (dropped / superseded by a later preset
         // run) — correctly contributes nothing to the master.
         foreach (
-            BlueprintTrack track in blueprintTracks.Where(track =>
+            BlueprintTrack track in blueprintTracks.Where(predicate: track =>
                 track is { Kind: "audio", Files.Count: > 0 }
             )
         )
         {
-            string? playlistFile = track.Files.FirstOrDefault(file =>
-                file.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase)
+            string? playlistFile = track.Files.FirstOrDefault(predicate: file =>
+                file.EndsWith(value: ".m3u8", comparisonType: StringComparison.OrdinalIgnoreCase)
             );
             if (playlistFile is null)
                 continue;
 
             string playlistTemplate = playlistFile[..^".m3u8".Length];
-            string language = string.IsNullOrWhiteSpace(track.SourceLanguage)
+            string language = string.IsNullOrWhiteSpace(value: track.SourceLanguage)
                 ? "und"
                 : track.SourceLanguage;
-            string codec = ResolveAudioCodecToken(track, playlistFile);
+            string codec = ResolveAudioCodecToken(track: track, playlistFile: playlistFile);
 
             outputs.Add(
-                new AudioOutputPlan(
+                item: new AudioOutputPlan(
                     EncoderName: codec,
                     BitrateKbps: 0,
                     Channels: 2,
@@ -268,16 +268,16 @@ public partial class HlsOnDiskPlanReconstructor(
     /// </summary>
     private static string ResolveAudioCodecToken(BlueprintTrack track, string playlistFile)
     {
-        string? renditionDir = StoragePathHelpers.GetParent(playlistFile);
-        string dirName = string.IsNullOrEmpty(renditionDir)
+        string? renditionDir = StoragePathHelpers.GetParent(path: playlistFile);
+        string dirName = string.IsNullOrEmpty(value: renditionDir)
             ? string.Empty
-            : StoragePathHelpers.GetName(renditionDir);
+            : StoragePathHelpers.GetName(path: renditionDir);
 
-        Match match = AudioRenditionDirRegex().Match(dirName);
-        if (match.Success && match.Groups["codec"].Success)
-            return match.Groups["codec"].Value;
+        Match match = AudioRenditionDirRegex().Match(input: dirName);
+        if (match.Success && match.Groups[groupname: "codec"].Success)
+            return match.Groups[groupname: "codec"].Value;
 
-        return string.IsNullOrWhiteSpace(track.SourceCodec) ? "aac" : track.SourceCodec;
+        return string.IsNullOrWhiteSpace(value: track.SourceCodec) ? "aac" : track.SourceCodec;
     }
 
     private static AudioOutputPlan[] ReconstructAudioFromDisk(
@@ -287,20 +287,20 @@ public partial class HlsOnDiskPlanReconstructor(
     {
         List<AudioOutputPlan> outputs = [];
 
-        foreach (string dirName in ListRenditionDirs(storage, outputDirectory, "audio_*"))
+        foreach (string dirName in ListRenditionDirs(storage: storage, outputDirectory: outputDirectory, pattern: "audio_*"))
         {
-            Match match = AudioRenditionDirRegex().Match(dirName);
+            Match match = AudioRenditionDirRegex().Match(input: dirName);
             if (!match.Success)
                 continue;
 
-            string language = match.Groups["lang"].Value;
+            string language = match.Groups[groupname: "lang"].Value;
             // Old-naming dirs (`audio_jpn`) carry no codec token — default to
             // aac, the group the master's video stream references by default
             // (PlaylistGenerator.GenerateMasterPlaylist's AUDIO="audio_aac").
-            string codec = match.Groups["codec"].Success ? match.Groups["codec"].Value : "aac";
+            string codec = match.Groups[groupname: "codec"].Success ? match.Groups[groupname: "codec"].Value : "aac";
 
             outputs.Add(
-                new AudioOutputPlan(
+                item: new AudioOutputPlan(
                     EncoderName: codec,
                     BitrateKbps: 0,
                     Channels: 2,
@@ -324,31 +324,31 @@ public partial class HlsOnDiskPlanReconstructor(
     )
     {
         List<SubtitleOutputPlan> outputs = [];
-        string subtitlesRoot = storage.CombinePath(outputDirectory, "subtitles");
-        if (!storage.Exists(subtitlesRoot))
+        string subtitlesRoot = storage.CombinePath(parent: outputDirectory, child: "subtitles");
+        if (!storage.Exists(path: subtitlesRoot))
             return [];
 
-        foreach (StorageEntry languageEntry in storage.List(subtitlesRoot, "*", recursive: false))
+        foreach (StorageEntry languageEntry in storage.List(path: subtitlesRoot, pattern: "*", recursive: false))
         {
             if (!languageEntry.IsDirectory)
                 continue;
 
-            string language = storage.GetName(languageEntry.Path);
+            string language = storage.GetName(path: languageEntry.Path);
 
             foreach (
-                StorageEntry trackEntry in storage.List(languageEntry.Path, "*", recursive: false)
+                StorageEntry trackEntry in storage.List(path: languageEntry.Path, pattern: "*", recursive: false)
             )
             {
                 if (trackEntry.IsDirectory)
                     continue;
 
-                string fileName = storage.GetName(trackEntry.Path);
-                (SubtitleCodecType? codecType, string variant) = ClassifySubtitleFile(fileName);
+                string fileName = storage.GetName(path: trackEntry.Path);
+                (SubtitleCodecType? codecType, string variant) = ClassifySubtitleFile(fileName: fileName);
                 if (codecType is null)
                     continue;
 
                 outputs.Add(
-                    new SubtitleOutputPlan(
+                    item: new SubtitleOutputPlan(
                         OutputCodec: codecType.Value,
                         Action: StreamAction.Extract,
                         Language: language,
@@ -367,11 +367,11 @@ public partial class HlsOnDiskPlanReconstructor(
         string fileName
     )
     {
-        if (fileName.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase))
+        if (fileName.EndsWith(value: ".m3u8", comparisonType: StringComparison.OrdinalIgnoreCase))
             return (SubtitleCodecType.WebVtt, fileName[..^".m3u8".Length]);
-        if (fileName.EndsWith(".ass", StringComparison.OrdinalIgnoreCase))
+        if (fileName.EndsWith(value: ".ass", comparisonType: StringComparison.OrdinalIgnoreCase))
             return (SubtitleCodecType.Ass, fileName[..^".ass".Length]);
-        if (fileName.EndsWith(".srt", StringComparison.OrdinalIgnoreCase))
+        if (fileName.EndsWith(value: ".srt", comparisonType: StringComparison.OrdinalIgnoreCase))
             return (SubtitleCodecType.Srt, fileName[..^".srt".Length]);
 
         return (null, string.Empty);
@@ -383,9 +383,9 @@ public partial class HlsOnDiskPlanReconstructor(
         string pattern
     ) =>
         storage
-            .List(outputDirectory, pattern, recursive: false)
-            .Where(entry => entry.IsDirectory)
-            .Select(entry => storage.GetName(entry.Path));
+            .List(path: outputDirectory, pattern: pattern, recursive: false)
+            .Where(predicate: entry => entry.IsDirectory)
+            .Select(selector: entry => storage.GetName(path: entry.Path));
 
     private async Task<(
         string? Codec,
@@ -397,16 +397,16 @@ public partial class HlsOnDiskPlanReconstructor(
         bool IsFmp4
     )> ProbeVideoAsync(IStorage storage, string dir, CancellationToken ct)
     {
-        string initPath = storage.CombinePath(dir, "init.mp4");
-        bool isFmp4 = storage.Exists(initPath);
-        string? probePath = isFmp4 ? initPath : FindFirstSegment(storage, dir);
+        string initPath = storage.CombinePath(parent: dir, child: "init.mp4");
+        bool isFmp4 = storage.Exists(path: initPath);
+        string? probePath = isFmp4 ? initPath : FindFirstSegment(storage: storage, dir: dir);
 
         if (probePath is null)
             return (null, 0, 0, false, null, 0, isFmp4);
 
         try
         {
-            MediaInfo info = await mediaAnalyzer.AnalyzeAsync(probePath, storage, ct);
+            MediaInfo info = await mediaAnalyzer.AnalyzeAsync(filePath: probePath, sourceStorage: storage, ct: ct);
             VideoStreamInfo? stream = info.VideoStreams.FirstOrDefault();
             return stream is null
                 ? (null, 0, 0, false, null, 0, isFmp4)
@@ -431,14 +431,14 @@ public partial class HlsOnDiskPlanReconstructor(
 
     private static string? FindFirstSegment(IStorage storage, string dir) =>
         storage
-            .List(dir, "*", recursive: false)
-            .Where(entry =>
+            .List(path: dir, pattern: "*", recursive: false)
+            .Where(predicate: entry =>
                 !entry.IsDirectory
                 && (
-                    entry.Path.EndsWith(".m4s", StringComparison.OrdinalIgnoreCase)
-                    || entry.Path.EndsWith(".ts", StringComparison.OrdinalIgnoreCase)
+                    entry.Path.EndsWith(value: ".m4s", comparisonType: StringComparison.OrdinalIgnoreCase)
+                    || entry.Path.EndsWith(value: ".ts", comparisonType: StringComparison.OrdinalIgnoreCase)
                 )
             )
-            .Select(entry => entry.Path)
+            .Select(selector: entry => entry.Path)
             .FirstOrDefault();
 }

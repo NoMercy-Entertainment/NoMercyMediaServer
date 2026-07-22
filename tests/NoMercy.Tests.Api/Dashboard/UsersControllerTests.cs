@@ -18,7 +18,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Dashboard;
 
-[Trait("Category", "DashboardUsers")]
+[Trait(name: "Category", value: "DashboardUsers")]
 public class UsersControllerTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly HttpClient _authed;
@@ -31,200 +31,200 @@ public class UsersControllerTests : IClassFixture<NoMercyApiFactory>
     }
 
     private static StringContent JsonBody(object obj) =>
-        new(JsonSerializer.Serialize(obj), Encoding.UTF8, "application/json");
+        new(content: JsonSerializer.Serialize(value: obj), encoding: Encoding.UTF8, mediaType: "application/json");
 
     private Task<HttpResponseMessage> PatchAsync(HttpClient client, string url, object body) =>
-        client.PatchAsync(url, JsonBody(body));
+        client.PatchAsync(requestUri: url, content: JsonBody(obj: body));
 
     [Fact]
     public async Task GetUsers_ReturnsUnauthorized_WhenAnonymous()
     {
-        HttpResponseMessage response = await _unauthed.GetAsync("/api/v1/dashboard/users");
+        HttpResponseMessage response = await _unauthed.GetAsync(requestUri: "/api/v1/dashboard/users");
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task GetUsers_ReturnsOk_WhenAuthenticated()
     {
-        HttpResponseMessage response = await _authed.GetAsync("/api/v1/dashboard/users");
+        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/dashboard/users");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
     }
 
     [Fact]
     public async Task GetUsers_ReturnsEnvelopeWithDataArray()
     {
-        HttpResponseMessage response = await _authed.GetAsync("/api/v1/dashboard/users");
+        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/dashboard/users");
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
 
-        doc.RootElement.TryGetProperty("data", out JsonElement data)
+        doc.RootElement.TryGetProperty(propertyName: "data", value: out JsonElement data)
             .Should()
-            .BeTrue("users response must have a 'data' property");
-        data.ValueKind.Should().Be(JsonValueKind.Array);
+            .BeTrue(because: "users response must have a 'data' property");
+        data.ValueKind.Should().Be(expected: JsonValueKind.Array);
     }
 
     [Fact]
     public async Task GetUsers_DataArray_ContainsSeededOwner()
     {
-        HttpResponseMessage response = await _authed.GetAsync("/api/v1/dashboard/users");
+        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/dashboard/users");
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
 
-        JsonElement data = doc.RootElement.GetProperty("data");
-        data.GetArrayLength().Should().BeGreaterThan(0, "at least the seeded owner user exists");
+        JsonElement data = doc.RootElement.GetProperty(propertyName: "data");
+        data.GetArrayLength().Should().BeGreaterThan(expected: 0, because: "at least the seeded owner user exists");
 
         JsonElement ownerItem = data.EnumerateArray().First();
-        ownerItem.TryGetProperty("id", out _).Should().BeTrue("user item must expose 'id'");
-        ownerItem.TryGetProperty("name", out _).Should().BeTrue("user item must expose 'name'");
-        ownerItem.TryGetProperty("email", out _).Should().BeTrue("user item must expose 'email'");
-        ownerItem.TryGetProperty("owner", out _).Should().BeTrue("user item must expose 'owner'");
+        ownerItem.TryGetProperty(propertyName: "id", value: out _).Should().BeTrue(because: "user item must expose 'id'");
+        ownerItem.TryGetProperty(propertyName: "name", value: out _).Should().BeTrue(because: "user item must expose 'name'");
+        ownerItem.TryGetProperty(propertyName: "email", value: out _).Should().BeTrue(because: "user item must expose 'email'");
+        ownerItem.TryGetProperty(propertyName: "owner", value: out _).Should().BeTrue(because: "user item must expose 'owner'");
         ownerItem
-            .TryGetProperty("allowed", out _)
+            .TryGetProperty(propertyName: "allowed", value: out _)
             .Should()
-            .BeTrue("user item must expose 'allowed'");
+            .BeTrue(because: "user item must expose 'allowed'");
     }
 
     [Fact]
     public async Task GetUserDetail_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.GetAsync(
-            $"/api/v1/dashboard/users/{TestAuthHandler.DefaultUserId}"
+            requestUri: $"/api/v1/dashboard/users/{TestAuthHandler.DefaultUserId}"
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task GetUserDetail_ReturnsNotFound_WhenUserDoesNotExist()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            $"/api/v1/dashboard/users/{Guid.NewGuid()}"
+            requestUri: $"/api/v1/dashboard/users/{Guid.NewGuid()}"
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.NotFound);
     }
 
     [Fact]
     public async Task GetUserDetail_ReturnsOkWithUserShape_WhenUserExists()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            $"/api/v1/dashboard/users/{TestAuthHandler.SecondaryUserId}"
+            requestUri: $"/api/v1/dashboard/users/{TestAuthHandler.SecondaryUserId}"
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
 
-        doc.RootElement.TryGetProperty("data", out JsonElement data)
+        doc.RootElement.TryGetProperty(propertyName: "data", value: out JsonElement data)
             .Should()
-            .BeTrue("user detail response must have a 'data' property");
-        data.ValueKind.Should().Be(JsonValueKind.Object);
+            .BeTrue(because: "user detail response must have a 'data' property");
+        data.ValueKind.Should().Be(expected: JsonValueKind.Object);
 
-        data.TryGetProperty("id", out JsonElement id).Should().BeTrue();
-        id.GetString().Should().Be(TestAuthHandler.SecondaryUserId.ToString());
+        data.TryGetProperty(propertyName: "id", value: out JsonElement id).Should().BeTrue();
+        id.GetString().Should().Be(expected: TestAuthHandler.SecondaryUserId.ToString());
 
-        data.TryGetProperty("name", out _).Should().BeTrue("user detail must expose 'name'");
-        data.TryGetProperty("email", out _).Should().BeTrue("user detail must expose 'email'");
-        data.TryGetProperty("owner", out _).Should().BeTrue("user detail must expose 'owner'");
-        data.TryGetProperty("allowed", out _).Should().BeTrue("user detail must expose 'allowed'");
-        data.TryGetProperty("library_user", out _)
+        data.TryGetProperty(propertyName: "name", value: out _).Should().BeTrue(because: "user detail must expose 'name'");
+        data.TryGetProperty(propertyName: "email", value: out _).Should().BeTrue(because: "user detail must expose 'email'");
+        data.TryGetProperty(propertyName: "owner", value: out _).Should().BeTrue(because: "user detail must expose 'owner'");
+        data.TryGetProperty(propertyName: "allowed", value: out _).Should().BeTrue(because: "user detail must expose 'allowed'");
+        data.TryGetProperty(propertyName: "library_user", value: out _)
             .Should()
-            .BeTrue("user detail must expose 'library_user'");
-        data.TryGetProperty("libraries", out _)
+            .BeTrue(because: "user detail must expose 'library_user'");
+        data.TryGetProperty(propertyName: "libraries", value: out _)
             .Should()
-            .BeTrue("user detail must expose 'libraries'");
+            .BeTrue(because: "user detail must expose 'libraries'");
     }
 
     [Fact]
     public async Task GetPermissions_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.GetAsync(
-            "/api/v1/dashboard/users/permissions"
+            requestUri: "/api/v1/dashboard/users/permissions"
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task GetPermissions_ReturnsOkWithDataArray_WhenAuthenticated()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            "/api/v1/dashboard/users/permissions"
+            requestUri: "/api/v1/dashboard/users/permissions"
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
 
-        doc.RootElement.TryGetProperty("data", out JsonElement data)
+        doc.RootElement.TryGetProperty(propertyName: "data", value: out JsonElement data)
             .Should()
-            .BeTrue("permissions response must have a 'data' property");
-        data.ValueKind.Should().Be(JsonValueKind.Array);
+            .BeTrue(because: "permissions response must have a 'data' property");
+        data.ValueKind.Should().Be(expected: JsonValueKind.Array);
     }
 
     [Fact]
     public async Task DeleteUser_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.DeleteAsync(
-            $"/api/v1/dashboard/users/{Guid.NewGuid()}"
+            requestUri: $"/api/v1/dashboard/users/{Guid.NewGuid()}"
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task DeleteUser_ReturnsNotFound_WhenUserDoesNotExist()
     {
         HttpResponseMessage response = await _authed.DeleteAsync(
-            $"/api/v1/dashboard/users/{Guid.NewGuid()}"
+            requestUri: $"/api/v1/dashboard/users/{Guid.NewGuid()}"
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.NotFound);
     }
 
     [Fact]
     public async Task DeleteUser_ReturnsUnauthorized_WhenDeletingOwner()
     {
         HttpResponseMessage response = await _authed.DeleteAsync(
-            $"/api/v1/dashboard/users/{TestAuthHandler.DefaultUserId}"
+            requestUri: $"/api/v1/dashboard/users/{TestAuthHandler.DefaultUserId}"
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task UpdateNotifications_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await PatchAsync(
-            _unauthed,
-            "/api/v1/dashboard/users/notifications",
-            new { }
+            client: _unauthed,
+            url: "/api/v1/dashboard/users/notifications",
+            body: new { }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task UpdateNotifications_ReturnsOk_WhenAuthenticated()
     {
         HttpResponseMessage response = await PatchAsync(
-            _authed,
-            "/api/v1/dashboard/users/notifications",
-            new { }
+            client: _authed,
+            url: "/api/v1/dashboard/users/notifications",
+            body: new { }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
 
-        doc.RootElement.TryGetProperty("status", out JsonElement status).Should().BeTrue();
-        status.GetString().Should().Be("success");
+        doc.RootElement.TryGetProperty(propertyName: "status", value: out JsonElement status).Should().BeTrue();
+        status.GetString().Should().Be(expected: "success");
     }
 }

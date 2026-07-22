@@ -71,7 +71,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         // Reset() that static; with serialized collections a later class would
         // otherwise inherit an owner-less cache and get spurious 403s.
         using MediaContext userCacheContext = new();
-        UserCache.Current.InitializeAsync(userCacheContext).GetAwaiter().GetResult();
+        UserCache.Current.InitializeAsync(context: userCacheContext).GetAwaiter().GetResult();
     }
 
     // Every existing test in this fixture authenticates via TestAuthHandler (a header-
@@ -91,25 +91,25 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Testing");
+        builder.UseEnvironment(environment: "Testing");
 
-        builder.ConfigureTestServices(services =>
+        builder.ConfigureTestServices(servicesConfiguration: services =>
         {
-            RemoveHostedServices(services);
+            RemoveHostedServices(services: services);
 
             if (UseRealAuthentication)
-                ConfigureRealAuthentication(services);
+                ConfigureRealAuthentication(services: services);
             else
-                ReplaceAuth(services);
+                ReplaceAuth(services: services);
 
-            ReplacePluginManager(services);
-            ReplaceSetupState(services);
+            ReplacePluginManager(services: services);
+            ReplaceSetupState(services: services);
 
             // Ensure all ConnectedClients registrations (from Startup AND from
             // CreateWebHostBuilder.ConfigureServices) are replaced by the single
             // shared instance so controllers and tests operate on the same dictionary.
             services.RemoveAll<ConnectedClients>();
-            services.AddSingleton(SharedConnectedClients);
+            services.AddSingleton(implementationInstance: SharedConnectedClients);
 
             // ServerController depends on IAudioFingerprinter. The real
             // ChromaprintFingerprinter needs the native fpcalc/chromaprint
@@ -117,7 +117,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             // no-op stand-in — the dashboard endpoints under test only need
             // the controller to construct, not to fingerprint audio.
             services.RemoveAll<IAudioFingerprinter>();
-            services.AddTransient<IAudioFingerprinter>(_ => Mock.Of<IAudioFingerprinter>());
+            services.AddTransient<IAudioFingerprinter>(implementationFactory: _ => Mock.Of<IAudioFingerprinter>());
 
             // RecommendationsController's /{type}/{id} detail route calls straight through
             // to the real TMDB HTTP client for movie/tv metadata. Tests must never reach
@@ -125,9 +125,9 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             // completed Task<null> for unconfigured Task<T?> members, which exercises the
             // controller's real "detail not found" 404 path deterministically.
             services.RemoveAll<IMovieMetadataProvider>();
-            services.AddScoped<IMovieMetadataProvider>(_ => Mock.Of<IMovieMetadataProvider>());
+            services.AddScoped<IMovieMetadataProvider>(implementationFactory: _ => Mock.Of<IMovieMetadataProvider>());
             services.RemoveAll<ITvShowMetadataProvider>();
-            services.AddScoped<ITvShowMetadataProvider>(_ => Mock.Of<ITvShowMetadataProvider>());
+            services.AddScoped<ITvShowMetadataProvider>(implementationFactory: _ => Mock.Of<ITvShowMetadataProvider>());
         });
     }
 
@@ -140,14 +140,14 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         ConnectedClients sharedClients = SharedConnectedClients;
 
         return WebHost
-            .CreateDefaultBuilder([])
-            .UseContentRoot(AppContext.BaseDirectory)
-            .ConfigureLogging(logging => logging.ClearProviders())
+            .CreateDefaultBuilder(args: [])
+            .UseContentRoot(contentRoot: AppContext.BaseDirectory)
+            .ConfigureLogging(configureLogging: logging => logging.ClearProviders())
             .UseStartup<Startup>()
-            .ConfigureServices(services =>
+            .ConfigureServices(configureServices: services =>
             {
-                services.AddSingleton(new StartupOptions());
-                services.AddSingleton<ISunsetPolicyManager>(new NoOpSunsetPolicyManager());
+                services.AddSingleton(implementationInstance: new StartupOptions());
+                services.AddSingleton<ISunsetPolicyManager>(implementationInstance: new NoOpSunsetPolicyManager());
                 services.AddSingleton<
                     IApiVersionDescriptionProvider,
                     DefaultApiVersionDescriptionProvider
@@ -158,9 +158,9 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
                 // The test host registers the logger itself, so it must register the
                 // provider + options too, or activating any ILogger<T> throws.
                 // LogDirectory defaults to null here, so tests write no log files.
-                services.AddSingleton(new NmSystem.Logging.NoMercyLoggerOptions());
+                services.AddSingleton(implementationInstance: new NmSystem.Logging.NoMercyLoggerOptions());
                 services.AddSingleton<NmSystem.Logging.NoMercyLoggerProvider>();
-                services.AddSingleton(typeof(ILogger<>), typeof(CustomLogger<>));
+                services.AddSingleton(serviceType: typeof(ILogger<>), implementationType: typeof(CustomLogger<>));
 
                 // Register the shared ConnectedClients instance early.  Because
                 // ConfigureServices callbacks are applied in registration order,
@@ -169,7 +169,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
                 // last-registered wins for plain resolution — so we must remove the
                 // Startup-registered one in ConfigureTestServices (below) to guarantee
                 // our instance is used.
-                services.AddSingleton(sharedClients);
+                services.AddSingleton(implementationInstance: sharedClients);
             });
 #pragma warning restore ASPDEPR008
     }
@@ -192,12 +192,12 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
     public static readonly Ulid TvFolderId = Ulid.NewUlid();
     public static readonly Ulid MusicFolderId = Ulid.NewUlid();
 
-    public static readonly Guid ArtistId1 = Guid.Parse("11111111-1111-1111-1111-111111111111");
-    public static readonly Guid AlbumId1 = Guid.Parse("22222222-2222-2222-2222-222222222222");
-    public static readonly Guid TrackId1 = Guid.Parse("33333333-3333-3333-3333-333333333333");
-    public static readonly Guid TrackId2 = Guid.Parse("33333333-3333-3333-3333-333333333334");
-    public static readonly Guid PlaylistId1 = Guid.Parse("44444444-4444-4444-4444-444444444444");
-    public static readonly Guid MusicGenreId1 = Guid.Parse("55555555-5555-5555-5555-555555555555");
+    public static readonly Guid ArtistId1 = Guid.Parse(input: "11111111-1111-1111-1111-111111111111");
+    public static readonly Guid AlbumId1 = Guid.Parse(input: "22222222-2222-2222-2222-222222222222");
+    public static readonly Guid TrackId1 = Guid.Parse(input: "33333333-3333-3333-3333-333333333333");
+    public static readonly Guid TrackId2 = Guid.Parse(input: "33333333-3333-3333-3333-333333333334");
+    public static readonly Guid PlaylistId1 = Guid.Parse(input: "44444444-4444-4444-4444-444444444444");
+    public static readonly Guid MusicGenreId1 = Guid.Parse(input: "55555555-5555-5555-5555-555555555555");
 
     public static readonly int FavoriteCollectionId = 900001;
     public static readonly Ulid FavoriteSpecialId = Ulid.NewUlid();
@@ -206,8 +206,8 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
     {
         foreach (string path in AppFiles.AllPaths())
         {
-            if (!Directory.Exists(path))
-                Directory.CreateDirectory(path);
+            if (!Directory.Exists(path: path))
+                Directory.CreateDirectory(path: path);
         }
 
         // Initialize DataProtection + TokenStore before any AppDbContext access.
@@ -216,10 +216,10 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         ServiceCollection tokenServices = new();
         tokenServices
             .AddDataProtection()
-            .PersistKeysToFileSystem(new(AppFiles.DataProtectionKeysDir))
-            .SetApplicationName("NoMercyMediaServer");
+            .PersistKeysToFileSystem(directory: new(path: AppFiles.DataProtectionKeysDir))
+            .SetApplicationName(applicationName: "NoMercyMediaServer");
         ServiceProvider tokenProvider = tokenServices.BuildServiceProvider();
-        TokenStore.Initialize(tokenProvider);
+        TokenStore.Initialize(serviceProvider: tokenProvider);
 
         // Create app.db for AppDbContext (Configuration table, SecureValue columns).
         // Use EnsureCreated rather than delete+recreate — parallel test assembly runs
@@ -227,12 +227,12 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         using AppDbContext appContext = new();
         appContext.Database.EnsureCreated();
 
-        string mediaDbPath = Path.Combine(AppFiles.DataPath, "media.db");
+        string mediaDbPath = Path.Combine(path1: AppFiles.DataPath, path2: "media.db");
         foreach (string suffix in new[] { "", "-wal", "-shm", "-journal" })
         {
             string file = mediaDbPath + suffix;
-            if (File.Exists(file))
-                File.Delete(file);
+            if (File.Exists(path: file))
+                File.Delete(path: file);
         }
 
         using MediaContext mediaContext = new();
@@ -262,23 +262,23 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
                 Allowed = true,
                 Manage = false,
             };
-            mediaContext.Users.AddRange(testUser, secondaryTestUser);
+            mediaContext.Users.AddRange(entities: [testUser, secondaryTestUser]);
             mediaContext.SaveChanges();
         }
 
-        SeedMediaData(mediaContext);
+        SeedMediaData(context: mediaContext);
 
-        UserCache.Current.InitializeAsync(mediaContext).GetAwaiter().GetResult();
+        UserCache.Current.InitializeAsync(context: mediaContext).GetAwaiter().GetResult();
 
-        string queueDbPath = Path.Combine(AppFiles.DataPath, "queue.db");
+        string queueDbPath = Path.Combine(path1: AppFiles.DataPath, path2: "queue.db");
         foreach (string suffix in new[] { "", "-wal", "-shm", "-journal" })
         {
             string file = queueDbPath + suffix;
-            if (File.Exists(file))
+            if (File.Exists(path: file))
             {
                 try
                 {
-                    File.Delete(file);
+                    File.Delete(path: file);
                 }
                 catch (IOException)
                 {
@@ -312,7 +312,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Type = "tv",
             Order = 2,
         };
-        context.Libraries.AddRange(movieLibrary, tvLibrary);
+        context.Libraries.AddRange(entities: [movieLibrary, tvLibrary]);
 
         Driver systemLocalDriver = new()
         {
@@ -323,7 +323,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow,
         };
-        context.Drivers.Add(systemLocalDriver);
+        context.Drivers.Add(entity: systemLocalDriver);
 
         Folder movieFolder = new()
         {
@@ -337,23 +337,19 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Path = "/media/tv",
             DriverId = Driver.SystemLocalDriverId,
         };
-        context.Folders.AddRange(movieFolder, tvFolder);
+        context.Folders.AddRange(entities: [movieFolder, tvFolder]);
 
         Genre actionGenre = new() { Id = 28, Name = "Action" };
         Genre dramaGenre = new() { Id = 18, Name = "Drama" };
-        context.Genres.AddRange(actionGenre, dramaGenre);
+        context.Genres.AddRange(entities: [actionGenre, dramaGenre]);
 
         context.SaveChanges();
 
         // Step 2: Entities with FK to libraries/folders/user
-        context.LibraryUser.AddRange(
-            new LibraryUser(MovieLibraryId, TestAuthHandler.DefaultUserId),
-            new LibraryUser(TvLibraryId, TestAuthHandler.DefaultUserId)
+        context.LibraryUser.AddRange(entities: [new LibraryUser(libraryId: MovieLibraryId, userId: TestAuthHandler.DefaultUserId), new LibraryUser(libraryId: TvLibraryId, userId: TestAuthHandler.DefaultUserId)]
         );
 
-        context.FolderLibrary.AddRange(
-            new(MovieFolderId, MovieLibraryId),
-            new(TvFolderId, TvLibraryId)
+        context.FolderLibrary.AddRange(entities: [new(folderId: MovieFolderId, libraryId: MovieLibraryId), new(folderId: TvFolderId, libraryId: TvLibraryId)]
         );
 
         Movie movie1 = new()
@@ -365,7 +361,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
                 "A young girl, Chihiro, becomes trapped in a strange new world of spirits. When her parents undergo a mysterious transformation, she must call upon the courage she never knew she had to free her family.",
             Poster = "/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg",
             Backdrop = "/Ab8mkHmkYADjU7wQiOkia9BzGvS.jpg",
-            ReleaseDate = new DateTime(2001, 7, 20),
+            ReleaseDate = new DateTime(year: 2001, month: 7, day: 20),
             LibraryId = MovieLibraryId,
             VoteAverage = 8.5,
         };
@@ -378,11 +374,11 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
                 "The lives of two mob hitmen intertwine in four tales of violence and redemption.",
             Poster = "/d5iIlFn5s0ImszYzBPb8JPIfbXD.jpg",
             Backdrop = "/suaEOtk1N1sgg2MTM7oZd2cfVp3.jpg",
-            ReleaseDate = new DateTime(1994, 9, 10),
+            ReleaseDate = new DateTime(year: 1994, month: 9, day: 10),
             LibraryId = MovieLibraryId,
             VoteAverage = 8.5,
         };
-        context.Movies.AddRange(movie1, movie2);
+        context.Movies.AddRange(entities: [movie1, movie2]);
 
         Tv show1 = new()
         {
@@ -393,31 +389,26 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
                 "A chemistry teacher teams up with a former student to cook and sell crystal meth.",
             Poster = "/ggFHVNu6YYI5L9pCfOacjizRGt.jpg",
             Backdrop = "/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg",
-            FirstAirDate = new DateTime(2008, 1, 20),
+            FirstAirDate = new DateTime(year: 2008, month: 1, day: 20),
             NumberOfEpisodes = 62,
             NumberOfSeasons = 5,
             LibraryId = TvLibraryId,
             VoteAverage = 8.9,
         };
-        context.Tvs.Add(show1);
+        context.Tvs.Add(entity: show1);
 
         context.SaveChanges();
 
         // Step 3: Join tables and child entities (FK to movies/tv/genres)
-        context.LibraryMovie.AddRange(
-            new LibraryMovie(MovieLibraryId, 129),
-            new LibraryMovie(MovieLibraryId, 680)
+        context.LibraryMovie.AddRange(entities: [new LibraryMovie(libraryId: MovieLibraryId, movieId: 129), new LibraryMovie(libraryId: MovieLibraryId, movieId: 680)]
         );
 
-        context.LibraryTv.Add(new(TvLibraryId, 1399));
+        context.LibraryTv.Add(entity: new(libraryId: TvLibraryId, tvId: 1399));
 
-        context.GenreMovie.AddRange(
-            new GenreMovie { GenreId = 28, MovieId = 129 },
-            new GenreMovie { GenreId = 18, MovieId = 129 },
-            new GenreMovie { GenreId = 18, MovieId = 680 }
+        context.GenreMovie.AddRange(entities: [new GenreMovie { GenreId = 28, MovieId = 129 }, new GenreMovie { GenreId = 18, MovieId = 129 }, new GenreMovie { GenreId = 18, MovieId = 680 }]
         );
 
-        context.GenreTv.Add(new() { GenreId = 18, TvId = 1399 });
+        context.GenreTv.Add(entity: new() { GenreId = 18, TvId = 1399 });
 
         Season season1 = new()
         {
@@ -427,7 +418,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             EpisodeCount = 7,
             TvId = 1399,
         };
-        context.Seasons.Add(season1);
+        context.Seasons.Add(entity: season1);
 
         context.SaveChanges();
 
@@ -452,7 +443,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             SeasonId = 3572,
             Overview = "Walt and Jesse deal with a corpse and a prisoner.",
         };
-        context.Episodes.AddRange(episode1, episode2);
+        context.Episodes.AddRange(entities: [episode1, episode2]);
 
         VideoFile movieVideoFile1 = new()
         {
@@ -476,7 +467,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Share = MovieFolderId.ToString(),
             MovieId = 680,
         };
-        context.VideoFiles.AddRange(movieVideoFile1, movieVideoFile2);
+        context.VideoFiles.AddRange(entities: [movieVideoFile1, movieVideoFile2]);
 
         context.SaveChanges();
 
@@ -503,7 +494,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Share = TvFolderId.ToString(),
             EpisodeId = 62086,
         };
-        context.VideoFiles.AddRange(tvVideoFile1, tvVideoFile2);
+        context.VideoFiles.AddRange(entities: [tvVideoFile1, tvVideoFile2]);
 
         context.SaveChanges();
 
@@ -515,7 +506,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Type = "music",
             Order = 3,
         };
-        context.Libraries.Add(musicLibrary);
+        context.Libraries.Add(entity: musicLibrary);
 
         Folder musicFolder = new()
         {
@@ -523,15 +514,15 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Path = "/media/music",
             DriverId = Driver.SystemLocalDriverId,
         };
-        context.Folders.Add(musicFolder);
+        context.Folders.Add(entity: musicFolder);
 
         context.SaveChanges();
 
-        context.LibraryUser.Add(new(MusicLibraryId, TestAuthHandler.DefaultUserId));
-        context.FolderLibrary.Add(new(MusicFolderId, MusicLibraryId));
+        context.LibraryUser.Add(entity: new(libraryId: MusicLibraryId, userId: TestAuthHandler.DefaultUserId));
+        context.FolderLibrary.Add(entity: new(folderId: MusicFolderId, libraryId: MusicLibraryId));
 
         MusicGenre rockGenre = new() { Id = MusicGenreId1, Name = "Rock" };
-        context.MusicGenres.Add(rockGenre);
+        context.MusicGenres.Add(entity: rockGenre);
 
         Artist artist1 = new()
         {
@@ -544,7 +535,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             LibraryId = MusicLibraryId,
             FolderId = MusicFolderId,
         };
-        context.Artists.Add(artist1);
+        context.Artists.Add(entity: artist1);
 
         Album album1 = new()
         {
@@ -559,7 +550,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             FolderId = MusicFolderId,
             LibraryFolder = null!,
         };
-        context.Albums.Add(album1);
+        context.Albums.Add(entity: album1);
 
         context.SaveChanges();
 
@@ -587,32 +578,26 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             HostFolder = "/media/music/Test Artist/Test Album",
             FolderId = MusicFolderId,
         };
-        context.Tracks.AddRange(track1, track2);
+        context.Tracks.AddRange(entities: [track1, track2]);
 
         context.SaveChanges();
 
         // Step 7: Music join tables
-        context.ArtistTrack.AddRange(
-            new ArtistTrack { ArtistId = ArtistId1, TrackId = TrackId1 },
-            new ArtistTrack { ArtistId = ArtistId1, TrackId = TrackId2 }
+        context.ArtistTrack.AddRange(entities: [new ArtistTrack { ArtistId = ArtistId1, TrackId = TrackId1 }, new ArtistTrack { ArtistId = ArtistId1, TrackId = TrackId2 }]
         );
 
-        context.AlbumTrack.AddRange(
-            new AlbumTrack { AlbumId = AlbumId1, TrackId = TrackId1 },
-            new AlbumTrack { AlbumId = AlbumId1, TrackId = TrackId2 }
+        context.AlbumTrack.AddRange(entities: [new AlbumTrack { AlbumId = AlbumId1, TrackId = TrackId1 }, new AlbumTrack { AlbumId = AlbumId1, TrackId = TrackId2 }]
         );
 
-        context.AlbumArtist.Add(new() { AlbumId = AlbumId1, ArtistId = ArtistId1 });
+        context.AlbumArtist.Add(entity: new() { AlbumId = AlbumId1, ArtistId = ArtistId1 });
 
-        context.ArtistLibrary.Add(new(ArtistId1, MusicLibraryId));
-        context.AlbumLibrary.Add(new(AlbumId1, MusicLibraryId));
+        context.ArtistLibrary.Add(entity: new(artistId: ArtistId1, libraryId: MusicLibraryId));
+        context.AlbumLibrary.Add(entity: new(albumId: AlbumId1, libraryId: MusicLibraryId));
 
-        context.LibraryTrack.AddRange(
-            new LibraryTrack { LibraryId = MusicLibraryId, TrackId = TrackId1 },
-            new LibraryTrack { LibraryId = MusicLibraryId, TrackId = TrackId2 }
+        context.LibraryTrack.AddRange(entities: [new LibraryTrack { LibraryId = MusicLibraryId, TrackId = TrackId1 }, new LibraryTrack { LibraryId = MusicLibraryId, TrackId = TrackId2 }]
         );
 
-        context.ArtistMusicGenre.Add(new() { ArtistId = ArtistId1, MusicGenreId = MusicGenreId1 });
+        context.ArtistMusicGenre.Add(entity: new() { ArtistId = ArtistId1, MusicGenreId = MusicGenreId1 });
 
         Playlist playlist1 = new()
         {
@@ -621,17 +606,17 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Description = "A test playlist",
             UserId = TestAuthHandler.DefaultUserId,
         };
-        context.Playlists.Add(playlist1);
+        context.Playlists.Add(entity: playlist1);
 
         context.SaveChanges();
 
-        context.PlaylistTrack.Add(new() { PlaylistId = PlaylistId1, TrackId = TrackId1 });
+        context.PlaylistTrack.Add(entity: new() { PlaylistId = PlaylistId1, TrackId = TrackId1 });
 
         // Favorite the artist/track so favorites endpoints have data
         context.ArtistUser.Add(
-            new() { ArtistId = ArtistId1, UserId = TestAuthHandler.DefaultUserId }
+            entity: new() { ArtistId = ArtistId1, UserId = TestAuthHandler.DefaultUserId }
         );
-        context.TrackUser.Add(new() { TrackId = TrackId1, UserId = TestAuthHandler.DefaultUserId });
+        context.TrackUser.Add(entity: new() { TrackId = TrackId1, UserId = TestAuthHandler.DefaultUserId });
 
         context.SaveChanges();
 
@@ -645,24 +630,24 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             LibraryId = MovieLibraryId,
             Parts = 1,
         };
-        context.Collections.Add(favoriteCollection);
+        context.Collections.Add(entity: favoriteCollection);
 
         Special favoriteSpecial = new() { Id = FavoriteSpecialId, Title = "Test Special" };
-        context.Specials.Add(favoriteSpecial);
+        context.Specials.Add(entity: favoriteSpecial);
 
         context.SaveChanges();
 
-        context.CollectionMovie.Add(new(FavoriteCollectionId, movie1.Id));
-        context.SpecialItems.Add(new() { SpecialId = FavoriteSpecialId, MovieId = movie1.Id });
+        context.CollectionMovie.Add(entity: new(collectionId: FavoriteCollectionId, movieId: movie1.Id));
+        context.SpecialItems.Add(entity: new() { SpecialId = FavoriteSpecialId, MovieId = movie1.Id });
 
         context.SaveChanges();
 
         // Favorite movie 129, tv 1399, the collection and the special so
         // GET /userData/favorites has one of each type to browse.
-        context.MovieUser.Add(new(movie1.Id, TestAuthHandler.DefaultUserId));
-        context.TvUser.Add(new(show1.Id, TestAuthHandler.DefaultUserId));
-        context.CollectionUser.Add(new(FavoriteCollectionId, TestAuthHandler.DefaultUserId));
-        context.SpecialUser.Add(new(FavoriteSpecialId, TestAuthHandler.DefaultUserId));
+        context.MovieUser.Add(entity: new(movieId: movie1.Id, userId: TestAuthHandler.DefaultUserId));
+        context.TvUser.Add(entity: new(tvId: show1.Id, userId: TestAuthHandler.DefaultUserId));
+        context.CollectionUser.Add(entity: new(collectionId: FavoriteCollectionId, userId: TestAuthHandler.DefaultUserId));
+        context.SpecialUser.Add(entity: new(specialId: FavoriteSpecialId, userId: TestAuthHandler.DefaultUserId));
 
         context.SaveChanges();
     }
@@ -670,11 +655,11 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
     private static void RemoveHostedServices(IServiceCollection services)
     {
         List<ServiceDescriptor> hostedServices = services
-            .Where(d => d.ServiceType == typeof(IHostedService))
+            .Where(predicate: d => d.ServiceType == typeof(IHostedService))
             .ToList();
 
         foreach (ServiceDescriptor descriptor in hostedServices)
-            services.Remove(descriptor);
+            services.Remove(item: descriptor);
     }
 
     private static void ReplaceSetupState(IServiceCollection services)
@@ -682,7 +667,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         services.RemoveAll<SetupState>();
         SetupState completedState = new();
         completedState.DetermineInitialPhase(hasValidToken: true);
-        services.AddSingleton(completedState);
+        services.AddSingleton(implementationInstance: completedState);
 
         // AuthManager is registered as a singleton that creates its own AppDbContext scope.
         // In tests, app.db is already seeded — provide a standalone instance with its own
@@ -695,24 +680,24 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         testAppContext.Database.EnsureCreated();
 
         AuthManager testAuthManager = new(
-            testAppContext,
-            new LocalStorageDriver(),
-            new AuthTokenStore()
+            appContext: testAppContext,
+            driver: new LocalStorageDriver(),
+            authTokenStore: new AuthTokenStore()
         );
-        services.AddSingleton(testAuthManager);
+        services.AddSingleton(implementationInstance: testAuthManager);
         IServerRegistrationService registrationService = Mock.Of<IServerRegistrationService>();
         services.AddSingleton(
-            new SetupEndpoints(completedState, testAuthManager, registrationService)
+            implementationInstance: new SetupEndpoints(state: completedState, authManager: testAuthManager, serverRegistrationService: registrationService)
         );
         services.AddSingleton(
-            new BootOrchestrator(
-                completedState,
-                testAuthManager,
-                Mock.Of<IApiKeyLoader>(),
-                Mock.Of<IDegradedModeRecovery>(),
-                registrationService,
-                new AuthTokenStore(),
-                new CertificateService(NullLogger<CertificateService>.Instance, null!)
+            implementationInstance: new BootOrchestrator(
+                setupState: completedState,
+                authManager: testAuthManager,
+                apiKeyLoader: Mock.Of<IApiKeyLoader>(),
+                degradedModeRecovery: Mock.Of<IDegradedModeRecovery>(),
+                serverRegistrationService: registrationService,
+                authTokenStore: new AuthTokenStore(),
+                certificateService: new CertificateService(logger: NullLogger<CertificateService>.Instance, httpClientFactory: null!)
             )
         );
     }
@@ -720,7 +705,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
     private void ReplacePluginManager(IServiceCollection services)
     {
         services.RemoveAll<IPluginManager>();
-        services.AddSingleton(CreateTestPluginManager());
+        services.AddSingleton(implementationInstance: CreateTestPluginManager());
     }
 
     private static void ReplaceAuth(IServiceCollection services)
@@ -729,22 +714,22 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         services.RemoveAll<IAuthenticationHandlerProvider>();
 
         services
-            .AddAuthentication(TestAuthDefaults.AuthenticationScheme)
+            .AddAuthentication(defaultScheme: TestAuthDefaults.AuthenticationScheme)
             .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(
-                TestAuthDefaults.AuthenticationScheme,
-                _ => { }
+                authenticationScheme: TestAuthDefaults.AuthenticationScheme,
+                configureOptions: _ => { }
             );
 
         services
             .AddAuthorizationBuilder()
             .SetDefaultPolicy(
-                new AuthorizationPolicyBuilder(TestAuthDefaults.AuthenticationScheme)
+                policy: new AuthorizationPolicyBuilder(authenticationSchemes: TestAuthDefaults.AuthenticationScheme)
                     .RequireAuthenticatedUser()
                     .Build()
             )
             .AddPolicy(
-                "api",
-                new AuthorizationPolicyBuilder(TestAuthDefaults.AuthenticationScheme)
+                name: "api",
+                policy: new AuthorizationPolicyBuilder(authenticationSchemes: TestAuthDefaults.AuthenticationScheme)
                     .RequireAuthenticatedUser()
                     .Build()
             );
@@ -780,7 +765,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Task.CompletedTask;
 
         public Task<IReadOnlyList<PluginLoadResult>> LoadAllAsync(CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<PluginLoadResult>>(Array.Empty<PluginLoadResult>());
+            Task.FromResult<IReadOnlyList<PluginLoadResult>>(result: Array.Empty<PluginLoadResult>());
 
         public IEnumerable<T> GetPluginsOfType<T>()
             where T : IPlugin => Array.Empty<T>();

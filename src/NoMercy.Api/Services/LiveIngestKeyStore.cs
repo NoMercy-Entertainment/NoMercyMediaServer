@@ -23,11 +23,11 @@ public class LiveIngestKeyStore : ILiveIngestKeyStore
     // reaper caps a session well under this, EndSessionAsync revokes explicitly,
     // and this absolute ceiling only backstops a session that dies without a
     // clean teardown. Comfortably longer than the longest single file.
-    private static readonly TimeSpan AbsoluteLifetime = TimeSpan.FromHours(12);
+    private static readonly TimeSpan AbsoluteLifetime = TimeSpan.FromHours(hours: 12);
 
     private sealed record Entry(string PathPrefix, DateTime ExpiresAtUtc, string? SessionId);
 
-    private readonly ConcurrentDictionary<string, Entry> _byKey = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, Entry> _byKey = new(comparer: StringComparer.Ordinal);
 
     public string Issue(string servedPath)
     {
@@ -40,35 +40,35 @@ public class LiveIngestKeyStore : ILiveIngestKeyStore
         // those nested URLs. Scoping to the file alone 401s them all. The folder is
         // one title's content — still far tighter than the old library-wide bearer,
         // and the request is loopback + ingest-port gated regardless.
-        int lastSlash = servedPath.LastIndexOf('/');
+        int lastSlash = servedPath.LastIndexOf(value: '/');
         string prefix = lastSlash >= 0 ? servedPath[..(lastSlash + 1)] : servedPath;
 
         // 256 bits of entropy, base64url so the value is safe to drop verbatim
         // into an ffmpeg "-headers" line (no CR/LF, no reserved chars).
         string key = Convert
-            .ToBase64String(RandomNumberGenerator.GetBytes(32))
-            .Replace('+', '-')
-            .Replace('/', '_')
-            .TrimEnd('=');
+            .ToBase64String(inArray: RandomNumberGenerator.GetBytes(count: 32))
+            .Replace(oldChar: '+', newChar: '-')
+            .Replace(oldChar: '/', newChar: '_')
+            .TrimEnd(trimChar: '=');
 
-        _byKey[key] = new(prefix, DateTime.UtcNow.Add(AbsoluteLifetime), SessionId: null);
+        _byKey[key: key] = new(PathPrefix: prefix, ExpiresAtUtc: DateTime.UtcNow.Add(value: AbsoluteLifetime), SessionId: null);
         return key;
     }
 
     public void BindSession(string key, string sessionId)
     {
-        if (_byKey.TryGetValue(key, out Entry? entry))
-            _byKey[key] = entry with { SessionId = sessionId };
+        if (_byKey.TryGetValue(key: key, value: out Entry? entry))
+            _byKey[key: key] = entry with { SessionId = sessionId };
     }
 
     public bool TryValidate(string key, string requestPath)
     {
-        if (string.IsNullOrEmpty(key) || !_byKey.TryGetValue(key, out Entry? entry))
+        if (string.IsNullOrEmpty(value: key) || !_byKey.TryGetValue(key: key, value: out Entry? entry))
             return false;
 
         if (DateTime.UtcNow > entry.ExpiresAtUtc)
         {
-            _byKey.TryRemove(key, out _);
+            _byKey.TryRemove(key: key, value: out _);
             return false;
         }
 
@@ -76,17 +76,17 @@ public class LiveIngestKeyStore : ILiveIngestKeyStore
         // serving middleware decodes the path, so match both the raw request path
         // and its decoded form — the prefix ends in '/', so this is a true folder
         // boundary, not a "/dir" matching "/dir-other" substring slip.
-        string decoded = Uri.UnescapeDataString(requestPath);
-        return requestPath.StartsWith(entry.PathPrefix, StringComparison.Ordinal)
-            || decoded.StartsWith(entry.PathPrefix, StringComparison.Ordinal);
+        string decoded = Uri.UnescapeDataString(stringToUnescape: requestPath);
+        return requestPath.StartsWith(value: entry.PathPrefix, comparisonType: StringComparison.Ordinal)
+            || decoded.StartsWith(value: entry.PathPrefix, comparisonType: StringComparison.Ordinal);
     }
 
     public void RevokeSession(string sessionId)
     {
         foreach (KeyValuePair<string, Entry> kvp in _byKey)
         {
-            if (string.Equals(kvp.Value.SessionId, sessionId, StringComparison.Ordinal))
-                _byKey.TryRemove(kvp.Key, out _);
+            if (string.Equals(a: kvp.Value.SessionId, b: sessionId, comparisonType: StringComparison.Ordinal))
+                _byKey.TryRemove(key: kvp.Key, value: out _);
         }
     }
 
@@ -96,7 +96,7 @@ public class LiveIngestKeyStore : ILiveIngestKeyStore
         foreach (KeyValuePair<string, Entry> kvp in _byKey)
         {
             if (now > kvp.Value.ExpiresAtUtc)
-                _byKey.TryRemove(kvp.Key, out _);
+                _byKey.TryRemove(key: kvp.Key, value: out _);
         }
     }
 }

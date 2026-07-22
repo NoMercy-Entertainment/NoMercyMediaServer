@@ -33,59 +33,59 @@ public static partial class ReclaimClassifier
     )
     {
         List<FolderEntry> ladders = entries
-            .Where(entry => entry.IsDirectory && LadderDirectoryRegex().IsMatch(entry.Name))
+            .Where(predicate: entry => entry.IsDirectory && LadderDirectoryRegex().IsMatch(input: entry.Name))
             .ToList();
 
         List<FolderEntry> masters = entries
-            .Where(entry =>
+            .Where(predicate: entry =>
                 !entry.IsDirectory
-                && entry.Name.EndsWith(".NoMercy.m3u8", StringComparison.OrdinalIgnoreCase)
+                && entry.Name.EndsWith(value: ".NoMercy.m3u8", comparisonType: StringComparison.OrdinalIgnoreCase)
             )
             .ToList();
 
         if (ladders.Count == 0 && masters.Count == 0)
-            return new(ReclaimKind.None, [], 0);
+            return new(Kind: ReclaimKind.None, TargetNames: [], ReclaimableBytes: 0);
 
         if (isProtected)
-            return new(ReclaimKind.None, [], 0);
+            return new(Kind: ReclaimKind.None, TargetNames: [], ReclaimableBytes: 0);
 
-        bool hasOriginal = entries.Any(entry =>
+        bool hasOriginal = entries.Any(predicate: entry =>
             !entry.IsDirectory
             && OriginalExtensions.Contains(
-                Path.GetExtension(entry.Name),
-                StringComparer.OrdinalIgnoreCase
+                value: Path.GetExtension(path: entry.Name),
+                comparer: StringComparer.OrdinalIgnoreCase
             )
-            && !entry.Name.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase)
+            && !entry.Name.EndsWith(value: ".m3u8", comparisonType: StringComparison.OrdinalIgnoreCase)
         );
 
         if (masters.Count > 0 && hasOriginal)
         {
             List<FolderEntry> targets = [.. ladders, .. masters];
             return new(
-                ReclaimKind.ReclaimableHls,
-                targets.Select(entry => entry.Name).ToList(),
-                targets.Sum(entry => entry.Size)
+                Kind: ReclaimKind.ReclaimableHls,
+                TargetNames: targets.Select(selector: entry => entry.Name).ToList(),
+                ReclaimableBytes: targets.Sum(selector: entry => entry.Size)
             );
         }
 
         if (masters.Count == 0 && ladders.Count > 0)
         {
             DateTimeOffset staleThreshold = now - partialStaleAfter;
-            bool allStale = ladders.All(entry => entry.LastModified < staleThreshold);
+            bool allStale = ladders.All(predicate: entry => entry.LastModified < staleThreshold);
 
             if (!allStale)
-                return new(ReclaimKind.None, [], 0);
+                return new(Kind: ReclaimKind.None, TargetNames: [], ReclaimableBytes: 0);
 
             return new(
-                ReclaimKind.OrphanPartial,
-                ladders.Select(entry => entry.Name).ToList(),
-                ladders.Sum(entry => entry.Size)
+                Kind: ReclaimKind.OrphanPartial,
+                TargetNames: ladders.Select(selector: entry => entry.Name).ToList(),
+                ReclaimableBytes: ladders.Sum(selector: entry => entry.Size)
             );
         }
 
-        return new(ReclaimKind.None, [], 0);
+        return new(Kind: ReclaimKind.None, TargetNames: [], ReclaimableBytes: 0);
     }
 
-    [GeneratedRegex(@"^(video_\d+x\d+(_.+)?|audio_[A-Za-z0-9_]+)$")]
+    [GeneratedRegex(pattern: @"^(video_\d+x\d+(_.+)?|audio_[A-Za-z0-9_]+)$")]
     private static partial Regex LadderDirectoryRegex();
 }

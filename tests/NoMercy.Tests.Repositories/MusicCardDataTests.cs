@@ -16,7 +16,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Repositories;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class MusicCardDataTests
 {
     [Fact]
@@ -29,9 +29,9 @@ public class MusicCardDataTests
             Cover = "",
         };
 
-        MusicCardData card = new(artist);
+        MusicCardData card = new(artist: artist);
 
-        Assert.Null(card.Cover);
+        Assert.Null(@object: card.Cover);
     }
 
     [Fact]
@@ -44,9 +44,9 @@ public class MusicCardDataTests
             Cover = null,
         };
 
-        MusicCardData card = new(artist);
+        MusicCardData card = new(artist: artist);
 
-        Assert.Null(card.Cover);
+        Assert.Null(@object: card.Cover);
     }
 
     [Fact]
@@ -59,8 +59,8 @@ public class MusicCardDataTests
             Cover = "/abc.jpg",
         };
 
-        MusicCardData card = new(artist);
+        MusicCardData card = new(artist: artist);
 
-        Assert.Equal("/images/music/abc.jpg", card.Cover);
+        Assert.Equal(expected: "/images/music/abc.jpg", actual: card.Cover);
     }
 }

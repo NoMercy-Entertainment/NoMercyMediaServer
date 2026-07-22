@@ -28,9 +28,9 @@ public class V3SubscriberActivatorTests
         services.AddLogging();
         services.AddSingleton<IHostApplicationLifetime, TestHostLifetime>();
         services.AddSingleton<IEventBus, InMemoryEventBus>();
-        services.AddDbContextFactory<MediaContext>(o => o.UseInMemoryDatabase("test-media"));
-        services.AddDbContextFactory<AppDbContext>(o => o.UseInMemoryDatabase("test-app"));
-        services.AddNoMercyEncoder(opts =>
+        services.AddDbContextFactory<MediaContext>(optionsAction: o => o.UseInMemoryDatabase(databaseName: "test-media"));
+        services.AddDbContextFactory<AppDbContext>(optionsAction: o => o.UseInMemoryDatabase(databaseName: "test-app"));
+        services.AddNoMercyEncoder(configure: opts =>
         {
             opts.FfmpegPathOverride = "ffmpeg";
             opts.FfprobePathOverride = "ffprobe";
@@ -54,11 +54,11 @@ public class V3SubscriberActivatorTests
 
         IntroDetectSubscriber intro1 = provider.GetRequiredService<IntroDetectSubscriber>();
         IntroDetectSubscriber intro2 = provider.GetRequiredService<IntroDetectSubscriber>();
-        intro1.Should().BeSameAs(intro2);
+        intro1.Should().BeSameAs(expected: intro2);
 
         CropDetectSubscriber crop1 = provider.GetRequiredService<CropDetectSubscriber>();
         CropDetectSubscriber crop2 = provider.GetRequiredService<CropDetectSubscriber>();
-        crop1.Should().BeSameAs(crop2);
+        crop1.Should().BeSameAs(expected: crop2);
     }
 
     [Fact]
@@ -66,7 +66,7 @@ public class V3SubscriberActivatorTests
     {
         ServiceProvider provider = BuildProvider();
         IEnumerable<IHostedService> hosted = provider.GetServices<IHostedService>();
-        hosted.Should().Contain(s => s.GetType().Name == "V3SubscriberActivator");
+        hosted.Should().Contain(predicate: s => s.GetType().Name == "V3SubscriberActivator");
     }
 
     [Fact]
@@ -75,9 +75,9 @@ public class V3SubscriberActivatorTests
         ServiceProvider provider = BuildProvider();
         IHostedService activator = provider
             .GetServices<IHostedService>()
-            .First(s => s.GetType().Name == "V3SubscriberActivator");
+            .First(predicate: s => s.GetType().Name == "V3SubscriberActivator");
 
-        await activator.StartAsync(CancellationToken.None);
+        await activator.StartAsync(cancellationToken: CancellationToken.None);
 
         // Subscribers should be alive — resolving them after start returns the
         // same instance the activator pulled.
@@ -98,20 +98,18 @@ public class V3SubscriberActivatorTests
         // provider that can't resolve any of the V3 subscribers.
         Type activatorType =
             typeof(V3SubscriberActivator)
-            ?? throw new InvalidOperationException("activator type missing");
+            ?? throw new InvalidOperationException(message: "activator type missing");
         IHostedService activator = (IHostedService)
             Activator.CreateInstance(
-                activatorType,
-                emptyProvider,
-                NullLogger<V3SubscriberActivator>.Instance
+                type: activatorType, args: [emptyProvider, NullLogger<V3SubscriberActivator>.Instance]
             )!;
 
-        Func<Task> act = () => activator.StartAsync(CancellationToken.None);
+        Func<Task> act = () => activator.StartAsync(cancellationToken: CancellationToken.None);
 
-        await act.Should().NotThrowAsync("subscriber resolution failures must not crash the host");
+        await act.Should().NotThrowAsync(because: "subscriber resolution failures must not crash the host");
 
         // Stop should also be quiet — Dispose handles the null subscribers.
-        await activator.StopAsync(CancellationToken.None);
+        await activator.StopAsync(cancellationToken: CancellationToken.None);
     }
 
     [Fact]
@@ -124,10 +122,10 @@ public class V3SubscriberActivatorTests
         ServiceProvider provider = BuildProvider();
         IHostedService activator = provider
             .GetServices<IHostedService>()
-            .First(s => s.GetType().Name == "V3SubscriberActivator");
+            .First(predicate: s => s.GetType().Name == "V3SubscriberActivator");
 
-        await activator.StartAsync(CancellationToken.None);
-        Func<Task> act = () => activator.StopAsync(CancellationToken.None);
+        await activator.StartAsync(cancellationToken: CancellationToken.None);
+        Func<Task> act = () => activator.StopAsync(cancellationToken: CancellationToken.None);
 
         await act.Should().NotThrowAsync();
     }

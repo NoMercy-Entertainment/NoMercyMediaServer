@@ -33,11 +33,11 @@ public partial class ServerControlView : UserControl
 
         ViewModel.ShowActiveSessionDialog = async activity =>
         {
-            Window? owner = TopLevel.GetTopLevel(this) as Window;
+            Window? owner = TopLevel.GetTopLevel(visual: this) as Window;
             if (owner is null)
                 return false;
 
-            return await ActiveSessionDialog.ShowAsync(owner, activity);
+            return await ActiveSessionDialog.ShowAsync(owner: owner, activity: activity);
         };
     }
 
@@ -54,40 +54,40 @@ public partial class ServerControlView : UserControl
         }
         catch (Exception ex)
         {
-            LauncherLog.Error($"ServerControlView.{label} failed: {ex.Message}", ex);
+            LauncherLog.Error(message: $"ServerControlView.{label} failed: {ex.Message}", ex: ex);
         }
     }
 
     private void OnOpenAppClick(object? sender, RoutedEventArgs e) =>
-        SafeRun(nameof(OnOpenAppClick), () => ViewModel?.LaunchAppAsync() ?? Task.CompletedTask);
+        SafeRun(label: nameof(OnOpenAppClick), action: () => ViewModel?.LaunchAppAsync() ?? Task.CompletedTask);
 
     private void OnStartClick(object? sender, RoutedEventArgs e) =>
-        SafeRun(nameof(OnStartClick), () => ViewModel?.StartServerAsync() ?? Task.CompletedTask);
+        SafeRun(label: nameof(OnStartClick), action: () => ViewModel?.StartServerAsync() ?? Task.CompletedTask);
 
     private void OnStopClick(object? sender, RoutedEventArgs e) =>
-        SafeRun(nameof(OnStopClick), () => ViewModel?.StopServerAsync() ?? Task.CompletedTask);
+        SafeRun(label: nameof(OnStopClick), action: () => ViewModel?.StopServerAsync() ?? Task.CompletedTask);
 
     private void OnRestartClick(object? sender, RoutedEventArgs e) =>
         SafeRun(
-            nameof(OnRestartClick),
-            () => ViewModel?.RestartServerAsync() ?? Task.CompletedTask
+            label: nameof(OnRestartClick),
+            action: () => ViewModel?.RestartServerAsync() ?? Task.CompletedTask
         );
 
     private void OnRefreshClick(object? sender, RoutedEventArgs e) =>
         SafeRun(
-            nameof(OnRefreshClick),
-            () => ViewModel?.RefreshStatusAsync() ?? Task.CompletedTask
+            label: nameof(OnRefreshClick),
+            action: () => ViewModel?.RefreshStatusAsync() ?? Task.CompletedTask
         );
 
     private void OnApplyUpdate(object? sender, RoutedEventArgs e) =>
-        SafeRun(nameof(OnApplyUpdate), () => ViewModel?.ApplyUpdateAsync() ?? Task.CompletedTask);
+        SafeRun(label: nameof(OnApplyUpdate), action: () => ViewModel?.ApplyUpdateAsync() ?? Task.CompletedTask);
 
     private void OnAutoStartToggle(object? sender, RoutedEventArgs e) =>
         SafeRun(
-            nameof(OnAutoStartToggle),
-            () =>
+            label: nameof(OnAutoStartToggle),
+            action: () =>
                 ViewModel is not null && sender is CheckBox checkBox
-                    ? ViewModel.ToggleAutoStartAsync(checkBox.IsChecked == true)
+                    ? ViewModel.ToggleAutoStartAsync(enabled: checkBox.IsChecked == true)
                     : Task.CompletedTask
         );
 }

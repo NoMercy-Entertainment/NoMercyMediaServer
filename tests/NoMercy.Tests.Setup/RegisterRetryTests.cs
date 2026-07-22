@@ -32,13 +32,13 @@ public class RegisterRetryTests
             attemptsMade++;
             try
             {
-                await action(attempt);
+                await action(arg: attempt);
                 return attemptsMade;
             }
             catch (Exception) when (attempt < maxRetries)
             {
-                int delay = getDelay(attempt);
-                await Task.Delay(TimeSpan.FromMilliseconds(delay));
+                int delay = getDelay(arg: attempt);
+                await Task.Delay(delay: TimeSpan.FromMilliseconds(milliseconds: delay));
             }
         }
 
@@ -57,11 +57,11 @@ public class RegisterRetryTests
                 callCount++;
                 return Task.CompletedTask;
             },
-            getDelay: attempt => BackoffSeconds[Math.Min(attempt - 1, BackoffSeconds.Length - 1)]
+            getDelay: attempt => BackoffSeconds[Math.Min(val1: attempt - 1, val2: BackoffSeconds.Length - 1)]
         );
 
-        Assert.Equal(1, callCount);
-        Assert.Equal(1, attempts);
+        Assert.Equal(expected: 1, actual: callCount);
+        Assert.Equal(expected: 1, actual: attempts);
     }
 
     [Fact]
@@ -76,14 +76,14 @@ public class RegisterRetryTests
             {
                 callCount++;
                 if (attempt < succeedOnAttempt)
-                    throw new HttpRequestException("Network error");
+                    throw new HttpRequestException(message: "Network error");
                 return Task.CompletedTask;
             },
             getDelay: attempt => 1
         );
 
-        Assert.Equal(succeedOnAttempt, callCount);
-        Assert.Equal(succeedOnAttempt, attempts);
+        Assert.Equal(expected: succeedOnAttempt, actual: callCount);
+        Assert.Equal(expected: succeedOnAttempt, actual: attempts);
     }
 
     [Fact]
@@ -91,23 +91,23 @@ public class RegisterRetryTests
     {
         int callCount = 0;
 
-        await Assert.ThrowsAsync<HttpRequestException>(async () =>
+        await Assert.ThrowsAsync<HttpRequestException>(testCode: async () =>
         {
             for (int attempt = 1; attempt <= 5; attempt++)
             {
                 try
                 {
                     callCount++;
-                    throw new HttpRequestException("Network error");
+                    throw new HttpRequestException(message: "Network error");
                 }
                 catch (Exception) when (attempt < 5)
                 {
-                    await Task.Delay(1);
+                    await Task.Delay(millisecondsDelay: 1);
                 }
             }
         });
 
-        Assert.Equal(5, callCount);
+        Assert.Equal(expected: 5, actual: callCount);
     }
 
     [Fact]
@@ -116,8 +116,8 @@ public class RegisterRetryTests
         for (int i = 1; i < BackoffSeconds.Length; i++)
         {
             Assert.True(
-                BackoffSeconds[i] > BackoffSeconds[i - 1],
-                $"BackoffSeconds[{i}] ({BackoffSeconds[i]}) should be greater than BackoffSeconds[{i - 1}] ({BackoffSeconds[i - 1]})"
+                condition: BackoffSeconds[i] > BackoffSeconds[i - 1],
+                userMessage: $"BackoffSeconds[{i}] ({BackoffSeconds[i]}) should be greater than BackoffSeconds[{i - 1}] ({BackoffSeconds[i - 1]})"
             );
         }
     }
@@ -128,8 +128,8 @@ public class RegisterRetryTests
         int maxIndex = BackoffSeconds.Length - 1;
         for (int attempt = BackoffSeconds.Length; attempt < BackoffSeconds.Length + 5; attempt++)
         {
-            int delay = BackoffSeconds[Math.Min(attempt - 1, maxIndex)];
-            Assert.Equal(BackoffSeconds[maxIndex], delay);
+            int delay = BackoffSeconds[Math.Min(val1: attempt - 1, val2: maxIndex)];
+            Assert.Equal(expected: BackoffSeconds[maxIndex], actual: delay);
         }
     }
 
@@ -137,8 +137,8 @@ public class RegisterRetryTests
     public void BackoffSeconds_FirstValueIsSmall()
     {
         Assert.True(
-            BackoffSeconds[0] <= 5,
-            "First backoff delay should be small (<=5s) for fast initial retry"
+            condition: BackoffSeconds[0] <= 5,
+            userMessage: "First backoff delay should be small (<=5s) for fast initial retry"
         );
     }
 
@@ -146,8 +146,8 @@ public class RegisterRetryTests
     public void BackoffSeconds_LastValueIsCapped()
     {
         Assert.True(
-            BackoffSeconds[^1] <= 120,
-            "Max backoff delay should be capped at a reasonable value (<=120s)"
+            condition: BackoffSeconds[^1] <= 120,
+            userMessage: "Max backoff delay should be capped at a reasonable value (<=120s)"
         );
     }
 
@@ -156,26 +156,26 @@ public class RegisterRetryTests
     {
         List<int> delays = [];
 
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        await Assert.ThrowsAsync<InvalidOperationException>(testCode: async () =>
         {
             for (int attempt = 1; attempt <= 3; attempt++)
             {
                 try
                 {
-                    throw new InvalidOperationException("fail");
+                    throw new InvalidOperationException(message: "fail");
                 }
                 catch (Exception) when (attempt < 3)
                 {
-                    int delay = BackoffSeconds[Math.Min(attempt - 1, BackoffSeconds.Length - 1)];
-                    delays.Add(delay);
-                    await Task.Delay(1);
+                    int delay = BackoffSeconds[Math.Min(val1: attempt - 1, val2: BackoffSeconds.Length - 1)];
+                    delays.Add(item: delay);
+                    await Task.Delay(millisecondsDelay: 1);
                 }
             }
         });
 
-        Assert.Equal(2, delays.Count);
-        Assert.Equal(2, delays[0]);
-        Assert.Equal(5, delays[1]);
+        Assert.Equal(expected: 2, actual: delays.Count);
+        Assert.Equal(expected: 2, actual: delays[index: 0]);
+        Assert.Equal(expected: 5, actual: delays[index: 1]);
     }
 
     [Fact]
@@ -184,19 +184,19 @@ public class RegisterRetryTests
         int callCount = 0;
 
         // When attempt == maxRetries, the 'when' guard fails and exception propagates
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        await Assert.ThrowsAsync<InvalidOperationException>(testCode: async () =>
         {
             await ExecuteWithRetry(
                 maxRetries: 1,
                 action: _ =>
                 {
                     callCount++;
-                    throw new InvalidOperationException("Non-transient error");
+                    throw new InvalidOperationException(message: "Non-transient error");
                 },
                 getDelay: _ => 1
             );
         });
 
-        Assert.Equal(1, callCount);
+        Assert.Equal(expected: 1, actual: callCount);
     }
 }

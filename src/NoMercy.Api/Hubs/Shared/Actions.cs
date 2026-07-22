@@ -15,39 +15,39 @@ namespace NoMercy.Api.Hubs.Shared;
 
 public class Actions
 {
-    [JsonProperty("disallows")]
+    [JsonProperty(propertyName: "disallows")]
     public Disallows Disallows { get; set; } = null!;
 }
 
 public class Disallows
 {
-    [JsonProperty("previous")]
+    [JsonProperty(propertyName: "previous")]
     public bool Previous { get; set; }
 
-    [JsonProperty("next")]
+    [JsonProperty(propertyName: "next")]
     public bool Next { get; set; }
 
-    [JsonProperty("resuming")]
+    [JsonProperty(propertyName: "resuming")]
     public bool Resuming { get; set; }
 
-    [JsonProperty("pausing")]
+    [JsonProperty(propertyName: "pausing")]
     public bool Pausing { get; set; }
 
-    [JsonProperty("toggling_repeat_context")]
+    [JsonProperty(propertyName: "toggling_repeat_context")]
     public bool TogglingRepeatContext { get; set; }
 
-    [JsonProperty("toggling_repeat_track")]
+    [JsonProperty(propertyName: "toggling_repeat_track")]
     public bool TogglingRepeatTrack { get; set; }
 
-    [JsonProperty("toggling_shuffle")]
+    [JsonProperty(propertyName: "toggling_shuffle")]
     public bool TogglingShuffle { get; set; }
 
-    [JsonProperty("seeking")]
+    [JsonProperty(propertyName: "seeking")]
     public bool Seeking { get; set; }
 
-    [JsonProperty("stopping")]
+    [JsonProperty(propertyName: "stopping")]
     public bool Stopping { get; set; }
 
-    [JsonProperty("muting")]
+    [JsonProperty(propertyName: "muting")]
     public bool Muting { get; set; }
 }

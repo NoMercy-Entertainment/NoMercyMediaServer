@@ -18,30 +18,30 @@ public class CodecRegistryTests
     private readonly CodecRegistry _registry = new();
 
     [Theory]
-    [InlineData(VideoCodecType.H264)]
-    [InlineData(VideoCodecType.H265)]
-    [InlineData(VideoCodecType.Av1)]
-    [InlineData(VideoCodecType.Vp9)]
+    [InlineData(data: VideoCodecType.H264)]
+    [InlineData(data: VideoCodecType.H265)]
+    [InlineData(data: VideoCodecType.Av1)]
+    [InlineData(data: VideoCodecType.Vp9)]
     public void GetDefinition_ReturnsForAllVideoCodecs(VideoCodecType codecType)
     {
-        ICodecDefinition definition = _registry.GetVideoDefinition(codecType);
+        ICodecDefinition definition = _registry.GetVideoDefinition(codecType: codecType);
         definition.Should().NotBeNull();
-        definition.CodecType.Should().Be(codecType);
+        definition.CodecType.Should().Be(expected: codecType);
         definition.Encoders.Should().NotBeEmpty();
     }
 
     [Fact]
     public void GetVideoEncoder_ByFfmpegName_ReturnsCorrect()
     {
-        EncoderInfo? nvenc = _registry.GetVideoEncoderByName("h264_nvenc");
+        EncoderInfo? nvenc = _registry.GetVideoEncoderByName(ffmpegName: "h264_nvenc");
         nvenc.Should().NotBeNull();
-        nvenc!.FfmpegName.Should().Be("h264_nvenc");
+        nvenc!.FfmpegName.Should().Be(expected: "h264_nvenc");
     }
 
     [Fact]
     public void GetVideoEncoder_UnknownName_ReturnsNull()
     {
-        EncoderInfo? unknown = _registry.GetVideoEncoderByName("vp9_nvenc");
+        EncoderInfo? unknown = _registry.GetVideoEncoderByName(ffmpegName: "vp9_nvenc");
         unknown.Should().BeNull();
     }
 
@@ -51,8 +51,8 @@ public class CodecRegistryTests
         List<string> allNames = [];
         foreach (VideoCodecType codecType in Enum.GetValues<VideoCodecType>())
         {
-            ICodecDefinition def = _registry.GetVideoDefinition(codecType);
-            allNames.AddRange(def.Encoders.Select(e => e.FfmpegName));
+            ICodecDefinition def = _registry.GetVideoDefinition(codecType: codecType);
+            allNames.AddRange(collection: def.Encoders.Select(selector: e => e.FfmpegName));
         }
         allNames.Should().OnlyHaveUniqueItems();
     }
@@ -66,8 +66,8 @@ public class CodecRegistryTests
         int total = 0;
         foreach (VideoCodecType codecType in Enum.GetValues<VideoCodecType>())
         {
-            total += _registry.GetVideoDefinition(codecType).Encoders.Length;
+            total += _registry.GetVideoDefinition(codecType: codecType).Encoders.Length;
         }
-        total.Should().Be(23);
+        total.Should().Be(expected: 23);
     }
 }

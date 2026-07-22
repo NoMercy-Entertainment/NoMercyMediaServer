@@ -39,18 +39,18 @@ public class ExtractionCommandBuilderTests : IDisposable
 
     public ExtractionCommandBuilderTests()
     {
-        _fontExtractor = new(TestStorageFactory.CreateLocal());
+        _fontExtractor = new(storage: TestStorageFactory.CreateLocal());
         _outputDirectory = Path.Combine(
-            Path.GetTempPath(),
-            $"ExtractionCommandBuilderTests_{Guid.NewGuid():N}"
+            path1: Path.GetTempPath(),
+            path2: $"ExtractionCommandBuilderTests_{Guid.NewGuid():N}"
         );
-        Directory.CreateDirectory(_outputDirectory);
+        Directory.CreateDirectory(path: _outputDirectory);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(_outputDirectory))
-            Directory.Delete(_outputDirectory, true);
+        if (Directory.Exists(path: _outputDirectory))
+            Directory.Delete(path: _outputDirectory, recursive: true);
     }
 
     // ------------------------------------------------------------------
@@ -61,15 +61,9 @@ public class ExtractionCommandBuilderTests : IDisposable
     [Fact]
     public void BuildCommand_ThreeBitmapSubsTwoAttachments_EmitsExactlyOneInputFlag()
     {
-        OutputPlan plan = MakePlan(
-            MakeBitmapSubtitlePlan(0),
-            MakeBitmapSubtitlePlan(1),
-            MakeBitmapSubtitlePlan(2)
+        OutputPlan plan = MakePlan(subtitleOutputs: [MakeBitmapSubtitlePlan(sourceIndex: 0), MakeBitmapSubtitlePlan(sourceIndex: 1), MakeBitmapSubtitlePlan(sourceIndex: 2)]
         );
-        MediaInfo mediaInfo = MakeMediaInfo(
-            MakeBitmapStream(0),
-            MakeBitmapStream(1),
-            MakeBitmapStream(2)
+        MediaInfo mediaInfo = MakeMediaInfo(subtitleStreams: [MakeBitmapStream(index: 0), MakeBitmapStream(index: 1), MakeBitmapStream(index: 2)]
         );
         IReadOnlyList<AttachmentInfo> attachments =
         [
@@ -77,10 +71,10 @@ public class ExtractionCommandBuilderTests : IDisposable
             new(Index: 4, Codec: "ttf", Filename: "Comic.ttf", MimeType: null),
         ];
 
-        FfmpegCommand? command = BuildCommand(plan, mediaInfo, attachments);
+        FfmpegCommand? command = BuildCommand(plan: plan, mediaInfo: mediaInfo, attachments: attachments);
 
         command.Should().NotBeNull();
-        command!.Arguments.Count(a => a == "-i").Should().Be(1);
+        command!.Arguments.Count(predicate: a => a == "-i").Should().Be(expected: 1);
     }
 
     // ------------------------------------------------------------------
@@ -91,23 +85,23 @@ public class ExtractionCommandBuilderTests : IDisposable
     [Fact]
     public void BuildCommand_BitmapSubs_EmitOneMksOutputEach()
     {
-        OutputPlan plan = MakePlan(MakeBitmapSubtitlePlan(0), MakeBitmapSubtitlePlan(1));
-        MediaInfo mediaInfo = MakeMediaInfo(MakeBitmapStream(0), MakeBitmapStream(1));
+        OutputPlan plan = MakePlan(subtitleOutputs: [MakeBitmapSubtitlePlan(sourceIndex: 0), MakeBitmapSubtitlePlan(sourceIndex: 1)]);
+        MediaInfo mediaInfo = MakeMediaInfo(subtitleStreams: [MakeBitmapStream(index: 0), MakeBitmapStream(index: 1)]);
 
-        FfmpegCommand? command = BuildCommand(plan, mediaInfo, []);
+        FfmpegCommand? command = BuildCommand(plan: plan, mediaInfo: mediaInfo, attachments: []);
 
         command.Should().NotBeNull();
         List<string> args = command!.Arguments.ToList();
 
-        CountOccurrences(args, "-map").Should().Be(2);
-        args.Should().Contain("0:s:0");
-        args.Should().Contain("0:s:1");
-        CountOccurrences(args, "-c:s").Should().Be(2);
-        CountOccurrences(args, "copy").Should().Be(2);
+        CountOccurrences(args: args, value: "-map").Should().Be(expected: 2);
+        args.Should().Contain(expected: "0:s:0");
+        args.Should().Contain(expected: "0:s:1");
+        CountOccurrences(args: args, value: "-c:s").Should().Be(expected: 2);
+        CountOccurrences(args: args, value: "copy").Should().Be(expected: 2);
         // -f appears once per bitmap output ("matroska" each time).
-        CountOccurrences(args, "matroska").Should().Be(2);
-        args.Should().Contain(a => a.EndsWith(".mks", StringComparison.Ordinal));
-        args.Count(a => a.EndsWith(".mks", StringComparison.Ordinal)).Should().Be(2);
+        CountOccurrences(args: args, value: "matroska").Should().Be(expected: 2);
+        args.Should().Contain(predicate: a => a.EndsWith(".mks", StringComparison.Ordinal));
+        args.Count(predicate: a => a.EndsWith(value: ".mks", comparisonType: StringComparison.Ordinal)).Should().Be(expected: 2);
     }
 
     // ------------------------------------------------------------------
@@ -118,46 +112,46 @@ public class ExtractionCommandBuilderTests : IDisposable
     [Fact]
     public void BuildCommand_Attachments_EmitOneDumpFlagEachWithSanitizedNames()
     {
-        OutputPlan plan = MakePlan(MakeBitmapSubtitlePlan(0));
-        MediaInfo mediaInfo = MakeMediaInfo(MakeBitmapStream(0));
+        OutputPlan plan = MakePlan(subtitleOutputs: MakeBitmapSubtitlePlan(sourceIndex: 0));
+        MediaInfo mediaInfo = MakeMediaInfo(subtitleStreams: MakeBitmapStream(index: 0));
         IReadOnlyList<AttachmentInfo> attachments =
         [
             new(Index: 5, Codec: "ttf", Filename: "CM Big Fat Paintbrush_0.ttf", MimeType: null),
             new(Index: 6, Codec: "ttf", Filename: "My@Font.ttf", MimeType: null),
         ];
 
-        FfmpegCommand? command = BuildCommand(plan, mediaInfo, attachments);
+        FfmpegCommand? command = BuildCommand(plan: plan, mediaInfo: mediaInfo, attachments: attachments);
 
         command.Should().NotBeNull();
         List<string> args = command!.Arguments.ToList();
 
-        args.Should().Contain("-dump_attachment:5");
-        args.Should().Contain("-dump_attachment:6");
-        args.Should().Contain("fonts/CM_Big_Fat_Paintbrush_0.ttf");
-        args.Should().Contain(a => a.StartsWith("fonts/My", StringComparison.Ordinal));
-        args.Should().NotContain(a => a.Contains(' '));
+        args.Should().Contain(expected: "-dump_attachment:5");
+        args.Should().Contain(expected: "-dump_attachment:6");
+        args.Should().Contain(expected: "fonts/CM_Big_Fat_Paintbrush_0.ttf");
+        args.Should().Contain(predicate: a => a.StartsWith("fonts/My", StringComparison.Ordinal));
+        args.Should().NotContain(predicate: a => a.Contains(' '));
     }
 
     [Fact]
     public void BuildCommand_AttachmentNameCollision_StaysDisambiguated()
     {
-        OutputPlan plan = MakePlan(MakeBitmapSubtitlePlan(0));
-        MediaInfo mediaInfo = MakeMediaInfo(MakeBitmapStream(0));
+        OutputPlan plan = MakePlan(subtitleOutputs: MakeBitmapSubtitlePlan(sourceIndex: 0));
+        MediaInfo mediaInfo = MakeMediaInfo(subtitleStreams: MakeBitmapStream(index: 0));
         IReadOnlyList<AttachmentInfo> attachments =
         [
             new(Index: 5, Codec: "ttf", Filename: "My Font.ttf", MimeType: null),
             new(Index: 6, Codec: "ttf", Filename: "My@Font.ttf", MimeType: null),
         ];
 
-        FfmpegCommand? command = BuildCommand(plan, mediaInfo, attachments);
+        FfmpegCommand? command = BuildCommand(plan: plan, mediaInfo: mediaInfo, attachments: attachments);
 
         command.Should().NotBeNull();
         List<string> fontArgs = command!
-            .Arguments.Where(a => a.StartsWith("fonts/", StringComparison.Ordinal))
+            .Arguments.Where(predicate: a => a.StartsWith(value: "fonts/", comparisonType: StringComparison.Ordinal))
             .ToList();
 
         fontArgs.Should().OnlyHaveUniqueItems();
-        fontArgs.Should().HaveCount(2);
+        fontArgs.Should().HaveCount(expected: 2);
     }
 
     // ------------------------------------------------------------------
@@ -174,16 +168,16 @@ public class ExtractionCommandBuilderTests : IDisposable
             new(Index: 3, Codec: "ttf", Filename: "Arial.ttf", MimeType: null),
         ];
 
-        FfmpegCommand? command = BuildCommand(plan, mediaInfo, attachments);
+        FfmpegCommand? command = BuildCommand(plan: plan, mediaInfo: mediaInfo, attachments: attachments);
 
         command.Should().NotBeNull();
         List<string> args = command!.Arguments.ToList();
 
-        args.Should().Contain("-dump_attachment:3");
-        args.Should().Contain("-f");
-        args.Should().Contain("null");
-        args.Should().Contain("-");
-        args.Should().NotContain(a => a == "-map");
+        args.Should().Contain(expected: "-dump_attachment:3");
+        args.Should().Contain(expected: "-f");
+        args.Should().Contain(expected: "null");
+        args.Should().Contain(expected: "-");
+        args.Should().NotContain(predicate: a => a == "-map");
     }
 
     // ------------------------------------------------------------------
@@ -193,13 +187,13 @@ public class ExtractionCommandBuilderTests : IDisposable
     [Fact]
     public void BuildCommand_BitmapSubsOnly_NoDumpAttachmentFlags()
     {
-        OutputPlan plan = MakePlan(MakeBitmapSubtitlePlan(0));
-        MediaInfo mediaInfo = MakeMediaInfo(MakeBitmapStream(0));
+        OutputPlan plan = MakePlan(subtitleOutputs: MakeBitmapSubtitlePlan(sourceIndex: 0));
+        MediaInfo mediaInfo = MakeMediaInfo(subtitleStreams: MakeBitmapStream(index: 0));
 
-        FfmpegCommand? command = BuildCommand(plan, mediaInfo, []);
+        FfmpegCommand? command = BuildCommand(plan: plan, mediaInfo: mediaInfo, attachments: []);
 
         command.Should().NotBeNull();
-        command!.Arguments.Should().NotContain(a => a.StartsWith("-dump_attachment"));
+        command!.Arguments.Should().NotContain(predicate: a => a.StartsWith("-dump_attachment"));
     }
 
     // ------------------------------------------------------------------
@@ -212,7 +206,7 @@ public class ExtractionCommandBuilderTests : IDisposable
         OutputPlan plan = MakePlan();
         MediaInfo mediaInfo = MakeMediaInfo();
 
-        FfmpegCommand? command = BuildCommand(plan, mediaInfo, []);
+        FfmpegCommand? command = BuildCommand(plan: plan, mediaInfo: mediaInfo, attachments: []);
 
         command.Should().BeNull();
     }
@@ -224,14 +218,14 @@ public class ExtractionCommandBuilderTests : IDisposable
     [Fact]
     public void BuildCommand_BurnInPolicy_IsExcluded()
     {
-        SubtitleOutputPlan burnInPlan = MakeBitmapSubtitlePlan(0) with
+        SubtitleOutputPlan burnInPlan = MakeBitmapSubtitlePlan(sourceIndex: 0) with
         {
             Policy = SubtitlePolicy.BurnIn,
         };
-        OutputPlan plan = MakePlan(burnInPlan);
-        MediaInfo mediaInfo = MakeMediaInfo(MakeBitmapStream(0));
+        OutputPlan plan = MakePlan(subtitleOutputs: burnInPlan);
+        MediaInfo mediaInfo = MakeMediaInfo(subtitleStreams: MakeBitmapStream(index: 0));
 
-        FfmpegCommand? command = BuildCommand(plan, mediaInfo, []);
+        FfmpegCommand? command = BuildCommand(plan: plan, mediaInfo: mediaInfo, attachments: []);
 
         command.Should().BeNull();
     }
@@ -243,11 +237,11 @@ public class ExtractionCommandBuilderTests : IDisposable
     [Fact]
     public void BuildCommand_DropAction_IsExcluded()
     {
-        SubtitleOutputPlan dropPlan = MakeBitmapSubtitlePlan(0) with { Action = StreamAction.Drop };
-        OutputPlan plan = MakePlan(dropPlan);
-        MediaInfo mediaInfo = MakeMediaInfo(MakeBitmapStream(0));
+        SubtitleOutputPlan dropPlan = MakeBitmapSubtitlePlan(sourceIndex: 0) with { Action = StreamAction.Drop };
+        OutputPlan plan = MakePlan(subtitleOutputs: dropPlan);
+        MediaInfo mediaInfo = MakeMediaInfo(subtitleStreams: MakeBitmapStream(index: 0));
 
-        FfmpegCommand? command = BuildCommand(plan, mediaInfo, []);
+        FfmpegCommand? command = BuildCommand(plan: plan, mediaInfo: mediaInfo, attachments: []);
 
         command.Should().BeNull();
     }
@@ -267,9 +261,9 @@ public class ExtractionCommandBuilderTests : IDisposable
             SourceIndex: 0,
             MapLabel: "0:s:0"
         );
-        OutputPlan plan = MakePlan(textPlan);
+        OutputPlan plan = MakePlan(subtitleOutputs: textPlan);
         MediaInfo mediaInfo = MakeMediaInfo(
-            new SubtitleStreamInfo(
+            subtitleStreams: new SubtitleStreamInfo(
                 Index: 0,
                 Codec: "subrip",
                 Language: "en",
@@ -279,7 +273,7 @@ public class ExtractionCommandBuilderTests : IDisposable
             )
         );
 
-        FfmpegCommand? command = BuildCommand(plan, mediaInfo, []);
+        FfmpegCommand? command = BuildCommand(plan: plan, mediaInfo: mediaInfo, attachments: []);
 
         command.Should().BeNull();
     }
@@ -292,10 +286,10 @@ public class ExtractionCommandBuilderTests : IDisposable
     [Fact]
     public void BuildCommand_SourceIndexOutOfRange_IsExcluded()
     {
-        OutputPlan plan = MakePlan(MakeBitmapSubtitlePlan(9));
-        MediaInfo mediaInfo = MakeMediaInfo(MakeBitmapStream(0));
+        OutputPlan plan = MakePlan(subtitleOutputs: MakeBitmapSubtitlePlan(sourceIndex: 9));
+        MediaInfo mediaInfo = MakeMediaInfo(subtitleStreams: MakeBitmapStream(index: 0));
 
-        FfmpegCommand? command = BuildCommand(plan, mediaInfo, []);
+        FfmpegCommand? command = BuildCommand(plan: plan, mediaInfo: mediaInfo, attachments: []);
 
         command.Should().BeNull();
     }
@@ -308,26 +302,26 @@ public class ExtractionCommandBuilderTests : IDisposable
     [Fact]
     public void BuildCommand_UsesFfmpegPathInputPathAndWorkingDirectory()
     {
-        OutputPlan plan = MakePlan(MakeBitmapSubtitlePlan(0));
-        MediaInfo mediaInfo = MakeMediaInfo(MakeBitmapStream(0));
+        OutputPlan plan = MakePlan(subtitleOutputs: MakeBitmapSubtitlePlan(sourceIndex: 0));
+        MediaInfo mediaInfo = MakeMediaInfo(subtitleStreams: MakeBitmapStream(index: 0));
 
         FfmpegCommand? command = ExtractionCommandBuilder.BuildCommand(
-            "/usr/bin/ffmpeg",
-            InputPath,
-            _outputDirectory,
-            plan,
-            mediaInfo,
-            MediaTitle,
-            _subtitleExtractor,
-            _fontExtractor,
-            TestStorageFactory.CreateLocal(),
-            []
+            ffmpegPath: "/usr/bin/ffmpeg",
+            inputPath: InputPath,
+            outputDirectory: _outputDirectory,
+            plan: plan,
+            mediaInfo: mediaInfo,
+            mediaTitle: MediaTitle,
+            subtitleExtractor: _subtitleExtractor,
+            fontExtractor: _fontExtractor,
+            storage: TestStorageFactory.CreateLocal(),
+            attachments: []
         );
 
         command.Should().NotBeNull();
-        command!.Executable.Should().Be("/usr/bin/ffmpeg");
-        command.Arguments.Should().Contain(InputPath);
-        command.WorkingDirectory.Should().Be(_outputDirectory);
+        command!.Executable.Should().Be(expected: "/usr/bin/ffmpeg");
+        command.Arguments.Should().Contain(expected: InputPath);
+        command.WorkingDirectory.Should().Be(expected: _outputDirectory);
     }
 
     // ------------------------------------------------------------------
@@ -340,20 +334,20 @@ public class ExtractionCommandBuilderTests : IDisposable
         IReadOnlyList<AttachmentInfo> attachments
     ) =>
         ExtractionCommandBuilder.BuildCommand(
-            "ffmpeg",
-            InputPath,
-            _outputDirectory,
-            plan,
-            mediaInfo,
-            MediaTitle,
-            _subtitleExtractor,
-            _fontExtractor,
-            TestStorageFactory.CreateLocal(),
-            attachments
+            ffmpegPath: "ffmpeg",
+            inputPath: InputPath,
+            outputDirectory: _outputDirectory,
+            plan: plan,
+            mediaInfo: mediaInfo,
+            mediaTitle: MediaTitle,
+            subtitleExtractor: _subtitleExtractor,
+            fontExtractor: _fontExtractor,
+            storage: TestStorageFactory.CreateLocal(),
+            attachments: attachments
         );
 
     private static int CountOccurrences(List<string> args, string value) =>
-        args.Count(a => a == value);
+        args.Count(predicate: a => a == value);
 
     private static OutputPlan MakePlan(params SubtitleOutputPlan[] subtitleOutputs) =>
         new(
@@ -387,7 +381,7 @@ public class ExtractionCommandBuilderTests : IDisposable
         new(
             FilePath: InputPath,
             Format: "matroska",
-            Duration: TimeSpan.FromHours(2),
+            Duration: TimeSpan.FromHours(hours: 2),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 7_200_000_000,
             VideoStreams: [],

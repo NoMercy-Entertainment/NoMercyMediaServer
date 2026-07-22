@@ -51,13 +51,13 @@ namespace NoMercy.Tests.Storage;
 /// <c>dotnet test --filter "Category=Benchmark"</c>. Payload is overridable with
 /// <c>NM_BENCH_MB</c> (default 256 MiB).</para>
 /// </summary>
-[Collection("StorageBackends")]
-[Trait("Category", "Integration")]
-[Trait("Category", "Benchmark")]
+[Collection(name: "StorageBackends")]
+[Trait(name: "Category", value: "Integration")]
+[Trait(name: "Category", value: "Benchmark")]
 public sealed class StorageThroughputBenchmark(StorageBackendsFixture fix, ITestOutputHelper output)
 {
     private static int PayloadBytes =>
-        (int.TryParse(Environment.GetEnvironmentVariable("NM_BENCH_MB"), out int mb) ? mb : 256)
+        (int.TryParse(s: Environment.GetEnvironmentVariable(variable: "NM_BENCH_MB"), result: out int mb) ? mb : 256)
         * 1024
         * 1024;
 
@@ -72,51 +72,51 @@ public sealed class StorageThroughputBenchmark(StorageBackendsFixture fix, ITest
     [SkippableFact]
     public void Local_baseline_throughput()
     {
-        Skip.If(!fix.Available, fix.StartupError ?? "storage container not available");
-        string root = Path.Combine(Path.GetTempPath(), "nm-bench-" + Ulid.NewUlid());
-        Directory.CreateDirectory(root);
+        Skip.If(condition: !fix.Available, reason: fix.StartupError ?? "storage container not available");
+        string root = Path.Combine(path1: Path.GetTempPath(), path2: "nm-bench-" + Ulid.NewUlid());
+        Directory.CreateDirectory(path: root);
         try
         {
-            Report("Local", new LocalStorageDriver(), Path.Combine(root, "baseline"));
+            Report(label: "Local", driver: new LocalStorageDriver(), pathStem: Path.Combine(path1: root, path2: "baseline"));
         }
         finally
         {
-            Directory.Delete(root, recursive: true);
+            Directory.Delete(path: root, recursive: true);
         }
     }
 
     [SkippableFact]
     public void Smb_streaming_throughput()
     {
-        Skip.If(!fix.Available, fix.StartupError ?? "storage container not available");
+        Skip.If(condition: !fix.Available, reason: fix.StartupError ?? "storage container not available");
         using SmbStorageDriver driver = fix.BuildSmbDriver();
-        Report("SMB", driver, $"bench/smb-{Ulid.NewUlid()}");
+        Report(label: "SMB", driver: driver, pathStem: $"bench/smb-{Ulid.NewUlid()}");
     }
 
     [SkippableFact]
     public void Nfs_streaming_throughput()
     {
-        Skip.If(!fix.Available, fix.StartupError ?? "storage container not available");
-        Skip.If(!fix.NfsMountable, fix.NfsUnavailableReason ?? "NFS export not mountable");
+        Skip.If(condition: !fix.Available, reason: fix.StartupError ?? "storage container not available");
+        Skip.If(condition: !fix.NfsMountable, reason: fix.NfsUnavailableReason ?? "NFS export not mountable");
         using NfsStorageDriver? driver = fix.TryBuildNfsDriver();
-        Skip.If(driver is null, "libnfs native library not installed");
-        Report("NFS", driver!, $"/bench-nfs-{Ulid.NewUlid()}");
+        Skip.If(condition: driver is null, reason: "libnfs native library not installed");
+        Report(label: "NFS", driver: driver!, pathStem: $"/bench-nfs-{Ulid.NewUlid()}");
     }
 
     [SkippableFact]
     public void S3_streaming_throughput()
     {
-        Skip.If(!fix.Available, fix.StartupError ?? "storage container not available");
+        Skip.If(condition: !fix.Available, reason: fix.StartupError ?? "storage container not available");
         using S3StorageDriver driver = fix.BuildS3Driver();
-        Report("S3", driver, $"bench/s3-{Ulid.NewUlid()}");
+        Report(label: "S3", driver: driver, pathStem: $"bench/s3-{Ulid.NewUlid()}");
     }
 
     [SkippableFact]
     public void WebDav_streaming_throughput()
     {
-        Skip.If(!fix.Available, fix.StartupError ?? "storage container not available");
+        Skip.If(condition: !fix.Available, reason: fix.StartupError ?? "storage container not available");
         WebDavStorageDriver driver = fix.BuildWebDavDriver();
-        Report("WebDAV", driver, $"bench/webdav-{Ulid.NewUlid()}");
+        Report(label: "WebDAV", driver: driver, pathStem: $"bench/webdav-{Ulid.NewUlid()}");
     }
 
     // Runs both transfer modes for one driver and prints a two-line result. The
@@ -124,22 +124,22 @@ public sealed class StorageThroughputBenchmark(StorageBackendsFixture fix, ITest
     // only difference is whether production and IO overlap.
     private void Report(string label, IStorageDriver driver, string pathStem)
     {
-        (double wSeq, double rSeq) = RunOnce(driver, $"{pathStem}-seq.bin", pipelined: false);
-        (double wPipe, double rPipe) = RunOnce(driver, $"{pathStem}-pipe.bin", pipelined: true);
+        (double wSeq, double rSeq) = RunOnce(driver: driver, path: $"{pathStem}-seq.bin", pipelined: false);
+        (double wPipe, double rPipe) = RunOnce(driver: driver, path: $"{pathStem}-pipe.bin", pipelined: true);
 
         int mib = PayloadBytes / (1024 * 1024);
         output.WriteLine(
-            $"{label, -7} {mib} MiB  seq : write {wSeq, 7:F1}  read {rSeq, 7:F1} MB/s"
+            message: $"{label, -7} {mib} MiB  seq : write {wSeq, 7:F1}  read {rSeq, 7:F1} MB/s"
         );
         output.WriteLine(
-            $"{label, -7} {mib} MiB  pipe: write {wPipe, 7:F1}  read {rPipe, 7:F1} MB/s"
+            message: $"{label, -7} {mib} MiB  pipe: write {wPipe, 7:F1}  read {rPipe, 7:F1} MB/s"
         );
 
         foreach (double v in new[] { wSeq, rSeq, wPipe, rPipe })
             v.Should()
                 .BeGreaterThan(
-                    MinMBytesPerSecond,
-                    $"{label} throughput regressed (whole-file buffer or per-byte round-trips?)"
+                    expected: MinMBytesPerSecond,
+                    because: $"{label} throughput regressed (whole-file buffer or per-byte round-trips?)"
                 );
     }
 
@@ -152,37 +152,37 @@ public sealed class StorageThroughputBenchmark(StorageBackendsFixture fix, ITest
         int payload = PayloadBytes;
 
         double writeMBps = Time(
-            payload,
-            () =>
+            payload: payload,
+            transfer: () =>
             {
-                using Stream w = driver.OpenWrite(path, overwrite: true);
-                using GeneratedStream src = new(payload);
+                using Stream w = driver.OpenWrite(path: path, overwrite: true);
+                using GeneratedStream src = new(length: payload);
                 if (pipelined)
-                    src.CopyTo(w, BlockSize);
+                    src.CopyTo(destination: w, bufferSize: BlockSize);
                 else
-                    CopySequential(src, w);
+                    CopySequential(from: src, to: w);
             }
         );
 
         double readMBps = Time(
-            payload,
-            () =>
+            payload: payload,
+            transfer: () =>
             {
-                using Stream r = driver.OpenRead(path);
+                using Stream r = driver.OpenRead(path: path);
                 using CountingSink sink = new();
                 if (pipelined)
-                    r.CopyTo(sink, BlockSize);
+                    r.CopyTo(destination: sink, bufferSize: BlockSize);
                 else
-                    CopySequential(r, sink);
+                    CopySequential(from: r, to: sink);
                 if (sink.Total != payload)
-                    throw new IOException($"read {sink.Total} of {payload} bytes");
+                    throw new IOException(message: $"read {sink.Total} of {payload} bytes");
             }
         );
 
-        long actualSize = driver.GetFileSize(path);
+        long actualSize = driver.GetFileSize(path: path);
         if (actualSize != payload)
-            throw new IOException($"stored size {actualSize} != written {payload}");
-        driver.DeleteFile(path);
+            throw new IOException(message: $"stored size {actualSize} != written {payload}");
+        driver.DeleteFile(path: path);
 
         return (writeMBps, readMBps);
     }
@@ -194,8 +194,8 @@ public sealed class StorageThroughputBenchmark(StorageBackendsFixture fix, ITest
     {
         byte[] block = new byte[BlockSize];
         int n;
-        while ((n = from.Read(block, 0, BlockSize)) > 0)
-            to.Write(block, 0, n);
+        while ((n = from.Read(buffer: block, offset: 0, count: BlockSize)) > 0)
+            to.Write(buffer: block, offset: 0, count: n);
     }
 
     // Times the transfer, disposing the stream inside the clock: a write driver's

@@ -15,9 +15,9 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record Credits
 {
-    [JsonProperty("cast")]
+    [JsonProperty(propertyName: "cast")]
     public KnownForDto[] Cast { get; set; } = [];
 
-    [JsonProperty("crew")]
+    [JsonProperty(propertyName: "crew")]
     public KnownForDto[] Crew { get; set; } = [];
 }

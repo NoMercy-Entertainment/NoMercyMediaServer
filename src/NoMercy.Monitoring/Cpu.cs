@@ -15,12 +15,12 @@ namespace NoMercy.Monitoring;
 
 public class Cpu
 {
-    [JsonProperty("total")]
+    [JsonProperty(propertyName: "total")]
     public double Total { get; set; }
 
-    [JsonProperty("max")]
+    [JsonProperty(propertyName: "max")]
     public double Max { get; set; }
 
-    [JsonProperty("core")]
+    [JsonProperty(propertyName: "core")]
     public List<Core> Core { get; set; } = [];
 }

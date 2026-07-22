@@ -28,13 +28,13 @@ namespace NoMercy.Tests.Encoder.Subscribers;
 /// Guard condition: when no webhook URLs are configured the subscriber skips
 /// subscription entirely — publishing an event must NOT reach the dispatcher.
 /// </summary>
-[Trait("Category", "Journey")]
+[Trait(name: "Category", value: "Journey")]
 public class EncodingNotificationSubscriberJourneyTests
 {
     private static EncoderOptions WithWebhook(string url)
     {
         EncoderOptions opts = new();
-        opts.NotificationWebhookUrls.Add(url);
+        opts.NotificationWebhookUrls.Add(item: url);
         return opts;
     }
 
@@ -46,33 +46,33 @@ public class EncodingNotificationSubscriberJourneyTests
         InMemoryEventBus bus = new();
         Mock<INotificationDispatcher> dispatcher = new();
         dispatcher
-            .Setup(d =>
+            .Setup(expression: d =>
                 d.NotifyCompletedAsync(
                     It.IsAny<EncodingCompletedNotification>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Returns(Task.CompletedTask);
+            .Returns(value: Task.CompletedTask);
 
         EncodingNotificationSubscriber subscriber = new(
-            bus,
-            dispatcher.Object,
-            WithWebhook("https://hooks.example.com/encode"),
-            NullLogger<EncodingNotificationSubscriber>.Instance
+            eventBus: bus,
+            dispatcher: dispatcher.Object,
+            options: WithWebhook(url: "https://hooks.example.com/encode"),
+            logger: NullLogger<EncodingNotificationSubscriber>.Instance
         );
-        await subscriber.StartAsync(CancellationToken.None);
+        await subscriber.StartAsync(cancellationToken: CancellationToken.None);
 
         await bus.PublishAsync(
-            new EncodingCompletedEvent
+            @event: new EncodingCompletedEvent
             {
                 JobId = 1,
                 OutputPath = "/out/film",
-                Duration = TimeSpan.FromMinutes(2),
+                Duration = TimeSpan.FromMinutes(minutes: 2),
             }
         );
 
         dispatcher.Verify(
-            d =>
+            expression: d =>
                 d.NotifyCompletedAsync(
                     It.Is<EncodingCompletedNotification>(n =>
                         n.JobId == 1
@@ -81,11 +81,11 @@ public class EncodingNotificationSubscriberJourneyTests
                     ),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Once,
-            "EncodingCompletedEvent through the real bus must reach the dispatcher with the full payload"
+            times: Times.Once,
+            failMessage: "EncodingCompletedEvent through the real bus must reach the dispatcher with the full payload"
         );
 
-        await subscriber.StopAsync(CancellationToken.None);
+        await subscriber.StopAsync(cancellationToken: CancellationToken.None);
     }
 
     [Fact]
@@ -94,24 +94,24 @@ public class EncodingNotificationSubscriberJourneyTests
         InMemoryEventBus bus = new();
         Mock<INotificationDispatcher> dispatcher = new();
         dispatcher
-            .Setup(d =>
+            .Setup(expression: d =>
                 d.NotifyStartedAsync(
                     It.IsAny<EncodingStartedNotification>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Returns(Task.CompletedTask);
+            .Returns(value: Task.CompletedTask);
 
         EncodingNotificationSubscriber subscriber = new(
-            bus,
-            dispatcher.Object,
-            WithWebhook("https://hooks.example.com/encode"),
-            NullLogger<EncodingNotificationSubscriber>.Instance
+            eventBus: bus,
+            dispatcher: dispatcher.Object,
+            options: WithWebhook(url: "https://hooks.example.com/encode"),
+            logger: NullLogger<EncodingNotificationSubscriber>.Instance
         );
-        await subscriber.StartAsync(CancellationToken.None);
+        await subscriber.StartAsync(cancellationToken: CancellationToken.None);
 
         await bus.PublishAsync(
-            new EncodingStartedEvent
+            @event: new EncodingStartedEvent
             {
                 JobId = 2,
                 InputPath = "/in/film.mkv",
@@ -121,7 +121,7 @@ public class EncodingNotificationSubscriberJourneyTests
         );
 
         dispatcher.Verify(
-            d =>
+            expression: d =>
                 d.NotifyStartedAsync(
                     It.Is<EncodingStartedNotification>(n =>
                         n.JobId == 2
@@ -131,11 +131,11 @@ public class EncodingNotificationSubscriberJourneyTests
                     ),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Once,
-            "EncodingStartedEvent through the real bus must reach the dispatcher with the full payload"
+            times: Times.Once,
+            failMessage: "EncodingStartedEvent through the real bus must reach the dispatcher with the full payload"
         );
 
-        await subscriber.StopAsync(CancellationToken.None);
+        await subscriber.StopAsync(cancellationToken: CancellationToken.None);
     }
 
     [Fact]
@@ -144,24 +144,24 @@ public class EncodingNotificationSubscriberJourneyTests
         InMemoryEventBus bus = new();
         Mock<INotificationDispatcher> dispatcher = new();
         dispatcher
-            .Setup(d =>
+            .Setup(expression: d =>
                 d.NotifyFailedAsync(
                     It.IsAny<EncodingFailedNotification>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Returns(Task.CompletedTask);
+            .Returns(value: Task.CompletedTask);
 
         EncodingNotificationSubscriber subscriber = new(
-            bus,
-            dispatcher.Object,
-            WithWebhook("https://hooks.example.com/encode"),
-            NullLogger<EncodingNotificationSubscriber>.Instance
+            eventBus: bus,
+            dispatcher: dispatcher.Object,
+            options: WithWebhook(url: "https://hooks.example.com/encode"),
+            logger: NullLogger<EncodingNotificationSubscriber>.Instance
         );
-        await subscriber.StartAsync(CancellationToken.None);
+        await subscriber.StartAsync(cancellationToken: CancellationToken.None);
 
         await bus.PublishAsync(
-            new EncodingFailedEvent
+            @event: new EncodingFailedEvent
             {
                 JobId = 3,
                 InputPath = "/in/broken.mkv",
@@ -171,7 +171,7 @@ public class EncodingNotificationSubscriberJourneyTests
         );
 
         dispatcher.Verify(
-            d =>
+            expression: d =>
                 d.NotifyFailedAsync(
                     It.Is<EncodingFailedNotification>(n =>
                         n.JobId == 3
@@ -181,11 +181,11 @@ public class EncodingNotificationSubscriberJourneyTests
                     ),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Once,
-            "EncodingFailedEvent through the real bus must reach the dispatcher with the full payload"
+            times: Times.Once,
+            failMessage: "EncodingFailedEvent through the real bus must reach the dispatcher with the full payload"
         );
 
-        await subscriber.StopAsync(CancellationToken.None);
+        await subscriber.StopAsync(cancellationToken: CancellationToken.None);
     }
 
     [Fact]
@@ -195,33 +195,33 @@ public class EncodingNotificationSubscriberJourneyTests
         Mock<INotificationDispatcher> dispatcher = new();
 
         EncodingNotificationSubscriber subscriber = new(
-            bus,
-            dispatcher.Object,
-            NoWebhooks(),
-            NullLogger<EncodingNotificationSubscriber>.Instance
+            eventBus: bus,
+            dispatcher: dispatcher.Object,
+            options: NoWebhooks(),
+            logger: NullLogger<EncodingNotificationSubscriber>.Instance
         );
-        await subscriber.StartAsync(CancellationToken.None);
+        await subscriber.StartAsync(cancellationToken: CancellationToken.None);
 
         await bus.PublishAsync(
-            new EncodingCompletedEvent
+            @event: new EncodingCompletedEvent
             {
                 JobId = 4,
                 OutputPath = "/out/film",
-                Duration = TimeSpan.FromMinutes(1),
+                Duration = TimeSpan.FromMinutes(minutes: 1),
             }
         );
 
         dispatcher.Verify(
-            d =>
+            expression: d =>
                 d.NotifyCompletedAsync(
                     It.IsAny<EncodingCompletedNotification>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Never,
-            "when no webhook URLs are configured the subscriber must not register — chain is severed at start"
+            times: Times.Never,
+            failMessage: "when no webhook URLs are configured the subscriber must not register — chain is severed at start"
         );
 
-        await subscriber.StopAsync(CancellationToken.None);
+        await subscriber.StopAsync(cancellationToken: CancellationToken.None);
     }
 
     [Fact]
@@ -230,40 +230,40 @@ public class EncodingNotificationSubscriberJourneyTests
         InMemoryEventBus bus = new();
         Mock<INotificationDispatcher> dispatcher = new();
         dispatcher
-            .Setup(d =>
+            .Setup(expression: d =>
                 d.NotifyCompletedAsync(
                     It.IsAny<EncodingCompletedNotification>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Returns(Task.CompletedTask);
+            .Returns(value: Task.CompletedTask);
 
         EncodingNotificationSubscriber subscriber = new(
-            bus,
-            dispatcher.Object,
-            WithWebhook("https://hooks.example.com/encode"),
-            NullLogger<EncodingNotificationSubscriber>.Instance
+            eventBus: bus,
+            dispatcher: dispatcher.Object,
+            options: WithWebhook(url: "https://hooks.example.com/encode"),
+            logger: NullLogger<EncodingNotificationSubscriber>.Instance
         );
-        await subscriber.StartAsync(CancellationToken.None);
-        await subscriber.StopAsync(CancellationToken.None);
+        await subscriber.StartAsync(cancellationToken: CancellationToken.None);
+        await subscriber.StopAsync(cancellationToken: CancellationToken.None);
 
         await bus.PublishAsync(
-            new EncodingCompletedEvent
+            @event: new EncodingCompletedEvent
             {
                 JobId = 5,
                 OutputPath = "/out/film",
-                Duration = TimeSpan.FromMinutes(1),
+                Duration = TimeSpan.FromMinutes(minutes: 1),
             }
         );
 
         dispatcher.Verify(
-            d =>
+            expression: d =>
                 d.NotifyCompletedAsync(
                     It.IsAny<EncodingCompletedNotification>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Never,
-            "after StopAsync the subscriptions are disposed — the chain must be severed"
+            times: Times.Never,
+            failMessage: "after StopAsync the subscriptions are disposed — the chain must be severed"
         );
     }
 
@@ -273,25 +273,25 @@ public class EncodingNotificationSubscriberJourneyTests
         InMemoryEventBus bus = new();
         Mock<INotificationDispatcher> dispatcher = new();
         dispatcher
-            .Setup(d =>
+            .Setup(expression: d =>
                 d.NotifyCompletedAsync(
                     It.IsAny<EncodingCompletedNotification>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ThrowsAsync(new HttpRequestException("webhook endpoint unreachable"));
+            .ThrowsAsync(exception: new HttpRequestException(message: "webhook endpoint unreachable"));
 
         EncodingNotificationSubscriber subscriber = new(
-            bus,
-            dispatcher.Object,
-            WithWebhook("https://hooks.example.com/encode"),
-            NullLogger<EncodingNotificationSubscriber>.Instance
+            eventBus: bus,
+            dispatcher: dispatcher.Object,
+            options: WithWebhook(url: "https://hooks.example.com/encode"),
+            logger: NullLogger<EncodingNotificationSubscriber>.Instance
         );
-        await subscriber.StartAsync(CancellationToken.None);
+        await subscriber.StartAsync(cancellationToken: CancellationToken.None);
 
         Func<Task> act = () =>
             bus.PublishAsync(
-                new EncodingCompletedEvent
+                @event: new EncodingCompletedEvent
                 {
                     JobId = 6,
                     OutputPath = "/out/film",
@@ -300,9 +300,9 @@ public class EncodingNotificationSubscriberJourneyTests
             );
 
         await act.Should()
-            .NotThrowAsync("a dispatcher failure must not propagate out of the event bus");
+            .NotThrowAsync(because: "a dispatcher failure must not propagate out of the event bus");
 
-        await subscriber.StopAsync(CancellationToken.None);
+        await subscriber.StopAsync(cancellationToken: CancellationToken.None);
     }
 
     [Fact]
@@ -312,46 +312,46 @@ public class EncodingNotificationSubscriberJourneyTests
         Mock<INotificationDispatcher> dispatcher = new();
         int callCount = 0;
         dispatcher
-            .Setup(d =>
+            .Setup(expression: d =>
                 d.NotifyCompletedAsync(
                     It.IsAny<EncodingCompletedNotification>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Callback(() => callCount++)
-            .Returns(Task.CompletedTask);
+            .Callback(action: () => callCount++)
+            .Returns(value: Task.CompletedTask);
 
         EncoderOptions options = new();
-        options.NotificationWebhookUrls.Add("https://a.example.com");
-        options.NotificationWebhookUrls.Add("https://b.example.com");
+        options.NotificationWebhookUrls.Add(item: "https://a.example.com");
+        options.NotificationWebhookUrls.Add(item: "https://b.example.com");
 
         EncodingNotificationSubscriber subscriber = new(
-            bus,
-            dispatcher.Object,
-            options,
-            NullLogger<EncodingNotificationSubscriber>.Instance
+            eventBus: bus,
+            dispatcher: dispatcher.Object,
+            options: options,
+            logger: NullLogger<EncodingNotificationSubscriber>.Instance
         );
-        await subscriber.StartAsync(CancellationToken.None);
+        await subscriber.StartAsync(cancellationToken: CancellationToken.None);
 
         await bus.PublishAsync(
-            new EncodingCompletedEvent
+            @event: new EncodingCompletedEvent
             {
                 JobId = 7,
                 OutputPath = "/out/film",
-                Duration = TimeSpan.FromSeconds(30),
+                Duration = TimeSpan.FromSeconds(seconds: 30),
             }
         );
 
         dispatcher.Verify(
-            d =>
+            expression: d =>
                 d.NotifyCompletedAsync(
                     It.IsAny<EncodingCompletedNotification>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Once,
-            "the subscriber registers one handler regardless of URL count — dispatcher decides fan-out"
+            times: Times.Once,
+            failMessage: "the subscriber registers one handler regardless of URL count — dispatcher decides fan-out"
         );
 
-        await subscriber.StopAsync(CancellationToken.None);
+        await subscriber.StopAsync(cancellationToken: CancellationToken.None);
     }
 }

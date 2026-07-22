@@ -25,15 +25,15 @@ public class DeviceAwareVariantSelector : IDeviceAwareVariantSelector
     )
     {
         if (variants.Count == 0)
-            return new(null, caps, null, null, "no variants available");
+            return new(VariantIndex: null, AppliedCapabilities: caps, AudioConstraint: null, VideoConstraint: null, Reason: "no variants available");
 
         if (caps is null)
             return new(
-                variants[0].Index,
-                null,
-                null,
-                null,
-                "no capabilities declared"
+                VariantIndex: variants[index: 0].Index,
+                AppliedCapabilities: null,
+                AudioConstraint: null,
+                VideoConstraint: null,
+                Reason: "no capabilities declared"
             );
 
         int ramCeiling = caps.RamTier switch
@@ -47,14 +47,14 @@ public class DeviceAwareVariantSelector : IDeviceAwareVariantSelector
 
         // Filter by audio channel count
         if (caps.MaxAudioChannels is int maxChannels)
-            candidates = [.. candidates.Where(v => v.AudioChannels <= maxChannels)];
+            candidates = [.. candidates.Where(predicate: v => v.AudioChannels <= maxChannels)];
 
         // Filter by audio codec support
         if (caps.AudioCodecs.Length > 0)
             candidates =
             [
-                .. candidates.Where(v =>
-                    caps.AudioCodecs.Contains(v.AudioCodec, StringComparer.OrdinalIgnoreCase)
+                .. candidates.Where(predicate: v =>
+                    caps.AudioCodecs.Contains(value: v.AudioCodec, comparer: StringComparer.OrdinalIgnoreCase)
                 ),
             ];
 
@@ -62,14 +62,14 @@ public class DeviceAwareVariantSelector : IDeviceAwareVariantSelector
         if (caps.VideoCodecs.Length > 0)
             candidates =
             [
-                .. candidates.Where(v =>
-                    caps.VideoCodecs.Contains(v.VideoCodec, StringComparer.OrdinalIgnoreCase)
+                .. candidates.Where(predicate: v =>
+                    caps.VideoCodecs.Contains(value: v.VideoCodec, comparer: StringComparer.OrdinalIgnoreCase)
                 ),
             ];
 
         // Filter by max video height
         if (caps.MaxVideoHeight is int maxHeight)
-            candidates = [.. candidates.Where(v => v.Height <= maxHeight)];
+            candidates = [.. candidates.Where(predicate: v => v.Height <= maxHeight)];
 
         // Filter out HDR variants when device doesn't support HDR.
         // HDR is signalled by naming convention: we treat any variant whose
@@ -83,21 +83,21 @@ public class DeviceAwareVariantSelector : IDeviceAwareVariantSelector
         // Apply RAM tier bitrate ceiling
         List<VariantDescriptor> withinCeiling =
         [
-            .. candidates.Where(v => v.VideoBitrateKbps <= ramCeiling),
+            .. candidates.Where(predicate: v => v.VideoBitrateKbps <= ramCeiling),
         ];
 
         if (withinCeiling.Count > 0)
         {
             // Pick the highest bitrate variant within the ceiling
             VariantDescriptor best = withinCeiling
-                .OrderByDescending(v => v.VideoBitrateKbps)
+                .OrderByDescending(keySelector: v => v.VideoBitrateKbps)
                 .First();
             return new(
-                best.Index,
-                caps,
-                null,
-                null,
-                $"variant {best.Index} selected — {best.VideoBitrateKbps} kbps within {caps.RamTier} ceiling ({ramCeiling} kbps)"
+                VariantIndex: best.Index,
+                AppliedCapabilities: caps,
+                AudioConstraint: null,
+                VideoConstraint: null,
+                Reason: $"variant {best.Index} selected — {best.VideoBitrateKbps} kbps within {caps.RamTier} ceiling ({ramCeiling} kbps)"
             );
         }
 
@@ -110,8 +110,8 @@ public class DeviceAwareVariantSelector : IDeviceAwareVariantSelector
             caps.MaxAudioChannels.HasValue
             || (
                 caps.AudioCodecs.Length > 0
-                && variants.All(v =>
-                    !caps.AudioCodecs.Contains(v.AudioCodec, StringComparer.OrdinalIgnoreCase)
+                && variants.All(predicate: v =>
+                    !caps.AudioCodecs.Contains(value: v.AudioCodec, comparer: StringComparer.OrdinalIgnoreCase)
                 )
             );
 
@@ -119,39 +119,39 @@ public class DeviceAwareVariantSelector : IDeviceAwareVariantSelector
         {
             int targetChannels = caps.MaxAudioChannels ?? 2;
             string targetCodec = caps.AudioCodecs.Length > 0 ? caps.AudioCodecs[0] : "aac";
-            audioConstraint = new(targetChannels, targetCodec);
-            reasons.Add($"audio downmix to {targetChannels}ch {targetCodec}");
+            audioConstraint = new(Channels: targetChannels, Codec: targetCodec);
+            reasons.Add(item: $"audio downmix to {targetChannels}ch {targetCodec}");
         }
 
         bool videoMismatch =
             caps.MaxVideoHeight.HasValue
             || (
                 caps.VideoCodecs.Length > 0
-                && variants.All(v =>
-                    !caps.VideoCodecs.Contains(v.VideoCodec, StringComparer.OrdinalIgnoreCase)
+                && variants.All(predicate: v =>
+                    !caps.VideoCodecs.Contains(value: v.VideoCodec, comparer: StringComparer.OrdinalIgnoreCase)
                 )
             )
-            || variants.All(v => v.VideoBitrateKbps > ramCeiling);
+            || variants.All(predicate: v => v.VideoBitrateKbps > ramCeiling);
 
         if (videoMismatch)
         {
             string? targetCodec = caps.VideoCodecs.Length > 0 ? caps.VideoCodecs[0] : null;
-            videoConstraint = new(caps.MaxVideoHeight, targetCodec);
+            videoConstraint = new(MaxHeight: caps.MaxVideoHeight, Codec: targetCodec);
             reasons.Add(
-                $"video constrained to {caps.MaxVideoHeight?.ToString() ?? "any"}px {targetCodec ?? "any codec"} within {caps.RamTier} ({ramCeiling} kbps)"
+                item: $"video constrained to {caps.MaxVideoHeight?.ToString() ?? "any"}px {targetCodec ?? "any codec"} within {caps.RamTier} ({ramCeiling} kbps)"
             );
         }
 
         string reason =
             reasons.Count > 0
-                ? string.Join("; ", reasons)
+                ? string.Join(separator: "; ", values: reasons)
                 : $"no matching variant — {caps.RamTier} ceiling {ramCeiling} kbps";
 
         // Always include RamTier in reason so tests can assert on it
-        if (!reason.Contains(caps.RamTier.ToString()))
+        if (!reason.Contains(value: caps.RamTier.ToString()))
             reason += $" [{caps.RamTier}]";
 
-        return new(null, caps, audioConstraint, videoConstraint, reason);
+        return new(VariantIndex: null, AppliedCapabilities: caps, AudioConstraint: audioConstraint, VideoConstraint: videoConstraint, Reason: reason);
     }
 
     /// <summary>
@@ -170,11 +170,11 @@ public class DeviceAwareVariantSelector : IDeviceAwareVariantSelector
 
         int maxChannels = client.MaxAudioChannels;
         if (deviceCaps.MaxAudioChannels is int declaredChannels)
-            maxChannels = Math.Min(maxChannels, declaredChannels);
+            maxChannels = Math.Min(val1: maxChannels, val2: declaredChannels);
 
         int maxHeight = client.MaxHeight;
         if (deviceCaps.MaxVideoHeight is int declaredHeight)
-            maxHeight = Math.Min(maxHeight > 0 ? maxHeight : int.MaxValue, declaredHeight);
+            maxHeight = Math.Min(val1: maxHeight > 0 ? maxHeight : int.MaxValue, val2: declaredHeight);
 
         bool supportsHdr = client.SupportsHdr && deviceCaps.HdrSupport;
 

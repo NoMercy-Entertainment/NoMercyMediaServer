@@ -14,36 +14,36 @@ namespace NoMercy.Api.DTOs.Encoding;
 
 public record EncodingStageChangedDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("status")]
+    [JsonProperty(propertyName: "status")]
     public string Status { get; set; } = string.Empty;
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty("message")]
+    [JsonProperty(propertyName: "message")]
     public string Message { get; set; } = string.Empty;
 
-    [JsonProperty("base_folder")]
+    [JsonProperty(propertyName: "base_folder")]
     public string BaseFolder { get; set; } = string.Empty;
 
-    [JsonProperty("share_path")]
+    [JsonProperty(propertyName: "share_path")]
     public string SharePath { get; set; } = string.Empty;
 
-    [JsonProperty("video_streams")]
+    [JsonProperty(propertyName: "video_streams")]
     public List<string> VideoStreams { get; set; } = [];
 
-    [JsonProperty("audio_streams")]
+    [JsonProperty(propertyName: "audio_streams")]
     public List<string> AudioStreams { get; set; } = [];
 
-    [JsonProperty("subtitle_streams")]
+    [JsonProperty(propertyName: "subtitle_streams")]
     public List<string> SubtitleStreams { get; set; } = [];
 
-    [JsonProperty("has_gpu")]
+    [JsonProperty(propertyName: "has_gpu")]
     public bool HasGpu { get; set; }
 
-    [JsonProperty("is_hdr")]
+    [JsonProperty(propertyName: "is_hdr")]
     public bool IsHdr { get; set; }
 }

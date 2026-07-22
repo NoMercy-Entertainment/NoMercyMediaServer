@@ -20,7 +20,7 @@ public class EncodingContextTests
     {
         EncodingContext ctx = EncodingContext.Create();
         ctx.CorrelationId.Should().NotBeNullOrEmpty();
-        ctx.CorrelationId.Should().HaveLength(26); // ULID length
+        ctx.CorrelationId.Should().HaveLength(expected: 26); // ULID length
     }
 
     [Fact]
@@ -28,19 +28,19 @@ public class EncodingContextTests
     {
         EncodingContext ctx1 = EncodingContext.Create();
         EncodingContext ctx2 = EncodingContext.Create();
-        ctx1.CorrelationId.Should().NotBe(ctx2.CorrelationId);
+        ctx1.CorrelationId.Should().NotBe(unexpected: ctx2.CorrelationId);
     }
 
     [Fact]
     public void DecisionsOrNoOp_NoDecisionsSet_ReturnsNullSink()
     {
-        EncodingContext ctx = new("test-id");
+        EncodingContext ctx = new(CorrelationId: "test-id");
 
         IDecisionLogSink sink = ctx.DecisionsOrNoOp;
 
         sink.Should().NotBeNull();
         // Null sink swallows adds — verify by calling and not throwing.
-        Action act = () => sink.Add(new("plan", "test.key", "msg", new { x = 1 }));
+        Action act = () => sink.Add(entry: new(Stage: "plan", Key: "test.key", Message: "msg", Data: new { x = 1 }));
         act.Should().NotThrow();
     }
 
@@ -48,11 +48,11 @@ public class EncodingContextTests
     public void DecisionsOrNoOp_DecisionsSet_ReturnsTheProvidedSink()
     {
         ScopedDecisionLog provided = new();
-        EncodingContext ctx = new("test-id", Decisions: provided);
+        EncodingContext ctx = new(CorrelationId: "test-id", Decisions: provided);
 
         IDecisionLogSink sink = ctx.DecisionsOrNoOp;
 
-        sink.Should().BeSameAs(provided);
+        sink.Should().BeSameAs(expected: provided);
     }
 
     [Fact]
@@ -63,13 +63,13 @@ public class EncodingContextTests
         EncodingContext ctx = EncodingContext.Create();
 
         ctx.Decisions.Should().BeOfType<ScopedDecisionLog>();
-        ctx.DecisionsOrNoOp.Should().BeSameAs(ctx.Decisions);
+        ctx.DecisionsOrNoOp.Should().BeSameAs(expected: ctx.Decisions);
     }
 
     [Fact]
     public void Context_DefaultProperties_AreNull()
     {
-        EncodingContext ctx = new("test-id");
+        EncodingContext ctx = new(CorrelationId: "test-id");
 
         ctx.MediaInfo.Should().BeNull();
         ctx.Decisions.Should().BeNull();

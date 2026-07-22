@@ -101,18 +101,18 @@ public static class Dev
     private static IStorage CreateStorage()
     {
         IStorageDriver driver = new LocalStorageDriver();
-        return new LocalStorage(driver, new([], driver));
+        return new LocalStorage(driver: driver, guard: new(allowedRoots: [], driver: driver));
     }
 
     private static Task DeleteEmptyPlaylists(string episodeFolder)
     {
         IStorage storage = CreateStorage();
 
-        if (!storage.Exists(episodeFolder))
+        if (!storage.Exists(path: episodeFolder))
             return Task.CompletedTask;
 
-        IEnumerable<StorageEntry> entries = storage.List(episodeFolder, "*.m3u8", false);
-        IEnumerable<string> m3U8Files = entries.Select(e => e.Path);
+        IEnumerable<StorageEntry> entries = storage.List(path: episodeFolder, pattern: "*.m3u8", recursive: false);
+        IEnumerable<string> m3U8Files = entries.Select(selector: e => e.Path);
 
         foreach (string playlistPath in m3U8Files)
         {
@@ -120,27 +120,27 @@ public static class Dev
             try
             {
                 lines = storage
-                    .ReadAllTextAsync(playlistPath, CancellationToken.None)
-                    .Result.Split(["\r\n", "\n"], StringSplitOptions.None);
+                    .ReadAllTextAsync(path: playlistPath, ct: CancellationToken.None)
+                    .Result.Split(separator: ["\r\n", "\n"], options: StringSplitOptions.None);
             }
             catch
             {
                 continue;
             }
 
-            bool hasSegments = lines.Any(line =>
-                !line.Trim().StartsWith("#") && !string.IsNullOrWhiteSpace(line)
+            bool hasSegments = lines.Any(predicate: line =>
+                !line.Trim().StartsWith(value: "#") && !string.IsNullOrWhiteSpace(value: line)
             );
             if (!hasSegments)
             {
                 try
                 {
-                    storage.Delete(playlistPath);
-                    Logger.App($"Deleted empty playlist: {playlistPath}");
+                    storage.Delete(path: playlistPath);
+                    Logger.App(message: $"Deleted empty playlist: {playlistPath}");
                 }
                 catch (Exception ex)
                 {
-                    Logger.App($"Failed to delete empty playlist {playlistPath}: {ex.Message}");
+                    Logger.App(message: $"Failed to delete empty playlist {playlistPath}: {ex.Message}");
                 }
             }
         }
@@ -150,22 +150,22 @@ public static class Dev
 
     private static Dictionary<string, long> CalculateBitratesFromMaster(string episodeFolder)
     {
-        Dictionary<string, long> results = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, long> results = new(comparer: StringComparer.OrdinalIgnoreCase);
         IStorage storage = CreateStorage();
 
-        if (!storage.Exists(episodeFolder))
+        if (!storage.Exists(path: episodeFolder))
             return results;
 
         IEnumerable<string> m3U8Files = storage
-            .List(episodeFolder, "*.m3u8", false)
-            .Select(e => e.Path)
-            .Where(f =>
+            .List(path: episodeFolder, pattern: "*.m3u8", recursive: false)
+            .Select(selector: e => e.Path)
+            .Where(predicate: f =>
             {
                 try
                 {
                     return storage
-                        .ReadAllTextAsync(f, CancellationToken.None)
-                        .Result.Contains("#EXT-X-STREAM-INF");
+                        .ReadAllTextAsync(path: f, ct: CancellationToken.None)
+                        .Result.Contains(value: "#EXT-X-STREAM-INF");
                 }
                 catch
                 {
@@ -175,13 +175,13 @@ public static class Dev
 
         foreach (string masterPath in m3U8Files)
         {
-            string masterDir = Path.GetDirectoryName(masterPath) ?? episodeFolder;
+            string masterDir = Path.GetDirectoryName(path: masterPath) ?? episodeFolder;
             string[] lines;
             try
             {
                 lines = storage
-                    .ReadAllTextAsync(masterPath, CancellationToken.None)
-                    .Result.Split(["\r\n", "\n"], StringSplitOptions.None);
+                    .ReadAllTextAsync(path: masterPath, ct: CancellationToken.None)
+                    .Result.Split(separator: ["\r\n", "\n"], options: StringSplitOptions.None);
             }
             catch
             {
@@ -194,8 +194,8 @@ public static class Dev
                     !lines[i]
                         .Trim()
                         .StartsWith(
-                            "#EXT-X-STREAM-INF",
-                            StringComparison.InvariantCultureIgnoreCase
+                            value: "#EXT-X-STREAM-INF",
+                            comparisonType: StringComparison.InvariantCultureIgnoreCase
                         )
                 )
                     continue;
@@ -205,7 +205,7 @@ public static class Dev
                 for (int j = i + 1; j < lines.Length; j++)
                 {
                     string nxt = lines[j].Trim();
-                    if (string.IsNullOrEmpty(nxt) || nxt.StartsWith("#"))
+                    if (string.IsNullOrEmpty(value: nxt) || nxt.StartsWith(value: "#"))
                         continue;
                     variantUri = nxt;
                     break;
@@ -213,23 +213,23 @@ public static class Dev
 
                 if (variantUri == null)
                     continue;
-                if (Uri.IsWellFormedUriString(variantUri, UriKind.Absolute))
+                if (Uri.IsWellFormedUriString(uriString: variantUri, uriKind: UriKind.Absolute))
                     continue;
 
-                string variantPath = Path.GetFullPath(Path.Combine(masterDir, variantUri));
-                if (!storage.Exists(variantPath))
+                string variantPath = Path.GetFullPath(path: Path.Combine(path1: masterDir, path2: variantUri));
+                if (!storage.Exists(path: variantPath))
                     continue;
 
                 long totalBytes = 0L;
                 double totalSeconds = 0.0;
 
-                string variantDir = Path.GetDirectoryName(variantPath) ?? masterDir;
+                string variantDir = Path.GetDirectoryName(path: variantPath) ?? masterDir;
                 string[] vlines;
                 try
                 {
                     vlines = storage
-                        .ReadAllTextAsync(variantPath, CancellationToken.None)
-                        .Result.Split(["\r\n", "\n"], StringSplitOptions.None);
+                        .ReadAllTextAsync(path: variantPath, ct: CancellationToken.None)
+                        .Result.Split(separator: ["\r\n", "\n"], options: StringSplitOptions.None);
                 }
                 catch
                 {
@@ -239,17 +239,17 @@ public static class Dev
                 foreach (string raw in vlines)
                 {
                     string vline = raw.Trim();
-                    if (vline.StartsWith("#EXTINF:", StringComparison.InvariantCultureIgnoreCase))
+                    if (vline.StartsWith(value: "#EXTINF:", comparisonType: StringComparison.InvariantCultureIgnoreCase))
                     {
-                        string payload = vline.Substring("#EXTINF:".Length);
-                        int comma = payload.IndexOf(',');
-                        string durStr = comma >= 0 ? payload.Substring(0, comma) : payload;
+                        string payload = vline.Substring(startIndex: "#EXTINF:".Length);
+                        int comma = payload.IndexOf(value: ',');
+                        string durStr = comma >= 0 ? payload.Substring(startIndex: 0, length: comma) : payload;
                         if (
                             double.TryParse(
-                                durStr,
-                                NumberStyles.Any,
-                                CultureInfo.InvariantCulture,
-                                out double d
+                                s: durStr,
+                                style: NumberStyles.Any,
+                                provider: CultureInfo.InvariantCulture,
+                                result: out double d
                             )
                         )
                             totalSeconds += d;
@@ -257,27 +257,27 @@ public static class Dev
                         continue;
                     }
 
-                    if (vline.StartsWith("#"))
+                    if (vline.StartsWith(value: "#"))
                         continue;
-                    string segRef = vline.Split(new[] { '?', '#' }, 2)[0];
-                    if (string.IsNullOrWhiteSpace(segRef))
+                    string segRef = vline.Split(separator: new[] { '?', '#' }, count: 2)[0];
+                    if (string.IsNullOrWhiteSpace(value: segRef))
                         continue;
-                    if (Uri.IsWellFormedUriString(segRef, UriKind.Absolute))
+                    if (Uri.IsWellFormedUriString(uriString: segRef, uriKind: UriKind.Absolute))
                         continue;
 
-                    string segPath = Path.GetFullPath(Path.Combine(variantDir, segRef));
-                    if (!storage.Exists(segPath))
+                    string segPath = Path.GetFullPath(path: Path.Combine(path1: variantDir, path2: segRef));
+                    if (!storage.Exists(path: segPath))
                         continue;
 
                     try
                     {
-                        long segSize = storage.Size(segPath);
+                        long segSize = storage.Size(path: segPath);
                         totalBytes = checked(totalBytes + segSize);
                     }
                     catch (OverflowException)
                     {
                         // extremely unlikely; abort this variant
-                        results[variantUri] = 0;
+                        results[key: variantUri] = 0;
                         break;
                     }
                     catch
@@ -289,17 +289,17 @@ public static class Dev
                 if (totalBytes > 0 && totalSeconds > 0.0)
                 {
                     double bits = totalBytes * 8.0;
-                    long bitrate = (long)Math.Round(bits / totalSeconds);
-                    results[variantUri] = bitrate;
+                    long bitrate = (long)Math.Round(a: bits / totalSeconds);
+                    results[key: variantUri] = bitrate;
                     Logger.App(
-                        $"Computed bitrate for {variantUri}: {bitrate} bps (bytes={totalBytes}, seconds={totalSeconds:F2})"
+                        message: $"Computed bitrate for {variantUri}: {bitrate} bps (bytes={totalBytes}, seconds={totalSeconds:F2})"
                     );
                 }
                 else
                 {
-                    results[variantUri] = 0;
+                    results[key: variantUri] = 0;
                     Logger.App(
-                        $"Could not compute bitrate for {variantUri} (bytes={totalBytes}, seconds={totalSeconds:F2})"
+                        message: $"Could not compute bitrate for {variantUri} (bytes={totalBytes}, seconds={totalSeconds:F2})"
                     );
                 }
             }
@@ -313,23 +313,23 @@ public static class Dev
     {
         IStorage storage = CreateStorage();
 
-        Logger.App($"Diagnosing folder: {hostFolder}");
-        if (!storage.Exists(hostFolder))
+        Logger.App(message: $"Diagnosing folder: {hostFolder}");
+        if (!storage.Exists(path: hostFolder))
         {
-            Logger.App("Folder does not exist");
+            Logger.App(message: "Folder does not exist");
             return;
         }
 
-        Dictionary<string, long> bitrates = CalculateBitratesFromMaster(hostFolder);
+        Dictionary<string, long> bitrates = CalculateBitratesFromMaster(episodeFolder: hostFolder);
         if (bitrates.Count == 0)
         {
-            Logger.App("No computed bitrates (no master playlists found or all remote/failed).\n");
+            Logger.App(message: "No computed bitrates (no master playlists found or all remote/failed).\n");
             return;
         }
 
         foreach (KeyValuePair<string, long> kv in bitrates)
         {
-            Logger.App($"Variant: {kv.Key} -> Bitrate: {kv.Value} bps");
+            Logger.App(message: $"Variant: {kv.Key} -> Bitrate: {kv.Value} bps");
         }
 
         // Optionally write a diagnostic file next to the master playlist(s)
@@ -337,15 +337,15 @@ public static class Dev
         {
             // Instead of writing a diagnostic JSON file, update the master playlists in-place
             IEnumerable<string> masters = storage
-                .List(hostFolder, "*.m3u8", false)
-                .Select(e => e.Path)
-                .Where(f =>
+                .List(path: hostFolder, pattern: "*.m3u8", recursive: false)
+                .Select(selector: e => e.Path)
+                .Where(predicate: f =>
                 {
                     try
                     {
                         return storage
-                            .ReadAllTextAsync(f, CancellationToken.None)
-                            .Result.Contains("#EXT-X-STREAM-INF");
+                            .ReadAllTextAsync(path: f, ct: CancellationToken.None)
+                            .Result.Contains(value: "#EXT-X-STREAM-INF");
                     }
                     catch
                     {
@@ -353,14 +353,14 @@ public static class Dev
                     }
                 });
 
-            Regex bwRegex = new(@"BANDWIDTH\s*=\s*\d+", RegexOptions.IgnoreCase);
+            Regex bwRegex = new(pattern: @"BANDWIDTH\s*=\s*\d+", options: RegexOptions.IgnoreCase);
 
             foreach (string masterPath in masters)
             {
                 string original = storage
-                    .ReadAllTextAsync(masterPath, CancellationToken.None)
+                    .ReadAllTextAsync(path: masterPath, ct: CancellationToken.None)
                     .Result;
-                string[] lines = original.Split(["\r\n", "\n"], StringSplitOptions.None);
+                string[] lines = original.Split(separator: ["\r\n", "\n"], options: StringSplitOptions.None);
                 bool changed = false;
 
                 for (int i = 0; i < lines.Length; i++)
@@ -369,8 +369,8 @@ public static class Dev
                         !lines[i]
                             .Trim()
                             .StartsWith(
-                                "#EXT-X-STREAM-INF",
-                                StringComparison.InvariantCultureIgnoreCase
+                                value: "#EXT-X-STREAM-INF",
+                                comparisonType: StringComparison.InvariantCultureIgnoreCase
                             )
                     )
                         continue;
@@ -380,7 +380,7 @@ public static class Dev
                     for (int j = i + 1; j < lines.Length; j++)
                     {
                         string nxt = lines[j].Trim();
-                        if (string.IsNullOrEmpty(nxt) || nxt.StartsWith("#"))
+                        if (string.IsNullOrEmpty(value: nxt) || nxt.StartsWith(value: "#"))
                             continue;
                         variantUri = nxt;
                         break;
@@ -388,10 +388,10 @@ public static class Dev
 
                     if (variantUri == null)
                         continue;
-                    if (Uri.IsWellFormedUriString(variantUri, UriKind.Absolute))
+                    if (Uri.IsWellFormedUriString(uriString: variantUri, uriKind: UriKind.Absolute))
                         continue;
 
-                    if (!bitrates.TryGetValue(variantUri, out long computed))
+                    if (!bitrates.TryGetValue(key: variantUri, value: out long computed))
                         continue;
                     if (computed <= 0)
                         continue;
@@ -399,9 +399,9 @@ public static class Dev
                     string tag = lines[i];
 
                     // Replace or add BANDWIDTH attribute
-                    if (bwRegex.IsMatch(tag))
+                    if (bwRegex.IsMatch(input: tag))
                     {
-                        tag = bwRegex.Replace(tag, $"BANDWIDTH={computed}");
+                        tag = bwRegex.Replace(input: tag, replacement: $"BANDWIDTH={computed}");
                     }
                     else
                     {
@@ -414,7 +414,7 @@ public static class Dev
                         lines[i] = tag;
                         changed = true;
                         Logger.App(
-                            $"Updated playlist tag in {masterPath}: {variantUri} -> BANDWIDTH={computed}"
+                            message: $"Updated playlist tag in {masterPath}: {variantUri} -> BANDWIDTH={computed}"
                         );
                     }
                 }
@@ -425,55 +425,55 @@ public static class Dev
                     {
                         storage
                             .WriteAllTextAsync(
-                                masterPath,
-                                string.Join(Environment.NewLine, lines),
-                                CancellationToken.None
+                                path: masterPath,
+                                contents: string.Join(separator: Environment.NewLine, value: lines),
+                                ct: CancellationToken.None
                             )
                             .GetAwaiter()
                             .GetResult();
-                        Logger.App($"Wrote updated master playlist: {masterPath}");
+                        Logger.App(message: $"Wrote updated master playlist: {masterPath}");
                     }
                     catch (Exception ex)
                     {
-                        Logger.App($"Failed updating master playlist {masterPath}: {ex.Message}");
+                        Logger.App(message: $"Failed updating master playlist {masterPath}: {ex.Message}");
                     }
                 }
             }
         }
         catch (Exception ex)
         {
-            Logger.App($"Failed updating playlists: {ex.Message}");
+            Logger.App(message: $"Failed updating playlists: {ex.Message}");
         }
     }
 
     private static async Task RecreateMasterPlaylist(string hostFolder, string filename)
     {
-        if (string.IsNullOrEmpty(hostFolder))
+        if (string.IsNullOrEmpty(value: hostFolder))
             return;
 
         IStorage storage = CreateStorage();
 
-        if (!storage.Exists(hostFolder))
+        if (!storage.Exists(path: hostFolder))
         {
-            Logger.App($"Host folder does not exist: {hostFolder}");
+            Logger.App(message: $"Host folder does not exist: {hostFolder}");
             return;
         }
 
-        string targetName = Path.GetFileNameWithoutExtension(filename) ?? "master";
+        string targetName = Path.GetFileNameWithoutExtension(path: filename) ?? "master";
 
         try
         {
             // Find master playlists in the folder (those containing EXT-X-STREAM-INF)
             List<string> masters = storage
-                .List(hostFolder, "*.m3u8", false)
-                .Select(e => e.Path)
-                .Where(f =>
+                .List(path: hostFolder, pattern: "*.m3u8", recursive: false)
+                .Select(selector: e => e.Path)
+                .Where(predicate: f =>
                 {
                     try
                     {
                         return storage
-                            .ReadAllTextAsync(f, CancellationToken.None)
-                            .Result.Contains("#EXT-X-STREAM-INF");
+                            .ReadAllTextAsync(path: f, ct: CancellationToken.None)
+                            .Result.Contains(value: "#EXT-X-STREAM-INF");
                     }
                     catch
                     {
@@ -485,90 +485,90 @@ public static class Dev
             if (masters.Any())
             {
                 string backupDir = Path.Combine(
-                    hostFolder,
-                    "_m3u8_backup_" + DateTime.UtcNow.ToString("yyyyMMddHHmmss")
+                    path1: hostFolder,
+                    path2: "_m3u8_backup_" + DateTime.UtcNow.ToString(format: "yyyyMMddHHmmss")
                 );
-                storage.CreateDirectory(backupDir);
+                storage.CreateDirectory(path: backupDir);
                 foreach (string m in masters)
                 {
                     try
                     {
-                        string dest = Path.Combine(backupDir, Path.GetFileName(m));
-                        storage.Move(m, dest);
-                        Logger.App($"Backed up master playlist {m} -> {dest}");
+                        string dest = Path.Combine(path1: backupDir, path2: Path.GetFileName(path: m));
+                        storage.Move(from: m, to: dest);
+                        Logger.App(message: $"Backed up master playlist {m} -> {dest}");
                     }
                     catch (Exception ex)
                     {
-                        Logger.App($"Failed to backup {m}: {ex.Message}");
+                        Logger.App(message: $"Failed to backup {m}: {ex.Message}");
                     }
                 }
             }
 
             // Build master playlist by scanning variant playlists in subdirectories
             StringBuilder masterBuilder = new();
-            masterBuilder.AppendLine("#EXTM3U");
+            masterBuilder.AppendLine(value: "#EXTM3U");
 
             // Video variants
             foreach (
                 string dir in storage
-                    .List(hostFolder, "video_*", false)
-                    .Where(e => e.IsDirectory)
-                    .Select(e => e.Path)
-                    .OrderByDescending(d => d)
+                    .List(path: hostFolder, pattern: "video_*", recursive: false)
+                    .Where(predicate: e => e.IsDirectory)
+                    .Select(selector: e => e.Path)
+                    .OrderByDescending(keySelector: d => d)
             )
             {
-                IReadOnlyList<StorageEntry> dirPlaylists = storage.List(dir, "*.m3u8", false);
+                IReadOnlyList<StorageEntry> dirPlaylists = storage.List(path: dir, pattern: "*.m3u8", recursive: false);
                 if (dirPlaylists.Count == 0)
                     continue;
 
-                string dirName = Path.GetFileName(dir);
-                string relativePath = Path.Combine(dirName, Path.GetFileName(dirPlaylists[0].Path))
-                    .Replace("\\", "/");
+                string dirName = Path.GetFileName(path: dir);
+                string relativePath = Path.Combine(path1: dirName, path2: Path.GetFileName(path: dirPlaylists[index: 0].Path))
+                    .Replace(oldValue: "\\", newValue: "/");
 
                 // Parse resolution from directory name (video_1920x1080)
-                Match resMatch = Regex.Match(dirName, @"video_(\d+)x(\d+)");
+                Match resMatch = Regex.Match(input: dirName, pattern: @"video_(\d+)x(\d+)");
                 if (resMatch.Success)
                 {
-                    string width = resMatch.Groups[1].Value;
-                    string height = resMatch.Groups[2].Value;
+                    string width = resMatch.Groups[groupnum: 1].Value;
+                    string height = resMatch.Groups[groupnum: 2].Value;
                     masterBuilder.AppendLine(
-                        $"#EXT-X-STREAM-INF:BANDWIDTH=8000000,RESOLUTION={width}x{height}"
+                        handler: $"#EXT-X-STREAM-INF:BANDWIDTH=8000000,RESOLUTION={width}x{height}"
                     );
-                    masterBuilder.AppendLine(relativePath);
+                    masterBuilder.AppendLine(value: relativePath);
                 }
             }
 
             // Audio variants
             foreach (
                 string dir in storage
-                    .List(hostFolder, "audio_*", false)
-                    .Where(e => e.IsDirectory)
-                    .Select(e => e.Path)
+                    .List(path: hostFolder, pattern: "audio_*", recursive: false)
+                    .Where(predicate: e => e.IsDirectory)
+                    .Select(selector: e => e.Path)
             )
             {
-                IReadOnlyList<StorageEntry> dirPlaylists = storage.List(dir, "*.m3u8", false);
+                IReadOnlyList<StorageEntry> dirPlaylists = storage.List(path: dir, pattern: "*.m3u8", recursive: false);
                 if (dirPlaylists.Count == 0)
                     continue;
 
-                string dirName = Path.GetFileName(dir);
-                string relativePath = Path.Combine(dirName, Path.GetFileName(dirPlaylists[0].Path))
-                    .Replace("\\", "/");
+                string dirName = Path.GetFileName(path: dir);
+                string relativePath = Path.Combine(path1: dirName, path2: Path.GetFileName(path: dirPlaylists[index: 0].Path))
+                    .Replace(oldValue: "\\", newValue: "/");
                 masterBuilder.AppendLine(
-                    $"#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",NAME=\"{dirName}\",URI=\"{relativePath}\""
+                    handler: $"#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",NAME=\"{dirName}\",URI=\"{relativePath}\""
                 );
             }
 
-            string newMaster = Path.Combine(hostFolder, targetName + ".m3u8");
+            string newMaster = Path.Combine(path1: hostFolder, path2: targetName + ".m3u8");
             await storage.WriteAllTextAsync(
-                newMaster,
-                masterBuilder.ToString(),
-                CancellationToken.None
+                path: newMaster,
+                contents: masterBuilder.ToString(),
+                ct: CancellationToken.None
             );
-            Logger.App($"Recreated master playlist: {newMaster}");
+            Logger.App(message: $"Recreated master playlist: {newMaster}");
         }
         catch (Exception ex)
         {
-            Logger.App($"Failed recreating master playlist in {hostFolder}: {ex.Message}");
+            Logger.App(message: $"Failed recreating master playlist in {hostFolder}: {ex.Message}");
         }
     }
 }

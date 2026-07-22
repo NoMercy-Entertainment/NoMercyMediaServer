@@ -27,12 +27,12 @@ public class SubtitleOcrEngineParserTests
             lavfi.ocr.text=Hello world
             """;
 
-        List<SubtitleOcrEngine.SubtitleCue> cues = ParserAccess.Parse(input);
+        List<SubtitleOcrEngine.SubtitleCue> cues = ParserAccess.Parse(content: input);
 
-        Assert.Single(cues);
-        Assert.Equal(0, cues[0].StartSeconds);
-        Assert.Equal(1.0, cues[0].EndSeconds);
-        Assert.Equal("Hello world", cues[0].Text);
+        Assert.Single(collection: cues);
+        Assert.Equal(expected: 0, actual: cues[index: 0].StartSeconds);
+        Assert.Equal(expected: 1.0, actual: cues[index: 0].EndSeconds);
+        Assert.Equal(expected: "Hello world", actual: cues[index: 0].Text);
     }
 
     [Fact]
@@ -49,14 +49,14 @@ public class SubtitleOcrEngineParserTests
             lavfi.ocr.text=World
             """;
 
-        List<SubtitleOcrEngine.SubtitleCue> cues = ParserAccess.Parse(input);
+        List<SubtitleOcrEngine.SubtitleCue> cues = ParserAccess.Parse(content: input);
 
-        Assert.Equal(2, cues.Count);
-        Assert.Equal("Hello", cues[0].Text);
-        Assert.Equal(0, cues[0].StartSeconds);
-        Assert.Equal(1.0, cues[0].EndSeconds);
-        Assert.Equal("World", cues[1].Text);
-        Assert.Equal(2.0, cues[1].StartSeconds);
+        Assert.Equal(expected: 2, actual: cues.Count);
+        Assert.Equal(expected: "Hello", actual: cues[index: 0].Text);
+        Assert.Equal(expected: 0, actual: cues[index: 0].StartSeconds);
+        Assert.Equal(expected: 1.0, actual: cues[index: 0].EndSeconds);
+        Assert.Equal(expected: "World", actual: cues[index: 1].Text);
+        Assert.Equal(expected: 2.0, actual: cues[index: 1].StartSeconds);
     }
 
     [Fact]
@@ -73,11 +73,11 @@ public class SubtitleOcrEngineParserTests
             lavfi.ocr.text=
             """;
 
-        List<SubtitleOcrEngine.SubtitleCue> cues = ParserAccess.Parse(input);
+        List<SubtitleOcrEngine.SubtitleCue> cues = ParserAccess.Parse(content: input);
 
-        Assert.Single(cues);
-        Assert.Equal("Hello", cues[0].Text);
-        Assert.Equal(1.0, cues[0].EndSeconds);
+        Assert.Single(collection: cues);
+        Assert.Equal(expected: "Hello", actual: cues[index: 0].Text);
+        Assert.Equal(expected: 1.0, actual: cues[index: 0].EndSeconds);
     }
 
     [Fact]
@@ -88,9 +88,9 @@ public class SubtitleOcrEngineParserTests
             frame:1 pts:1 pts_time:1
             """;
 
-        List<SubtitleOcrEngine.SubtitleCue> cues = ParserAccess.Parse(input);
+        List<SubtitleOcrEngine.SubtitleCue> cues = ParserAccess.Parse(content: input);
 
-        Assert.Empty(cues);
+        Assert.Empty(collection: cues);
     }
 
     [Fact]
@@ -99,10 +99,10 @@ public class SubtitleOcrEngineParserTests
         string input =
             "pts_time:0\r\nlavfi.ocr.text=Hello\r\n\r\npts_time:1\r\nlavfi.ocr.text=Hello\r\n";
 
-        List<SubtitleOcrEngine.SubtitleCue> cues = ParserAccess.Parse(input);
+        List<SubtitleOcrEngine.SubtitleCue> cues = ParserAccess.Parse(content: input);
 
-        Assert.Single(cues);
-        Assert.Equal("Hello", cues[0].Text);
+        Assert.Single(collection: cues);
+        Assert.Equal(expected: "Hello", actual: cues[index: 0].Text);
     }
 
     [Fact]
@@ -113,12 +113,12 @@ public class SubtitleOcrEngineParserTests
             lavfi.ocr.text=Last line
             """;
 
-        List<SubtitleOcrEngine.SubtitleCue> cues = ParserAccess.Parse(input);
+        List<SubtitleOcrEngine.SubtitleCue> cues = ParserAccess.Parse(content: input);
 
-        Assert.Single(cues);
-        Assert.Equal("Last line", cues[0].Text);
-        Assert.Equal(10.5, cues[0].StartSeconds);
-        Assert.Equal(10.5, cues[0].EndSeconds);
+        Assert.Single(collection: cues);
+        Assert.Equal(expected: "Last line", actual: cues[index: 0].Text);
+        Assert.Equal(expected: 10.5, actual: cues[index: 0].StartSeconds);
+        Assert.Equal(expected: 10.5, actual: cues[index: 0].EndSeconds);
     }
 
     [Fact]
@@ -132,11 +132,11 @@ public class SubtitleOcrEngineParserTests
             lavfi.ocr.text=Frame 1
             """;
 
-        List<SubtitleOcrEngine.SubtitleCue> cues = ParserAccess.Parse(input);
+        List<SubtitleOcrEngine.SubtitleCue> cues = ParserAccess.Parse(content: input);
 
-        Assert.Single(cues);
-        Assert.Equal(0.041667, cues[0].StartSeconds, precision: 6);
-        Assert.Equal(2.083333, cues[0].EndSeconds, precision: 6);
+        Assert.Single(collection: cues);
+        Assert.Equal(expected: 0.041667, actual: cues[index: 0].StartSeconds, precision: 6);
+        Assert.Equal(expected: 2.083333, actual: cues[index: 0].EndSeconds, precision: 6);
     }
 
     /// <summary>
@@ -148,7 +148,7 @@ public class SubtitleOcrEngineParserTests
         public static List<SubtitleOcrEngine.SubtitleCue> Parse(string content) =>
             (List<SubtitleOcrEngine.SubtitleCue>)
                 typeof(SubtitleOcrEngine)
-                    .GetMethod("ParseOcrOutput", BindingFlags.Static | BindingFlags.NonPublic)!
-                    .Invoke(null, [content])!;
+                    .GetMethod(name: "ParseOcrOutput", bindingAttr: BindingFlags.Static | BindingFlags.NonPublic)!
+                    .Invoke(obj: null, parameters: [content])!;
     }
 }

@@ -16,53 +16,53 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Movies;
 
-[PrimaryKey(nameof(Id))]
-[Index(nameof(MediaId), nameof(TvFromId), IsUnique = true)]
-[Index(nameof(MediaId), nameof(MovieFromId), IsUnique = true)]
-[Index(nameof(Title))]
-[Index(nameof(TitleSort))]
-[Index(nameof(TvFromId))]
-[Index(nameof(TvToId))]
-[Index(nameof(MovieFromId))]
-[Index(nameof(MovieToId))]
+[PrimaryKey(propertyName: nameof(Id))]
+[Index(propertyName: nameof(MediaId), additionalPropertyNames: nameof(TvFromId), IsUnique = true)]
+[Index(propertyName: nameof(MediaId), additionalPropertyNames: nameof(MovieFromId), IsUnique = true)]
+[Index(propertyName: nameof(Title))]
+[Index(propertyName: nameof(TitleSort))]
+[Index(propertyName: nameof(TvFromId))]
+[Index(propertyName: nameof(TvToId))]
+[Index(propertyName: nameof(MovieFromId))]
+[Index(propertyName: nameof(MovieToId))]
 public class Similar : ColorPaletteTimeStamps
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    [JsonProperty("id")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.Identity)]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("backdrop")]
+    [JsonProperty(propertyName: "backdrop")]
     public string? Backdrop { get; set; }
 
-    [MaxLength(4096)]
-    [JsonProperty("overview")]
+    [MaxLength(length: 4096)]
+    [JsonProperty(propertyName: "overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty("poster")]
+    [JsonProperty(propertyName: "poster")]
     public string? Poster { get; set; }
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string? Title { get; set; }
 
-    [JsonProperty("titleSort")]
+    [JsonProperty(propertyName: "titleSort")]
     public string? TitleSort { get; set; }
 
-    [JsonProperty("media_id")]
+    [JsonProperty(propertyName: "media_id")]
     public int MediaId { get; set; }
 
-    [JsonProperty("tv_from_id")]
+    [JsonProperty(propertyName: "tv_from_id")]
     public int? TvFromId { get; set; }
     public Tv? TvFrom { get; set; }
 
-    [JsonProperty("tv_to_id")]
+    [JsonProperty(propertyName: "tv_to_id")]
     public int? TvToId { get; set; }
     public Tv? TvTo { get; set; }
 
-    [JsonProperty("movie_from_id")]
+    [JsonProperty(propertyName: "movie_from_id")]
     public int? MovieFromId { get; set; }
     public Movie? MovieFrom { get; set; }
 
-    [JsonProperty("movie_to_id")]
+    [JsonProperty(propertyName: "movie_to_id")]
     public int? MovieToId { get; set; }
     public Movie? MovieTo { get; set; }
 }

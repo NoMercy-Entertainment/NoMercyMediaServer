@@ -44,7 +44,7 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
 
     public SmbStorageDriver(SmbDriverConfig config, ILogger? log = null)
     {
-        _config = config ?? throw new ArgumentNullException(nameof(config));
+        _config = config ?? throw new ArgumentNullException(paramName: nameof(config));
         _log = log ?? NullLogger.Instance;
     }
 
@@ -55,22 +55,22 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
     // share, honouring the configured BasePath.
     private string ToSmbPath(string path)
     {
-        string rel = (path ?? string.Empty).Replace('\\', '/').Trim('/');
+        string rel = (path ?? string.Empty).Replace(oldChar: '\\', newChar: '/').Trim(trimChar: '/');
         string combined =
-            string.IsNullOrEmpty(_config.BasePath) ? rel
-            : string.IsNullOrEmpty(rel) ? _config.BasePath
+            string.IsNullOrEmpty(value: _config.BasePath) ? rel
+            : string.IsNullOrEmpty(value: rel) ? _config.BasePath
             : $"{_config.BasePath}/{rel}";
-        return combined.Replace('/', '\\');
+        return combined.Replace(oldChar: '/', newChar: '\\');
     }
 
-    private static string FromSmbPath(string smbPath) => smbPath.Replace('\\', '/');
+    private static string FromSmbPath(string smbPath) => smbPath.Replace(oldChar: '\\', newChar: '/');
 
     // Relative parent of a path ("" when the path is top-level), in forward-slash
     // form so it can be fed straight back to CreateDirectory.
     private static string ParentOf(string path)
     {
-        string rel = (path ?? string.Empty).Replace('\\', '/').Trim('/');
-        int slash = rel.LastIndexOf('/');
+        string rel = (path ?? string.Empty).Replace(oldChar: '\\', newChar: '/').Trim(trimChar: '/');
+        int slash = rel.LastIndexOf(value: '/');
         return slash < 0 ? string.Empty : rel[..slash];
     }
 
@@ -80,31 +80,31 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
     {
         SMB2Client client = new();
         bool connected = client.Connect(
-            ResolveHost(_config.Host),
-            SMBTransportType.DirectTCPTransport,
-            _config.Port
+            serverAddress: ResolveHost(host: _config.Host),
+            transport: SMBTransportType.DirectTCPTransport,
+            port: _config.Port
         );
         if (!connected)
-            throw new IOException($"SMB connect failed for {_config.Host}:{_config.Port}");
+            throw new IOException(message: $"SMB connect failed for {_config.Host}:{_config.Port}");
 
         NTStatus login = client.Login(
-            _config.Domain,
-            _config.Username ?? string.Empty,
-            _config.Password ?? string.Empty
+            domainName: _config.Domain,
+            userName: _config.Username ?? string.Empty,
+            password: _config.Password ?? string.Empty
         );
         if (login != NTStatus.STATUS_SUCCESS)
         {
             client.Disconnect();
-            throw new IOException($"SMB login failed for {_config.Host} (status {login})");
+            throw new IOException(message: $"SMB login failed for {_config.Host} (status {login})");
         }
 
-        ISMBFileStore store = client.TreeConnect(_config.Share, out NTStatus tree);
+        ISMBFileStore store = client.TreeConnect(shareName: _config.Share, status: out NTStatus tree);
         if (tree != NTStatus.STATUS_SUCCESS)
         {
             client.Logoff();
             client.Disconnect();
             throw new IOException(
-                $"SMB tree-connect to share '{_config.Share}' failed (status {tree})"
+                message: $"SMB tree-connect to share '{_config.Share}' failed (status {tree})"
             );
         }
 
@@ -113,10 +113,10 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
 
     private static IPAddress ResolveHost(string host)
     {
-        if (IPAddress.TryParse(host, out IPAddress? ip))
+        if (IPAddress.TryParse(ipString: host, address: out IPAddress? ip))
             return ip;
-        IPAddress[] addresses = Dns.GetHostAddresses(host);
-        return addresses.FirstOrDefault(a =>
+        IPAddress[] addresses = Dns.GetHostAddresses(hostNameOrAddress: host);
+        return addresses.FirstOrDefault(predicate: a =>
                 a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork
             ) ?? addresses.First();
     }
@@ -126,67 +126,67 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
         lock (_lock)
         {
             using SmbSession session = Connect();
-            return action(session);
+            return action(arg: session);
         }
     }
 
     // ── existence / metadata ──────────────────────────────────────────────────
 
     public bool FileExists(string path) =>
-        WithSession(s =>
-            TryGetInfo(s, ToSmbPath(path), out FileBasicInformation? info, out bool isDir)
+        WithSession(action: s =>
+            TryGetInfo(s: s, smbPath: ToSmbPath(path: path), info: out FileBasicInformation? info, isDirectory: out bool isDir)
             && info is not null
             && !isDir
         );
 
     public bool DirectoryExists(string path)
     {
-        string smb = ToSmbPath(path);
+        string smb = ToSmbPath(path: path);
         if (smb.Length == 0)
             return true; // share root
-        return WithSession(s => TryGetInfo(s, smb, out _, out bool isDir) && isDir);
+        return WithSession(action: s => TryGetInfo(s: s, smbPath: smb, info: out _, isDirectory: out bool isDir) && isDir);
     }
 
     public long GetFileSize(string path) =>
-        WithSession(s =>
+        WithSession(action: s =>
         {
-            OpenForRead(s, ToSmbPath(path), out object handle);
+            OpenForRead(s: s, smbPath: ToSmbPath(path: path), handle: out object handle);
             try
             {
                 NTStatus st = s.Store.GetFileInformation(
-                    out FileInformation info,
-                    handle,
-                    FileInformationClass.FileStandardInformation
+                    result: out FileInformation info,
+                    handle: handle,
+                    informationClass: FileInformationClass.FileStandardInformation
                 );
-                SmbStatus.EnsureSuccess(st, $"stat '{path}'");
+                SmbStatus.EnsureSuccess(status: st, what: $"stat '{path}'");
                 return ((FileStandardInformation)info).EndOfFile;
             }
             finally
             {
-                s.Store.CloseFile(handle);
+                s.Store.CloseFile(handle: handle);
             }
         });
 
-    public DateTime GetLastWriteTimeUtc(string path) => GetBasicTimes(path).LastWrite;
+    public DateTime GetLastWriteTimeUtc(string path) => GetBasicTimes(path: path).LastWrite;
 
-    public DateTime GetCreationTimeUtc(string path) => GetBasicTimes(path).Creation;
+    public DateTime GetCreationTimeUtc(string path) => GetBasicTimes(path: path).Creation;
 
-    public DateTime GetLastAccessTimeUtc(string path) => GetBasicTimes(path).LastAccess;
+    public DateTime GetLastAccessTimeUtc(string path) => GetBasicTimes(path: path).LastAccess;
 
     private (DateTime Creation, DateTime LastAccess, DateTime LastWrite) GetBasicTimes(
         string path
     ) =>
-        WithSession(s =>
+        WithSession(action: s =>
         {
-            OpenForRead(s, ToSmbPath(path), out object handle);
+            OpenForRead(s: s, smbPath: ToSmbPath(path: path), handle: out object handle);
             try
             {
                 NTStatus st = s.Store.GetFileInformation(
-                    out FileInformation info,
-                    handle,
-                    FileInformationClass.FileBasicInformation
+                    result: out FileInformation info,
+                    handle: handle,
+                    informationClass: FileInformationClass.FileBasicInformation
                 );
-                SmbStatus.EnsureSuccess(st, $"stat '{path}'");
+                SmbStatus.EnsureSuccess(status: st, what: $"stat '{path}'");
                 FileBasicInformation b = (FileBasicInformation)info;
                 return (
                     (b.CreationTime.Time ?? DateTime.MinValue).ToUniversalTime(),
@@ -196,23 +196,23 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
             }
             finally
             {
-                s.Store.CloseFile(handle);
+                s.Store.CloseFile(handle: handle);
             }
         });
 
     public bool IsHidden(string path) =>
-        WithSession(s =>
+        WithSession(action: s =>
         {
             if (
-                !TryGetInfo(s, ToSmbPath(path), out FileBasicInformation? info, out _)
+                !TryGetInfo(s: s, smbPath: ToSmbPath(path: path), info: out FileBasicInformation? info, isDirectory: out _)
                 || info is null
             )
                 return false;
-            return info.FileAttributes.HasFlag(FileAttributes.Hidden)
-                || info.FileAttributes.HasFlag(FileAttributes.System);
+            return info.FileAttributes.HasFlag(flag: FileAttributes.Hidden)
+                || info.FileAttributes.HasFlag(flag: FileAttributes.System);
         });
 
-    public string GetFullPath(string path) => FromSmbPath(ToSmbPath(path));
+    public string GetFullPath(string path) => FromSmbPath(smbPath: ToSmbPath(path: path));
 
     public string? ResolveLinkTarget(string path) => null; // SMB symlinks not modelled
 
@@ -226,8 +226,8 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
         SmbSession session = Connect();
         try
         {
-            OpenForRead(session, ToSmbPath(path), out object handle);
-            return new SmbReadStream(session, handle, path, StreamChunkSize);
+            OpenForRead(s: session, smbPath: ToSmbPath(path: path), handle: out object handle);
+            return new SmbReadStream(session: session, handle: handle, path: path, chunkSize: StreamChunkSize);
         }
         catch
         {
@@ -238,15 +238,15 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
 
     public Stream OpenWrite(string path, bool overwrite)
     {
-        if (!overwrite && FileExists(path))
+        if (!overwrite && FileExists(path: path))
             throw new IOException(
-                $"Cannot write to '{path}': file already exists and overwrite is false."
+                message: $"Cannot write to '{path}': file already exists and overwrite is false."
             );
 
         // Match the other drivers: writing a nested path creates its parents.
-        string parent = ParentOf(path);
+        string parent = ParentOf(path: path);
         if (parent.Length > 0)
-            CreateDirectory(parent);
+            CreateDirectory(path: parent);
 
         // A dedicated connection + open handle streamed for the caller's lifetime
         // — bytes go straight to the share via WriteFile at an advancing offset,
@@ -255,18 +255,18 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
         try
         {
             NTStatus st = session.Store.CreateFile(
-                out object handle,
-                out FileStatus _,
-                ToSmbPath(path),
-                AccessMask.GENERIC_WRITE | AccessMask.SYNCHRONIZE,
-                FileAttributes.Normal,
-                ShareAccess.None,
-                CreateDisposition.FILE_OVERWRITE_IF,
-                CreateOptions.FILE_NON_DIRECTORY_FILE | CreateOptions.FILE_SYNCHRONOUS_IO_NONALERT,
-                null
+                handle: out object handle,
+                fileStatus: out FileStatus _,
+                path: ToSmbPath(path: path),
+                desiredAccess: AccessMask.GENERIC_WRITE | AccessMask.SYNCHRONIZE,
+                fileAttributes: FileAttributes.Normal,
+                shareAccess: ShareAccess.None,
+                createDisposition: CreateDisposition.FILE_OVERWRITE_IF,
+                createOptions: CreateOptions.FILE_NON_DIRECTORY_FILE | CreateOptions.FILE_SYNCHRONOUS_IO_NONALERT,
+                securityContext: null
             );
-            SmbStatus.EnsureSuccess(st, $"create '{path}'");
-            return new SmbWriteStream(session, handle, path, StreamChunkSize);
+            SmbStatus.EnsureSuccess(status: st, what: $"create '{path}'");
+            return new SmbWriteStream(session: session, handle: handle, path: path, chunkSize: StreamChunkSize);
         }
         catch
         {
@@ -278,125 +278,125 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
     // ── mutations ──────────────────────────────────────────────────────────────
 
     public void CreateDirectory(string path) =>
-        WithSession(s =>
+        WithSession(action: s =>
         {
             // Create each missing segment so nested dirs work like the other drivers.
-            string[] segments = ToSmbPath(path).Split('\\', StringSplitOptions.RemoveEmptyEntries);
+            string[] segments = ToSmbPath(path: path).Split(separator: '\\', options: StringSplitOptions.RemoveEmptyEntries);
             string current = string.Empty;
             foreach (string segment in segments)
             {
                 current = current.Length == 0 ? segment : $"{current}\\{segment}";
                 NTStatus st = s.Store.CreateFile(
-                    out object handle,
-                    out FileStatus _,
-                    current,
-                    AccessMask.GENERIC_READ,
-                    FileAttributes.Directory,
-                    ShareAccess.Read | ShareAccess.Write,
-                    CreateDisposition.FILE_OPEN_IF,
-                    CreateOptions.FILE_DIRECTORY_FILE,
-                    null
+                    handle: out object handle,
+                    fileStatus: out FileStatus _,
+                    path: current,
+                    desiredAccess: AccessMask.GENERIC_READ,
+                    fileAttributes: FileAttributes.Directory,
+                    shareAccess: ShareAccess.Read | ShareAccess.Write,
+                    createDisposition: CreateDisposition.FILE_OPEN_IF,
+                    createOptions: CreateOptions.FILE_DIRECTORY_FILE,
+                    securityContext: null
                 );
                 if (st == NTStatus.STATUS_SUCCESS)
-                    s.Store.CloseFile(handle);
+                    s.Store.CloseFile(handle: handle);
                 else if (st != NTStatus.STATUS_OBJECT_NAME_COLLISION)
-                    SmbStatus.EnsureSuccess(st, $"mkdir '{current}'");
+                    SmbStatus.EnsureSuccess(status: st, what: $"mkdir '{current}'");
             }
             return 0;
         });
 
-    public void DeleteFile(string path) => Delete(ToSmbPath(path), directory: false);
+    public void DeleteFile(string path) => Delete(smbPath: ToSmbPath(path: path), directory: false);
 
     public void DeleteDirectory(string path, bool recursive)
     {
         if (recursive)
             foreach (
-                string child in EnumerateFileSystemEntries(path, "*", SearchOption.TopDirectoryOnly)
+                string child in EnumerateFileSystemEntries(directory: path, searchPattern: "*", option: SearchOption.TopDirectoryOnly)
             )
             {
-                if (DirectoryExists(child))
-                    DeleteDirectory(child, recursive: true);
+                if (DirectoryExists(path: child))
+                    DeleteDirectory(path: child, recursive: true);
                 else
-                    DeleteFile(child);
+                    DeleteFile(path: child);
             }
-        Delete(ToSmbPath(path), directory: true);
+        Delete(smbPath: ToSmbPath(path: path), directory: true);
     }
 
     private void Delete(string smbPath, bool directory) =>
-        WithSession(s =>
+        WithSession(action: s =>
         {
             NTStatus st = s.Store.CreateFile(
-                out object handle,
-                out FileStatus _,
-                smbPath,
-                AccessMask.DELETE,
-                directory ? FileAttributes.Directory : FileAttributes.Normal,
+                handle: out object handle,
+                fileStatus: out FileStatus _,
+                path: smbPath,
+                desiredAccess: AccessMask.DELETE,
+                fileAttributes: directory ? FileAttributes.Directory : FileAttributes.Normal,
                 // Tolerate a still-open read stream (which shares Read | Delete):
                 // the delete-open must itself allow those to coexist, otherwise a
                 // delete-while-reading raises SHARING_VIOLATION.
-                ShareAccess.Read
-                    | ShareAccess.Write
-                    | ShareAccess.Delete,
-                CreateDisposition.FILE_OPEN,
-                directory
+                shareAccess: ShareAccess.Read
+                             | ShareAccess.Write
+                             | ShareAccess.Delete,
+                createDisposition: CreateDisposition.FILE_OPEN,
+                createOptions: directory
                     ? CreateOptions.FILE_DIRECTORY_FILE
                     : CreateOptions.FILE_NON_DIRECTORY_FILE,
-                null
+                securityContext: null
             );
-            SmbStatus.EnsureSuccess(st, $"open-for-delete '{FromSmbPath(smbPath)}'");
+            SmbStatus.EnsureSuccess(status: st, what: $"open-for-delete '{FromSmbPath(smbPath: smbPath)}'");
             try
             {
                 FileDispositionInformation disposition = new() { DeletePending = true };
-                NTStatus dst = s.Store.SetFileInformation(handle, disposition);
-                SmbStatus.EnsureSuccess(dst, $"delete '{FromSmbPath(smbPath)}'");
+                NTStatus dst = s.Store.SetFileInformation(handle: handle, information: disposition);
+                SmbStatus.EnsureSuccess(status: dst, what: $"delete '{FromSmbPath(smbPath: smbPath)}'");
             }
             finally
             {
-                s.Store.CloseFile(handle);
+                s.Store.CloseFile(handle: handle);
             }
             return 0;
         });
 
-    public void MoveFile(string source, string destination) => Rename(source, destination);
+    public void MoveFile(string source, string destination) => Rename(source: source, destination: destination);
 
-    public void MoveDirectory(string source, string destination) => Rename(source, destination);
+    public void MoveDirectory(string source, string destination) => Rename(source: source, destination: destination);
 
     private void Rename(string source, string destination)
     {
         // SMB rename won't create the destination's parent; match the other
         // drivers and ensure it exists first.
-        string destParent = ParentOf(destination);
+        string destParent = ParentOf(path: destination);
         if (destParent.Length > 0)
-            CreateDirectory(destParent);
+            CreateDirectory(path: destParent);
 
-        WithSession(s =>
+        WithSession(action: s =>
         {
-            string srcSmb = ToSmbPath(source);
+            string srcSmb = ToSmbPath(path: source);
             NTStatus st = s.Store.CreateFile(
-                out object handle,
-                out FileStatus _,
-                srcSmb,
-                AccessMask.GENERIC_ALL | AccessMask.DELETE | AccessMask.SYNCHRONIZE,
-                FileAttributes.Normal,
-                ShareAccess.None,
-                CreateDisposition.FILE_OPEN,
-                CreateOptions.FILE_SYNCHRONOUS_IO_NONALERT,
-                null
+                handle: out object handle,
+                fileStatus: out FileStatus _,
+                path: srcSmb,
+                desiredAccess: AccessMask.GENERIC_ALL | AccessMask.DELETE | AccessMask.SYNCHRONIZE,
+                fileAttributes: FileAttributes.Normal,
+                shareAccess: ShareAccess.None,
+                createDisposition: CreateDisposition.FILE_OPEN,
+                createOptions: CreateOptions.FILE_SYNCHRONOUS_IO_NONALERT,
+                securityContext: null
             );
-            SmbStatus.EnsureSuccess(st, $"open-for-rename '{source}'");
+            SmbStatus.EnsureSuccess(status: st, what: $"open-for-rename '{source}'");
             try
             {
                 FileRenameInformationType2 rename = new()
                 {
                     ReplaceIfExists = true,
-                    FileName = ToSmbPath(destination),
+                    FileName = ToSmbPath(path: destination),
                 };
-                NTStatus rst = s.Store.SetFileInformation(handle, rename);
-                SmbStatus.EnsureSuccess(rst, $"rename '{source}' -> '{destination}'");
+                NTStatus rst = s.Store.SetFileInformation(handle: handle, information: rename);
+                SmbStatus.EnsureSuccess(status: rst, what: $"rename '{source}' -> '{destination}'");
             }
             finally
             {
-                s.Store.CloseFile(handle);
+                s.Store.CloseFile(handle: handle);
             }
             return 0;
         });
@@ -406,9 +406,9 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
     {
         // SMB has no server-side copy in SMBLibrary's surface — stream the bytes
         // from source to destination without buffering the whole file.
-        using Stream r = OpenRead(source);
-        using Stream w = OpenWrite(destination, overwrite);
-        r.CopyTo(w);
+        using Stream r = OpenRead(path: source);
+        using Stream w = OpenWrite(path: destination, overwrite: overwrite);
+        r.CopyTo(destination: w);
     }
 
     // ── enumeration ────────────────────────────────────────────────────────────
@@ -420,7 +420,7 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
     )
     {
         List<string> results = [];
-        CollectEntries(directory, searchPattern, option, results);
+        CollectEntries(directory: directory, searchPattern: searchPattern, option: option, results: results);
         return results;
     }
 
@@ -431,20 +431,20 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
         List<string> results
     )
     {
-        string dirRel = (directory ?? string.Empty).Replace('\\', '/').Trim('/');
-        List<(string Name, bool IsDir)> children = WithSession(s =>
+        string dirRel = (directory ?? string.Empty).Replace(oldChar: '\\', newChar: '/').Trim(trimChar: '/');
+        List<(string Name, bool IsDir)> children = WithSession(action: s =>
         {
-            string smbDir = ToSmbPath(dirRel);
+            string smbDir = ToSmbPath(path: dirRel);
             NTStatus st = s.Store.CreateFile(
-                out object handle,
-                out FileStatus _,
-                smbDir,
-                AccessMask.GENERIC_READ,
-                FileAttributes.Directory,
-                ShareAccess.Read | ShareAccess.Write,
-                CreateDisposition.FILE_OPEN,
-                CreateOptions.FILE_DIRECTORY_FILE,
-                null
+                handle: out object handle,
+                fileStatus: out FileStatus _,
+                path: smbDir,
+                desiredAccess: AccessMask.GENERIC_READ,
+                fileAttributes: FileAttributes.Directory,
+                shareAccess: ShareAccess.Read | ShareAccess.Write,
+                createDisposition: CreateDisposition.FILE_OPEN,
+                createOptions: CreateOptions.FILE_DIRECTORY_FILE,
+                securityContext: null
             );
             // Enumerating a missing directory yields nothing, like the other
             // drivers — not an error.
@@ -452,17 +452,17 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
                 st is NTStatus.STATUS_OBJECT_NAME_NOT_FOUND or NTStatus.STATUS_OBJECT_PATH_NOT_FOUND
             )
                 return [];
-            SmbStatus.EnsureSuccess(st, $"open-dir '{directory}'");
+            SmbStatus.EnsureSuccess(status: st, what: $"open-dir '{directory}'");
             try
             {
                 NTStatus qst = s.Store.QueryDirectory(
-                    out List<QueryDirectoryFileInformation> entries,
-                    handle,
-                    string.IsNullOrEmpty(searchPattern) ? "*" : searchPattern,
-                    FileInformationClass.FileDirectoryInformation
+                    result: out List<QueryDirectoryFileInformation> entries,
+                    handle: handle,
+                    fileName: string.IsNullOrEmpty(value: searchPattern) ? "*" : searchPattern,
+                    informationClass: FileInformationClass.FileDirectoryInformation
                 );
                 if (qst != NTStatus.STATUS_SUCCESS && qst != NTStatus.STATUS_NO_MORE_FILES)
-                    SmbStatus.EnsureSuccess(qst, $"list '{directory}'");
+                    SmbStatus.EnsureSuccess(status: qst, what: $"list '{directory}'");
 
                 List<(string, bool)> found = [];
                 foreach (QueryDirectoryFileInformation entry in entries)
@@ -470,23 +470,23 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
                     FileDirectoryInformation info = (FileDirectoryInformation)entry;
                     if (info.FileName is "." or "..")
                         continue;
-                    bool isDir = info.FileAttributes.HasFlag(FileAttributes.Directory);
-                    found.Add((info.FileName, isDir));
+                    bool isDir = info.FileAttributes.HasFlag(flag: FileAttributes.Directory);
+                    found.Add(item: (info.FileName, isDir));
                 }
                 return found;
             }
             finally
             {
-                s.Store.CloseFile(handle);
+                s.Store.CloseFile(handle: handle);
             }
         });
 
         foreach ((string name, bool isDir) in children)
         {
             string childRel = dirRel.Length == 0 ? name : $"{dirRel}/{name}";
-            results.Add("/" + childRel);
+            results.Add(item: "/" + childRel);
             if (option == SearchOption.AllDirectories && isDir)
-                CollectEntries(childRel, searchPattern, option, results);
+                CollectEntries(directory: childRel, searchPattern: searchPattern, option: option, results: results);
         }
     }
 
@@ -495,20 +495,20 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
     private static void OpenForRead(SmbSession s, string smbPath, out object handle)
     {
         NTStatus st = s.Store.CreateFile(
-            out handle,
-            out FileStatus _,
-            smbPath,
-            AccessMask.GENERIC_READ | AccessMask.SYNCHRONIZE,
-            FileAttributes.Normal,
+            handle: out handle,
+            fileStatus: out FileStatus _,
+            path: smbPath,
+            desiredAccess: AccessMask.GENERIC_READ | AccessMask.SYNCHRONIZE,
+            fileAttributes: FileAttributes.Normal,
             // Allow a concurrent delete/rename while a read stream holds the file
             // open — the streaming read keeps the handle for its whole lifetime,
             // so without share-delete a delete-after-read raises SHARING_VIOLATION.
-            ShareAccess.Read | ShareAccess.Delete,
-            CreateDisposition.FILE_OPEN,
-            CreateOptions.FILE_SYNCHRONOUS_IO_NONALERT,
-            null
+            shareAccess: ShareAccess.Read | ShareAccess.Delete,
+            createDisposition: CreateDisposition.FILE_OPEN,
+            createOptions: CreateOptions.FILE_SYNCHRONOUS_IO_NONALERT,
+            securityContext: null
         );
-        SmbStatus.EnsureSuccess(st, $"open '{FromSmbPath(smbPath)}'");
+        SmbStatus.EnsureSuccess(status: st, what: $"open '{FromSmbPath(smbPath: smbPath)}'");
     }
 
     private static bool TryGetInfo(
@@ -521,34 +521,34 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
         info = null;
         isDirectory = false;
         NTStatus st = s.Store.CreateFile(
-            out object handle,
-            out FileStatus _,
-            smbPath,
-            AccessMask.GENERIC_READ | AccessMask.SYNCHRONIZE,
-            FileAttributes.Normal,
-            ShareAccess.Read | ShareAccess.Write,
-            CreateDisposition.FILE_OPEN,
-            CreateOptions.FILE_SYNCHRONOUS_IO_NONALERT,
-            null
+            handle: out object handle,
+            fileStatus: out FileStatus _,
+            path: smbPath,
+            desiredAccess: AccessMask.GENERIC_READ | AccessMask.SYNCHRONIZE,
+            fileAttributes: FileAttributes.Normal,
+            shareAccess: ShareAccess.Read | ShareAccess.Write,
+            createDisposition: CreateDisposition.FILE_OPEN,
+            createOptions: CreateOptions.FILE_SYNCHRONOUS_IO_NONALERT,
+            securityContext: null
         );
         if (st != NTStatus.STATUS_SUCCESS)
             return false;
         try
         {
             NTStatus bst = s.Store.GetFileInformation(
-                out FileInformation basic,
-                handle,
-                FileInformationClass.FileBasicInformation
+                result: out FileInformation basic,
+                handle: handle,
+                informationClass: FileInformationClass.FileBasicInformation
             );
             if (bst != NTStatus.STATUS_SUCCESS)
                 return false;
             info = (FileBasicInformation)basic;
-            isDirectory = info.FileAttributes.HasFlag(FileAttributes.Directory);
+            isDirectory = info.FileAttributes.HasFlag(flag: FileAttributes.Directory);
             return true;
         }
         finally
         {
-            s.Store.CloseFile(handle);
+            s.Store.CloseFile(handle: handle);
         }
     }
 

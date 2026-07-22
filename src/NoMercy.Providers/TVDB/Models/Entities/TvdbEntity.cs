@@ -18,12 +18,12 @@ public class TvdbEntitiesResponse : TvdbResponse<TvdbEntity[]> { }
 
 public class TvdbEntity
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("hasSpecials")]
+    [JsonProperty(propertyName: "hasSpecials")]
     public bool HasSpecials { get; set; }
 }

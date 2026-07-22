@@ -21,61 +21,61 @@ namespace NoMercy.Api.DTOs.Common;
 
 public record GenreDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public dynamic Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; }
 
-    [JsonProperty("link")]
+    [JsonProperty(propertyName: "link")]
     public Uri Link { get; set; }
 
     public GenreDto()
     {
         Id = 0;
         Name = string.Empty;
-        Link = new("/genres/0", UriKind.Relative);
+        Link = new(uriString: "/genres/0", uriKind: UriKind.Relative);
     }
 
     public GenreDto(GenreMovie genreMovie)
     {
         Id = genreMovie.GenreId;
         Name = genreMovie.Genre.Name;
-        Link = new($"/genres/{Id}", UriKind.Relative);
+        Link = new(uriString: $"/genres/{Id}", uriKind: UriKind.Relative);
     }
 
     public GenreDto(GenreTv genreTv)
     {
         Id = genreTv.GenreId;
         Name = genreTv.Genre.Name;
-        Link = new($"/genres/{Id}", UriKind.Relative);
+        Link = new(uriString: $"/genres/{Id}", uriKind: UriKind.Relative);
     }
 
     public GenreDto(Genre genreMovie)
     {
         Id = genreMovie.Id;
         Name = genreMovie.Name;
-        Link = new($"/genres/{Id}", UriKind.Relative);
+        Link = new(uriString: $"/genres/{Id}", uriKind: UriKind.Relative);
     }
 
     public GenreDto(TmdbGenre tmdbGenreMovie)
     {
         Id = tmdbGenreMovie.Id;
         Name = tmdbGenreMovie.Name.OrEmpty();
-        Link = new($"/genres/{Id}", UriKind.Relative);
+        Link = new(uriString: $"/genres/{Id}", uriKind: UriKind.Relative);
     }
 
     public GenreDto(ArtistMusicGenre artistMusicGenre)
     {
         Id = artistMusicGenre.MusicGenreId;
         Name = artistMusicGenre.MusicGenre.Name;
-        Link = new($"/music/genres/{Id}", UriKind.Relative);
+        Link = new(uriString: $"/music/genres/{Id}", uriKind: UriKind.Relative);
     }
 
     public GenreDto(AlbumMusicGenre artistMusicGenre)
     {
         Id = artistMusicGenre.MusicGenreId;
         Name = artistMusicGenre.MusicGenre.Name;
-        Link = new($"/music/genres/{Id}", UriKind.Relative);
+        Link = new(uriString: $"/music/genres/{Id}", uriKind: UriKind.Relative);
     }
 }

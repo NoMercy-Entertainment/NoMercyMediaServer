@@ -38,13 +38,13 @@ public class ClusterTokenHolderTests
         ClusterTokenHolder holder = new();
         ClusterToken token = new(
             Secret: "future-secret",
-            ExpiresAt: DateTime.UtcNow.AddHours(1),
+            ExpiresAt: DateTime.UtcNow.AddHours(value: 1),
             Scopes: ["encode"]
         );
 
-        holder.Update(token);
+        holder.Update(token: token);
 
-        holder.Current.Should().Be(token);
+        holder.Current.Should().Be(expected: token);
         holder.HasValidToken.Should().BeTrue();
         holder.GetSigner().Should().NotBeNull();
     }
@@ -55,13 +55,13 @@ public class ClusterTokenHolderTests
         ClusterTokenHolder holder = new();
         ClusterToken expired = new(
             Secret: "stale-secret",
-            ExpiresAt: DateTime.UtcNow.AddHours(-1),
+            ExpiresAt: DateTime.UtcNow.AddHours(value: -1),
             Scopes: []
         );
 
-        holder.Update(expired);
+        holder.Update(token: expired);
 
-        holder.Current.Should().Be(expired);
+        holder.Current.Should().Be(expected: expired);
         holder.HasValidToken.Should().BeFalse();
         // Signer is gated by HasValidToken — even though Update built one,
         // GetSigner returns null while the token is expired.
@@ -72,18 +72,18 @@ public class ClusterTokenHolderTests
     public void Update_NewToken_BuildsFreshSigner()
     {
         ClusterTokenHolder holder = new();
-        ClusterToken first = new("first-secret", DateTime.UtcNow.AddHours(1), []);
-        ClusterToken second = new("second-secret", DateTime.UtcNow.AddHours(1), []);
+        ClusterToken first = new(Secret: "first-secret", ExpiresAt: DateTime.UtcNow.AddHours(value: 1), Scopes: []);
+        ClusterToken second = new(Secret: "second-secret", ExpiresAt: DateTime.UtcNow.AddHours(value: 1), Scopes: []);
 
-        holder.Update(first);
+        holder.Update(token: first);
         HmacSigner? firstSigner = holder.GetSigner();
-        holder.Update(second);
+        holder.Update(token: second);
         HmacSigner? secondSigner = holder.GetSigner();
 
         firstSigner.Should().NotBeNull();
         secondSigner.Should().NotBeNull();
         // Different signers for different secrets.
-        secondSigner.Should().NotBeSameAs(firstSigner);
+        secondSigner.Should().NotBeSameAs(unexpected: firstSigner);
     }
 
     [Fact]
@@ -102,9 +102,9 @@ public class ClusterTokenHolderTests
         // ExpiresAt > DateTime.UtcNow — strictly greater than. A token whose
         // ExpiresAt has already passed must be invalid.
         ClusterTokenHolder holder = new();
-        ClusterToken expired = new("s", DateTime.UtcNow.AddMilliseconds(-1), []);
+        ClusterToken expired = new(Secret: "s", ExpiresAt: DateTime.UtcNow.AddMilliseconds(value: -1), Scopes: []);
 
-        holder.Update(expired);
+        holder.Update(token: expired);
 
         holder.HasValidToken.Should().BeFalse();
     }

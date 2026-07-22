@@ -40,30 +40,30 @@ public class MetadataMerger : IMetadataMerger
     {
         Dictionary<int, SourceTrackMetadata> sourceByIndex = [];
         foreach (SourceTrackMetadata s in source)
-            sourceByIndex[s.OutputIndex] = s;
+            sourceByIndex[key: s.OutputIndex] = s;
 
         Dictionary<int, TrackMetadata> dbByIndex = [];
         foreach (TrackMetadata d in dbTracks)
-            dbByIndex[d.OutputIndex] = d;
+            dbByIndex[key: d.OutputIndex] = d;
 
         HashSet<int> allIndexes = [];
         foreach (int idx in sourceByIndex.Keys)
-            allIndexes.Add(idx);
+            allIndexes.Add(item: idx);
         foreach (int idx in dbByIndex.Keys)
-            allIndexes.Add(idx);
+            allIndexes.Add(item: idx);
 
         List<TrackMetadata> result = [];
 
-        foreach (int idx in allIndexes.OrderBy(i => i))
+        foreach (int idx in allIndexes.OrderBy(keySelector: i => i))
         {
-            bool hasSource = sourceByIndex.TryGetValue(idx, out SourceTrackMetadata? src);
-            bool hasDb = dbByIndex.TryGetValue(idx, out TrackMetadata? db);
+            bool hasSource = sourceByIndex.TryGetValue(key: idx, value: out SourceTrackMetadata? src);
+            bool hasDb = dbByIndex.TryGetValue(key: idx, value: out TrackMetadata? db);
 
             if (hasSource && !hasDb)
             {
                 // Source-only: no DB row — emit source values, default dispositions false.
                 result.Add(
-                    new(
+                    item: new(
                         OutputIndex: src!.OutputIndex,
                         Kind: src.Kind,
                         Language: src.Language,
@@ -78,14 +78,14 @@ public class MetadataMerger : IMetadataMerger
             if (!hasSource && hasDb)
             {
                 // DB-only: e.g. acquired subtitle — emit unchanged.
-                result.Add(db!);
+                result.Add(item: db!);
                 continue;
             }
 
             // Both present — apply field-level precedence rules.
             string? mergedLanguage = src!.Language; // rule: source always wins
 
-            string? mergedTitle = !string.IsNullOrEmpty(db!.Title)
+            string? mergedTitle = !string.IsNullOrEmpty(value: db!.Title)
                 ? db.Title // rule: DB wins if non-empty
                 : src.Title; // fallback to source
 
@@ -93,7 +93,7 @@ public class MetadataMerger : IMetadataMerger
             bool mergedIsForced = db.IsForced; // rule: DB wins
 
             result.Add(
-                new(
+                item: new(
                     OutputIndex: idx,
                     Kind: db.Kind,
                     Language: mergedLanguage,

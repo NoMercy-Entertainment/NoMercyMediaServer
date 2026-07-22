@@ -20,10 +20,10 @@ public class ReleaseGroupRepository(MediaContext context) : IReleaseGroupReposit
     public Task Store(ReleaseGroup releaseGroup)
     {
         return context
-            .ReleaseGroups.Upsert(releaseGroup)
-            .On(e => new { e.Id })
+            .ReleaseGroups.Upsert(entity: releaseGroup)
+            .On(match: e => new { e.Id })
             .WhenMatched(
-                (s, i) =>
+                updater: (s, i) =>
                     new()
                     {
                         Id = i.Id,

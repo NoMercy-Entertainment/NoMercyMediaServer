@@ -27,7 +27,7 @@ namespace NoMercy.Tests.Service.Workers;
 /// (the interval is a private <c>static readonly</c> constant, not injectable)
 /// — see the coverage report for that residue.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class PeriodicUpdateCheckServiceTests
 {
     private sealed class CountingUpdateChecker : IUpdateChecker
@@ -37,7 +37,7 @@ public sealed class PeriodicUpdateCheckServiceTests
         public Task<bool> IsUpdateAvailableAsync()
         {
             CallCount++;
-            return Task.FromResult(false);
+            return Task.FromResult(result: false);
         }
     }
 
@@ -45,17 +45,17 @@ public sealed class PeriodicUpdateCheckServiceTests
     public async Task ExecuteAsync_CancelledDuringInitialDelay_NeverCallsCheckerAndExitsCleanly()
     {
         CountingUpdateChecker checker = new();
-        PeriodicUpdateCheckService service = new(checker);
+        PeriodicUpdateCheckService service = new(updateChecker: checker);
         using CancellationTokenSource cts = new();
-        cts.CancelAfter(TimeSpan.FromMilliseconds(20));
+        cts.CancelAfter(delay: TimeSpan.FromMilliseconds(milliseconds: 20));
 
-        Exception? thrown = await Record.ExceptionAsync(async () =>
+        Exception? thrown = await Record.ExceptionAsync(testCode: async () =>
         {
-            await service.StartAsync(cts.Token);
-            await Task.Delay(100);
+            await service.StartAsync(cancellationToken: cts.Token);
+            await Task.Delay(millisecondsDelay: 100);
         });
 
-        Assert.Null(thrown);
-        Assert.Equal(0, checker.CallCount);
+        Assert.Null(@object: thrown);
+        Assert.Equal(expected: 0, actual: checker.CallCount);
     }
 }

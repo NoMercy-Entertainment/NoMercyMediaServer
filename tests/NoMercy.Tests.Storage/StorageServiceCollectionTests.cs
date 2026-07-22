@@ -28,9 +28,9 @@ public class StorageServiceCollectionTests
     private static ServiceProvider BuildProvider()
     {
         ServiceCollection services = new();
-        services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
+        services.AddSingleton(serviceType: typeof(ILogger<>), implementationType: typeof(NullLogger<>));
         services.AddNoMercyStorage();
-        return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true });
+        return services.BuildServiceProvider(options: new ServiceProviderOptions { ValidateOnBuild = true });
     }
 
     [Fact]
@@ -48,10 +48,10 @@ public class StorageServiceCollectionTests
 
         List<string> keys = provider
             .GetServices<IStorageDriverBuilder>()
-            .SelectMany(builder => builder.SupportedTypes)
+            .SelectMany(selector: builder => builder.SupportedTypes)
             .ToList();
 
-        keys.Should().BeEquivalentTo(["local", "nfs", "s3", "r2", "webdav"]);
+        keys.Should().BeEquivalentTo(expectation: ["local", "nfs", "s3", "r2", "webdav"]);
         keys.Should().OnlyHaveUniqueItems();
     }
 }

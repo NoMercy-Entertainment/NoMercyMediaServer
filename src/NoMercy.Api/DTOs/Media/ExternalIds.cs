@@ -15,9 +15,9 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record ExternalIds
 {
-    [JsonProperty("imdb_id")]
+    [JsonProperty(propertyName: "imdb_id")]
     public string? ImdbId { get; set; }
 
-    [JsonProperty("tvdb_id")]
+    [JsonProperty(propertyName: "tvdb_id")]
     public int? TvdbId { get; set; }
 }

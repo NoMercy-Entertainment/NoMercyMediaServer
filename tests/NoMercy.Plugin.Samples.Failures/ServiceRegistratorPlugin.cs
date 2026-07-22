@@ -27,18 +27,18 @@ namespace NoMercy.Plugin.Samples.Failures;
 // every dependency being intercepted by the shared-assembly short-circuit.
 public sealed class ServiceRegistratorPlugin : IPlugin, IPluginServiceRegistrator
 {
-    public static readonly Guid FixedId = Guid.Parse("33333333-0000-0000-0000-000000000003");
+    public static readonly Guid FixedId = Guid.Parse(input: "33333333-0000-0000-0000-000000000003");
 
     public string Name => "ServiceRegistrator";
     public string Description => "Healthy plugin that also registers a host service";
     public Guid Id => FixedId;
-    public Version Version { get; } = new(0, 1, 0);
+    public Version Version { get; } = new(major: 0, minor: 1, build: 0);
 
     public void Initialize(IPluginContext context) =>
-        JsonConvert.SerializeObject(new { ok = true });
+        JsonConvert.SerializeObject(value: new { ok = true });
 
     public void RegisterServices(IServiceCollection services) =>
-        services.AddSingleton(new FailuresPluginMarker());
+        services.AddSingleton(implementationInstance: new FailuresPluginMarker());
 
     public void Dispose() { }
 }

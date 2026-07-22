@@ -39,7 +39,7 @@ public sealed class DvdDiscSource(
 
     public async Task<DiscInfo> ProbeAsync(DiscDrive drive, CancellationToken ct)
     {
-        string drivePath = ToDvdPath(drive.Path);
+        string drivePath = ToDvdPath(mountPath: drive.Path);
 
         // libdvdread doesn't enumerate titles in a single call — it expects
         // the caller to walk titles 1..N sequentially. We probe each title
@@ -50,7 +50,8 @@ public sealed class DvdDiscSource(
         for (int titleIdx = 1; titleIdx <= MaxTitleProbes; titleIdx++)
         {
             ProcessResult result = await processRunner.RunAsync(
-                options.FfprobePath,
+                executable: options.FfprobePath,
+                arguments:
                 [
                     "-hide_banner",
                     "-v",
@@ -58,7 +59,7 @@ public sealed class DvdDiscSource(
                     "-f",
                     "dvdvideo",
                     "-title",
-                    titleIdx.ToString(CultureInfo.InvariantCulture),
+                    titleIdx.ToString(provider: CultureInfo.InvariantCulture),
                     "-print_format",
                     "json",
                     "-show_format",
@@ -71,13 +72,13 @@ public sealed class DvdDiscSource(
 
             // Capture protection state from the first probe — same stderr
             // signatures every iteration anyway.
-            protection ??= ClassifyProtection(result.StdErr);
+            protection ??= ClassifyProtection(stderr: result.StdErr);
 
             if (
-                !string.IsNullOrEmpty(result.StdErr)
+                !string.IsNullOrEmpty(value: result.StdErr)
                 && result.StdErr.Contains(
-                    $"Title {titleIdx} not found",
-                    StringComparison.OrdinalIgnoreCase
+                    value: $"Title {titleIdx} not found",
+                    comparisonType: StringComparison.OrdinalIgnoreCase
                 )
             )
             {
@@ -85,31 +86,31 @@ public sealed class DvdDiscSource(
                 break;
             }
 
-            if (string.IsNullOrWhiteSpace(result.StdOut))
+            if (string.IsNullOrWhiteSpace(value: result.StdOut))
                 continue;
 
             try
             {
-                using JsonDocument doc = JsonDocument.Parse(result.StdOut);
-                if (!doc.RootElement.TryGetProperty("format", out JsonElement format))
+                using JsonDocument doc = JsonDocument.Parse(json: result.StdOut);
+                if (!doc.RootElement.TryGetProperty(propertyName: "format", value: out JsonElement format))
                     continue;
 
                 TimeSpan duration = TimeSpan.Zero;
                 if (
-                    format.TryGetProperty("duration", out JsonElement dur)
+                    format.TryGetProperty(propertyName: "duration", value: out JsonElement dur)
                     && double.TryParse(
-                        dur.GetString(),
-                        NumberStyles.Float,
-                        CultureInfo.InvariantCulture,
-                        out double seconds
+                        s: dur.GetString(),
+                        style: NumberStyles.Float,
+                        provider: CultureInfo.InvariantCulture,
+                        result: out double seconds
                     )
                 )
                 {
-                    duration = TimeSpan.FromSeconds(seconds);
+                    duration = TimeSpan.FromSeconds(value: seconds);
                 }
 
                 titles.Add(
-                    new(
+                    item: new(
                         Index: titleIdx,
                         Name: $"Title {titleIdx:D2}",
                         Duration: duration,
@@ -125,10 +126,8 @@ public sealed class DvdDiscSource(
             catch (JsonException ex)
             {
                 logger.LogInformation(
-                    ex,
-                    "DVD title {Title} probe parse failed for {Drive}",
-                    titleIdx,
-                    drive.Path
+                    exception: ex,
+                    message: "DVD title {Title} probe parse failed for {Drive}", args: [titleIdx, drive.Path]
                 );
             }
         }
@@ -136,18 +135,16 @@ public sealed class DvdDiscSource(
         if (titles.Count == 0)
         {
             logger.LogInformation(
-                "DVD probe found 0 titles for {Drive}: {Protection}",
-                drive.Path,
-                protection?.Message ?? "(no protection detected)"
+                message: "DVD probe found 0 titles for {Drive}: {Protection}", args: [drive.Path, protection?.Message ?? "(no protection detected)"]
             );
-            return new(OpticalDiscType.Dvd, drive.Label, [], null, TimeSpan.Zero, protection);
+            return new(Type: OpticalDiscType.Dvd, DiscLabel: drive.Label, Titles: [], AudioTracks: null, TotalDuration: TimeSpan.Zero, Protection: protection);
         }
 
         // Flag the longest title as the main feature.
-        TimeSpan maxDuration = titles.Max(t => t.Duration);
+        TimeSpan maxDuration = titles.Max(selector: t => t.Duration);
         DiscTitle[] flagged = titles
-            .Select(t => t with { IsMainFeature = t.Duration == maxDuration })
-            .OrderByDescending(t => t.Duration)
+            .Select(selector: t => t with { IsMainFeature = t.Duration == maxDuration })
+            .OrderByDescending(keySelector: t => t.Duration)
             .ToArray();
 
         return new(
@@ -155,8 +152,8 @@ public sealed class DvdDiscSource(
             DiscLabel: drive.Label,
             Titles: flagged,
             AudioTracks: null,
-            TotalDuration: flagged.Sum(t => t.Duration.Ticks) is long ticks
-                ? TimeSpan.FromTicks(ticks)
+            TotalDuration: flagged.Sum(selector: t => t.Duration.Ticks) is long ticks
+                ? TimeSpan.FromTicks(value: ticks)
                 : TimeSpan.Zero,
             Protection: protection
         );
@@ -176,17 +173,18 @@ public sealed class DvdDiscSource(
         CancellationToken ct
     )
     {
-        string drivePath = ToDvdPath(drive.Path);
+        string drivePath = ToDvdPath(mountPath: drive.Path);
 
         ProcessResult result = await processRunner.RunAsync(
-            options.FfprobePath,
+            executable: options.FfprobePath,
+            arguments:
             [
                 "-v",
                 "quiet",
                 "-f",
                 "dvdvideo",
                 "-title",
-                titleIndex.ToString(CultureInfo.InvariantCulture),
+                titleIndex.ToString(provider: CultureInfo.InvariantCulture),
                 "-print_format",
                 "json",
                 "-show_format",
@@ -211,7 +209,7 @@ public sealed class DvdDiscSource(
             IsMainFeature: false
         );
 
-        if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.StdOut))
+        if (!result.IsSuccess || string.IsNullOrWhiteSpace(value: result.StdOut))
             return empty;
 
         try
@@ -219,7 +217,7 @@ public sealed class DvdDiscSource(
             // Re-use Bluray's parser — same JSON shape from ffprobe regardless
             // of input demuxer. Returns DiscInfo with one title; we lift that
             // title out and re-stamp the index.
-            DiscInfo info = Bluray.DiscScanner.Parse(result.StdOut, OpticalDiscType.Dvd);
+            DiscInfo info = Bluray.DiscScanner.Parse(json: result.StdOut, discType: OpticalDiscType.Dvd);
             DiscTitle? single = info.Titles.FirstOrDefault();
             return single is null ? empty : single with { Index = titleIndex };
         }
@@ -232,10 +230,8 @@ public sealed class DvdDiscSource(
             // instead of degrading to the empty skeleton title this method
             // otherwise always returns on failure.
             logger.LogInformation(
-                ex,
-                "DVD per-title probe parse failed for {Drive} title {Title}",
-                drive.Path,
-                titleIndex
+                exception: ex,
+                message: "DVD per-title probe parse failed for {Drive} title {Title}", args: [drive.Path, titleIndex]
             );
             return empty;
         }
@@ -248,14 +244,14 @@ public sealed class DvdDiscSource(
     /// </summary>
     internal static DiscProtection? ClassifyProtection(string stderr)
     {
-        if (string.IsNullOrEmpty(stderr))
+        if (string.IsNullOrEmpty(value: stderr))
             return null;
 
         if (
-            stderr.Contains("css authentication failed", StringComparison.OrdinalIgnoreCase)
+            stderr.Contains(value: "css authentication failed", comparisonType: StringComparison.OrdinalIgnoreCase)
             || stderr.Contains(
-                "could not get a key for any title",
-                StringComparison.OrdinalIgnoreCase
+                value: "could not get a key for any title",
+                comparisonType: StringComparison.OrdinalIgnoreCase
             )
         )
         {
@@ -267,7 +263,7 @@ public sealed class DvdDiscSource(
             );
         }
 
-        if (stderr.Contains("region code mismatch", StringComparison.OrdinalIgnoreCase))
+        if (stderr.Contains(value: "region code mismatch", comparisonType: StringComparison.OrdinalIgnoreCase))
         {
             return new(
                 Kind: "RegionLock",
@@ -285,9 +281,9 @@ public sealed class DvdDiscSource(
         // VIDEO_TS folder, not the disc root. Without it libdvdcss tries
         // raw block reads and fails on any drive that doesn't expose the
         // SCSI MMC interface (virtual drives, some USB enclosures).
-        if (mountPath.StartsWith("dvd:", StringComparison.OrdinalIgnoreCase))
+        if (mountPath.StartsWith(value: "dvd:", comparisonType: StringComparison.OrdinalIgnoreCase))
             return mountPath;
-        string trimmed = mountPath.TrimEnd('\\', '/');
+        string trimmed = mountPath.TrimEnd(trimChars: ['\\', '/']);
         return $"{trimmed}/VIDEO_TS/";
     }
 }

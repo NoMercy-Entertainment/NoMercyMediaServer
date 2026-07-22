@@ -16,9 +16,9 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record RecommendationColorPaletteDto
 {
-    [JsonProperty("poster")]
+    [JsonProperty(propertyName: "poster")]
     public ColorPalette? Poster { get; set; }
 
-    [JsonProperty("backdrop")]
+    [JsonProperty(propertyName: "backdrop")]
     public ColorPalette? Backdrop { get; set; }
 }

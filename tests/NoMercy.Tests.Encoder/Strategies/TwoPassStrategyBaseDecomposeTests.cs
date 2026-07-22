@@ -52,10 +52,10 @@ public class TwoPassStrategyBaseDecomposeTests
 
     private static HlsTwoPassStrategy Build() =>
         new(
-            Mock.Of<IEncoder>(),
-            Mock.Of<ICheckpointStore>(),
-            NullLogger<HlsTwoPassStrategy>.Instance,
-            TestStorageFactory.CreateLocal()
+            encoder: Mock.Of<IEncoder>(),
+            checkpointStore: Mock.Of<ICheckpointStore>(),
+            logger: NullLogger<HlsTwoPassStrategy>.Instance,
+            storage: TestStorageFactory.CreateLocal()
         );
 
     // ── Pass1 + Pass2 per variant ────────────────────────────────────────────
@@ -71,11 +71,11 @@ public class TwoPassStrategyBaseDecomposeTests
             Thumbnails: null
         );
 
-        DecomposedTask[] tasks = Build().Decompose(plan, GroupTag);
+        DecomposedTask[] tasks = Build().Decompose(plan: plan, groupTag: GroupTag);
 
-        tasks.Should().HaveCount(2);
-        tasks.Count(t => t.Kind == EncodeTaskKind.Pass1).Should().Be(1);
-        tasks.Count(t => t.Kind == EncodeTaskKind.Pass2).Should().Be(1);
+        tasks.Should().HaveCount(expected: 2);
+        tasks.Count(predicate: t => t.Kind == EncodeTaskKind.Pass1).Should().Be(expected: 1);
+        tasks.Count(predicate: t => t.Kind == EncodeTaskKind.Pass2).Should().Be(expected: 1);
     }
 
     [Fact]
@@ -94,10 +94,10 @@ public class TwoPassStrategyBaseDecomposeTests
             Thumbnails: null
         );
 
-        DecomposedTask[] tasks = Build().Decompose(plan, GroupTag);
+        DecomposedTask[] tasks = Build().Decompose(plan: plan, groupTag: GroupTag);
 
-        tasks.Count(t => t.Kind == EncodeTaskKind.Pass1).Should().Be(3);
-        tasks.Count(t => t.Kind == EncodeTaskKind.Pass2).Should().Be(3);
+        tasks.Count(predicate: t => t.Kind == EncodeTaskKind.Pass1).Should().Be(expected: 3);
+        tasks.Count(predicate: t => t.Kind == EncodeTaskKind.Pass2).Should().Be(expected: 3);
     }
 
     [Fact]
@@ -113,19 +113,19 @@ public class TwoPassStrategyBaseDecomposeTests
             Thumbnails: null
         );
 
-        DecomposedTask[] tasks = Build().Decompose(plan, GroupTag);
+        DecomposedTask[] tasks = Build().Decompose(plan: plan, groupTag: GroupTag);
 
         int lastPass1Index = -1;
         int firstPass2Index = int.MaxValue;
         for (int i = 0; i < tasks.Length; i++)
         {
             if (tasks[i].Kind == EncodeTaskKind.Pass1)
-                lastPass1Index = Math.Max(lastPass1Index, i);
+                lastPass1Index = Math.Max(val1: lastPass1Index, val2: i);
             if (tasks[i].Kind == EncodeTaskKind.Pass2 && i < firstPass2Index)
                 firstPass2Index = i;
         }
 
-        lastPass1Index.Should().BeLessThan(firstPass2Index);
+        lastPass1Index.Should().BeLessThan(expected: firstPass2Index);
     }
 
     [Fact]
@@ -140,13 +140,13 @@ public class TwoPassStrategyBaseDecomposeTests
             Thumbnails: null
         );
 
-        DecomposedTask[] tasks = Build().Decompose(plan, GroupTag);
+        DecomposedTask[] tasks = Build().Decompose(plan: plan, groupTag: GroupTag);
 
-        DecomposedTask[] pass1 = tasks.Where(t => t.Kind == EncodeTaskKind.Pass1).ToArray();
-        DecomposedTask[] pass2 = tasks.Where(t => t.Kind == EncodeTaskKind.Pass2).ToArray();
+        DecomposedTask[] pass1 = tasks.Where(predicate: t => t.Kind == EncodeTaskKind.Pass1).ToArray();
+        DecomposedTask[] pass2 = tasks.Where(predicate: t => t.Kind == EncodeTaskKind.Pass2).ToArray();
 
-        pass1.Select(t => t.TaskId).Should().Equal($"{GroupTag}-pass1-0", $"{GroupTag}-pass1-1");
-        pass2.Select(t => t.TaskId).Should().Equal($"{GroupTag}-pass2-0", $"{GroupTag}-pass2-1");
+        pass1.Select(selector: t => t.TaskId).Should().Equal(expected: [$"{GroupTag}-pass1-0", $"{GroupTag}-pass1-1"]);
+        pass2.Select(selector: t => t.TaskId).Should().Equal(expected: [$"{GroupTag}-pass2-0", $"{GroupTag}-pass2-1"]);
     }
 
     [Fact]
@@ -163,8 +163,8 @@ public class TwoPassStrategyBaseDecomposeTests
         );
 
         DecomposedTask pass2 = Build()
-            .Decompose(plan, GroupTag)
-            .Single(t => t.Kind == EncodeTaskKind.Pass2);
+            .Decompose(plan: plan, groupTag: GroupTag)
+            .Single(predicate: t => t.Kind == EncodeTaskKind.Pass2);
 
         pass2.StatsFilePath.Should().BeNull();
     }
@@ -183,10 +183,10 @@ public class TwoPassStrategyBaseDecomposeTests
         );
 
         DecomposedTask pass1 = Build()
-            .Decompose(plan, GroupTag)
-            .Single(t => t.Kind == EncodeTaskKind.Pass1);
+            .Decompose(plan: plan, groupTag: GroupTag)
+            .Single(predicate: t => t.Kind == EncodeTaskKind.Pass1);
 
-        pass1.Label.Should().StartWith("pass1 ").And.Contain("1920p").And.Contain("libx264");
+        pass1.Label.Should().StartWith(expected: "pass1 ").And.Contain(expected: "1920p").And.Contain(expected: "libx264");
     }
 
     [Fact]
@@ -201,41 +201,41 @@ public class TwoPassStrategyBaseDecomposeTests
         );
 
         DecomposedTask pass2 = Build()
-            .Decompose(plan, GroupTag)
-            .Single(t => t.Kind == EncodeTaskKind.Pass2);
+            .Decompose(plan: plan, groupTag: GroupTag)
+            .Single(predicate: t => t.Kind == EncodeTaskKind.Pass2);
 
-        pass2.Label.Should().StartWith("pass2 ").And.Contain("1280p");
+        pass2.Label.Should().StartWith(expected: "pass2 ").And.Contain(expected: "1280p");
     }
 
     // ── Cost banding ─────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(3840, 8)]
-    [InlineData(1920, 4)]
-    [InlineData(1280, 2)]
-    [InlineData(854, 1)]
+    [InlineData(data: [3840, 8])]
+    [InlineData(data: [1920, 4])]
+    [InlineData(data: [1280, 2])]
+    [InlineData(data: [854, 1])]
     public void Decompose_video_cost_matches_width_for_both_passes(int width, int expectedCost)
     {
         // Pass1 and Pass2 do roughly equivalent CPU work per variant — cost
         // bands must match so the dispatcher allocates consistent slots.
         OutputPlan plan = new(
             Format: OutputFormat.Hls,
-            VideoOutputs: [Video(width: width, height: Math.Max(180, width * 9 / 16))],
+            VideoOutputs: [Video(width: width, height: Math.Max(val1: 180, val2: width * 9 / 16))],
             AudioOutputs: [],
             SubtitleOutputs: [],
             Thumbnails: null
         );
 
-        DecomposedTask[] tasks = Build().Decompose(plan, GroupTag);
+        DecomposedTask[] tasks = Build().Decompose(plan: plan, groupTag: GroupTag);
 
         tasks
-            .Single(t => t.Kind == EncodeTaskKind.Pass1)
+            .Single(predicate: t => t.Kind == EncodeTaskKind.Pass1)
             .EstimatedCostUnits.Should()
-            .Be(expectedCost);
+            .Be(expected: expectedCost);
         tasks
-            .Single(t => t.Kind == EncodeTaskKind.Pass2)
+            .Single(predicate: t => t.Kind == EncodeTaskKind.Pass2)
             .EstimatedCostUnits.Should()
-            .Be(expectedCost);
+            .Be(expected: expectedCost);
     }
 
     // ── Audio / subtitle / thumbnails / chapter expansion ────────────────────
@@ -272,13 +272,13 @@ public class TwoPassStrategyBaseDecomposeTests
         );
 
         DecomposedTask[] audio = Build()
-            .Decompose(plan, GroupTag)
-            .Where(t => t.Kind == EncodeTaskKind.Audio)
+            .Decompose(plan: plan, groupTag: GroupTag)
+            .Where(predicate: t => t.Kind == EncodeTaskKind.Audio)
             .ToArray();
 
-        audio.Should().HaveCount(2);
-        audio[0].Label.Should().Be("eng aac");
-        audio[1].Label.Should().Be("und aac"); // null language → und
+        audio.Should().HaveCount(expected: 2);
+        audio[0].Label.Should().Be(expected: "eng aac");
+        audio[1].Label.Should().Be(expected: "und aac"); // null language → und
     }
 
     [Fact]
@@ -288,18 +288,18 @@ public class TwoPassStrategyBaseDecomposeTests
             Format: OutputFormat.Hls,
             VideoOutputs: [],
             AudioOutputs: [],
-            SubtitleOutputs: [Subtitle("eng", 0), Subtitle(null, 1)],
+            SubtitleOutputs: [Subtitle(language: "eng", sourceIndex: 0), Subtitle(language: null, sourceIndex: 1)],
             Thumbnails: null
         );
 
         DecomposedTask[] subs = Build()
-            .Decompose(plan, GroupTag)
-            .Where(t => t.Kind == EncodeTaskKind.Subtitle)
+            .Decompose(plan: plan, groupTag: GroupTag)
+            .Where(predicate: t => t.Kind == EncodeTaskKind.Subtitle)
             .ToArray();
 
-        subs.Should().HaveCount(2);
-        subs[0].Label.Should().Be("sub eng");
-        subs[1].Label.Should().Be("sub und");
+        subs.Should().HaveCount(expected: 2);
+        subs[0].Label.Should().Be(expected: "sub eng");
+        subs[1].Label.Should().Be(expected: "sub und");
     }
 
     [Fact]
@@ -312,18 +312,18 @@ public class TwoPassStrategyBaseDecomposeTests
             VideoOutputs: [],
             AudioOutputs: [],
             SubtitleOutputs: [],
-            Thumbnails: new(160, 90, 10)
+            Thumbnails: new(Width: 160, Height: 90, IntervalSeconds: 10)
         );
 
         DecomposedTask[] thumbs = Build()
-            .Decompose(plan, GroupTag)
-            .Where(t => t.Kind == EncodeTaskKind.Thumbnails)
+            .Decompose(plan: plan, groupTag: GroupTag)
+            .Where(predicate: t => t.Kind == EncodeTaskKind.Thumbnails)
             .ToArray();
 
         thumbs.Should().ContainSingle();
-        thumbs[0].TaskId.Should().Be($"{GroupTag}-thumbs");
-        thumbs[0].Label.Should().Be("thumbnails");
-        thumbs[0].EstimatedCostUnits.Should().Be(1);
+        thumbs[0].TaskId.Should().Be(expected: $"{GroupTag}-thumbs");
+        thumbs[0].Label.Should().Be(expected: "thumbnails");
+        thumbs[0].EstimatedCostUnits.Should().Be(expected: 1);
     }
 
     [Fact]
@@ -338,9 +338,9 @@ public class TwoPassStrategyBaseDecomposeTests
         );
 
         Build()
-            .Decompose(plan, GroupTag)
+            .Decompose(plan: plan, groupTag: GroupTag)
             .Should()
-            .NotContain(t => t.Kind == EncodeTaskKind.Thumbnails);
+            .NotContain(predicate: t => t.Kind == EncodeTaskKind.Thumbnails);
     }
 
     [Fact]
@@ -354,21 +354,21 @@ public class TwoPassStrategyBaseDecomposeTests
             Thumbnails: null,
             Chapters:
             [
-                new(TimeSpan.Zero, TimeSpan.FromMinutes(10), "Intro"),
-                new(TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(45), "Act 1"),
+                new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(minutes: 10), Title: "Intro"),
+                new(Start: TimeSpan.FromMinutes(minutes: 10), End: TimeSpan.FromMinutes(minutes: 45), Title: "Act 1"),
             ],
             GenerateChapterThumbs: true
         );
 
         DecomposedTask[] chapters = Build()
-            .Decompose(plan, GroupTag)
-            .Where(t => t.Kind == EncodeTaskKind.Chapters)
+            .Decompose(plan: plan, groupTag: GroupTag)
+            .Where(predicate: t => t.Kind == EncodeTaskKind.Chapters)
             .ToArray();
 
-        chapters.Should().HaveCount(2);
-        chapters[0].TaskId.Should().Be($"{GroupTag}-chapter-0");
-        chapters[0].Label.Should().Contain("1/2").And.Contain("@ 0s");
-        chapters[1].Label.Should().Contain("2/2").And.Contain("@ 600s");
+        chapters.Should().HaveCount(expected: 2);
+        chapters[0].TaskId.Should().Be(expected: $"{GroupTag}-chapter-0");
+        chapters[0].Label.Should().Contain(expected: "1/2").And.Contain(expected: "@ 0s");
+        chapters[1].Label.Should().Contain(expected: "2/2").And.Contain(expected: "@ 600s");
     }
 
     [Fact]
@@ -380,14 +380,14 @@ public class TwoPassStrategyBaseDecomposeTests
             AudioOutputs: [],
             SubtitleOutputs: [],
             Thumbnails: null,
-            Chapters: [new(TimeSpan.Zero, TimeSpan.FromMinutes(10), "Intro")],
+            Chapters: [new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(minutes: 10), Title: "Intro")],
             GenerateChapterThumbs: false
         );
 
         Build()
-            .Decompose(plan, GroupTag)
+            .Decompose(plan: plan, groupTag: GroupTag)
             .Should()
-            .NotContain(t => t.Kind == EncodeTaskKind.Chapters);
+            .NotContain(predicate: t => t.Kind == EncodeTaskKind.Chapters);
     }
 
     [Fact]
@@ -404,9 +404,9 @@ public class TwoPassStrategyBaseDecomposeTests
         );
 
         Build()
-            .Decompose(plan, GroupTag)
+            .Decompose(plan: plan, groupTag: GroupTag)
             .Should()
-            .NotContain(t => t.Kind == EncodeTaskKind.Chapters);
+            .NotContain(predicate: t => t.Kind == EncodeTaskKind.Chapters);
     }
 
     // ── Empty plan fallback ──────────────────────────────────────────────────
@@ -422,10 +422,10 @@ public class TwoPassStrategyBaseDecomposeTests
             Thumbnails: null
         );
 
-        DecomposedTask[] tasks = Build().Decompose(plan, GroupTag);
+        DecomposedTask[] tasks = Build().Decompose(plan: plan, groupTag: GroupTag);
 
         tasks.Should().ContainSingle();
-        tasks[0].Kind.Should().Be(EncodeTaskKind.Whole);
+        tasks[0].Kind.Should().Be(expected: EncodeTaskKind.Whole);
     }
 
     // ── Full graph ordering ──────────────────────────────────────────────────
@@ -448,28 +448,20 @@ public class TwoPassStrategyBaseDecomposeTests
                     MapLabel: "[a0]"
                 ),
             ],
-            SubtitleOutputs: [Subtitle("eng", 0)],
-            Thumbnails: new(160, 90, 10),
-            Chapters: [new(TimeSpan.Zero, TimeSpan.FromMinutes(10), "Intro")],
+            SubtitleOutputs: [Subtitle(language: "eng", sourceIndex: 0)],
+            Thumbnails: new(Width: 160, Height: 90, IntervalSeconds: 10),
+            Chapters: [new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(minutes: 10), Title: "Intro")],
             GenerateChapterThumbs: true
         );
 
-        DecomposedTask[] tasks = Build().Decompose(plan, GroupTag);
+        DecomposedTask[] tasks = Build().Decompose(plan: plan, groupTag: GroupTag);
 
         // Block sequence: 2× Pass1, 2× Pass2, 1× Audio, 1× Subtitle, 1× Thumbnails, 1× Chapters = 8 total
-        tasks.Should().HaveCount(8);
+        tasks.Should().HaveCount(expected: 8);
         tasks
-            .Select(t => t.Kind)
+            .Select(selector: t => t.Kind)
             .Should()
-            .Equal(
-                EncodeTaskKind.Pass1,
-                EncodeTaskKind.Pass1,
-                EncodeTaskKind.Pass2,
-                EncodeTaskKind.Pass2,
-                EncodeTaskKind.Audio,
-                EncodeTaskKind.Subtitle,
-                EncodeTaskKind.Thumbnails,
-                EncodeTaskKind.Chapters
+            .Equal(elements: [EncodeTaskKind.Pass1, EncodeTaskKind.Pass1, EncodeTaskKind.Pass2, EncodeTaskKind.Pass2, EncodeTaskKind.Audio, EncodeTaskKind.Subtitle, EncodeTaskKind.Thumbnails, EncodeTaskKind.Chapters]
             );
     }
 

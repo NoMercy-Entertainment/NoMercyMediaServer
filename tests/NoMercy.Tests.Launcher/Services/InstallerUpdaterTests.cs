@@ -32,9 +32,9 @@ public sealed class InstallerUpdaterTests
 {
     private static string CacheDir =>
         Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "NoMercy",
-            "UpdateCache"
+            path1: Environment.GetFolderPath(folder: Environment.SpecialFolder.LocalApplicationData),
+            path2: "NoMercy",
+            path3: "UpdateCache"
         );
 
     private static string InstallerFileName(string version) =>
@@ -45,7 +45,7 @@ public sealed class InstallerUpdaterTests
     {
         // The test host process (testhost.exe / dotnet) never lives under
         // %AppData%\NoMercy\binaries, so this must report "installer deployment".
-        InstallerUpdater updater = new(new ServerConnection());
+        InstallerUpdater updater = new(serverConnection: new ServerConnection());
 
         bool result = await updater.IsInstallerDeploymentAsync();
 
@@ -55,10 +55,10 @@ public sealed class InstallerUpdaterTests
     [Fact]
     public async Task IsInstallerDeploymentAsync_InstallDirEnvVarSet_ReturnsTrueWithoutPathCheck()
     {
-        Environment.SetEnvironmentVariable("NOMERCY_INSTALL_DIR", @"C:\Program Files\NoMercy");
+        Environment.SetEnvironmentVariable(variable: "NOMERCY_INSTALL_DIR", value: @"C:\Program Files\NoMercy");
         try
         {
-            InstallerUpdater updater = new(new ServerConnection());
+            InstallerUpdater updater = new(serverConnection: new ServerConnection());
 
             bool result = await updater.IsInstallerDeploymentAsync();
 
@@ -66,7 +66,7 @@ public sealed class InstallerUpdaterTests
         }
         finally
         {
-            Environment.SetEnvironmentVariable("NOMERCY_INSTALL_DIR", null);
+            Environment.SetEnvironmentVariable(variable: "NOMERCY_INSTALL_DIR", value: null);
         }
     }
 
@@ -74,9 +74,9 @@ public sealed class InstallerUpdaterTests
     public async Task VerifyInstallerAsync_NoSha256Sidecar_ReturnsTrueAsLegacyRelease()
     {
         string version = $"test-{Guid.NewGuid():N}";
-        InstallerUpdater updater = new(new ServerConnection());
+        InstallerUpdater updater = new(serverConnection: new ServerConnection());
 
-        bool result = await updater.VerifyInstallerAsync(version);
+        bool result = await updater.VerifyInstallerAsync(version: version);
 
         result.Should().BeTrue();
     }
@@ -85,27 +85,27 @@ public sealed class InstallerUpdaterTests
     public async Task VerifyInstallerAsync_MatchingSha256Sidecar_ReturnsTrue()
     {
         string version = $"test-{Guid.NewGuid():N}";
-        Directory.CreateDirectory(CacheDir);
-        string exePath = Path.Combine(CacheDir, InstallerFileName(version));
+        Directory.CreateDirectory(path: CacheDir);
+        string exePath = Path.Combine(path1: CacheDir, path2: InstallerFileName(version: version));
         string sha256Path = exePath + ".sha256";
 
         try
         {
             byte[] content = "fake installer bytes for hash verification"u8.ToArray();
-            await File.WriteAllBytesAsync(exePath, content);
-            string hash = Convert.ToHexString(SHA256.HashData(content));
-            await File.WriteAllTextAsync(sha256Path, hash);
+            await File.WriteAllBytesAsync(path: exePath, bytes: content);
+            string hash = Convert.ToHexString(inArray: SHA256.HashData(source: content));
+            await File.WriteAllTextAsync(path: sha256Path, contents: hash);
 
-            InstallerUpdater updater = new(new ServerConnection());
+            InstallerUpdater updater = new(serverConnection: new ServerConnection());
 
-            bool result = await updater.VerifyInstallerAsync(version);
+            bool result = await updater.VerifyInstallerAsync(version: version);
 
             result.Should().BeTrue();
         }
         finally
         {
-            File.Delete(exePath);
-            File.Delete(sha256Path);
+            File.Delete(path: exePath);
+            File.Delete(path: sha256Path);
         }
     }
 
@@ -113,28 +113,28 @@ public sealed class InstallerUpdaterTests
     public async Task VerifyInstallerAsync_SidecarInHashSpaceFilenameFormat_StillParsesTheHash()
     {
         string version = $"test-{Guid.NewGuid():N}";
-        Directory.CreateDirectory(CacheDir);
-        string exePath = Path.Combine(CacheDir, InstallerFileName(version));
+        Directory.CreateDirectory(path: CacheDir);
+        string exePath = Path.Combine(path1: CacheDir, path2: InstallerFileName(version: version));
         string sha256Path = exePath + ".sha256";
 
         try
         {
             byte[] content = "fake installer bytes, sha256sum-style sidecar"u8.ToArray();
-            await File.WriteAllBytesAsync(exePath, content);
-            string hash = Convert.ToHexString(SHA256.HashData(content)).ToLowerInvariant();
+            await File.WriteAllBytesAsync(path: exePath, bytes: content);
+            string hash = Convert.ToHexString(inArray: SHA256.HashData(source: content)).ToLowerInvariant();
             // sha256sum's own output format is "HASH  filename" (lowercase hex).
-            await File.WriteAllTextAsync(sha256Path, $"{hash}  {InstallerFileName(version)}");
+            await File.WriteAllTextAsync(path: sha256Path, contents: $"{hash}  {InstallerFileName(version: version)}");
 
-            InstallerUpdater updater = new(new ServerConnection());
+            InstallerUpdater updater = new(serverConnection: new ServerConnection());
 
-            bool result = await updater.VerifyInstallerAsync(version);
+            bool result = await updater.VerifyInstallerAsync(version: version);
 
             result.Should().BeTrue();
         }
         finally
         {
-            File.Delete(exePath);
-            File.Delete(sha256Path);
+            File.Delete(path: exePath);
+            File.Delete(path: sha256Path);
         }
     }
 
@@ -142,29 +142,29 @@ public sealed class InstallerUpdaterTests
     public async Task VerifyInstallerAsync_MismatchedSha256_ThrowsInvalidDataException()
     {
         string version = $"test-{Guid.NewGuid():N}";
-        Directory.CreateDirectory(CacheDir);
-        string exePath = Path.Combine(CacheDir, InstallerFileName(version));
+        Directory.CreateDirectory(path: CacheDir);
+        string exePath = Path.Combine(path1: CacheDir, path2: InstallerFileName(version: version));
         string sha256Path = exePath + ".sha256";
 
         try
         {
-            await File.WriteAllBytesAsync(exePath, "real content"u8.ToArray());
+            await File.WriteAllBytesAsync(path: exePath, bytes: "real content"u8.ToArray());
             // Sidecar records the hash of totally different bytes.
             string wrongHash = Convert.ToHexString(
-                SHA256.HashData("different content"u8.ToArray())
+                inArray: SHA256.HashData(source: "different content"u8.ToArray())
             );
-            await File.WriteAllTextAsync(sha256Path, wrongHash);
+            await File.WriteAllTextAsync(path: sha256Path, contents: wrongHash);
 
-            InstallerUpdater updater = new(new ServerConnection());
+            InstallerUpdater updater = new(serverConnection: new ServerConnection());
 
-            Func<Task> act = () => updater.VerifyInstallerAsync(version);
+            Func<Task> act = () => updater.VerifyInstallerAsync(version: version);
 
             await act.Should().ThrowAsync<InvalidDataException>();
         }
         finally
         {
-            File.Delete(exePath);
-            File.Delete(sha256Path);
+            File.Delete(path: exePath);
+            File.Delete(path: sha256Path);
         }
     }
 
@@ -174,38 +174,38 @@ public sealed class InstallerUpdaterTests
         string current = $"cur-{Guid.NewGuid():N}";
         string pending = $"pend-{Guid.NewGuid():N}";
         string stale = $"stale-{Guid.NewGuid():N}";
-        Directory.CreateDirectory(CacheDir);
+        Directory.CreateDirectory(path: CacheDir);
 
-        string currentPath = Path.Combine(CacheDir, InstallerFileName(current));
-        string pendingPath = Path.Combine(CacheDir, InstallerFileName(pending));
-        string stalePath = Path.Combine(CacheDir, InstallerFileName(stale));
+        string currentPath = Path.Combine(path1: CacheDir, path2: InstallerFileName(version: current));
+        string pendingPath = Path.Combine(path1: CacheDir, path2: InstallerFileName(version: pending));
+        string stalePath = Path.Combine(path1: CacheDir, path2: InstallerFileName(version: stale));
 
         try
         {
-            await File.WriteAllTextAsync(currentPath, "current");
-            await File.WriteAllTextAsync(pendingPath, "pending");
-            await File.WriteAllTextAsync(stalePath, "stale");
+            await File.WriteAllTextAsync(path: currentPath, contents: "current");
+            await File.WriteAllTextAsync(path: pendingPath, contents: "pending");
+            await File.WriteAllTextAsync(path: stalePath, contents: "stale");
 
-            InstallerUpdater updater = new(new ServerConnection());
+            InstallerUpdater updater = new(serverConnection: new ServerConnection());
 
-            await updater.CleanCacheAsync(current, pending);
+            await updater.CleanCacheAsync(currentVersion: current, pendingVersion: pending);
 
-            File.Exists(currentPath)
+            File.Exists(path: currentPath)
                 .Should()
-                .BeTrue("the running version's installer must survive a prune");
-            File.Exists(pendingPath)
+                .BeTrue(because: "the running version's installer must survive a prune");
+            File.Exists(path: pendingPath)
                 .Should()
-                .BeTrue("the pending update's installer must survive a prune");
-            File.Exists(stalePath)
+                .BeTrue(because: "the pending update's installer must survive a prune");
+            File.Exists(path: stalePath)
                 .Should()
-                .BeFalse("an installer for neither the current nor pending version is stale");
+                .BeFalse(because: "an installer for neither the current nor pending version is stale");
         }
         finally
         {
-            File.Delete(currentPath);
-            File.Delete(pendingPath);
-            if (File.Exists(stalePath))
-                File.Delete(stalePath);
+            File.Delete(path: currentPath);
+            File.Delete(path: pendingPath);
+            if (File.Exists(path: stalePath))
+                File.Delete(path: stalePath);
         }
     }
 
@@ -218,9 +218,9 @@ public sealed class InstallerUpdaterTests
         // is a no-op when the version strings can't match anything on disk,
         // by pointing at a version that certainly doesn't exist while the
         // directory itself may or may not be present.
-        InstallerUpdater updater = new(new ServerConnection());
+        InstallerUpdater updater = new(serverConnection: new ServerConnection());
 
-        Func<Task> act = () => updater.CleanCacheAsync($"nonexistent-{Guid.NewGuid():N}", null);
+        Func<Task> act = () => updater.CleanCacheAsync(currentVersion: $"nonexistent-{Guid.NewGuid():N}", pendingVersion: null);
 
         await act.Should().NotThrowAsync();
     }

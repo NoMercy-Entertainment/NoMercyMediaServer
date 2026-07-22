@@ -35,7 +35,7 @@ public class HolderBackedHardwareCapabilitiesTests
     public void NullCurrent_GpusReturnsEmpty()
     {
         HardwareCapabilitiesHolder holder = new();
-        HolderBackedHardwareCapabilities subject = new(holder);
+        HolderBackedHardwareCapabilities subject = new(holder: holder);
 
         subject.Gpus.Should().BeEmpty();
         subject.HasGpu.Should().BeFalse();
@@ -45,42 +45,42 @@ public class HolderBackedHardwareCapabilitiesTests
     public void NullCurrent_CpuCoresFallsBackToEnvironmentProcessorCount()
     {
         HardwareCapabilitiesHolder holder = new();
-        HolderBackedHardwareCapabilities subject = new(holder);
+        HolderBackedHardwareCapabilities subject = new(holder: holder);
 
-        subject.CpuCores.Should().Be(Environment.ProcessorCount);
+        subject.CpuCores.Should().Be(expected: Environment.ProcessorCount);
     }
 
     [Fact]
     public void NullCurrent_SupportsHardwareEncodingReturnsFalse()
     {
         HardwareCapabilitiesHolder holder = new();
-        HolderBackedHardwareCapabilities subject = new(holder);
+        HolderBackedHardwareCapabilities subject = new(holder: holder);
 
-        subject.SupportsHardwareEncoding(VideoCodecType.H264).Should().BeFalse();
+        subject.SupportsHardwareEncoding(codec: VideoCodecType.H264).Should().BeFalse();
     }
 
     [Fact]
     public void NullCurrent_GetGpuForCodecReturnsNull()
     {
         HardwareCapabilitiesHolder holder = new();
-        HolderBackedHardwareCapabilities subject = new(holder);
+        HolderBackedHardwareCapabilities subject = new(holder: holder);
 
-        subject.GetGpuForCodec(VideoCodecType.H264).Should().BeNull();
+        subject.GetGpuForCodec(codec: VideoCodecType.H264).Should().BeNull();
     }
 
     [Fact]
     public void PopulatedCurrent_ForwardsGpuListThrough()
     {
-        GpuDevice gpu = GpuFor(VideoCodecType.H265);
+        GpuDevice gpu = GpuFor(codec: VideoCodecType.H265);
         HardwareCapabilitiesHolder holder = new()
         {
-            Current = new HardwareCapabilities([gpu], CpuCores: 24),
+            Current = new HardwareCapabilities(Gpus: [gpu], CpuCores: 24),
         };
-        HolderBackedHardwareCapabilities subject = new(holder);
+        HolderBackedHardwareCapabilities subject = new(holder: holder);
 
-        subject.Gpus.Should().ContainSingle().Which.Should().Be(gpu);
+        subject.Gpus.Should().ContainSingle().Which.Should().Be(expected: gpu);
         subject.HasGpu.Should().BeTrue();
-        subject.CpuCores.Should().Be(24);
+        subject.CpuCores.Should().Be(expected: 24);
     }
 
     [Fact]
@@ -88,12 +88,12 @@ public class HolderBackedHardwareCapabilitiesTests
     {
         HardwareCapabilitiesHolder holder = new()
         {
-            Current = new HardwareCapabilities([GpuFor(VideoCodecType.H265)], CpuCores: 8),
+            Current = new HardwareCapabilities(Gpus: [GpuFor(codec: VideoCodecType.H265)], CpuCores: 8),
         };
-        HolderBackedHardwareCapabilities subject = new(holder);
+        HolderBackedHardwareCapabilities subject = new(holder: holder);
 
-        subject.SupportsHardwareEncoding(VideoCodecType.H265).Should().BeTrue();
-        subject.SupportsHardwareEncoding(VideoCodecType.Av1).Should().BeFalse();
+        subject.SupportsHardwareEncoding(codec: VideoCodecType.H265).Should().BeTrue();
+        subject.SupportsHardwareEncoding(codec: VideoCodecType.Av1).Should().BeFalse();
     }
 
     [Fact]
@@ -102,14 +102,14 @@ public class HolderBackedHardwareCapabilitiesTests
         // This is the whole point of the indirection: post-detection update
         // must reach consumers that resolved the singleton pre-detection.
         HardwareCapabilitiesHolder holder = new();
-        HolderBackedHardwareCapabilities subject = new(holder);
+        HolderBackedHardwareCapabilities subject = new(holder: holder);
 
         subject.HasGpu.Should().BeFalse();
 
-        holder.Current = new HardwareCapabilities([GpuFor(VideoCodecType.Av1)], CpuCores: 16);
+        holder.Current = new HardwareCapabilities(Gpus: [GpuFor(codec: VideoCodecType.Av1)], CpuCores: 16);
 
         subject.HasGpu.Should().BeTrue();
         subject.Gpus.Should().ContainSingle();
-        subject.SupportsHardwareEncoding(VideoCodecType.Av1).Should().BeTrue();
+        subject.SupportsHardwareEncoding(codec: VideoCodecType.Av1).Should().BeTrue();
     }
 }

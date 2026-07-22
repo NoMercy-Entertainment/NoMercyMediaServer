@@ -15,36 +15,36 @@ namespace NoMercy.Providers.TMDB.Models.Reviews;
 
 public class TmdbReviewDetails
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty("author")]
+    [JsonProperty(propertyName: "author")]
     public string Author { get; set; } = string.Empty;
 
-    [JsonProperty("author_details")]
+    [JsonProperty(propertyName: "author_details")]
     public TmdbAuthorDetails TmdbAuthorDetails { get; set; } = new();
 
-    [JsonProperty("content")]
+    [JsonProperty(propertyName: "content")]
     public string Content { get; set; } = string.Empty;
 
-    [JsonProperty("created_at")]
+    [JsonProperty(propertyName: "created_at")]
     public DateTime CreatedAt { get; set; }
 
-    [JsonProperty("iso_639_1")]
+    [JsonProperty(propertyName: "iso_639_1")]
     public string Iso6391 { get; set; } = string.Empty;
 
-    [JsonProperty("media_id")]
+    [JsonProperty(propertyName: "media_id")]
     public int MediaId { get; set; }
 
-    [JsonProperty("media_title")]
+    [JsonProperty(propertyName: "media_title")]
     public string MediaTitle { get; set; } = string.Empty;
 
-    [JsonProperty("media_type")]
+    [JsonProperty(propertyName: "media_type")]
     public string MediaType { get; set; } = string.Empty;
 
-    [JsonProperty("updated_at")]
+    [JsonProperty(propertyName: "updated_at")]
     public DateTime? UpdatedAt { get; set; }
 
-    [JsonProperty("url")]
+    [JsonProperty(propertyName: "url")]
     public Uri? Url { get; set; }
 }

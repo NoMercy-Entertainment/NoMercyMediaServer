@@ -27,7 +27,7 @@ public static class CertificationsSeed
         if (hasCertifications)
             return;
 
-        Logger.Setup("Adding Certifications", LogEventLevel.Verbose);
+        Logger.Setup(message: "Adding Certifications", level: LogEventLevel.Verbose);
 
         TmdbMovieClient tmdbMovieClient = new();
         TmdbTvClient tmdbTvClient = new();
@@ -42,7 +42,7 @@ public static class CertificationsSeed
         )
         foreach (TmdbMovieCertification certification in value)
             certifications.Add(
-                new()
+                item: new()
                 {
                     Iso31661 = key,
                     Rating = certification.Rating,
@@ -59,7 +59,7 @@ public static class CertificationsSeed
         )
         foreach (TmdbTvShowCertification certification in value)
             certifications.Add(
-                new()
+                item: new()
                 {
                     Iso31661 = key,
                     Rating = certification.Rating,
@@ -71,9 +71,9 @@ public static class CertificationsSeed
         try
         {
             await dbContext
-                .Certifications.UpsertRange(certifications)
-                .On(v => new { v.Iso31661, v.Rating })
-                .WhenMatched(v =>
+                .Certifications.UpsertRange(entities: certifications)
+                .On(match: v => new { v.Iso31661, v.Rating })
+                .WhenMatched(updater: v =>
                     new()
                     {
                         Iso31661 = v.Iso31661,
@@ -86,7 +86,7 @@ public static class CertificationsSeed
         }
         catch (Exception e)
         {
-            Logger.Setup($"Certifications seed failed: {e.Message}", LogEventLevel.Warning);
+            Logger.Setup(message: $"Certifications seed failed: {e.Message}", level: LogEventLevel.Warning);
         }
     }
 }

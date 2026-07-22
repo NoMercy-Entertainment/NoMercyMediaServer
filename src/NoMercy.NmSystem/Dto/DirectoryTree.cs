@@ -15,52 +15,52 @@ namespace NoMercy.NmSystem.Dto;
 
 public class DirectoryTree
 {
-    [JsonProperty("path")]
+    [JsonProperty(propertyName: "path")]
     public string Path { get; set; } = string.Empty;
 
-    [JsonProperty("mode")]
+    [JsonProperty(propertyName: "mode")]
     public int Mode { get; set; }
 
-    [JsonProperty("size")]
+    [JsonProperty(propertyName: "size")]
     public long? Size { get; set; }
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty("parent")]
+    [JsonProperty(propertyName: "parent")]
     public string Parent { get; set; } = string.Empty;
 
-    [JsonProperty("full_path")]
+    [JsonProperty(propertyName: "full_path")]
     public string FullPath { get; set; } = string.Empty;
 
-    [JsonProperty("subtitle", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty(propertyName: "subtitle", NullValueHandling = NullValueHandling.Ignore)]
     public string? Subtitle { get; set; }
 
-    [JsonProperty("is_empty", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty(propertyName: "is_empty", NullValueHandling = NullValueHandling.Ignore)]
     public bool? IsEmpty { get; set; }
 
     public DirectoryTree() { }
 
     public DirectoryTree(string parent, string path)
     {
-        string fullPath = System.IO.Path.Combine(parent, path);
+        string fullPath = System.IO.Path.Combine(path1: parent, path2: path);
 
-        DirectoryInfo pathInfo = new(fullPath);
-        FileInfo fileInfo = new(fullPath);
+        DirectoryInfo pathInfo = new(path: fullPath);
+        FileInfo fileInfo = new(fileName: fullPath);
 
-        string type = pathInfo.Attributes.HasFlag(FileAttributes.Directory) ? "folder" : "file";
+        string type = pathInfo.Attributes.HasFlag(flag: FileAttributes.Directory) ? "folder" : "file";
 
-        string newPath = string.IsNullOrEmpty(pathInfo.Name) ? path : pathInfo.Name;
+        string newPath = string.IsNullOrEmpty(value: pathInfo.Name) ? path : pathInfo.Name;
 
-        string parentPath = string.IsNullOrEmpty(parent)
+        string parentPath = string.IsNullOrEmpty(value: parent)
             ? "/"
-            : System.IO.Path.Combine(fullPath, @"..\..");
+            : System.IO.Path.Combine(path1: fullPath, path2: @"..\..");
 
         // double dirSize = Task.Run(() => pathInfo.GetDirectorySize())?.Result ?? 0.0;
 
         Path = newPath;
         Parent = parentPath;
-        FullPath = fullPath.Replace(@"..\", "");
+        FullPath = fullPath.Replace(oldValue: @"..\", newValue: "");
         Mode = (int)pathInfo.Attributes;
         Size = type == "file" ? fileInfo.Length : null;
         Type = type;

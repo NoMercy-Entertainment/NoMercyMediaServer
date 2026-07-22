@@ -40,7 +40,7 @@ public sealed class CropDetectSubscriber
         if (!_options.EnableCropDetectSubscriber)
         {
             _logger.LogInformation(
-                "CropDetectSubscriber disabled — PlanStage will skip auto-detect-crop"
+                message: "CropDetectSubscriber disabled — PlanStage will skip auto-detect-crop"
             );
         }
     }

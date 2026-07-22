@@ -47,7 +47,7 @@ namespace NoMercy.Tests.Api;
 /// session. From a PASSIVE device it must stay a no-op, exactly like before this existed, so it
 /// can never release someone else's claim by accident.
 /// </summary>
-[Trait("Category", "Characterization")]
+[Trait(name: "Category", value: "Characterization")]
 public class MusicHubDeviceReleaseTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -69,7 +69,7 @@ public class MusicHubDeviceReleaseTests : IClassFixture<NoMercyApiFactory>
             Folder = "/music/",
             FolderId = Ulid.NewUlid(),
         };
-        return new(track, "US");
+        return new(track: track, country: "US");
     }
 
     private static (Client Client, Mock<ISingleClientProxy> Proxy) MakeClientWithProxy(
@@ -80,14 +80,14 @@ public class MusicHubDeviceReleaseTests : IClassFixture<NoMercyApiFactory>
     {
         Mock<ISingleClientProxy> proxy = new();
         proxy
-            .Setup(p =>
+            .Setup(expression: p =>
                 p.SendCoreAsync(
                     It.IsAny<string>(),
                     It.IsAny<object?[]>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Returns(Task.CompletedTask);
+            .Returns(value: Task.CompletedTask);
 
         Client client = new()
         {
@@ -120,51 +120,51 @@ public class MusicHubDeviceReleaseTests : IClassFixture<NoMercyApiFactory>
             _factory.Services.GetRequiredService<CastPanelWakeLauncher>();
         AuthManager authManager = _factory.Services.GetRequiredService<AuthManager>();
 
-        MusicDeviceManager musicDeviceManager = new(new());
+        MusicDeviceManager musicDeviceManager = new(mediaContext: new());
         MusicPlaylistManager musicPlaylistManager = new(
-            new MusicRepository(contextFactory),
-            new()
+            musicService: new MusicRepository(contextFactory: contextFactory),
+            mediaContext: new()
         );
-        DeviceBusRegistry busRegistry = new(contextFactory, Mock.Of<IHubContext<DeviceHub>>());
-        CastSessionTokenService castTokenService = new(authManager, new AuthTokenStore());
+        DeviceBusRegistry busRegistry = new(contextFactory: contextFactory, hubContext: Mock.Of<IHubContext<DeviceHub>>());
+        CastSessionTokenService castTokenService = new(authManager: authManager, authTokenStore: new AuthTokenStore());
 
         DefaultHttpContext httpContext = new() { RequestServices = null! };
         httpContext.Request.Path = "/musicHub";
 
         MusicHub hub = new(
-            NullLogger<MusicHub>.Instance,
-            new HttpContextAccessorStub(httpContext),
-            contextFactory,
-            connectedClients,
-            clientMessenger,
-            musicPlaybackService,
-            stateManager,
-            musicDeviceManager,
-            musicPlaylistManager,
-            commandHandler,
-            Mock.Of<IActivityLogger>(),
-            busRegistry,
-            castTokenService,
-            Mock.Of<IChromeCastService>(),
-            castPanelWakeLauncher,
-            activeDeviceRegistry
+            logger: NullLogger<MusicHub>.Instance,
+            httpContextAccessor: new HttpContextAccessorStub(httpContext: httpContext),
+            contextFactory: contextFactory,
+            connectedClients: connectedClients,
+            clientMessenger: clientMessenger,
+            musicPlaybackService: musicPlaybackService,
+            musicPlayerStateManager: stateManager,
+            musicDeviceManager: musicDeviceManager,
+            musicPlaylistManager: musicPlaylistManager,
+            commandHandler: commandHandler,
+            activityLogger: Mock.Of<IActivityLogger>(),
+            busRegistry: busRegistry,
+            castTokenService: castTokenService,
+            chromeCast: Mock.Of<IChromeCastService>(),
+            castPanelWakeLauncher: castPanelWakeLauncher,
+            activeDeviceRegistry: activeDeviceRegistry
         );
 
         ClaimsPrincipal principal = new(
-            new ClaimsIdentity([new(ClaimTypes.NameIdentifier, userId.ToString())], "TestAuth")
+            identity: new ClaimsIdentity(claims: [new(type: ClaimTypes.NameIdentifier, value: userId.ToString())], authenticationType: "TestAuth")
         );
 
         Mock<HubCallerContext> context = new();
-        context.Setup(c => c.User).Returns(principal);
-        context.Setup(c => c.ConnectionId).Returns(connectionId);
-        context.Setup(c => c.ConnectionAborted).Returns(CancellationToken.None);
+        context.Setup(expression: c => c.User).Returns(value: principal);
+        context.Setup(expression: c => c.ConnectionId).Returns(value: connectionId);
+        context.Setup(expression: c => c.ConnectionAborted).Returns(value: CancellationToken.None);
 
         Mock<ISingleClientProxy> callerProxy = new();
         Mock<ISingleClientProxy> userProxy = new();
 
         Mock<IHubCallerClients> clients = new();
-        clients.Setup(c => c.Caller).Returns(callerProxy.Object);
-        clients.Setup(c => c.User(It.IsAny<string>())).Returns(userProxy.Object);
+        clients.Setup(expression: c => c.Caller).Returns(value: callerProxy.Object);
+        clients.Setup(expression: c => c.User(It.IsAny<string>())).Returns(value: userProxy.Object);
 
         hub.Context = context.Object;
         hub.Clients = clients.Object;
@@ -183,7 +183,7 @@ public class MusicHubDeviceReleaseTests : IClassFixture<NoMercyApiFactory>
             Allowed = true,
             Manage = false,
         };
-        UserCache.Current.AddUser(user);
+        UserCache.Current.AddUser(user: user);
         return user;
     }
 
@@ -191,29 +191,29 @@ public class MusicHubDeviceReleaseTests : IClassFixture<NoMercyApiFactory>
     {
         ConnectedClients connectedClients = _factory.GetConnectedClients();
         foreach (string connectionId in connectionIds)
-            connectedClients.Clients.TryRemove(connectionId, out _);
+            connectedClients.Clients.TryRemove(key: connectionId, value: out _);
 
-        _factory.Services.GetRequiredService<MusicPlayerStateManager>().RemoveState(userId);
-        _factory.Services.GetRequiredService<MusicActiveDeviceRegistry>().Remove(userId);
-        UserCache.Current.RemoveUser(user);
+        _factory.Services.GetRequiredService<MusicPlayerStateManager>().RemoveState(userId: userId);
+        _factory.Services.GetRequiredService<MusicActiveDeviceRegistry>().Remove(userId: userId);
+        UserCache.Current.RemoveUser(user: user);
     }
 
     [Fact]
     public async Task ChangeDeviceCommand_EmptyDeviceId_FromActiveDevice_ReleasesClaim_KeepsItemAndPosition()
     {
         Guid userId = Guid.NewGuid();
-        User user = SeedTestUser(userId);
+        User user = SeedTestUser(userId: userId);
 
         string tvConnectionId = Guid.NewGuid().ToString();
         string tvDeviceId = $"tv-{Guid.NewGuid()}";
 
         ConnectedClients connectedClients = _factory.GetConnectedClients();
         (Client tvClient, Mock<ISingleClientProxy> tvProxy) = MakeClientWithProxy(
-            userId,
-            tvDeviceId,
-            "tv"
+            userId: userId,
+            deviceId: tvDeviceId,
+            type: "tv"
         );
-        connectedClients.Clients[tvConnectionId] = tvClient;
+        connectedClients.Clients[key: tvConnectionId] = tvClient;
 
         MusicPlayerStateManager stateManager =
             _factory.Services.GetRequiredService<MusicPlayerStateManager>();
@@ -228,46 +228,46 @@ public class MusicHubDeviceReleaseTests : IClassFixture<NoMercyApiFactory>
             CurrentItem = currentTrack,
             Playlist = [MakeTrack()],
             Backlog = [MakeTrack()],
-            CurrentList = new("/music/albums/test", UriKind.Relative),
+            CurrentList = new(uriString: "/music/albums/test", uriKind: UriKind.Relative),
             Time = 42_000,
         };
-        stateManager.UpdateState(userId, state);
-        registry.Set(userId, tvClient);
+        stateManager.UpdateState(userId: userId, state: state);
+        registry.Set(userId: userId, device: tvClient);
 
         try
         {
-            MusicHub hub = CreateHub(tvConnectionId, userId);
+            MusicHub hub = CreateHub(connectionId: tvConnectionId, userId: userId);
 
-            await hub.ChangeDeviceCommand("");
+            await hub.ChangeDeviceCommand(deviceId: "");
 
-            stateManager.TryGetValue(userId, out MusicPlayerState? after).Should().BeTrue();
+            stateManager.TryGetValue(userId: userId, state: out MusicPlayerState? after).Should().BeTrue();
             after!.DeviceId.Should().BeNull();
             after.PlayState.Should().BeFalse();
 
             // Device going dark, not the session ending: item/queue/position all survive.
-            after.CurrentItem.Should().Be(currentTrack);
-            after.Playlist.Should().HaveCount(1);
-            after.Backlog.Should().HaveCount(1);
-            after.Time.Should().Be(42_000);
+            after.CurrentItem.Should().Be(expected: currentTrack);
+            after.Playlist.Should().HaveCount(expected: 1);
+            after.Backlog.Should().HaveCount(expected: 1);
+            after.Time.Should().Be(expected: 42_000);
 
             // A resume from any device must be allowed next.
             after.Actions.Disallows.Resuming.Should().BeFalse();
 
-            registry.TryGet(userId, out _).Should().BeFalse();
+            registry.TryGet(userId: userId, device: out _).Should().BeFalse();
 
             tvProxy.Verify(
-                p =>
+                expression: p =>
                     p.SendCoreAsync(
                         "MusicPlayerState",
                         It.IsAny<object?[]>(),
                         It.IsAny<CancellationToken>()
                     ),
-                Times.AtLeastOnce
+                times: Times.AtLeastOnce
             );
         }
         finally
         {
-            Cleanup(userId, user, tvConnectionId);
+            Cleanup(userId: userId, user: user, connectionIds: tvConnectionId);
         }
     }
 
@@ -275,14 +275,14 @@ public class MusicHubDeviceReleaseTests : IClassFixture<NoMercyApiFactory>
     public async Task ChangeDeviceCommand_NullDeviceId_BehavesIdenticallyToEmpty()
     {
         Guid userId = Guid.NewGuid();
-        User user = SeedTestUser(userId);
+        User user = SeedTestUser(userId: userId);
 
         string tvConnectionId = Guid.NewGuid().ToString();
         string tvDeviceId = $"tv-{Guid.NewGuid()}";
 
         ConnectedClients connectedClients = _factory.GetConnectedClients();
-        (Client tvClient, _) = MakeClientWithProxy(userId, tvDeviceId, "tv");
-        connectedClients.Clients[tvConnectionId] = tvClient;
+        (Client tvClient, _) = MakeClientWithProxy(userId: userId, deviceId: tvDeviceId, type: "tv");
+        connectedClients.Clients[key: tvConnectionId] = tvClient;
 
         MusicPlayerStateManager stateManager =
             _factory.Services.GetRequiredService<MusicPlayerStateManager>();
@@ -296,29 +296,29 @@ public class MusicHubDeviceReleaseTests : IClassFixture<NoMercyApiFactory>
             PlayState = true,
             CurrentItem = currentTrack,
             Playlist = [MakeTrack()],
-            CurrentList = new("/music/albums/test", UriKind.Relative),
+            CurrentList = new(uriString: "/music/albums/test", uriKind: UriKind.Relative),
             Time = 5_000,
         };
-        stateManager.UpdateState(userId, state);
-        registry.Set(userId, tvClient);
+        stateManager.UpdateState(userId: userId, state: state);
+        registry.Set(userId: userId, device: tvClient);
 
         try
         {
-            MusicHub hub = CreateHub(tvConnectionId, userId);
+            MusicHub hub = CreateHub(connectionId: tvConnectionId, userId: userId);
 
-            await hub.ChangeDeviceCommand(null);
+            await hub.ChangeDeviceCommand(deviceId: null);
 
-            stateManager.TryGetValue(userId, out MusicPlayerState? after).Should().BeTrue();
+            stateManager.TryGetValue(userId: userId, state: out MusicPlayerState? after).Should().BeTrue();
             after!.DeviceId.Should().BeNull();
             after.PlayState.Should().BeFalse();
-            after.CurrentItem.Should().Be(currentTrack);
-            after.Time.Should().Be(5_000);
+            after.CurrentItem.Should().Be(expected: currentTrack);
+            after.Time.Should().Be(expected: 5_000);
 
-            registry.TryGet(userId, out _).Should().BeFalse();
+            registry.TryGet(userId: userId, device: out _).Should().BeFalse();
         }
         finally
         {
-            Cleanup(userId, user, tvConnectionId);
+            Cleanup(userId: userId, user: user, connectionIds: tvConnectionId);
         }
     }
 
@@ -326,7 +326,7 @@ public class MusicHubDeviceReleaseTests : IClassFixture<NoMercyApiFactory>
     public async Task ChangeDeviceCommand_EmptyDeviceId_FromPassiveDevice_IsNoOp()
     {
         Guid userId = Guid.NewGuid();
-        User user = SeedTestUser(userId);
+        User user = SeedTestUser(userId: userId);
 
         string tvConnectionId = Guid.NewGuid().ToString();
         string phoneConnectionId = Guid.NewGuid().ToString();
@@ -334,10 +334,10 @@ public class MusicHubDeviceReleaseTests : IClassFixture<NoMercyApiFactory>
         string phoneDeviceId = $"phone-{Guid.NewGuid()}";
 
         ConnectedClients connectedClients = _factory.GetConnectedClients();
-        (Client tvClient, _) = MakeClientWithProxy(userId, tvDeviceId, "tv");
-        (Client phoneClient, _) = MakeClientWithProxy(userId, phoneDeviceId);
-        connectedClients.Clients[tvConnectionId] = tvClient;
-        connectedClients.Clients[phoneConnectionId] = phoneClient;
+        (Client tvClient, _) = MakeClientWithProxy(userId: userId, deviceId: tvDeviceId, type: "tv");
+        (Client phoneClient, _) = MakeClientWithProxy(userId: userId, deviceId: phoneDeviceId);
+        connectedClients.Clients[key: tvConnectionId] = tvClient;
+        connectedClients.Clients[key: phoneConnectionId] = phoneClient;
 
         MusicPlayerStateManager stateManager =
             _factory.Services.GetRequiredService<MusicPlayerStateManager>();
@@ -351,31 +351,31 @@ public class MusicHubDeviceReleaseTests : IClassFixture<NoMercyApiFactory>
             PlayState = true,
             CurrentItem = currentTrack,
             Playlist = [MakeTrack()],
-            CurrentList = new("/music/albums/test", UriKind.Relative),
+            CurrentList = new(uriString: "/music/albums/test", uriKind: UriKind.Relative),
             Time = 10_000,
         };
-        stateManager.UpdateState(userId, state);
-        registry.Set(userId, tvClient);
+        stateManager.UpdateState(userId: userId, state: state);
+        registry.Set(userId: userId, device: tvClient);
 
         try
         {
             // The PASSIVE phone sends the release — must never end the TV's claim.
-            MusicHub hub = CreateHub(phoneConnectionId, userId);
+            MusicHub hub = CreateHub(connectionId: phoneConnectionId, userId: userId);
 
-            await hub.ChangeDeviceCommand("");
+            await hub.ChangeDeviceCommand(deviceId: "");
 
-            stateManager.TryGetValue(userId, out MusicPlayerState? after).Should().BeTrue();
-            after!.DeviceId.Should().Be(tvDeviceId);
+            stateManager.TryGetValue(userId: userId, state: out MusicPlayerState? after).Should().BeTrue();
+            after!.DeviceId.Should().Be(expected: tvDeviceId);
             after.PlayState.Should().BeTrue();
-            after.CurrentItem.Should().Be(currentTrack);
-            after.Time.Should().Be(10_000);
+            after.CurrentItem.Should().Be(expected: currentTrack);
+            after.Time.Should().Be(expected: 10_000);
 
-            registry.TryGet(userId, out Device? active).Should().BeTrue();
-            active!.DeviceId.Should().Be(tvDeviceId);
+            registry.TryGet(userId: userId, device: out Device? active).Should().BeTrue();
+            active!.DeviceId.Should().Be(expected: tvDeviceId);
         }
         finally
         {
-            Cleanup(userId, user, tvConnectionId, phoneConnectionId);
+            Cleanup(userId: userId, user: user, connectionIds: [tvConnectionId, phoneConnectionId]);
         }
     }
 
@@ -388,7 +388,7 @@ public class MusicHubDeviceReleaseTests : IClassFixture<NoMercyApiFactory>
         // anymore, exactly like StartPlaybackCommand's own GetOrPromoteActiveDevice would
         // for a brand-new session.
         Guid userId = Guid.NewGuid();
-        User user = SeedTestUser(userId);
+        User user = SeedTestUser(userId: userId);
 
         string tvConnectionId = Guid.NewGuid().ToString();
         string phoneConnectionId = Guid.NewGuid().ToString();
@@ -396,10 +396,10 @@ public class MusicHubDeviceReleaseTests : IClassFixture<NoMercyApiFactory>
         string phoneDeviceId = $"phone-{Guid.NewGuid()}";
 
         ConnectedClients connectedClients = _factory.GetConnectedClients();
-        (Client tvClient, _) = MakeClientWithProxy(userId, tvDeviceId, "tv");
-        (Client phoneClient, _) = MakeClientWithProxy(userId, phoneDeviceId);
-        connectedClients.Clients[tvConnectionId] = tvClient;
-        connectedClients.Clients[phoneConnectionId] = phoneClient;
+        (Client tvClient, _) = MakeClientWithProxy(userId: userId, deviceId: tvDeviceId, type: "tv");
+        (Client phoneClient, _) = MakeClientWithProxy(userId: userId, deviceId: phoneDeviceId);
+        connectedClients.Clients[key: tvConnectionId] = tvClient;
+        connectedClients.Clients[key: phoneConnectionId] = phoneClient;
 
         MusicPlayerStateManager stateManager =
             _factory.Services.GetRequiredService<MusicPlayerStateManager>();
@@ -413,30 +413,30 @@ public class MusicHubDeviceReleaseTests : IClassFixture<NoMercyApiFactory>
             PlayState = true,
             CurrentItem = currentTrack,
             Playlist = [MakeTrack()],
-            CurrentList = new("/music/albums/test", UriKind.Relative),
+            CurrentList = new(uriString: "/music/albums/test", uriKind: UriKind.Relative),
             Time = 10_000,
         };
-        stateManager.UpdateState(userId, state);
-        registry.Set(userId, tvClient);
+        stateManager.UpdateState(userId: userId, state: state);
+        registry.Set(userId: userId, device: tvClient);
 
         try
         {
-            MusicHub tvHub = CreateHub(tvConnectionId, userId);
-            await tvHub.ChangeDeviceCommand("");
+            MusicHub tvHub = CreateHub(connectionId: tvConnectionId, userId: userId);
+            await tvHub.ChangeDeviceCommand(deviceId: "");
 
-            stateManager.TryGetValue(userId, out MusicPlayerState? afterRelease).Should().BeTrue();
+            stateManager.TryGetValue(userId: userId, state: out MusicPlayerState? afterRelease).Should().BeTrue();
             afterRelease!.DeviceId.Should().BeNull();
 
-            MusicHub phoneHub = CreateHub(phoneConnectionId, userId);
-            await phoneHub.PlaybackCommand("play");
+            MusicHub phoneHub = CreateHub(connectionId: phoneConnectionId, userId: userId);
+            await phoneHub.PlaybackCommand(command: "play");
 
-            stateManager.TryGetValue(userId, out MusicPlayerState? afterClaim).Should().BeTrue();
-            afterClaim!.DeviceId.Should().Be(phoneDeviceId);
+            stateManager.TryGetValue(userId: userId, state: out MusicPlayerState? afterClaim).Should().BeTrue();
+            afterClaim!.DeviceId.Should().Be(expected: phoneDeviceId);
             afterClaim.PlayState.Should().BeTrue();
         }
         finally
         {
-            Cleanup(userId, user, tvConnectionId, phoneConnectionId);
+            Cleanup(userId: userId, user: user, connectionIds: [tvConnectionId, phoneConnectionId]);
         }
     }
 

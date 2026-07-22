@@ -19,43 +19,43 @@ namespace NoMercy.Api.DTOs.Music;
 
 public class FavoriteTrackDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public Guid Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; }
 
-    [JsonProperty("cover")]
+    [JsonProperty(propertyName: "cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty("disambiguation")]
+    [JsonProperty(propertyName: "disambiguation")]
     public string? Disambiguation { get; set; }
 
-    [JsonProperty("link")]
+    [JsonProperty(propertyName: "link")]
     public Uri Link { get; set; }
 
-    [JsonProperty("color_palette")]
+    [JsonProperty(propertyName: "color_palette")]
     public JToken? ColorPalette { get; set; }
 
-    [JsonProperty("description")]
+    [JsonProperty(propertyName: "description")]
     public string? Description { get; set; }
 
-    [JsonProperty("tracks")]
+    [JsonProperty(propertyName: "tracks")]
     public int Tracks { get; set; }
 
-    [JsonProperty("year")]
+    [JsonProperty(propertyName: "year")]
     public int? Year { get; set; }
 
-    [JsonProperty("album_artist")]
+    [JsonProperty(propertyName: "album_artist")]
     public Guid? AlbumArtist { get; set; }
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; }
 
-    [JsonProperty("album_track")]
+    [JsonProperty(propertyName: "album_track")]
     public IEnumerable<AlbumDto> Albums { get; set; }
 
-    [JsonProperty("artist_track")]
+    [JsonProperty(propertyName: "artist_track")]
     public IEnumerable<ArtistDto> Artists { get; set; }
 
     public FavoriteTrackDto(ArtistTrack artistTrack, string country)
@@ -63,20 +63,20 @@ public class FavoriteTrackDto
         Id = artistTrack.Track.Id;
         Name = artistTrack.Track.Name;
         Cover = artistTrack.Track.Cover is not null
-            ? new Uri($"/images/music{artistTrack.Track.Cover}", UriKind.Relative).ToString()
+            ? new Uri(uriString: $"/images/music{artistTrack.Track.Cover}", uriKind: UriKind.Relative).ToString()
             : null;
-        Link = new($"/music/tracks/{Id}", UriKind.Relative);
+        Link = new(uriString: $"/music/tracks/{Id}", uriKind: UriKind.Relative);
         Type = "track";
         ColorPalette = artistTrack.Track._colorPalette.ToRaw();
         Year = artistTrack.Track.Date.ParseYear();
 
-        Albums = artistTrack.Track.AlbumTrack.Select(albumTrack => new AlbumDto(
-            albumTrack,
-            country
+        Albums = artistTrack.Track.AlbumTrack.Select(selector: albumTrack => new AlbumDto(
+            albumTrack: albumTrack,
+            country: country
         ));
-        Artists = artistTrack.Track.ArtistTrack.Select(albumTrack => new ArtistDto(
-            albumTrack,
-            country
+        Artists = artistTrack.Track.ArtistTrack.Select(selector: albumTrack => new ArtistDto(
+            artistTrack: albumTrack,
+            country: country
         ));
     }
 }

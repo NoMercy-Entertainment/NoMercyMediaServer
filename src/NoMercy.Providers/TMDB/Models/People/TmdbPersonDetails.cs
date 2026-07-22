@@ -15,9 +15,9 @@ namespace NoMercy.Providers.TMDB.Models.People;
 
 public class TmdbPersonDetails : TmdbPerson
 {
-    [JsonProperty("deathday")]
+    [JsonProperty(propertyName: "deathday")]
     public DateTime? DeathDay { get; set; }
 
-    [JsonProperty("homepage")]
+    [JsonProperty(propertyName: "homepage")]
     public Uri? Homepage { get; set; }
 }

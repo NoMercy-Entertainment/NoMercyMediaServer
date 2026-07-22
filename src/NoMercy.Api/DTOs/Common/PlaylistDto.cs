@@ -17,31 +17,31 @@ namespace NoMercy.Api.DTOs.Common;
 
 public class PlaylistDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public Guid Id { get; set; } = Guid.NewGuid();
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; }
 
-    [JsonProperty("description")]
+    [JsonProperty(propertyName: "description")]
     public string? Description { get; set; }
 
-    [JsonProperty("cover")]
+    [JsonProperty(propertyName: "cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty("filename")]
+    [JsonProperty(propertyName: "filename")]
     public string? Filename { get; set; }
 
-    [JsonProperty("duration")]
+    [JsonProperty(propertyName: "duration")]
     public string? Duration { get; set; }
 
-    [JsonProperty("user_id")]
+    [JsonProperty(propertyName: "user_id")]
     public Guid UserId { get; set; }
 
-    [JsonProperty("user")]
+    [JsonProperty(propertyName: "user")]
     public User User { get; set; }
 
-    [JsonProperty("playlist_track")]
+    [JsonProperty(propertyName: "playlist_track")]
     public ICollection<PlaylistTrack> Tracks { get; set; }
 
     public PlaylistDto(Playlist playlist)
@@ -51,7 +51,7 @@ public class PlaylistDto
         Description = playlist.Description;
         Cover = playlist.Cover;
         Cover = Cover is not null
-            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
+            ? new Uri(uriString: $"/images/music{Cover}", uriKind: UriKind.Relative).ToString()
             : null;
         Filename = playlist.Filename;
         Duration = playlist.Duration;

@@ -38,20 +38,20 @@ namespace NoMercy.Tests.MediaProcessing.Files;
 // Movie/Tv/Anime whose Folder is null (Paths() returns immediately, no DB or
 // storage access) is sufficient to reach it without standing up a real scan.
 // ---------------------------------------------------------------------------
-[Trait("Category", "Unit")]
-[Collection("EventBusProvider")]
+[Trait(name: "Category", value: "Unit")]
+[Collection(name: "EventBusProvider")]
 public sealed class FileManagerFindFilesTests
 {
     private static IEventBus? GetCurrentInstance() =>
         (IEventBus?)
             typeof(EventBusProvider)
-                .GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)!
-                .GetValue(null);
+                .GetField(name: "_instance", bindingAttr: BindingFlags.NonPublic | BindingFlags.Static)!
+                .GetValue(obj: null);
 
     private static void SetInstance(IEventBus? bus) =>
         typeof(EventBusProvider)
-            .GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)!
-            .SetValue(null, bus);
+            .GetField(name: "_instance", bindingAttr: BindingFlags.NonPublic | BindingFlags.Static)!
+            .SetValue(obj: null, value: bus);
 
     private static (
         Mock<IEventBus> BusMock,
@@ -61,11 +61,11 @@ public sealed class FileManagerFindFilesTests
         List<LibraryRefreshedEvent> captured = [];
         Mock<IEventBus> busMock = new();
         busMock
-            .Setup(bus =>
+            .Setup(expression: bus =>
                 bus.PublishAsync(It.IsAny<LibraryRefreshedEvent>(), It.IsAny<CancellationToken>())
             )
-            .Callback<LibraryRefreshedEvent, CancellationToken>((evt, _) => captured.Add(evt))
-            .Returns(Task.CompletedTask);
+            .Callback<LibraryRefreshedEvent, CancellationToken>(action: (evt, _) => captured.Add(item: evt))
+            .Returns(value: Task.CompletedTask);
         return (busMock, captured);
     }
 
@@ -75,31 +75,31 @@ public sealed class FileManagerFindFilesTests
         Mock<IStorageDriver> driverMock = new();
         Mock<IMediaAnalyzer> mediaAnalyzerMock = new();
         return new(
-            repoMock.Object,
-            factoryMock.Object,
-            driverMock.Object,
-            mediaAnalyzerMock.Object
+            fileRepository: repoMock.Object,
+            storageFactory: factoryMock.Object,
+            storageDriver: driverMock.Object,
+            mediaAnalyzer: mediaAnalyzerMock.Object
         );
     }
 
     private static bool HasKey(LibraryRefreshedEvent evt, params object?[] key) =>
-        evt.QueryKey.SequenceEqual(key);
+        evt.QueryKey.SequenceEqual(other: key);
 
     [Fact]
     public async Task FindFiles_NoResolvableMediaFolder_ReturnsFalse()
     {
         Mock<IFileRepository> repoMock = new();
         repoMock
-            .Setup(repository => repository.MediaType(It.IsAny<int>(), It.IsAny<Library>()))
-            .ReturnsAsync(((Movie?)null, (Tv?)null, MediaTypes.MovieMediaType));
+            .Setup(expression: repository => repository.MediaType(It.IsAny<int>(), It.IsAny<Library>()))
+            .ReturnsAsync(value: ((Movie?)null, (Tv?)null, MediaTypes.MovieMediaType));
 
-        FileManager manager = BuildManager(repoMock);
+        FileManager manager = BuildManager(repoMock: repoMock);
 
         Library library = new() { Id = Ulid.NewUlid(), Type = MediaTypes.MovieMediaType };
 
         // No Movie is resolvable for this id, so FileManager.Paths() has no
         // folder to look under and the scan never finds a candidate file.
-        bool hasCandidates = await manager.FindFiles(id: 999_999, library);
+        bool hasCandidates = await manager.FindFiles(id: 999_999, library: library);
 
         hasCandidates.Should().BeFalse();
     }
@@ -111,44 +111,44 @@ public sealed class FileManagerFindFilesTests
         try
         {
             (Mock<IEventBus> busMock, List<LibraryRefreshedEvent> captured) = BuildCapturingBus();
-            EventBusProvider.Configure(busMock.Object);
+            EventBusProvider.Configure(eventBus: busMock.Object);
 
             Movie movie = new() { Id = 550, Folder = null };
             Mock<IFileRepository> repoMock = new();
             repoMock
-                .Setup(repository => repository.MediaType(It.IsAny<int>(), It.IsAny<Library>()))
-                .ReturnsAsync((movie, (Tv?)null, MediaTypes.MovieMediaType));
+                .Setup(expression: repository => repository.MediaType(It.IsAny<int>(), It.IsAny<Library>()))
+                .ReturnsAsync(value: (movie, (Tv?)null, MediaTypes.MovieMediaType));
 
-            FileManager manager = BuildManager(repoMock);
+            FileManager manager = BuildManager(repoMock: repoMock);
             Library library = new() { Id = Ulid.NewUlid(), Type = MediaTypes.MovieMediaType };
 
-            await manager.FindFiles(id: 42, library);
+            await manager.FindFiles(id: 42, library: library);
 
             captured
                 .Should()
                 .ContainSingle(
-                    evt => HasKey(evt, "libraries", library.Id.ToString()),
-                    "the existing grid invalidation must not regress"
+                    predicate: evt => HasKey(evt, "libraries", library.Id.ToString()),
+                    because: "the existing grid invalidation must not regress"
                 );
 
             captured
                 .Should()
                 .ContainSingle(
-                    evt => HasKey(evt, "movie", "42"),
-                    "the movie info page must be invalidated using the raw scan id, as a string"
+                    predicate: evt => HasKey(evt, "movie", "42"),
+                    because: "the movie info page must be invalidated using the raw scan id, as a string"
                 );
 
             captured
-                .SelectMany(evt => evt.QueryKey)
+                .SelectMany(selector: evt => evt.QueryKey)
                 .Should()
                 .OnlyContain(
-                    element => element is string,
-                    "every QueryKey element must be a string, never a raw int"
+                    predicate: element => element is string,
+                    because: "every QueryKey element must be a string, never a raw int"
                 );
         }
         finally
         {
-            SetInstance(previous);
+            SetInstance(bus: previous);
         }
     }
 
@@ -159,47 +159,47 @@ public sealed class FileManagerFindFilesTests
         try
         {
             (Mock<IEventBus> busMock, List<LibraryRefreshedEvent> captured) = BuildCapturingBus();
-            EventBusProvider.Configure(busMock.Object);
+            EventBusProvider.Configure(eventBus: busMock.Object);
 
             Tv show = new() { Id = 1399, Folder = null };
             Mock<IFileRepository> repoMock = new();
             repoMock
-                .Setup(repository => repository.MediaType(It.IsAny<int>(), It.IsAny<Library>()))
-                .ReturnsAsync(((Movie?)null, show, MediaTypes.TvMediaType));
+                .Setup(expression: repository => repository.MediaType(It.IsAny<int>(), It.IsAny<Library>()))
+                .ReturnsAsync(value: ((Movie?)null, show, MediaTypes.TvMediaType));
 
-            FileManager manager = BuildManager(repoMock);
+            FileManager manager = BuildManager(repoMock: repoMock);
             Library library = new() { Id = Ulid.NewUlid(), Type = MediaTypes.TvMediaType };
 
             // The scan id (42) intentionally differs from Show.Id (1399) so the
             // assertion proves the published key uses Show.Id, mirroring the
             // existing `Show?.Id ?? id` usage elsewhere in this method.
-            await manager.FindFiles(id: 42, library);
+            await manager.FindFiles(id: 42, library: library);
 
             captured
                 .Should()
                 .ContainSingle(
-                    evt => HasKey(evt, "libraries", library.Id.ToString()),
-                    "the existing grid invalidation must not regress"
+                    predicate: evt => HasKey(evt, "libraries", library.Id.ToString()),
+                    because: "the existing grid invalidation must not regress"
                 );
 
             captured
                 .Should()
                 .ContainSingle(
-                    evt => HasKey(evt, "tv", "1399"),
-                    "the tv info page must be invalidated using Show.Id, not the raw scan id"
+                    predicate: evt => HasKey(evt, "tv", "1399"),
+                    because: "the tv info page must be invalidated using Show.Id, not the raw scan id"
                 );
 
             captured
-                .SelectMany(evt => evt.QueryKey)
+                .SelectMany(selector: evt => evt.QueryKey)
                 .Should()
                 .OnlyContain(
-                    element => element is string,
-                    "every QueryKey element must be a string, never a raw int"
+                    predicate: element => element is string,
+                    because: "every QueryKey element must be a string, never a raw int"
                 );
         }
         finally
         {
-            SetInstance(previous);
+            SetInstance(bus: previous);
         }
     }
 
@@ -210,36 +210,36 @@ public sealed class FileManagerFindFilesTests
         try
         {
             (Mock<IEventBus> busMock, List<LibraryRefreshedEvent> captured) = BuildCapturingBus();
-            EventBusProvider.Configure(busMock.Object);
+            EventBusProvider.Configure(eventBus: busMock.Object);
 
             Tv show = new() { Id = 888, Folder = null };
             Mock<IFileRepository> repoMock = new();
             repoMock
-                .Setup(repository => repository.MediaType(It.IsAny<int>(), It.IsAny<Library>()))
-                .ReturnsAsync(((Movie?)null, show, MediaTypes.AnimeMediaType));
+                .Setup(expression: repository => repository.MediaType(It.IsAny<int>(), It.IsAny<Library>()))
+                .ReturnsAsync(value: ((Movie?)null, show, MediaTypes.AnimeMediaType));
 
-            FileManager manager = BuildManager(repoMock);
+            FileManager manager = BuildManager(repoMock: repoMock);
             Library library = new() { Id = Ulid.NewUlid(), Type = MediaTypes.AnimeMediaType };
 
-            await manager.FindFiles(id: 42, library);
+            await manager.FindFiles(id: 42, library: library);
 
             captured
                 .Should()
                 .ContainSingle(
-                    evt => HasKey(evt, "tv", "888"),
-                    "an anime library must publish the 'tv' info-page key — the web client has no /anime/:id route"
+                    predicate: evt => HasKey(evt, "tv", "888"),
+                    because: "an anime library must publish the 'tv' info-page key — the web client has no /anime/:id route"
                 );
 
             captured
                 .Should()
                 .NotContain(
-                    evt => evt.QueryKey.Length > 0 && Equals(evt.QueryKey[0], "anime"),
-                    "the info-page key must never be 'anime'"
+                    predicate: evt => evt.QueryKey.Length > 0 && Equals(evt.QueryKey[0], "anime"),
+                    because: "the info-page key must never be 'anime'"
                 );
         }
         finally
         {
-            SetInstance(previous);
+            SetInstance(bus: previous);
         }
     }
 }

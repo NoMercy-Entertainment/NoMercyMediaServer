@@ -38,95 +38,85 @@ public class HttpSourceFetcher(
 {
     public async Task<string> EnsureLocalAsync(EncodeTask task, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(task.InputPath))
+        if (string.IsNullOrWhiteSpace(value: task.InputPath))
             return string.Empty;
 
         // Fast path: source is visible locally (shared NAS / SMB mount).
-        if (storage.Exists(task.InputPath))
+        if (storage.Exists(path: task.InputPath))
             return task.InputPath;
 
         // Coordinator URL required for fetch — when it's not set, this
         // worker is standalone and there's no remote source to fetch from.
-        if (string.IsNullOrWhiteSpace(options.CoordinatorUrl))
+        if (string.IsNullOrWhiteSpace(value: options.CoordinatorUrl))
         {
             logger.LogWarning(
-                "Task {TaskId} source {Path} is missing locally and no CoordinatorUrl configured",
-                task.TaskId,
-                task.InputPath
+                message: "Task {TaskId} source {Path} is missing locally and no CoordinatorUrl configured", args: [task.TaskId, task.InputPath]
             );
             return task.InputPath;
         }
 
-        string cachedPath = ResolveCachePath(task);
+        string cachedPath = ResolveCachePath(task: task);
 
         // Idempotency: if the file already exists from a previous attempt
         // and isn't empty, reuse it. Full hash-match check is overkill;
         // HMAC on the coordinator's response covers integrity.
-        if (storage.Exists(cachedPath) && storage.SizeOrZero(cachedPath) > 0)
+        if (storage.Exists(path: cachedPath) && storage.SizeOrZero(path: cachedPath) > 0)
         {
             logger.LogInformation(
-                "Task {TaskId} reusing cached source at {Path}",
-                task.TaskId,
-                cachedPath
+                message: "Task {TaskId} reusing cached source at {Path}", args: [task.TaskId, cachedPath]
             );
             return cachedPath;
         }
 
-        storage.CreateDirectory(Path.GetDirectoryName(cachedPath)!);
+        storage.CreateDirectory(path: Path.GetDirectoryName(path: cachedPath)!);
 
-        HttpClient http = httpClientFactory.CreateClient("worker-source-fetch");
-        http.BaseAddress = new(options.CoordinatorUrl);
-        http.Timeout = TimeSpan.FromHours(1); // Multi-GB downloads over WAN.
+        HttpClient http = httpClientFactory.CreateClient(name: "worker-source-fetch");
+        http.BaseAddress = new(uriString: options.CoordinatorUrl);
+        http.Timeout = TimeSpan.FromHours(hours: 1); // Multi-GB downloads over WAN.
 
-        string signedQuery = BuildSignedQuery(task.InputPath!);
+        string signedQuery = BuildSignedQuery(path: task.InputPath!);
         string requestPath = $"api/v1/worker/source?{signedQuery}";
-        HttpRequestMessage request = new(HttpMethod.Get, requestPath);
+        HttpRequestMessage request = new(method: HttpMethod.Get, requestUri: requestPath);
 
         if (options.IsDistributedEncodingEnabled)
         {
-            HmacSigner hmacSigner = new(options.DistributedEncodingSigningKey!);
+            HmacSigner hmacSigner = new(secret: options.DistributedEncodingSigningKey!);
             long timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            string signature = hmacSigner.Sign("GET", "/" + "api/v1/worker/source", timestamp, []);
-            request.Headers.Add("X-NoMercy-Timestamp", timestamp.ToString());
-            request.Headers.Add("X-NoMercy-Signature", signature);
+            string signature = hmacSigner.Sign(method: "GET", path: "/" + "api/v1/worker/source", timestamp: timestamp, body: []);
+            request.Headers.Add(name: "X-NoMercy-Timestamp", value: timestamp.ToString());
+            request.Headers.Add(name: "X-NoMercy-Signature", value: signature);
         }
 
-        logger.LogInformation("Fetching source for task {TaskId} from coordinator", task.TaskId);
+        logger.LogInformation(message: "Fetching source for task {TaskId} from coordinator", args: task.TaskId);
 
         using HttpResponseMessage response = await http.SendAsync(
-                request,
-                HttpCompletionOption.ResponseHeadersRead,
-                ct
+                request: request,
+                completionOption: HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken: ct
             )
-            .ConfigureAwait(false);
+            .ConfigureAwait(continueOnCapturedContext: false);
 
         if (!response.IsSuccessStatusCode)
         {
-            string body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            string body = await response.Content.ReadAsStringAsync(cancellationToken: ct).ConfigureAwait(continueOnCapturedContext: false);
             logger.LogError(
-                "Coordinator returned {Status} fetching source for task {TaskId}: {Body}",
-                (int)response.StatusCode,
-                task.TaskId,
-                body.Length > 500 ? body[..500] : body
+                message: "Coordinator returned {Status} fetching source for task {TaskId}: {Body}", args: [(int)response.StatusCode, task.TaskId, body.Length > 500 ? body[..500] : body]
             );
             throw new InvalidOperationException(
-                $"Source fetch failed: HTTP {(int)response.StatusCode}"
+                message: $"Source fetch failed: HTTP {(int)response.StatusCode}"
             );
         }
 
         await using (
-            Stream source = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false)
+            Stream source = await response.Content.ReadAsStreamAsync(cancellationToken: ct).ConfigureAwait(continueOnCapturedContext: false)
         )
-        await using (Stream target = await storage.OpenWriteAsync(cachedPath, overwrite: true, ct))
+        await using (Stream target = await storage.OpenWriteAsync(path: cachedPath, overwrite: true, ct: ct))
         {
-            await source.CopyToAsync(target, ct).ConfigureAwait(false);
+            await source.CopyToAsync(destination: target, cancellationToken: ct).ConfigureAwait(continueOnCapturedContext: false);
         }
 
         logger.LogInformation(
-            "Task {TaskId} source fetched to {Path} ({Bytes} bytes)",
-            task.TaskId,
-            cachedPath,
-            storage.SizeOrZero(cachedPath)
+            message: "Task {TaskId} source fetched to {Path} ({Bytes} bytes)", args: [task.TaskId, cachedPath, storage.SizeOrZero(path: cachedPath)]
         );
 
         return cachedPath;
@@ -139,16 +129,16 @@ public class HttpSourceFetcher(
         // cached sources there.
         try
         {
-            string cachedPath = ResolveCachePath(task);
-            storage.Delete(cachedPath);
-            logger.LogDebug("Released cached source for task {TaskId}", task.TaskId);
+            string cachedPath = ResolveCachePath(task: task);
+            storage.Delete(path: cachedPath);
+            logger.LogDebug(message: "Released cached source for task {TaskId}", args: task.TaskId);
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                ex,
-                "Failed to release cached source for task {TaskId} — will persist until next cache cleanup",
-                task.TaskId
+                exception: ex,
+                message: "Failed to release cached source for task {TaskId} — will persist until next cache cleanup",
+                args: task.TaskId
             );
         }
         return Task.CompletedTask;
@@ -156,16 +146,16 @@ public class HttpSourceFetcher(
 
     private string ResolveCachePath(EncodeTask task)
     {
-        string cacheRoot = Path.Combine(options.ResolvedLiveTranscodeCachePath, "remote-sources");
+        string cacheRoot = Path.Combine(path1: options.ResolvedLiveTranscodeCachePath, path2: "remote-sources");
 
         // Deterministic filename per task — task.TaskId is unique per job,
         // suffixed with the source file's extension so ffprobe/ffmpeg
         // auto-detect the container from the extension.
-        string ext = Path.GetExtension(task.InputPath ?? string.Empty);
-        if (string.IsNullOrEmpty(ext))
+        string ext = Path.GetExtension(path: task.InputPath ?? string.Empty);
+        if (string.IsNullOrEmpty(value: ext))
             ext = ".src";
 
-        return Path.Combine(cacheRoot, $"{task.TaskId}{ext}");
+        return Path.Combine(path1: cacheRoot, path2: $"{task.TaskId}{ext}");
     }
 
     private string BuildSignedQuery(string path)
@@ -173,14 +163,14 @@ public class HttpSourceFetcher(
         long timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         byte[] key = options.GetDistributedEncodingSigningKey();
         string signatureInput = $"{path}|{timestamp}";
-        using HMACSHA256 hmac = new(key);
+        using HMACSHA256 hmac = new(key: key);
         string signature = Convert.ToBase64String(
-            hmac.ComputeHash(Encoding.UTF8.GetBytes(signatureInput))
+            inArray: hmac.ComputeHash(buffer: Encoding.UTF8.GetBytes(s: signatureInput))
         );
 
         // URL-encode the path and signature; timestamp is a simple int.
-        string encodedPath = Uri.EscapeDataString(path);
-        string encodedSig = Uri.EscapeDataString(signature);
+        string encodedPath = Uri.EscapeDataString(stringToEscape: path);
+        string encodedSig = Uri.EscapeDataString(stringToEscape: signature);
         return $"path={encodedPath}&ts={timestamp}&sig={encodedSig}";
     }
 }

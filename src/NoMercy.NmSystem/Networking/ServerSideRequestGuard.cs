@@ -39,17 +39,17 @@ public static class ServerSideRequestGuard
         CancellationToken cancellationToken = default
     )
     {
-        if (string.IsNullOrWhiteSpace(url))
+        if (string.IsNullOrWhiteSpace(value: url))
             return false;
 
-        if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri))
+        if (!Uri.TryCreate(uriString: url, uriKind: UriKind.Absolute, result: out Uri? uri))
             return false;
 
         if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
             return false;
 
         IPAddress[] addresses;
-        if (IPAddress.TryParse(uri.Host, out IPAddress? literal))
+        if (IPAddress.TryParse(ipString: uri.Host, address: out IPAddress? literal))
         {
             addresses = [literal];
         }
@@ -57,7 +57,7 @@ public static class ServerSideRequestGuard
         {
             try
             {
-                addresses = await Dns.GetHostAddressesAsync(uri.Host, cancellationToken);
+                addresses = await Dns.GetHostAddressesAsync(hostNameOrAddress: uri.Host, cancellationToken: cancellationToken);
             }
             catch (Exception)
             {
@@ -65,7 +65,7 @@ public static class ServerSideRequestGuard
             }
         }
 
-        return addresses.Length > 0 && addresses.All(IsPubliclyRoutable);
+        return addresses.Length > 0 && addresses.All(predicate: IsPubliclyRoutable);
     }
 
     /// <summary>
@@ -78,7 +78,7 @@ public static class ServerSideRequestGuard
         if (address.IsIPv4MappedToIPv6)
             address = address.MapToIPv4();
 
-        if (IPAddress.IsLoopback(address))
+        if (IPAddress.IsLoopback(address: address))
             return false;
 
         if (address.AddressFamily == AddressFamily.InterNetwork)
@@ -102,7 +102,7 @@ public static class ServerSideRequestGuard
             if (address.IsIPv6LinkLocal || address.IsIPv6SiteLocal || address.IsIPv6Multicast)
                 return false;
 
-            if (address.Equals(IPAddress.IPv6None) || address.Equals(IPAddress.IPv6Any))
+            if (address.Equals(comparand: IPAddress.IPv6None) || address.Equals(comparand: IPAddress.IPv6Any))
                 return false;
 
             // fc00::/7 unique-local

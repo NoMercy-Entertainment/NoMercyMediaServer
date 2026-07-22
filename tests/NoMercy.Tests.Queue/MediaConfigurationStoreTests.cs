@@ -28,30 +28,30 @@ namespace NoMercy.Tests.Queue;
 /// updating) would silently duplicate rows and make <c>HasKey</c>/<c>GetValue</c>
 /// pick an arbitrary one.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class MediaConfigurationStoreTests : IDisposable
 {
     private readonly List<SqliteConnection> _connections = [];
 
     private IDbContextFactory<AppDbContext> CreateFactory()
     {
-        SqliteConnection connection = new("DataSource=:memory:;Foreign Keys=False");
+        SqliteConnection connection = new(connectionString: "DataSource=:memory:;Foreign Keys=False");
         connection.Open();
-        _connections.Add(connection);
+        _connections.Add(item: connection);
 
         DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite(connection)
+            .UseSqlite(connection: connection)
             .Options;
 
-        using (AppDbContext init = new(options))
+        using (AppDbContext init = new(options: options))
         {
             init.Database.EnsureCreated();
         }
 
         Mock<IDbContextFactory<AppDbContext>> mock = new();
-        mock.Setup(x => x.CreateDbContext()).Returns(() => new(options));
-        mock.Setup(x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => new(options));
+        mock.Setup(expression: x => x.CreateDbContext()).Returns(valueFunction: () => new(options: options));
+        mock.Setup(expression: x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(valueFunction: () => new(options: options));
         return mock.Object;
     }
 
@@ -64,71 +64,71 @@ public class MediaConfigurationStoreTests : IDisposable
     [Fact]
     public void GetValue_UnknownKey_ReturnsNull()
     {
-        MediaConfigurationStore store = new(CreateFactory());
+        MediaConfigurationStore store = new(contextFactory: CreateFactory());
 
-        store.GetValue("queue.extras.paused").Should().BeNull();
+        store.GetValue(key: "queue.extras.paused").Should().BeNull();
     }
 
     [Fact]
     public void HasKey_UnknownKey_ReturnsFalse()
     {
-        MediaConfigurationStore store = new(CreateFactory());
+        MediaConfigurationStore store = new(contextFactory: CreateFactory());
 
-        store.HasKey("queue.extras.paused").Should().BeFalse();
+        store.HasKey(key: "queue.extras.paused").Should().BeFalse();
     }
 
     [Fact]
     public void SetValue_NewKey_InsertsRow_HasKeyAndGetValueReflectIt()
     {
-        MediaConfigurationStore store = new(CreateFactory());
+        MediaConfigurationStore store = new(contextFactory: CreateFactory());
 
-        store.SetValue("queue.extras.paused", "true");
+        store.SetValue(key: "queue.extras.paused", value: "true");
 
-        store.HasKey("queue.extras.paused").Should().BeTrue();
-        store.GetValue("queue.extras.paused").Should().Be("true");
+        store.HasKey(key: "queue.extras.paused").Should().BeTrue();
+        store.GetValue(key: "queue.extras.paused").Should().Be(expected: "true");
     }
 
     [Fact]
     public void SetValue_ExistingKey_UpdatesInPlace_DoesNotDuplicateRow()
     {
-        MediaConfigurationStore store = new(CreateFactory());
-        store.SetValue("queue.extras.paused", "true");
+        MediaConfigurationStore store = new(contextFactory: CreateFactory());
+        store.SetValue(key: "queue.extras.paused", value: "true");
 
-        store.SetValue("queue.extras.paused", "false");
+        store.SetValue(key: "queue.extras.paused", value: "false");
 
-        store.GetValue("queue.extras.paused").Should().Be("false");
+        store.GetValue(key: "queue.extras.paused").Should().Be(expected: "false");
     }
 
     [Fact]
     public async Task SetValueAsync_NewKey_InsertsRow_StampsModifiedBy()
     {
-        MediaConfigurationStore store = new(CreateFactory());
+        MediaConfigurationStore store = new(contextFactory: CreateFactory());
         Guid modifier = Guid.NewGuid();
 
-        await store.SetValueAsync("queue.image.paused", "true", modifier);
+        await store.SetValueAsync(key: "queue.image.paused", value: "true", modifiedBy: modifier);
 
-        store.GetValue("queue.image.paused").Should().Be("true");
+        store.GetValue(key: "queue.image.paused").Should().Be(expected: "true");
     }
 
     [Fact]
     public async Task SetValueAsync_ExistingKey_UpdatesValueAndModifiedBy()
     {
-        MediaConfigurationStore store = new(CreateFactory());
-        await store.SetValueAsync("queue.image.paused", "true", Guid.NewGuid());
+        MediaConfigurationStore store = new(contextFactory: CreateFactory());
+        await store.SetValueAsync(key: "queue.image.paused", value: "true", modifiedBy: Guid.NewGuid());
         Guid secondModifier = Guid.NewGuid();
 
-        await store.SetValueAsync("queue.image.paused", "false", secondModifier);
+        await store.SetValueAsync(key: "queue.image.paused", value: "false", modifiedBy: secondModifier);
 
-        store.GetValue("queue.image.paused").Should().Be("false");
+        store.GetValue(key: "queue.image.paused").Should().Be(expected: "false");
     }
 
     [Fact]
     public async Task SetValueAsync_WithoutModifiedBy_LeavesItNull()
     {
-        MediaConfigurationStore store = new(CreateFactory());
+        MediaConfigurationStore store = new(contextFactory: CreateFactory());
 
-        await store.SetValueAsync("queue.music.paused", "true");
+        await store.SetValueAsync(key: "queue.music.paused", value: "true");
 
-        store.GetValue("queue.music.paused").Should().Be("true");
+        store.GetValue(key: "queue.music.paused").Should().Be(expected: "true");
     }
 }

@@ -29,75 +29,75 @@ public class EventAuditTests
 
         LibraryRefreshedEvent evt = new() { QueryKey = ["music", "album", Guid.NewGuid()] };
 
-        auditLog.Record(evt, "LibraryRefreshedEvent");
+        auditLog.Record(@event: evt, eventTypeName: "LibraryRefreshedEvent");
 
-        auditLog.Count.Should().Be(1);
+        auditLog.Count.Should().Be(expected: 1);
         IReadOnlyList<EventAuditEntry> entries = auditLog.GetEntries();
-        entries.Should().HaveCount(1);
-        entries[0].EventType.Should().Be("LibraryRefreshedEvent");
-        entries[0].EventId.Should().Be(evt.EventId);
-        entries[0].Source.Should().Be("LibraryRefresh");
-        entries[0].Timestamp.Should().Be(evt.Timestamp);
-        entries[0].Payload.Should().Contain("QueryKey");
+        entries.Should().HaveCount(expected: 1);
+        entries[index: 0].EventType.Should().Be(expected: "LibraryRefreshedEvent");
+        entries[index: 0].EventId.Should().Be(expected: evt.EventId);
+        entries[index: 0].Source.Should().Be(expected: "LibraryRefresh");
+        entries[index: 0].Timestamp.Should().Be(expected: evt.Timestamp);
+        entries[index: 0].Payload.Should().Contain(expected: "QueryKey");
     }
 
     [Fact]
     public void AuditLog_DisabledDoesNotRecord()
     {
-        EventAuditLog auditLog = new(new() { Enabled = false });
+        EventAuditLog auditLog = new(options: new() { Enabled = false });
 
-        auditLog.Record(new LibraryRefreshedEvent { QueryKey = ["test"] }, "LibraryRefreshedEvent");
+        auditLog.Record(@event: new LibraryRefreshedEvent { QueryKey = ["test"] }, eventTypeName: "LibraryRefreshedEvent");
 
-        auditLog.Count.Should().Be(0);
+        auditLog.Count.Should().Be(expected: 0);
         auditLog.GetEntries().Should().BeEmpty();
     }
 
     [Fact]
     public void AuditLog_ExcludedEventTypesAreSkipped()
     {
-        EventAuditLog auditLog = new(new() { ExcludedEventTypes = ["EncodingProgressUpdatedEvent"] });
+        EventAuditLog auditLog = new(options: new() { ExcludedEventTypes = ["EncodingProgressUpdatedEvent"] });
 
         auditLog.Record(
-            new EncodingProgressUpdatedEvent
+            @event: new EncodingProgressUpdatedEvent
             {
                 JobId = 1,
                 Percentage = 50,
-                Elapsed = TimeSpan.FromMinutes(1),
+                Elapsed = TimeSpan.FromMinutes(minutes: 1),
             },
-            "EncodingProgressUpdatedEvent"
+            eventTypeName: "EncodingProgressUpdatedEvent"
         );
 
         auditLog.Record(
-            new EncodingStartedEvent
+            @event: new EncodingStartedEvent
             {
                 JobId = 1,
                 InputPath = "/test.mkv",
                 OutputPath = "/out/",
                 ProfileName = "x264",
             },
-            "EncodingStartedEvent"
+            eventTypeName: "EncodingStartedEvent"
         );
 
-        auditLog.Count.Should().Be(1);
-        auditLog.GetEntries()[0].EventType.Should().Be("EncodingStartedEvent");
+        auditLog.Count.Should().Be(expected: 1);
+        auditLog.GetEntries()[index: 0].EventType.Should().Be(expected: "EncodingStartedEvent");
     }
 
     [Fact]
     public void AuditLog_CompactsWhenMaxEntriesExceeded()
     {
-        EventAuditLog auditLog = new(new() { MaxEntries = 10, CompactionPercentage = 0.5 });
+        EventAuditLog auditLog = new(options: new() { MaxEntries = 10, CompactionPercentage = 0.5 });
 
         for (int i = 0; i < 15; i++)
         {
             auditLog.Record(
-                new LibraryRefreshedEvent { QueryKey = ["test", i.ToString()] },
-                "LibraryRefreshedEvent"
+                @event: new LibraryRefreshedEvent { QueryKey = ["test", i.ToString()] },
+                eventTypeName: "LibraryRefreshedEvent"
             );
         }
 
         // After compaction (50% of 10 = 5 removed from oldest), count should be <= MaxEntries
-        auditLog.Count.Should().BeLessThanOrEqualTo(15);
-        auditLog.Count.Should().BeGreaterThan(0);
+        auditLog.Count.Should().BeLessThanOrEqualTo(expected: 15);
+        auditLog.Count.Should().BeGreaterThan(expected: 0);
     }
 
     [Fact]
@@ -107,12 +107,12 @@ public class EventAuditTests
 
         for (int i = 0; i < 5; i++)
         {
-            auditLog.Record(new LibraryRefreshedEvent { QueryKey = ["test"] }, "LibraryRefreshedEvent");
+            auditLog.Record(@event: new LibraryRefreshedEvent { QueryKey = ["test"] }, eventTypeName: "LibraryRefreshedEvent");
         }
 
-        auditLog.Count.Should().Be(5);
+        auditLog.Count.Should().Be(expected: 5);
         auditLog.Clear();
-        auditLog.Count.Should().Be(0);
+        auditLog.Count.Should().Be(expected: 0);
         auditLog.GetEntries().Should().BeEmpty();
     }
 
@@ -121,49 +121,49 @@ public class EventAuditTests
     {
         EventAuditLog auditLog = new();
 
-        auditLog.Record(new LibraryRefreshedEvent { QueryKey = ["music"] }, "LibraryRefreshedEvent");
+        auditLog.Record(@event: new LibraryRefreshedEvent { QueryKey = ["music"] }, eventTypeName: "LibraryRefreshedEvent");
 
         auditLog.Record(
-            new EncodingStartedEvent
+            @event: new EncodingStartedEvent
             {
                 JobId = 1,
                 InputPath = "/test.mkv",
                 OutputPath = "/out/",
                 ProfileName = "x264",
             },
-            "EncodingStartedEvent"
+            eventTypeName: "EncodingStartedEvent"
         );
 
         auditLog.Record(
-            new LibraryRefreshedEvent { QueryKey = ["libraries"] },
-            "LibraryRefreshedEvent"
+            @event: new LibraryRefreshedEvent { QueryKey = ["libraries"] },
+            eventTypeName: "LibraryRefreshedEvent"
         );
 
-        IReadOnlyList<EventAuditEntry> refreshEntries = auditLog.GetEntries("LibraryRefreshedEvent");
-        refreshEntries.Should().HaveCount(2);
+        IReadOnlyList<EventAuditEntry> refreshEntries = auditLog.GetEntries(eventType: "LibraryRefreshedEvent");
+        refreshEntries.Should().HaveCount(expected: 2);
 
         IReadOnlyList<EventAuditEntry> encodingEntries = auditLog.GetEntries(
-            "EncodingStartedEvent"
+            eventType: "EncodingStartedEvent"
         );
-        encodingEntries.Should().HaveCount(1);
+        encodingEntries.Should().HaveCount(expected: 1);
     }
 
     [Fact]
     public void AuditLog_GetEntries_ByTimeRange()
     {
         EventAuditLog auditLog = new();
-        DateTime before = DateTime.UtcNow.AddSeconds(-1);
+        DateTime before = DateTime.UtcNow.AddSeconds(value: -1);
 
-        auditLog.Record(new LibraryRefreshedEvent { QueryKey = ["test"] }, "LibraryRefreshedEvent");
+        auditLog.Record(@event: new LibraryRefreshedEvent { QueryKey = ["test"] }, eventTypeName: "LibraryRefreshedEvent");
 
-        DateTime after = DateTime.UtcNow.AddSeconds(1);
+        DateTime after = DateTime.UtcNow.AddSeconds(value: 1);
 
-        IReadOnlyList<EventAuditEntry> entries = auditLog.GetEntries(before, after);
-        entries.Should().HaveCount(1);
+        IReadOnlyList<EventAuditEntry> entries = auditLog.GetEntries(from: before, to: after);
+        entries.Should().HaveCount(expected: 1);
 
         IReadOnlyList<EventAuditEntry> emptyEntries = auditLog.GetEntries(
-            DateTime.UtcNow.AddDays(-2),
-            DateTime.UtcNow.AddDays(-1)
+            from: DateTime.UtcNow.AddDays(value: -2),
+            to: DateTime.UtcNow.AddDays(value: -1)
         );
         emptyEntries.Should().BeEmpty();
     }
@@ -173,23 +173,23 @@ public class EventAuditTests
     {
         InMemoryEventBus innerBus = new();
         EventAuditLog auditLog = new();
-        AuditingEventBusDecorator decorator = new(innerBus, auditLog);
+        AuditingEventBusDecorator decorator = new(inner: innerBus, auditLog: auditLog);
 
         List<IEvent> received = [];
         decorator.Subscribe<LibraryRefreshedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
 
         await decorator.PublishAsync(
-            new LibraryRefreshedEvent { QueryKey = ["music", "album", Guid.NewGuid()] }
+            @event: new LibraryRefreshedEvent { QueryKey = ["music", "album", Guid.NewGuid()] }
         );
 
-        auditLog.Count.Should().Be(1);
-        received.Should().HaveCount(1);
+        auditLog.Count.Should().Be(expected: 1);
+        received.Should().HaveCount(expected: 1);
     }
 
     [Fact]
@@ -197,11 +197,11 @@ public class EventAuditTests
     {
         InMemoryEventBus innerBus = new();
         EventAuditLog auditLog = new();
-        AuditingEventBusDecorator decorator = new(innerBus, auditLog);
+        AuditingEventBusDecorator decorator = new(inner: innerBus, auditLog: auditLog);
 
         bool handlerCalled = false;
         IDisposable sub = decorator.Subscribe<PlaybackStartedEvent>(
-            (_, _) =>
+            handler: (_, _) =>
             {
                 handlerCalled = true;
                 return Task.CompletedTask;
@@ -209,7 +209,7 @@ public class EventAuditTests
         );
 
         await decorator.PublishAsync(
-            new PlaybackStartedEvent
+            @event: new PlaybackStartedEvent
             {
                 UserId = Guid.NewGuid(),
                 MediaId = 1,
@@ -223,7 +223,7 @@ public class EventAuditTests
         handlerCalled = false;
 
         await decorator.PublishAsync(
-            new PlaybackStartedEvent
+            @event: new PlaybackStartedEvent
             {
                 UserId = Guid.NewGuid(),
                 MediaId = 2,
@@ -237,30 +237,30 @@ public class EventAuditTests
     [Fact]
     public async Task AuditLog_IsThreadSafe()
     {
-        EventAuditLog auditLog = new(new() { MaxEntries = 50_000 });
+        EventAuditLog auditLog = new(options: new() { MaxEntries = 50_000 });
 
         Task[] tasks = Enumerable
-            .Range(0, 100)
-            .Select(i =>
-                Task.Run(() =>
+            .Range(start: 0, count: 100)
+            .Select(selector: i =>
+                Task.Run(action: () =>
                 {
                     for (int j = 0; j < 100; j++)
                     {
                         auditLog.Record(
-                            new LibraryRefreshedEvent
+                            @event: new LibraryRefreshedEvent
                             {
                                 QueryKey = ["test", i.ToString(), j.ToString()],
                             },
-                            "LibraryRefreshedEvent"
+                            eventTypeName: "LibraryRefreshedEvent"
                         );
                     }
                 })
             )
             .ToArray();
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks: tasks);
 
-        auditLog.Count.Should().Be(10_000);
+        auditLog.Count.Should().Be(expected: 10_000);
     }
 
     [Fact]
@@ -276,12 +276,12 @@ public class EventAuditTests
             LibraryId = Ulid.NewUlid(),
         };
 
-        auditLog.Record(evt, "MediaAddedEvent");
+        auditLog.Record(@event: evt, eventTypeName: "MediaAddedEvent");
 
-        EventAuditEntry entry = auditLog.GetEntries()[0];
-        entry.Payload.Should().Contain("\"MediaId\":42");
-        entry.Payload.Should().Contain("\"MediaType\":\"movie\"");
-        entry.Payload.Should().Contain("\"Title\":\"Test Movie\"");
+        EventAuditEntry entry = auditLog.GetEntries()[index: 0];
+        entry.Payload.Should().Contain(expected: "\"MediaId\":42");
+        entry.Payload.Should().Contain(expected: "\"MediaType\":\"movie\"");
+        entry.Payload.Should().Contain(expected: "\"Title\":\"Test Movie\"");
     }
 
     [Fact]
@@ -290,8 +290,8 @@ public class EventAuditTests
         EventAuditOptions options = new();
 
         options.Enabled.Should().BeTrue();
-        options.MaxEntries.Should().Be(10_000);
-        options.CompactionPercentage.Should().Be(0.25);
+        options.MaxEntries.Should().Be(expected: 10_000);
+        options.CompactionPercentage.Should().Be(expected: 0.25);
         options.ExcludedEventTypes.Should().BeEmpty();
     }
 
@@ -301,13 +301,13 @@ public class EventAuditTests
         // InMemoryBus -> LoggingDecorator -> AuditingDecorator
         InMemoryEventBus innerBus = new();
         List<string> logMessages = [];
-        LoggingEventBusDecorator loggingBus = new(innerBus, msg => logMessages.Add(msg));
+        LoggingEventBusDecorator loggingBus = new(inner: innerBus, log: msg => logMessages.Add(item: msg));
         EventAuditLog auditLog = new();
-        AuditingEventBusDecorator auditBus = new(loggingBus, auditLog);
+        AuditingEventBusDecorator auditBus = new(inner: loggingBus, auditLog: auditLog);
 
         bool handlerCalled = false;
         auditBus.Subscribe<EncodingCompletedEvent>(
-            (_, _) =>
+            handler: (_, _) =>
             {
                 handlerCalled = true;
                 return Task.CompletedTask;
@@ -315,20 +315,20 @@ public class EventAuditTests
         );
 
         await auditBus.PublishAsync(
-            new EncodingCompletedEvent
+            @event: new EncodingCompletedEvent
             {
                 JobId = 1,
                 OutputPath = "/out/playlist.m3u8",
-                Duration = TimeSpan.FromMinutes(5),
+                Duration = TimeSpan.FromMinutes(minutes: 5),
             }
         );
 
         // Audit recorded
-        auditLog.Count.Should().Be(1);
-        auditLog.GetEntries()[0].EventType.Should().Be("EncodingCompletedEvent");
+        auditLog.Count.Should().Be(expected: 1);
+        auditLog.GetEntries()[index: 0].EventType.Should().Be(expected: "EncodingCompletedEvent");
 
         // Logging happened
-        logMessages.Should().ContainSingle(m => m.Contains("EncodingCompletedEvent"));
+        logMessages.Should().ContainSingle(predicate: m => m.Contains("EncodingCompletedEvent"));
 
         // Handler was called
         handlerCalled.Should().BeTrue();

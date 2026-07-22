@@ -15,9 +15,9 @@ namespace NoMercy.Providers.KitsuIo;
 
 public class Large
 {
-    [JsonProperty("width")]
+    [JsonProperty(propertyName: "width")]
     public int? Width { get; set; }
 
-    [JsonProperty("height")]
+    [JsonProperty(propertyName: "height")]
     public int? Height { get; set; }
 }

@@ -44,10 +44,10 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 // -----------------------------------------------------------------------------
 
 [ApiController]
-[Tags("Dashboard Notifications")]
-[ApiVersion(1.0)]
+[Tags(tags: "Dashboard Notifications")]
+[ApiVersion(version: 1.0)]
 [Authorize(Policy = "Moderator")]
-[Route("api/v{version:apiVersion}/dashboard/notifications", Order = 10)]
+[Route(template: "api/v{version:apiVersion}/dashboard/notifications", Order = 10)]
 public class NotificationsController(
     MediaContext mediaContext,
     IEventBus eventBus,
@@ -58,25 +58,25 @@ public class NotificationsController(
     private const string DefaultNotificationHub = "videoHub";
 
     [HttpPost]
-    [Route("broadcast")]
+    [Route(template: "broadcast")]
     public async Task<IActionResult> Broadcast([FromBody] BroadcastNotificationRequestDto request)
     {
-        if (string.IsNullOrWhiteSpace(request.Title))
-            return BadRequestResponse("title is required.");
+        if (string.IsNullOrWhiteSpace(value: request.Title))
+            return BadRequestResponse(detail: "title is required.");
 
-        if (string.IsNullOrWhiteSpace(request.Body))
-            return BadRequestResponse("body is required.");
+        if (string.IsNullOrWhiteSpace(value: request.Body))
+            return BadRequestResponse(detail: "body is required.");
 
-        string type = string.IsNullOrWhiteSpace(request.Type)
+        string type = string.IsNullOrWhiteSpace(value: request.Type)
             ? DefaultNotificationType
             : request.Type;
 
         int notifiedUsers = await mediaContext
             .Users.AsNoTracking()
-            .CountAsync(user => user.Allowed || user.Owner);
+            .CountAsync(predicate: user => user.Allowed || user.Owner);
 
         await eventBus.PublishAsync(
-            new UserNotifiedEvent
+            @event: new UserNotifiedEvent
             {
                 Title = request.Title,
                 Message = request.Body,
@@ -85,7 +85,7 @@ public class NotificationsController(
         );
 
         return Ok(
-            new DataResponseDto<BroadcastNotificationResponseDto>
+            value: new DataResponseDto<BroadcastNotificationResponseDto>
             {
                 Data = new()
                 {
@@ -99,34 +99,34 @@ public class NotificationsController(
     }
 
     [HttpPost]
-    [Route("send")]
+    [Route(template: "send")]
     public async Task<IActionResult> Send([FromBody] SendNotificationRequestDto request)
     {
         if (request.UserId == Guid.Empty)
-            return BadRequestResponse("user_id is required.");
+            return BadRequestResponse(detail: "user_id is required.");
 
-        if (string.IsNullOrWhiteSpace(request.Title))
-            return BadRequestResponse("title is required.");
+        if (string.IsNullOrWhiteSpace(value: request.Title))
+            return BadRequestResponse(detail: "title is required.");
 
-        if (string.IsNullOrWhiteSpace(request.Body))
-            return BadRequestResponse("body is required.");
+        if (string.IsNullOrWhiteSpace(value: request.Body))
+            return BadRequestResponse(detail: "body is required.");
 
         User? user = await mediaContext
             .Users.AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Id == request.UserId);
+            .FirstOrDefaultAsync(predicate: u => u.Id == request.UserId);
         if (user is null)
-            return NotFoundResponse("User not found.");
+            return NotFoundResponse(detail: "User not found.");
 
-        string type = string.IsNullOrWhiteSpace(request.Type)
+        string type = string.IsNullOrWhiteSpace(value: request.Type)
             ? DefaultNotificationType
             : request.Type;
 
-        bool connected = connectedClients.Clients.Values.Any(client =>
+        bool connected = connectedClients.Clients.Values.Any(predicate: client =>
             client.Sub == request.UserId && client.Endpoint == "/" + DefaultNotificationHub
         );
 
         await eventBus.PublishAsync(
-            new UserNotifiedEvent
+            @event: new UserNotifiedEvent
             {
                 Title = request.Title,
                 Message = request.Body,
@@ -136,7 +136,7 @@ public class NotificationsController(
         );
 
         return Ok(
-            new DataResponseDto<SendNotificationResponseDto>
+            value: new DataResponseDto<SendNotificationResponseDto>
             {
                 Data = new()
                 {

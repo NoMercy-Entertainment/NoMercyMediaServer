@@ -17,7 +17,7 @@ namespace NoMercy.Tests.Encoder.Distribution;
 public class TaskSerializerTests
 {
     private readonly byte[] _signingKey = Encoding.UTF8.GetBytes(
-        "test-task-signing-key-32-bytes-!"
+        s: "test-task-signing-key-32-bytes-!"
     );
     private readonly TaskSerializer _serializer = new();
 
@@ -26,23 +26,23 @@ public class TaskSerializerTests
     {
         EncodeTask task = MakeTask();
 
-        string wire = _serializer.Serialize(task, _signingKey);
-        EncodeTask? decoded = _serializer.Deserialize(wire, _signingKey);
+        string wire = _serializer.Serialize(task: task, signingKey: _signingKey);
+        EncodeTask? decoded = _serializer.Deserialize(payload: wire, signingKey: _signingKey);
 
         decoded.Should().NotBeNull();
-        decoded!.TaskId.Should().Be(task.TaskId);
-        decoded.OutputPath.Should().Be(task.OutputPath);
-        decoded.Type.Should().Be(task.Type);
+        decoded!.TaskId.Should().Be(expected: task.TaskId);
+        decoded.OutputPath.Should().Be(expected: task.OutputPath);
+        decoded.Type.Should().Be(expected: task.Type);
     }
 
     [Fact]
     public void Deserialize_WrongKey_ReturnsNull()
     {
         EncodeTask task = MakeTask();
-        string wire = _serializer.Serialize(task, _signingKey);
+        string wire = _serializer.Serialize(task: task, signingKey: _signingKey);
 
-        byte[] wrongKey = Encoding.UTF8.GetBytes("wrong-task-signing-key-32-bytes!");
-        EncodeTask? result = _serializer.Deserialize(wire, wrongKey);
+        byte[] wrongKey = Encoding.UTF8.GetBytes(s: "wrong-task-signing-key-32-bytes!");
+        EncodeTask? result = _serializer.Deserialize(payload: wire, signingKey: wrongKey);
 
         result.Should().BeNull();
     }
@@ -50,11 +50,11 @@ public class TaskSerializerTests
     [Fact]
     public void Deserialize_Tampered_ReturnsNull()
     {
-        EncodeTask task = MakeTask("t0");
-        string wire = _serializer.Serialize(task, _signingKey);
+        EncodeTask task = MakeTask(id: "t0");
+        string wire = _serializer.Serialize(task: task, signingKey: _signingKey);
 
-        string tampered = wire.Replace("t0", "evil");
-        EncodeTask? result = _serializer.Deserialize(tampered, _signingKey);
+        string tampered = wire.Replace(oldValue: "t0", newValue: "evil");
+        EncodeTask? result = _serializer.Deserialize(payload: tampered, signingKey: _signingKey);
 
         result.Should().BeNull();
     }
@@ -62,20 +62,20 @@ public class TaskSerializerTests
     [Fact]
     public void Deserialize_MalformedJson_ReturnsNull()
     {
-        _serializer.Deserialize("not json", _signingKey).Should().BeNull();
+        _serializer.Deserialize(payload: "not json", signingKey: _signingKey).Should().BeNull();
     }
 
     [Fact]
     public void Deserialize_Empty_ReturnsNull()
     {
-        _serializer.Deserialize("", _signingKey).Should().BeNull();
+        _serializer.Deserialize(payload: "", signingKey: _signingKey).Should().BeNull();
     }
 
     [Fact]
     public void Deserialize_EmptyJsonObject_ReturnsNull()
     {
         // Missing Payload and Signature fields — must not NRE.
-        _serializer.Deserialize("{}", _signingKey).Should().BeNull();
+        _serializer.Deserialize(payload: "{}", signingKey: _signingKey).Should().BeNull();
     }
 
     [Fact]
@@ -85,35 +85,35 @@ public class TaskSerializerTests
             TaskId: "t0",
             Success: true,
             OutputPath: "/out/t0.ts",
-            Duration: TimeSpan.FromSeconds(5),
+            Duration: TimeSpan.FromSeconds(seconds: 5),
             Error: null,
             WorkerId: "beast"
         );
 
-        string wire = _serializer.SerializeResult(original, _signingKey);
-        DispatchResult? decoded = _serializer.DeserializeResult(wire, _signingKey);
+        string wire = _serializer.SerializeResult(result: original, signingKey: _signingKey);
+        DispatchResult? decoded = _serializer.DeserializeResult(payload: wire, signingKey: _signingKey);
 
         decoded.Should().NotBeNull();
-        decoded!.TaskId.Should().Be("t0");
+        decoded!.TaskId.Should().Be(expected: "t0");
         decoded.Success.Should().BeTrue();
-        decoded.OutputPath.Should().Be("/out/t0.ts");
-        decoded.WorkerId.Should().Be("beast");
+        decoded.OutputPath.Should().Be(expected: "/out/t0.ts");
+        decoded.WorkerId.Should().Be(expected: "beast");
     }
 
     [Fact]
     public void DeserializeResult_WrongKey_ReturnsNull()
     {
-        DispatchResult original = new("t0", true, "/out", TimeSpan.FromSeconds(1));
-        string wire = _serializer.SerializeResult(original, _signingKey);
+        DispatchResult original = new(TaskId: "t0", Success: true, OutputPath: "/out", Duration: TimeSpan.FromSeconds(seconds: 1));
+        string wire = _serializer.SerializeResult(result: original, signingKey: _signingKey);
 
-        byte[] wrongKey = Encoding.UTF8.GetBytes("different-key-32-bytes-long-pad!");
-        _serializer.DeserializeResult(wire, wrongKey).Should().BeNull();
+        byte[] wrongKey = Encoding.UTF8.GetBytes(s: "different-key-32-bytes-long-pad!");
+        _serializer.DeserializeResult(payload: wire, signingKey: wrongKey).Should().BeNull();
     }
 
     private static EncodeTask MakeTask(string id = "task-1") =>
         new(
             TaskId: id,
-            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            Command: new(Executable: "ffmpeg", Arguments: ["-i", "in.mkv", "out.ts"], WorkingDirectory: null),
             OutputPath: $"/out/{id}",
             Type: EncodeTaskType.QualityVariant
         );

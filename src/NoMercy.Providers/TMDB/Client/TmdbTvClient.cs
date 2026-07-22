@@ -22,11 +22,11 @@ namespace NoMercy.Providers.TMDB.Client;
 public class TmdbTvClient : TmdbBaseClient
 {
     public TmdbTvClient(int? id = 0, string[]? appendices = null, string? language = "en-US")
-        : base((int)id!, language!) { }
+        : base(id: (int)id!, language: language!) { }
 
     public TmdbSeasonClient Season(int seasonNumber, string[]? items = null)
     {
-        return new TmdbSeasonClient(Id, seasonNumber, items);
+        return new TmdbSeasonClient(tvId: Id, seasonNumber: seasonNumber, appendices: items);
     }
 
     //public Task<Models?.Season.SeasonAppends> SeasonWithAppends(int SeasonNumber, string[] Appendices)
@@ -36,22 +36,23 @@ public class TmdbTvClient : TmdbBaseClient
 
     public Task<TmdbTvShowDetails?> Details(bool? priority = false)
     {
-        return Get<TmdbTvShowDetails>("tv/" + Id, priority: priority);
+        return Get<TmdbTvShowDetails>(url: "tv/" + Id, priority: priority);
     }
 
     public Task<TmdbTvShowAppends?> WithAppends(string[] appendices, bool? priority = false)
     {
         Dictionary<string, string?> queryParams = new()
         {
-            ["append_to_response"] = string.Join(",", appendices),
+            [key: "append_to_response"] = string.Join(separator: ",", value: appendices),
         };
 
-        return Get<TmdbTvShowAppends>("tv/" + Id, queryParams, priority);
+        return Get<TmdbTvShowAppends>(url: "tv/" + Id, query: queryParams, priority: priority);
     }
 
     public Task<TmdbTvShowAppends?> WithAllAppends(bool? priority = false)
     {
         return WithAppends(
+            appendices:
             [
                 "aggregate_credits",
                 "alternative_titles",
@@ -67,148 +68,148 @@ public class TmdbTvClient : TmdbBaseClient
                 "videos",
                 "watch/providers",
             ],
-            priority
+            priority: priority
         );
     }
 
     public Task<TmdbTvAggregatedCredits?> AggregatedCredits(bool? priority = false)
     {
-        return Get<TmdbTvAggregatedCredits>("tv/" + Id + "/aggregate_credits", priority: priority);
+        return Get<TmdbTvAggregatedCredits>(url: "tv/" + Id + "/aggregate_credits", priority: priority);
     }
 
     public Task<TmdbTvAlternativeTitles?> AlternativeTitles(bool? priority = false)
     {
-        return Get<TmdbTvAlternativeTitles>("tv/" + Id + "/alternative_titles", priority: priority);
+        return Get<TmdbTvAlternativeTitles>(url: "tv/" + Id + "/alternative_titles", priority: priority);
     }
 
     public Task<TmdbTvChanges?> Changes(string startDate, string endDate, bool? priority = false)
     {
         Dictionary<string, string?> queryParams = new()
         {
-            ["start_date"] = startDate,
-            ["end_date"] = endDate,
+            [key: "start_date"] = startDate,
+            [key: "end_date"] = endDate,
         };
 
-        return Get<TmdbTvChanges>("tv/" + Id + "/changes", queryParams, priority: priority);
+        return Get<TmdbTvChanges>(url: "tv/" + Id + "/changes", query: queryParams, priority: priority);
     }
 
     public Task<TmdbTvContentRatings?> ContentRatings(bool? priority = false)
     {
-        return Get<TmdbTvContentRatings>("tv/" + Id + "/content_ratings", priority: priority);
+        return Get<TmdbTvContentRatings>(url: "tv/" + Id + "/content_ratings", priority: priority);
     }
 
     public Task<TmdbTvCredits?> Credits(bool? priority = false)
     {
-        return Get<TmdbTvCredits>("tv/" + Id + "/credits", priority: priority);
+        return Get<TmdbTvCredits>(url: "tv/" + Id + "/credits", priority: priority);
     }
 
     public Task<TmdbTvEpisodeGroups?> EpisodeGroups(bool? priority = false)
     {
-        return Get<TmdbTvEpisodeGroups>("tv/" + Id + "/episode_groups", priority: priority);
+        return Get<TmdbTvEpisodeGroups>(url: "tv/" + Id + "/episode_groups", priority: priority);
     }
 
     public TmdbEpisodeGroupClient EpisodeGroup(string groupId)
     {
-        return new TmdbEpisodeGroupClient(groupId);
+        return new TmdbEpisodeGroupClient(groupId: groupId);
     }
 
     public Task<TmdbTvExternalIds?> ExternalIds(bool? priority = false)
     {
-        return Get<TmdbTvExternalIds>("tv/" + Id + "/external_ids", priority: priority);
+        return Get<TmdbTvExternalIds>(url: "tv/" + Id + "/external_ids", priority: priority);
     }
 
     public Task<TmdbImages?> Images(bool? priority = false)
     {
-        return Get<TmdbImages>("tv/" + Id + "/images", priority: priority);
+        return Get<TmdbImages>(url: "tv/" + Id + "/images", priority: priority);
     }
 
     public Task<TmdbTvKeywords?> Keywords(bool? priority = false)
     {
-        return Get<TmdbTvKeywords>("tv/" + Id + "/keywords", priority: priority);
+        return Get<TmdbTvKeywords>(url: "tv/" + Id + "/keywords", priority: priority);
     }
 
     public Task<TmdbTvRecommendations?> Recommendations(bool? priority = false)
     {
-        return Get<TmdbTvRecommendations>("tv/" + Id + "/recommendations", priority: priority);
+        return Get<TmdbTvRecommendations>(url: "tv/" + Id + "/recommendations", priority: priority);
     }
 
     public Task<TmdbTvReviews?> Reviews(bool? priority = false)
     {
-        return Get<TmdbTvReviews>("tv/" + Id + "/reviews", priority: priority);
+        return Get<TmdbTvReviews>(url: "tv/" + Id + "/reviews", priority: priority);
     }
 
     public Task<TmdbTvScreenedTheatrically?> ScreenedTheatrically(bool? priority = false)
     {
         return Get<TmdbTvScreenedTheatrically>(
-            "tv/" + Id + "/screened_theatrically",
+            url: "tv/" + Id + "/screened_theatrically",
             priority: priority
         );
     }
 
     public Task<TmdbTvSimilar?> Similar(bool? priority = false)
     {
-        return Get<TmdbTvSimilar>("tv/" + Id + "/similar", priority: priority);
+        return Get<TmdbTvSimilar>(url: "tv/" + Id + "/similar", priority: priority);
     }
 
     public Task<TmdbSharedTranslations?> Translations(bool? priority = false)
     {
-        return Get<TmdbSharedTranslations>("tv/" + Id + "/translations", priority: priority);
+        return Get<TmdbSharedTranslations>(url: "tv/" + Id + "/translations", priority: priority);
     }
 
     public Task<TmdbTvVideos?> Videos(bool? priority = false)
     {
-        return Get<TmdbTvVideos>("tv/" + Id + "/videos", priority: priority);
+        return Get<TmdbTvVideos>(url: "tv/" + Id + "/videos", priority: priority);
     }
 
     public Task<TmdbWatchProviders?> WatchProviders(bool? priority = false)
     {
-        return Get<TmdbWatchProviders>("tv/" + Id + "/watch/providers", priority: priority);
+        return Get<TmdbWatchProviders>(url: "tv/" + Id + "/watch/providers", priority: priority);
     }
 
     public Task<TmdbTvShowLatest?> Latest(bool? priority = false)
     {
-        return Get<TmdbTvShowLatest>("tv/latest", priority: priority);
+        return Get<TmdbTvShowLatest>(url: "tv/latest", priority: priority);
     }
 
     public Task<TmdbTvAiringToday?> AiringToday(bool? priority = false)
     {
-        return Get<TmdbTvAiringToday>("tv/airing_today", priority: priority);
+        return Get<TmdbTvAiringToday>(url: "tv/airing_today", priority: priority);
     }
 
     public Task<TmdbTvOnTheAir?> OnTheAir(bool? priority = false)
     {
-        return Get<TmdbTvOnTheAir>("tv/on_the_air", priority: priority);
+        return Get<TmdbTvOnTheAir>(url: "tv/on_the_air", priority: priority);
     }
 
     public async Task<List<TmdbTvShow>?> Popular(int limit = 10, bool? priority = false)
     {
         TmdbPaginatedResponse<TmdbTvShow>? response = await Get<TmdbPaginatedResponse<TmdbTvShow>>(
-            "tv/popular",
+            url: "tv/popular",
             priority: priority
         );
-        return response?.Results?.Take(limit).ToList();
+        return response?.Results?.Take(count: limit).ToList();
     }
 
     public Task<TmdbTvTopRated?> TopRated(bool? priority = false)
     {
-        return Get<TmdbTvTopRated>("tv/top_rated", priority: priority);
+        return Get<TmdbTvTopRated>(url: "tv/top_rated", priority: priority);
     }
 
     public Task<TvShowCertifications?> Certifications(bool? priority = false)
     {
-        return Get<TvShowCertifications>("certification/tv/list", priority: priority);
+        return Get<TvShowCertifications>(url: "certification/tv/list", priority: priority);
     }
 
     public Task<TmdbGenreTv?> Genres(string language = "en", bool? priority = false)
     {
-        Dictionary<string, string?> queryParams = new() { ["language"] = language };
+        Dictionary<string, string?> queryParams = new() { [key: "language"] = language };
 
-        return Get<TmdbGenreTv>("genre/tv/list", queryParams, priority: priority);
+        return Get<TmdbGenreTv>(url: "genre/tv/list", query: queryParams, priority: priority);
     }
 
     public Task<TmdbTmdbNetworkDetails?> NetworkDetails(int id, bool? priority = false)
     {
-        return Get<TmdbTmdbNetworkDetails>("network/" + id, priority: priority);
+        return Get<TmdbTmdbNetworkDetails>(url: "network/" + id, priority: priority);
     }
 
 }

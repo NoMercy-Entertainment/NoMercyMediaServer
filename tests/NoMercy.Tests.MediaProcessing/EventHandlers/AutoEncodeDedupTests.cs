@@ -24,7 +24,7 @@ namespace NoMercy.Tests.MediaProcessing.EventHandlers;
 /// to every configured destination from a single run, so duplicate
 /// dispatches were pure waste.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class AutoEncodeDedupTests
 {
     private static readonly Ulid LocalDriverId = Ulid.NewUlid();
@@ -70,46 +70,46 @@ public class AutoEncodeDedupTests
     {
         // The actual bug we shipped: an episode existed on both Anime/Anime
         // (NFS) and Anime-S3 (S3). Pre-fix the loop dispatched twice.
-        Folder nfsFolder = Folder(Ulid.NewUlid(), "/mnt/vault/Media/Anime/Anime", NfsDriverId);
-        Folder s3Folder = Folder(Ulid.NewUlid(), "Anime-S3", S3DriverId);
+        Folder nfsFolder = Folder(id: Ulid.NewUlid(), path: "/mnt/vault/Media/Anime/Anime", driverId: NfsDriverId);
+        Folder s3Folder = Folder(id: Ulid.NewUlid(), path: "Anime-S3", driverId: S3DriverId);
 
         VideoFile nfsVideo = Video(
-            "/mnt/vault/Media/Anime/Anime/Black.Butler.(2008)/Black.Butler.S05E02",
-            "/Black.Butler.S05E02.NoMercy.m3u8"
+            hostFolder: "/mnt/vault/Media/Anime/Anime/Black.Butler.(2008)/Black.Butler.S05E02",
+            filename: "/Black.Butler.S05E02.NoMercy.m3u8"
         );
         VideoFile s3Video = Video(
-            "Anime-S3/Black.Butler.(2008)/Black.Butler.S05E02",
-            "/Black.Butler.S05E02.NoMercy.m3u8"
+            hostFolder: "Anime-S3/Black.Butler.(2008)/Black.Butler.S05E02",
+            filename: "/Black.Butler.S05E02.NoMercy.m3u8"
         );
 
         List<(VideoFile File, Folder Folder)> picked = AutoEncodeSubscriber
-            .SelectSourcesToEncode([nfsVideo, s3Video], [nfsFolder, s3Folder], StandardDriverMap())
+            .SelectSourcesToEncode(videoFiles: [nfsVideo, s3Video], folders: [nfsFolder, s3Folder], driverTypeById: StandardDriverMap())
             .ToList();
 
-        picked.Should().HaveCount(1, "one filename, one encode — encoder publishes to all dests");
-        picked[0].File.HostFolder.Should().StartWith("/mnt/vault", "NFS preferred over S3");
-        picked[0].Folder.Id.Should().Be(nfsFolder.Id);
+        picked.Should().HaveCount(expected: 1, because: "one filename, one encode — encoder publishes to all dests");
+        picked[index: 0].File.HostFolder.Should().StartWith(expected: "/mnt/vault", because: "NFS preferred over S3");
+        picked[index: 0].Folder.Id.Should().Be(expected: nfsFolder.Id);
     }
 
     [Fact]
     public void Local_beats_every_other_driver_type()
     {
-        Folder localFolder = Folder(Ulid.NewUlid(), "/local/media", LocalDriverId);
-        Folder nfsFolder = Folder(Ulid.NewUlid(), "/mnt/nfs", NfsDriverId);
+        Folder localFolder = Folder(id: Ulid.NewUlid(), path: "/local/media", driverId: LocalDriverId);
+        Folder nfsFolder = Folder(id: Ulid.NewUlid(), path: "/mnt/nfs", driverId: NfsDriverId);
 
-        VideoFile localFile = Video("/local/media/show", "/ep.m3u8");
-        VideoFile nfsFile = Video("/mnt/nfs/show", "/ep.m3u8");
+        VideoFile localFile = Video(hostFolder: "/local/media/show", filename: "/ep.m3u8");
+        VideoFile nfsFile = Video(hostFolder: "/mnt/nfs/show", filename: "/ep.m3u8");
 
         List<(VideoFile File, Folder Folder)> picked = AutoEncodeSubscriber
             .SelectSourcesToEncode(
-                [nfsFile, localFile],
-                [localFolder, nfsFolder],
-                StandardDriverMap()
+                videoFiles: [nfsFile, localFile],
+                folders: [localFolder, nfsFolder],
+                driverTypeById: StandardDriverMap()
             )
             .ToList();
 
-        picked.Should().HaveCount(1);
-        picked[0].File.HostFolder.Should().Be("/local/media/show");
+        picked.Should().HaveCount(expected: 1);
+        picked[index: 0].File.HostFolder.Should().Be(expected: "/local/media/show");
     }
 
     [Fact]
@@ -117,48 +117,48 @@ public class AutoEncodeDedupTests
     {
         // S05E07 / S05E08 / S00E03 in Stoney's library: only on NFS, not S3.
         // Single source → single dispatch, no special case.
-        Folder nfsFolder = Folder(Ulid.NewUlid(), "/mnt/vault/Media/Anime/Anime", NfsDriverId);
-        Folder s3Folder = Folder(Ulid.NewUlid(), "Anime-S3", S3DriverId);
+        Folder nfsFolder = Folder(id: Ulid.NewUlid(), path: "/mnt/vault/Media/Anime/Anime", driverId: NfsDriverId);
+        Folder s3Folder = Folder(id: Ulid.NewUlid(), path: "Anime-S3", driverId: S3DriverId);
 
         VideoFile only = Video(
-            "/mnt/vault/Media/Anime/Anime/Black.Butler.(2008)/Black.Butler.S05E07",
-            "/Black.Butler.S05E07.NoMercy.m3u8"
+            hostFolder: "/mnt/vault/Media/Anime/Anime/Black.Butler.(2008)/Black.Butler.S05E07",
+            filename: "/Black.Butler.S05E07.NoMercy.m3u8"
         );
 
         List<(VideoFile File, Folder Folder)> picked = AutoEncodeSubscriber
-            .SelectSourcesToEncode([only], [nfsFolder, s3Folder], StandardDriverMap())
+            .SelectSourcesToEncode(videoFiles: [only], folders: [nfsFolder, s3Folder], driverTypeById: StandardDriverMap())
             .ToList();
 
-        picked.Should().HaveCount(1);
-        picked[0].File.HostFolder.Should().StartWith("/mnt/vault");
+        picked.Should().HaveCount(expected: 1);
+        picked[index: 0].File.HostFolder.Should().StartWith(expected: "/mnt/vault");
     }
 
     [Fact]
     public void Multiple_episodes_each_get_one_dispatch()
     {
         // 13 distinct episode files across NFS+S3 → 13 dispatches, not 26.
-        Folder nfsFolder = Folder(Ulid.NewUlid(), "/mnt/vault/Media/Anime/Anime", NfsDriverId);
-        Folder s3Folder = Folder(Ulid.NewUlid(), "Anime-S3", S3DriverId);
+        Folder nfsFolder = Folder(id: Ulid.NewUlid(), path: "/mnt/vault/Media/Anime/Anime", driverId: NfsDriverId);
+        Folder s3Folder = Folder(id: Ulid.NewUlid(), path: "Anime-S3", driverId: S3DriverId);
 
         List<VideoFile> videos = [];
         for (int ep = 1; ep <= 13; ep++)
         {
             string filename = $"/Black.Butler.S05E{ep:D2}.NoMercy.m3u8";
             videos.Add(
-                Video(
-                    $"/mnt/vault/Media/Anime/Anime/Black.Butler.(2008)/Black.Butler.S05E{ep:D2}",
-                    filename
+                item: Video(
+                    hostFolder: $"/mnt/vault/Media/Anime/Anime/Black.Butler.(2008)/Black.Butler.S05E{ep:D2}",
+                    filename: filename
                 )
             );
-            videos.Add(Video($"Anime-S3/Black.Butler.(2008)/Black.Butler.S05E{ep:D2}", filename));
+            videos.Add(item: Video(hostFolder: $"Anime-S3/Black.Butler.(2008)/Black.Butler.S05E{ep:D2}", filename: filename));
         }
 
         List<(VideoFile File, Folder Folder)> picked = AutoEncodeSubscriber
-            .SelectSourcesToEncode(videos, [nfsFolder, s3Folder], StandardDriverMap())
+            .SelectSourcesToEncode(videoFiles: videos, folders: [nfsFolder, s3Folder], driverTypeById: StandardDriverMap())
             .ToList();
 
-        picked.Should().HaveCount(13, "one dispatch per filename");
-        picked.Should().AllSatisfy(p => p.File.HostFolder.Should().StartWith("/mnt/vault"));
+        picked.Should().HaveCount(expected: 13, because: "one dispatch per filename");
+        picked.Should().AllSatisfy(expected: p => p.File.HostFolder.Should().StartWith(expected: "/mnt/vault"));
     }
 
     [Fact]
@@ -166,14 +166,14 @@ public class AutoEncodeDedupTests
     {
         // VideoFile pointing at a path that no Folder claims — orphan record,
         // should not produce a dispatch.
-        Folder nfsFolder = Folder(Ulid.NewUlid(), "/mnt/vault/Media/Anime", NfsDriverId);
-        VideoFile orphan = Video("/somewhere/else", "/file.m3u8");
+        Folder nfsFolder = Folder(id: Ulid.NewUlid(), path: "/mnt/vault/Media/Anime", driverId: NfsDriverId);
+        VideoFile orphan = Video(hostFolder: "/somewhere/else", filename: "/file.m3u8");
 
         List<(VideoFile File, Folder Folder)> picked = AutoEncodeSubscriber
-            .SelectSourcesToEncode([orphan], [nfsFolder], StandardDriverMap())
+            .SelectSourcesToEncode(videoFiles: [orphan], folders: [nfsFolder], driverTypeById: StandardDriverMap())
             .ToList();
 
-        picked.Should().BeEmpty("orphan VideoFile rows shouldn't trigger an encode");
+        picked.Should().BeEmpty(because: "orphan VideoFile rows shouldn't trigger an encode");
     }
 
     [Fact]
@@ -181,25 +181,25 @@ public class AutoEncodeDedupTests
     {
         // Sanity check: the ranking enum.
         AutoEncodeSubscriber
-            .DriverPreference(StandardDriverMap(), LocalDriverId)
+            .DriverPreference(typeById: StandardDriverMap(), driverId: LocalDriverId)
             .Should()
-            .BeLessThan(AutoEncodeSubscriber.DriverPreference(StandardDriverMap(), NfsDriverId));
+            .BeLessThan(expected: AutoEncodeSubscriber.DriverPreference(typeById: StandardDriverMap(), driverId: NfsDriverId));
         AutoEncodeSubscriber
-            .DriverPreference(StandardDriverMap(), NfsDriverId)
+            .DriverPreference(typeById: StandardDriverMap(), driverId: NfsDriverId)
             .Should()
-            .Be(AutoEncodeSubscriber.DriverPreference(StandardDriverMap(), SmbDriverId));
+            .Be(expected: AutoEncodeSubscriber.DriverPreference(typeById: StandardDriverMap(), driverId: SmbDriverId));
         AutoEncodeSubscriber
-            .DriverPreference(StandardDriverMap(), NfsDriverId)
+            .DriverPreference(typeById: StandardDriverMap(), driverId: NfsDriverId)
             .Should()
-            .BeLessThan(AutoEncodeSubscriber.DriverPreference(StandardDriverMap(), WebdavDriverId));
+            .BeLessThan(expected: AutoEncodeSubscriber.DriverPreference(typeById: StandardDriverMap(), driverId: WebdavDriverId));
         AutoEncodeSubscriber
-            .DriverPreference(StandardDriverMap(), WebdavDriverId)
+            .DriverPreference(typeById: StandardDriverMap(), driverId: WebdavDriverId)
             .Should()
-            .BeLessThan(AutoEncodeSubscriber.DriverPreference(StandardDriverMap(), S3DriverId));
+            .BeLessThan(expected: AutoEncodeSubscriber.DriverPreference(typeById: StandardDriverMap(), driverId: S3DriverId));
         AutoEncodeSubscriber
-            .DriverPreference(StandardDriverMap(), S3DriverId)
+            .DriverPreference(typeById: StandardDriverMap(), driverId: S3DriverId)
             .Should()
-            .Be(AutoEncodeSubscriber.DriverPreference(StandardDriverMap(), R2DriverId));
+            .Be(expected: AutoEncodeSubscriber.DriverPreference(typeById: StandardDriverMap(), driverId: R2DriverId));
     }
 
     [Fact]
@@ -207,11 +207,11 @@ public class AutoEncodeDedupTests
     {
         Ulid mysteryDriver = Ulid.NewUlid();
         AutoEncodeSubscriber
-            .DriverPreference(StandardDriverMap(), mysteryDriver)
+            .DriverPreference(typeById: StandardDriverMap(), driverId: mysteryDriver)
             .Should()
             .BeGreaterThan(
-                AutoEncodeSubscriber.DriverPreference(StandardDriverMap(), R2DriverId),
-                "unknown drivers shouldn't beat known ones"
+                expected: AutoEncodeSubscriber.DriverPreference(typeById: StandardDriverMap(), driverId: R2DriverId),
+                because: "unknown drivers shouldn't beat known ones"
             );
     }
 
@@ -219,7 +219,7 @@ public class AutoEncodeDedupTests
     public void Empty_video_files_returns_empty()
     {
         List<(VideoFile File, Folder Folder)> picked = AutoEncodeSubscriber
-            .SelectSourcesToEncode([], [], StandardDriverMap())
+            .SelectSourcesToEncode(videoFiles: [], folders: [], driverTypeById: StandardDriverMap())
             .ToList();
 
         picked.Should().BeEmpty();
@@ -229,23 +229,23 @@ public class AutoEncodeDedupTests
     public void Three_source_drivers_picks_the_one_with_lowest_preference()
     {
         // Same content on local + nfs + s3 → local wins.
-        Folder localFolder = Folder(Ulid.NewUlid(), "/local", LocalDriverId);
-        Folder nfsFolder = Folder(Ulid.NewUlid(), "/nfs", NfsDriverId);
-        Folder s3Folder = Folder(Ulid.NewUlid(), "/s3", S3DriverId);
+        Folder localFolder = Folder(id: Ulid.NewUlid(), path: "/local", driverId: LocalDriverId);
+        Folder nfsFolder = Folder(id: Ulid.NewUlid(), path: "/nfs", driverId: NfsDriverId);
+        Folder s3Folder = Folder(id: Ulid.NewUlid(), path: "/s3", driverId: S3DriverId);
 
-        VideoFile l = Video("/local/show", "/ep.m3u8");
-        VideoFile n = Video("/nfs/show", "/ep.m3u8");
-        VideoFile s = Video("/s3/show", "/ep.m3u8");
+        VideoFile l = Video(hostFolder: "/local/show", filename: "/ep.m3u8");
+        VideoFile n = Video(hostFolder: "/nfs/show", filename: "/ep.m3u8");
+        VideoFile s = Video(hostFolder: "/s3/show", filename: "/ep.m3u8");
 
         List<(VideoFile File, Folder Folder)> picked = AutoEncodeSubscriber
             .SelectSourcesToEncode(
-                [s, n, l],
-                [localFolder, nfsFolder, s3Folder],
-                StandardDriverMap()
+                videoFiles: [s, n, l],
+                folders: [localFolder, nfsFolder, s3Folder],
+                driverTypeById: StandardDriverMap()
             )
             .ToList();
 
-        picked.Should().HaveCount(1);
-        picked[0].File.HostFolder.Should().Be("/local/show");
+        picked.Should().HaveCount(expected: 1);
+        picked[index: 0].File.HostFolder.Should().Be(expected: "/local/show");
     }
 }

@@ -20,7 +20,7 @@ namespace NoMercy.Tests.Storage;
 /// a regression here would silently scatter staged files back into the OS
 /// temp directory for every self-hosted install.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class StoragePathsTests
 {
     [Fact]
@@ -36,8 +36,8 @@ public sealed class StoragePathsTests
             StoragePaths
                 .TempRoot.Should()
                 .Be(
-                    Path.GetTempPath(),
-                    "storage must be usable (tests, CLI tools) without app-level wiring"
+                    expected: Path.GetTempPath(),
+                    because: "storage must be usable (tests, CLI tools) without app-level wiring"
                 );
         }
         finally
@@ -54,7 +54,7 @@ public sealed class StoragePathsTests
         {
             StoragePaths.TranscodeRoot = Path.GetTempPath();
 
-            StoragePaths.TranscodeRoot.Should().Be(Path.GetTempPath());
+            StoragePaths.TranscodeRoot.Should().Be(expected: Path.GetTempPath());
         }
         finally
         {
@@ -66,7 +66,7 @@ public sealed class StoragePathsTests
     public void TempRoot_setter_overrides_the_value_hosts_read()
     {
         string original = StoragePaths.TempRoot;
-        string overridden = Path.Combine(Path.GetTempPath(), $"nm-temproot-{Guid.NewGuid():N}");
+        string overridden = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-temproot-{Guid.NewGuid():N}");
         try
         {
             StoragePaths.TempRoot = overridden;
@@ -74,8 +74,8 @@ public sealed class StoragePathsTests
             StoragePaths
                 .TempRoot.Should()
                 .Be(
-                    overridden,
-                    "the host must be able to redirect staged files into its own data directory"
+                    expected: overridden,
+                    because: "the host must be able to redirect staged files into its own data directory"
                 );
         }
         finally
@@ -89,14 +89,14 @@ public sealed class StoragePathsTests
     {
         string original = StoragePaths.TranscodeRoot;
         string overridden = Path.Combine(
-            Path.GetTempPath(),
-            $"nm-transcoderoot-{Guid.NewGuid():N}"
+            path1: Path.GetTempPath(),
+            path2: $"nm-transcoderoot-{Guid.NewGuid():N}"
         );
         try
         {
             StoragePaths.TranscodeRoot = overridden;
 
-            StoragePaths.TranscodeRoot.Should().Be(overridden);
+            StoragePaths.TranscodeRoot.Should().Be(expected: overridden);
         }
         finally
         {
@@ -115,18 +115,18 @@ public sealed class StoragePathsTests
         string originalTranscode = StoragePaths.TranscodeRoot;
         try
         {
-            string tempOverride = Path.Combine(Path.GetTempPath(), $"nm-temp-{Guid.NewGuid():N}");
+            string tempOverride = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-temp-{Guid.NewGuid():N}");
             string transcodeOverride = Path.Combine(
-                Path.GetTempPath(),
-                $"nm-transcode-{Guid.NewGuid():N}"
+                path1: Path.GetTempPath(),
+                path2: $"nm-transcode-{Guid.NewGuid():N}"
             );
 
             StoragePaths.TempRoot = tempOverride;
             StoragePaths.TranscodeRoot = transcodeOverride;
 
-            StoragePaths.TempRoot.Should().Be(tempOverride);
-            StoragePaths.TranscodeRoot.Should().Be(transcodeOverride);
-            StoragePaths.TempRoot.Should().NotBe(StoragePaths.TranscodeRoot);
+            StoragePaths.TempRoot.Should().Be(expected: tempOverride);
+            StoragePaths.TranscodeRoot.Should().Be(expected: transcodeOverride);
+            StoragePaths.TempRoot.Should().NotBe(unexpected: StoragePaths.TranscodeRoot);
         }
         finally
         {

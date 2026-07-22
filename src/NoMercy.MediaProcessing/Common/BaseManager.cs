@@ -19,12 +19,12 @@ public class BaseManager : IBaseManager
 {
     public string BaseUrl(string title, DateTime? releaseDate)
     {
-        return "/" + string.Concat(title, ".(", releaseDate.ParseYear(), ")").CleanFileName();
+        return "/" + string.Concat(args: [title, ".(", releaseDate.ParseYear(), ")"]).CleanFileName();
     }
 
     public string BaseUrl(string name)
     {
-        return string.Concat(name[0], "/", name).CleanFileName();
+        return string.Concat(arg0: name[index: 0], arg1: "/", arg2: name).CleanFileName();
     }
 
     /// <summary>
@@ -37,5 +37,5 @@ public class BaseManager : IBaseManager
     /// non-local backend.
     /// </summary>
     protected static string FolderRootPath(IStorage storage, string path) =>
-        storage is LocalStorage ? storage.GetFullPath(path) : path;
+        storage is LocalStorage ? storage.GetFullPath(path: path) : path;
 }

@@ -24,15 +24,15 @@ public class SignalRLibraryRefreshEventHandler : IDisposable
     public SignalRLibraryRefreshEventHandler(IEventBus eventBus, IClientMessenger clientMessenger)
     {
         _clientMessenger = clientMessenger;
-        _subscriptions.Add(eventBus.Subscribe<LibraryRefreshedEvent>(OnLibraryRefresh));
+        _subscriptions.Add(item: eventBus.Subscribe<LibraryRefreshedEvent>(handler: OnLibraryRefresh));
     }
 
     internal async Task OnLibraryRefresh(LibraryRefreshedEvent @event, CancellationToken ct)
     {
         await _clientMessenger.SendToAll(
-            "RefreshLibrary",
-            "videoHub",
-            new RefreshLibraryDto { QueryKey = @event.QueryKey }
+            name: "RefreshLibrary",
+            endpoint: "videoHub",
+            data: new RefreshLibraryDto { QueryKey = @event.QueryKey }
         );
     }
 

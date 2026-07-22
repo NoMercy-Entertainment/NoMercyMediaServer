@@ -34,8 +34,8 @@ public sealed class ServerControlViewModelRefreshStatusTests
         string body
     )
     {
-        return server.RunOnceAsync(stream =>
-            FakeManagementPipeServer.WriteResponseAsync(stream, status, reason, body)
+        return server.RunOnceAsync(respond: stream =>
+            FakeManagementPipeServer.WriteResponseAsync(stream: stream, statusCode: status, reasonPhrase: reason, body: body)
         );
     }
 
@@ -43,66 +43,66 @@ public sealed class ServerControlViewModelRefreshStatusTests
     public async Task RefreshStatusAsync_RunningResponse_MapsStatusColorAndUptime()
     {
         FakeManagementPipeServer server = new();
-        Task<string> connectRequest = RespondWith(server, 200, "OK", """{"status":"running"}""");
-        using ServerConnection connection = new(server.PipeName);
-        ServerControlViewModel viewModel = new(connection, new ServerProcessLauncher());
+        Task<string> connectRequest = RespondWith(server: server, status: 200, reason: "OK", body: """{"status":"running"}""");
+        using ServerConnection connection = new(pipeNameOrSocketPath: server.PipeName);
+        ServerControlViewModel viewModel = new(serverConnection: connection, processLauncher: new ServerProcessLauncher());
         await connection.ConnectAsync();
         await connectRequest;
 
         Task<string> statusRequest = RespondWith(
-            server,
-            200,
-            "OK",
-            """
-            {
-                "status": "running",
-                "server_name": "nomercy-test",
-                "version": "2.1.0",
-                "platform": "Windows",
-                "architecture": "X64",
-                "uptime_seconds": 3725,
-                "auto_start": true,
-                "update_available": true,
-                "restart_needed": false,
-                "latest_version": "2.2.0"
-            }
-            """
+            server: server,
+            status: 200,
+            reason: "OK",
+            body: """
+                  {
+                      "status": "running",
+                      "server_name": "nomercy-test",
+                      "version": "2.1.0",
+                      "platform": "Windows",
+                      "architecture": "X64",
+                      "uptime_seconds": 3725,
+                      "auto_start": true,
+                      "update_available": true,
+                      "restart_needed": false,
+                      "latest_version": "2.2.0"
+                  }
+                  """
         );
 
         await viewModel.RefreshStatusAsync();
 
         await statusRequest;
-        viewModel.ServerStatus.Should().Be("Running");
-        viewModel.ServerName.Should().Be("nomercy-test");
-        viewModel.Version.Should().Be("2.1.0");
-        viewModel.Platform.Should().Be("Windows (X64)");
-        viewModel.Uptime.Should().Be("1h 2m");
+        viewModel.ServerStatus.Should().Be(expected: "Running");
+        viewModel.ServerName.Should().Be(expected: "nomercy-test");
+        viewModel.Version.Should().Be(expected: "2.1.0");
+        viewModel.Platform.Should().Be(expected: "Windows (X64)");
+        viewModel.Uptime.Should().Be(expected: "1h 2m");
         viewModel.IsServerRunning.Should().BeTrue();
         viewModel.IsServerStopped.Should().BeFalse();
-        viewModel.StatusColor.Should().Be("#22C55E");
+        viewModel.StatusColor.Should().Be(expected: "#22C55E");
         viewModel.AutoStartEnabled.Should().BeTrue();
         viewModel.UpdateAvailable.Should().BeTrue();
         viewModel.RestartNeeded.Should().BeFalse();
-        viewModel.LatestVersion.Should().Be("2.2.0");
+        viewModel.LatestVersion.Should().Be(expected: "2.2.0");
     }
 
     [Fact]
     public async Task RefreshStatusAsync_StartingResponse_MapsStartingColorAndLabel()
     {
         FakeManagementPipeServer server = new();
-        Task<string> connectRequest = RespondWith(server, 200, "OK", """{"status":"running"}""");
-        using ServerConnection connection = new(server.PipeName);
-        ServerControlViewModel viewModel = new(connection, new ServerProcessLauncher());
+        Task<string> connectRequest = RespondWith(server: server, status: 200, reason: "OK", body: """{"status":"running"}""");
+        using ServerConnection connection = new(pipeNameOrSocketPath: server.PipeName);
+        ServerControlViewModel viewModel = new(serverConnection: connection, processLauncher: new ServerProcessLauncher());
         await connection.ConnectAsync();
         await connectRequest;
 
-        Task<string> statusRequest = RespondWith(server, 200, "OK", """{"status":"starting"}""");
+        Task<string> statusRequest = RespondWith(server: server, status: 200, reason: "OK", body: """{"status":"starting"}""");
 
         await viewModel.RefreshStatusAsync();
 
         await statusRequest;
-        viewModel.ServerStatus.Should().Be("Starting");
-        viewModel.StatusColor.Should().Be("#EAB308");
+        viewModel.ServerStatus.Should().Be(expected: "Starting");
+        viewModel.StatusColor.Should().Be(expected: "#EAB308");
         viewModel.IsServerRunning.Should().BeFalse();
     }
 
@@ -110,19 +110,19 @@ public sealed class ServerControlViewModelRefreshStatusTests
     public async Task RefreshStatusAsync_MissingServerNameAndVersion_FallsBackToPlaceholder()
     {
         FakeManagementPipeServer server = new();
-        Task<string> connectRequest = RespondWith(server, 200, "OK", """{"status":"running"}""");
-        using ServerConnection connection = new(server.PipeName);
-        ServerControlViewModel viewModel = new(connection, new ServerProcessLauncher());
+        Task<string> connectRequest = RespondWith(server: server, status: 200, reason: "OK", body: """{"status":"running"}""");
+        using ServerConnection connection = new(pipeNameOrSocketPath: server.PipeName);
+        ServerControlViewModel viewModel = new(serverConnection: connection, processLauncher: new ServerProcessLauncher());
         await connection.ConnectAsync();
         await connectRequest;
 
-        Task<string> statusRequest = RespondWith(server, 200, "OK", """{"status":"running"}""");
+        Task<string> statusRequest = RespondWith(server: server, status: 200, reason: "OK", body: """{"status":"running"}""");
 
         await viewModel.RefreshStatusAsync();
 
         await statusRequest;
-        viewModel.ServerName.Should().Be("--");
-        viewModel.Version.Should().Be("--");
-        viewModel.Platform.Should().Be("--");
+        viewModel.ServerName.Should().Be(expected: "--");
+        viewModel.Version.Should().Be(expected: "--");
+        viewModel.Platform.Should().Be(expected: "--");
     }
 }

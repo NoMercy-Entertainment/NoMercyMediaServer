@@ -24,5 +24,5 @@ namespace NoMercy.Tests.Monitoring;
 /// </summary>
 internal sealed class ThrowingResourceProvider : IResourceProvider
 {
-    public Resource Collect() => throw new InvalidOperationException("Simulated provider failure.");
+    public Resource Collect() => throw new InvalidOperationException(message: "Simulated provider failure.");
 }

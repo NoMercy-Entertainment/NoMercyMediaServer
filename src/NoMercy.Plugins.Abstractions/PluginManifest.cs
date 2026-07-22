@@ -15,36 +15,36 @@ namespace NoMercy.Plugins.Abstractions;
 
 public class PluginManifest
 {
-    [JsonPropertyName("id")]
+    [JsonPropertyName(name: "id")]
     public required Guid Id { get; init; }
 
-    [JsonPropertyName("name")]
+    [JsonPropertyName(name: "name")]
     public required string Name { get; init; }
 
-    [JsonPropertyName("description")]
+    [JsonPropertyName(name: "description")]
     public required string Description { get; init; }
 
-    [JsonPropertyName("version")]
+    [JsonPropertyName(name: "version")]
     public required string Version { get; init; }
 
-    [JsonPropertyName("targetAbi")]
+    [JsonPropertyName(name: "targetAbi")]
     public string? TargetAbi { get; init; }
 
-    [JsonPropertyName("author")]
+    [JsonPropertyName(name: "author")]
     public string? Author { get; init; }
 
-    [JsonPropertyName("projectUrl")]
+    [JsonPropertyName(name: "projectUrl")]
     public string? ProjectUrl { get; init; }
 
-    [JsonPropertyName("assembly")]
+    [JsonPropertyName(name: "assembly")]
     public required string Assembly { get; init; }
 
-    [JsonPropertyName("autoEnabled")]
+    [JsonPropertyName(name: "autoEnabled")]
     public bool AutoEnabled { get; init; } = true;
 
-    [JsonPropertyName("capabilities")]
+    [JsonPropertyName(name: "capabilities")]
     public PluginCapabilities? Capabilities { get; init; }
 
-    [JsonPropertyName("signature")]
+    [JsonPropertyName(name: "signature")]
     public string? Signature { get; init; }
 }

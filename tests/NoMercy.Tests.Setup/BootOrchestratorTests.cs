@@ -25,7 +25,7 @@ using NoMercy.Tests.Setup.Infrastructure;
 
 namespace NoMercy.Tests.Setup;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class BootOrchestratorTests : IDisposable
 {
     private readonly AppDbContext _appContext;
@@ -38,24 +38,24 @@ public class BootOrchestratorTests : IDisposable
         ServiceCollection services = new();
         services.AddDataProtection().UseEphemeralDataProtectionProvider();
         ServiceProvider provider = services.BuildServiceProvider();
-        TokenStore.Initialize(provider);
+        TokenStore.Initialize(serviceProvider: provider);
 
         DbContextOptionsBuilder<AppDbContext> optionsBuilder = new();
-        optionsBuilder.UseSqlite("Data Source=:memory:");
-        _appContext = new(optionsBuilder.Options);
+        optionsBuilder.UseSqlite(connectionString: "Data Source=:memory:");
+        _appContext = new(options: optionsBuilder.Options);
         _appContext.Database.OpenConnection();
         _appContext.Database.EnsureCreated();
 
-        _authManager = new(_appContext, new LocalStorageDriver(), new AuthTokenStore());
+        _authManager = new(appContext: _appContext, driver: new LocalStorageDriver(), authTokenStore: new AuthTokenStore());
         _setupState = new();
         _orchestrator = new(
-            _setupState,
-            _authManager,
-            new FakeApiKeyLoader(),
-            new FakeDegradedModeRecovery(),
-            new FakeServerRegistrationService(),
-            new AuthTokenStore(),
-            new CertificateService(NullLogger<CertificateService>.Instance, null!)
+            setupState: _setupState,
+            authManager: _authManager,
+            apiKeyLoader: new FakeApiKeyLoader(),
+            degradedModeRecovery: new FakeDegradedModeRecovery(),
+            serverRegistrationService: new FakeServerRegistrationService(),
+            authTokenStore: new AuthTokenStore(),
+            certificateService: new CertificateService(logger: NullLogger<CertificateService>.Instance, httpClientFactory: null!)
         );
     }
 
@@ -68,39 +68,39 @@ public class BootOrchestratorTests : IDisposable
     [Fact]
     public void SetupState_StartsAsUnauthenticated()
     {
-        Assert.Equal(SetupPhase.Unauthenticated, _setupState.CurrentPhase);
-        Assert.True(_setupState.IsSetupRequired);
+        Assert.Equal(expected: SetupPhase.Unauthenticated, actual: _setupState.CurrentPhase);
+        Assert.True(condition: _setupState.IsSetupRequired);
     }
 
     [Fact]
     public async Task PostAuth_WaitsForAuthenticated()
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromMilliseconds(200));
-        Task postAuth = _orchestrator.RunPostAuthAsync(cts.Token);
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => postAuth);
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromMilliseconds(milliseconds: 200));
+        Task postAuth = _orchestrator.RunPostAuthAsync(ct: cts.Token);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(testCode: () => postAuth);
     }
 
     [Fact]
     public async Task PostAuth_ProceedsWhenAuthenticated()
     {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
 
-        _ = Task.Run(async () =>
+        _ = Task.Run(function: async () =>
         {
-            await Task.Delay(100);
-            _setupState.TransitionTo(SetupPhase.Authenticating);
-            _setupState.TransitionTo(SetupPhase.Authenticated);
+            await Task.Delay(millisecondsDelay: 100);
+            _setupState.TransitionTo(targetPhase: SetupPhase.Authenticating);
+            _setupState.TransitionTo(targetPhase: SetupPhase.Authenticated);
         });
 
         try
         {
-            await _orchestrator.RunPostAuthAsync(cts.Token);
+            await _orchestrator.RunPostAuthAsync(ct: cts.Token);
         }
         catch
         {
             // Registration will fail in test (no network) — expected
         }
 
-        Assert.NotEqual(SetupPhase.Unauthenticated, _setupState.CurrentPhase);
+        Assert.NotEqual(expected: SetupPhase.Unauthenticated, actual: _setupState.CurrentPhase);
     }
 }

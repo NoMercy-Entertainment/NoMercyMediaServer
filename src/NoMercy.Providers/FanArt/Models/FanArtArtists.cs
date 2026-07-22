@@ -15,9 +15,9 @@ namespace NoMercy.Providers.FanArt.Models;
 
 public class FanArtArtists
 {
-    [JsonProperty("cdart")]
+    [JsonProperty(propertyName: "cdart")]
     public Image[] CdArt { get; set; } = [];
 
-    [JsonProperty("albumcover")]
+    [JsonProperty(propertyName: "albumcover")]
     public Image[] AlbumCover { get; set; } = [];
 }

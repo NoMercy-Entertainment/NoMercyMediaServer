@@ -16,12 +16,12 @@ namespace NoMercy.NmSystem.SystemCalls;
 
 internal static class MacStartupManager
 {
-    [SupportedOSPlatform("macos")]
+    [SupportedOSPlatform(platformName: "macos")]
     public static bool IsMacStartupEnabled()
     {
         try
         {
-            return File.Exists(GetLaunchdPlistPath());
+            return File.Exists(path: GetLaunchdPlistPath());
         }
         catch
         {
@@ -34,7 +34,7 @@ internal static class MacStartupManager
     /// On desktop, starts the Launcher (GUI app, no --service flag).
     /// Falls back to the server with --service if Launcher is not found.
     /// </summary>
-    [SupportedOSPlatform("macos")]
+    [SupportedOSPlatform(platformName: "macos")]
     public static (string Content, string Path) GenerateLaunchdPlist()
     {
         string? launcherPath = StartupManagerShared.ResolveLauncherPath();
@@ -64,7 +64,7 @@ internal static class MacStartupManager
                     <key>StandardErrorPath</key>
                     <string>{logPath}/nomercy-launcher-stderr.log</string>
                     <key>WorkingDirectory</key>
-                    <string>{Path.GetDirectoryName(launcherPath)}</string>
+                    <string>{Path.GetDirectoryName(path: launcherPath)}</string>
                 </dict>
                 </plist>
                 """;
@@ -94,58 +94,58 @@ internal static class MacStartupManager
                 <key>StandardErrorPath</key>
                 <string>{logPath}/nomercy-stderr.log</string>
                 <key>WorkingDirectory</key>
-                <string>{Path.GetDirectoryName(serverPath)}</string>
+                <string>{Path.GetDirectoryName(path: serverPath)}</string>
             </dict>
             </plist>
             """;
         return (fallbackContent, plistPath);
     }
 
-    [SupportedOSPlatform("macos")]
+    [SupportedOSPlatform(platformName: "macos")]
     public static void RegisterMacStartup()
     {
         try
         {
             (string plistContent, string plistPath) = GenerateLaunchdPlist();
 
-            string? directory = Path.GetDirectoryName(plistPath);
-            if (!string.IsNullOrEmpty(directory))
-                Directory.CreateDirectory(directory);
+            string? directory = Path.GetDirectoryName(path: plistPath);
+            if (!string.IsNullOrEmpty(value: directory))
+                Directory.CreateDirectory(path: directory);
 
-            File.WriteAllText(plistPath, plistContent);
-            Logger.App("macOS LaunchAgent registration successful.");
+            File.WriteAllText(path: plistPath, contents: plistContent);
+            Logger.App(message: "macOS LaunchAgent registration successful.");
         }
         catch (Exception ex)
         {
-            Logger.App($"Failed to register macOS LaunchAgent: {ex.Message}");
+            Logger.App(message: $"Failed to register macOS LaunchAgent: {ex.Message}");
         }
     }
 
-    [SupportedOSPlatform("macos")]
+    [SupportedOSPlatform(platformName: "macos")]
     public static void UnregisterMacStartup()
     {
         try
         {
             string plistPath = GetLaunchdPlistPath();
 
-            if (File.Exists(plistPath))
+            if (File.Exists(path: plistPath))
             {
-                File.Delete(plistPath);
-                Logger.App("macOS LaunchAgent unregistration successful.");
+                File.Delete(path: plistPath);
+                Logger.App(message: "macOS LaunchAgent unregistration successful.");
             }
         }
         catch (Exception ex)
         {
-            Logger.App($"Failed to unregister macOS LaunchAgent: {ex.Message}");
+            Logger.App(message: $"Failed to unregister macOS LaunchAgent: {ex.Message}");
         }
     }
 
-    [SupportedOSPlatform("macos")]
+    [SupportedOSPlatform(platformName: "macos")]
     public static string GetLaunchdPlistPath()
     {
         return Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            "Library/LaunchAgents/tv.nomercy.mediaserver.plist"
+            path1: Environment.GetFolderPath(folder: Environment.SpecialFolder.UserProfile),
+            path2: "Library/LaunchAgents/tv.nomercy.mediaserver.plist"
         );
     }
 }

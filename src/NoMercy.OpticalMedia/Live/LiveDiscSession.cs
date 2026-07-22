@@ -43,18 +43,15 @@ public sealed class LiveDiscSession(
         CancellationToken ct
     )
     {
-        string inputPath = BuildInputPath(drive, titleIndex);
+        string inputPath = BuildInputPath(drive: drive, titleIndex: titleIndex);
         logger.LogInformation(
-            "Live disc session for {Drive} title {Title} → {InputPath}",
-            drive.Path,
-            titleIndex,
-            inputPath
+            message: "Live disc session for {Drive} title {Title} → {InputPath}", args: [drive.Path, titleIndex, inputPath]
         );
 
         // Probe the disc input the same way the encoder probes any other
         // source. The analyzer wraps ffprobe + parses streams + chapters
         // into a MediaInfo the live runner consumes verbatim.
-        MediaInfo info = await mediaAnalyzer.AnalyzeAsync(inputPath, ct);
+        MediaInfo info = await mediaAnalyzer.AnalyzeAsync(filePath: inputPath, ct: ct);
 
         // ClientCapabilities defaults — the runner only needs format + codec
         // hints, the streaming service refines per-client when it stamps
@@ -80,7 +77,7 @@ public sealed class LiveDiscSession(
             PreferredQuality: preferredQuality
         );
 
-        return await liveEncoder.StartAsync(request, ct);
+        return await liveEncoder.StartAsync(request: request, ct: ct);
     }
 
     /// <summary>
@@ -93,11 +90,11 @@ public sealed class LiveDiscSession(
     /// </summary>
     private static string BuildInputPath(DiscDrive drive, int titleIndex)
     {
-        string trimmed = drive.Path.TrimEnd('\\', '/');
+        string trimmed = drive.Path.TrimEnd(trimChars: ['\\', '/']);
         return drive.DiscType switch
         {
             OpticalDiscType.BluRay =>
-                $"bluray:{trimmed}/?playlist={titleIndex.ToString(CultureInfo.InvariantCulture)}",
+                $"bluray:{trimmed}/?playlist={titleIndex.ToString(provider: CultureInfo.InvariantCulture)}",
             OpticalDiscType.Dvd => $"{trimmed}/",
             OpticalDiscType.Cd => drive.Path,
             _ => trimmed,

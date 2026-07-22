@@ -71,6 +71,6 @@ public class ApiKeyStore : IApiKeyStore
             "NoMercy is the only media server you'll ever need",
         ];
 
-        return quotes[new Random().Next(quotes.Length)];
+        return quotes[new Random().Next(maxValue: quotes.Length)];
     }
 }

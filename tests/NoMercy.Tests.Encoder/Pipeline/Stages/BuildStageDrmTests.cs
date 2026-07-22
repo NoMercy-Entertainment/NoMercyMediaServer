@@ -30,8 +30,8 @@ public class BuildStageDrmTests
     [Fact]
     public async Task DrmAes128_InjectsKeyInfoFlagIntoVideoOutput()
     {
-        string tempDir = Path.Combine(Path.GetTempPath(), $"drm-build-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
+        string tempDir = Path.Combine(path1: Path.GetTempPath(), path2: $"drm-build-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: tempDir);
 
         try
         {
@@ -42,65 +42,65 @@ public class BuildStageDrmTests
             };
 
             BuildStage stage = new(
-                options,
-                new FontExtractor(TestStorageFactory.CreateLocal()),
-                new SubtitleExtractor(),
-                OutputStrategyFactoryTestHelper.Create(),
-                [new Aes128HlsDrmProcessor(TestStorageFactory.CreateLocal())],
-                NullLogger<BuildStage>.Instance,
-                TestStorageFactory.CreateLocal()
+                options: options,
+                fontExtractor: new FontExtractor(storage: TestStorageFactory.CreateLocal()),
+                subtitleExtractor: new SubtitleExtractor(),
+                outputStrategyFactory: OutputStrategyFactoryTestHelper.Create(),
+                drmProcessors: [new Aes128HlsDrmProcessor(storage: TestStorageFactory.CreateLocal())],
+                logger: NullLogger<BuildStage>.Instance,
+                storage: TestStorageFactory.CreateLocal()
             );
 
-            DrmConfig drm = new(DrmMethod.Aes128, KeyUri: "https://example/keys/1");
-            OutputPlan plan = BuildPlan(drm);
-            ExecutionPlan execPlan = BuildExecutionPlan(plan);
-            BuildInput input = new(execPlan, "/movies/test.mkv", tempDir, "TestMovie");
-            EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildMediaInfo());
+            DrmConfig drm = new(Method: DrmMethod.Aes128, KeyUri: "https://example/keys/1");
+            OutputPlan plan = BuildPlan(drm: drm);
+            ExecutionPlan execPlan = BuildExecutionPlan(outputPlan: plan);
+            BuildInput input = new(Plan: execPlan, InputPath: "/movies/test.mkv", OutputDirectory: tempDir, MediaTitle: "TestMovie");
+            EncodingContext context = new(CorrelationId: EncodingContext.Create().CorrelationId, MediaInfo: BuildMediaInfo());
 
-            StageResult result = await stage.ExecuteAsync(input, context, default);
+            StageResult result = await stage.ExecuteAsync(input: input, context: context, ct: default);
 
             result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
             FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
 
             // The main ffmpeg command must carry -hls_key_info_file pointing at
             // the prepared keyinfo file.
-            int idx = Array.IndexOf(commands[0].Arguments, "-hls_key_info_file");
-            idx.Should().BeGreaterThan(-1, "DRM processor should inject the flag");
+            int idx = Array.IndexOf(array: commands[0].Arguments, value: "-hls_key_info_file");
+            idx.Should().BeGreaterThan(expected: -1, because: "DRM processor should inject the flag");
             string keyInfoPath = commands[0].Arguments[idx + 1];
-            keyInfoPath.Should().EndWith("drm_keyinfo.txt");
+            keyInfoPath.Should().EndWith(expected: "drm_keyinfo.txt");
 
             // The raw key must NEVER land in the published output directory —
             // it would ship next to the ciphertext it's meant to protect.
-            File.Exists(Path.Combine(tempDir, "drm.key")).Should().BeFalse();
-            File.Exists(Path.Combine(tempDir, "drm_keyinfo.txt")).Should().BeFalse();
+            File.Exists(path: Path.Combine(path1: tempDir, path2: "drm.key")).Should().BeFalse();
+            File.Exists(path: Path.Combine(path1: tempDir, path2: "drm_keyinfo.txt")).Should().BeFalse();
 
             // Artifacts land in a per-encode temp directory outside TempRoot's
             // sibling published dirs, and are readable there for ffmpeg.
-            string fullKeyInfoDir = Path.GetFullPath(Path.GetDirectoryName(keyInfoPath)!);
-            string fullTempRoot = Path.GetFullPath(StoragePaths.TempRoot);
+            string fullKeyInfoDir = Path.GetFullPath(path: Path.GetDirectoryName(path: keyInfoPath)!);
+            string fullTempRoot = Path.GetFullPath(path: StoragePaths.TempRoot);
             fullKeyInfoDir
                 .Should()
                 .StartWith(
-                    fullTempRoot,
-                    "DRM key artifacts must live under TempRoot, never the published output dir"
+                    expected: fullTempRoot,
+                    because: "DRM key artifacts must live under TempRoot, never the published output dir"
                 );
-            File.Exists(keyInfoPath).Should().BeTrue();
-            File.Exists(Path.Combine(fullKeyInfoDir, "drm.key")).Should().BeTrue();
+            File.Exists(path: keyInfoPath).Should().BeTrue();
+            File.Exists(path: Path.Combine(path1: fullKeyInfoDir, path2: "drm.key")).Should().BeTrue();
 
-            Directory.Delete(fullKeyInfoDir, recursive: true);
+            Directory.Delete(path: fullKeyInfoDir, recursive: true);
         }
         finally
         {
-            if (Directory.Exists(tempDir))
-                Directory.Delete(tempDir, recursive: true);
+            if (Directory.Exists(path: tempDir))
+                Directory.Delete(path: tempDir, recursive: true);
         }
     }
 
     [Fact]
     public async Task NoDrm_DoesNotInjectKeyInfoFlag()
     {
-        string tempDir = Path.Combine(Path.GetTempPath(), $"drm-build-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
+        string tempDir = Path.Combine(path1: Path.GetTempPath(), path2: $"drm-build-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: tempDir);
 
         try
         {
@@ -111,39 +111,39 @@ public class BuildStageDrmTests
             };
 
             BuildStage stage = new(
-                options,
-                new FontExtractor(TestStorageFactory.CreateLocal()),
-                new SubtitleExtractor(),
-                OutputStrategyFactoryTestHelper.Create(),
-                [new Aes128HlsDrmProcessor(TestStorageFactory.CreateLocal())],
-                NullLogger<BuildStage>.Instance,
-                TestStorageFactory.CreateLocal()
+                options: options,
+                fontExtractor: new FontExtractor(storage: TestStorageFactory.CreateLocal()),
+                subtitleExtractor: new SubtitleExtractor(),
+                outputStrategyFactory: OutputStrategyFactoryTestHelper.Create(),
+                drmProcessors: [new Aes128HlsDrmProcessor(storage: TestStorageFactory.CreateLocal())],
+                logger: NullLogger<BuildStage>.Instance,
+                storage: TestStorageFactory.CreateLocal()
             );
 
             OutputPlan plan = BuildPlan(drm: null);
-            ExecutionPlan execPlan = BuildExecutionPlan(plan);
-            BuildInput input = new(execPlan, "/movies/test.mkv", tempDir, "TestMovie");
-            EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildMediaInfo());
+            ExecutionPlan execPlan = BuildExecutionPlan(outputPlan: plan);
+            BuildInput input = new(Plan: execPlan, InputPath: "/movies/test.mkv", OutputDirectory: tempDir, MediaTitle: "TestMovie");
+            EncodingContext context = new(CorrelationId: EncodingContext.Create().CorrelationId, MediaInfo: BuildMediaInfo());
 
-            StageResult result = await stage.ExecuteAsync(input, context, default);
+            StageResult result = await stage.ExecuteAsync(input: input, context: context, ct: default);
 
             FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
-            commands[0].Arguments.Should().NotContain("-hls_key_info_file");
+            commands[0].Arguments.Should().NotContain(unexpected: "-hls_key_info_file");
 
-            File.Exists(Path.Combine(tempDir, "drm.key")).Should().BeFalse();
+            File.Exists(path: Path.Combine(path1: tempDir, path2: "drm.key")).Should().BeFalse();
         }
         finally
         {
-            if (Directory.Exists(tempDir))
-                Directory.Delete(tempDir, recursive: true);
+            if (Directory.Exists(path: tempDir))
+                Directory.Delete(path: tempDir, recursive: true);
         }
     }
 
     [Fact]
     public async Task Drm_NoMatchingProcessor_FailsTheEncode()
     {
-        string tempDir = Path.Combine(Path.GetTempPath(), $"drm-build-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
+        string tempDir = Path.Combine(path1: Path.GetTempPath(), path2: $"drm-build-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: tempDir);
 
         try
         {
@@ -157,31 +157,31 @@ public class BuildStageDrmTests
             // registered to handle it. Build must fail rather than silently
             // shipping an unencrypted encode while reporting success.
             BuildStage stage = new(
-                options,
-                new FontExtractor(TestStorageFactory.CreateLocal()),
-                new SubtitleExtractor(),
-                OutputStrategyFactoryTestHelper.Create(),
-                [],
-                NullLogger<BuildStage>.Instance,
-                TestStorageFactory.CreateLocal()
+                options: options,
+                fontExtractor: new FontExtractor(storage: TestStorageFactory.CreateLocal()),
+                subtitleExtractor: new SubtitleExtractor(),
+                outputStrategyFactory: OutputStrategyFactoryTestHelper.Create(),
+                drmProcessors: [],
+                logger: NullLogger<BuildStage>.Instance,
+                storage: TestStorageFactory.CreateLocal()
             );
 
-            DrmConfig drm = new(DrmMethod.Aes128, KeyUri: "https://example/keys/1");
-            OutputPlan plan = BuildPlan(drm);
-            ExecutionPlan execPlan = BuildExecutionPlan(plan);
-            BuildInput input = new(execPlan, "/movies/test.mkv", tempDir, "TestMovie");
-            EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildMediaInfo());
+            DrmConfig drm = new(Method: DrmMethod.Aes128, KeyUri: "https://example/keys/1");
+            OutputPlan plan = BuildPlan(drm: drm);
+            ExecutionPlan execPlan = BuildExecutionPlan(outputPlan: plan);
+            BuildInput input = new(Plan: execPlan, InputPath: "/movies/test.mkv", OutputDirectory: tempDir, MediaTitle: "TestMovie");
+            EncodingContext context = new(CorrelationId: EncodingContext.Create().CorrelationId, MediaInfo: BuildMediaInfo());
 
-            StageResult result = await stage.ExecuteAsync(input, context, default);
+            StageResult result = await stage.ExecuteAsync(input: input, context: context, ct: default);
 
             result.Should().BeOfType<StageFailure>();
             StageFailure failure = (StageFailure)result;
-            failure.Error.Message.Should().Contain("Aes128");
+            failure.Error.Message.Should().Contain(expected: "Aes128");
         }
         finally
         {
-            if (Directory.Exists(tempDir))
-                Directory.Delete(tempDir, recursive: true);
+            if (Directory.Exists(path: tempDir))
+                Directory.Delete(path: tempDir, recursive: true);
         }
     }
 
@@ -228,7 +228,7 @@ public class BuildStageDrmTests
             [
                 new(
                     GroupId: "group_0",
-                    Nodes: [new("decode_0", OperationType.Decode, [], new())],
+                    Nodes: [new(Id: "decode_0", Operation: OperationType.Decode, DependsOn: [], Parameters: new())],
                     DeviceId: null,
                     GpuSlotsRequired: 0,
                     CpuThreadsRequired: 4,
@@ -236,7 +236,7 @@ public class BuildStageDrmTests
                     Priority: 1
                 ),
             ],
-            EstimatedTotalDuration: TimeSpan.FromMinutes(90),
+            EstimatedTotalDuration: TimeSpan.FromMinutes(minutes: 90),
             OutputPlan: outputPlan
         );
 
@@ -244,7 +244,7 @@ public class BuildStageDrmTests
         new(
             FilePath: "/movies/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromHours(2),
+            Duration: TimeSpan.FromHours(hours: 2),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 4_000_000_000,
             VideoStreams:

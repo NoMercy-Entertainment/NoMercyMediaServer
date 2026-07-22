@@ -26,7 +26,7 @@ internal static class CalibrationArgumentBuilder
         int height
     )
     {
-        (double sourceSeconds, int _) = HardwareBenchmark.CalibrationProfile(target.Encoder);
+        (double sourceSeconds, int _) = HardwareBenchmark.CalibrationProfile(encoder: target.Encoder);
 
         List<string> args = ["-hide_banner", "-nostats", "-loglevel", "error"];
 
@@ -34,13 +34,13 @@ internal static class CalibrationArgumentBuilder
         // encoder's hw context is ready when frames arrive. Without this,
         // ffmpeg can fall back to CPU or fail the encoder entirely, making
         // our measurement meaningless.
-        AddHwaccelInitArgs(args, target);
+        AddHwaccelInitArgs(args: args, target: target);
 
-        args.Add("-f");
-        args.Add("lavfi");
-        args.Add("-i");
+        args.Add(item: "-f");
+        args.Add(item: "lavfi");
+        args.Add(item: "-i");
         args.Add(
-            $"testsrc=duration={sourceSeconds.ToString(CultureInfo.InvariantCulture)}:size={width}x{height}:rate={HardwareBenchmark.SourceFrameRate.ToString(CultureInfo.InvariantCulture)}"
+            item: $"testsrc=duration={sourceSeconds.ToString(provider: CultureInfo.InvariantCulture)}:size={width}x{height}:rate={HardwareBenchmark.SourceFrameRate.ToString(provider: CultureInfo.InvariantCulture)}"
         );
 
         // Upload lavfi frames to the GPU before the encoder consumes them.
@@ -48,34 +48,34 @@ internal static class CalibrationArgumentBuilder
         // auto-uploads) but CPU→GPU transfer bleeds into the encode
         // measurement. Explicit hwupload keeps the fps number tied to GPU
         // encode throughput.
-        AddHwUploadFilter(args, target);
+        AddHwUploadFilter(args: args, target: target);
 
-        args.Add("-c:v");
-        args.Add(target.Encoder.FfmpegName);
+        args.Add(item: "-c:v");
+        args.Add(item: target.Encoder.FfmpegName);
 
         // Vendor-specific flags (e.g. -usage transcoding for AMF).
         foreach ((string flag, string value) in target.Encoder.VendorSpecificFlags)
         {
-            args.Add(flag);
-            args.Add(value);
+            args.Add(item: flag);
+            args.Add(item: value);
         }
 
         // GPU device selector on the encoder itself. Matters when the host
         // has multiple GPUs of the same vendor — without this, ffmpeg picks
         // the first one and every "per-device" benchmark actually exercises
         // the same card.
-        AddEncoderDeviceSelector(args, target);
+        AddEncoderDeviceSelector(args: args, target: target);
 
         // Use a reasonable default preset if the encoder has one. Matches
         // what production encodes would typically do.
         if (target.Encoder.Presets.Length > 0)
         {
             string preset =
-                target.Encoder.Presets.Contains("medium") ? "medium"
-                : target.Encoder.Presets.Contains("p4") ? "p4"
+                target.Encoder.Presets.Contains(value: "medium") ? "medium"
+                : target.Encoder.Presets.Contains(value: "p4") ? "p4"
                 : target.Encoder.Presets[target.Encoder.Presets.Length / 2];
-            args.Add("-preset");
-            args.Add(preset);
+            args.Add(item: "-preset");
+            args.Add(item: preset);
         }
 
         // Hard cap on encoded frames — ffmpeg stops as soon as the output
@@ -84,15 +84,15 @@ internal static class CalibrationArgumentBuilder
         // varies per encoder via CalibrationProfile so fast encoders get a
         // long enough probe to settle into steady state (300 frames) and
         // slow encoders bail early (60 frames).
-        (_, int maxFrames) = HardwareBenchmark.CalibrationProfile(target.Encoder);
-        args.Add("-frames:v");
-        args.Add(maxFrames.ToString(CultureInfo.InvariantCulture));
+        (_, int maxFrames) = HardwareBenchmark.CalibrationProfile(encoder: target.Encoder);
+        args.Add(item: "-frames:v");
+        args.Add(item: maxFrames.ToString(provider: CultureInfo.InvariantCulture));
 
-        args.Add("-f");
-        args.Add("null");
-        args.Add("-");
-        args.Add("-progress");
-        args.Add("pipe:1");
+        args.Add(item: "-f");
+        args.Add(item: "null");
+        args.Add(item: "-");
+        args.Add(item: "-progress");
+        args.Add(item: "pipe:1");
 
         return [.. args];
     }
@@ -108,23 +108,23 @@ internal static class CalibrationArgumentBuilder
         if (target.Encoder.RequiredVendor is not GpuVendor vendor)
             return;
 
-        string deviceArg = target.VendorIndex.ToString(CultureInfo.InvariantCulture);
+        string deviceArg = target.VendorIndex.ToString(provider: CultureInfo.InvariantCulture);
 
         switch (vendor)
         {
             case GpuVendor.Nvidia:
-                args.Add("-init_hw_device");
-                args.Add($"cuda=cu:{deviceArg}");
-                args.Add("-filter_hw_device");
-                args.Add("cu");
+                args.Add(item: "-init_hw_device");
+                args.Add(item: $"cuda=cu:{deviceArg}");
+                args.Add(item: "-filter_hw_device");
+                args.Add(item: "cu");
                 break;
             case GpuVendor.Intel:
-                if (target.Encoder.FfmpegName.Contains("_qsv", StringComparison.OrdinalIgnoreCase))
+                if (target.Encoder.FfmpegName.Contains(value: "_qsv", comparisonType: StringComparison.OrdinalIgnoreCase))
                 {
-                    args.Add("-init_hw_device");
-                    args.Add("qsv=hw");
-                    args.Add("-filter_hw_device");
-                    args.Add("hw");
+                    args.Add(item: "-init_hw_device");
+                    args.Add(item: "qsv=hw");
+                    args.Add(item: "-filter_hw_device");
+                    args.Add(item: "hw");
                 }
                 break;
             case GpuVendor.Amd:
@@ -148,8 +148,8 @@ internal static class CalibrationArgumentBuilder
             GpuVendor.Nvidia => "format=nv12,hwupload_cuda",
             GpuVendor.Intel
                 when target.Encoder.FfmpegName.Contains(
-                    "_qsv",
-                    StringComparison.OrdinalIgnoreCase
+                    value: "_qsv",
+                    comparisonType: StringComparison.OrdinalIgnoreCase
                 ) => "format=nv12,hwupload=extra_hw_frames=16",
             _ => null,
         };
@@ -157,8 +157,8 @@ internal static class CalibrationArgumentBuilder
         if (filter is null)
             return;
 
-        args.Add("-vf");
-        args.Add(filter);
+        args.Add(item: "-vf");
+        args.Add(item: filter);
     }
 
     /// <summary>
@@ -173,17 +173,17 @@ internal static class CalibrationArgumentBuilder
 
         if (
             target.Encoder.RequiredVendor == GpuVendor.Nvidia
-            && target.Encoder.FfmpegName.Contains("_nvenc", StringComparison.OrdinalIgnoreCase)
+            && target.Encoder.FfmpegName.Contains(value: "_nvenc", comparisonType: StringComparison.OrdinalIgnoreCase)
         )
         {
-            args.Add("-gpu");
-            args.Add(target.VendorIndex.ToString(CultureInfo.InvariantCulture));
+            args.Add(item: "-gpu");
+            args.Add(item: target.VendorIndex.ToString(provider: CultureInfo.InvariantCulture));
         }
     }
 
     internal static string TruncateStderr(string stderr)
     {
-        if (string.IsNullOrEmpty(stderr))
+        if (string.IsNullOrEmpty(value: stderr))
             return "<empty>";
         const int maxLen = 500;
         return stderr.Length > maxLen ? stderr[^maxLen..] : stderr;

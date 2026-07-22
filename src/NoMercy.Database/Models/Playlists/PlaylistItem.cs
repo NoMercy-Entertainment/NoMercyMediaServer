@@ -49,38 +49,38 @@ public enum PlaylistItemKind
 /// the AsNoTracking Include-cycle trap those entities would otherwise create
 /// for callers rooted at PlaylistItem.
 /// </summary>
-[PrimaryKey(nameof(Id))]
-[Index(nameof(UserPlaylistId), nameof(Order))]
+[PrimaryKey(propertyName: nameof(Id))]
+[Index(propertyName: nameof(UserPlaylistId), additionalPropertyNames: nameof(Order))]
 public class PlaylistItem : Timestamps
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.None)]
-    [JsonProperty("id")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
+    [JsonProperty(propertyName: "id")]
     public Ulid Id { get; set; } = Ulid.NewUlid();
 
-    [JsonProperty("user_playlist_id")]
+    [JsonProperty(propertyName: "user_playlist_id")]
     public Guid UserPlaylistId { get; set; }
     public UserPlaylist UserPlaylist { get; set; } = null!;
 
-    [JsonProperty("kind")]
+    [JsonProperty(propertyName: "kind")]
     public PlaylistItemKind Kind { get; set; }
 
     /// <summary>Stable user-defined sort key within the playlist. Not required to be gap-free.</summary>
-    [JsonProperty("order")]
+    [JsonProperty(propertyName: "order")]
     public int Order { get; set; }
 
-    [JsonProperty("movie_id")]
+    [JsonProperty(propertyName: "movie_id")]
     public int? MovieId { get; set; }
     public Movie? Movie { get; set; }
 
-    [JsonProperty("tv_id")]
+    [JsonProperty(propertyName: "tv_id")]
     public int? TvId { get; set; }
     public Tv? Tv { get; set; }
 
-    [JsonProperty("episode_id")]
+    [JsonProperty(propertyName: "episode_id")]
     public int? EpisodeId { get; set; }
     public Episode? Episode { get; set; }
 
-    [JsonProperty("special_id")]
+    [JsonProperty(propertyName: "special_id")]
     public Ulid? SpecialId { get; set; }
     public Special? Special { get; set; }
 }

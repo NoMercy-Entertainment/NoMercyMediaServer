@@ -29,17 +29,17 @@ namespace NoMercy.Tests.Networking;
 /// a connection timeout. These use real loopback TCP sockets — no mock of the
 /// method under test.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class NetworkDiscoveryPortCheckTests
 {
     private static NetworkDiscovery BuildDiscovery(string externalIp, int externalPort)
     {
         NetworkDiscovery discovery = new(
-            NullLogger<NetworkDiscovery>.Instance,
-            new LocalStorageDriver(),
-            new AuthTokenStore(),
-            new ConnectivityStatus(),
-            new()
+            logger: NullLogger<NetworkDiscovery>.Instance,
+            driver: new LocalStorageDriver(),
+            authTokenStore: new AuthTokenStore(),
+            connectivityStatus: new ConnectivityStatus(),
+            networkProbeConfig: new()
         );
         discovery.ExternalIp = externalIp;
         RuntimeServerSettings.Current.ExternalServerPort = externalPort;
@@ -49,23 +49,23 @@ public sealed class NetworkDiscoveryPortCheckTests
     [Fact]
     public async Task IsPortOpenAsync_AgainstRealListener_ReturnsTrue()
     {
-        TcpListener listener = new(IPAddress.Loopback, 0);
+        TcpListener listener = new(localaddr: IPAddress.Loopback, port: 0);
         listener.Start();
         int port = ((IPEndPoint)listener.LocalEndpoint).Port;
         int originalPort = RuntimeServerSettings.Current.ExternalServerPort;
 
         try
         {
-            _ = Task.Run(async () =>
+            _ = Task.Run(function: async () =>
             {
                 using TcpClient accepted = await listener.AcceptTcpClientAsync();
             });
 
-            NetworkDiscovery discovery = BuildDiscovery("127.0.0.1", port);
+            NetworkDiscovery discovery = BuildDiscovery(externalIp: "127.0.0.1", externalPort: port);
 
             bool result = await discovery.IsPortOpenAsync();
 
-            Assert.True(result);
+            Assert.True(condition: result);
         }
         finally
         {
@@ -79,7 +79,7 @@ public sealed class NetworkDiscoveryPortCheckTests
     {
         // Bind, note the free port, then close it immediately — nothing is
         // listening there, so the connect attempt gets a real RST/refused.
-        TcpListener listener = new(IPAddress.Loopback, 0);
+        TcpListener listener = new(localaddr: IPAddress.Loopback, port: 0);
         listener.Start();
         int freePort = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();
@@ -87,11 +87,11 @@ public sealed class NetworkDiscoveryPortCheckTests
 
         try
         {
-            NetworkDiscovery discovery = BuildDiscovery("127.0.0.1", freePort);
+            NetworkDiscovery discovery = BuildDiscovery(externalIp: "127.0.0.1", externalPort: freePort);
 
             bool result = await discovery.IsPortOpenAsync();
 
-            Assert.False(result);
+            Assert.False(condition: result);
         }
         finally
         {
@@ -109,11 +109,11 @@ public sealed class NetworkDiscoveryPortCheckTests
 
         try
         {
-            NetworkDiscovery discovery = BuildDiscovery("192.0.2.1", 9);
+            NetworkDiscovery discovery = BuildDiscovery(externalIp: "192.0.2.1", externalPort: 9);
 
             bool result = await discovery.IsPortOpenAsync();
 
-            Assert.False(result);
+            Assert.False(condition: result);
         }
         finally
         {

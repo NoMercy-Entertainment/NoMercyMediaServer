@@ -15,66 +15,66 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class MusixMatchLyrics
 {
-    [JsonProperty("lyrics_id")]
+    [JsonProperty(propertyName: "lyrics_id")]
     public long LyricsId { get; set; }
 
-    [JsonProperty("can_edit")]
+    [JsonProperty(propertyName: "can_edit")]
     public long CanEdit { get; set; }
 
-    [JsonProperty("check_validation_overridable")]
+    [JsonProperty(propertyName: "check_validation_overridable")]
     public long CheckValidationOverridable { get; set; }
 
-    [JsonProperty("locked")]
+    [JsonProperty(propertyName: "locked")]
     public long Locked { get; set; }
 
-    [JsonProperty("published_status")]
+    [JsonProperty(propertyName: "published_status")]
     public long PublishedStatus { get; set; }
 
-    [JsonProperty("action_requested")]
+    [JsonProperty(propertyName: "action_requested")]
     public string ActionRequested { get; set; } = string.Empty;
 
-    [JsonProperty("verified")]
+    [JsonProperty(propertyName: "verified")]
     public long Verified { get; set; }
 
-    [JsonProperty("restricted")]
+    [JsonProperty(propertyName: "restricted")]
     public long Restricted { get; set; }
 
-    [JsonProperty("instrumental")]
+    [JsonProperty(propertyName: "instrumental")]
     public long Instrumental { get; set; }
 
-    [JsonProperty("explicit")]
+    [JsonProperty(propertyName: "explicit")]
     public long Explicit { get; set; }
 
-    [JsonProperty("lyrics_body")]
+    [JsonProperty(propertyName: "lyrics_body")]
     public string LyricsBody { get; set; } = string.Empty;
 
-    [JsonProperty("lyrics_language")]
+    [JsonProperty(propertyName: "lyrics_language")]
     public string LyricsLanguage { get; set; } = string.Empty;
 
-    [JsonProperty("lyrics_language_description")]
+    [JsonProperty(propertyName: "lyrics_language_description")]
     public string LyricsLanguageDescription { get; set; } = string.Empty;
 
-    [JsonProperty("script_tracking_url")]
+    [JsonProperty(propertyName: "script_tracking_url")]
     public Uri ScriptTrackingUrl { get; set; } = null!;
 
-    [JsonProperty("pixel_tracking_url")]
+    [JsonProperty(propertyName: "pixel_tracking_url")]
     public Uri PixelTrackingUrl { get; set; } = null!;
 
-    [JsonProperty("html_tracking_url")]
+    [JsonProperty(propertyName: "html_tracking_url")]
     public Uri HtmlTrackingUrl { get; set; } = null!;
 
-    [JsonProperty("lyrics_copyright")]
+    [JsonProperty(propertyName: "lyrics_copyright")]
     public string LyricsCopyright { get; set; } = string.Empty;
 
-    [JsonProperty("writer_list")]
+    [JsonProperty(propertyName: "writer_list")]
     public object[] WriterList { get; set; } = [];
 
-    [JsonProperty("publisher_list")]
+    [JsonProperty(propertyName: "publisher_list")]
     public object[] PublisherList { get; set; } = [];
 
-    [JsonProperty("backlink_url")]
+    [JsonProperty(propertyName: "backlink_url")]
     public Uri BacklinkUrl { get; set; } = null!;
 
-    [JsonProperty("updated_time")]
+    [JsonProperty(propertyName: "updated_time")]
     public DateTimeOffset UpdatedTime { get; set; }
 }

@@ -17,58 +17,58 @@ namespace NoMercy.Api.DTOs.Music;
 
 public record PlaylistResponseItemDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public Guid Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; }
 
-    [JsonProperty("cover")]
+    [JsonProperty(propertyName: "cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty("link")]
+    [JsonProperty(propertyName: "link")]
     public Uri Link { get; set; }
 
-    [JsonProperty("color_palette")]
+    [JsonProperty(propertyName: "color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty("country")]
+    [JsonProperty(propertyName: "country")]
     public string? Country { get; set; }
 
-    [JsonProperty("description")]
+    [JsonProperty(propertyName: "description")]
     public string? Description { get; set; }
 
-    [JsonProperty("favorite")]
+    [JsonProperty(propertyName: "favorite")]
     public bool Favorite { get; set; }
 
-    [JsonProperty("library_id")]
+    [JsonProperty(propertyName: "library_id")]
     public Ulid? LibraryId { get; set; }
 
-    [JsonProperty("year")]
+    [JsonProperty(propertyName: "year")]
     public int? Year { get; set; }
 
-    [JsonProperty("artists")]
+    [JsonProperty(propertyName: "artists")]
     public IEnumerable<ArtistDto> Artists { get; set; }
 
-    [JsonProperty("tracks")]
+    [JsonProperty(propertyName: "tracks")]
     public IEnumerable<PlaylistTrackDto> Tracks { get; set; }
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; }
 
     public PlaylistResponseItemDto(Playlist playlist, string? country = "US")
     {
         ColorPalette = playlist.ColorPalette;
-        Cover = !string.IsNullOrEmpty(playlist.Cover)
-            ? new Uri($"/images/music{playlist.Cover}", UriKind.Relative).ToString()
+        Cover = !string.IsNullOrEmpty(value: playlist.Cover)
+            ? new Uri(uriString: $"/images/music{playlist.Cover}", uriKind: UriKind.Relative).ToString()
             : null;
         Description = playlist.Description;
         Id = playlist.Id;
         Name = playlist.Name;
-        Link = new($"/music/playlists/{Id}", UriKind.Relative);
+        Link = new(uriString: $"/music/playlists/{Id}", uriKind: UriKind.Relative);
         Type = "playlist";
         Artists = [];
 
-        Tracks = playlist.Tracks.Select(albumTrack => new PlaylistTrackDto(albumTrack, country!));
+        Tracks = playlist.Tracks.Select(selector: albumTrack => new PlaylistTrackDto(trackTrack: albumTrack, country: country!));
     }
 }

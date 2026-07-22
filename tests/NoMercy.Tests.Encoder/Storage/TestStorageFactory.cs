@@ -26,7 +26,7 @@ internal static class TestStorageFactory
     public static LocalStorage CreateLocal()
     {
         LocalStorageDriver driver = new();
-        return new(driver, new([], driver));
+        return new(driver: driver, guard: new(allowedRoots: [], driver: driver));
     }
 
     /// <summary>
@@ -36,5 +36,5 @@ internal static class TestStorageFactory
     /// each call site.
     /// </summary>
     public static ILiveSegmentInventory CreateSegmentInventory(IStorage storage) =>
-        new LiveSegmentInventory(storage, NullLogger<LiveSegmentInventory>.Instance);
+        new LiveSegmentInventory(storage: storage, logger: NullLogger<LiveSegmentInventory>.Instance);
 }

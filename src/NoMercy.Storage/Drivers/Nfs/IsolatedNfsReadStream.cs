@@ -48,41 +48,41 @@ internal sealed class IsolatedNfsReadStream : Stream
     public override long Position
     {
         get => _position;
-        set => Seek(value, SeekOrigin.Begin);
+        set => Seek(offset: value, origin: SeekOrigin.Begin);
     }
 
     public override int Read(byte[] buffer, int offset, int count)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        ObjectDisposedException.ThrowIf(condition: _disposed, instance: this);
         if (count <= 0)
             return 0;
 
-        int toRead = (int)Math.Min(count, _length - _position);
+        int toRead = (int)Math.Min(val1: count, val2: _length - _position);
         if (toRead <= 0)
             return 0;
 
         int totalRead = 0;
         while (totalRead < toRead)
         {
-            int chunk = Math.Min(ChunkSize, toRead - totalRead);
-            IntPtr pinned = Marshal.AllocHGlobal(chunk);
+            int chunk = Math.Min(val1: ChunkSize, val2: toRead - totalRead);
+            IntPtr pinned = Marshal.AllocHGlobal(cb: chunk);
             try
             {
-                int n = _libNfs.Read(_ownedCtx, _fh, pinned, chunk);
+                int n = _libNfs.Read(nfs: _ownedCtx, fh: _fh, buf: pinned, count: chunk);
                 if (n < 0)
                     throw new IOException(
-                        $"NFS isolated read failed: {_libNfs.GetError(_ownedCtx)}"
+                        message: $"NFS isolated read failed: {_libNfs.GetError(nfs: _ownedCtx)}"
                     );
                 if (n == 0)
                     break;
 
-                Marshal.Copy(pinned, buffer, offset + totalRead, n);
+                Marshal.Copy(source: pinned, destination: buffer, startIndex: offset + totalRead, length: n);
                 totalRead += n;
                 _position += n;
             }
             finally
             {
-                Marshal.FreeHGlobal(pinned);
+                Marshal.FreeHGlobal(hglobal: pinned);
             }
         }
 
@@ -91,25 +91,25 @@ internal sealed class IsolatedNfsReadStream : Stream
 
     public override long Seek(long offset, SeekOrigin origin)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        ObjectDisposedException.ThrowIf(condition: _disposed, instance: this);
         long target = origin switch
         {
             SeekOrigin.Begin => offset,
             SeekOrigin.Current => _position + offset,
             SeekOrigin.End => _length + offset,
-            _ => throw new ArgumentOutOfRangeException(nameof(origin)),
+            _ => throw new ArgumentOutOfRangeException(paramName: nameof(origin)),
         };
 
         long rc = _libNfs.Lseek(
-            _ownedCtx,
-            _fh,
-            target,
-            0 /* SEEK_SET */
+            nfs: _ownedCtx,
+            fh: _fh,
+            offset: target,
+            whence: 0 /* SEEK_SET */
             ,
-            out _
+            currentOffset: out _
         );
         if (rc < 0)
-            throw new IOException($"NFS isolated lseek failed: {_libNfs.GetError(_ownedCtx)}");
+            throw new IOException(message: $"NFS isolated lseek failed: {_libNfs.GetError(nfs: _ownedCtx)}");
 
         _position = target;
         return _position;
@@ -128,10 +128,10 @@ internal sealed class IsolatedNfsReadStream : Stream
             return;
         _disposed = true;
 
-        _libNfs.Close(_ownedCtx, _fh);
-        _libNfs.Umount(_ownedCtx);
-        _libNfs.DestroyContext(_ownedCtx);
+        _libNfs.Close(nfs: _ownedCtx, fh: _fh);
+        _libNfs.Umount(nfs: _ownedCtx);
+        _libNfs.DestroyContext(nfs: _ownedCtx);
 
-        base.Dispose(disposing);
+        base.Dispose(disposing: disposing);
     }
 }

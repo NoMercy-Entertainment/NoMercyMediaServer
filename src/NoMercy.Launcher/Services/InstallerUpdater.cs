@@ -30,14 +30,14 @@ public class InstallerUpdater(ServerConnection serverConnection)
     // %LocalAppData%\NoMercy\UpdateCache\
     private static string CacheDir =>
         Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "NoMercy",
-            "UpdateCache"
+            path1: Environment.GetFolderPath(folder: Environment.SpecialFolder.LocalApplicationData),
+            path2: "NoMercy",
+            path3: "UpdateCache"
         );
 
     static InstallerUpdater()
     {
-        HttpClient.DefaultRequestHeaders.Add("User-Agent", "NoMercyLauncher/1.0");
+        HttpClient.DefaultRequestHeaders.Add(name: "User-Agent", value: "NoMercyLauncher/1.0");
     }
 
     /// <summary>
@@ -46,30 +46,30 @@ public class InstallerUpdater(ServerConnection serverConnection)
     /// </summary>
     public Task<bool> IsInstallerDeploymentAsync()
     {
-        string? installDir = Environment.GetEnvironmentVariable("NOMERCY_INSTALL_DIR");
-        if (!string.IsNullOrEmpty(installDir))
-            return Task.FromResult(true);
+        string? installDir = Environment.GetEnvironmentVariable(variable: "NOMERCY_INSTALL_DIR");
+        if (!string.IsNullOrEmpty(value: installDir))
+            return Task.FromResult(result: true);
 
         string? ownDir = Path.GetDirectoryName(
-            Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location
+            path: Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location
         );
 
         if (ownDir is null)
-            return Task.FromResult(false);
+            return Task.FromResult(result: false);
 
         string binariesPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "NoMercy",
-            "binaries"
+            path1: Environment.GetFolderPath(folder: Environment.SpecialFolder.ApplicationData),
+            path2: "NoMercy",
+            path3: "binaries"
         );
 
         bool isInBinaries = string.Equals(
-            Path.GetFullPath(ownDir),
-            Path.GetFullPath(binariesPath),
-            StringComparison.OrdinalIgnoreCase
+            a: Path.GetFullPath(path: ownDir),
+            b: Path.GetFullPath(path: binariesPath),
+            comparisonType: StringComparison.OrdinalIgnoreCase
         );
 
-        return Task.FromResult(!isInBinaries);
+        return Task.FromResult(result: !isInBinaries);
     }
 
     /// <summary>
@@ -77,7 +77,7 @@ public class InstallerUpdater(ServerConnection serverConnection)
     /// </summary>
     public async Task<ActivityInfo?> GetActivityAsync(CancellationToken ct = default)
     {
-        return await serverConnection.GetAsync<ActivityInfo>("/manage/activity", ct);
+        return await serverConnection.GetAsync<ActivityInfo>(path: "/manage/activity", cancellationToken: ct);
     }
 
     /// <summary>
@@ -91,23 +91,23 @@ public class InstallerUpdater(ServerConnection serverConnection)
         CancellationToken ct = default
     )
     {
-        Directory.CreateDirectory(CacheDir);
+        Directory.CreateDirectory(path: CacheDir);
 
         string fileName = $"NoMercyMediaServer-{version}-windows-x64-setup.exe";
-        string destPath = Path.Combine(CacheDir, fileName);
+        string destPath = Path.Combine(path1: CacheDir, path2: fileName);
         string sha256Path = destPath + ".sha256";
 
         // Check for valid cached copy first
-        if (File.Exists(destPath) && File.Exists(sha256Path))
+        if (File.Exists(path: destPath) && File.Exists(path: sha256Path))
         {
-            LauncherLog.Info($"Installer already cached at {destPath}, verifying SHA-256...");
-            if (await VerifyInstallerAsync(version, ct))
+            LauncherLog.Info(message: $"Installer already cached at {destPath}, verifying SHA-256...");
+            if (await VerifyInstallerAsync(version: version, ct: ct))
             {
-                LauncherLog.Info("Cached installer SHA-256 matches — skipping download");
+                LauncherLog.Info(message: "Cached installer SHA-256 matches — skipping download");
                 return true;
             }
 
-            LauncherLog.Info("SHA-256 mismatch on cached installer — re-downloading");
+            LauncherLog.Info(message: "SHA-256 mismatch on cached installer — re-downloading");
         }
 
         string tag = $"v{version}";
@@ -120,36 +120,36 @@ public class InstallerUpdater(ServerConnection serverConnection)
         try
         {
             using HttpResponseMessage sha256Response = await HttpClient.GetAsync(
-                sha256Url,
-                HttpCompletionOption.ResponseHeadersRead,
-                ct
+                requestUri: sha256Url,
+                completionOption: HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken: ct
             );
 
             if (sha256Response.IsSuccessStatusCode)
             {
-                string sha256Content = await sha256Response.Content.ReadAsStringAsync(ct);
-                await File.WriteAllTextAsync(sha256Path, sha256Content, ct);
-                LauncherLog.Info("Downloaded SHA-256 sidecar");
+                string sha256Content = await sha256Response.Content.ReadAsStringAsync(cancellationToken: ct);
+                await File.WriteAllTextAsync(path: sha256Path, contents: sha256Content, cancellationToken: ct);
+                LauncherLog.Info(message: "Downloaded SHA-256 sidecar");
             }
             else
             {
                 LauncherLog.Info(
-                    $"SHA-256 sidecar not found for {version} — will continue without verification"
+                    message: $"SHA-256 sidecar not found for {version} — will continue without verification"
                 );
             }
         }
         catch (Exception ex)
         {
-            LauncherLog.Info($"Could not fetch SHA-256 sidecar: {ex.Message}");
+            LauncherLog.Info(message: $"Could not fetch SHA-256 sidecar: {ex.Message}");
         }
 
         // Download installer
-        LauncherLog.Info($"Downloading installer from {installerUrl}");
+        LauncherLog.Info(message: $"Downloading installer from {installerUrl}");
 
         using HttpResponseMessage response = await HttpClient.GetAsync(
-            installerUrl,
-            HttpCompletionOption.ResponseHeadersRead,
-            ct
+            requestUri: installerUrl,
+            completionOption: HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken: ct
         );
 
         response.EnsureSuccessStatusCode();
@@ -157,30 +157,30 @@ public class InstallerUpdater(ServerConnection serverConnection)
         long? total = response.Content.Headers.ContentLength;
 
         await using FileStream fileStream = new(
-            destPath,
-            FileMode.Create,
-            FileAccess.Write,
-            FileShare.None,
-            81920,
-            true
+            path: destPath,
+            mode: FileMode.Create,
+            access: FileAccess.Write,
+            share: FileShare.None,
+            bufferSize: 81920,
+            useAsync: true
         );
 
-        await using Stream download = await response.Content.ReadAsStreamAsync(ct);
+        await using Stream download = await response.Content.ReadAsStreamAsync(cancellationToken: ct);
 
         byte[] buffer = new byte[81920];
         long bytesRead = 0;
         int read;
 
-        while ((read = await download.ReadAsync(buffer, ct)) > 0)
+        while ((read = await download.ReadAsync(buffer: buffer, cancellationToken: ct)) > 0)
         {
-            await fileStream.WriteAsync(buffer.AsMemory(0, read), ct);
+            await fileStream.WriteAsync(buffer: buffer.AsMemory(start: 0, length: read), cancellationToken: ct);
             bytesRead += read;
 
             if (progress is not null && total is > 0)
-                progress.Report((double)bytesRead / total.Value);
+                progress.Report(value: (double)bytesRead / total.Value);
         }
 
-        LauncherLog.Info($"Installer downloaded to {destPath} ({bytesRead} bytes)");
+        LauncherLog.Info(message: $"Installer downloaded to {destPath} ({bytesRead} bytes)");
         return true;
     }
 
@@ -192,34 +192,34 @@ public class InstallerUpdater(ServerConnection serverConnection)
     public async Task<bool> VerifyInstallerAsync(string version, CancellationToken ct = default)
     {
         string fileName = $"NoMercyMediaServer-{version}-windows-x64-setup.exe";
-        string destPath = Path.Combine(CacheDir, fileName);
+        string destPath = Path.Combine(path1: CacheDir, path2: fileName);
         string sha256Path = destPath + ".sha256";
 
-        if (!File.Exists(sha256Path))
+        if (!File.Exists(path: sha256Path))
         {
-            LauncherLog.Info($"No SHA-256 sidecar for {version} — skipping verification");
+            LauncherLog.Info(message: $"No SHA-256 sidecar for {version} — skipping verification");
             return true;
         }
 
-        string expectedLine = (await File.ReadAllTextAsync(sha256Path, ct)).Trim();
+        string expectedLine = (await File.ReadAllTextAsync(path: sha256Path, cancellationToken: ct)).Trim();
 
         // Accept both bare-hash and "HASH  filename" formats
-        string expected = expectedLine.Split(' ', 2)[0].ToUpperInvariant();
+        string expected = expectedLine.Split(separator: ' ', count: 2)[0].ToUpperInvariant();
 
         using SHA256 sha256 = SHA256.Create();
-        await using FileStream fs = File.OpenRead(destPath);
-        byte[] hash = await sha256.ComputeHashAsync(fs, ct);
-        string actual = Convert.ToHexString(hash).ToUpperInvariant();
+        await using FileStream fs = File.OpenRead(path: destPath);
+        byte[] hash = await sha256.ComputeHashAsync(inputStream: fs, cancellationToken: ct);
+        string actual = Convert.ToHexString(inArray: hash).ToUpperInvariant();
 
-        if (!string.Equals(expected, actual, StringComparison.Ordinal))
+        if (!string.Equals(a: expected, b: actual, comparisonType: StringComparison.Ordinal))
         {
-            LauncherLog.Error($"SHA-256 mismatch for {version}: expected {expected}, got {actual}");
+            LauncherLog.Error(message: $"SHA-256 mismatch for {version}: expected {expected}, got {actual}");
             throw new InvalidDataException(
-                $"Installer SHA-256 mismatch — file may be corrupted. Expected {expected[..8]}..., got {actual[..8]}..."
+                message: $"Installer SHA-256 mismatch — file may be corrupted. Expected {expected[..8]}..., got {actual[..8]}..."
             );
         }
 
-        LauncherLog.Info($"SHA-256 verified for {version}");
+        LauncherLog.Info(message: $"SHA-256 verified for {version}");
         return true;
     }
 
@@ -236,33 +236,33 @@ public class InstallerUpdater(ServerConnection serverConnection)
         // Stop the App process first
         try
         {
-            await connection.PostAsync("/manage/app/stop", ct);
-            LauncherLog.Info("App stop command sent");
+            await connection.PostAsync(path: "/manage/app/stop", cancellationToken: ct);
+            LauncherLog.Info(message: "App stop command sent");
         }
         catch (Exception ex)
         {
-            LauncherLog.Info($"App stop via IPC skipped: {ex.Message}");
+            LauncherLog.Info(message: $"App stop via IPC skipped: {ex.Message}");
         }
 
-        await Task.Delay(500, ct);
+        await Task.Delay(millisecondsDelay: 500, cancellationToken: ct);
 
         // Stop the Server
         try
         {
-            await connection.PostAsync("/manage/stop", ct);
-            LauncherLog.Info("Server stop command sent");
+            await connection.PostAsync(path: "/manage/stop", cancellationToken: ct);
+            LauncherLog.Info(message: "Server stop command sent");
         }
         catch (Exception ex)
         {
-            LauncherLog.Info($"Server stop via IPC skipped: {ex.Message}");
+            LauncherLog.Info(message: $"Server stop via IPC skipped: {ex.Message}");
         }
 
-        LauncherLog.Info("Waiting for server process to exit (30s timeout)");
-        bool exited = await processLauncher.WaitForServerExitAsync(TimeSpan.FromSeconds(30));
+        LauncherLog.Info(message: "Waiting for server process to exit (30s timeout)");
+        bool exited = await processLauncher.WaitForServerExitAsync(timeout: TimeSpan.FromSeconds(seconds: 30));
 
         if (!exited)
         {
-            LauncherLog.Info("Server did not exit gracefully within 30s — continuing anyway");
+            LauncherLog.Info(message: "Server did not exit gracefully within 30s — continuing anyway");
         }
     }
 
@@ -275,26 +275,26 @@ public class InstallerUpdater(ServerConnection serverConnection)
     public Task LaunchInstallerAsync(string version, bool launcherAutoStart)
     {
         string fileName = $"NoMercyMediaServer-{version}-windows-x64-setup.exe";
-        string installerPath = Path.Combine(CacheDir, fileName);
+        string installerPath = Path.Combine(path1: CacheDir, path2: fileName);
 
-        if (!File.Exists(installerPath))
-            throw new FileNotFoundException("Installer not found in cache", installerPath);
+        if (!File.Exists(path: installerPath))
+            throw new FileNotFoundException(message: "Installer not found in cache", fileName: installerPath);
 
         string launchAfter = launcherAutoStart ? "1" : "0";
 
-        ProcessStartInfo startInfo = new(installerPath)
+        ProcessStartInfo startInfo = new(fileName: installerPath)
         {
             UseShellExecute = true, // needed for UAC elevation
             Arguments =
                 $"/SILENT /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS /UpdateCacheCleanup=1 /LaunchAfterInstall={launchAfter}",
         };
 
-        LauncherLog.Info($"Launching installer: {installerPath} {startInfo.Arguments}");
+        LauncherLog.Info(message: $"Launching installer: {installerPath} {startInfo.Arguments}");
 
-        Process.Start(startInfo);
+        Process.Start(startInfo: startInfo);
 
         // Exit the launcher — the installer handles the rest via CLOSEAPPLICATIONS
-        Environment.Exit(0);
+        Environment.Exit(exitCode: 0);
 
         return Task.CompletedTask;
     }
@@ -309,7 +309,7 @@ public class InstallerUpdater(ServerConnection serverConnection)
         CancellationToken ct = default
     )
     {
-        if (!Directory.Exists(CacheDir))
+        if (!Directory.Exists(path: CacheDir))
             return Task.CompletedTask;
 
         HashSet<string> keep =
@@ -320,24 +320,24 @@ public class InstallerUpdater(ServerConnection serverConnection)
 
         if (pendingVersion is not null)
         {
-            keep.Add($"NoMercyMediaServer-{pendingVersion}-windows-x64-setup.exe");
-            keep.Add($"NoMercyMediaServer-{pendingVersion}-windows-x64-setup.exe.sha256");
+            keep.Add(item: $"NoMercyMediaServer-{pendingVersion}-windows-x64-setup.exe");
+            keep.Add(item: $"NoMercyMediaServer-{pendingVersion}-windows-x64-setup.exe.sha256");
         }
 
-        foreach (string file in Directory.EnumerateFiles(CacheDir, "NoMercyMediaServer-*-setup*"))
+        foreach (string file in Directory.EnumerateFiles(path: CacheDir, searchPattern: "NoMercyMediaServer-*-setup*"))
         {
-            string name = Path.GetFileName(file);
-            if (keep.Contains(name))
+            string name = Path.GetFileName(path: file);
+            if (keep.Contains(item: name))
                 continue;
 
             try
             {
-                File.Delete(file);
-                LauncherLog.Info($"Pruned stale installer cache entry: {name}");
+                File.Delete(path: file);
+                LauncherLog.Info(message: $"Pruned stale installer cache entry: {name}");
             }
             catch (Exception ex)
             {
-                LauncherLog.Info($"Could not prune {name}: {ex.Message}");
+                LauncherLog.Info(message: $"Could not prune {name}: {ex.Message}");
             }
         }
 
@@ -357,17 +357,17 @@ public class InstallerUpdater(ServerConnection serverConnection)
     )
     {
         // Background cache prune (fire-and-forget)
-        _ = Task.Run(() => CleanCacheAsync(string.Empty, version, ct), ct);
+        _ = Task.Run(function: () => CleanCacheAsync(currentVersion: string.Empty, pendingVersion: version, ct: ct), cancellationToken: ct);
 
-        bool downloaded = await DownloadInstallerAsync(version, progress, ct);
+        bool downloaded = await DownloadInstallerAsync(version: version, progress: progress, ct: ct);
         if (!downloaded)
             return false;
 
-        await VerifyInstallerAsync(version, ct);
+        await VerifyInstallerAsync(version: version, ct: ct);
 
-        await ShutdownAllAsync(connection, processLauncher, ct);
+        await ShutdownAllAsync(connection: connection, processLauncher: processLauncher, ct: ct);
 
-        await LaunchInstallerAsync(version, launcherAutoStart);
+        await LaunchInstallerAsync(version: version, launcherAutoStart: launcherAutoStart);
 
         return true;
     }

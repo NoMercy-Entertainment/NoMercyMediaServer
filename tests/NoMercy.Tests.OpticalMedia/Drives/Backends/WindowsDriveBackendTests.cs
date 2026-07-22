@@ -35,8 +35,8 @@ namespace NoMercy.Tests.OpticalMedia.Drives.Backends;
 /// Each test runtime-skips on non-Windows hosts rather than relying on a
 /// separate test package.
 /// </summary>
-[SupportedOSPlatform("windows")]
-[Trait("Category", "Unit")]
+[SupportedOSPlatform(platformName: "windows")]
+[Trait(name: "Category", value: "Unit")]
 public class WindowsDriveBackendTests
 {
     [Fact]
@@ -45,7 +45,7 @@ public class WindowsDriveBackendTests
         if (!OperatingSystem.IsWindows())
             return;
 
-        WindowsDriveBackend backend = new(NullLogger<WindowsDriveBackend>.Instance);
+        WindowsDriveBackend backend = new(logger: NullLogger<WindowsDriveBackend>.Instance);
         backend.Should().NotBeNull();
         await backend.DisposeAsync();
     }
@@ -56,7 +56,7 @@ public class WindowsDriveBackendTests
         if (!OperatingSystem.IsWindows())
             return;
 
-        await using WindowsDriveBackend backend = new(NullLogger<WindowsDriveBackend>.Instance);
+        await using WindowsDriveBackend backend = new(logger: NullLogger<WindowsDriveBackend>.Instance);
 
         IReadOnlyList<DiscDrive> drives = backend.GetDrives();
 
@@ -69,13 +69,13 @@ public class WindowsDriveBackendTests
         if (!OperatingSystem.IsWindows())
             return;
 
-        await using WindowsDriveBackend backend = new(NullLogger<WindowsDriveBackend>.Instance);
+        await using WindowsDriveBackend backend = new(logger: NullLogger<WindowsDriveBackend>.Instance);
         using CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
         List<DriveEvent> observed = [];
-        await foreach (DriveEvent ev in backend.ListenAsync(cts.Token))
-            observed.Add(ev);
+        await foreach (DriveEvent ev in backend.ListenAsync(ct: cts.Token))
+            observed.Add(item: ev);
 
         observed.Should().BeEmpty();
     }
@@ -86,18 +86,18 @@ public class WindowsDriveBackendTests
         if (!OperatingSystem.IsWindows())
             return;
 
-        await using WindowsDriveBackend backend = new(NullLogger<WindowsDriveBackend>.Instance);
-        using CancellationTokenSource cts = new(TimeSpan.FromMilliseconds(100));
+        await using WindowsDriveBackend backend = new(logger: NullLogger<WindowsDriveBackend>.Instance);
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromMilliseconds(milliseconds: 100));
 
         List<DriveEvent> observed = [];
         Func<Task> act = async () =>
         {
-            await foreach (DriveEvent ev in backend.ListenAsync(cts.Token))
-                observed.Add(ev);
+            await foreach (DriveEvent ev in backend.ListenAsync(ct: cts.Token))
+                observed.Add(item: ev);
         };
 
         await act.Should().NotThrowAsync();
-        observed.Should().BeEmpty("no physical drive is attached to raise a real WMI event");
+        observed.Should().BeEmpty(because: "no physical drive is attached to raise a real WMI event");
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public class WindowsDriveBackendTests
         if (!OperatingSystem.IsWindows())
             return;
 
-        WindowsDriveBackend backend = new(NullLogger<WindowsDriveBackend>.Instance);
+        WindowsDriveBackend backend = new(logger: NullLogger<WindowsDriveBackend>.Instance);
 
         Func<Task> act = async () =>
         {

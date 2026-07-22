@@ -18,19 +18,19 @@ namespace NoMercy.Tests.Encoder.PostProcess;
 
 public class ThumbnailGeneratorTests : IDisposable
 {
-    private readonly ThumbnailGenerator _gen = new(TestStorageFactory.CreateLocal());
+    private readonly ThumbnailGenerator _gen = new(storage: TestStorageFactory.CreateLocal());
     private readonly string _tempDir;
 
     public ThumbnailGeneratorTests()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"ThumbnailGeneratorTests_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempDir);
+        _tempDir = Path.Combine(path1: Path.GetTempPath(), path2: $"ThumbnailGeneratorTests_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: _tempDir);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempDir))
-            Directory.Delete(_tempDir, true);
+        if (Directory.Exists(path: _tempDir))
+            Directory.Delete(path: _tempDir, recursive: true);
     }
 
     // ------------------------------------------------------------------
@@ -42,16 +42,16 @@ public class ThumbnailGeneratorTests : IDisposable
     {
         ThumbnailOutputPlan plan = new(Width: 320, Height: 218, IntervalSeconds: 10);
         FfmpegCommand cmd = _gen.BuildCaptureCommand(
-            "ffmpeg",
-            "/input/movie.mkv",
-            _tempDir,
-            plan,
-            TimeSpan.FromMinutes(90)
+            ffmpegPath: "ffmpeg",
+            inputPath: "/input/movie.mkv",
+            outputDirectory: _tempDir,
+            plan: plan,
+            duration: TimeSpan.FromMinutes(minutes: 90)
         );
 
-        string args = string.Join(" ", cmd.Arguments);
-        args.Should().Contain("fps=1/10");
-        args.Should().Contain("scale=320:-2");
+        string args = string.Join(separator: " ", value: cmd.Arguments);
+        args.Should().Contain(expected: "fps=1/10");
+        args.Should().Contain(expected: "scale=320:-2");
     }
 
     // ------------------------------------------------------------------
@@ -63,14 +63,14 @@ public class ThumbnailGeneratorTests : IDisposable
     {
         ThumbnailOutputPlan plan = new(Width: 320, Height: 218, IntervalSeconds: 10);
         FfmpegCommand cmd = _gen.BuildCaptureCommand(
-            "ffmpeg",
-            "/input/movie.mkv",
-            _tempDir,
-            plan,
-            TimeSpan.FromMinutes(90)
+            ffmpegPath: "ffmpeg",
+            inputPath: "/input/movie.mkv",
+            outputDirectory: _tempDir,
+            plan: plan,
+            duration: TimeSpan.FromMinutes(minutes: 90)
         );
 
-        cmd.Arguments.Should().Contain("0:v:0");
+        cmd.Arguments.Should().Contain(expected: "0:v:0");
     }
 
     // ------------------------------------------------------------------
@@ -82,16 +82,16 @@ public class ThumbnailGeneratorTests : IDisposable
     {
         ThumbnailOutputPlan plan = new(Width: 320, Height: 218, IntervalSeconds: 10);
         FfmpegCommand cmd = _gen.BuildCaptureCommand(
-            "ffmpeg",
-            "/input/movie.mkv",
-            _tempDir,
-            plan,
-            TimeSpan.FromMinutes(90)
+            ffmpegPath: "ffmpeg",
+            inputPath: "/input/movie.mkv",
+            outputDirectory: _tempDir,
+            plan: plan,
+            duration: TimeSpan.FromMinutes(minutes: 90)
         );
 
-        string args = string.Join(" ", cmd.Arguments);
-        args.Should().Contain("thumbs_320");
-        args.Should().Contain("thumb_%04d.jpg");
+        string args = string.Join(separator: " ", value: cmd.Arguments);
+        args.Should().Contain(expected: "thumbs_320");
+        args.Should().Contain(expected: "thumb_%04d.jpg");
     }
 
     // ------------------------------------------------------------------
@@ -103,10 +103,10 @@ public class ThumbnailGeneratorTests : IDisposable
     public void BuildSpriteCommand_NineImages_ThreeByThreeGrid()
     {
         ThumbnailOutputPlan plan = new(Width: 320, Height: 218, IntervalSeconds: 10);
-        FfmpegCommand cmd = _gen.BuildSpriteCommand("ffmpeg", _tempDir, plan, imageCount: 9);
+        FfmpegCommand cmd = _gen.BuildSpriteCommand(ffmpegPath: "ffmpeg", outputDirectory: _tempDir, plan: plan, imageCount: 9);
 
-        string args = string.Join(" ", cmd.Arguments);
-        args.Should().Contain("tile=3x3");
+        string args = string.Join(separator: " ", value: cmd.Arguments);
+        args.Should().Contain(expected: "tile=3x3");
     }
 
     // ------------------------------------------------------------------
@@ -117,10 +117,10 @@ public class ThumbnailGeneratorTests : IDisposable
     public void BuildSpriteCommand_FourImages_TwoByTwoGrid()
     {
         ThumbnailOutputPlan plan = new(Width: 320, Height: 218, IntervalSeconds: 10);
-        FfmpegCommand cmd = _gen.BuildSpriteCommand("ffmpeg", _tempDir, plan, imageCount: 4);
+        FfmpegCommand cmd = _gen.BuildSpriteCommand(ffmpegPath: "ffmpeg", outputDirectory: _tempDir, plan: plan, imageCount: 4);
 
-        string args = string.Join(" ", cmd.Arguments);
-        args.Should().Contain("tile=2x2");
+        string args = string.Join(separator: " ", value: cmd.Arguments);
+        args.Should().Contain(expected: "tile=2x2");
     }
 
     // ------------------------------------------------------------------
@@ -131,10 +131,10 @@ public class ThumbnailGeneratorTests : IDisposable
     public void BuildSpriteCommand_TenImages_FourByThreeGrid()
     {
         ThumbnailOutputPlan plan = new(Width: 320, Height: 218, IntervalSeconds: 10);
-        FfmpegCommand cmd = _gen.BuildSpriteCommand("ffmpeg", _tempDir, plan, imageCount: 10);
+        FfmpegCommand cmd = _gen.BuildSpriteCommand(ffmpegPath: "ffmpeg", outputDirectory: _tempDir, plan: plan, imageCount: 10);
 
-        string args = string.Join(" ", cmd.Arguments);
-        args.Should().Contain("tile=4x3");
+        string args = string.Join(separator: " ", value: cmd.Arguments);
+        args.Should().Contain(expected: "tile=4x3");
     }
 
     // ------------------------------------------------------------------
@@ -145,9 +145,9 @@ public class ThumbnailGeneratorTests : IDisposable
     public void BuildSpriteCommand_OutputIsWebp()
     {
         ThumbnailOutputPlan plan = new(Width: 320, Height: 218, IntervalSeconds: 10);
-        FfmpegCommand cmd = _gen.BuildSpriteCommand("ffmpeg", _tempDir, plan, imageCount: 9);
+        FfmpegCommand cmd = _gen.BuildSpriteCommand(ffmpegPath: "ffmpeg", outputDirectory: _tempDir, plan: plan, imageCount: 9);
 
-        cmd.Arguments.Last().Should().EndWith(".webp");
+        cmd.Arguments.Last().Should().EndWith(expected: ".webp");
     }
 
     // ------------------------------------------------------------------
@@ -159,18 +159,18 @@ public class ThumbnailGeneratorTests : IDisposable
     {
         ThumbnailOutputPlan plan = new(Width: 320, Height: 218, IntervalSeconds: 10);
         await _gen.WriteVttCueFileAsync(
-            _tempDir,
-            plan,
+            outputDirectory: _tempDir,
+            plan: plan,
             imageCount: 3,
-            duration: TimeSpan.FromSeconds(30),
+            duration: TimeSpan.FromSeconds(seconds: 30),
             ct: default
         );
 
-        string vttFile = Path.Combine(_tempDir, "thumbs_320x218.vtt");
-        File.Exists(vttFile).Should().BeTrue();
+        string vttFile = Path.Combine(path1: _tempDir, path2: "thumbs_320x218.vtt");
+        File.Exists(path: vttFile).Should().BeTrue();
 
-        string content = await File.ReadAllTextAsync(vttFile);
-        content.Should().StartWith("WEBVTT");
+        string content = await File.ReadAllTextAsync(path: vttFile);
+        content.Should().StartWith(expected: "WEBVTT");
     }
 
     // ------------------------------------------------------------------
@@ -182,21 +182,21 @@ public class ThumbnailGeneratorTests : IDisposable
     {
         ThumbnailOutputPlan plan = new(Width: 320, Height: 218, IntervalSeconds: 10);
         await _gen.WriteVttCueFileAsync(
-            _tempDir,
-            plan,
+            outputDirectory: _tempDir,
+            plan: plan,
             imageCount: 3,
-            duration: TimeSpan.FromSeconds(30),
+            duration: TimeSpan.FromSeconds(seconds: 30),
             ct: default
         );
 
-        string content = await File.ReadAllTextAsync(Path.Combine(_tempDir, "thumbs_320x218.vtt"));
+        string content = await File.ReadAllTextAsync(path: Path.Combine(path1: _tempDir, path2: "thumbs_320x218.vtt"));
 
         // First cue: 00:00:00.000 --> 00:00:10.000
-        content.Should().Contain("00:00:00.000 --> 00:00:10.000");
+        content.Should().Contain(expected: "00:00:00.000 --> 00:00:10.000");
         // Second cue: 00:00:10.000 --> 00:00:20.000
-        content.Should().Contain("00:00:10.000 --> 00:00:20.000");
+        content.Should().Contain(expected: "00:00:10.000 --> 00:00:20.000");
         // Third cue: 00:00:20.000 --> 00:00:30.000
-        content.Should().Contain("00:00:20.000 --> 00:00:30.000");
+        content.Should().Contain(expected: "00:00:20.000 --> 00:00:30.000");
     }
 
     // ------------------------------------------------------------------
@@ -211,21 +211,21 @@ public class ThumbnailGeneratorTests : IDisposable
         ThumbnailOutputPlan plan = new(Width: 320, Height: 218, IntervalSeconds: 10);
         // 9 images → 3x3 grid, thumbHeight = 320*9/16 = 180
         await _gen.WriteVttCueFileAsync(
-            _tempDir,
-            plan,
+            outputDirectory: _tempDir,
+            plan: plan,
             imageCount: 9,
-            duration: TimeSpan.FromSeconds(90),
+            duration: TimeSpan.FromSeconds(seconds: 90),
             ct: default
         );
 
-        string content = await File.ReadAllTextAsync(Path.Combine(_tempDir, "thumbs_320x218.vtt"));
+        string content = await File.ReadAllTextAsync(path: Path.Combine(path1: _tempDir, path2: "thumbs_320x218.vtt"));
 
         // First frame: col=0, row=0 → xywh=0,0,320,218
-        content.Should().Contain("thumbs_320x218.webp#xywh=0,0,320,218");
+        content.Should().Contain(expected: "thumbs_320x218.webp#xywh=0,0,320,218");
         // Second frame: col=1, row=0 → xywh=320,0,320,218
-        content.Should().Contain("thumbs_320x218.webp#xywh=320,0,320,218");
+        content.Should().Contain(expected: "thumbs_320x218.webp#xywh=320,0,320,218");
         // Fourth frame: col=0, row=1 → xywh=0,218,320,218
-        content.Should().Contain("thumbs_320x218.webp#xywh=0,218,320,218");
+        content.Should().Contain(expected: "thumbs_320x218.webp#xywh=0,218,320,218");
     }
 
     // ------------------------------------------------------------------
@@ -238,15 +238,15 @@ public class ThumbnailGeneratorTests : IDisposable
         ThumbnailOutputPlan plan = new(Width: 320, Height: 218, IntervalSeconds: 10);
         // imageCount=3, duration=25s → last cue end = min(30, 25) = 25s
         await _gen.WriteVttCueFileAsync(
-            _tempDir,
-            plan,
+            outputDirectory: _tempDir,
+            plan: plan,
             imageCount: 3,
-            duration: TimeSpan.FromSeconds(25),
+            duration: TimeSpan.FromSeconds(seconds: 25),
             ct: default
         );
 
-        string content = await File.ReadAllTextAsync(Path.Combine(_tempDir, "thumbs_320x218.vtt"));
-        content.Should().Contain("00:00:20.000 --> 00:00:25.000");
+        string content = await File.ReadAllTextAsync(path: Path.Combine(path1: _tempDir, path2: "thumbs_320x218.vtt"));
+        content.Should().Contain(expected: "00:00:20.000 --> 00:00:25.000");
     }
 
     // ------------------------------------------------------------------
@@ -257,13 +257,13 @@ public class ThumbnailGeneratorTests : IDisposable
     public void CleanupIndividualThumbnails_RemovesThumbsDirectory()
     {
         ThumbnailOutputPlan plan = new(Width: 320, Height: 218, IntervalSeconds: 10);
-        string thumbDir = Path.Combine(_tempDir, "thumbs_320");
-        Directory.CreateDirectory(thumbDir);
-        File.WriteAllText(Path.Combine(thumbDir, "thumb_0001.jpg"), "dummy");
+        string thumbDir = Path.Combine(path1: _tempDir, path2: "thumbs_320");
+        Directory.CreateDirectory(path: thumbDir);
+        File.WriteAllText(path: Path.Combine(path1: thumbDir, path2: "thumb_0001.jpg"), contents: "dummy");
 
-        _gen.CleanupIndividualThumbnails(_tempDir, plan);
+        _gen.CleanupIndividualThumbnails(outputDirectory: _tempDir, plan: plan);
 
-        Directory.Exists(thumbDir).Should().BeFalse();
+        Directory.Exists(path: thumbDir).Should().BeFalse();
     }
 
     // ------------------------------------------------------------------
@@ -274,7 +274,7 @@ public class ThumbnailGeneratorTests : IDisposable
     public void CleanupIndividualThumbnails_MissingDir_DoesNotThrow()
     {
         ThumbnailOutputPlan plan = new(Width: 999, Height: 562, IntervalSeconds: 10);
-        Action act = () => _gen.CleanupIndividualThumbnails(_tempDir, plan);
+        Action act = () => _gen.CleanupIndividualThumbnails(outputDirectory: _tempDir, plan: plan);
         act.Should().NotThrow();
     }
 
@@ -283,17 +283,17 @@ public class ThumbnailGeneratorTests : IDisposable
     // ------------------------------------------------------------------
 
     [Theory]
-    [InlineData(1, 1, 1)]
-    [InlineData(4, 2, 2)]
-    [InlineData(9, 3, 3)]
-    [InlineData(10, 4, 3)]
-    [InlineData(16, 4, 4)]
-    [InlineData(17, 5, 4)]
+    [InlineData(data: [1, 1, 1])]
+    [InlineData(data: [4, 2, 2])]
+    [InlineData(data: [9, 3, 3])]
+    [InlineData(data: [10, 4, 3])]
+    [InlineData(data: [16, 4, 4])]
+    [InlineData(data: [17, 5, 4])]
     public void ComputeGrid_CorrectDimensions(int imageCount, int expectedW, int expectedH)
     {
-        (int w, int h) = ThumbnailGenerator.ComputeGrid(imageCount);
+        (int w, int h) = ThumbnailGenerator.ComputeGrid(imageCount: imageCount);
 
-        w.Should().Be(expectedW);
-        h.Should().Be(expectedH);
+        w.Should().Be(expected: expectedW);
+        h.Should().Be(expected: expectedH);
     }
 }

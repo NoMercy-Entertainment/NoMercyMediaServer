@@ -15,23 +15,23 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Movies;
 
-[PrimaryKey(nameof(Id))]
+[PrimaryKey(propertyName: nameof(Id))]
 public class WatchProvider : Timestamps
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.None)]
-    [JsonProperty("id")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("logo")]
+    [JsonProperty(propertyName: "logo")]
     public string? Logo { get; set; }
 
-    [JsonProperty("display_priority")]
+    [JsonProperty(propertyName: "display_priority")]
     public int DisplayPriority { get; set; }
 
-    [JsonProperty("medias")]
+    [JsonProperty(propertyName: "medias")]
     public ICollection<WatchProviderMedia> WatchProviderMedias { get; set; } =
         new List<WatchProviderMedia>();
 }

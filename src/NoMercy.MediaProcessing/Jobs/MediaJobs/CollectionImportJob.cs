@@ -39,7 +39,7 @@ public class CollectionImportJob : AbstractMediaJob
         IStorageDriver storageDriver,
         ILoggerFactory loggerFactory
     )
-        : base(storageFactory, storageDriver, loggerFactory) { }
+        : base(storageFactory: storageFactory, storageDriver: storageDriver, loggerFactory: loggerFactory) { }
 
     public override string QueueName => "import";
     public override int Priority => 4;
@@ -49,49 +49,49 @@ public class CollectionImportJob : AbstractMediaJob
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
-        MovieRepository movieRepository = new(context);
+        MovieRepository movieRepository = new(context: context);
         MovieManager movieManager = new(
-            movieRepository,
-            jobDispatcher,
-            StorageFactory,
-            LoggerFactory.CreateLogger<MovieManager>()
+            movieRepository: movieRepository,
+            jobDispatcher: jobDispatcher,
+            storageFactory: StorageFactory,
+            logger: LoggerFactory.CreateLogger<MovieManager>()
         );
 
-        CollectionRepository collectionRepository = new(context);
+        CollectionRepository collectionRepository = new(context: context);
         CollectionManager collectionManager = new(
-            collectionRepository,
-            movieManager,
-            jobDispatcher,
-            LoggerFactory.CreateLogger<CollectionManager>()
+            collectionRepository: collectionRepository,
+            movieManager: movieManager,
+            jobDispatcher: jobDispatcher,
+            logger: LoggerFactory.CreateLogger<CollectionManager>()
         );
 
         Library collectionLibrary = await context
-            .Libraries.Where(f => f.Id == LibraryId)
-            .Include(f => f.FolderLibraries)
-                .ThenInclude(f => f.Folder)
+            .Libraries.Where(predicate: f => f.Id == LibraryId)
+            .Include(navigationPropertyPath: f => f.FolderLibraries)
+                .ThenInclude(navigationPropertyPath: f => f.Folder)
             .FirstAsync();
 
         TmdbCollectionAppends? collectionAppends = await collectionManager.Add(
-            Id,
-            collectionLibrary
+            id: Id,
+            library: collectionLibrary
         );
         if (collectionAppends == null)
             return;
 
-        await collectionManager.AddCollectionMovies(collectionAppends, collectionLibrary);
+        await collectionManager.AddCollectionMovies(collectionAppends: collectionAppends, library: collectionLibrary);
 
         if (EventBusProvider.IsConfigured)
         {
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshedEvent { QueryKey = ["libraries", LibraryId.ToString()] }
+                @event: new LibraryRefreshedEvent { QueryKey = ["libraries", LibraryId.ToString()] }
             );
 
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshedEvent { QueryKey = ["collection"] }
+                @event: new LibraryRefreshedEvent { QueryKey = ["collection"] }
             );
 
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshedEvent { QueryKey = ["collection", Id.ToString()] }
+                @event: new LibraryRefreshedEvent { QueryKey = ["collection", Id.ToString()] }
             );
         }
     }

@@ -25,45 +25,45 @@ namespace NoMercy.Tests.Cli;
 /// command action runs — malformed input must never reach the network layer,
 /// so these can assert a non-zero exit code without a live management server.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class ProgramTests
 {
     [Fact]
     public async Task Main_Help_ExitsZero_AndListsEveryRegisteredSubcommand()
     {
         using ConsoleCapture console = new();
-        int exitCode = await Program.Main(["--help"]);
+        int exitCode = await Program.Main(args: ["--help"]);
 
-        exitCode.Should().Be(0);
-        console.Out.Should().Contain("start");
-        console.Out.Should().Contain("status");
-        console.Out.Should().Contain("logs");
-        console.Out.Should().Contain("stop");
-        console.Out.Should().Contain("restart");
-        console.Out.Should().Contain("config");
-        console.Out.Should().Contain("plugin");
-        console.Out.Should().Contain("queue");
-        console.Out.Should().Contain("resources");
-        console.Out.Should().Contain("autostart");
-        console.Out.Should().Contain("update");
+        exitCode.Should().Be(expected: 0);
+        console.Out.Should().Contain(expected: "start");
+        console.Out.Should().Contain(expected: "status");
+        console.Out.Should().Contain(expected: "logs");
+        console.Out.Should().Contain(expected: "stop");
+        console.Out.Should().Contain(expected: "restart");
+        console.Out.Should().Contain(expected: "config");
+        console.Out.Should().Contain(expected: "plugin");
+        console.Out.Should().Contain(expected: "queue");
+        console.Out.Should().Contain(expected: "resources");
+        console.Out.Should().Contain(expected: "autostart");
+        console.Out.Should().Contain(expected: "update");
     }
 
     [Fact]
     public async Task Main_GlobalPipeOption_ComposesWithHelp_WithoutError()
     {
         using ConsoleCapture console = new();
-        int exitCode = await Program.Main(["--pipe", "custom-pipe", "--help"]);
+        int exitCode = await Program.Main(args: ["--pipe", "custom-pipe", "--help"]);
 
-        exitCode.Should().Be(0);
+        exitCode.Should().Be(expected: 0);
     }
 
     [Fact]
     public async Task Main_UnknownTopLevelCommand_ReturnsNonZeroExitCode()
     {
         using ConsoleCapture console = new();
-        int exitCode = await Program.Main(["frobnicate"]);
+        int exitCode = await Program.Main(args: ["frobnicate"]);
 
-        exitCode.Should().NotBe(0);
+        exitCode.Should().NotBe(unexpected: 0);
         console.Error.ToString().Should().NotBeEmpty();
     }
 
@@ -71,52 +71,52 @@ public sealed class ProgramTests
     public async Task Main_UnknownGlobalFlag_ReturnsNonZeroExitCode()
     {
         using ConsoleCapture console = new();
-        int exitCode = await Program.Main(["--this-flag-does-not-exist"]);
+        int exitCode = await Program.Main(args: ["--this-flag-does-not-exist"]);
 
-        exitCode.Should().NotBe(0);
+        exitCode.Should().NotBe(unexpected: 0);
     }
 
     [Fact]
     public async Task Main_ConfigSetMissingKeyAndValue_ReturnsNonZeroExitCode()
     {
         using ConsoleCapture console = new();
-        int exitCode = await Program.Main(["config", "set"]);
+        int exitCode = await Program.Main(args: ["config", "set"]);
 
-        exitCode.Should().NotBe(0);
+        exitCode.Should().NotBe(unexpected: 0);
     }
 
     [Fact]
     public async Task Main_LogsTailGivenNonNumericValue_ReturnsNonZeroExitCode()
     {
         using ConsoleCapture console = new();
-        int exitCode = await Program.Main(["logs", "--tail", "not-a-number"]);
+        int exitCode = await Program.Main(args: ["logs", "--tail", "not-a-number"]);
 
-        exitCode.Should().NotBe(0);
+        exitCode.Should().NotBe(unexpected: 0);
     }
 
     [Fact]
     public async Task Main_LogsTailGivenOutOfRangeValue_ReturnsNonZeroExitCode()
     {
         using ConsoleCapture console = new();
-        int exitCode = await Program.Main(["logs", "--tail", "99999999999999999999999"]);
+        int exitCode = await Program.Main(args: ["logs", "--tail", "99999999999999999999999"]);
 
-        exitCode.Should().NotBe(0);
+        exitCode.Should().NotBe(unexpected: 0);
     }
 
     [Fact]
     public async Task Main_PipeOptionMissingValue_ReturnsNonZeroExitCode()
     {
         using ConsoleCapture console = new();
-        int exitCode = await Program.Main(["--pipe"]);
+        int exitCode = await Program.Main(args: ["--pipe"]);
 
-        exitCode.Should().NotBe(0);
+        exitCode.Should().NotBe(unexpected: 0);
     }
 
     [Fact]
     public async Task Main_NoArguments_DoesNotThrow()
     {
         using ConsoleCapture console = new();
-        Exception? ex = await Record.ExceptionAsync(async () => await Program.Main([]));
+        Exception? ex = await Record.ExceptionAsync(testCode: async () => await Program.Main(args: []));
 
         ex.Should().BeNull();
     }

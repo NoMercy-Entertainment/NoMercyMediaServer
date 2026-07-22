@@ -31,14 +31,14 @@ public class LiveGapPlannerTests
         );
 
         plan.Should().NotBeNull();
-        plan!.Start.Should().Be(TimeSpan.Zero);
+        plan!.Start.Should().Be(expected: TimeSpan.Zero);
         plan.StopAt.Should().BeNull();
     }
 
     [Fact]
     public void Plan_FullyCovered_ReturnsNull()
     {
-        HashSet<int> existing = [.. Enumerable.Range(0, 10)]; // 0..9
+        HashSet<int> existing = [.. Enumerable.Range(start: 0, count: 10)]; // 0..9
 
         LiveGapPlan? plan = LiveGapPlanner.Plan(
             existing: existing,
@@ -57,7 +57,7 @@ public class LiveGapPlannerTests
         // stop bound the respawn would eat straight through 200..260 (re-encoding
         // already-produced content) and continue to EOF — the bug this planner
         // exists to prevent.
-        HashSet<int> existing = [.. Enumerable.Range(0, 51), .. Enumerable.Range(200, 61)];
+        HashSet<int> existing = [.. Enumerable.Range(start: 0, count: 51), .. Enumerable.Range(start: 200, count: 61)];
         const int segDur = 6;
 
         LiveGapPlan? plan = LiveGapPlanner.Plan(
@@ -68,14 +68,14 @@ public class LiveGapPlannerTests
         );
 
         plan.Should().NotBeNull();
-        plan!.Start.Should().Be(TimeSpan.FromSeconds(100 * segDur));
-        plan.StopAt.Should().Be(TimeSpan.FromSeconds(200 * segDur));
+        plan!.Start.Should().Be(expected: TimeSpan.FromSeconds(seconds: 100 * segDur));
+        plan.StopAt.Should().Be(expected: TimeSpan.FromSeconds(seconds: 200 * segDur));
     }
 
     [Fact]
     public void Plan_DesiredAlreadyCovered_SkipsForwardToTheRealGap()
     {
-        HashSet<int> existing = [.. Enumerable.Range(0, 51)]; // 0..50
+        HashSet<int> existing = [.. Enumerable.Range(start: 0, count: 51)]; // 0..50
         const int segDur = 6;
 
         LiveGapPlan? plan = LiveGapPlanner.Plan(
@@ -86,14 +86,14 @@ public class LiveGapPlannerTests
         );
 
         plan.Should().NotBeNull();
-        plan!.Start.Should().Be(TimeSpan.FromSeconds(51 * segDur));
+        plan!.Start.Should().Be(expected: TimeSpan.FromSeconds(seconds: 51 * segDur));
         plan.StopAt.Should().BeNull();
     }
 
     [Fact]
     public void Plan_SmallCoveredIslandAheadOfDesired_StopsAtIt()
     {
-        HashSet<int> existing = [.. Enumerable.Range(10, 10)]; // 10..19
+        HashSet<int> existing = [.. Enumerable.Range(start: 10, count: 10)]; // 10..19
         const int segDur = 6;
 
         LiveGapPlan? plan = LiveGapPlanner.Plan(
@@ -104,8 +104,8 @@ public class LiveGapPlannerTests
         );
 
         plan.Should().NotBeNull();
-        plan!.Start.Should().Be(TimeSpan.FromSeconds(5 * segDur));
-        plan.StopAt.Should().Be(TimeSpan.FromSeconds(10 * segDur));
+        plan!.Start.Should().Be(expected: TimeSpan.FromSeconds(seconds: 5 * segDur));
+        plan.StopAt.Should().Be(expected: TimeSpan.FromSeconds(seconds: 10 * segDur));
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public class LiveGapPlannerTests
         );
 
         plan.Should().NotBeNull();
-        plan!.Start.Should().Be(TimeSpan.FromSeconds(2 * 6));
+        plan!.Start.Should().Be(expected: TimeSpan.FromSeconds(seconds: 2 * 6));
     }
 
     [Fact]
@@ -146,6 +146,6 @@ public class LiveGapPlannerTests
         );
 
         plan.Should().NotBeNull();
-        plan!.Start.Should().Be(TimeSpan.Zero);
+        plan!.Start.Should().Be(expected: TimeSpan.Zero);
     }
 }

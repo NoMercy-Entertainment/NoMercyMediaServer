@@ -20,36 +20,36 @@ public class TvdbUserFavoritesResponse : TvdbResponse<TvdbUserFavorites> { }
 
 public class TvdbUser
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public long Id { get; set; }
 
-    [JsonProperty("language")]
+    [JsonProperty(propertyName: "language")]
     public string? Language { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string? Name { get; set; }
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string? Type { get; set; }
 }
 
 public class TvdbUserFavorites
 {
-    [JsonProperty("series")]
+    [JsonProperty(propertyName: "series")]
     public long[] Series { get; set; } = [];
 
-    [JsonProperty("movies")]
+    [JsonProperty(propertyName: "movies")]
     public long[] Movies { get; set; } = [];
 
-    [JsonProperty("episodes")]
+    [JsonProperty(propertyName: "episodes")]
     public long[] Episodes { get; set; } = [];
 
-    [JsonProperty("artwork")]
+    [JsonProperty(propertyName: "artwork")]
     public long[] Artwork { get; set; } = [];
 
-    [JsonProperty("people")]
+    [JsonProperty(propertyName: "people")]
     public long[] People { get; set; } = [];
 
-    [JsonProperty("lists")]
+    [JsonProperty(propertyName: "lists")]
     public long[] Lists { get; set; } = [];
 }

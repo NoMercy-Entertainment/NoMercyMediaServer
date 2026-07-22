@@ -15,6 +15,6 @@ namespace NoMercy.Api.DTOs.Common;
 
 public record LikeRequestDto
 {
-    [JsonProperty("value")]
+    [JsonProperty(propertyName: "value")]
     public bool Value { get; set; }
 }

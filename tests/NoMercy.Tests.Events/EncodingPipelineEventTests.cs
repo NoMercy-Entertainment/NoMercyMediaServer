@@ -25,29 +25,29 @@ public class EncodingPipelineEventTests
         List<IEvent> received = [];
 
         bus.Subscribe<EncodingStartedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
         bus.Subscribe<EncodingProgressUpdatedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
         bus.Subscribe<EncodingCompletedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
 
         await bus.PublishAsync(
-            new EncodingStartedEvent
+            @event: new EncodingStartedEvent
             {
                 JobId = 42,
                 InputPath = "/input/video.mkv",
@@ -57,54 +57,54 @@ public class EncodingPipelineEventTests
         );
 
         await bus.PublishAsync(
-            new EncodingProgressUpdatedEvent
+            @event: new EncodingProgressUpdatedEvent
             {
                 JobId = 42,
                 Percentage = 25.0,
-                Elapsed = TimeSpan.FromMinutes(5),
-                Estimated = TimeSpan.FromMinutes(15),
+                Elapsed = TimeSpan.FromMinutes(minutes: 5),
+                Estimated = TimeSpan.FromMinutes(minutes: 15),
             }
         );
 
         await bus.PublishAsync(
-            new EncodingProgressUpdatedEvent
+            @event: new EncodingProgressUpdatedEvent
             {
                 JobId = 42,
                 Percentage = 75.0,
-                Elapsed = TimeSpan.FromMinutes(15),
-                Estimated = TimeSpan.FromMinutes(5),
+                Elapsed = TimeSpan.FromMinutes(minutes: 15),
+                Estimated = TimeSpan.FromMinutes(minutes: 5),
             }
         );
 
         await bus.PublishAsync(
-            new EncodingCompletedEvent
+            @event: new EncodingCompletedEvent
             {
                 JobId = 42,
                 OutputPath = "/output/video/",
-                Duration = TimeSpan.FromMinutes(20),
+                Duration = TimeSpan.FromMinutes(minutes: 20),
             }
         );
 
-        received.Should().HaveCount(4);
-        received[0].Should().BeOfType<EncodingStartedEvent>();
-        received[1].Should().BeOfType<EncodingProgressUpdatedEvent>();
-        received[2].Should().BeOfType<EncodingProgressUpdatedEvent>();
-        received[3].Should().BeOfType<EncodingCompletedEvent>();
+        received.Should().HaveCount(expected: 4);
+        received[index: 0].Should().BeOfType<EncodingStartedEvent>();
+        received[index: 1].Should().BeOfType<EncodingProgressUpdatedEvent>();
+        received[index: 2].Should().BeOfType<EncodingProgressUpdatedEvent>();
+        received[index: 3].Should().BeOfType<EncodingCompletedEvent>();
 
-        EncodingStartedEvent started = (EncodingStartedEvent)received[0];
-        started.JobId.Should().Be(42);
-        started.InputPath.Should().Be("/input/video.mkv");
-        started.ProfileName.Should().Be("HLS-1080p");
+        EncodingStartedEvent started = (EncodingStartedEvent)received[index: 0];
+        started.JobId.Should().Be(expected: 42);
+        started.InputPath.Should().Be(expected: "/input/video.mkv");
+        started.ProfileName.Should().Be(expected: "HLS-1080p");
 
-        EncodingProgressUpdatedEvent progress1 = (EncodingProgressUpdatedEvent)received[1];
-        progress1.Percentage.Should().Be(25.0);
-        progress1.Estimated.Should().Be(TimeSpan.FromMinutes(15));
+        EncodingProgressUpdatedEvent progress1 = (EncodingProgressUpdatedEvent)received[index: 1];
+        progress1.Percentage.Should().Be(expected: 25.0);
+        progress1.Estimated.Should().Be(expected: TimeSpan.FromMinutes(minutes: 15));
 
-        EncodingProgressUpdatedEvent progress2 = (EncodingProgressUpdatedEvent)received[2];
-        progress2.Percentage.Should().Be(75.0);
+        EncodingProgressUpdatedEvent progress2 = (EncodingProgressUpdatedEvent)received[index: 2];
+        progress2.Percentage.Should().Be(expected: 75.0);
 
-        EncodingCompletedEvent completed = (EncodingCompletedEvent)received[3];
-        completed.Duration.Should().Be(TimeSpan.FromMinutes(20));
+        EncodingCompletedEvent completed = (EncodingCompletedEvent)received[index: 3];
+        completed.Duration.Should().Be(expected: TimeSpan.FromMinutes(minutes: 20));
     }
 
     [Fact]
@@ -114,22 +114,22 @@ public class EncodingPipelineEventTests
         List<IEvent> received = [];
 
         bus.Subscribe<EncodingStartedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
         bus.Subscribe<EncodingFailedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
 
         await bus.PublishAsync(
-            new EncodingStartedEvent
+            @event: new EncodingStartedEvent
             {
                 JobId = 99,
                 InputPath = "/input/corrupt.mkv",
@@ -139,7 +139,7 @@ public class EncodingPipelineEventTests
         );
 
         await bus.PublishAsync(
-            new EncodingFailedEvent
+            @event: new EncodingFailedEvent
             {
                 JobId = 99,
                 InputPath = "/input/corrupt.mkv",
@@ -148,14 +148,14 @@ public class EncodingPipelineEventTests
             }
         );
 
-        received.Should().HaveCount(2);
-        received[0].Should().BeOfType<EncodingStartedEvent>();
-        received[1].Should().BeOfType<EncodingFailedEvent>();
+        received.Should().HaveCount(expected: 2);
+        received[index: 0].Should().BeOfType<EncodingStartedEvent>();
+        received[index: 1].Should().BeOfType<EncodingFailedEvent>();
 
-        EncodingFailedEvent failed = (EncodingFailedEvent)received[1];
-        failed.JobId.Should().Be(99);
-        failed.ErrorMessage.Should().Be("FFmpeg exited with code 1");
-        failed.ExceptionType.Should().Be("InvalidOperationException");
+        EncodingFailedEvent failed = (EncodingFailedEvent)received[index: 1];
+        failed.JobId.Should().Be(expected: 99);
+        failed.ErrorMessage.Should().Be(expected: "FFmpeg exited with code 1");
+        failed.ExceptionType.Should().Be(expected: "InvalidOperationException");
     }
 
     [Fact]
@@ -165,7 +165,7 @@ public class EncodingPipelineEventTests
         EncodingProgressUpdatedEvent? receivedEvent = null;
 
         bus.Subscribe<EncodingProgressUpdatedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
                 receivedEvent = evt;
                 return Task.CompletedTask;
@@ -176,37 +176,37 @@ public class EncodingPipelineEventTests
         int jobId = trackId.GetHashCode();
 
         await bus.PublishAsync(
-            new EncodingProgressUpdatedEvent
+            @event: new EncodingProgressUpdatedEvent
             {
                 JobId = jobId,
                 Percentage = 50.0,
-                Elapsed = TimeSpan.FromMinutes(3),
+                Elapsed = TimeSpan.FromMinutes(minutes: 3),
             }
         );
 
         receivedEvent.Should().NotBeNull();
-        receivedEvent!.JobId.Should().Be(jobId);
-        receivedEvent.Percentage.Should().Be(50.0);
+        receivedEvent!.JobId.Should().Be(expected: jobId);
+        receivedEvent.Percentage.Should().Be(expected: 50.0);
     }
 
     [Fact]
     public async Task EventBusProvider_CanPublishEncodingEvents_WhenConfigured()
     {
         InMemoryEventBus bus = new();
-        EventBusProvider.Configure(bus);
+        EventBusProvider.Configure(eventBus: bus);
 
         List<IEvent> received = [];
         bus.Subscribe<EncodingStartedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
         bus.Subscribe<EncodingCompletedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
@@ -214,7 +214,7 @@ public class EncodingPipelineEventTests
         EventBusProvider.IsConfigured.Should().BeTrue();
 
         await EventBusProvider.Current.PublishAsync(
-            new EncodingStartedEvent
+            @event: new EncodingStartedEvent
             {
                 JobId = 1,
                 InputPath = "/test.mkv",
@@ -224,17 +224,17 @@ public class EncodingPipelineEventTests
         );
 
         await EventBusProvider.Current.PublishAsync(
-            new EncodingCompletedEvent
+            @event: new EncodingCompletedEvent
             {
                 JobId = 1,
                 OutputPath = "/out/",
-                Duration = TimeSpan.FromSeconds(30),
+                Duration = TimeSpan.FromSeconds(seconds: 30),
             }
         );
 
-        received.Should().HaveCount(2);
-        received[0].Should().BeOfType<EncodingStartedEvent>();
-        received[1].Should().BeOfType<EncodingCompletedEvent>();
+        received.Should().HaveCount(expected: 2);
+        received[index: 0].Should().BeOfType<EncodingStartedEvent>();
+        received[index: 1].Should().BeOfType<EncodingCompletedEvent>();
     }
 
     [Fact]
@@ -252,14 +252,14 @@ public class EncodingPipelineEventTests
         {
             JobId = 1,
             Percentage = 50.0,
-            Elapsed = TimeSpan.FromMinutes(1),
+            Elapsed = TimeSpan.FromMinutes(minutes: 1),
         };
 
         EncodingCompletedEvent completed = new()
         {
             JobId = 1,
             OutputPath = "/out",
-            Duration = TimeSpan.FromMinutes(2),
+            Duration = TimeSpan.FromMinutes(minutes: 2),
         };
 
         EncodingFailedEvent failed = new()
@@ -271,7 +271,7 @@ public class EncodingPipelineEventTests
 
         Guid[] eventIds = [started.EventId, progress.EventId, completed.EventId, failed.EventId];
         eventIds.Should().OnlyHaveUniqueItems();
-        eventIds.Should().NotContain(Guid.Empty);
+        eventIds.Should().NotContain(unexpected: Guid.Empty);
     }
 
     [Fact]
@@ -308,7 +308,7 @@ public class EncodingPipelineEventTests
 
         foreach (IEvent evt in events)
         {
-            evt.Source.Should().Be("Encoder");
+            evt.Source.Should().Be(expected: "Encoder");
         }
     }
 }

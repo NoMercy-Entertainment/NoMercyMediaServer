@@ -20,49 +20,51 @@ public class WindowsServiceHostTests
     public void StartupOptions_RunAsService_DefaultsToFalse()
     {
         StartupOptions options = new();
-        Assert.False(options.RunAsService);
+        Assert.False(condition: options.RunAsService);
     }
 
     [Fact]
     public void StartupOptions_RunAsService_ParsedFromArgs()
     {
-        ParserResult<StartupOptions> result = Parser.Default.ParseArguments<StartupOptions>([
+        ParserResult<StartupOptions> result = Parser.Default.ParseArguments<StartupOptions>(args:
+        [
             "--service",
         ]);
 
         StartupOptions? parsed = null;
-        result.WithParsed(o => parsed = o);
+        result.WithParsed(action: o => parsed = o);
 
-        Assert.NotNull(parsed);
-        Assert.True(parsed.RunAsService);
+        Assert.NotNull(@object: parsed);
+        Assert.True(condition: parsed.RunAsService);
     }
 
     [Fact]
     public void StartupOptions_RunAsService_FalseWhenNotProvided()
     {
-        ParserResult<StartupOptions> result = Parser.Default.ParseArguments<StartupOptions>([]);
+        ParserResult<StartupOptions> result = Parser.Default.ParseArguments<StartupOptions>(args: []);
 
         StartupOptions? parsed = null;
-        result.WithParsed(o => parsed = o);
+        result.WithParsed(action: o => parsed = o);
 
-        Assert.NotNull(parsed);
-        Assert.False(parsed.RunAsService);
+        Assert.NotNull(@object: parsed);
+        Assert.False(condition: parsed.RunAsService);
     }
 
     [Fact]
     public void StartupOptions_RunAsService_CoexistsWithOtherFlags()
     {
-        ParserResult<StartupOptions> result = Parser.Default.ParseArguments<StartupOptions>([
+        ParserResult<StartupOptions> result = Parser.Default.ParseArguments<StartupOptions>(args:
+        [
             "--service",
             "--dev",
         ]);
 
         StartupOptions? parsed = null;
-        result.WithParsed(o => parsed = o);
+        result.WithParsed(action: o => parsed = o);
 
-        Assert.NotNull(parsed);
-        Assert.True(parsed.RunAsService);
-        Assert.True(parsed.Development);
+        Assert.NotNull(@object: parsed);
+        Assert.True(condition: parsed.RunAsService);
+        Assert.True(condition: parsed.Development);
     }
 
 }

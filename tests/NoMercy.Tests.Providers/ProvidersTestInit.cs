@@ -59,12 +59,12 @@ internal static class ProvidersTestInit
         // CacheController at the temp folder inside the (test) app-data folder and
         // make sure the directories exist, so cache I/O is satisfied and confined
         // to a writable, test-scoped location.
-        Directory.CreateDirectory(AppFiles.ApiCachePath);
-        Directory.CreateDirectory(AppFiles.TempPath);
+        Directory.CreateDirectory(path: AppFiles.ApiCachePath);
+        Directory.CreateDirectory(path: AppFiles.TempPath);
 
         LocalStorageDriver driver = new();
-        StoragePathGuard guard = new([AppFiles.AppPath], driver);
-        IStorage storage = new LocalStorage(driver, guard);
-        CacheController.Initialize(storage);
+        StoragePathGuard guard = new(allowedRoots: [AppFiles.AppPath], driver: driver);
+        IStorage storage = new LocalStorage(driver: driver, guard: guard);
+        CacheController.Initialize(storage: storage);
     }
 }

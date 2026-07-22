@@ -35,11 +35,11 @@ public class PluginContext : IPluginContext
         PluginCapabilities? capabilities = null
     )
     {
-        EventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
-        Services = services ?? throw new ArgumentNullException(nameof(services));
-        Logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        DataFolderPath = dataFolderPath ?? throw new ArgumentNullException(nameof(dataFolderPath));
-        Configuration = new PluginConfiguration(dataFolderPath, storage);
-        HttpClient = PluginHttpClientFactory.Create(capabilities);
+        EventBus = eventBus ?? throw new ArgumentNullException(paramName: nameof(eventBus));
+        Services = services ?? throw new ArgumentNullException(paramName: nameof(services));
+        Logger = logger ?? throw new ArgumentNullException(paramName: nameof(logger));
+        DataFolderPath = dataFolderPath ?? throw new ArgumentNullException(paramName: nameof(dataFolderPath));
+        Configuration = new PluginConfiguration(dataFolderPath: dataFolderPath, storage: storage);
+        HttpClient = PluginHttpClientFactory.Create(capabilities: capabilities);
     }
 }

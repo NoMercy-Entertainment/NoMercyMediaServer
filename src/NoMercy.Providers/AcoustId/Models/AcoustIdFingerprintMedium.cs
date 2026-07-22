@@ -15,15 +15,15 @@ namespace NoMercy.Providers.AcoustId.Models;
 
 public class AcoustIdFingerprintMedium
 {
-    [JsonProperty("format")]
+    [JsonProperty(propertyName: "format")]
     public string? Format { get; set; }
 
-    [JsonProperty("position")]
+    [JsonProperty(propertyName: "position")]
     public int? Position { get; set; }
 
-    [JsonProperty("track_count")]
+    [JsonProperty(propertyName: "track_count")]
     public int? TrackCount { get; set; }
 
-    [JsonProperty("tracks")]
+    [JsonProperty(propertyName: "tracks")]
     public AcoustIdFingerprintTrack[] Tracks { get; set; } = [];
 }

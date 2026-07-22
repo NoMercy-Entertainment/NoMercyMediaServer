@@ -21,12 +21,12 @@ public class InMemoryRemoteWorkerRegistryTests
     public void Register_NewWorker_AppearsInActiveList()
     {
         InMemoryRemoteWorkerRegistry sut = new();
-        sut.Register(MakeWorker("beast"));
+        sut.Register(worker: MakeWorker(id: "beast"));
 
         IReadOnlyList<IRemoteWorker> active = sut.GetActiveWorkers();
 
-        active.Should().HaveCount(1);
-        active[0].WorkerId.Should().Be("beast");
+        active.Should().HaveCount(expected: 1);
+        active[index: 0].WorkerId.Should().Be(expected: "beast");
     }
 
     [Fact]
@@ -34,17 +34,17 @@ public class InMemoryRemoteWorkerRegistryTests
     {
         // Re-registration (worker restarted) must not grow the active list.
         InMemoryRemoteWorkerRegistry sut = new();
-        sut.Register(MakeWorker("beast"));
-        sut.Register(MakeWorker("beast"));
+        sut.Register(worker: MakeWorker(id: "beast"));
+        sut.Register(worker: MakeWorker(id: "beast"));
 
-        sut.GetActiveWorkers().Should().HaveCount(1);
+        sut.GetActiveWorkers().Should().HaveCount(expected: 1);
     }
 
     [Fact]
     public void Heartbeat_UnknownWorker_ReturnsFalse()
     {
         InMemoryRemoteWorkerRegistry sut = new();
-        sut.Heartbeat("never-registered").Should().BeFalse();
+        sut.Heartbeat(workerId: "never-registered").Should().BeFalse();
     }
 
     [Fact]
@@ -52,42 +52,42 @@ public class InMemoryRemoteWorkerRegistryTests
     {
         // Tight stale threshold proves heartbeat keeps the worker from
         // being evicted as stale.
-        DateTime t0 = new(2026, 4, 17, 12, 0, 0, DateTimeKind.Utc);
+        DateTime t0 = new(year: 2026, month: 4, day: 17, hour: 12, minute: 0, second: 0, kind: DateTimeKind.Utc);
         DateTime now = t0;
         InMemoryRemoteWorkerRegistry sut = new(
-            staleAfter: TimeSpan.FromSeconds(10),
+            staleAfter: TimeSpan.FromSeconds(seconds: 10),
             clock: () => now
         );
-        sut.Register(MakeWorker("beast"));
+        sut.Register(worker: MakeWorker(id: "beast"));
 
         // Advance past stale threshold, heartbeat, then advance again.
-        now = t0.AddSeconds(9);
-        sut.Heartbeat("beast").Should().BeTrue();
-        now = t0.AddSeconds(15); // 6s past the refresh → still within 10s
+        now = t0.AddSeconds(value: 9);
+        sut.Heartbeat(workerId: "beast").Should().BeTrue();
+        now = t0.AddSeconds(value: 15); // 6s past the refresh → still within 10s
 
-        sut.GetActiveWorkers().Should().HaveCount(1);
+        sut.GetActiveWorkers().Should().HaveCount(expected: 1);
     }
 
     [Fact]
     public void Unregister_RemovesWorker()
     {
         InMemoryRemoteWorkerRegistry sut = new();
-        sut.Register(MakeWorker("w"));
-        sut.Unregister("w").Should().BeTrue();
+        sut.Register(worker: MakeWorker(id: "w"));
+        sut.Unregister(workerId: "w").Should().BeTrue();
         sut.GetActiveWorkers().Should().BeEmpty();
     }
 
     [Fact]
     public void GetActiveWorkers_EvictsStale()
     {
-        DateTime now = new(2026, 4, 17, 12, 0, 0, DateTimeKind.Utc);
+        DateTime now = new(year: 2026, month: 4, day: 17, hour: 12, minute: 0, second: 0, kind: DateTimeKind.Utc);
         InMemoryRemoteWorkerRegistry sut = new(
-            staleAfter: TimeSpan.FromSeconds(30),
+            staleAfter: TimeSpan.FromSeconds(seconds: 30),
             clock: () => now
         );
-        sut.Register(MakeWorker("ghost"));
+        sut.Register(worker: MakeWorker(id: "ghost"));
 
-        now = now.AddSeconds(31);
+        now = now.AddSeconds(value: 31);
 
         sut.GetActiveWorkers().Should().BeEmpty();
     }
@@ -98,15 +98,15 @@ public class InMemoryRemoteWorkerRegistryTests
         // Registry may churn mid-dispatch. The snapshot returned must be
         // an independent array so the caller iterates safely.
         InMemoryRemoteWorkerRegistry sut = new();
-        sut.Register(MakeWorker("a"));
-        sut.Register(MakeWorker("b"));
+        sut.Register(worker: MakeWorker(id: "a"));
+        sut.Register(worker: MakeWorker(id: "b"));
 
         IReadOnlyList<IRemoteWorker> snapshot = sut.GetActiveWorkers();
 
         // Mutate after snapshot — snapshot must not change.
-        sut.Unregister("a");
+        sut.Unregister(workerId: "a");
 
-        snapshot.Should().HaveCount(2);
+        snapshot.Should().HaveCount(expected: 2);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -116,68 +116,68 @@ public class InMemoryRemoteWorkerRegistryTests
     [Fact]
     public void RecordTaskOutcome_ConsecutiveFailures_PushesWorkerIntoCooldown()
     {
-        DateTime now = new(2026, 4, 17, 12, 0, 0, DateTimeKind.Utc);
+        DateTime now = new(year: 2026, month: 4, day: 17, hour: 12, minute: 0, second: 0, kind: DateTimeKind.Utc);
         InMemoryRemoteWorkerRegistry sut = new(
-            staleAfter: TimeSpan.FromMinutes(10),
-            cooldownDuration: TimeSpan.FromMinutes(2),
+            staleAfter: TimeSpan.FromMinutes(minutes: 10),
+            cooldownDuration: TimeSpan.FromMinutes(minutes: 2),
             clock: () => now
         );
-        sut.Register(MakeWorker("flaky"));
+        sut.Register(worker: MakeWorker(id: "flaky"));
 
-        sut.RecordTaskOutcome("flaky", success: false);
-        sut.RecordTaskOutcome("flaky", success: false);
-        sut.RecordTaskOutcome("flaky", success: false);
+        sut.RecordTaskOutcome(workerId: "flaky", success: false);
+        sut.RecordTaskOutcome(workerId: "flaky", success: false);
+        sut.RecordTaskOutcome(workerId: "flaky", success: false);
 
-        sut.GetActiveWorkers().Should().BeEmpty("3 consecutive failures must trigger cooldown");
+        sut.GetActiveWorkers().Should().BeEmpty(because: "3 consecutive failures must trigger cooldown");
 
         IReadOnlyList<WorkerHealthSnapshot> snapshot = sut.GetAllWorkersWithHealth();
-        snapshot.Should().HaveCount(1);
-        snapshot[0].ConsecutiveFailures.Should().Be(3);
-        snapshot[0].CooldownUntilUtc.Should().NotBeNull();
+        snapshot.Should().HaveCount(expected: 1);
+        snapshot[index: 0].ConsecutiveFailures.Should().Be(expected: 3);
+        snapshot[index: 0].CooldownUntilUtc.Should().NotBeNull();
     }
 
     [Fact]
     public void RecordTaskOutcome_SuccessClearsFailureCount()
     {
-        DateTime now = new(2026, 4, 17, 12, 0, 0, DateTimeKind.Utc);
+        DateTime now = new(year: 2026, month: 4, day: 17, hour: 12, minute: 0, second: 0, kind: DateTimeKind.Utc);
         InMemoryRemoteWorkerRegistry sut = new(
-            staleAfter: TimeSpan.FromMinutes(10),
-            cooldownDuration: TimeSpan.FromMinutes(2),
+            staleAfter: TimeSpan.FromMinutes(minutes: 10),
+            cooldownDuration: TimeSpan.FromMinutes(minutes: 2),
             clock: () => now
         );
-        sut.Register(MakeWorker("recovering"));
+        sut.Register(worker: MakeWorker(id: "recovering"));
 
-        sut.RecordTaskOutcome("recovering", success: false);
-        sut.RecordTaskOutcome("recovering", success: false);
-        sut.RecordTaskOutcome("recovering", success: true);
-        sut.RecordTaskOutcome("recovering", success: false);
+        sut.RecordTaskOutcome(workerId: "recovering", success: false);
+        sut.RecordTaskOutcome(workerId: "recovering", success: false);
+        sut.RecordTaskOutcome(workerId: "recovering", success: true);
+        sut.RecordTaskOutcome(workerId: "recovering", success: false);
 
         // Failure counter reset on success — latest single failure doesn't
         // push to cooldown.
-        sut.GetActiveWorkers().Should().HaveCount(1);
+        sut.GetActiveWorkers().Should().HaveCount(expected: 1);
     }
 
     [Fact]
     public void Cooldown_LiftsAutomaticallyAfterDuration()
     {
-        DateTime now = new(2026, 4, 17, 12, 0, 0, DateTimeKind.Utc);
+        DateTime now = new(year: 2026, month: 4, day: 17, hour: 12, minute: 0, second: 0, kind: DateTimeKind.Utc);
         InMemoryRemoteWorkerRegistry sut = new(
-            staleAfter: TimeSpan.FromMinutes(10),
-            cooldownDuration: TimeSpan.FromMinutes(2),
+            staleAfter: TimeSpan.FromMinutes(minutes: 10),
+            cooldownDuration: TimeSpan.FromMinutes(minutes: 2),
             clock: () => now
         );
-        sut.Register(MakeWorker("w"));
-        sut.RecordTaskOutcome("w", false);
-        sut.RecordTaskOutcome("w", false);
-        sut.RecordTaskOutcome("w", false);
+        sut.Register(worker: MakeWorker(id: "w"));
+        sut.RecordTaskOutcome(workerId: "w", success: false);
+        sut.RecordTaskOutcome(workerId: "w", success: false);
+        sut.RecordTaskOutcome(workerId: "w", success: false);
 
         sut.GetActiveWorkers().Should().BeEmpty(); // In cooldown.
 
         // Advance past cooldown window + heartbeat refresh to keep it non-stale.
-        now = now.AddMinutes(3);
-        sut.Register(MakeWorker("w")); // Re-register refreshes LastSeenUtc AND clears cooldown per contract.
+        now = now.AddMinutes(value: 3);
+        sut.Register(worker: MakeWorker(id: "w")); // Re-register refreshes LastSeenUtc AND clears cooldown per contract.
 
-        sut.GetActiveWorkers().Should().HaveCount(1);
+        sut.GetActiveWorkers().Should().HaveCount(expected: 1);
     }
 
     [Fact]
@@ -185,22 +185,22 @@ public class InMemoryRemoteWorkerRegistryTests
     {
         // A worker that self-re-registers (e.g. after a restart) is claiming
         // to be healthy again. Wipe the cooldown so it returns to rotation.
-        DateTime now = new(2026, 4, 17, 12, 0, 0, DateTimeKind.Utc);
+        DateTime now = new(year: 2026, month: 4, day: 17, hour: 12, minute: 0, second: 0, kind: DateTimeKind.Utc);
         InMemoryRemoteWorkerRegistry sut = new(
-            staleAfter: TimeSpan.FromMinutes(10),
-            cooldownDuration: TimeSpan.FromMinutes(2),
+            staleAfter: TimeSpan.FromMinutes(minutes: 10),
+            cooldownDuration: TimeSpan.FromMinutes(minutes: 2),
             clock: () => now
         );
-        sut.Register(MakeWorker("w"));
-        sut.RecordTaskOutcome("w", false);
-        sut.RecordTaskOutcome("w", false);
-        sut.RecordTaskOutcome("w", false);
+        sut.Register(worker: MakeWorker(id: "w"));
+        sut.RecordTaskOutcome(workerId: "w", success: false);
+        sut.RecordTaskOutcome(workerId: "w", success: false);
+        sut.RecordTaskOutcome(workerId: "w", success: false);
 
         sut.GetActiveWorkers().Should().BeEmpty();
 
-        sut.Register(MakeWorker("w"));
+        sut.Register(worker: MakeWorker(id: "w"));
 
-        sut.GetActiveWorkers().Should().HaveCount(1, "re-register must clear cooldown");
+        sut.GetActiveWorkers().Should().HaveCount(expected: 1, because: "re-register must clear cooldown");
     }
 
     [Fact]
@@ -208,35 +208,35 @@ public class InMemoryRemoteWorkerRegistryTests
     {
         // Hidden from dispatch ≠ hidden from the operator. Dashboard lists
         // everyone so the user can see "workerX is cooling down, 3 failures".
-        DateTime now = new(2026, 4, 17, 12, 0, 0, DateTimeKind.Utc);
+        DateTime now = new(year: 2026, month: 4, day: 17, hour: 12, minute: 0, second: 0, kind: DateTimeKind.Utc);
         InMemoryRemoteWorkerRegistry sut = new(
-            staleAfter: TimeSpan.FromMinutes(10),
-            cooldownDuration: TimeSpan.FromMinutes(2),
+            staleAfter: TimeSpan.FromMinutes(minutes: 10),
+            cooldownDuration: TimeSpan.FromMinutes(minutes: 2),
             clock: () => now
         );
-        sut.Register(MakeWorker("healthy"));
-        sut.Register(MakeWorker("cooling"));
-        sut.RecordTaskOutcome("cooling", false);
-        sut.RecordTaskOutcome("cooling", false);
-        sut.RecordTaskOutcome("cooling", false);
+        sut.Register(worker: MakeWorker(id: "healthy"));
+        sut.Register(worker: MakeWorker(id: "cooling"));
+        sut.RecordTaskOutcome(workerId: "cooling", success: false);
+        sut.RecordTaskOutcome(workerId: "cooling", success: false);
+        sut.RecordTaskOutcome(workerId: "cooling", success: false);
 
-        sut.GetActiveWorkers().Should().HaveCount(1);
-        sut.GetAllWorkersWithHealth().Should().HaveCount(2);
+        sut.GetActiveWorkers().Should().HaveCount(expected: 1);
+        sut.GetAllWorkersWithHealth().Should().HaveCount(expected: 2);
     }
 
     [Fact]
     public void RecordTaskOutcome_UnknownWorker_IsNoOp()
     {
         InMemoryRemoteWorkerRegistry sut = new();
-        Action act = () => sut.RecordTaskOutcome("never-registered", success: false);
+        Action act = () => sut.RecordTaskOutcome(workerId: "never-registered", success: false);
         act.Should().NotThrow();
     }
 
     private static IRemoteWorker MakeWorker(string id)
     {
         Mock<IRemoteWorker> mock = new();
-        mock.SetupGet(w => w.WorkerId).Returns(id);
-        mock.Setup(w => w.GetAvailableBudget()).Returns(new ResourceBudgetSnapshot(0, 4, 0));
+        mock.SetupGet(expression: w => w.WorkerId).Returns(value: id);
+        mock.Setup(expression: w => w.GetAvailableBudget()).Returns(value: new ResourceBudgetSnapshot(AvailableGpuSlots: 0, AvailableCpuThreads: 4, GpuUtilization: 0));
         return mock.Object;
     }
 }

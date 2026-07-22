@@ -22,12 +22,12 @@ namespace NoMercy.Tests.Storage;
 // once for the whole assembly and torn down after the last test.
 // ============================================================================
 
-[Collection("StorageBackends")]
+[Collection(name: "StorageBackends")]
 public sealed class S3LiveTests(StorageBackendsFixture fix)
 {
     private S3StorageDriver Driver()
     {
-        Skip.If(!fix.Available, fix.StartupError ?? "storage container not available");
+        Skip.If(condition: !fix.Available, reason: fix.StartupError ?? "storage container not available");
         return fix.BuildS3Driver();
     }
 
@@ -45,9 +45,9 @@ public sealed class S3LiveTests(StorageBackendsFixture fix)
     {
         using S3StorageDriver driver = Driver();
         List<string> entries = driver
-            .EnumerateFileSystemEntries("/", "*", SearchOption.TopDirectoryOnly)
+            .EnumerateFileSystemEntries(directory: "/", searchPattern: "*", option: SearchOption.TopDirectoryOnly)
             .ToList();
-        Console.WriteLine($"[S3] root entry count: {entries.Count}");
+        Console.WriteLine(value: $"[S3] root entry count: {entries.Count}");
     }
 
     [SkippableFact]
@@ -55,23 +55,23 @@ public sealed class S3LiveTests(StorageBackendsFixture fix)
     {
         using S3StorageDriver driver = Driver();
         string marker = $"{ScratchName()}.bin";
-        await using (Stream w = driver.OpenWrite(marker, overwrite: true))
-            await w.WriteAsync(new byte[4]);
+        await using (Stream w = driver.OpenWrite(path: marker, overwrite: true))
+            await w.WriteAsync(buffer: new byte[4]);
 
         try
         {
             List<string> entries = driver
-                .EnumerateFileSystemEntries("/", "*", SearchOption.TopDirectoryOnly)
+                .EnumerateFileSystemEntries(directory: "/", searchPattern: "*", option: SearchOption.TopDirectoryOnly)
                 .ToList();
 
             // Entries are driver-relative — never prefixed with a leading slash
             // or the bucket name.
-            entries.Should().NotContain(e => e.StartsWith('/'));
-            entries.Should().Contain(e => e.EndsWith(marker, StringComparison.Ordinal));
+            entries.Should().NotContain(predicate: e => e.StartsWith('/'));
+            entries.Should().Contain(predicate: e => e.EndsWith(marker, StringComparison.Ordinal));
         }
         finally
         {
-            driver.DeleteFile(marker);
+            driver.DeleteFile(path: marker);
         }
     }
 
@@ -81,16 +81,16 @@ public sealed class S3LiveTests(StorageBackendsFixture fix)
         using S3StorageDriver driver = Driver();
         string dir = ScratchName();
         string file = $"{dir}/item.bin";
-        await using (Stream w = driver.OpenWrite(file, overwrite: true))
-            await w.WriteAsync(new byte[4]);
+        await using (Stream w = driver.OpenWrite(path: file, overwrite: true))
+            await w.WriteAsync(buffer: new byte[4]);
 
         try
         {
-            driver.DirectoryExists(dir).Should().BeTrue($"DirectoryExists('{dir}') must be true");
+            driver.DirectoryExists(path: dir).Should().BeTrue(because: $"DirectoryExists('{dir}') must be true");
         }
         finally
         {
-            driver.DeleteDirectory(dir, recursive: true);
+            driver.DeleteDirectory(path: dir, recursive: true);
         }
     }
 
@@ -99,16 +99,16 @@ public sealed class S3LiveTests(StorageBackendsFixture fix)
     {
         using S3StorageDriver driver = Driver();
         string file = $"{ScratchName()}.bin";
-        await using (Stream w = driver.OpenWrite(file, overwrite: true))
-            await w.WriteAsync(new byte[8]);
+        await using (Stream w = driver.OpenWrite(path: file, overwrite: true))
+            await w.WriteAsync(buffer: new byte[8]);
 
         try
         {
-            driver.FileExists(file).Should().BeTrue();
+            driver.FileExists(path: file).Should().BeTrue();
         }
         finally
         {
-            driver.DeleteFile(file);
+            driver.DeleteFile(path: file);
         }
     }
 
@@ -120,18 +120,18 @@ public sealed class S3LiveTests(StorageBackendsFixture fix)
 
         try
         {
-            driver.CreateDirectory(scratch);
-            driver.DirectoryExists(scratch).Should().BeTrue();
+            driver.CreateDirectory(path: scratch);
+            driver.DirectoryExists(path: scratch).Should().BeTrue();
         }
         finally
         {
             try
             {
-                driver.DeleteDirectory(scratch, recursive: true);
+                driver.DeleteDirectory(path: scratch, recursive: true);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[S3] cleanup warning: {ex.Message}");
+                Console.WriteLine(value: $"[S3] cleanup warning: {ex.Message}");
             }
         }
 
@@ -144,27 +144,27 @@ public sealed class S3LiveTests(StorageBackendsFixture fix)
         using S3StorageDriver driver = Driver();
         string scratch = $"{ScratchName()}.bin";
         byte[] expected = new byte[16 * 1024];
-        new Random(1337).NextBytes(expected);
+        new Random(Seed: 1337).NextBytes(buffer: expected);
 
         try
         {
-            await using (Stream w = driver.OpenWrite(scratch, overwrite: true))
-                await w.WriteAsync(expected);
+            await using (Stream w = driver.OpenWrite(path: scratch, overwrite: true))
+                await w.WriteAsync(buffer: expected);
 
-            await using Stream r = driver.OpenRead(scratch);
+            await using Stream r = driver.OpenRead(path: scratch);
             using MemoryStream ms = new();
-            await r.CopyToAsync(ms);
-            ms.ToArray().Should().Equal(expected);
+            await r.CopyToAsync(destination: ms);
+            ms.ToArray().Should().Equal(elements: expected);
         }
         finally
         {
             try
             {
-                driver.DeleteFile(scratch);
+                driver.DeleteFile(path: scratch);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[S3] cleanup warning: {ex.Message}");
+                Console.WriteLine(value: $"[S3] cleanup warning: {ex.Message}");
             }
         }
     }
@@ -175,24 +175,24 @@ public sealed class S3LiveTests(StorageBackendsFixture fix)
         using S3StorageDriver driver = Driver();
         string scratch = $"{ScratchName()}.bin";
         byte[] data = new byte[256];
-        new Random(42).NextBytes(data);
+        new Random(Seed: 42).NextBytes(buffer: data);
 
         try
         {
-            await using (Stream w = driver.OpenWrite(scratch, overwrite: true))
-                await w.WriteAsync(data);
+            await using (Stream w = driver.OpenWrite(path: scratch, overwrite: true))
+                await w.WriteAsync(buffer: data);
 
-            driver.GetFileSize(scratch).Should().Be(256);
+            driver.GetFileSize(path: scratch).Should().Be(expected: 256);
         }
         finally
         {
             try
             {
-                driver.DeleteFile(scratch);
+                driver.DeleteFile(path: scratch);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[S3] cleanup warning: {ex.Message}");
+                Console.WriteLine(value: $"[S3] cleanup warning: {ex.Message}");
             }
         }
     }
@@ -206,21 +206,21 @@ public sealed class S3LiveTests(StorageBackendsFixture fix)
 
         try
         {
-            await using (Stream w = driver.OpenWrite(scratch, overwrite: true))
-                await w.WriteAsync(data);
+            await using (Stream w = driver.OpenWrite(path: scratch, overwrite: true))
+                await w.WriteAsync(buffer: data);
 
-            DateTime mtime = driver.GetLastWriteTimeUtc(scratch);
-            mtime.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(5));
+            DateTime mtime = driver.GetLastWriteTimeUtc(path: scratch);
+            mtime.Should().BeCloseTo(nearbyTime: DateTime.UtcNow, precision: TimeSpan.FromMinutes(minutes: 5));
         }
         finally
         {
             try
             {
-                driver.DeleteFile(scratch);
+                driver.DeleteFile(path: scratch);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[S3] cleanup warning: {ex.Message}");
+                Console.WriteLine(value: $"[S3] cleanup warning: {ex.Message}");
             }
         }
     }
@@ -232,32 +232,32 @@ public sealed class S3LiveTests(StorageBackendsFixture fix)
         string src = $"{ScratchName()}-src.bin";
         string dst = $"{ScratchName()}-dst.bin";
         byte[] data = new byte[64];
-        new Random(7).NextBytes(data);
+        new Random(Seed: 7).NextBytes(buffer: data);
 
         try
         {
-            await using (Stream w = driver.OpenWrite(src, overwrite: true))
-                await w.WriteAsync(data);
+            await using (Stream w = driver.OpenWrite(path: src, overwrite: true))
+                await w.WriteAsync(buffer: data);
 
-            driver.MoveFile(src, dst);
+            driver.MoveFile(source: src, destination: dst);
 
-            driver.FileExists(src).Should().BeFalse();
-            driver.FileExists(dst).Should().BeTrue();
+            driver.FileExists(path: src).Should().BeFalse();
+            driver.FileExists(path: dst).Should().BeTrue();
 
-            await using Stream r = driver.OpenRead(dst);
+            await using Stream r = driver.OpenRead(path: dst);
             using MemoryStream ms = new();
-            await r.CopyToAsync(ms);
-            ms.ToArray().Should().Equal(data);
+            await r.CopyToAsync(destination: ms);
+            ms.ToArray().Should().Equal(elements: data);
         }
         finally
         {
             try
             {
-                driver.DeleteFile(dst);
+                driver.DeleteFile(path: dst);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[S3] cleanup warning: {ex.Message}");
+                Console.WriteLine(value: $"[S3] cleanup warning: {ex.Message}");
             }
         }
     }
@@ -269,36 +269,36 @@ public sealed class S3LiveTests(StorageBackendsFixture fix)
         string src = $"{ScratchName()}-src.bin";
         string dst = $"{ScratchName()}-dst.bin";
         byte[] data = new byte[64];
-        new Random(99).NextBytes(data);
+        new Random(Seed: 99).NextBytes(buffer: data);
 
         try
         {
-            await using (Stream w = driver.OpenWrite(src, overwrite: true))
-                await w.WriteAsync(data);
+            await using (Stream w = driver.OpenWrite(path: src, overwrite: true))
+                await w.WriteAsync(buffer: data);
 
-            driver.CopyFile(src, dst, overwrite: true);
+            driver.CopyFile(source: src, destination: dst, overwrite: true);
 
-            driver.FileExists(src).Should().BeTrue();
-            driver.FileExists(dst).Should().BeTrue();
+            driver.FileExists(path: src).Should().BeTrue();
+            driver.FileExists(path: dst).Should().BeTrue();
         }
         finally
         {
             try
             {
-                driver.DeleteFile(src);
+                driver.DeleteFile(path: src);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[S3] cleanup warning (src): {ex.Message}");
+                Console.WriteLine(value: $"[S3] cleanup warning (src): {ex.Message}");
             }
 
             try
             {
-                driver.DeleteFile(dst);
+                driver.DeleteFile(path: dst);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[S3] cleanup warning (dst): {ex.Message}");
+                Console.WriteLine(value: $"[S3] cleanup warning (dst): {ex.Message}");
             }
         }
     }
@@ -312,21 +312,21 @@ public sealed class S3LiveTests(StorageBackendsFixture fix)
 
         try
         {
-            await using (Stream w = driver.OpenWrite(scratch, overwrite: true))
-                await w.WriteAsync(data);
+            await using (Stream w = driver.OpenWrite(path: scratch, overwrite: true))
+                await w.WriteAsync(buffer: data);
 
-            Action act = () => driver.OpenWrite(scratch, overwrite: false);
+            Action act = () => driver.OpenWrite(path: scratch, overwrite: false);
             act.Should().Throw<IOException>();
         }
         finally
         {
             try
             {
-                driver.DeleteFile(scratch);
+                driver.DeleteFile(path: scratch);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[S3] cleanup warning: {ex.Message}");
+                Console.WriteLine(value: $"[S3] cleanup warning: {ex.Message}");
             }
         }
     }
@@ -343,34 +343,34 @@ public sealed class S3LiveTests(StorageBackendsFixture fix)
 
         try
         {
-            await using (Stream w = driver.OpenWrite(fileA, overwrite: true))
-                await w.WriteAsync(bytes);
-            await using (Stream w = driver.OpenWrite(fileB, overwrite: true))
-                await w.WriteAsync(bytes);
-            await using (Stream w = driver.OpenWrite(fileC, overwrite: true))
-                await w.WriteAsync(bytes);
+            await using (Stream w = driver.OpenWrite(path: fileA, overwrite: true))
+                await w.WriteAsync(buffer: bytes);
+            await using (Stream w = driver.OpenWrite(path: fileB, overwrite: true))
+                await w.WriteAsync(buffer: bytes);
+            await using (Stream w = driver.OpenWrite(path: fileC, overwrite: true))
+                await w.WriteAsync(buffer: bytes);
 
             List<string> txtEntries = driver
-                .EnumerateFileSystemEntries(dir, "*.txt", SearchOption.TopDirectoryOnly)
+                .EnumerateFileSystemEntries(directory: dir, searchPattern: "*.txt", option: SearchOption.TopDirectoryOnly)
                 .ToList();
-            txtEntries.Should().HaveCount(2);
-            txtEntries.Should().Contain(e => e.EndsWith("a.txt", StringComparison.Ordinal));
-            txtEntries.Should().Contain(e => e.EndsWith("b.txt", StringComparison.Ordinal));
+            txtEntries.Should().HaveCount(expected: 2);
+            txtEntries.Should().Contain(predicate: e => e.EndsWith("a.txt", StringComparison.Ordinal));
+            txtEntries.Should().Contain(predicate: e => e.EndsWith("b.txt", StringComparison.Ordinal));
 
             List<string> recursive = driver
-                .EnumerateFileSystemEntries(dir, "*.txt", SearchOption.AllDirectories)
+                .EnumerateFileSystemEntries(directory: dir, searchPattern: "*.txt", option: SearchOption.AllDirectories)
                 .ToList();
-            recursive.Should().HaveCount(2);
+            recursive.Should().HaveCount(expected: 2);
         }
         finally
         {
             try
             {
-                driver.DeleteDirectory(dir, recursive: true);
+                driver.DeleteDirectory(path: dir, recursive: true);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[S3] cleanup warning: {ex.Message}");
+                Console.WriteLine(value: $"[S3] cleanup warning: {ex.Message}");
             }
         }
     }
@@ -379,8 +379,8 @@ public sealed class S3LiveTests(StorageBackendsFixture fix)
     public void IsHidden_dotfiles_are_hidden()
     {
         using S3StorageDriver driver = Driver();
-        bool result = driver.IsHidden(".hidden-file");
-        result.Should().BeFalse("S3 has no hidden attribute — IsHidden always returns false");
+        bool result = driver.IsHidden(path: ".hidden-file");
+        result.Should().BeFalse(because: "S3 has no hidden attribute — IsHidden always returns false");
     }
 
     [SkippableFact]
@@ -394,19 +394,19 @@ public sealed class S3LiveTests(StorageBackendsFixture fix)
 
         try
         {
-            await using (Stream w = driver.OpenWrite(file, overwrite: true))
-                await w.WriteAsync(data);
+            await using (Stream w = driver.OpenWrite(path: file, overwrite: true))
+                await w.WriteAsync(buffer: data);
 
-            driver.MoveDirectory(src, dst);
+            driver.MoveDirectory(source: src, destination: dst);
 
-            driver.DirectoryExists(src).Should().BeFalse();
-            driver.DirectoryExists(dst).Should().BeTrue();
+            driver.DirectoryExists(path: src).Should().BeFalse();
+            driver.DirectoryExists(path: dst).Should().BeTrue();
         }
         finally
         {
             try
             {
-                driver.DeleteDirectory(src, recursive: true);
+                driver.DeleteDirectory(path: src, recursive: true);
             }
             catch
             {
@@ -415,11 +415,11 @@ public sealed class S3LiveTests(StorageBackendsFixture fix)
 
             try
             {
-                driver.DeleteDirectory(dst, recursive: true);
+                driver.DeleteDirectory(path: dst, recursive: true);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[S3] cleanup warning: {ex.Message}");
+                Console.WriteLine(value: $"[S3] cleanup warning: {ex.Message}");
             }
         }
     }

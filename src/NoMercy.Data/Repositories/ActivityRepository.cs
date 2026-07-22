@@ -32,30 +32,30 @@ public class ActivityRepository(MediaContext context) : IActivityRepository
     {
         IQueryable<ActivityLog> query = context
             .ActivityLogs.AsNoTracking()
-            .Include(activityLog => activityLog.Device)
-            .Include(activityLog => activityLog.User);
+            .Include(navigationPropertyPath: activityLog => activityLog.Device)
+            .Include(navigationPropertyPath: activityLog => activityLog.User);
 
         if (category is { } cat)
-            query = query.Where(activityLog => activityLog.Category == cat);
+            query = query.Where(predicate: activityLog => activityLog.Category == cat);
         if (userId is { } uid)
-            query = query.Where(activityLog => activityLog.UserId == uid);
+            query = query.Where(predicate: activityLog => activityLog.UserId == uid);
         if (deviceId is { } did)
-            query = query.Where(activityLog => activityLog.DeviceId == did);
+            query = query.Where(predicate: activityLog => activityLog.DeviceId == did);
         if (mediaId is { } mid)
-            query = query.Where(activityLog => activityLog.MediaId == mid);
+            query = query.Where(predicate: activityLog => activityLog.MediaId == mid);
         if (from is { } f)
-            query = query.Where(activityLog => activityLog.CreatedAt >= f);
+            query = query.Where(predicate: activityLog => activityLog.CreatedAt >= f);
         if (to is { } t)
-            query = query.Where(activityLog => activityLog.CreatedAt <= t);
+            query = query.Where(predicate: activityLog => activityLog.CreatedAt <= t);
         if (success is { } s)
-            query = query.Where(activityLog => activityLog.Success == s);
+            query = query.Where(predicate: activityLog => activityLog.Success == s);
 
         return query
-            .OrderByDescending(activityLog => activityLog.CreatedAt)
-            .ThenByDescending(activityLog => activityLog.Id)
-            .Skip(skip)
-            .Take(take)
-            .ToListAsync(ct);
+            .OrderByDescending(keySelector: activityLog => activityLog.CreatedAt)
+            .ThenByDescending(keySelector: activityLog => activityLog.Id)
+            .Skip(count: skip)
+            .Take(count: take)
+            .ToListAsync(cancellationToken: ct);
     }
 
     public Task<int> DeleteAsync(
@@ -67,10 +67,10 @@ public class ActivityRepository(MediaContext context) : IActivityRepository
         IQueryable<ActivityLog> query = context.ActivityLogs;
 
         if (category is { } cat)
-            query = query.Where(activityLog => activityLog.Category == cat);
+            query = query.Where(predicate: activityLog => activityLog.Category == cat);
         if (before is { } cutoff)
-            query = query.Where(activityLog => activityLog.CreatedAt < cutoff);
+            query = query.Where(predicate: activityLog => activityLog.CreatedAt < cutoff);
 
-        return query.ExecuteDeleteAsync(ct);
+        return query.ExecuteDeleteAsync(cancellationToken: ct);
     }
 }

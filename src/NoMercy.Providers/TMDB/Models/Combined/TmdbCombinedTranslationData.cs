@@ -15,21 +15,21 @@ namespace NoMercy.Providers.TMDB.Models.Combined;
 
 public class TmdbCombinedTranslationData
 {
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string? Name { get; set; }
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string? Title { get; set; }
 
-    [JsonProperty("overview")]
+    [JsonProperty(propertyName: "overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty("homepage")]
+    [JsonProperty(propertyName: "homepage")]
     public Uri? Homepage { get; set; }
 
-    [JsonProperty("biography")]
+    [JsonProperty(propertyName: "biography")]
     public string? Biography { get; set; }
 
-    [JsonProperty("tagline")]
+    [JsonProperty(propertyName: "tagline")]
     public string? Tagline { get; set; }
 }

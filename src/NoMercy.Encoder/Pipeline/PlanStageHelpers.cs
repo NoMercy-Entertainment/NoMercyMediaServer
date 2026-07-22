@@ -43,8 +43,8 @@ internal static class PlanStageHelpers
             profile.Ladder is { Mode: LadderMode.Manual, Rungs: { Length: > 0 } rungs }
         )
         {
-            VideoOutput reference = profile.Video ?? BuildSyntheticReference(rungs[0]);
-            return rungs.Select(r => RungToVideoOutput(r, reference)).ToArray();
+            VideoOutput reference = profile.Video ?? BuildSyntheticReference(rung: rungs[0]);
+            return rungs.Select(selector: r => RungToVideoOutput(rung: r, reference: reference)).ToArray();
         }
 
         if (profile.Video is null)

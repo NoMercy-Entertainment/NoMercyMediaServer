@@ -16,7 +16,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Media;
 
-[Trait("Category", "Home")]
+[Trait(name: "Category", value: "Home")]
 public class HomeControllerTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly HttpClient _authed;
@@ -31,49 +31,49 @@ public class HomeControllerTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Index_Authenticated_ReturnsPaginatedEnvelope()
     {
-        HttpResponseMessage response = await _authed.GetAsync("/api/v1?take=10&page=0");
+        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1?take=10&page=0");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument document = JsonDocument.Parse(body);
+        using JsonDocument document = JsonDocument.Parse(json: body);
 
         Assert.True(
-            document.RootElement.TryGetProperty("data", out JsonElement data),
-            "Home page response must expose a 'data' array"
+            condition: document.RootElement.TryGetProperty(propertyName: "data", value: out JsonElement data),
+            userMessage: "Home page response must expose a 'data' array"
         );
-        Assert.Equal(JsonValueKind.Array, data.ValueKind);
+        Assert.Equal(expected: JsonValueKind.Array, actual: data.ValueKind);
     }
 
     [Fact]
     public async Task Index_Unauthenticated_DoesNotReturnOk()
     {
-        HttpResponseMessage response = await _unauthed.GetAsync("/api/v1?take=10&page=0");
+        HttpResponseMessage response = await _unauthed.GetAsync(requestUri: "/api/v1?take=10&page=0");
 
-        Assert.NotEqual(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.OK, actual: response.StatusCode);
     }
 
     [Fact]
     public async Task Index_NonLolomo_Page0_ContainsLatestInLibraryRow()
     {
-        HttpResponseMessage response = await _authed.GetAsync("/api/v1?take=10&page=0");
+        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1?take=10&page=0");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument document = JsonDocument.Parse(body);
-        JsonElement data = document.RootElement.GetProperty("data");
+        using JsonDocument document = JsonDocument.Parse(json: body);
+        JsonElement data = document.RootElement.GetProperty(propertyName: "data");
 
         bool hasLatestInRow = data.EnumerateArray()
-            .Any(row =>
-                row.TryGetProperty("title", out JsonElement title)
+            .Any(predicate: row =>
+                row.TryGetProperty(propertyName: "title", value: out JsonElement title)
                 && title.GetString() is not null
-                && title.GetString()!.StartsWith("Latest in ", StringComparison.Ordinal)
+                && title.GetString()!.StartsWith(value: "Latest in ", comparisonType: StringComparison.Ordinal)
             );
 
         Assert.True(
-            hasLatestInRow,
-            "Non-lolomo home page 0 must include a 'Latest in {library}' row"
+            condition: hasLatestInRow,
+            userMessage: "Non-lolomo home page 0 must include a 'Latest in {library}' row"
         );
     }
 
@@ -81,25 +81,25 @@ public class HomeControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task Index_Lolomo_Page0_DoesNotContainLatestInLibraryRow()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            "/api/v1?take=10&page=0&version=lolomo"
+            requestUri: "/api/v1?take=10&page=0&version=lolomo"
         );
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument document = JsonDocument.Parse(body);
-        JsonElement data = document.RootElement.GetProperty("data");
+        using JsonDocument document = JsonDocument.Parse(json: body);
+        JsonElement data = document.RootElement.GetProperty(propertyName: "data");
 
         bool hasLatestInRow = data.EnumerateArray()
-            .Any(row =>
-                row.TryGetProperty("title", out JsonElement title)
+            .Any(predicate: row =>
+                row.TryGetProperty(propertyName: "title", value: out JsonElement title)
                 && title.GetString() is not null
-                && title.GetString()!.StartsWith("Latest in ", StringComparison.Ordinal)
+                && title.GetString()!.StartsWith(value: "Latest in ", comparisonType: StringComparison.Ordinal)
             );
 
         Assert.False(
-            hasLatestInRow,
-            "Lolomo home page 0 must not include a 'Latest in {library}' row"
+            condition: hasLatestInRow,
+            userMessage: "Lolomo home page 0 must not include a 'Latest in {library}' row"
         );
     }
 }

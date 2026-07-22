@@ -16,24 +16,24 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Common;
 
-[Index(nameof(Iso31661), IsUnique = true)]
-[Index(nameof(EnglishName))]
-[Index(nameof(NativeName))]
-[PrimaryKey(nameof(Id))]
+[Index(propertyName: nameof(Iso31661), IsUnique = true)]
+[Index(propertyName: nameof(EnglishName))]
+[Index(propertyName: nameof(NativeName))]
+[PrimaryKey(propertyName: nameof(Id))]
 public class Country
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    [JsonProperty("id")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.Identity)]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
     [Key]
-    [JsonProperty("iso_3166_1")]
+    [JsonProperty(propertyName: "iso_3166_1")]
     public string Iso31661 { get; set; } = string.Empty;
 
-    [JsonProperty("english_name")]
+    [JsonProperty(propertyName: "english_name")]
     public string? EnglishName { get; set; }
 
-    [JsonProperty("native_name")]
+    [JsonProperty(propertyName: "native_name")]
     public string? NativeName { get; set; }
 
     // public Country(Providers.TMDB.Models.Configuration.TmdbCountry tmdbCountry)

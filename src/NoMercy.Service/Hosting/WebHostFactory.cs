@@ -41,16 +41,16 @@ public static class WebHostFactory
         builder.Services.AddSingleton<IApiKeyStore, ApiKeyStore>();
         builder.Services.AddSingleton<IApiKeyLoader, ApiKeyLoader>();
 
-        builder.Services.Configure<ServerConfiguration>(builder.Configuration.GetSection("Server"));
+        builder.Services.Configure<ServerConfiguration>(config: builder.Configuration.GetSection(key: "Server"));
         builder.Services.AddSingleton<IServerConfiguration, ServerConfigurationWrapper>();
 
-        builder.Services.AddSingleton(options);
+        builder.Services.AddSingleton(implementationInstance: options);
         builder.Services.AddSingleton<
             IApiVersionDescriptionProvider,
             DefaultApiVersionDescriptionProvider
         >();
         builder.Services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
-        builder.Services.AddSingleton<NmSystem.Logging.NoMercyLoggerOptions>(_ =>
+        builder.Services.AddSingleton<NmSystem.Logging.NoMercyLoggerOptions>(implementationFactory: _ =>
             new()
             {
                 MinimumLevel = LogLevel.Information,
@@ -78,7 +78,7 @@ public static class WebHostFactory
                     // lines still wrap and hang under the gutter instead of the
                     // consumer terminal hard-wrapping them flush-left.
                     return
-                        int.TryParse(Environment.GetEnvironmentVariable("COLUMNS"), out int cols)
+                        int.TryParse(s: Environment.GetEnvironmentVariable(variable: "COLUMNS"), result: out int cols)
                         && cols > 0
                         ? cols
                         : 120;
@@ -86,12 +86,12 @@ public static class WebHostFactory
             }
         );
         builder.Services.AddSingleton<NmSystem.Logging.NoMercyLoggerProvider>();
-        builder.Services.AddSingleton(typeof(ILogger<>), typeof(CustomLogger<>));
+        builder.Services.AddSingleton(serviceType: typeof(ILogger<>), implementationType: typeof(CustomLogger<>));
 
         // Configure host options with reduced shutdown timeout
-        builder.Services.Configure<HostOptions>(hostOptions =>
+        builder.Services.Configure<HostOptions>(configureOptions: hostOptions =>
         {
-            hostOptions.ShutdownTimeout = TimeSpan.FromSeconds(10);
+            hostOptions.ShutdownTimeout = TimeSpan.FromSeconds(seconds: 10);
         });
 
         // Service integration — context-aware lifetime management
@@ -113,21 +113,21 @@ public static class WebHostFactory
         // providers and had its entries dropped without a trace. That silence hid
         // real encode failures: a job's Log.LogWarning in a catch went nowhere.
         // Register the provider so both paths land in the same sink.
-        builder.Logging.Services.AddSingleton<ILoggerProvider>(serviceProvider =>
+        builder.Logging.Services.AddSingleton<ILoggerProvider>(implementationFactory: serviceProvider =>
             serviceProvider.GetRequiredService<NmSystem.Logging.NoMercyLoggerProvider>()
         );
 
         // The framework's own categories were silenced wholesale by ClearProviders.
         // Now that the factory can write again, keep their routine chatter out while
         // letting genuine problems (Kestrel, hosting) through.
-        builder.Logging.AddFilter("Microsoft", LogLevel.Warning);
-        builder.Logging.AddFilter("System", LogLevel.Warning);
+        builder.Logging.AddFilter(category: "Microsoft", level: LogLevel.Warning);
+        builder.Logging.AddFilter(category: "System", level: LogLevel.Warning);
 
-        builder.WebHost.ConfigureKestrel(kestrelOptions =>
+        builder.WebHost.ConfigureKestrel(options: kestrelOptions =>
         {
             ICertificateService certificateService =
                 kestrelOptions.ApplicationServices.GetRequiredService<ICertificateService>();
-            certificateService.KestrelConfig(kestrelOptions);
+            certificateService.KestrelConfig(options: kestrelOptions);
 
             // Main server endpoints.
             // forceHttp = true during setup/auth, so we never need HTTPS to handle the
@@ -135,9 +135,9 @@ public static class WebHostFactory
             foreach (IPAddress address in localAddresses)
             {
                 kestrelOptions.Listen(
-                    address,
-                    RuntimeServerSettings.Current.InternalServerPort,
-                    listenOptions =>
+                    address: address,
+                    port: RuntimeServerSettings.Current.InternalServerPort,
+                    configure: listenOptions =>
                     {
                         if (forceHttp)
                         {
@@ -157,7 +157,7 @@ public static class WebHostFactory
                             // drop h2 and let WebSockets use the plain HTTP/1.1 upgrade. Do not
                             // re-add Http2 here without first solving Extended CONNECT.
                             listenOptions.Protocols = HttpProtocols.Http1 | HttpProtocols.Http3;
-                            certificateService.ConfigureHttpsListener(listenOptions);
+                            certificateService.ConfigureHttpsListener(listenOptions: listenOptions);
                         }
                     }
                 );
@@ -167,9 +167,9 @@ public static class WebHostFactory
             // No TLS is configured here, so Http3 can never negotiate — requesting it
             // just makes Kestrel log a "HTTP/3 is not enabled" warning every startup.
             kestrelOptions.Listen(
-                IPAddress.Loopback,
-                RuntimeServerSettings.Current.InternalServerPort + 1,
-                listenOptions =>
+                address: IPAddress.Loopback,
+                port: RuntimeServerSettings.Current.InternalServerPort + 1,
+                configure: listenOptions =>
                 {
                     listenOptions.Protocols = HttpProtocols.Http1;
                 }
@@ -180,32 +180,32 @@ public static class WebHostFactory
             if (Software.IsWindows)
             {
                 kestrelOptions.ListenNamedPipe(
-                    Config.ManagementPipeName,
-                    listenOptions =>
+                    pipeName: Config.ManagementPipeName,
+                    configure: listenOptions =>
                     {
                         listenOptions.Protocols = HttpProtocols.Http1;
                     }
                 );
 
-                Logger.App($"IPC listening on named pipe: {Config.ManagementPipeName}");
+                Logger.App(message: $"IPC listening on named pipe: {Config.ManagementPipeName}");
             }
             else
             {
                 string socketPath = Config.ManagementSocketPath;
 
                 // Remove stale socket file from previous run
-                if (File.Exists(socketPath))
-                    File.Delete(socketPath);
+                if (File.Exists(path: socketPath))
+                    File.Delete(path: socketPath);
 
                 kestrelOptions.ListenUnixSocket(
-                    socketPath,
-                    listenOptions =>
+                    socketPath: socketPath,
+                    configure: listenOptions =>
                     {
                         listenOptions.Protocols = HttpProtocols.Http1;
                     }
                 );
 
-                Logger.App($"IPC listening on Unix socket: {socketPath}");
+                Logger.App(message: $"IPC listening on Unix socket: {socketPath}");
             }
         });
 
@@ -214,18 +214,18 @@ public static class WebHostFactory
 
         // Set content root to executable directory when running as a service
         if (options.RunAsService)
-            builder.WebHost.UseContentRoot(AppContext.BaseDirectory);
+            builder.WebHost.UseContentRoot(contentRoot: AppContext.BaseDirectory);
 
         // Register services from Startup.ConfigureServices
-        ServiceConfiguration.ConfigureServices(builder.Services, builder.Configuration);
-        builder.Services.AddSingleton(options);
+        ServiceConfiguration.ConfigureServices(services: builder.Services, configuration: builder.Configuration);
+        builder.Services.AddSingleton(implementationInstance: options);
 
         WebApplication app = builder.Build();
 
         // Configure middleware from Startup.Configure
         IApiVersionDescriptionProvider provider =
             app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
-        ApplicationConfiguration.ConfigureApp(app, provider);
+        ApplicationConfiguration.ConfigureApp(app: app, provider: provider);
 
         return app;
     }

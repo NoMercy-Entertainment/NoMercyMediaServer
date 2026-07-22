@@ -94,7 +94,7 @@ public abstract class IStorageContractTests
     // -----------------------------------------------------------------------
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public async Task List_empty_string_does_not_throw()
     {
         IStorage storage = CreateStorage();
@@ -103,13 +103,13 @@ public abstract class IStorageContractTests
             List<StorageEntry> entries = [];
             await foreach (
                 StorageEntry e in storage.ListAsync(
-                    "",
-                    "*",
+                    path: "",
+                    pattern: "*",
                     recursive: false,
-                    CancellationToken.None
+                    ct: CancellationToken.None
                 )
             )
-                entries.Add(e);
+                entries.Add(item: e);
         }
         finally
         {
@@ -118,7 +118,7 @@ public abstract class IStorageContractTests
     }
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public async Task List_null_pattern_does_not_throw()
     {
         IStorage storage = CreateStorage();
@@ -127,13 +127,13 @@ public abstract class IStorageContractTests
             List<StorageEntry> entries = [];
             await foreach (
                 StorageEntry e in storage.ListAsync(
-                    "",
-                    null,
+                    path: "",
+                    pattern: null,
                     recursive: false,
-                    CancellationToken.None
+                    ct: CancellationToken.None
                 )
             )
-                entries.Add(e);
+                entries.Add(item: e);
         }
         finally
         {
@@ -142,14 +142,14 @@ public abstract class IStorageContractTests
     }
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public virtual async Task Exists_empty_string_root_returns_true_when_root_is_directory()
     {
         IStorage storage = CreateStorage();
         try
         {
-            bool exists = await storage.ExistsAsync("", CancellationToken.None);
-            exists.Should().BeTrue("the storage root must always exist");
+            bool exists = await storage.ExistsAsync(path: "", ct: CancellationToken.None);
+            exists.Should().BeTrue(because: "the storage root must always exist");
         }
         finally
         {
@@ -162,22 +162,22 @@ public abstract class IStorageContractTests
     // -----------------------------------------------------------------------
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public async Task Exists_backslash_and_forward_slash_are_equivalent()
     {
         IStorage storage = CreateStorage();
         try
         {
-            byte[] data = Payload(10);
-            await SeedFile("foo/bar.bin", data);
+            byte[] data = Payload(seed: 10);
+            await SeedFile(relativePath: "foo/bar.bin", content: data);
 
-            bool withForward = await storage.ExistsAsync("foo/bar.bin", CancellationToken.None);
-            bool withBackslash = await storage.ExistsAsync("foo\\bar.bin", CancellationToken.None);
+            bool withForward = await storage.ExistsAsync(path: "foo/bar.bin", ct: CancellationToken.None);
+            bool withBackslash = await storage.ExistsAsync(path: "foo\\bar.bin", ct: CancellationToken.None);
 
             withForward.Should().BeTrue();
             withBackslash
                 .Should()
-                .Be(withForward, "backslash and forward slash must normalize identically");
+                .Be(expected: withForward, because: "backslash and forward slash must normalize identically");
         }
         finally
         {
@@ -186,20 +186,20 @@ public abstract class IStorageContractTests
     }
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public async Task Exists_double_slash_normalizes_correctly()
     {
         IStorage storage = CreateStorage();
         try
         {
-            byte[] data = Payload(11);
-            await SeedFile("foo/bar.bin", data);
+            byte[] data = Payload(seed: 11);
+            await SeedFile(relativePath: "foo/bar.bin", content: data);
 
-            bool withDouble = await storage.ExistsAsync("foo//bar.bin", CancellationToken.None);
-            bool withSingle = await storage.ExistsAsync("foo/bar.bin", CancellationToken.None);
+            bool withDouble = await storage.ExistsAsync(path: "foo//bar.bin", ct: CancellationToken.None);
+            bool withSingle = await storage.ExistsAsync(path: "foo/bar.bin", ct: CancellationToken.None);
 
             withSingle.Should().BeTrue();
-            withDouble.Should().Be(withSingle, "double slashes must be collapsed");
+            withDouble.Should().Be(expected: withSingle, because: "double slashes must be collapsed");
         }
         finally
         {
@@ -212,16 +212,16 @@ public abstract class IStorageContractTests
     // -----------------------------------------------------------------------
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public async Task WriteAsync_then_ReadAsync_round_trips_bytes()
     {
         IStorage storage = CreateStorage();
         try
         {
-            byte[] payload = Payload(42);
-            await storage.WriteAsync("roundtrip.bin", payload, CancellationToken.None);
-            byte[] result = await storage.ReadAsync("roundtrip.bin", CancellationToken.None);
-            result.Should().Equal(payload);
+            byte[] payload = Payload(seed: 42);
+            await storage.WriteAsync(path: "roundtrip.bin", bytes: payload, ct: CancellationToken.None);
+            byte[] result = await storage.ReadAsync(path: "roundtrip.bin", ct: CancellationToken.None);
+            result.Should().Equal(elements: payload);
         }
         finally
         {
@@ -230,14 +230,14 @@ public abstract class IStorageContractTests
     }
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public async Task WriteAsync_then_ExistsAsync_returns_true()
     {
         IStorage storage = CreateStorage();
         try
         {
-            await storage.WriteAsync("exists-check.bin", Payload(1), CancellationToken.None);
-            bool exists = await storage.ExistsAsync("exists-check.bin", CancellationToken.None);
+            await storage.WriteAsync(path: "exists-check.bin", bytes: Payload(seed: 1), ct: CancellationToken.None);
+            bool exists = await storage.ExistsAsync(path: "exists-check.bin", ct: CancellationToken.None);
             exists.Should().BeTrue();
         }
         finally
@@ -247,16 +247,16 @@ public abstract class IStorageContractTests
     }
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public async Task WriteAsync_propagates_to_backend()
     {
         IStorage storage = CreateStorage();
         try
         {
-            byte[] payload = Payload(7);
-            await storage.WriteAsync("backend-check.bin", payload, CancellationToken.None);
-            bool landed = await BackendHasFile("backend-check.bin");
-            landed.Should().BeTrue("Write must persist to the backend store");
+            byte[] payload = Payload(seed: 7);
+            await storage.WriteAsync(path: "backend-check.bin", bytes: payload, ct: CancellationToken.None);
+            bool landed = await BackendHasFile(relativePath: "backend-check.bin");
+            landed.Should().BeTrue(because: "Write must persist to the backend store");
         }
         finally
         {
@@ -269,17 +269,17 @@ public abstract class IStorageContractTests
     // -----------------------------------------------------------------------
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public async Task WriteAsync_nested_path_creates_intermediate_directories()
     {
         IStorage storage = CreateStorage();
         try
         {
-            byte[] payload = Payload(3);
-            await storage.WriteAsync("a/b/c.bin", payload, CancellationToken.None);
+            byte[] payload = Payload(seed: 3);
+            await storage.WriteAsync(path: "a/b/c.bin", bytes: payload, ct: CancellationToken.None);
 
-            byte[] result = await storage.ReadAsync("a/b/c.bin", CancellationToken.None);
-            result.Should().Equal(payload);
+            byte[] result = await storage.ReadAsync(path: "a/b/c.bin", ct: CancellationToken.None);
+            result.Should().Equal(elements: payload);
         }
         finally
         {
@@ -292,20 +292,20 @@ public abstract class IStorageContractTests
     // -----------------------------------------------------------------------
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public async Task WriteAsync_encoder_shape_path_round_trips()
     {
         IStorage storage = CreateStorage();
         try
         {
-            byte[] payload = Payload(99);
+            byte[] payload = Payload(seed: 99);
             string encoderPath = "Black Butler (2008)/Season 05/episode.m3u8";
-            await storage.WriteAsync(encoderPath, payload, CancellationToken.None);
+            await storage.WriteAsync(path: encoderPath, bytes: payload, ct: CancellationToken.None);
 
-            byte[] result = await storage.ReadAsync(encoderPath, CancellationToken.None);
-            result.Should().Equal(payload);
+            byte[] result = await storage.ReadAsync(path: encoderPath, ct: CancellationToken.None);
+            result.Should().Equal(elements: payload);
 
-            bool exists = await storage.ExistsAsync(encoderPath, CancellationToken.None);
+            bool exists = await storage.ExistsAsync(path: encoderPath, ct: CancellationToken.None);
             exists.Should().BeTrue();
         }
         finally
@@ -319,16 +319,16 @@ public abstract class IStorageContractTests
     // -----------------------------------------------------------------------
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public async Task DeleteAsync_removes_file_and_exists_becomes_false()
     {
         IStorage storage = CreateStorage();
         try
         {
-            await storage.WriteAsync("del-test.bin", Payload(5), CancellationToken.None);
-            await storage.DeleteAsync("del-test.bin", CancellationToken.None);
+            await storage.WriteAsync(path: "del-test.bin", bytes: Payload(seed: 5), ct: CancellationToken.None);
+            await storage.DeleteAsync(path: "del-test.bin", ct: CancellationToken.None);
 
-            bool exists = await storage.ExistsAsync("del-test.bin", CancellationToken.None);
+            bool exists = await storage.ExistsAsync(path: "del-test.bin", ct: CancellationToken.None);
             exists.Should().BeFalse();
         }
         finally
@@ -338,18 +338,18 @@ public abstract class IStorageContractTests
     }
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public async Task DeleteAsync_is_idempotent_on_missing_file()
     {
         IStorage storage = CreateStorage();
         try
         {
-            await storage.WriteAsync("idempotent-del.bin", Payload(6), CancellationToken.None);
-            await storage.DeleteAsync("idempotent-del.bin", CancellationToken.None);
+            await storage.WriteAsync(path: "idempotent-del.bin", bytes: Payload(seed: 6), ct: CancellationToken.None);
+            await storage.DeleteAsync(path: "idempotent-del.bin", ct: CancellationToken.None);
 
             Func<Task> secondDelete = () =>
-                storage.DeleteAsync("idempotent-del.bin", CancellationToken.None);
-            await secondDelete.Should().NotThrowAsync("second delete must be a no-op");
+                storage.DeleteAsync(path: "idempotent-del.bin", ct: CancellationToken.None);
+            await secondDelete.Should().NotThrowAsync(because: "second delete must be a no-op");
         }
         finally
         {
@@ -362,21 +362,21 @@ public abstract class IStorageContractTests
     // -----------------------------------------------------------------------
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public async Task MoveAsync_source_gone_destination_exists()
     {
         IStorage storage = CreateStorage();
         try
         {
-            byte[] payload = Payload(20);
-            await storage.WriteAsync("move-src.bin", payload, CancellationToken.None);
-            await storage.MoveAsync("move-src.bin", "move-dst.bin", CancellationToken.None);
+            byte[] payload = Payload(seed: 20);
+            await storage.WriteAsync(path: "move-src.bin", bytes: payload, ct: CancellationToken.None);
+            await storage.MoveAsync(from: "move-src.bin", to: "move-dst.bin", ct: CancellationToken.None);
 
-            bool srcExists = await storage.ExistsAsync("move-src.bin", CancellationToken.None);
-            bool dstExists = await storage.ExistsAsync("move-dst.bin", CancellationToken.None);
+            bool srcExists = await storage.ExistsAsync(path: "move-src.bin", ct: CancellationToken.None);
+            bool dstExists = await storage.ExistsAsync(path: "move-dst.bin", ct: CancellationToken.None);
 
-            srcExists.Should().BeFalse("source must be removed after move");
-            dstExists.Should().BeTrue("destination must exist after move");
+            srcExists.Should().BeFalse(because: "source must be removed after move");
+            dstExists.Should().BeTrue(because: "destination must exist after move");
         }
         finally
         {
@@ -385,18 +385,18 @@ public abstract class IStorageContractTests
     }
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public async Task MoveAsync_across_directories()
     {
         IStorage storage = CreateStorage();
         try
         {
-            byte[] payload = Payload(21);
-            await storage.WriteAsync("dir-a/src.bin", payload, CancellationToken.None);
-            await storage.MoveAsync("dir-a/src.bin", "dir-b/dst.bin", CancellationToken.None);
+            byte[] payload = Payload(seed: 21);
+            await storage.WriteAsync(path: "dir-a/src.bin", bytes: payload, ct: CancellationToken.None);
+            await storage.MoveAsync(from: "dir-a/src.bin", to: "dir-b/dst.bin", ct: CancellationToken.None);
 
-            bool srcExists = await storage.ExistsAsync("dir-a/src.bin", CancellationToken.None);
-            bool dstExists = await storage.ExistsAsync("dir-b/dst.bin", CancellationToken.None);
+            bool srcExists = await storage.ExistsAsync(path: "dir-a/src.bin", ct: CancellationToken.None);
+            bool dstExists = await storage.ExistsAsync(path: "dir-b/dst.bin", ct: CancellationToken.None);
 
             srcExists.Should().BeFalse();
             dstExists.Should().BeTrue();
@@ -408,22 +408,22 @@ public abstract class IStorageContractTests
     }
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public async Task MoveAsync_content_is_preserved()
     {
         IStorage storage = CreateStorage();
         try
         {
-            byte[] payload = Payload(22);
-            await storage.WriteAsync("mv-content-src.bin", payload, CancellationToken.None);
+            byte[] payload = Payload(seed: 22);
+            await storage.WriteAsync(path: "mv-content-src.bin", bytes: payload, ct: CancellationToken.None);
             await storage.MoveAsync(
-                "mv-content-src.bin",
-                "mv-content-dst.bin",
-                CancellationToken.None
+                from: "mv-content-src.bin",
+                to: "mv-content-dst.bin",
+                ct: CancellationToken.None
             );
 
-            byte[] result = await storage.ReadAsync("mv-content-dst.bin", CancellationToken.None);
-            result.Should().Equal(payload);
+            byte[] result = await storage.ReadAsync(path: "mv-content-dst.bin", ct: CancellationToken.None);
+            result.Should().Equal(elements: payload);
         }
         finally
         {
@@ -436,16 +436,16 @@ public abstract class IStorageContractTests
     // -----------------------------------------------------------------------
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public async Task SizeAsync_returns_written_byte_count()
     {
         IStorage storage = CreateStorage();
         try
         {
-            byte[] payload = Payload(1, 512);
-            await storage.WriteAsync("sized.bin", payload, CancellationToken.None);
-            long size = await storage.SizeAsync("sized.bin", CancellationToken.None);
-            size.Should().Be(payload.Length);
+            byte[] payload = Payload(seed: 1, length: 512);
+            await storage.WriteAsync(path: "sized.bin", bytes: payload, ct: CancellationToken.None);
+            long size = await storage.SizeAsync(path: "sized.bin", ct: CancellationToken.None);
+            size.Should().Be(expected: payload.Length);
         }
         finally
         {
@@ -458,21 +458,21 @@ public abstract class IStorageContractTests
     // -----------------------------------------------------------------------
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public virtual async Task LastModifiedAsync_is_recent_after_write()
     {
         IStorage storage = CreateStorage();
         try
         {
-            await storage.WriteAsync("stamped.bin", Payload(2), CancellationToken.None);
+            await storage.WriteAsync(path: "stamped.bin", bytes: Payload(seed: 2), ct: CancellationToken.None);
             DateTimeOffset stamp = await storage.LastModifiedAsync(
-                "stamped.bin",
-                CancellationToken.None
+                path: "stamped.bin",
+                ct: CancellationToken.None
             );
 
             (DateTimeOffset.UtcNow - stamp)
                 .Should()
-                .BeLessThan(TimeSpan.FromMinutes(1), "last-modified must be within 60s of write");
+                .BeLessThan(expected: TimeSpan.FromMinutes(minutes: 1), because: "last-modified must be within 60s of write");
         }
         finally
         {
@@ -485,7 +485,7 @@ public abstract class IStorageContractTests
     // -----------------------------------------------------------------------
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public async Task List_nonexistent_directory_returns_empty_not_throw()
     {
         IStorage storage = CreateStorage();
@@ -496,13 +496,13 @@ public abstract class IStorageContractTests
             {
                 await foreach (
                     StorageEntry e in storage.ListAsync(
-                        "nonexistent-dir-xyz",
-                        "*",
+                        path: "nonexistent-dir-xyz",
+                        pattern: "*",
                         recursive: false,
-                        CancellationToken.None
+                        ct: CancellationToken.None
                     )
                 )
-                    entries.Add(e);
+                    entries.Add(item: e);
             };
 
             await act.Should().NotThrowAsync();
@@ -519,31 +519,31 @@ public abstract class IStorageContractTests
     // -----------------------------------------------------------------------
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public virtual async Task List_with_pattern_filters_by_extension()
     {
         IStorage storage = CreateStorage();
         try
         {
-            await storage.WriteAsync("filter/a.bin", Payload(1), CancellationToken.None);
-            await storage.WriteAsync("filter/b.bin", Payload(2), CancellationToken.None);
-            await storage.WriteAsync("filter/c.txt", Payload(3), CancellationToken.None);
+            await storage.WriteAsync(path: "filter/a.bin", bytes: Payload(seed: 1), ct: CancellationToken.None);
+            await storage.WriteAsync(path: "filter/b.bin", bytes: Payload(seed: 2), ct: CancellationToken.None);
+            await storage.WriteAsync(path: "filter/c.txt", bytes: Payload(seed: 3), ct: CancellationToken.None);
 
             List<StorageEntry> entries = [];
             await foreach (
                 StorageEntry e in storage.ListAsync(
-                    "filter",
-                    "*.bin",
+                    path: "filter",
+                    pattern: "*.bin",
                     recursive: false,
-                    CancellationToken.None
+                    ct: CancellationToken.None
                 )
             )
-                entries.Add(e);
+                entries.Add(item: e);
 
-            entries.Should().HaveCount(2, "only .bin files should match *.bin");
+            entries.Should().HaveCount(expected: 2, because: "only .bin files should match *.bin");
             entries
                 .Should()
-                .NotContain(e => e.Path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase));
+                .NotContain(predicate: e => e.Path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase));
         }
         finally
         {
@@ -556,30 +556,30 @@ public abstract class IStorageContractTests
     // -----------------------------------------------------------------------
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public virtual async Task List_flat_does_not_see_subdir_contents()
     {
         IStorage storage = CreateStorage();
         try
         {
-            await storage.WriteAsync("flat/top.bin", Payload(1), CancellationToken.None);
-            await storage.WriteAsync("flat/sub/deep.bin", Payload(2), CancellationToken.None);
+            await storage.WriteAsync(path: "flat/top.bin", bytes: Payload(seed: 1), ct: CancellationToken.None);
+            await storage.WriteAsync(path: "flat/sub/deep.bin", bytes: Payload(seed: 2), ct: CancellationToken.None);
 
             List<StorageEntry> flat = [];
             await foreach (
                 StorageEntry e in storage.ListAsync(
-                    "flat",
-                    "*",
+                    path: "flat",
+                    pattern: "*",
                     recursive: false,
-                    CancellationToken.None
+                    ct: CancellationToken.None
                 )
             )
-                flat.Add(e);
+                flat.Add(item: e);
 
             flat.Should()
                 .NotContain(
-                    e => e.Path.Contains("deep"),
-                    "flat list must not recurse into subdirs"
+                    predicate: e => e.Path.Contains("deep"),
+                    because: "flat list must not recurse into subdirs"
                 );
         }
         finally
@@ -589,31 +589,31 @@ public abstract class IStorageContractTests
     }
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public virtual async Task List_recursive_sees_subdir_contents()
     {
         IStorage storage = CreateStorage();
         try
         {
-            await storage.WriteAsync("rec/top.bin", Payload(1), CancellationToken.None);
-            await storage.WriteAsync("rec/sub/deep.bin", Payload(2), CancellationToken.None);
+            await storage.WriteAsync(path: "rec/top.bin", bytes: Payload(seed: 1), ct: CancellationToken.None);
+            await storage.WriteAsync(path: "rec/sub/deep.bin", bytes: Payload(seed: 2), ct: CancellationToken.None);
 
             List<StorageEntry> recursive = [];
             await foreach (
                 StorageEntry e in storage.ListAsync(
-                    "rec",
-                    "*",
+                    path: "rec",
+                    pattern: "*",
                     recursive: true,
-                    CancellationToken.None
+                    ct: CancellationToken.None
                 )
             )
-                recursive.Add(e);
+                recursive.Add(item: e);
 
             recursive
                 .Should()
                 .Contain(
-                    e => e.Path.Contains("deep"),
-                    "recursive list must include subdirectory contents"
+                    predicate: e => e.Path.Contains("deep"),
+                    because: "recursive list must include subdirectory contents"
                 );
         }
         finally
@@ -627,14 +627,14 @@ public abstract class IStorageContractTests
     // -----------------------------------------------------------------------
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public virtual async Task Exists_null_byte_in_path_throws()
     {
         IStorage storage = CreateStorage();
         try
         {
-            Func<Task> act = () => storage.ExistsAsync("foo\0bar", CancellationToken.None);
-            await act.Should().ThrowAsync<Exception>("null bytes in paths must be rejected");
+            Func<Task> act = () => storage.ExistsAsync(path: "foo\0bar", ct: CancellationToken.None);
+            await act.Should().ThrowAsync<Exception>(because: "null bytes in paths must be rejected");
         }
         finally
         {
@@ -647,14 +647,14 @@ public abstract class IStorageContractTests
     // -----------------------------------------------------------------------
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public virtual async Task Exists_dotdot_traversal_throws()
     {
         IStorage storage = CreateStorage();
         try
         {
-            Func<Task> act = () => storage.ExistsAsync("../escape", CancellationToken.None);
-            await act.Should().ThrowAsync<Exception>("'..' traversal paths must be rejected");
+            Func<Task> act = () => storage.ExistsAsync(path: "../escape", ct: CancellationToken.None);
+            await act.Should().ThrowAsync<Exception>(because: "'..' traversal paths must be rejected");
         }
         finally
         {
@@ -667,7 +667,7 @@ public abstract class IStorageContractTests
     // -----------------------------------------------------------------------
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public virtual async Task Exists_absolute_path_is_rejected_or_returns_false()
     {
         IStorage storage = CreateStorage();
@@ -682,7 +682,7 @@ public abstract class IStorageContractTests
             bool result = false;
             try
             {
-                result = await storage.ExistsAsync("/abs/path/escape", CancellationToken.None);
+                result = await storage.ExistsAsync(path: "/abs/path/escape", ct: CancellationToken.None);
             }
             catch (StoragePathNotAllowedException)
             {
@@ -697,7 +697,7 @@ public abstract class IStorageContractTests
             acceptable
                 .Should()
                 .BeTrue(
-                    "absolute paths must be rejected (throw) or return false, never silently resolve"
+                    because: "absolute paths must be rejected (throw) or return false, never silently resolve"
                 );
         }
         finally
@@ -711,22 +711,22 @@ public abstract class IStorageContractTests
     // -----------------------------------------------------------------------
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public async Task Concurrent_ExistsAsync_calls_return_correctly()
     {
         IStorage storage = CreateStorage();
         try
         {
-            await storage.WriteAsync("concurrent-read.bin", Payload(55), CancellationToken.None);
+            await storage.WriteAsync(path: "concurrent-read.bin", bytes: Payload(seed: 55), ct: CancellationToken.None);
 
             Task<bool>[] tasks = new Task<bool>[8];
             for (int i = 0; i < 8; i++)
-                tasks[i] = storage.ExistsAsync("concurrent-read.bin", CancellationToken.None);
+                tasks[i] = storage.ExistsAsync(path: "concurrent-read.bin", ct: CancellationToken.None);
 
-            bool[] results = await Task.WhenAll(tasks);
+            bool[] results = await Task.WhenAll(tasks: tasks);
             results
                 .Should()
-                .AllBeEquivalentTo(true, "all concurrent Exists calls must return true");
+                .AllBeEquivalentTo(expectation: true, because: "all concurrent Exists calls must return true");
         }
         finally
         {
@@ -739,7 +739,7 @@ public abstract class IStorageContractTests
     // -----------------------------------------------------------------------
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public async Task Concurrent_WriteAsync_to_different_paths_all_land()
     {
         IStorage storage = CreateStorage();
@@ -750,20 +750,20 @@ public abstract class IStorageContractTests
             {
                 int index = i;
                 writes[i] = storage.WriteAsync(
-                    $"concurrent/file-{index}.bin",
-                    Payload(index),
-                    CancellationToken.None
+                    path: $"concurrent/file-{index}.bin",
+                    bytes: Payload(seed: index),
+                    ct: CancellationToken.None
                 );
             }
-            await Task.WhenAll(writes);
+            await Task.WhenAll(tasks: writes);
 
             for (int i = 0; i < 8; i++)
             {
                 bool exists = await storage.ExistsAsync(
-                    $"concurrent/file-{i}.bin",
-                    CancellationToken.None
+                    path: $"concurrent/file-{i}.bin",
+                    ct: CancellationToken.None
                 );
-                exists.Should().BeTrue($"file-{i}.bin must exist after concurrent write");
+                exists.Should().BeTrue(because: $"file-{i}.bin must exist after concurrent write");
             }
         }
         finally

@@ -25,7 +25,7 @@ namespace NoMercy.Tests.Api;
 /// <c>WhisperProgress</c> broadcasts on the <see cref="ContentAnalysisHub"/>
 /// IHubContext.
 /// </summary>
-[Trait("Category", "SignalR")]
+[Trait(name: "Category", value: "SignalR")]
 public class WhisperProgressObserverTests
 {
     [Fact]
@@ -33,27 +33,27 @@ public class WhisperProgressObserverTests
     {
         Mock<IClientProxy> clientProxyMock = new();
         clientProxyMock
-            .Setup(c =>
+            .Setup(expression: c =>
                 c.SendCoreAsync(
                     It.IsAny<string>(),
                     It.IsAny<object[]>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Returns(Task.CompletedTask);
+            .Returns(value: Task.CompletedTask);
 
         Mock<IHubClients> hubClientsMock = new();
-        hubClientsMock.Setup(h => h.All).Returns(clientProxyMock.Object);
+        hubClientsMock.Setup(expression: h => h.All).Returns(value: clientProxyMock.Object);
 
         Mock<IHubContext<ContentAnalysisHub>> hubContextMock = new();
-        hubContextMock.Setup(h => h.Clients).Returns(hubClientsMock.Object);
+        hubContextMock.Setup(expression: h => h.Clients).Returns(value: hubClientsMock.Object);
 
-        SignalRProgressObserver observer = new(hubContextMock.Object, "test-file-id");
+        SignalRProgressObserver observer = new(hub: hubContextMock.Object, videoFileId: "test-file-id");
 
         EncodingProgress progress = new(
             CorrelationId: "c1",
             PercentComplete: 42.5,
-            Elapsed: TimeSpan.FromSeconds(5),
+            Elapsed: TimeSpan.FromSeconds(seconds: 5),
             EstimatedRemaining: null,
             CurrentFps: null,
             CurrentSpeed: null,
@@ -61,19 +61,19 @@ public class WhisperProgressObserverTests
             CurrentOperation: null
         );
 
-        observer.OnProgress(progress);
+        observer.OnProgress(progress: progress);
 
         // Give the fire-and-forget a moment to schedule on the thread pool.
-        Thread.Sleep(100);
+        Thread.Sleep(millisecondsTimeout: 100);
 
         clientProxyMock.Verify(
-            c =>
+            expression: c =>
                 c.SendCoreAsync(
                     "WhisperProgress",
                     It.Is<object[]>(args => args.Length > 0),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.AtLeastOnce
+            times: Times.AtLeastOnce
         );
     }
 
@@ -81,13 +81,13 @@ public class WhisperProgressObserverTests
     public void OtherCallbacks_DoNotThrow()
     {
         Mock<IHubContext<ContentAnalysisHub>> hubContextMock = new();
-        SignalRProgressObserver observer = new(hubContextMock.Object, "test-file-id");
+        SignalRProgressObserver observer = new(hub: hubContextMock.Object, videoFileId: "test-file-id");
 
         // None of these should throw.
-        observer.OnStageStarted("stage");
-        observer.OnStageCompleted("stage", TimeSpan.Zero);
+        observer.OnStageStarted(stageName: "stage");
+        observer.OnStageCompleted(stageName: "stage", duration: TimeSpan.Zero);
         observer.OnCompleted();
-        observer.OnError(new(EncodingErrorKind.Unknown, "msg", null, null, false));
-        observer.OnPlanResolved([], [], [], false, false);
+        observer.OnError(error: new(Kind: EncodingErrorKind.Unknown, Message: "msg", FfmpegStderr: null, StageName: null, Recoverable: false));
+        observer.OnPlanResolved(videoStreams: [], audioStreams: [], subtitleStreams: [], hasGpu: false, isHdr: false);
     }
 }

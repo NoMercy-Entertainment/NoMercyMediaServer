@@ -26,14 +26,14 @@ public static class LocalizationHelper
     // race on the I18N.xml file handle and so we don't repeatedly load+save
     // the document for the same missing key while a previous append is mid-write.
     private static readonly object WriteLock = new();
-    private static readonly HashSet<string> SeenMissingKeys = new(StringComparer.Ordinal);
+    private static readonly HashSet<string> SeenMissingKeys = new(comparer: StringComparer.Ordinal);
 
     public static string Localize(this string key)
     {
-        string localized = GlobalLocalizer.Localize(key);
-        if (key == localized && Config.IsDev && IsCollectableKey(key))
+        string localized = GlobalLocalizer.Localize(text: key);
+        if (key == localized && Config.IsDev && IsCollectableKey(key: key))
         {
-            TryAppendMissingLocalization(key);
+            TryAppendMissingLocalization(key: key);
             return key;
         }
 
@@ -47,7 +47,7 @@ public static class LocalizationHelper
     // I18N.xml and can never be usefully translated. Any digit or path separator is
     // the tell: a real UI label carries a placeholder token, never a live value.
     private static bool IsCollectableKey(string key) =>
-        !key.Any(c => char.IsDigit(c) || c == '\\' || c == '/');
+        !key.Any(predicate: c => char.IsDigit(c: c) || c == '\\' || c == '/');
 
     private static void TryAppendMissingLocalization(string key)
     {
@@ -57,13 +57,13 @@ public static class LocalizationHelper
         // returning 500 to the dashboard.
         try
         {
-            AppendMissingLocalization(key);
+            AppendMissingLocalization(key: key);
         }
         catch (Exception ex)
         {
             Logger.App(
-                $"LocalizationHelper: failed to record missing key '{key}': {ex.Message}",
-                LogEventLevel.Warning
+                message: $"LocalizationHelper: failed to record missing key '{key}': {ex.Message}",
+                level: LogEventLevel.Warning
             );
         }
     }
@@ -74,42 +74,40 @@ public static class LocalizationHelper
         // repeat hits for the same handful of keys during a session.
         lock (SeenMissingKeys)
         {
-            if (!SeenMissingKeys.Add(key))
+            if (!SeenMissingKeys.Add(item: key))
                 return;
         }
 
         string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
         string? projectRoot = Directory
-            .GetParent(baseDirectory)
+            .GetParent(path: baseDirectory)
             ?.Parent?.Parent?.Parent?.Parent?.FullName;
         if (projectRoot is null)
             return;
 
-        string filePath = Path.Combine(projectRoot, "NoMercy.Api", "Resources", "I18N.xml");
+        string filePath = Path.Combine(path1: projectRoot, path2: "NoMercy.Api", path3: "Resources", path4: "I18N.xml");
 
         lock (WriteLock)
         {
-            XDocument doc = XDocument.Load(filePath);
+            XDocument doc = XDocument.Load(uri: filePath);
 
             // Re-check inside the lock against the on-disk file — a previous
             // session may have added the key already.
             bool exists =
-                doc.Root?.Elements("Entry").Any(e => e.Element("Key")?.Value == key) == true;
+                doc.Root?.Elements(name: "Entry").Any(predicate: e => e.Element(name: "Key")?.Value == key) == true;
             if (exists)
                 return;
 
             XElement newEntry = new(
-                "Entry",
-                new XElement("Key", key),
-                new XElement("Value", new XAttribute("lang", "nl"), key)
+                name: "Entry", content: [new XElement(name: "Key", content: key), new XElement(name: "Value", content: [new XAttribute(name: "lang", value: "nl"), key])]
             );
 
-            doc.Root?.Add(newEntry);
-            doc.Save(filePath);
+            doc.Root?.Add(content: newEntry);
+            doc.Save(fileName: filePath);
 
             // Reload the localizer to include the new entry
             Localizer reportLocalizer = new();
-            reportLocalizer.LoadXML(Assembly.GetExecutingAssembly(), "Resources.I18N.xml", "nl");
+            reportLocalizer.LoadXML(assembly: Assembly.GetExecutingAssembly(), resourceName: "Resources.I18N.xml", language: "nl");
             GlobalLocalizer = reportLocalizer;
         }
     }

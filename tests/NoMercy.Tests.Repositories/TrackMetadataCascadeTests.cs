@@ -20,7 +20,7 @@ using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class TrackMetadataCascadeTests : IDisposable
 {
     private readonly IDbContextFactory<MediaContext> _factory;
@@ -47,10 +47,10 @@ public class TrackMetadataCascadeTests : IDisposable
     {
         using (MediaContext seedContext = _factory.CreateDbContext())
         {
-            SeedSharedMetadataWithTwoSiblingTracks(seedContext);
+            SeedSharedMetadataWithTwoSiblingTracks(context: seedContext);
 
-            Track trackToDelete = seedContext.Tracks.Single(t => t.Id == AudioTrackId);
-            seedContext.Tracks.Remove(trackToDelete);
+            Track trackToDelete = seedContext.Tracks.Single(predicate: t => t.Id == AudioTrackId);
+            seedContext.Tracks.Remove(entity: trackToDelete);
             seedContext.SaveChanges();
         }
 
@@ -59,9 +59,9 @@ public class TrackMetadataCascadeTests : IDisposable
         // in-memory change tracker.
         using MediaContext assertContext = _factory.CreateDbContext();
 
-        Assert.NotNull(assertContext.Metadata.Find(MetadataId));
-        Assert.NotNull(assertContext.Tracks.Find(SiblingTrack1Id));
-        Assert.NotNull(assertContext.Tracks.Find(SiblingTrack2Id));
+        Assert.NotNull(@object: assertContext.Metadata.Find(keyValues: MetadataId));
+        Assert.NotNull(@object: assertContext.Tracks.Find(keyValues: SiblingTrack1Id));
+        Assert.NotNull(@object: assertContext.Tracks.Find(keyValues: SiblingTrack2Id));
     }
 
     private static void SeedSharedMetadataWithTwoSiblingTracks(MediaContext context)
@@ -75,7 +75,7 @@ public class TrackMetadataCascadeTests : IDisposable
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow,
         };
-        context.Drivers.Add(driver);
+        context.Drivers.Add(entity: driver);
 
         Folder folder = new()
         {
@@ -83,7 +83,7 @@ public class TrackMetadataCascadeTests : IDisposable
             Path = "/media/music/Artist/Album",
             DriverId = Driver.SystemLocalDriverId,
         };
-        context.Folders.Add(folder);
+        context.Folders.Add(entity: folder);
 
         Track audioTrack = new()
         {
@@ -106,7 +106,7 @@ public class TrackMetadataCascadeTests : IDisposable
             FolderId = FolderId,
             LibraryFolder = folder,
         };
-        context.Tracks.AddRange(audioTrack, siblingTrack1, siblingTrack2);
+        context.Tracks.AddRange(entities: [audioTrack, siblingTrack1, siblingTrack2]);
         context.SaveChanges();
 
         Metadata metadata = new()
@@ -118,7 +118,7 @@ public class TrackMetadataCascadeTests : IDisposable
             HostFolder = "/media/music/Artist/Album",
             AudioTrackId = AudioTrackId,
         };
-        context.Metadata.Add(metadata);
+        context.Metadata.Add(entity: metadata);
         context.SaveChanges();
 
         // Metadata.AudioTrackId needed the Track rows to exist first, so the sibling

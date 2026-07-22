@@ -18,28 +18,28 @@ namespace NoMercy.Api.DTOs.Media;
 
 public class CompanyDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("description")]
+    [JsonProperty(propertyName: "description")]
     public string? Description { get; set; }
 
-    [JsonProperty("headquarters")]
+    [JsonProperty(propertyName: "headquarters")]
     public string? Headquarters { get; set; }
 
-    [JsonProperty("link")]
+    [JsonProperty(propertyName: "link")]
     public Uri? Homepage { get; set; }
 
-    [JsonProperty("logo")]
+    [JsonProperty(propertyName: "logo")]
     public string? Logo { get; set; }
 
-    [JsonProperty("origin_country")]
+    [JsonProperty(propertyName: "origin_country")]
     public string? OriginCountry { get; set; }
 
-    [JsonProperty("parent_company")]
+    [JsonProperty(propertyName: "parent_company")]
     public int? ParentCompany { get; set; }
 
     public CompanyDto() { }

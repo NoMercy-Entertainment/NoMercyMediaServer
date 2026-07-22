@@ -24,68 +24,68 @@ namespace NoMercy.Tests.Setup.Ui;
 /// a gap here is a runtime <c>KeyNotFoundException</c> or <c>IndexOutOfRangeException</c>
 /// during the very first thing a fresh install prints to the console.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class ConsoleLettersTests
 {
     // The exact banner text ConsoleMessages.Logo renders, character by character.
     private const string BannerText = "║  NoMercy MediaServer  ║";
 
     [Theory]
-    [InlineData(nameof(ConsoleLetters.Colossal))]
-    [InlineData(nameof(ConsoleLetters.ColossalXmas))]
+    [InlineData(data: nameof(ConsoleLetters.Colossal))]
+    [InlineData(data: nameof(ConsoleLetters.ColossalXmas))]
     public void Table_ContainsEveryCharacterTheBannerNeeds(string tableName)
     {
-        Dictionary<string, List<string>> table = GetTable(tableName);
+        Dictionary<string, List<string>> table = GetTable(name: tableName);
 
         foreach (char c in BannerText.Distinct())
         {
             Assert.True(
-                table.ContainsKey(c.ToString()),
-                $"{tableName} is missing a glyph for '{c}' — Logo() would throw a KeyNotFoundException"
+                condition: table.ContainsKey(key: c.ToString()),
+                userMessage: $"{tableName} is missing a glyph for '{c}' — Logo() would throw a KeyNotFoundException"
             );
         }
     }
 
     [Theory]
-    [InlineData(nameof(ConsoleLetters.Colossal))]
-    [InlineData(nameof(ConsoleLetters.ColossalXmas))]
+    [InlineData(data: nameof(ConsoleLetters.Colossal))]
+    [InlineData(data: nameof(ConsoleLetters.ColossalXmas))]
     public void Table_EveryGlyphHasTheSameRowCount(string tableName)
     {
-        Dictionary<string, List<string>> table = GetTable(tableName);
+        Dictionary<string, List<string>> table = GetTable(name: tableName);
 
         int expectedRows = table.Values.First().Count;
 
         foreach ((string letter, List<string> rows) in table)
         {
-            Assert.Equal(expectedRows, rows.Count);
+            Assert.Equal(expected: expectedRows, actual: rows.Count);
         }
     }
 
     [Theory]
-    [InlineData(nameof(ConsoleLetters.Colossal))]
-    [InlineData(nameof(ConsoleLetters.ColossalXmas))]
+    [InlineData(data: nameof(ConsoleLetters.Colossal))]
+    [InlineData(data: nameof(ConsoleLetters.ColossalXmas))]
     public void Table_NoRowIsNullOrMissing(string tableName)
     {
-        Dictionary<string, List<string>> table = GetTable(tableName);
+        Dictionary<string, List<string>> table = GetTable(name: tableName);
 
         foreach ((string letter, List<string> rows) in table)
         {
-            Assert.All(rows, row => Assert.NotNull(row));
+            Assert.All(collection: rows, action: row => Assert.NotNull(@object: row));
         }
     }
 
     [Theory]
-    [InlineData(nameof(ConsoleLetters.Colossal))]
-    [InlineData(nameof(ConsoleLetters.ColossalXmas))]
+    [InlineData(data: nameof(ConsoleLetters.Colossal))]
+    [InlineData(data: nameof(ConsoleLetters.ColossalXmas))]
     public void Table_PipeGlyph_IsUsedAsTheBorderCharacter(string tableName)
     {
         // Logo() special-cases '║' with Colors[0] specifically because it renders the
         // box border — the glyph must exist and render as a single repeated character
         // (its row count must still match every other glyph per the test above).
-        Dictionary<string, List<string>> table = GetTable(tableName);
+        Dictionary<string, List<string>> table = GetTable(name: tableName);
 
-        Assert.True(table.ContainsKey("║"));
-        Assert.All(table["║"], row => Assert.Equal("║", row));
+        Assert.True(condition: table.ContainsKey(key: "║"));
+        Assert.All(collection: table[key: "║"], action: row => Assert.Equal(expected: "║", actual: row));
     }
 
     [Fact]
@@ -96,31 +96,31 @@ public class ConsoleLettersTests
         // switching tables mid-way through a run (date rollover) would change the
         // rendered banner's height unexpectedly.
         Assert.Equal(
-            ConsoleLetters.Colossal.Values.First().Count,
-            ConsoleLetters.ColossalXmas.Values.First().Count
+            expected: ConsoleLetters.Colossal.Values.First().Count,
+            actual: ConsoleLetters.ColossalXmas.Values.First().Count
         );
     }
 
     [Theory]
-    [InlineData(nameof(ConsoleLetters.Colossal))]
-    [InlineData(nameof(ConsoleLetters.ColossalXmas))]
+    [InlineData(data: nameof(ConsoleLetters.Colossal))]
+    [InlineData(data: nameof(ConsoleLetters.ColossalXmas))]
     public void Table_LettersUsedForBrandColor_Exist(string tableName)
     {
         // Logo()'s Colors[1] switch case explicitly names 'N', 'M', 'S' (from "NoMercy
         // MediaServer") as the brand-highlighted letters — they must exist in the table
         // the same way any other rendered character must.
-        Dictionary<string, List<string>> table = GetTable(tableName);
+        Dictionary<string, List<string>> table = GetTable(name: tableName);
 
         foreach (char brand in "NMS")
         {
-            Assert.True(table.ContainsKey(brand.ToString()));
+            Assert.True(condition: table.ContainsKey(key: brand.ToString()));
         }
     }
 
     [Fact]
     public void Colossal_AndColossalXmas_AreDistinctTableInstances()
     {
-        Assert.NotSame(ConsoleLetters.Colossal, ConsoleLetters.ColossalXmas);
+        Assert.NotSame(expected: ConsoleLetters.Colossal, actual: ConsoleLetters.ColossalXmas);
     }
 
     private static Dictionary<string, List<string>> GetTable(string name) =>

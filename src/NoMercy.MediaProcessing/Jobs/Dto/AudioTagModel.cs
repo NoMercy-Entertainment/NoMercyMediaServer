@@ -39,7 +39,7 @@ public class AudioTagModel
 
     public static async Task<AudioTagModel> Create(MediaFile fileItem)
     {
-        FfProbeData ffProbeData = await FfProbe.CreateAsync(fileItem.Path);
+        FfProbeData ffProbeData = await FfProbe.CreateAsync(file: fileItem.Path);
         Dictionary<string, string> tagsContainer = ffProbeData.Format.Tags ?? [];
         MusicBrainzDto? mb = null;
 
@@ -47,121 +47,121 @@ public class AudioTagModel
         {
             mb ??= new();
 
-            if (Guid.TryParse(fileItem.TagFile.Tag.MusicBrainzReleaseId, out Guid rId))
+            if (Guid.TryParse(input: fileItem.TagFile.Tag.MusicBrainzReleaseId, result: out Guid rId))
                 mb.ReleaseId = rId;
 
-            if (Guid.TryParse(fileItem.TagFile.Tag.MusicBrainzArtistId, out Guid aId))
+            if (Guid.TryParse(input: fileItem.TagFile.Tag.MusicBrainzArtistId, result: out Guid aId))
                 mb.ArtistId = aId;
 
-            if (Guid.TryParse(fileItem.TagFile.Tag.MusicBrainzReleaseArtistId, out Guid raId))
+            if (Guid.TryParse(input: fileItem.TagFile.Tag.MusicBrainzReleaseArtistId, result: out Guid raId))
                 mb.ReleaseArtistId = raId;
 
-            if (Guid.TryParse(fileItem.TagFile.Tag.MusicBrainzTrackId, out Guid tId))
+            if (Guid.TryParse(input: fileItem.TagFile.Tag.MusicBrainzTrackId, result: out Guid tId))
                 mb.ReleaseTrackId = tId;
 
-            if (Guid.TryParse(fileItem.TagFile.Tag.MusicBrainzTrackId, out Guid recId))
+            if (Guid.TryParse(input: fileItem.TagFile.Tag.MusicBrainzTrackId, result: out Guid recId))
                 mb.RecordingId = recId;
 
-            if (tagsContainer.TryGetValue("Acoustid Fingerprint", out string? fingerPrint))
+            if (tagsContainer.TryGetValue(key: "Acoustid Fingerprint", value: out string? fingerPrint))
                 mb.FingerPrint = fingerPrint;
 
             if (
-                tagsContainer.TryGetValue("Acoustid Id", out string? acoustId)
-                && Guid.TryParse(acoustId, out Guid acoustGuid)
+                tagsContainer.TryGetValue(key: "Acoustid Id", value: out string? acoustId)
+                && Guid.TryParse(input: acoustId, result: out Guid acoustGuid)
             )
                 mb.AcoustIdId = acoustGuid;
 
             if (
                 mb.ReleaseId == Guid.Empty
-                && tagsContainer.TryGetValue("MusicBrainz Release Id", out string? releaseId)
-                && Guid.TryParse(releaseId, out Guid releaseGuid)
+                && tagsContainer.TryGetValue(key: "MusicBrainz Release Id", value: out string? releaseId)
+                && Guid.TryParse(input: releaseId, result: out Guid releaseGuid)
             )
                 mb.ReleaseId = releaseGuid;
 
             if (
                 mb.ArtistId == Guid.Empty
-                && tagsContainer.TryGetValue("MusicBrainz Artist Id", out string? albumId)
+                && tagsContainer.TryGetValue(key: "MusicBrainz Artist Id", value: out string? albumId)
             )
-                mb.ArtistId = Guid.TryParse(albumId.Split(";").First().Trim(), out Guid albumGuid)
+                mb.ArtistId = Guid.TryParse(input: albumId.Split(separator: ";").First().Trim(), result: out Guid albumGuid)
                     ? albumGuid
                     : Guid.Empty;
 
             if (
                 mb.ReleaseArtistId == Guid.Empty
                 && tagsContainer.TryGetValue(
-                    "MusicBrainz Release Artist Id",
-                    out string? albumTrackId
+                    key: "MusicBrainz Release Artist Id",
+                    value: out string? albumTrackId
                 )
-                && Guid.TryParse(albumTrackId, out Guid albumTrackGuid)
+                && Guid.TryParse(input: albumTrackId, result: out Guid albumTrackGuid)
             )
                 mb.ReleaseArtistId = albumTrackGuid;
 
             if (
                 mb.ReleaseTrackId == Guid.Empty
-                && tagsContainer.TryGetValue("MusicBrainz Track Id", out string? trackId)
-                && Guid.TryParse(trackId, out Guid trackGuid)
+                && tagsContainer.TryGetValue(key: "MusicBrainz Track Id", value: out string? trackId)
+                && Guid.TryParse(input: trackId, result: out Guid trackGuid)
             )
                 mb.ReleaseTrackId = trackGuid;
 
             if (
                 mb.ReleaseTrackId == Guid.Empty
-                && tagsContainer.TryGetValue("MusicBrainz Recording Id", out string? recordingId)
-                && Guid.TryParse(recordingId, out Guid recordingGuid)
+                && tagsContainer.TryGetValue(key: "MusicBrainz Recording Id", value: out string? recordingId)
+                && Guid.TryParse(input: recordingId, result: out Guid recordingGuid)
             )
                 mb.RecordingId = recordingGuid;
 
             if (
                 mb.ReleaseTrackId == Guid.Empty
-                && tagsContainer.TryGetValue("MusicBrainz Track Id", out string? trackId2)
-                && Guid.TryParse(trackId2, out Guid trackGuid2)
+                && tagsContainer.TryGetValue(key: "MusicBrainz Track Id", value: out string? trackId2)
+                && Guid.TryParse(input: trackId2, result: out Guid trackGuid2)
             )
                 mb.RecordingId = trackGuid2;
         }
         else
         {
             mb ??= new();
-            if (tagsContainer.TryGetValue("Acoustid Fingerprint", out string? fingerPrint))
+            if (tagsContainer.TryGetValue(key: "Acoustid Fingerprint", value: out string? fingerPrint))
                 mb.FingerPrint = fingerPrint;
 
             if (
-                tagsContainer.TryGetValue("Acoustid Id", out string? acoustId)
-                && Guid.TryParse(acoustId, out Guid acoustGuid)
+                tagsContainer.TryGetValue(key: "Acoustid Id", value: out string? acoustId)
+                && Guid.TryParse(input: acoustId, result: out Guid acoustGuid)
             )
                 mb.AcoustIdId = acoustGuid;
 
             if (
-                tagsContainer.TryGetValue("MusicBrainz Release Id", out string? releaseId)
-                && Guid.TryParse(releaseId, out Guid releaseGuid)
+                tagsContainer.TryGetValue(key: "MusicBrainz Release Id", value: out string? releaseId)
+                && Guid.TryParse(input: releaseId, result: out Guid releaseGuid)
             )
                 mb.ReleaseId = releaseGuid;
 
             if (
-                tagsContainer.TryGetValue("MusicBrainz Artist Id", out string? albumId)
-                && Guid.TryParse(albumId, out Guid artistGuid)
+                tagsContainer.TryGetValue(key: "MusicBrainz Artist Id", value: out string? albumId)
+                && Guid.TryParse(input: albumId, result: out Guid artistGuid)
             )
                 mb.ArtistId = artistGuid;
 
             if (
-                tagsContainer.TryGetValue("MusicBrainz Release Artist Id", out string? albumTrackId)
-                && Guid.TryParse(albumTrackId, out Guid albumTrackGuid)
+                tagsContainer.TryGetValue(key: "MusicBrainz Release Artist Id", value: out string? albumTrackId)
+                && Guid.TryParse(input: albumTrackId, result: out Guid albumTrackGuid)
             )
                 mb.ReleaseArtistId = albumTrackGuid;
 
             if (
-                tagsContainer.TryGetValue("MusicBrainz Track Id", out string? trackId)
-                && Guid.TryParse(trackId, out Guid trackGuid)
+                tagsContainer.TryGetValue(key: "MusicBrainz Track Id", value: out string? trackId)
+                && Guid.TryParse(input: trackId, result: out Guid trackGuid)
             )
                 mb.ReleaseTrackId = trackGuid;
 
             if (
-                tagsContainer.TryGetValue("MusicBrainz Recording Id", out string? recordingId)
-                && Guid.TryParse(recordingId, out Guid recordingGuid)
+                tagsContainer.TryGetValue(key: "MusicBrainz Recording Id", value: out string? recordingId)
+                && Guid.TryParse(input: recordingId, result: out Guid recordingGuid)
             )
                 mb.RecordingId = recordingGuid;
 
             if (
-                tagsContainer.TryGetValue("MusicBrainz Track Id", out string? trackId2)
-                && Guid.TryParse(trackId2, out Guid trackGuid2)
+                tagsContainer.TryGetValue(key: "MusicBrainz Track Id", value: out string? trackId2)
+                && Guid.TryParse(input: trackId2, result: out Guid trackGuid2)
             )
                 mb.RecordingId = trackGuid2;
         }
@@ -170,22 +170,22 @@ public class AudioTagModel
         {
             string key = tag
                 .Key.ToLowerInvariant()
-                .Replace("musicbrainz_", "")
-                .Replace("musicbrainz", "")
-                .Replace(" ", "")
-                .Replace("_", "");
+                .Replace(oldValue: "musicbrainz_", newValue: "")
+                .Replace(oldValue: "musicbrainz", newValue: "")
+                .Replace(oldValue: " ", newValue: "")
+                .Replace(oldValue: "_", newValue: "");
             string value = tag.Value;
             switch (key)
             {
                 case "albumid":
                 case "releaseid":
-                    if (Guid.TryParse(value, out Guid releaseId) && mb.ReleaseId != releaseId)
+                    if (Guid.TryParse(input: value, result: out Guid releaseId) && mb.ReleaseId != releaseId)
                     {
                         mb.ReleaseId = releaseId;
                     }
                     continue;
                 case "artistid":
-                    if (Guid.TryParse(value, out Guid artistId) && mb.ArtistId != artistId)
+                    if (Guid.TryParse(input: value, result: out Guid artistId) && mb.ArtistId != artistId)
                     {
                         mb.ArtistId = artistId;
                     }
@@ -193,7 +193,7 @@ public class AudioTagModel
                 case "albumartistid":
                 case "releaseartistid":
                     if (
-                        Guid.TryParse(value, out Guid releaseArtistId)
+                        Guid.TryParse(input: value, result: out Guid releaseArtistId)
                         && mb.ReleaseArtistId != releaseArtistId
                     )
                     {
@@ -203,7 +203,7 @@ public class AudioTagModel
                 case "trackid":
                 case "releasetrackid":
                     if (
-                        Guid.TryParse(value, out Guid releaseTrackId)
+                        Guid.TryParse(input: value, result: out Guid releaseTrackId)
                         && mb.ReleaseTrackId != releaseTrackId
                     )
                     {
@@ -211,7 +211,7 @@ public class AudioTagModel
                     }
                     continue;
                 case "recordingid":
-                    if (Guid.TryParse(value, out Guid recordingId) && mb.RecordingId != recordingId)
+                    if (Guid.TryParse(input: value, result: out Guid recordingId) && mb.RecordingId != recordingId)
                     {
                         mb.RecordingId = recordingId;
                     }
@@ -223,7 +223,7 @@ public class AudioTagModel
                     }
                     continue;
                 case "acoustidid":
-                    if (Guid.TryParse(value, out Guid acoustIdId) && mb.AcoustIdId != acoustIdId)
+                    if (Guid.TryParse(input: value, result: out Guid acoustIdId) && mb.AcoustIdId != acoustIdId)
                     {
                         mb.AcoustIdId = acoustIdId;
                     }

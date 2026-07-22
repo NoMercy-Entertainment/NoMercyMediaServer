@@ -48,7 +48,7 @@ public class OrphanJobRecoveryHostedService(
     ILogger<OrphanJobRecoveryHostedService> logger
 ) : BackgroundService
 {
-    private static readonly TimeSpan OrphanCutoff = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan OrphanCutoff = TimeSpan.FromSeconds(seconds: 30);
     internal static readonly string[] EncoderQueues =
     [
         QueueNames.Encoder,
@@ -69,21 +69,21 @@ public class OrphanJobRecoveryHostedService(
             IOrphanCheckpointLookup? checkpointLookup =
                 scope.ServiceProvider.GetService<IOrphanCheckpointLookup>();
 
-            DateTime cutoff = DateTime.UtcNow.Subtract(OrphanCutoff);
-            IReadOnlyList<QueueJobModel> orphans = context.GetReservedJobsOlderThan(cutoff);
+            DateTime cutoff = DateTime.UtcNow.Subtract(value: OrphanCutoff);
+            IReadOnlyList<QueueJobModel> orphans = context.GetReservedJobsOlderThan(cutoffUtc: cutoff);
 
             if (orphans.Count == 0)
             {
-                logger.LogDebug("Orphan recovery: no orphan jobs found");
+                logger.LogDebug(message: "Orphan recovery: no orphan jobs found");
                 return;
             }
 
             OrphanTriageResult result = await OrphanRecoveryTriage
                 .RunAsync(
-                    context,
-                    checkpointLookup,
-                    orphans,
-                    EncoderQueues.ToHashSet(),
+                    context: context,
+                    checkpointLookup: checkpointLookup,
+                    orphans: orphans,
+                    encoderQueues: EncoderQueues.ToHashSet(),
                     // Boot-pass behavior is unchanged: nothing was running when
                     // the host came up, so a genuine first-time orphan gets its
                     // attempt refunded for one free clean retry.
@@ -92,20 +92,15 @@ public class OrphanJobRecoveryHostedService(
                     onReclaimed: null,
                     cancellationToken: cancellationToken
                 )
-                .ConfigureAwait(false);
+                .ConfigureAwait(continueOnCapturedContext: false);
 
             logger.LogInformation(
-                "Orphan recovery: scanned {Total} orphan job(s); {Failed} moved to FailedJobs ({Reason}); {Requeued} left for retry; {Resumable} re-queued for checkpoint resume",
-                orphans.Count,
-                result.Failed,
-                OrphanRecoveryTriage.InterruptedReason,
-                result.Requeued,
-                result.Resumable
+                message: "Orphan recovery: scanned {Total} orphan job(s); {Failed} moved to FailedJobs ({Reason}); {Requeued} left for retry; {Resumable} re-queued for checkpoint resume", args: [orphans.Count, result.Failed, OrphanRecoveryTriage.InterruptedReason, result.Requeued, result.Resumable]
             );
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Orphan recovery failed; continuing startup");
+            logger.LogError(exception: ex, message: "Orphan recovery failed; continuing startup");
         }
 
         return;

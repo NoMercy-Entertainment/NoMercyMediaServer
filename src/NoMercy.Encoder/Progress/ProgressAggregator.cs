@@ -18,7 +18,7 @@ public class ProgressAggregator
 
     public ProgressAggregator(TimeSpan[] estimatedDurations)
     {
-        _weights = estimatedDurations.Select(d => d.TotalSeconds).ToArray();
+        _weights = estimatedDurations.Select(selector: d => d.TotalSeconds).ToArray();
         _groupProgress = new double[_weights.Length];
         OverallPercentage = _weights.Sum();
     }
@@ -26,7 +26,7 @@ public class ProgressAggregator
     public void UpdateGroup(int groupIndex, double percentage)
     {
         if (groupIndex >= 0 && groupIndex < _groupProgress.Length)
-            _groupProgress[groupIndex] = Math.Clamp(percentage, 0, 100);
+            _groupProgress[groupIndex] = Math.Clamp(value: percentage, min: 0, max: 100);
     }
 
     public double OverallPercentage
@@ -49,6 +49,6 @@ public class ProgressAggregator
             return null;
         double totalEstimatedSeconds = elapsed.TotalSeconds / (percent / 100.0);
         double remainingSeconds = totalEstimatedSeconds - elapsed.TotalSeconds;
-        return remainingSeconds > 0 ? TimeSpan.FromSeconds(remainingSeconds) : TimeSpan.Zero;
+        return remainingSeconds > 0 ? TimeSpan.FromSeconds(value: remainingSeconds) : TimeSpan.Zero;
     }
 }

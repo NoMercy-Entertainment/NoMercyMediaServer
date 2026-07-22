@@ -36,17 +36,17 @@ public class BatchEncodingRequestTests
     {
         EncodingRequest[] items =
         [
-            BuildRequest("/media/a.mkv"),
-            BuildRequest("/media/b.mkv"),
-            BuildRequest("/media/c.mkv"),
+            BuildRequest(inputPath: "/media/a.mkv"),
+            BuildRequest(inputPath: "/media/b.mkv"),
+            BuildRequest(inputPath: "/media/c.mkv"),
         ];
 
         BatchEncodingRequest request = new(Items: items, Options: new());
 
-        request.Items.Should().HaveCount(3);
-        request.Items.Should().Contain(r => r.InputPath == "/media/a.mkv");
-        request.Items.Should().Contain(r => r.InputPath == "/media/b.mkv");
-        request.Items.Should().Contain(r => r.InputPath == "/media/c.mkv");
+        request.Items.Should().HaveCount(expected: 3);
+        request.Items.Should().Contain(predicate: r => r.InputPath == "/media/a.mkv");
+        request.Items.Should().Contain(predicate: r => r.InputPath == "/media/b.mkv");
+        request.Items.Should().Contain(predicate: r => r.InputPath == "/media/c.mkv");
     }
 
     [Fact]
@@ -59,12 +59,12 @@ public class BatchEncodingRequestTests
             CancelMode: BatchCancellationMode.CancelAll
         );
 
-        BatchEncodingRequest request = new(Items: [BuildRequest("/media/a.mkv")], Options: options);
+        BatchEncodingRequest request = new(Items: [BuildRequest(inputPath: "/media/a.mkv")], Options: options);
 
         request.Options.ShareAnalysis.Should().BeTrue();
         request.Options.ParallelEncoding.Should().BeTrue();
-        request.Options.MaxParallel.Should().Be(2);
-        request.Options.CancelMode.Should().Be(BatchCancellationMode.CancelAll);
+        request.Options.MaxParallel.Should().Be(expected: 2);
+        request.Options.CancelMode.Should().Be(expected: BatchCancellationMode.CancelAll);
     }
 
     [Fact]
@@ -93,7 +93,7 @@ public class BatchEncodingRequestTests
 
         options.ShareAnalysis.Should().BeTrue();
         options.ParallelEncoding.Should().BeFalse();
-        options.MaxParallel.Should().Be(1);
-        options.CancelMode.Should().Be(BatchCancellationMode.SkipRemaining);
+        options.MaxParallel.Should().Be(expected: 1);
+        options.CancelMode.Should().Be(expected: BatchCancellationMode.SkipRemaining);
     }
 }

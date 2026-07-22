@@ -15,9 +15,9 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class MusicBrainzReleaseGroupDetails : MusicBrainzReleaseGroup
 {
-    [JsonProperty("releases")]
+    [JsonProperty(propertyName: "releases")]
     public MusicBrainzRelease[] Releases { get; set; } = [];
 
-    [JsonProperty("relations")]
+    [JsonProperty(propertyName: "relations")]
     public MusicBrainzWorkRelation[] Relations { get; set; } = [];
 }

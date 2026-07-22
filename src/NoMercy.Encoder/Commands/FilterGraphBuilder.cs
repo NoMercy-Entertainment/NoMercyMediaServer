@@ -20,15 +20,15 @@ public class FilterGraphBuilder : IFilterGraphBuilder
     // Add a simple filter: [inputLabel]filter=params[outputLabel]
     public IFilterGraphBuilder AddFilter(string inputLabel, string filter, string outputLabel)
     {
-        _chains.Add($"[{inputLabel}]{filter}[{outputLabel}]");
+        _chains.Add(item: $"[{inputLabel}]{filter}[{outputLabel}]");
         return this;
     }
 
     // Add a split filter: [inputLabel]split=N[out1][out2]...[outN]
     public IFilterGraphBuilder AddSplit(string inputLabel, string[] outputLabels)
     {
-        string outputs = string.Join("", outputLabels.Select(l => $"[{l}]"));
-        _chains.Add($"[{inputLabel}]split={outputLabels.Length}{outputs}");
+        string outputs = string.Join(separator: "", values: outputLabels.Select(selector: l => $"[{l}]"));
+        _chains.Add(item: $"[{inputLabel}]split={outputLabels.Length}{outputs}");
         return this;
     }
 
@@ -40,14 +40,14 @@ public class FilterGraphBuilder : IFilterGraphBuilder
         string outputLabel
     )
     {
-        _chains.Add($"[{inputLabel}]scale={width}:{height}[{outputLabel}]");
+        _chains.Add(item: $"[{inputLabel}]scale={width}:{height}[{outputLabel}]");
         return this;
     }
 
     // Scale maintaining aspect ratio (height=-2 for even value)
     public IFilterGraphBuilder AddScaleWidth(string inputLabel, int width, string outputLabel)
     {
-        _chains.Add($"[{inputLabel}]scale={width}:-2[{outputLabel}]");
+        _chains.Add(item: $"[{inputLabel}]scale={width}:-2[{outputLabel}]");
         return this;
     }
 
@@ -61,7 +61,7 @@ public class FilterGraphBuilder : IFilterGraphBuilder
         string outputLabel
     )
     {
-        _chains.Add($"[{inputLabel}]{scaleFilter}={width}:{height}[{outputLabel}]");
+        _chains.Add(item: $"[{inputLabel}]{scaleFilter}={width}:{height}[{outputLabel}]");
         return this;
     }
 
@@ -71,7 +71,7 @@ public class FilterGraphBuilder : IFilterGraphBuilder
         // CPU tonemapping: zscale + tonemap chain
         string chain =
             $"[{inputLabel}]zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap={algorithm}:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p[{outputLabel}]";
-        _chains.Add(chain);
+        _chains.Add(item: chain);
         return this;
     }
 
@@ -84,7 +84,7 @@ public class FilterGraphBuilder : IFilterGraphBuilder
     {
         string chain =
             $"[{inputLabel}]libplacebo=tonemapping={algorithm}:color_primaries=bt709:color_trc=bt709:colorspace=bt709:format=yuv420p[{outputLabel}]";
-        _chains.Add(chain);
+        _chains.Add(item: chain);
         return this;
     }
 
@@ -95,7 +95,7 @@ public class FilterGraphBuilder : IFilterGraphBuilder
         string method = "yadif"
     )
     {
-        _chains.Add($"[{inputLabel}]{method}[{outputLabel}]");
+        _chains.Add(item: $"[{inputLabel}]{method}[{outputLabel}]");
         return this;
     }
 
@@ -109,7 +109,7 @@ public class FilterGraphBuilder : IFilterGraphBuilder
         string outputLabel
     )
     {
-        _chains.Add($"[{inputLabel}]crop={width}:{height}:{x}:{y}[{outputLabel}]");
+        _chains.Add(item: $"[{inputLabel}]crop={width}:{height}:{x}:{y}[{outputLabel}]");
         return this;
     }
 
@@ -118,7 +118,7 @@ public class FilterGraphBuilder : IFilterGraphBuilder
     {
         if (_chains.Count == 0)
             return "";
-        return string.Join(";", _chains);
+        return string.Join(separator: ";", values: _chains);
     }
 
     // Check if any filters have been added

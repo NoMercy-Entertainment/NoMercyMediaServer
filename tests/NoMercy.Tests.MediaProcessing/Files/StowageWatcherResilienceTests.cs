@@ -31,42 +31,42 @@ public class StowageWatcherResilienceTests
         Mock<IFileStorage> storage = new();
         int calls = 0;
         IReadOnlyCollection<IOEntry> empty = [];
-        IReadOnlyCollection<IOEntry> withFile = [new IOEntry("/movie.mkv")];
+        IReadOnlyCollection<IOEntry> withFile = [new IOEntry(path: "/movie.mkv")];
 
         storage
-            .Setup(s => s.Ls(It.IsAny<IOPath?>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
-            .Returns(() =>
+            .Setup(expression: s => s.Ls(It.IsAny<IOPath?>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .Returns(valueFunction: () =>
             {
-                int n = Interlocked.Increment(ref calls);
+                int n = Interlocked.Increment(location: ref calls);
                 return n switch
                 {
                     // First (seed) scan fails, as if the mount is not ready yet.
                     1 => Task.FromException<IReadOnlyCollection<IOEntry>>(
-                        new IOException("network mount not ready")
+                        exception: new IOException(message: "network mount not ready")
                     ),
                     // Second scan seeds an empty baseline (no events).
-                    2 => Task.FromResult(empty),
+                    2 => Task.FromResult(result: empty),
                     // From then on a new file exists → a Created event must fire.
-                    _ => Task.FromResult(withFile),
+                    _ => Task.FromResult(result: withFile),
                 };
             });
 
-        StowageWatcher watcher = new(storage.Object, "/");
+        StowageWatcher watcher = new(storage: storage.Object, path: "/");
         TaskCompletionSource<StowageWatcherEventArgs> created = new(
-            TaskCreationOptions.RunContinuationsAsynchronously
+            creationOptions: TaskCreationOptions.RunContinuationsAsynchronously
         );
-        watcher.Created += args => created.TrySetResult(args);
+        watcher.Created += args => created.TrySetResult(result: args);
 
-        watcher.Watch(TimeSpan.FromMilliseconds(50));
+        watcher.Watch(interval: TimeSpan.FromMilliseconds(milliseconds: 50));
 
-        Task finished = await Task.WhenAny(created.Task, Task.Delay(TimeSpan.FromSeconds(5)));
+        Task finished = await Task.WhenAny(task1: created.Task, task2: Task.Delay(delay: TimeSpan.FromSeconds(seconds: 5)));
         watcher.Dispose();
 
         Assert.True(
-            finished == created.Task,
-            "Watcher must recover from the initial scan failure and still emit later events."
+            condition: finished == created.Task,
+            userMessage: "Watcher must recover from the initial scan failure and still emit later events."
         );
         StowageWatcherEventArgs args = await created.Task;
-        Assert.Equal("/movie.mkv", args.Path);
+        Assert.Equal(expected: "/movie.mkv", actual: args.Path);
     }
 }

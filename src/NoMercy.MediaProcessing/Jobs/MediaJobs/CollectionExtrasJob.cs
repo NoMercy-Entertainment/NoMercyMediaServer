@@ -37,7 +37,7 @@ public class CollectionExtrasJob : AbstractMediaExraDataJob<TmdbCollectionAppend
         IStorageDriver storageDriver,
         ILoggerFactory loggerFactory
     )
-        : base(storageFactory, storageDriver, loggerFactory) { }
+        : base(storageFactory: storageFactory, storageDriver: storageDriver, loggerFactory: loggerFactory) { }
 
     public override string QueueName => "extras";
     public override int Priority => 1;
@@ -47,27 +47,27 @@ public class CollectionExtrasJob : AbstractMediaExraDataJob<TmdbCollectionAppend
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
-        MovieRepository movieRepository = new(context);
+        MovieRepository movieRepository = new(context: context);
         MovieManager movieManager = new(
-            movieRepository,
-            jobDispatcher,
-            StorageFactory,
-            LoggerFactory.CreateLogger<MovieManager>()
+            movieRepository: movieRepository,
+            jobDispatcher: jobDispatcher,
+            storageFactory: StorageFactory,
+            logger: LoggerFactory.CreateLogger<MovieManager>()
         );
 
-        CollectionRepository collectionRepository = new(context);
+        CollectionRepository collectionRepository = new(context: context);
         CollectionManager collectionManager = new(
-            collectionRepository,
-            movieManager,
-            jobDispatcher,
-            LoggerFactory.CreateLogger<CollectionManager>()
+            collectionRepository: collectionRepository,
+            movieManager: movieManager,
+            jobDispatcher: jobDispatcher,
+            logger: LoggerFactory.CreateLogger<CollectionManager>()
         );
 
-        await collectionManager.StoreImages(Storage);
+        await collectionManager.StoreImages(collection: Storage);
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshedEvent { QueryKey = ["collection", Storage.Id.ToString()] }
+                @event: new LibraryRefreshedEvent { QueryKey = ["collection", Storage.Id.ToString()] }
             );
     }
 }

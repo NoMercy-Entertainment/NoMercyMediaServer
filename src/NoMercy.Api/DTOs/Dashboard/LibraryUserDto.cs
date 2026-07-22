@@ -15,9 +15,9 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record LibraryUserDto
 {
-    [JsonProperty("library_id")]
+    [JsonProperty(propertyName: "library_id")]
     public Ulid LibraryId { get; set; }
 
-    [JsonProperty("UserId")]
+    [JsonProperty(propertyName: "UserId")]
     public Guid UserId { get; set; }
 }

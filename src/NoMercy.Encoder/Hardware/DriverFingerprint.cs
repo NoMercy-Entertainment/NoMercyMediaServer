@@ -26,11 +26,11 @@ public record DriverFingerprint(IReadOnlyList<GpuDriverInfo> Gpus)
     /// </summary>
     public string ComputeHash()
     {
-        IEnumerable<string> parts = Gpus.Select(g => $"{g.Vendor}|{g.Model}|{g.DriverVersion}")
-            .OrderBy(s => s, StringComparer.Ordinal);
+        IEnumerable<string> parts = Gpus.Select(selector: g => $"{g.Vendor}|{g.Model}|{g.DriverVersion}")
+            .OrderBy(keySelector: s => s, comparer: StringComparer.Ordinal);
 
-        string payload = string.Join(";", parts);
-        byte[] hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(payload));
-        return Convert.ToHexStringLower(hashBytes);
+        string payload = string.Join(separator: ";", values: parts);
+        byte[] hashBytes = SHA256.HashData(source: Encoding.UTF8.GetBytes(s: payload));
+        return Convert.ToHexStringLower(inArray: hashBytes);
     }
 }

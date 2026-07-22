@@ -25,22 +25,22 @@ public class VideoPlayerStateManager
 
     public VideoPlayerState? GetState(Guid userId)
     {
-        return _playerStates.TryGetValue(userId, out VideoPlayerState? state) ? state : null;
+        return _playerStates.TryGetValue(key: userId, value: out VideoPlayerState? state) ? state : null;
     }
 
     public void UpdateState(Guid userId, VideoPlayerState state)
     {
-        _playerStates.AddOrUpdate(userId, state, (_, _) => state);
+        _playerStates.AddOrUpdate(key: userId, addValue: state, updateValueFactory: (_, _) => state);
     }
 
     public bool RemoveState(Guid userId)
     {
-        return _playerStates.TryRemove(userId, out _);
+        return _playerStates.TryRemove(key: userId, value: out _);
     }
 
     public bool HasState(Guid userId)
     {
-        return _playerStates.ContainsKey(userId);
+        return _playerStates.ContainsKey(key: userId);
     }
 
     public void ClearAllStates()
@@ -50,15 +50,15 @@ public class VideoPlayerStateManager
 
     public void UpdateStateProperty(Guid userId, Action<VideoPlayerState> updateAction)
     {
-        if (_playerStates.TryGetValue(userId, out VideoPlayerState? state))
+        if (_playerStates.TryGetValue(key: userId, value: out VideoPlayerState? state))
         {
-            updateAction(state);
-            _playerStates[userId] = state;
+            updateAction(obj: state);
+            _playerStates[key: userId] = state;
         }
     }
 
-    public bool TryGetValue(Guid userId, [NotNullWhen(true)] out VideoPlayerState? state)
+    public bool TryGetValue(Guid userId, [NotNullWhen(returnValue: true)] out VideoPlayerState? state)
     {
-        return _playerStates.TryGetValue(userId, out state);
+        return _playerStates.TryGetValue(key: userId, value: out state);
     }
 }

@@ -73,9 +73,9 @@ public class ProcessResourceMonitor : IResourceMonitor
             if (elapsedMs < 1)
                 return 0;
 
-            int cores = Math.Max(1, Environment.ProcessorCount);
+            int cores = Math.Max(val1: 1, val2: Environment.ProcessorCount);
             double rawPercent = (cpuMs / elapsedMs) / cores * 100.0;
-            return Math.Clamp(rawPercent, 0, 100);
+            return Math.Clamp(value: rawPercent, min: 0, max: 100);
         }
     }
 
@@ -93,10 +93,10 @@ public class ProcessResourceMonitor : IResourceMonitor
     /// </remarks>
     public double GetSystemCpuUsagePercent()
     {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
             return SampleWindowsSystemCpu();
 
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        if (RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Linux))
             return SampleLinuxSystemCpu();
 
         // macOS + unknown: no portable API without P/Invoke into Mach
@@ -121,24 +121,24 @@ public class ProcessResourceMonitor : IResourceMonitor
         {
             _gpuWarningLogged = true;
             _logger?.LogWarning(
-                "[{RuleId}] GPU process telemetry is not available on this platform. "
-                    + "Install a vendor-specific sampler (e.g. NvmlGpuSampler) to enable live GPU utilization.",
-                EncoderRuleId.HardwareGpuTelemetryUnsupported
+                message: "[{RuleId}] GPU process telemetry is not available on this platform. "
+                         + "Install a vendor-specific sampler (e.g. NvmlGpuSampler) to enable live GPU utilization.",
+                args: EncoderRuleId.HardwareGpuTelemetryUnsupported
             );
         }
 
-        return Task.FromResult<IReadOnlyList<GpuProcessSample>>([]);
+        return Task.FromResult<IReadOnlyList<GpuProcessSample>>(result: []);
     }
 
     public long GetAvailableMemoryMb()
     {
         GCMemoryInfo info = GC.GetGCMemoryInfo();
         long available = info.TotalAvailableMemoryBytes - info.MemoryLoadBytes;
-        return Math.Max(0, available / (1024 * 1024));
+        return Math.Max(val1: 0, val2: available / (1024 * 1024));
     }
 
-    [DllImport("kernel32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
+    [DllImport(dllName: "kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(unmanagedType: UnmanagedType.Bool)]
     private static extern bool GetSystemTimes(
         out long lpIdleTime,
         out long lpKernelTime,
@@ -149,9 +149,9 @@ public class ProcessResourceMonitor : IResourceMonitor
     {
         try
         {
-            if (!GetSystemTimes(out long idle, out long kernel, out long user))
+            if (!GetSystemTimes(lpIdleTime: out long idle, lpKernelTime: out long kernel, lpUserTime: out long user))
             {
-                WarnSystemSamplerFailed("GetSystemTimes returned false");
+                WarnSystemSamplerFailed(detail: "GetSystemTimes returned false");
                 return SampleProcessFamilyCpu();
             }
 
@@ -176,7 +176,7 @@ public class ProcessResourceMonitor : IResourceMonitor
                 // kernel time on Windows INCLUDES idle time, so subtract
                 // idle to isolate actual busy ticks.
                 double busy = totalDelta - idleDelta;
-                double percent = Math.Clamp(busy / totalDelta * 100.0, 0, 100);
+                double percent = Math.Clamp(value: busy / totalDelta * 100.0, min: 0, max: 100);
                 _lastSystemCpuPercent = percent;
                 _lastSystemSampleAt = DateTime.UtcNow;
                 return percent;
@@ -184,7 +184,7 @@ public class ProcessResourceMonitor : IResourceMonitor
         }
         catch (Exception ex)
         {
-            WarnSystemSamplerFailed($"Windows GetSystemTimes threw: {ex.Message}");
+            WarnSystemSamplerFailed(detail: $"Windows GetSystemTimes threw: {ex.Message}");
             return SampleProcessFamilyCpu();
         }
     }
@@ -194,24 +194,24 @@ public class ProcessResourceMonitor : IResourceMonitor
         try
         {
             // /proc/stat first line: "cpu  user nice system idle iowait irq softirq steal ..."
-            string firstLine = File.ReadAllLines("/proc/stat")[0];
-            string[] parts = firstLine.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            string firstLine = File.ReadAllLines(path: "/proc/stat")[0];
+            string[] parts = firstLine.Split(separator: ' ', options: StringSplitOptions.RemoveEmptyEntries);
 
             // parts[0] == "cpu", parts[1..] are tick counts.
             if (parts.Length < 5)
             {
-                WarnSystemSamplerFailed("/proc/stat first line malformed");
+                WarnSystemSamplerFailed(detail: "/proc/stat first line malformed");
                 return SampleProcessFamilyCpu();
             }
 
-            long user = long.Parse(parts[1]);
-            long nice = long.Parse(parts[2]);
-            long system = long.Parse(parts[3]);
-            long idle = long.Parse(parts[4]);
-            long iowait = parts.Length > 5 ? long.Parse(parts[5]) : 0;
-            long irq = parts.Length > 6 ? long.Parse(parts[6]) : 0;
-            long softirq = parts.Length > 7 ? long.Parse(parts[7]) : 0;
-            long steal = parts.Length > 8 ? long.Parse(parts[8]) : 0;
+            long user = long.Parse(s: parts[1]);
+            long nice = long.Parse(s: parts[2]);
+            long system = long.Parse(s: parts[3]);
+            long idle = long.Parse(s: parts[4]);
+            long iowait = parts.Length > 5 ? long.Parse(s: parts[5]) : 0;
+            long irq = parts.Length > 6 ? long.Parse(s: parts[6]) : 0;
+            long softirq = parts.Length > 7 ? long.Parse(s: parts[7]) : 0;
+            long steal = parts.Length > 8 ? long.Parse(s: parts[8]) : 0;
 
             long idleAll = idle + iowait;
             long busy = user + nice + system + irq + softirq + steal;
@@ -231,7 +231,7 @@ public class ProcessResourceMonitor : IResourceMonitor
                     return _lastSystemCpuPercent;
                 }
 
-                double percent = Math.Clamp((1.0 - (double)idleDelta / totalDelta) * 100.0, 0, 100);
+                double percent = Math.Clamp(value: (1.0 - (double)idleDelta / totalDelta) * 100.0, min: 0, max: 100);
                 _lastSystemCpuPercent = percent;
                 _lastSystemSampleAt = DateTime.UtcNow;
                 return percent;
@@ -239,7 +239,7 @@ public class ProcessResourceMonitor : IResourceMonitor
         }
         catch (Exception ex)
         {
-            WarnSystemSamplerFailed($"/proc/stat read failed: {ex.Message}");
+            WarnSystemSamplerFailed(detail: $"/proc/stat read failed: {ex.Message}");
             return SampleProcessFamilyCpu();
         }
     }
@@ -259,7 +259,7 @@ public class ProcessResourceMonitor : IResourceMonitor
                 totalCpu += self.TotalProcessorTime;
             }
 
-            foreach (Process ffmpeg in Process.GetProcessesByName("ffmpeg"))
+            foreach (Process ffmpeg in Process.GetProcessesByName(processName: "ffmpeg"))
             {
                 try
                 {
@@ -291,8 +291,8 @@ public class ProcessResourceMonitor : IResourceMonitor
                 _lastSystemSampleAt = now;
                 _lastProcessFamilyCpuTime = totalCpu;
 
-                int cores = Math.Max(1, Environment.ProcessorCount);
-                double percent = Math.Clamp(cpuMs / elapsedMs / cores * 100.0, 0, 100);
+                int cores = Math.Max(val1: 1, val2: Environment.ProcessorCount);
+                double percent = Math.Clamp(value: cpuMs / elapsedMs / cores * 100.0, min: 0, max: 100);
                 _lastSystemCpuPercent = percent;
                 return percent;
             }
@@ -309,9 +309,9 @@ public class ProcessResourceMonitor : IResourceMonitor
             return;
         _systemSamplerWarningLogged = true;
         _logger?.LogWarning(
-            "System-wide CPU sampler unavailable ({Detail}); falling back to process-family sampler. "
-                + "Encoder dispatch will still throttle on encoder load but won't react to unrelated host activity.",
-            detail
+            message: "System-wide CPU sampler unavailable ({Detail}); falling back to process-family sampler. "
+                     + "Encoder dispatch will still throttle on encoder load but won't react to unrelated host activity.",
+            args: detail
         );
     }
 }
@@ -332,5 +332,5 @@ public sealed class NullResourceMonitor : IResourceMonitor
 
     public Task<IReadOnlyList<GpuProcessSample>> SampleGpuAsync(
         CancellationToken cancellationToken = default
-    ) => Task.FromResult<IReadOnlyList<GpuProcessSample>>([]);
+    ) => Task.FromResult<IReadOnlyList<GpuProcessSample>>(result: []);
 }

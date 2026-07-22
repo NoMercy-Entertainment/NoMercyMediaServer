@@ -23,7 +23,7 @@ namespace NoMercy.Tests.Networking;
 /// must carry every field the device-switcher UI depends on (identity,
 /// presence, and the TV-side foreground/screen-on flags).
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class ConnectedClientsAndDeviceListItemTests
 {
     [Fact]
@@ -31,7 +31,7 @@ public sealed class ConnectedClientsAndDeviceListItemTests
     {
         ConnectedClients clients = new();
 
-        Assert.Empty(clients.Clients);
+        Assert.Empty(collection: clients.Clients);
     }
 
     [Fact]
@@ -40,33 +40,33 @@ public sealed class ConnectedClientsAndDeviceListItemTests
         ConnectedClients clients = new();
         Client client = new() { Endpoint = "/videoHub" };
 
-        bool added = clients.Clients.TryAdd("conn-1", client);
+        bool added = clients.Clients.TryAdd(key: "conn-1", value: client);
 
-        Assert.True(added);
-        Assert.Same(client, clients.Clients["conn-1"]);
+        Assert.True(condition: added);
+        Assert.Same(expected: client, actual: clients.Clients[key: "conn-1"]);
     }
 
     [Fact]
     public void ConnectedClients_TryAdd_SameKeyTwice_SecondAddFails()
     {
         ConnectedClients clients = new();
-        clients.Clients.TryAdd("conn-1", new());
+        clients.Clients.TryAdd(key: "conn-1", value: new());
 
-        bool secondAdd = clients.Clients.TryAdd("conn-1", new());
+        bool secondAdd = clients.Clients.TryAdd(key: "conn-1", value: new());
 
-        Assert.False(secondAdd);
+        Assert.False(condition: secondAdd);
     }
 
     [Fact]
     public void ConnectedClients_Remove_DeletesEntry()
     {
         ConnectedClients clients = new();
-        clients.Clients.TryAdd("conn-1", new());
+        clients.Clients.TryAdd(key: "conn-1", value: new());
 
-        bool removed = clients.Clients.Remove("conn-1", out _);
+        bool removed = clients.Clients.Remove(key: "conn-1", value: out _);
 
-        Assert.True(removed);
-        Assert.Empty(clients.Clients);
+        Assert.True(condition: removed);
+        Assert.Empty(collection: clients.Clients);
     }
 
     [Fact]
@@ -82,15 +82,15 @@ public sealed class ConnectedClientsAndDeviceListItemTests
             Type = "tv",
         };
 
-        Assert.Equal(deviceId, item.DeviceId);
-        Assert.Equal("fp-abc", item.Fingerprint);
-        Assert.Equal("Bedroom TV", item.Name);
-        Assert.Equal("tv", item.Type);
-        Assert.False(item.Online);
-        Assert.Null(item.LanIp);
-        Assert.Null(item.LastSeenAt);
-        Assert.False(item.Foreground);
-        Assert.False(item.ScreenOn);
+        Assert.Equal(expected: deviceId, actual: item.DeviceId);
+        Assert.Equal(expected: "fp-abc", actual: item.Fingerprint);
+        Assert.Equal(expected: "Bedroom TV", actual: item.Name);
+        Assert.Equal(expected: "tv", actual: item.Type);
+        Assert.False(condition: item.Online);
+        Assert.Null(@object: item.LanIp);
+        Assert.Null(value: item.LastSeenAt);
+        Assert.False(condition: item.Foreground);
+        Assert.False(condition: item.ScreenOn);
     }
 
     [Fact]
@@ -115,10 +115,10 @@ public sealed class ConnectedClientsAndDeviceListItemTests
             ScreenOn = true,
         };
 
-        Assert.True(foregroundOnly.Foreground);
-        Assert.False(foregroundOnly.ScreenOn);
-        Assert.False(screenOnOnly.Foreground);
-        Assert.True(screenOnOnly.ScreenOn);
+        Assert.True(condition: foregroundOnly.Foreground);
+        Assert.False(condition: foregroundOnly.ScreenOn);
+        Assert.False(condition: screenOnOnly.Foreground);
+        Assert.True(condition: screenOnOnly.ScreenOn);
     }
 
     [Fact]
@@ -148,6 +148,6 @@ public sealed class ConnectedClientsAndDeviceListItemTests
             LastSeenAt = seenAt,
         };
 
-        Assert.Equal(a, b);
+        Assert.Equal(expected: a, actual: b);
     }
 }

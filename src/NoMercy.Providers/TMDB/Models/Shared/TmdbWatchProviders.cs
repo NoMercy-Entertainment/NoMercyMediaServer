@@ -15,10 +15,10 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbWatchProviders
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("results")]
+    [JsonProperty(propertyName: "results")]
     public TmdbWatchProviderResults TmdbWatchProviderResults { get; set; } = new();
 
     public static IEnumerable<(
@@ -35,11 +35,11 @@ public class TmdbWatchProviders
 
             Dictionary<string, TmdbPaymentDetails[]?> providerTypeMap = new()
             {
-                ["flatrate"] = value.FlatRate,
-                ["buy"] = value.Buy,
-                ["rent"] = value.Rent,
-                ["ads"] = value.Ads,
-                ["free"] = value.Free,
+                [key: "flatrate"] = value.FlatRate,
+                [key: "buy"] = value.Buy,
+                [key: "rent"] = value.Rent,
+                [key: "ads"] = value.Ads,
+                [key: "free"] = value.Free,
             };
 
             foreach ((string providerType, TmdbPaymentDetails[]? providers) in providerTypeMap)

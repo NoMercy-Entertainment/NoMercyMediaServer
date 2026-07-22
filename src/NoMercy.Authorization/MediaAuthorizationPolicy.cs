@@ -18,13 +18,13 @@ public class MediaAuthorizationPolicy(IUserCache userCache) : IMediaAuthorizatio
 {
     public bool IsOwner(ClaimsPrincipal? principal)
     {
-        User? owner = userCache.Users.FirstOrDefault(u => u.Owner);
+        User? owner = userCache.Users.FirstOrDefault(predicate: u => u.Owner);
         return owner is not null && principal?.UserId() == owner.Id;
     }
 
     public bool IsModerator(ClaimsPrincipal? principal) =>
-        userCache.Users.Any(u => u.Manage && u.Id == principal.UserId()) || IsOwner(principal);
+        userCache.Users.Any(predicate: u => u.Manage && u.Id == principal.UserId()) || IsOwner(principal: principal);
 
     public bool IsAllowed(ClaimsPrincipal? principal) =>
-        userCache.Users.Any(u => u.Allowed && u.Id == principal.UserId()) || IsOwner(principal);
+        userCache.Users.Any(predicate: u => u.Allowed && u.Id == principal.UserId()) || IsOwner(principal: principal);
 }

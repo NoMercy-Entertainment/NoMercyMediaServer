@@ -20,7 +20,7 @@ using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;
 
-[Trait("Category", "Characterization")]
+[Trait(name: "Category", value: "Characterization")]
 public class TvShowRepositoryTests : IDisposable
 {
     private readonly MediaContext _context;
@@ -32,75 +32,75 @@ public class TvShowRepositoryTests : IDisposable
     {
         (_factory, _connection) = TestMediaContextFactory.CreateSeededFactory();
         _context = _factory.CreateDbContext();
-        _repository = new(_factory);
+        _repository = new(contextFactory: _factory);
     }
 
     [Fact]
     public async Task GetTvAvailableAsync_ReturnsTrue_WhenShowHasVideoFiles()
     {
-        bool available = await _repository.GetTvAvailableAsync(SeedConstants.UserId, 1399);
+        bool available = await _repository.GetTvAvailableAsync(userId: SeedConstants.UserId, id: 1399);
 
-        Assert.True(available);
+        Assert.True(condition: available);
     }
 
     [Fact]
     public async Task GetTvAvailableAsync_ReturnsFalse_WhenUserHasNoAccess()
     {
-        bool available = await _repository.GetTvAvailableAsync(SeedConstants.OtherUserId, 1399);
+        bool available = await _repository.GetTvAvailableAsync(userId: SeedConstants.OtherUserId, id: 1399);
 
-        Assert.False(available);
+        Assert.False(condition: available);
     }
 
     [Fact]
     public async Task GetTvAvailableAsync_ReturnsFalse_WhenShowDoesNotExist()
     {
-        bool available = await _repository.GetTvAvailableAsync(SeedConstants.UserId, 999999);
+        bool available = await _repository.GetTvAvailableAsync(userId: SeedConstants.UserId, id: 999999);
 
-        Assert.False(available);
+        Assert.False(condition: available);
     }
 
     [Fact]
     public async Task GetTvPlaylistAsync_ReturnsShowWithSeasons()
     {
-        Tv? playlist = await _repository.GetPlaylistAsync(SeedConstants.UserId, 1399, "en", "US");
+        Tv? playlist = await _repository.GetPlaylistAsync(userId: SeedConstants.UserId, id: 1399, language: "en", country: "US");
 
-        Assert.NotNull(playlist);
-        Assert.Equal(1399, playlist.Id);
-        Assert.Equal("Breaking Bad", playlist.Title);
-        Assert.NotEmpty(playlist.Seasons);
+        Assert.NotNull(@object: playlist);
+        Assert.Equal(expected: 1399, actual: playlist.Id);
+        Assert.Equal(expected: "Breaking Bad", actual: playlist.Title);
+        Assert.NotEmpty(collection: playlist.Seasons);
     }
 
     [Fact]
     public async Task GetTvPlaylistAsync_ReturnsNull_WhenUserHasNoAccess()
     {
         Tv? playlist = await _repository.GetPlaylistAsync(
-            SeedConstants.OtherUserId,
-            1399,
-            "en",
-            "US"
+            userId: SeedConstants.OtherUserId,
+            id: 1399,
+            language: "en",
+            country: "US"
         );
 
-        Assert.Null(playlist);
+        Assert.Null(@object: playlist);
     }
 
     [Fact]
     public async Task GetTvPlaylistAsync_IncludesEpisodesWithVideoFiles()
     {
-        Tv? playlist = await _repository.GetPlaylistAsync(SeedConstants.UserId, 1399, "en", "US");
+        Tv? playlist = await _repository.GetPlaylistAsync(userId: SeedConstants.UserId, id: 1399, language: "en", country: "US");
 
-        Assert.NotNull(playlist);
-        Season season = Assert.Single(playlist.Seasons);
-        Assert.Equal(2, season.Episodes.Count);
-        Assert.All(season.Episodes, e => Assert.NotEmpty(e.VideoFiles));
+        Assert.NotNull(@object: playlist);
+        Season season = Assert.Single(collection: playlist.Seasons);
+        Assert.Equal(expected: 2, actual: season.Episodes.Count);
+        Assert.All(collection: season.Episodes, action: e => Assert.NotEmpty(collection: e.VideoFiles));
     }
 
     [Fact]
     public async Task DeleteTvAsync_RemovesShow()
     {
-        await _repository.DeleteAsync(1399);
+        await _repository.DeleteAsync(id: 1399);
 
-        bool available = await _repository.GetTvAvailableAsync(SeedConstants.UserId, 1399);
-        Assert.False(available);
+        bool available = await _repository.GetTvAvailableAsync(userId: SeedConstants.UserId, id: 1399);
+        Assert.False(condition: available);
     }
 
     [Fact]
@@ -115,44 +115,44 @@ public class TvShowRepositoryTests : IDisposable
             TvId = 1399,
             SeasonId = 3572,
         };
-        _context.Episodes.Add(episodeWithoutVideo);
+        _context.Episodes.Add(entity: episodeWithoutVideo);
         await _context.SaveChangesAsync();
 
         IEnumerable<Episode> missing = await _repository.GetMissingLibraryShows(
-            SeedConstants.UserId,
-            1399,
-            "en"
+            userId: SeedConstants.UserId,
+            id: 1399,
+            language: "en"
         );
 
-        Assert.Single(missing);
-        Assert.Equal(62087, missing.First().Id);
+        Assert.Single(collection: missing);
+        Assert.Equal(expected: 62087, actual: missing.First().Id);
     }
 
     [Fact]
     public async Task LikeTvAsync_AddsTvUser_WhenLikeIsTrue()
     {
-        bool result = await _repository.LikeAsync(1399, SeedConstants.UserId, true);
+        bool result = await _repository.LikeAsync(id: 1399, userId: SeedConstants.UserId, like: true);
 
-        Assert.True(result);
+        Assert.True(condition: result);
 
-        TvUser? tvUser = _context.TvUser.FirstOrDefault(tu =>
+        TvUser? tvUser = _context.TvUser.FirstOrDefault(predicate: tu =>
             tu.TvId == 1399 && tu.UserId == SeedConstants.UserId
         );
-        Assert.NotNull(tvUser);
+        Assert.NotNull(@object: tvUser);
     }
 
     [Fact]
     public async Task LikeTvAsync_RemovesTvUser_WhenLikeIsFalse()
     {
-        await _repository.LikeAsync(1399, SeedConstants.UserId, true);
-        bool result = await _repository.LikeAsync(1399, SeedConstants.UserId, false);
+        await _repository.LikeAsync(id: 1399, userId: SeedConstants.UserId, like: true);
+        bool result = await _repository.LikeAsync(id: 1399, userId: SeedConstants.UserId, like: false);
 
-        Assert.True(result);
+        Assert.True(condition: result);
 
-        TvUser? tvUser = _context.TvUser.FirstOrDefault(tu =>
+        TvUser? tvUser = _context.TvUser.FirstOrDefault(predicate: tu =>
             tu.TvId == 1399 && tu.UserId == SeedConstants.UserId
         );
-        Assert.Null(tvUser);
+        Assert.Null(@object: tvUser);
     }
 
     #region GetTvAsync — Split Query Tests
@@ -160,78 +160,78 @@ public class TvShowRepositoryTests : IDisposable
     [Fact]
     public async Task GetTvAsync_ReturnsShowWithAllNavigationProperties()
     {
-        SeedDetailData(_context);
+        SeedDetailData(context: _context);
 
-        Tv? tv = (await _repository.GetTvAsync(SeedConstants.UserId, 1399, "en", "US"))?.Tv;
+        Tv? tv = (await _repository.GetTvAsync(userId: SeedConstants.UserId, id: 1399, language: "en", country: "US"))?.Tv;
 
-        Assert.NotNull(tv);
-        Assert.Equal(1399, tv.Id);
-        Assert.Equal("Breaking Bad", tv.Title);
+        Assert.NotNull(@object: tv);
+        Assert.Equal(expected: 1399, actual: tv.Id);
+        Assert.Equal(expected: "Breaking Bad", actual: tv.Title);
 
-        Assert.NotEmpty(tv.Translations);
-        Assert.NotEmpty(tv.Images);
-        Assert.NotEmpty(tv.GenreTvs);
-        Assert.NotEmpty(tv.KeywordTvs);
-        Assert.NotEmpty(tv.Cast);
-        Assert.NotEmpty(tv.Crew);
-        Assert.NotEmpty(tv.Seasons);
-        Assert.NotEmpty(tv.RecommendationFrom);
-        Assert.NotEmpty(tv.SimilarFrom);
-        Assert.NotEmpty(tv.CertificationTvs);
-        Assert.NotEmpty(tv.Creators);
+        Assert.NotEmpty(collection: tv.Translations);
+        Assert.NotEmpty(collection: tv.Images);
+        Assert.NotEmpty(collection: tv.GenreTvs);
+        Assert.NotEmpty(collection: tv.KeywordTvs);
+        Assert.NotEmpty(collection: tv.Cast);
+        Assert.NotEmpty(collection: tv.Crew);
+        Assert.NotEmpty(collection: tv.Seasons);
+        Assert.NotEmpty(collection: tv.RecommendationFrom);
+        Assert.NotEmpty(collection: tv.SimilarFrom);
+        Assert.NotEmpty(collection: tv.CertificationTvs);
+        Assert.NotEmpty(collection: tv.Creators);
     }
 
     [Fact]
     public async Task GetTvAsync_MergesEpisodeCastCrewFromSplitQuery()
     {
-        SeedDetailData(_context);
+        SeedDetailData(context: _context);
 
-        Tv? tv = (await _repository.GetTvAsync(SeedConstants.UserId, 1399, "en", "US"))?.Tv;
+        Tv? tv = (await _repository.GetTvAsync(userId: SeedConstants.UserId, id: 1399, language: "en", country: "US"))?.Tv;
 
-        Assert.NotNull(tv);
+        Assert.NotNull(@object: tv);
 
         // Episode cast/crew should be populated via the second query
         Episode[] allEpisodes = tv.Episodes.ToArray();
-        Assert.NotEmpty(allEpisodes);
+        Assert.NotEmpty(collection: allEpisodes);
         Assert.True(
-            allEpisodes.Any(e => e.Cast.Count > 0),
-            "Episode-level cast should be populated from split query"
+            condition: allEpisodes.Any(predicate: e => e.Cast.Count > 0),
+            userMessage: "Episode-level cast should be populated from split query"
         );
         Assert.True(
-            allEpisodes.Any(e => e.Crew.Count > 0),
-            "Episode-level crew should be populated from split query"
+            condition: allEpisodes.Any(predicate: e => e.Crew.Count > 0),
+            userMessage: "Episode-level crew should be populated from split query"
         );
 
         // Verify cast has Person and Role loaded
-        Cast episodeCast = allEpisodes.SelectMany(e => e.Cast).First();
-        Assert.NotNull(episodeCast.Person);
-        Assert.NotNull(episodeCast.Role);
+        Cast episodeCast = allEpisodes.SelectMany(selector: e => e.Cast).First();
+        Assert.NotNull(@object: episodeCast.Person);
+        Assert.NotNull(@object: episodeCast.Role);
 
         // Verify crew has Person and Job loaded
-        Crew episodeCrew = allEpisodes.SelectMany(e => e.Crew).First();
-        Assert.NotNull(episodeCrew.Person);
-        Assert.NotNull(episodeCrew.Job);
+        Crew episodeCrew = allEpisodes.SelectMany(selector: e => e.Crew).First();
+        Assert.NotNull(@object: episodeCrew.Person);
+        Assert.NotNull(@object: episodeCrew.Job);
     }
 
     [Fact]
     public async Task GetTvAsync_MergesEpisodeCastCrewIntoSeasonEpisodes()
     {
-        SeedDetailData(_context);
+        SeedDetailData(context: _context);
 
-        Tv? tv = (await _repository.GetTvAsync(SeedConstants.UserId, 1399, "en", "US"))?.Tv;
+        Tv? tv = (await _repository.GetTvAsync(userId: SeedConstants.UserId, id: 1399, language: "en", country: "US"))?.Tv;
 
-        Assert.NotNull(tv);
+        Assert.NotNull(@object: tv);
 
         // Season episodes should also have cast/crew merged
-        Episode[] seasonEpisodes = tv.Seasons.SelectMany(s => s.Episodes).ToArray();
-        Assert.NotEmpty(seasonEpisodes);
+        Episode[] seasonEpisodes = tv.Seasons.SelectMany(selector: s => s.Episodes).ToArray();
+        Assert.NotEmpty(collection: seasonEpisodes);
         Assert.True(
-            seasonEpisodes.Any(e => e.Cast.Count > 0),
-            "Season-level episode cast should be populated from split query"
+            condition: seasonEpisodes.Any(predicate: e => e.Cast.Count > 0),
+            userMessage: "Season-level episode cast should be populated from split query"
         );
         Assert.True(
-            seasonEpisodes.Any(e => e.Crew.Count > 0),
-            "Season-level episode crew should be populated from split query"
+            condition: seasonEpisodes.Any(predicate: e => e.Crew.Count > 0),
+            userMessage: "Season-level episode crew should be populated from split query"
         );
     }
 
@@ -239,55 +239,55 @@ public class TvShowRepositoryTests : IDisposable
     public async Task GetTvAsync_ReturnsNull_WhenUserHasNoAccess()
     {
         TvDetail? detail = await _repository.GetTvAsync(
-            SeedConstants.OtherUserId,
-            1399,
-            "en",
-            "US"
+            userId: SeedConstants.OtherUserId,
+            id: 1399,
+            language: "en",
+            country: "US"
         );
 
-        Assert.Null(detail);
+        Assert.Null(@object: detail);
     }
 
     [Fact]
     public async Task GetTvAsync_ReturnsNull_WhenShowDoesNotExist()
     {
-        TvDetail? detail = await _repository.GetTvAsync(SeedConstants.UserId, 999999, "en", "US");
+        TvDetail? detail = await _repository.GetTvAsync(userId: SeedConstants.UserId, id: 999999, language: "en", country: "US");
 
-        Assert.Null(detail);
+        Assert.Null(@object: detail);
     }
 
     [Fact]
     public async Task GetTvAsync_IncludesShowLevelCastAndCrew()
     {
-        SeedDetailData(_context);
+        SeedDetailData(context: _context);
 
-        Tv? tv = (await _repository.GetTvAsync(SeedConstants.UserId, 1399, "en", "US"))?.Tv;
+        Tv? tv = (await _repository.GetTvAsync(userId: SeedConstants.UserId, id: 1399, language: "en", country: "US"))?.Tv;
 
-        Assert.NotNull(tv);
+        Assert.NotNull(@object: tv);
 
         // Show-level cast with Person and Role
-        Assert.NotEmpty(tv.Cast);
+        Assert.NotEmpty(collection: tv.Cast);
         Cast showCast = tv.Cast.First();
-        Assert.NotNull(showCast.Person);
-        Assert.NotNull(showCast.Role);
+        Assert.NotNull(@object: showCast.Person);
+        Assert.NotNull(@object: showCast.Role);
 
         // Show-level crew with Person and Job
-        Assert.NotEmpty(tv.Crew);
+        Assert.NotEmpty(collection: tv.Crew);
         Crew showCrew = tv.Crew.First();
-        Assert.NotNull(showCrew.Person);
-        Assert.NotNull(showCrew.Job);
+        Assert.NotNull(@object: showCrew.Person);
+        Assert.NotNull(@object: showCrew.Job);
     }
 
     [Fact]
     public async Task GetTvAsync_IncludesSeasonsWithEpisodesAndVideoFiles()
     {
-        Tv? tv = (await _repository.GetTvAsync(SeedConstants.UserId, 1399, "en", "US"))?.Tv;
+        Tv? tv = (await _repository.GetTvAsync(userId: SeedConstants.UserId, id: 1399, language: "en", country: "US"))?.Tv;
 
-        Assert.NotNull(tv);
-        Assert.NotEmpty(tv.Seasons);
+        Assert.NotNull(@object: tv);
+        Assert.NotEmpty(collection: tv.Seasons);
         Season season = tv.Seasons.First();
-        Assert.NotEmpty(season.Episodes);
-        Assert.All(season.Episodes, e => Assert.NotEmpty(e.VideoFiles));
+        Assert.NotEmpty(collection: season.Episodes);
+        Assert.All(collection: season.Episodes, action: e => Assert.NotEmpty(collection: e.VideoFiles));
     }
 
     [Fact]
@@ -298,19 +298,19 @@ public class TvShowRepositoryTests : IDisposable
             SqlCaptureInterceptor interceptor,
             SqliteConnection connection
         ) = TestMediaContextFactory.CreateSeededFactoryWithInterceptor();
-        TvShowRepository repo = new(factory);
+        TvShowRepository repo = new(contextFactory: factory);
         using (MediaContext seedCtx = factory.CreateDbContext())
         {
-            SeedDetailData(seedCtx);
+            SeedDetailData(context: seedCtx);
         }
         interceptor.Clear();
 
-        await repo.GetTvAsync(SeedConstants.UserId, 1399, "en", "US");
+        await repo.GetTvAsync(userId: SeedConstants.UserId, id: 1399, language: "en", country: "US");
 
         // Should generate multiple SQL queries (split query behavior)
         Assert.True(
-            interceptor.CapturedSql.Count > 1,
-            $"Expected multiple split queries, got {interceptor.CapturedSql.Count}"
+            condition: interceptor.CapturedSql.Count > 1,
+            userMessage: $"Expected multiple split queries, got {interceptor.CapturedSql.Count}"
         );
 
         connection.Dispose();
@@ -333,18 +333,18 @@ public class TvShowRepositoryTests : IDisposable
             Name = "Vince Gilligan",
             TitleSort = "gilligan, vince",
         };
-        context.People.AddRange(person1, person2);
+        context.People.AddRange(entities: [person1, person2]);
 
         // Role and Job
         Role role1 = new() { Character = "Walter White", EpisodeCount = 62 };
         Job job1 = new() { CreditId = "crew-1", Task = "Director" };
-        context.Roles.Add(role1);
-        context.Jobs.Add(job1);
+        context.Roles.Add(entity: role1);
+        context.Jobs.Add(entity: job1);
         context.SaveChanges();
 
         // Show-level Cast and Crew
         context.Casts.Add(
-            new()
+            entity: new()
             {
                 CreditId = "cast-tv-1",
                 PersonId = 17419,
@@ -353,7 +353,7 @@ public class TvShowRepositoryTests : IDisposable
             }
         );
         context.Crews.Add(
-            new()
+            entity: new()
             {
                 CreditId = "crew-tv-1",
                 PersonId = 84497,
@@ -365,12 +365,12 @@ public class TvShowRepositoryTests : IDisposable
         // Episode-level Cast and Crew
         Role episodeRole = new() { Character = "Walter White", EpisodeCount = 1 };
         Job episodeJob = new() { CreditId = "crew-ep-1", Task = "Writer" };
-        context.Roles.Add(episodeRole);
-        context.Jobs.Add(episodeJob);
+        context.Roles.Add(entity: episodeRole);
+        context.Jobs.Add(entity: episodeJob);
         context.SaveChanges();
 
         context.Casts.Add(
-            new()
+            entity: new()
             {
                 CreditId = "cast-ep-1",
                 PersonId = 17419,
@@ -379,7 +379,7 @@ public class TvShowRepositoryTests : IDisposable
             }
         );
         context.Crews.Add(
-            new()
+            entity: new()
             {
                 CreditId = "crew-ep-2",
                 PersonId = 84497,
@@ -389,11 +389,11 @@ public class TvShowRepositoryTests : IDisposable
         );
 
         // Creator
-        context.Creators.Add(new() { PersonId = 84497, TvId = 1399 });
+        context.Creators.Add(entity: new() { PersonId = 84497, TvId = 1399 });
 
         // Translation
         context.Translations.Add(
-            new()
+            entity: new()
             {
                 Iso6391 = "en",
                 Iso31661 = "US",
@@ -405,7 +405,7 @@ public class TvShowRepositoryTests : IDisposable
 
         // Image
         context.Images.Add(
-            new()
+            entity: new()
             {
                 FilePath = "/logo.png",
                 Type = "logo",
@@ -416,7 +416,7 @@ public class TvShowRepositoryTests : IDisposable
             }
         );
         context.Images.Add(
-            new()
+            entity: new()
             {
                 FilePath = "/backdrop.jpg",
                 Type = "backdrop",
@@ -429,8 +429,8 @@ public class TvShowRepositoryTests : IDisposable
 
         // Keyword
         Keyword keyword = new() { Id = 10765, Name = "drug dealer" };
-        context.Keywords.Add(keyword);
-        context.KeywordTv.Add(new() { KeywordId = 10765, TvId = 1399 });
+        context.Keywords.Add(entity: keyword);
+        context.KeywordTv.Add(entity: new() { KeywordId = 10765, TvId = 1399 });
 
         // Certification
         Certification cert = new()
@@ -440,13 +440,13 @@ public class TvShowRepositoryTests : IDisposable
             Meaning = "Parents Strongly Cautioned",
             Order = 3,
         };
-        context.Certifications.Add(cert);
+        context.Certifications.Add(entity: cert);
         context.SaveChanges();
-        context.CertificationTv.Add(new() { CertificationId = cert.Id, TvId = 1399 });
+        context.CertificationTv.Add(entity: new() { CertificationId = cert.Id, TvId = 1399 });
 
         // Similar and Recommendation
         context.Similar.Add(
-            new()
+            entity: new()
             {
                 MediaId = 9999,
                 TvFromId = 1399,
@@ -454,7 +454,7 @@ public class TvShowRepositoryTests : IDisposable
             }
         );
         context.Recommendations.Add(
-            new()
+            entity: new()
             {
                 MediaId = 9998,
                 TvFromId = 1399,

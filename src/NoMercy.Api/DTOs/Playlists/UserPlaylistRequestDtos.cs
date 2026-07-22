@@ -16,13 +16,13 @@ namespace NoMercy.Api.DTOs.Playlists;
 /// <summary>POST /api/v1/playlists request body.</summary>
 public record CreateUserPlaylistRequestDto
 {
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("description")]
+    [JsonProperty(propertyName: "description")]
     public string? Description { get; set; }
 
-    [JsonProperty("cover")]
+    [JsonProperty(propertyName: "cover")]
     public string? Cover { get; set; }
 }
 
@@ -32,32 +32,32 @@ public record CreateUserPlaylistRequestDto
 /// </summary>
 public record UpdateUserPlaylistRequestDto
 {
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string? Name { get; set; }
 
-    [JsonProperty("description")]
+    [JsonProperty(propertyName: "description")]
     public string? Description { get; set; }
 
-    [JsonProperty("cover")]
+    [JsonProperty(propertyName: "cover")]
     public string? Cover { get; set; }
 }
 
 /// <summary>POST /api/v1/playlists/{id}/items request body.</summary>
 public record AddPlaylistItemRequestDto
 {
-    [JsonProperty("kind")]
+    [JsonProperty(propertyName: "kind")]
     public string Kind { get; set; } = string.Empty;
 
-    [JsonProperty("media_id")]
+    [JsonProperty(propertyName: "media_id")]
     public string MediaId { get; set; } = string.Empty;
 
-    [JsonProperty("order")]
+    [JsonProperty(propertyName: "order")]
     public int? Order { get; set; }
 }
 
 /// <summary>PUT /api/v1/playlists/{id}/items/order request body.</summary>
 public record ReorderPlaylistItemsRequestDto
 {
-    [JsonProperty("ordered_item_ids")]
+    [JsonProperty(propertyName: "ordered_item_ids")]
     public List<string> OrderedItemIds { get; set; } = [];
 }

@@ -15,9 +15,9 @@ namespace NoMercy.Providers.AcoustId.Models;
 
 public class AcoustIdFingerprint
 {
-    [JsonProperty("results")]
+    [JsonProperty(propertyName: "results")]
     public AcoustIdFingerprintResult[] Results { get; set; } = [];
 
-    [JsonProperty("status")]
+    [JsonProperty(propertyName: "status")]
     public string Status { get; set; } = string.Empty;
 }

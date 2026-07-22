@@ -15,85 +15,85 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Libraries;
 
-[PrimaryKey(nameof(Id))]
-[Index(nameof(Id), IsUnique = true)]
-[Index(nameof(Title))]
-[Index(nameof(Type))]
-[Index(nameof(Order))]
+[PrimaryKey(propertyName: nameof(Id))]
+[Index(propertyName: nameof(Id), IsUnique = true)]
+[Index(propertyName: nameof(Title))]
+[Index(propertyName: nameof(Type))]
+[Index(propertyName: nameof(Order))]
 public class Library : Timestamps
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.None)]
-    [JsonProperty("id")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
+    [JsonProperty(propertyName: "id")]
     public Ulid Id { get; set; }
 
-    [JsonProperty("chapter_images")]
+    [JsonProperty(propertyName: "chapter_images")]
     public bool ChapterImages { get; set; }
 
-    [JsonProperty("extract_chapters")]
+    [JsonProperty(propertyName: "extract_chapters")]
     public bool ExtractChapters { get; set; }
 
-    [JsonProperty("extract_chapters_during")]
+    [JsonProperty(propertyName: "extract_chapters_during")]
     public bool ExtractChaptersDuring { get; set; }
 
-    [JsonProperty("image")]
+    [JsonProperty(propertyName: "image")]
     public string? Image { get; set; }
 
-    [JsonProperty("auto_refresh_interval")]
+    [JsonProperty(propertyName: "auto_refresh_interval")]
     public int AutoRefreshInterval { get; set; }
 
-    [Column("AutoEncodeOnScan")]
-    [JsonProperty("auto_encode_on_scan")]
+    [Column(name: "AutoEncodeOnScan")]
+    [JsonProperty(propertyName: "auto_encode_on_scan")]
     public bool AutoEncodeOnScan { get; set; }
 
-    [Column("EncodePresetId")]
-    [JsonProperty("encode_preset_id")]
+    [Column(name: "EncodePresetId")]
+    [JsonProperty(propertyName: "encode_preset_id")]
     public Ulid? EncodePresetId { get; set; }
 
-    [JsonProperty("order")]
+    [JsonProperty(propertyName: "order")]
     public int? Order { get; set; }
 
-    [JsonProperty("perfect_subtitle_match")]
+    [JsonProperty(propertyName: "perfect_subtitle_match")]
     public bool PerfectSubtitleMatch { get; set; }
 
-    [JsonProperty("realtime")]
+    [JsonProperty(propertyName: "realtime")]
     public bool Realtime { get; set; }
 
-    [JsonProperty("special_season_name")]
+    [JsonProperty(propertyName: "special_season_name")]
     public string? SpecialSeasonName { get; set; }
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty("folder_libraries")]
+    [JsonProperty(propertyName: "folder_libraries")]
     public ICollection<FolderLibrary> FolderLibraries { get; set; } = [];
 
-    [JsonProperty("language_libraries")]
+    [JsonProperty(propertyName: "language_libraries")]
     public ICollection<LanguageLibrary> LanguageLibraries { get; set; } = [];
 
-    [JsonProperty("library_users")]
+    [JsonProperty(propertyName: "library_users")]
     public ICollection<LibraryUser> LibraryUsers { get; set; } = [];
 
-    [JsonProperty("library_tvs")]
+    [JsonProperty(propertyName: "library_tvs")]
     public ICollection<LibraryTv> LibraryTvs { get; set; } = [];
 
-    [JsonProperty("library_movies")]
+    [JsonProperty(propertyName: "library_movies")]
     public ICollection<LibraryMovie> LibraryMovies { get; set; } = [];
 
-    [JsonProperty("library_tracks")]
+    [JsonProperty(propertyName: "library_tracks")]
     public ICollection<LibraryTrack> LibraryTracks { get; set; } = [];
 
-    [JsonProperty("collection_libraries")]
+    [JsonProperty(propertyName: "collection_libraries")]
     public ICollection<CollectionLibrary> CollectionLibraries { get; set; } = [];
 
-    [JsonProperty("album_libraries")]
+    [JsonProperty(propertyName: "album_libraries")]
     public ICollection<AlbumLibrary> AlbumLibraries { get; set; } = [];
 
-    [JsonProperty("artist_libraries")]
+    [JsonProperty(propertyName: "artist_libraries")]
     public ICollection<ArtistLibrary> ArtistLibraries { get; set; } = [];
 
-    [JsonProperty("playback_preferences")]
+    [JsonProperty(propertyName: "playback_preferences")]
     public ICollection<PlaybackPreference> PlaybackPreferences { get; set; } = [];
 }

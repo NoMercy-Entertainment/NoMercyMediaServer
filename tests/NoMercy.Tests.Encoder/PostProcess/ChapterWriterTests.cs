@@ -17,19 +17,19 @@ namespace NoMercy.Tests.Encoder.PostProcess;
 
 public class ChapterWriterTests : IDisposable
 {
-    private readonly ChapterWriter _writer = new(TestStorageFactory.CreateLocal());
+    private readonly ChapterWriter _writer = new(storage: TestStorageFactory.CreateLocal());
     private readonly string _tempDir;
 
     public ChapterWriterTests()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"ChapterWriterTests_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempDir);
+        _tempDir = Path.Combine(path1: Path.GetTempPath(), path2: $"ChapterWriterTests_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: _tempDir);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempDir))
-            Directory.Delete(_tempDir, true);
+        if (Directory.Exists(path: _tempDir))
+            Directory.Delete(path: _tempDir, recursive: true);
     }
 
     // ------------------------------------------------------------------
@@ -39,10 +39,10 @@ public class ChapterWriterTests : IDisposable
     [Fact]
     public async Task WriteChaptersAsync_EmptyChapters_NoFileCreated()
     {
-        await _writer.WriteChaptersAsync(_tempDir, [], default);
+        await _writer.WriteChaptersAsync(outputDirectory: _tempDir, chapters: [], ct: default);
 
-        string chaptersFile = Path.Combine(_tempDir, "chapters.vtt");
-        File.Exists(chaptersFile).Should().BeFalse();
+        string chaptersFile = Path.Combine(path1: _tempDir, path2: "chapters.vtt");
+        File.Exists(path: chaptersFile).Should().BeFalse();
     }
 
     // ------------------------------------------------------------------
@@ -54,13 +54,13 @@ public class ChapterWriterTests : IDisposable
     {
         ChapterInfo[] chapters =
         [
-            new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(5), Title: "Opening"),
+            new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(minutes: 5), Title: "Opening"),
         ];
 
-        await _writer.WriteChaptersAsync(_tempDir, chapters, default);
+        await _writer.WriteChaptersAsync(outputDirectory: _tempDir, chapters: chapters, ct: default);
 
-        string content = await File.ReadAllTextAsync(Path.Combine(_tempDir, "chapters.vtt"));
-        content.Should().StartWith("WEBVTT");
+        string content = await File.ReadAllTextAsync(path: Path.Combine(path1: _tempDir, path2: "chapters.vtt"));
+        content.Should().StartWith(expected: "WEBVTT");
     }
 
     // ------------------------------------------------------------------
@@ -72,16 +72,16 @@ public class ChapterWriterTests : IDisposable
     {
         ChapterInfo[] chapters =
         [
-            new(Start: TimeSpan.Zero, End: TimeSpan.FromSeconds(90), Title: "Part 1"),
-            new(Start: TimeSpan.FromSeconds(90), End: TimeSpan.FromMinutes(30), Title: "Part 2"),
+            new(Start: TimeSpan.Zero, End: TimeSpan.FromSeconds(seconds: 90), Title: "Part 1"),
+            new(Start: TimeSpan.FromSeconds(seconds: 90), End: TimeSpan.FromMinutes(minutes: 30), Title: "Part 2"),
         ];
 
-        await _writer.WriteChaptersAsync(_tempDir, chapters, default);
+        await _writer.WriteChaptersAsync(outputDirectory: _tempDir, chapters: chapters, ct: default);
 
-        string content = await File.ReadAllTextAsync(Path.Combine(_tempDir, "chapters.vtt"));
+        string content = await File.ReadAllTextAsync(path: Path.Combine(path1: _tempDir, path2: "chapters.vtt"));
 
-        content.Should().Contain("00:00:00.000 --> 00:01:30.000");
-        content.Should().Contain("00:01:30.000 --> 00:30:00.000");
+        content.Should().Contain(expected: "00:00:00.000 --> 00:01:30.000");
+        content.Should().Contain(expected: "00:01:30.000 --> 00:30:00.000");
     }
 
     // ------------------------------------------------------------------
@@ -93,20 +93,20 @@ public class ChapterWriterTests : IDisposable
     {
         ChapterInfo[] chapters =
         [
-            new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(5), Title: "Opening Credits"),
+            new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(minutes: 5), Title: "Opening Credits"),
             new(
-                Start: TimeSpan.FromMinutes(5),
-                End: TimeSpan.FromMinutes(60),
+                Start: TimeSpan.FromMinutes(minutes: 5),
+                End: TimeSpan.FromMinutes(minutes: 60),
                 Title: "Main Feature"
             ),
         ];
 
-        await _writer.WriteChaptersAsync(_tempDir, chapters, default);
+        await _writer.WriteChaptersAsync(outputDirectory: _tempDir, chapters: chapters, ct: default);
 
-        string content = await File.ReadAllTextAsync(Path.Combine(_tempDir, "chapters.vtt"));
+        string content = await File.ReadAllTextAsync(path: Path.Combine(path1: _tempDir, path2: "chapters.vtt"));
 
-        content.Should().Contain("Opening Credits");
-        content.Should().Contain("Main Feature");
+        content.Should().Contain(expected: "Opening Credits");
+        content.Should().Contain(expected: "Main Feature");
     }
 
     // ------------------------------------------------------------------
@@ -118,13 +118,13 @@ public class ChapterWriterTests : IDisposable
     {
         ChapterInfo[] chapters =
         [
-            new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(5), Title: null),
+            new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(minutes: 5), Title: null),
         ];
 
-        await _writer.WriteChaptersAsync(_tempDir, chapters, default);
+        await _writer.WriteChaptersAsync(outputDirectory: _tempDir, chapters: chapters, ct: default);
 
-        string content = await File.ReadAllTextAsync(Path.Combine(_tempDir, "chapters.vtt"));
-        content.Should().Contain("Chapter 1");
+        string content = await File.ReadAllTextAsync(path: Path.Combine(path1: _tempDir, path2: "chapters.vtt"));
+        content.Should().Contain(expected: "Chapter 1");
     }
 
     // ------------------------------------------------------------------
@@ -136,18 +136,18 @@ public class ChapterWriterTests : IDisposable
     {
         ChapterInfo[] chapters =
         [
-            new(TimeSpan.Zero, TimeSpan.FromMinutes(10), "One"),
-            new(TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(20), "Two"),
-            new(TimeSpan.FromMinutes(20), TimeSpan.FromMinutes(30), "Three"),
+            new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(minutes: 10), Title: "One"),
+            new(Start: TimeSpan.FromMinutes(minutes: 10), End: TimeSpan.FromMinutes(minutes: 20), Title: "Two"),
+            new(Start: TimeSpan.FromMinutes(minutes: 20), End: TimeSpan.FromMinutes(minutes: 30), Title: "Three"),
         ];
 
-        await _writer.WriteChaptersAsync(_tempDir, chapters, default);
+        await _writer.WriteChaptersAsync(outputDirectory: _tempDir, chapters: chapters, ct: default);
 
-        string content = await File.ReadAllTextAsync(Path.Combine(_tempDir, "chapters.vtt"));
+        string content = await File.ReadAllTextAsync(path: Path.Combine(path1: _tempDir, path2: "chapters.vtt"));
 
-        content.Should().Contain("Chapter 1");
-        content.Should().Contain("Chapter 2");
-        content.Should().Contain("Chapter 3");
+        content.Should().Contain(expected: "Chapter 1");
+        content.Should().Contain(expected: "Chapter 2");
+        content.Should().Contain(expected: "Chapter 3");
     }
 
     // ------------------------------------------------------------------
@@ -160,16 +160,16 @@ public class ChapterWriterTests : IDisposable
         ChapterInfo[] chapters =
         [
             new(
-                Start: TimeSpan.FromHours(1) + TimeSpan.FromMinutes(30),
-                End: TimeSpan.FromHours(2),
+                Start: TimeSpan.FromHours(hours: 1) + TimeSpan.FromMinutes(minutes: 30),
+                End: TimeSpan.FromHours(hours: 2),
                 Title: "Act 3"
             ),
         ];
 
-        await _writer.WriteChaptersAsync(_tempDir, chapters, default);
+        await _writer.WriteChaptersAsync(outputDirectory: _tempDir, chapters: chapters, ct: default);
 
-        string content = await File.ReadAllTextAsync(Path.Combine(_tempDir, "chapters.vtt"));
-        content.Should().Contain("01:30:00.000 --> 02:00:00.000");
+        string content = await File.ReadAllTextAsync(path: Path.Combine(path1: _tempDir, path2: "chapters.vtt"));
+        content.Should().Contain(expected: "01:30:00.000 --> 02:00:00.000");
     }
 
     // ------------------------------------------------------------------
@@ -179,11 +179,11 @@ public class ChapterWriterTests : IDisposable
     [Fact]
     public async Task WriteChaptersAsync_CreatesFileAtCorrectPath()
     {
-        ChapterInfo[] chapters = [new(TimeSpan.Zero, TimeSpan.FromMinutes(5), "Intro")];
+        ChapterInfo[] chapters = [new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(minutes: 5), Title: "Intro")];
 
-        await _writer.WriteChaptersAsync(_tempDir, chapters, default);
+        await _writer.WriteChaptersAsync(outputDirectory: _tempDir, chapters: chapters, ct: default);
 
-        string expectedPath = Path.Combine(_tempDir, "chapters.vtt");
-        File.Exists(expectedPath).Should().BeTrue();
+        string expectedPath = Path.Combine(path1: _tempDir, path2: "chapters.vtt");
+        File.Exists(path: expectedPath).Should().BeTrue();
     }
 }

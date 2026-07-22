@@ -25,14 +25,14 @@ namespace NoMercy.Encoder.Codecs;
 /// </summary>
 public sealed class QsvQualityScaler : IQualityScaler
 {
-    private static readonly HashSet<string> _handles = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> _handles = new(comparer: StringComparer.OrdinalIgnoreCase)
     {
         "h264_qsv",
         "hevc_qsv",
         "av1_qsv",
     };
 
-    public bool Supports(string encoderHandle) => _handles.Contains(encoderHandle);
+    public bool Supports(string encoderHandle) => _handles.Contains(item: encoderHandle);
 
     public int Translate(int sourceCrf, int sourceMax, int targetMax, CodecHint hint)
     {
@@ -43,9 +43,9 @@ public sealed class QsvQualityScaler : IQualityScaler
         if (sourceMax <= 0)
             return qsvMin;
 
-        int scaled = (int)Math.Round((double)sourceCrf / sourceMax * qsvMax);
+        int scaled = (int)Math.Round(a: (double)sourceCrf / sourceMax * qsvMax);
 
         // Off-by-one guard: never emit 0 — it silently disables CRF mode.
-        return Math.Clamp(scaled, qsvMin, qsvMax);
+        return Math.Clamp(value: scaled, min: qsvMin, max: qsvMax);
     }
 }

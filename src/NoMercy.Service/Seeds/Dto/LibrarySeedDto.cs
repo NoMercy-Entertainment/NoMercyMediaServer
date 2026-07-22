@@ -15,42 +15,42 @@ namespace NoMercy.Service.Seeds.Dto;
 
 public class LibrarySeedDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public Ulid Id { get; set; }
 
-    [JsonProperty("image")]
+    [JsonProperty(propertyName: "image")]
     public string Image { get; set; } = string.Empty;
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty("order")]
+    [JsonProperty(propertyName: "order")]
     public int Order { get; set; } = 99;
 
-    [JsonProperty("specialSeasonName")]
+    [JsonProperty(propertyName: "specialSeasonName")]
     public string SpecialSeasonName { get; set; } = string.Empty;
 
-    [JsonProperty("realtime")]
+    [JsonProperty(propertyName: "realtime")]
     public bool Realtime { get; set; }
 
-    [JsonProperty("autoRefreshInterval")]
+    [JsonProperty(propertyName: "autoRefreshInterval")]
     public int AutoRefreshInterval { get; set; }
 
-    [JsonProperty("chapterImages")]
+    [JsonProperty(propertyName: "chapterImages")]
     public bool ChapterImages { get; set; }
 
-    [JsonProperty("extractChaptersDuring")]
+    [JsonProperty(propertyName: "extractChaptersDuring")]
     public bool ExtractChaptersDuring { get; set; }
 
-    [JsonProperty("extractChapters")]
+    [JsonProperty(propertyName: "extractChapters")]
     public bool ExtractChapters { get; set; }
 
-    [JsonProperty("perfectSubtitleMatch")]
+    [JsonProperty(propertyName: "perfectSubtitleMatch")]
     public bool PerfectSubtitleMatch { get; set; }
 
-    [JsonProperty("folders")]
+    [JsonProperty(propertyName: "folders")]
     public FolderSeedDto[] Folders { get; set; } = [];
 }

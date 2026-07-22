@@ -19,7 +19,7 @@ namespace NoMercy.Tests.OpticalMedia.Metadata;
 /// candidate list is empty — callers (DiscRipJob's auto-apply / pending-write
 /// branches) rely on this to distinguish "no match" from "a ranked match".
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class DiscIdentificationTests
 {
     private static DiscCandidate MakeCandidate(string title, double confidence) =>
@@ -50,8 +50,8 @@ public class DiscIdentificationTests
     [Fact]
     public void TopCandidate_NonEmptyCandidates_ReturnsFirstEntry()
     {
-        DiscCandidate first = MakeCandidate("First", 0.95);
-        DiscCandidate second = MakeCandidate("Second", 0.5);
+        DiscCandidate first = MakeCandidate(title: "First", confidence: 0.95);
+        DiscCandidate second = MakeCandidate(title: "Second", confidence: 0.5);
 
         DiscIdentification identification = new(
             Kind: MediaKind.Movie,
@@ -61,6 +61,6 @@ public class DiscIdentificationTests
             NeedsManualAssignment: false
         );
 
-        identification.TopCandidate.Should().BeSameAs(first);
+        identification.TopCandidate.Should().BeSameAs(expected: first);
     }
 }

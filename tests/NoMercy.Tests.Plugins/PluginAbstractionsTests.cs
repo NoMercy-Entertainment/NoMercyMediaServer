@@ -26,7 +26,7 @@ public class PluginAbstractionsTests
         public string Name => "Test Plugin";
         public string Description => "A test plugin for unit testing";
         public Guid Id { get; } = Guid.NewGuid();
-        public Version Version { get; } = new(1, 0, 0);
+        public Version Version { get; } = new(major: 1, minor: 0, build: 0);
         public bool Initialized { get; private set; }
         public IPluginContext? ReceivedContext { get; private set; }
 
@@ -44,7 +44,7 @@ public class PluginAbstractionsTests
         public string Name => "Test Metadata";
         public string Description => "Test metadata provider";
         public Guid Id { get; } = Guid.NewGuid();
-        public Version Version { get; } = new(1, 0, 0);
+        public Version Version { get; } = new(major: 1, minor: 0, build: 0);
 
         public void Initialize(IPluginContext context) { }
 
@@ -55,7 +55,7 @@ public class PluginAbstractionsTests
         )
         {
             return Task.FromResult<MediaMetadata?>(
-                new()
+                result: new()
                 {
                     Title = title,
                     Year = 2024,
@@ -72,13 +72,14 @@ public class PluginAbstractionsTests
         public string Name => "Test Source";
         public string Description => "Test media source";
         public Guid Id { get; } = Guid.NewGuid();
-        public Version Version { get; } = new(1, 0, 0);
+        public Version Version { get; } = new(major: 1, minor: 0, build: 0);
 
         public void Initialize(IPluginContext context) { }
 
         public Task<IEnumerable<MediaFile>> ScanAsync(string path, CancellationToken ct = default)
         {
-            return Task.FromResult<IEnumerable<MediaFile>>([
+            return Task.FromResult<IEnumerable<MediaFile>>(result:
+            [
                 new()
                 {
                     Path = $"{path}/movie.mkv",
@@ -97,7 +98,7 @@ public class PluginAbstractionsTests
         public string Name => "Test Encoder";
         public string Description => "Test encoder";
         public Guid Id { get; } = Guid.NewGuid();
-        public Version Version { get; } = new(1, 0, 0);
+        public Version Version { get; } = new(major: 1, minor: 0, build: 0);
 
         public void Initialize(IPluginContext context) { }
 
@@ -119,7 +120,7 @@ public class PluginAbstractionsTests
         public string Name => "Test Scheduled";
         public string Description => "Test scheduled task";
         public Guid Id { get; } = Guid.NewGuid();
-        public Version Version { get; } = new(1, 0, 0);
+        public Version Version { get; } = new(major: 1, minor: 0, build: 0);
         public string CronExpression => "0 0 * * *";
         public bool Executed { get; private set; }
 
@@ -139,14 +140,14 @@ public class PluginAbstractionsTests
         public string Name => "Test Auth";
         public string Description => "Test auth";
         public Guid Id { get; } = Guid.NewGuid();
-        public Version Version { get; } = new(1, 0, 0);
+        public Version Version { get; } = new(major: 1, minor: 0, build: 0);
 
         public void Initialize(IPluginContext context) { }
 
         public Task<AuthResult> AuthenticateAsync(string token, CancellationToken ct = default)
         {
             return Task.FromResult(
-                new AuthResult
+                result: new AuthResult
                 {
                     IsAuthenticated = token == "valid-token",
                     UserName = token == "valid-token" ? "testuser" : null,
@@ -173,7 +174,7 @@ public class PluginAbstractionsTests
             Logger = NullLogger.Instance;
             DataFolderPath = dataFolder;
             Configuration = new NullPluginConfiguration();
-            HttpClient = new(new HttpClientHandler());
+            HttpClient = new(handler: new HttpClientHandler());
         }
 
         private sealed class MinimalServiceProvider : IServiceProvider
@@ -187,7 +188,7 @@ public class PluginAbstractionsTests
                 where T : class, new() => null;
 
             public Task<T?> GetConfigurationAsync<T>(CancellationToken ct = default)
-                where T : class, new() => Task.FromResult<T?>(null);
+                where T : class, new() => Task.FromResult<T?>(result: null);
 
             public void SaveConfiguration<T>(T configuration)
                 where T : class { }
@@ -206,39 +207,39 @@ public class PluginAbstractionsTests
     {
         using TestPlugin plugin = new();
 
-        plugin.Name.Should().Be("Test Plugin");
+        plugin.Name.Should().Be(expected: "Test Plugin");
         plugin.Description.Should().NotBeNullOrEmpty();
-        plugin.Id.Should().NotBe(Guid.Empty);
-        plugin.Version.Should().Be(new(1, 0, 0));
+        plugin.Id.Should().NotBe(unexpected: Guid.Empty);
+        plugin.Version.Should().Be(expected: new(major: 1, minor: 0, build: 0));
     }
 
     [Fact]
     public void IPlugin_Initialize_ReceivesPluginContext()
     {
         InMemoryEventBus bus = new();
-        TestPluginContext context = new(bus);
+        TestPluginContext context = new(eventBus: bus);
 
         using TestPlugin plugin = new();
-        plugin.Initialize(context);
+        plugin.Initialize(context: context);
 
         plugin.Initialized.Should().BeTrue();
-        plugin.ReceivedContext.Should().BeSameAs(context);
+        plugin.ReceivedContext.Should().BeSameAs(expected: context);
     }
 
     [Fact]
     public void IPluginContext_ProvidesEventBus()
     {
         InMemoryEventBus bus = new();
-        TestPluginContext context = new(bus);
+        TestPluginContext context = new(eventBus: bus);
 
-        context.EventBus.Should().BeSameAs(bus);
+        context.EventBus.Should().BeSameAs(expected: bus);
     }
 
     [Fact]
     public void IPluginContext_ProvidesLogger()
     {
         InMemoryEventBus bus = new();
-        TestPluginContext context = new(bus);
+        TestPluginContext context = new(eventBus: bus);
 
         context.Logger.Should().NotBeNull();
     }
@@ -247,9 +248,9 @@ public class PluginAbstractionsTests
     public void IPluginContext_ProvidesDataFolderPath()
     {
         InMemoryEventBus bus = new();
-        TestPluginContext context = new(bus, "/data/plugins/my-plugin");
+        TestPluginContext context = new(eventBus: bus, dataFolder: "/data/plugins/my-plugin");
 
-        context.DataFolderPath.Should().Be("/data/plugins/my-plugin");
+        context.DataFolderPath.Should().Be(expected: "/data/plugins/my-plugin");
     }
 
     [Fact]
@@ -257,12 +258,12 @@ public class PluginAbstractionsTests
     {
         using TestMetadataPlugin plugin = new();
 
-        MediaMetadata? result = await plugin.GetMetadataAsync("Test Movie", MediaType.Movie);
+        MediaMetadata? result = await plugin.GetMetadataAsync(title: "Test Movie", type: MediaType.Movie);
 
         result.Should().NotBeNull();
-        result!.Title.Should().Be("Test Movie");
-        result.Year.Should().Be(2024);
-        result.Genres.Should().Contain("Action");
+        result!.Title.Should().Be(expected: "Test Movie");
+        result.Year.Should().Be(expected: 2024);
+        result.Genres.Should().Contain(expected: "Action");
     }
 
     [Fact]
@@ -270,12 +271,12 @@ public class PluginAbstractionsTests
     {
         using TestMediaSourcePlugin plugin = new();
 
-        List<MediaFile> files = (await plugin.ScanAsync("/movies")).ToList();
+        List<MediaFile> files = (await plugin.ScanAsync(path: "/movies")).ToList();
 
         files.Should().ContainSingle();
-        files[0].FileName.Should().Be("movie.mkv");
-        files[0].Type.Should().Be(MediaType.Movie);
-        files[0].Size.Should().Be(1024);
+        files[index: 0].FileName.Should().Be(expected: "movie.mkv");
+        files[index: 0].Type.Should().Be(expected: MediaType.Movie);
+        files[index: 0].Size.Should().Be(expected: 1024);
     }
 
     [Fact]
@@ -284,11 +285,11 @@ public class PluginAbstractionsTests
         using TestEncoderPlugin plugin = new();
 
         MediaInfo info = new() { FilePath = "/test.mkv" };
-        EncodingProfile profile = plugin.GetProfile(info);
+        EncodingProfile profile = plugin.GetProfile(info: info);
 
-        profile.Name.Should().Be("test-profile");
-        profile.VideoCodec.Should().Be("libx264");
-        profile.AudioCodec.Should().Be("aac");
+        profile.Name.Should().Be(expected: "test-profile");
+        profile.VideoCodec.Should().Be(expected: "libx264");
+        profile.AudioCodec.Should().Be(expected: "aac");
     }
 
     [Fact]
@@ -296,7 +297,7 @@ public class PluginAbstractionsTests
     {
         using TestScheduledPlugin plugin = new();
 
-        plugin.CronExpression.Should().Be("0 0 * * *");
+        plugin.CronExpression.Should().Be(expected: "0 0 * * *");
         plugin.Executed.Should().BeFalse();
 
         await plugin.ExecuteAsync();
@@ -309,10 +310,10 @@ public class PluginAbstractionsTests
     {
         using TestAuthPlugin plugin = new();
 
-        AuthResult result = await plugin.AuthenticateAsync("valid-token");
+        AuthResult result = await plugin.AuthenticateAsync(token: "valid-token");
 
         result.IsAuthenticated.Should().BeTrue();
-        result.UserName.Should().Be("testuser");
+        result.UserName.Should().Be(expected: "testuser");
     }
 
     [Fact]
@@ -320,7 +321,7 @@ public class PluginAbstractionsTests
     {
         using TestAuthPlugin plugin = new();
 
-        AuthResult result = await plugin.AuthenticateAsync("bad-token");
+        AuthResult result = await plugin.AuthenticateAsync(token: "bad-token");
 
         result.IsAuthenticated.Should().BeFalse();
         result.UserName.Should().BeNull();
@@ -336,10 +337,10 @@ public class PluginAbstractionsTests
         IEncoderPlugin encoderPlugin = plugin;
         MediaInfo info = new() { FilePath = "/test.mkv" };
 
-        EncodingProfile? profile = await encoderPlugin.GetProfileAsync(info);
+        EncodingProfile? profile = await encoderPlugin.GetProfileAsync(info: info);
 
         profile.Should().NotBeNull();
-        profile!.Name.Should().Be("test-profile");
+        profile!.Name.Should().Be(expected: "test-profile");
     }
 
     [Fact]
@@ -351,13 +352,13 @@ public class PluginAbstractionsTests
         MinimalPluginManager manager = new();
         IPluginManager pluginManager = manager;
 
-        await pluginManager.InstallPluginAsync("https://example.com/plugin.zip", "deadbeef");
+        await pluginManager.InstallPluginAsync(packageUrl: "https://example.com/plugin.zip", expectedChecksum: "deadbeef");
 
         manager
             .ReceivedPackageUrls.Should()
             .ContainSingle()
             .Which.Should()
-            .Be("https://example.com/plugin.zip");
+            .Be(expected: "https://example.com/plugin.zip");
     }
 
     private sealed class MinimalPluginManager : IPluginManager
@@ -368,7 +369,7 @@ public class PluginAbstractionsTests
 
         public Task InstallPluginAsync(string packageUrl, CancellationToken ct = default)
         {
-            ReceivedPackageUrls.Add(packageUrl);
+            ReceivedPackageUrls.Add(item: packageUrl);
             return Task.CompletedTask;
         }
 
@@ -382,7 +383,7 @@ public class PluginAbstractionsTests
             Task.CompletedTask;
 
         public Task<IReadOnlyList<PluginLoadResult>> LoadAllAsync(CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<PluginLoadResult>>([]);
+            Task.FromResult<IReadOnlyList<PluginLoadResult>>(result: []);
 
         public IEnumerable<T> GetPluginsOfType<T>()
             where T : IPlugin => [];
@@ -396,36 +397,36 @@ public class PluginAbstractionsTests
             Id = Guid.NewGuid(),
             Name = "My Plugin",
             Description = "A useful plugin",
-            Version = new(2, 1, 0),
+            Version = new(major: 2, minor: 1, build: 0),
             Status = PluginStatus.Active,
             Author = "Test Author",
         };
 
-        info.Name.Should().Be("My Plugin");
-        info.Status.Should().Be(PluginStatus.Active);
-        info.Version.Should().Be(new(2, 1, 0));
-        info.Author.Should().Be("Test Author");
+        info.Name.Should().Be(expected: "My Plugin");
+        info.Status.Should().Be(expected: PluginStatus.Active);
+        info.Version.Should().Be(expected: new(major: 2, minor: 1, build: 0));
+        info.Author.Should().Be(expected: "Test Author");
     }
 
     [Fact]
     public void PluginStatus_HasAllExpectedValues()
     {
-        Enum.GetValues<PluginStatus>().Should().HaveCount(4);
-        Enum.GetValues<PluginStatus>().Should().Contain(PluginStatus.Active);
-        Enum.GetValues<PluginStatus>().Should().Contain(PluginStatus.Disabled);
-        Enum.GetValues<PluginStatus>().Should().Contain(PluginStatus.Malfunctioned);
-        Enum.GetValues<PluginStatus>().Should().Contain(PluginStatus.Deleted);
+        Enum.GetValues<PluginStatus>().Should().HaveCount(expected: 4);
+        Enum.GetValues<PluginStatus>().Should().Contain(expected: PluginStatus.Active);
+        Enum.GetValues<PluginStatus>().Should().Contain(expected: PluginStatus.Disabled);
+        Enum.GetValues<PluginStatus>().Should().Contain(expected: PluginStatus.Malfunctioned);
+        Enum.GetValues<PluginStatus>().Should().Contain(expected: PluginStatus.Deleted);
     }
 
     [Fact]
     public void MediaType_HasAllExpectedValues()
     {
-        Enum.GetValues<MediaType>().Should().HaveCount(5);
-        Enum.GetValues<MediaType>().Should().Contain(MediaType.Movie);
-        Enum.GetValues<MediaType>().Should().Contain(MediaType.TvShow);
-        Enum.GetValues<MediaType>().Should().Contain(MediaType.Music);
-        Enum.GetValues<MediaType>().Should().Contain(MediaType.Episode);
-        Enum.GetValues<MediaType>().Should().Contain(MediaType.Season);
+        Enum.GetValues<MediaType>().Should().HaveCount(expected: 5);
+        Enum.GetValues<MediaType>().Should().Contain(expected: MediaType.Movie);
+        Enum.GetValues<MediaType>().Should().Contain(expected: MediaType.TvShow);
+        Enum.GetValues<MediaType>().Should().Contain(expected: MediaType.Music);
+        Enum.GetValues<MediaType>().Should().Contain(expected: MediaType.Episode);
+        Enum.GetValues<MediaType>().Should().Contain(expected: MediaType.Season);
     }
 
     [Fact]
@@ -438,7 +439,7 @@ public class PluginAbstractionsTests
             AudioCodec = "aac",
         };
 
-        profile.Container.Should().Be("mp4");
+        profile.Container.Should().Be(expected: "mp4");
         profile.Width.Should().BeNull();
         profile.ExtraParameters.Should().BeEmpty();
     }
@@ -470,8 +471,8 @@ public class PluginAbstractionsTests
     {
         MediaFile file = new() { Path = "/test.mkv", FileName = "test.mkv" };
 
-        file.Size.Should().Be(0);
-        file.Type.Should().Be(MediaType.Movie);
+        file.Size.Should().Be(expected: 0);
+        file.Type.Should().Be(expected: MediaType.Movie);
         file.Properties.Should().BeEmpty();
     }
 
@@ -491,19 +492,19 @@ public class PluginAbstractionsTests
     public async Task Plugin_CanSubscribeToEventsViaContext()
     {
         InMemoryEventBus bus = new();
-        TestPluginContext context = new(bus);
+        TestPluginContext context = new(eventBus: bus);
 
         List<IEvent> received = [];
         context.EventBus.Subscribe<PlaybackStartedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
 
         await bus.PublishAsync(
-            new PlaybackStartedEvent
+            @event: new PlaybackStartedEvent
             {
                 UserId = Guid.NewGuid(),
                 MediaId = 1,

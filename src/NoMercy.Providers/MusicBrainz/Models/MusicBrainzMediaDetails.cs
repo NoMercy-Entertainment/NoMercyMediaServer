@@ -15,9 +15,9 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class MusicBrainzMediaDetails : MusicBrainzMedia
 {
-    [JsonProperty("discs")]
+    [JsonProperty(propertyName: "discs")]
     public Disc[] Discs { get; set; } = [];
 
-    [JsonProperty("track-offset")]
+    [JsonProperty(propertyName: "track-offset")]
     public int TrackOffset { get; set; }
 }

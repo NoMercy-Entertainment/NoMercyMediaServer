@@ -41,19 +41,19 @@ public class PluginRepository : IPluginRepository
         IStorage storage
     )
     {
-        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        ArgumentException.ThrowIfNullOrWhiteSpace(pluginsPath);
-        _storage = storage ?? throw new ArgumentNullException(nameof(storage));
+        _httpClient = httpClient ?? throw new ArgumentNullException(paramName: nameof(httpClient));
+        _logger = logger ?? throw new ArgumentNullException(paramName: nameof(logger));
+        ArgumentException.ThrowIfNullOrWhiteSpace(argument: pluginsPath);
+        _storage = storage ?? throw new ArgumentNullException(paramName: nameof(storage));
 
-        string configDir = Path.Combine(pluginsPath, "configurations");
+        string configDir = Path.Combine(path1: pluginsPath, path2: "configurations");
 
-        if (!_storage.Exists(configDir))
+        if (!_storage.Exists(path: configDir))
         {
-            _storage.CreateDirectory(configDir);
+            _storage.CreateDirectory(path: configDir);
         }
 
-        _repositoriesFilePath = Path.Combine(configDir, "repositories.json");
+        _repositoriesFilePath = Path.Combine(path1: configDir, path2: "repositories.json");
     }
 
     /// <summary>
@@ -70,8 +70,8 @@ public class PluginRepository : IPluginRepository
         CancellationToken ct = default
     )
     {
-        PluginRepository repository = new(httpClient, logger, pluginsPath, storage);
-        await repository.LoadRepositoriesFromDiskAsync(ct);
+        PluginRepository repository = new(httpClient: httpClient, logger: logger, pluginsPath: pluginsPath, storage: storage);
+        await repository.LoadRepositoriesFromDiskAsync(ct: ct);
         return repository;
     }
 
@@ -85,18 +85,18 @@ public class PluginRepository : IPluginRepository
 
     public async Task AddRepositoryAsync(string name, string url, CancellationToken ct = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        ArgumentException.ThrowIfNullOrWhiteSpace(url);
+        ArgumentException.ThrowIfNullOrWhiteSpace(argument: name);
+        ArgumentException.ThrowIfNullOrWhiteSpace(argument: url);
 
         lock (_lock)
         {
-            if (_repositories.Any(r => r.Name == name))
+            if (_repositories.Any(predicate: r => r.Name == name))
             {
-                throw new InvalidOperationException($"Repository '{name}' already exists.");
+                throw new InvalidOperationException(message: $"Repository '{name}' already exists.");
             }
 
             _repositories.Add(
-                new()
+                item: new()
                 {
                     Name = name,
                     Url = url,
@@ -105,24 +105,24 @@ public class PluginRepository : IPluginRepository
             );
         }
 
-        await SaveRepositoriesToDiskAsync(ct);
-        await RefreshRepositoryAsync(name, url, ct);
+        await SaveRepositoriesToDiskAsync(ct: ct);
+        await RefreshRepositoryAsync(name: name, url: url, ct: ct);
     }
 
     public async Task RemoveRepositoryAsync(string name, CancellationToken ct = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentException.ThrowIfNullOrWhiteSpace(argument: name);
 
         lock (_lock)
         {
-            int removed = _repositories.RemoveAll(r => r.Name == name);
+            int removed = _repositories.RemoveAll(match: r => r.Name == name);
             if (removed == 0)
             {
-                throw new InvalidOperationException($"Repository '{name}' not found.");
+                throw new InvalidOperationException(message: $"Repository '{name}' not found.");
             }
         }
 
-        await SaveRepositoriesToDiskAsync(ct);
+        await SaveRepositoriesToDiskAsync(ct: ct);
     }
 
     public async Task RefreshAsync(CancellationToken ct = default)
@@ -130,7 +130,7 @@ public class PluginRepository : IPluginRepository
         List<PluginRepositoryInfo> repos;
         lock (_lock)
         {
-            repos = _repositories.Where(r => r.Enabled).ToList();
+            repos = _repositories.Where(predicate: r => r.Enabled).ToList();
         }
 
         List<PluginRepositoryEntry> allPlugins = [];
@@ -140,18 +140,15 @@ public class PluginRepository : IPluginRepository
             try
             {
                 List<PluginRepositoryEntry> plugins = await FetchRepositoryPluginsAsync(
-                    repo.Url,
-                    ct
+                    url: repo.Url,
+                    ct: ct
                 );
-                allPlugins.AddRange(plugins);
+                allPlugins.AddRange(collection: plugins);
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(
-                    "Failed to refresh repository '{Name}' ({Url}): {Error}",
-                    repo.Name,
-                    repo.Url,
-                    ex.Message
+                    message: "Failed to refresh repository '{Name}' ({Url}): {Error}", args: [repo.Name, repo.Url, ex.Message]
                 );
             }
         }
@@ -159,7 +156,7 @@ public class PluginRepository : IPluginRepository
         lock (_lock)
         {
             _availablePlugins.Clear();
-            _availablePlugins.AddRange(allPlugins);
+            _availablePlugins.AddRange(collection: allPlugins);
         }
     }
 
@@ -175,18 +172,18 @@ public class PluginRepository : IPluginRepository
     {
         lock (_lock)
         {
-            return _availablePlugins.FirstOrDefault(p => p.Id == pluginId);
+            return _availablePlugins.FirstOrDefault(predicate: p => p.Id == pluginId);
         }
     }
 
     public PluginVersionEntry? FindVersion(Guid pluginId, string version)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(version);
+        ArgumentException.ThrowIfNullOrWhiteSpace(argument: version);
 
         lock (_lock)
         {
-            PluginRepositoryEntry? plugin = _availablePlugins.FirstOrDefault(p => p.Id == pluginId);
-            return plugin?.Versions.FirstOrDefault(v => v.Version == version);
+            PluginRepositoryEntry? plugin = _availablePlugins.FirstOrDefault(predicate: p => p.Id == pluginId);
+            return plugin?.Versions.FirstOrDefault(predicate: v => v.Version == version);
         }
     }
 
@@ -195,13 +192,13 @@ public class PluginRepository : IPluginRepository
         CancellationToken ct = default
     )
     {
-        using HttpResponseMessage response = await _httpClient.GetAsync(url, ct);
+        using HttpResponseMessage response = await _httpClient.GetAsync(requestUri: url, cancellationToken: ct);
         response.EnsureSuccessStatusCode();
 
-        string json = await response.Content.ReadAsStringAsync(ct);
+        string json = await response.Content.ReadAsStringAsync(cancellationToken: ct);
         PluginRepositoryManifest? manifest = JsonSerializer.Deserialize<PluginRepositoryManifest>(
-            json,
-            JsonOptions
+            json: json,
+            options: JsonOptions
         );
 
         if (manifest is null)
@@ -216,48 +213,43 @@ public class PluginRepository : IPluginRepository
     {
         try
         {
-            List<PluginRepositoryEntry> plugins = await FetchRepositoryPluginsAsync(url, ct);
+            List<PluginRepositoryEntry> plugins = await FetchRepositoryPluginsAsync(url: url, ct: ct);
 
             lock (_lock)
             {
-                _availablePlugins.AddRange(plugins);
+                _availablePlugins.AddRange(collection: plugins);
             }
         }
         catch (Exception ex)
         {
             _logger.LogWarning(
-                "Failed to fetch repository '{Name}' ({Url}): {Error}",
-                name,
-                url,
-                ex.Message
+                message: "Failed to fetch repository '{Name}' ({Url}): {Error}", args: [name, url, ex.Message]
             );
         }
     }
 
     private async Task LoadRepositoriesFromDiskAsync(CancellationToken ct)
     {
-        if (!_storage.Exists(_repositoriesFilePath))
+        if (!_storage.Exists(path: _repositoriesFilePath))
         {
             return;
         }
 
         try
         {
-            string json = await _storage.ReadAllTextAsync(_repositoriesFilePath, ct);
+            string json = await _storage.ReadAllTextAsync(path: _repositoriesFilePath, ct: ct);
             List<PluginRepositoryInfo>? repos = JsonSerializer.Deserialize<
                 List<PluginRepositoryInfo>
-            >(json, JsonOptions);
+            >(json: json, options: JsonOptions);
             if (repos is not null)
             {
-                _repositories.AddRange(repos);
+                _repositories.AddRange(collection: repos);
             }
         }
         catch (Exception ex)
         {
             _logger.LogWarning(
-                "Failed to load repositories from {Path}: {Error}",
-                _repositoriesFilePath,
-                ex.Message
+                message: "Failed to load repositories from {Path}: {Error}", args: [_repositoriesFilePath, ex.Message]
             );
         }
     }
@@ -278,15 +270,13 @@ public class PluginRepository : IPluginRepository
                 snapshot = _repositories.ToList();
             }
 
-            string json = JsonSerializer.Serialize(snapshot, JsonOptions);
-            await _storage.WriteAllTextAsync(_repositoriesFilePath, json, ct);
+            string json = JsonSerializer.Serialize(value: snapshot, options: JsonOptions);
+            await _storage.WriteAllTextAsync(path: _repositoriesFilePath, contents: json, ct: ct);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(
-                "Failed to save repositories to {Path}: {Error}",
-                _repositoriesFilePath,
-                ex.Message
+                message: "Failed to save repositories to {Path}: {Error}", args: [_repositoriesFilePath, ex.Message]
             );
         }
     }

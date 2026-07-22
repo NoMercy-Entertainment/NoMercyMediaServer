@@ -25,7 +25,7 @@ namespace NoMercy.Tests.Api;
 /// broadcast) while keeping the current track's lyrics for instant render, and
 /// must never mutate the stored state.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class MusicBroadcastPayloadTests
 {
     private static PlaylistTrackDto MakeTrackWithLyrics()
@@ -52,10 +52,10 @@ public class MusicBroadcastPayloadTests
                 },
             ],
         };
-        PlaylistTrackDto dto = new(track, "US");
+        PlaylistTrackDto dto = new(track: track, country: "US");
         // The DTO copies Lyrics from the entity; guard the fixture in case that
         // path ever changes, so the strip assertion can't silently pass on null.
-        Assert.NotNull(dto.Lyrics);
+        Assert.NotNull(@object: dto.Lyrics);
         return dto;
     }
 
@@ -69,7 +69,7 @@ public class MusicBroadcastPayloadTests
             CurrentItem = current,
             Backlog = [MakeTrackWithLyrics(), current],
             Playlist = [MakeTrackWithLyrics(), MakeTrackWithLyrics()],
-            CurrentList = new("/music/albums/x", UriKind.Relative),
+            CurrentList = new(uriString: "/music/albums/x", uriKind: UriKind.Relative),
         };
     }
 
@@ -80,8 +80,8 @@ public class MusicBroadcastPayloadTests
 
         MusicPlayerState broadcast = state.CloneForBroadcast();
 
-        Assert.All(broadcast.Playlist, track => Assert.Null(track.Lyrics));
-        Assert.All(broadcast.Backlog, track => Assert.Null(track.Lyrics));
+        Assert.All(collection: broadcast.Playlist, action: track => Assert.Null(@object: track.Lyrics));
+        Assert.All(collection: broadcast.Backlog, action: track => Assert.Null(@object: track.Lyrics));
     }
 
     [Fact]
@@ -91,9 +91,9 @@ public class MusicBroadcastPayloadTests
 
         MusicPlayerState broadcast = state.CloneForBroadcast();
 
-        Assert.NotNull(broadcast.CurrentItem);
-        Assert.NotNull(broadcast.CurrentItem!.Lyrics);
-        Assert.Equal(2, broadcast.CurrentItem.Lyrics!.Length);
+        Assert.NotNull(@object: broadcast.CurrentItem);
+        Assert.NotNull(@object: broadcast.CurrentItem!.Lyrics);
+        Assert.Equal(expected: 2, actual: broadcast.CurrentItem.Lyrics!.Length);
     }
 
     [Fact]
@@ -105,8 +105,8 @@ public class MusicBroadcastPayloadTests
 
         // The stored queue must still carry lyrics — stripping happens only on
         // the throwaway copy, never on the state the server keeps authoring.
-        Assert.All(state.Playlist, track => Assert.NotNull(track.Lyrics));
-        Assert.All(state.Backlog, track => Assert.NotNull(track.Lyrics));
+        Assert.All(collection: state.Playlist, action: track => Assert.NotNull(@object: track.Lyrics));
+        Assert.All(collection: state.Backlog, action: track => Assert.NotNull(@object: track.Lyrics));
     }
 
     [Fact]
@@ -116,34 +116,34 @@ public class MusicBroadcastPayloadTests
         // reference. In-place stripping would blank CurrentItem's lyrics too;
         // record `with` copies must isolate the two.
         MusicPlayerState state = MakeStateWithQueueLyrics();
-        Assert.Same(state.CurrentItem, state.Backlog[^1]);
+        Assert.Same(expected: state.CurrentItem, actual: state.Backlog[^1]);
 
         MusicPlayerState broadcast = state.CloneForBroadcast();
 
-        Assert.Null(broadcast.Backlog[^1].Lyrics);
-        Assert.NotNull(broadcast.CurrentItem!.Lyrics);
+        Assert.Null(@object: broadcast.Backlog[^1].Lyrics);
+        Assert.NotNull(@object: broadcast.CurrentItem!.Lyrics);
     }
 
     [Fact]
     public void CloneForBroadcast_PreservesQueueOrderAndScalarFields()
     {
         MusicPlayerState state = MakeStateWithQueueLyrics();
-        state.SetPosition(12_345);
+        state.SetPosition(positionMs: 12_345);
 
         MusicPlayerState broadcast = state.CloneForBroadcast();
 
-        Assert.Equal(state.DeviceId, broadcast.DeviceId);
-        Assert.Equal(state.VolumePercentage, broadcast.VolumePercentage);
-        Assert.Equal(state.Time, broadcast.Time);
-        Assert.Equal(state.PositionCapturedAtMs, broadcast.PositionCapturedAtMs);
-        Assert.Equal(state.CurrentList, broadcast.CurrentList);
+        Assert.Equal(expected: state.DeviceId, actual: broadcast.DeviceId);
+        Assert.Equal(expected: state.VolumePercentage, actual: broadcast.VolumePercentage);
+        Assert.Equal(expected: state.Time, actual: broadcast.Time);
+        Assert.Equal(expected: state.PositionCapturedAtMs, actual: broadcast.PositionCapturedAtMs);
+        Assert.Equal(expected: state.CurrentList, actual: broadcast.CurrentList);
         Assert.Equal(
-            state.Playlist.Select(track => track.Id),
-            broadcast.Playlist.Select(track => track.Id)
+            expected: state.Playlist.Select(selector: track => track.Id),
+            actual: broadcast.Playlist.Select(selector: track => track.Id)
         );
         Assert.Equal(
-            state.Backlog.Select(track => track.Id),
-            broadcast.Backlog.Select(track => track.Id)
+            expected: state.Backlog.Select(selector: track => track.Id),
+            actual: broadcast.Backlog.Select(selector: track => track.Id)
         );
     }
 
@@ -158,9 +158,9 @@ public class MusicBroadcastPayloadTests
     private static AlbumDto MakeAlbumDtoWithHeavyFields()
     {
         Album album = new() { Id = Guid.NewGuid(), Name = "Test Album" };
-        return new(album, "US")
+        return new(album: album, country: "US")
         {
-            ColorPalette = JToken.Parse("[\"#ffffff\",\"#000000\"]"),
+            ColorPalette = JToken.Parse(json: "[\"#ffffff\",\"#000000\"]"),
             Description = "an album bio no queue row renders",
         };
     }
@@ -174,9 +174,9 @@ public class MusicBroadcastPayloadTests
             ArtistId = artist.Id,
             TrackId = Guid.NewGuid(),
         };
-        return new(artistTrack, "US")
+        return new(artistTrack: artistTrack, country: "US")
         {
-            ColorPalette = JToken.Parse("[\"#ffffff\"]"),
+            ColorPalette = JToken.Parse(json: "[\"#ffffff\"]"),
             Description = "an artist bio no queue row renders",
         };
     }
@@ -199,7 +199,7 @@ public class MusicBroadcastPayloadTests
             CurrentItem = current,
             Backlog = [MakeTrackWithHeavyQueueFields(), current],
             Playlist = [MakeTrackWithHeavyQueueFields(), MakeTrackWithHeavyQueueFields()],
-            CurrentList = new("/music/genres/x", UriKind.Relative),
+            CurrentList = new(uriString: "/music/genres/x", uriKind: UriKind.Relative),
         };
     }
 
@@ -210,8 +210,8 @@ public class MusicBroadcastPayloadTests
 
         MusicPlayerState broadcast = state.CloneForBroadcast();
 
-        Assert.All(broadcast.Playlist, track => Assert.Null(track.ColorPalette));
-        Assert.All(broadcast.Backlog, track => Assert.Null(track.ColorPalette));
+        Assert.All(collection: broadcast.Playlist, action: track => Assert.Null(@object: track.ColorPalette));
+        Assert.All(collection: broadcast.Backlog, action: track => Assert.Null(@object: track.ColorPalette));
     }
 
     [Fact]
@@ -221,22 +221,22 @@ public class MusicBroadcastPayloadTests
 
         MusicPlayerState broadcast = state.CloneForBroadcast();
 
-        foreach (PlaylistTrackDto track in broadcast.Playlist.Concat(broadcast.Backlog))
+        foreach (PlaylistTrackDto track in broadcast.Playlist.Concat(second: broadcast.Backlog))
         {
             Assert.All(
-                track.Album,
-                album =>
+                collection: track.Album,
+                action: album =>
                 {
-                    Assert.Null(album.ColorPalette);
-                    Assert.Null(album.Description);
+                    Assert.Null(@object: album.ColorPalette);
+                    Assert.Null(@object: album.Description);
                 }
             );
             Assert.All(
-                track.Artist,
-                artist =>
+                collection: track.Artist,
+                action: artist =>
                 {
-                    Assert.Null(artist.ColorPalette);
-                    Assert.Null(artist.Description);
+                    Assert.Null(@object: artist.ColorPalette);
+                    Assert.Null(@object: artist.Description);
                 }
             );
         }
@@ -249,10 +249,10 @@ public class MusicBroadcastPayloadTests
 
         MusicPlayerState broadcast = state.CloneForBroadcast();
 
-        Assert.NotNull(broadcast.CurrentItem);
-        Assert.NotNull(broadcast.CurrentItem!.ColorPalette);
-        Assert.All(broadcast.CurrentItem.Album, album => Assert.NotNull(album.ColorPalette));
-        Assert.All(broadcast.CurrentItem.Artist, artist => Assert.NotNull(artist.ColorPalette));
+        Assert.NotNull(@object: broadcast.CurrentItem);
+        Assert.NotNull(@object: broadcast.CurrentItem!.ColorPalette);
+        Assert.All(collection: broadcast.CurrentItem.Album, action: album => Assert.NotNull(@object: album.ColorPalette));
+        Assert.All(collection: broadcast.CurrentItem.Artist, action: artist => Assert.NotNull(@object: artist.ColorPalette));
     }
 
     [Fact]
@@ -263,12 +263,12 @@ public class MusicBroadcastPayloadTests
         state.CloneForBroadcast();
 
         Assert.All(
-            state.Playlist,
-            track =>
+            collection: state.Playlist,
+            action: track =>
             {
-                Assert.NotNull(track.ColorPalette);
-                Assert.All(track.Album, album => Assert.NotNull(album.ColorPalette));
-                Assert.All(track.Artist, artist => Assert.NotNull(artist.ColorPalette));
+                Assert.NotNull(@object: track.ColorPalette);
+                Assert.All(collection: track.Album, action: album => Assert.NotNull(@object: album.ColorPalette));
+                Assert.All(collection: track.Artist, action: artist => Assert.NotNull(@object: artist.ColorPalette));
             }
         );
     }
@@ -280,14 +280,14 @@ public class MusicBroadcastPayloadTests
 
         AlbumDto stripped = album.ForBroadcastQueueEntry();
 
-        Assert.Null(stripped.ColorPalette);
-        Assert.Null(stripped.Description);
-        Assert.Equal(album.Id, stripped.Id);
-        Assert.Equal(album.Name, stripped.Name);
-        Assert.Equal(album.Link, stripped.Link);
+        Assert.Null(@object: stripped.ColorPalette);
+        Assert.Null(@object: stripped.Description);
+        Assert.Equal(expected: album.Id, actual: stripped.Id);
+        Assert.Equal(expected: album.Name, actual: stripped.Name);
+        Assert.Equal(expected: album.Link, actual: stripped.Link);
         // The source DTO the server keeps is never mutated.
-        Assert.NotNull(album.ColorPalette);
-        Assert.NotNull(album.Description);
+        Assert.NotNull(@object: album.ColorPalette);
+        Assert.NotNull(@object: album.Description);
     }
 
     [Fact]
@@ -297,13 +297,13 @@ public class MusicBroadcastPayloadTests
 
         ArtistDto stripped = artist.ForBroadcastQueueEntry();
 
-        Assert.Null(stripped.ColorPalette);
-        Assert.Null(stripped.Description);
-        Assert.Equal(artist.Id, stripped.Id);
-        Assert.Equal(artist.Name, stripped.Name);
-        Assert.Equal(artist.Link, stripped.Link);
-        Assert.NotNull(artist.ColorPalette);
-        Assert.NotNull(artist.Description);
+        Assert.Null(@object: stripped.ColorPalette);
+        Assert.Null(@object: stripped.Description);
+        Assert.Equal(expected: artist.Id, actual: stripped.Id);
+        Assert.Equal(expected: artist.Name, actual: stripped.Name);
+        Assert.Equal(expected: artist.Link, actual: stripped.Link);
+        Assert.NotNull(@object: artist.ColorPalette);
+        Assert.NotNull(@object: artist.Description);
     }
 
     // ── Queue window ──────────────────────────────────────────────────────────
@@ -316,53 +316,53 @@ public class MusicBroadcastPayloadTests
     public void CloneForBroadcast_WindowsPlaylistToUpcomingCap()
     {
         List<PlaylistTrackDto> longPlaylist = Enumerable
-            .Range(0, 250)
-            .Select(_ => MakeTrackWithLyrics())
+            .Range(start: 0, count: 250)
+            .Select(selector: _ => MakeTrackWithLyrics())
             .ToList();
         MusicPlayerState state = new()
         {
             CurrentItem = MakeTrackWithLyrics(),
             Playlist = longPlaylist,
             Backlog = [],
-            CurrentList = new("/music/genres/x", UriKind.Relative),
+            CurrentList = new(uriString: "/music/genres/x", uriKind: UriKind.Relative),
         };
 
         MusicPlayerState broadcast = state.CloneForBroadcast();
 
-        Assert.Equal(100, broadcast.Playlist.Count);
+        Assert.Equal(expected: 100, actual: broadcast.Playlist.Count);
         // Front-anchored: the window is the first 100 upcoming tracks, in order.
         Assert.Equal(
-            longPlaylist.Take(100).Select(track => track.Id),
-            broadcast.Playlist.Select(track => track.Id)
+            expected: longPlaylist.Take(count: 100).Select(selector: track => track.Id),
+            actual: broadcast.Playlist.Select(selector: track => track.Id)
         );
         // The server's own stored playlist is never truncated.
-        Assert.Equal(250, state.Playlist.Count);
+        Assert.Equal(expected: 250, actual: state.Playlist.Count);
     }
 
     [Fact]
     public void CloneForBroadcast_WindowsBacklogToMostRecentCap()
     {
         List<PlaylistTrackDto> longBacklog = Enumerable
-            .Range(0, 80)
-            .Select(_ => MakeTrackWithLyrics())
+            .Range(start: 0, count: 80)
+            .Select(selector: _ => MakeTrackWithLyrics())
             .ToList();
         MusicPlayerState state = new()
         {
             CurrentItem = MakeTrackWithLyrics(),
             Playlist = [],
             Backlog = longBacklog,
-            CurrentList = new("/music/genres/x", UriKind.Relative),
+            CurrentList = new(uriString: "/music/genres/x", uriKind: UriKind.Relative),
         };
 
         MusicPlayerState broadcast = state.CloneForBroadcast();
 
-        Assert.Equal(20, broadcast.Backlog.Count);
+        Assert.Equal(expected: 20, actual: broadcast.Backlog.Count);
         // Back-anchored: the window is the last 20 played tracks, in order.
         Assert.Equal(
-            longBacklog.TakeLast(20).Select(track => track.Id),
-            broadcast.Backlog.Select(track => track.Id)
+            expected: longBacklog.TakeLast(count: 20).Select(selector: track => track.Id),
+            actual: broadcast.Backlog.Select(selector: track => track.Id)
         );
-        Assert.Equal(80, state.Backlog.Count);
+        Assert.Equal(expected: 80, actual: state.Backlog.Count);
     }
 
     [Fact]
@@ -372,7 +372,7 @@ public class MusicBroadcastPayloadTests
 
         MusicPlayerState broadcast = state.CloneForBroadcast();
 
-        Assert.Equal(state.Playlist.Count, broadcast.Playlist.Count);
-        Assert.Equal(state.Backlog.Count, broadcast.Backlog.Count);
+        Assert.Equal(expected: state.Playlist.Count, actual: broadcast.Playlist.Count);
+        Assert.Equal(expected: state.Backlog.Count, actual: broadcast.Backlog.Count);
     }
 }

@@ -19,13 +19,13 @@ namespace NoMercy.Api.DTOs.Media.Components;
 /// </summary>
 public interface IComponentProps
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     dynamic Id { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty(propertyName: "next_id")]
     dynamic? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty(propertyName: "previous_id")]
     dynamic? PreviousId { get; set; }
 }
 
@@ -34,25 +34,25 @@ public interface IComponentProps
 /// </summary>
 public interface IContainerProps : IComponentProps
 {
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     string Title { get; set; }
 
-    [JsonProperty("more_link")]
+    [JsonProperty(propertyName: "more_link")]
     Uri? MoreLink { get; set; }
 
-    [JsonProperty("more_link_text")]
+    [JsonProperty(propertyName: "more_link_text")]
     string? MoreLinkText { get; }
 
-    [JsonProperty("items")]
+    [JsonProperty(propertyName: "items")]
     IEnumerable<ComponentEnvelope> Items { get; set; }
 
-    [JsonProperty("context_menu_items")]
+    [JsonProperty(propertyName: "context_menu_items")]
     IEnumerable<ContextMenuItemDto>? ContextMenuItems { get; set; }
 
-    [JsonProperty("url")]
+    [JsonProperty(propertyName: "url")]
     Uri? Url { get; set; }
 
-    [JsonProperty("properties")]
+    [JsonProperty(propertyName: "properties")]
     Dictionary<string, dynamic>? Properties { get; set; }
 }
 
@@ -62,21 +62,21 @@ public interface IContainerProps : IComponentProps
 /// <typeparam name="TData">The type of data this component displays.</typeparam>
 public interface ILeafProps<TData> : IComponentProps
 {
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     string Title { get; set; }
 
-    [JsonProperty("data")]
+    [JsonProperty(propertyName: "data")]
     TData? Data { get; set; }
 
-    [JsonProperty("watch")]
+    [JsonProperty(propertyName: "watch")]
     bool Watch { get; set; }
 
-    [JsonProperty("context_menu_items")]
+    [JsonProperty(propertyName: "context_menu_items")]
     IEnumerable<ContextMenuItemDto>? ContextMenuItems { get; set; }
 
-    [JsonProperty("url")]
+    [JsonProperty(propertyName: "url")]
     Uri? Url { get; set; }
 
-    [JsonProperty("properties")]
+    [JsonProperty(propertyName: "properties")]
     Dictionary<string, dynamic>? Properties { get; set; }
 }

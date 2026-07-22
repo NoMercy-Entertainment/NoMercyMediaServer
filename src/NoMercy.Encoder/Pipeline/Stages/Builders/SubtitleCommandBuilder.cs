@@ -53,27 +53,27 @@ public static class SubtitleCommandBuilder
             if (subPlan.SourceIndex >= mediaInfo.SubtitleStreams.Count)
                 continue;
 
-            SubtitleStreamInfo stream = mediaInfo.SubtitleStreams[subPlan.SourceIndex];
+            SubtitleStreamInfo stream = mediaInfo.SubtitleStreams[index: subPlan.SourceIndex];
 
             // Only text subtitles in the main command
             if (!stream.IsTextBased)
                 continue;
 
             SubtitleOutputInfo info = subtitleExtractor.ResolveOutput(
-                subPlan,
-                stream,
-                outputDirectory,
-                mediaTitle
+                plan: subPlan,
+                stream: stream,
+                outputDirectory: outputDirectory,
+                mediaTitle: mediaTitle
             );
 
             // Ensure subtitle directory exists (storage-relative parent of OutputPath).
-            string? parentDir = storage.GetParent(info.OutputPath);
+            string? parentDir = storage.GetParent(path: info.OutputPath);
             if (parentDir is not null)
-                storage.CreateDirectory(storage.CombinePath(outputDirectory, parentDir));
+                storage.CreateDirectory(path: storage.CombinePath(parent: outputDirectory, child: parentDir));
 
             // FFmpeg gets the relative path (CWD = output directory)
             builder.AddOutput(
-                new(
+                output: new(
                     FilePath: info.OutputPath,
                     SubtitleCodec: info.FfmpegCodec,
                     MapStreams: [$"0:s:{info.SourceIndex}"]

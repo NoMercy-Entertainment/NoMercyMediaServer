@@ -26,7 +26,7 @@ public class ArchiveExtractGateTests
     {
         bool result = ArchiveExtractGate.CanProceed(fileExists: false, actualSizeBytes: 0);
 
-        Assert.False(result, "a missing archive must never be handed to the extractor");
+        Assert.False(condition: result, userMessage: "a missing archive must never be handed to the extractor");
     }
 
     [Fact]
@@ -39,7 +39,7 @@ public class ArchiveExtractGateTests
             actualSizeBytes: 224_525_275
         );
 
-        Assert.False(result);
+        Assert.False(condition: result);
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public class ArchiveExtractGateTests
         // The signature of an aborted, partial, or not-yet-flushed download.
         bool result = ArchiveExtractGate.CanProceed(fileExists: true, actualSizeBytes: 0);
 
-        Assert.False(result, "a zero-byte file is never a valid archive");
+        Assert.False(condition: result, userMessage: "a zero-byte file is never a valid archive");
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public class ArchiveExtractGateTests
     {
         bool result = ArchiveExtractGate.CanProceed(fileExists: true, actualSizeBytes: 224_525_275);
 
-        Assert.True(result, "a fully-downloaded, verified archive must be allowed to extract");
+        Assert.True(condition: result, userMessage: "a fully-downloaded, verified archive must be allowed to extract");
     }
 
     [Fact]
@@ -67,6 +67,6 @@ public class ArchiveExtractGateTests
         // release manifest — that happens earlier in the download pipeline.
         bool result = ArchiveExtractGate.CanProceed(fileExists: true, actualSizeBytes: 1);
 
-        Assert.True(result);
+        Assert.True(condition: result);
     }
 }

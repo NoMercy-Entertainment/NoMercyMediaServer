@@ -15,7 +15,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Authorization;
 
-[Trait("Category", "Authorization")]
+[Trait(name: "Category", value: "Authorization")]
 public sealed class UserCacheTests
 {
     [Fact]
@@ -30,11 +30,11 @@ public sealed class UserCacheTests
             Email = "alice@nm.tv",
         };
 
-        cache.AddUser(user);
-        User? found = cache.GetUser(id);
+        cache.AddUser(user: user);
+        User? found = cache.GetUser(userId: id);
 
         found.Should().NotBeNull();
-        found!.Id.Should().Be(id);
+        found!.Id.Should().Be(expected: id);
     }
 
     [Fact]
@@ -49,9 +49,9 @@ public sealed class UserCacheTests
             Email = "bob@nm.tv",
         };
 
-        cache.AddUser(user);
-        cache.RemoveUser(user);
-        User? found = cache.GetUser(id);
+        cache.AddUser(user: user);
+        cache.RemoveUser(user: user);
+        User? found = cache.GetUser(userId: id);
 
         found.Should().BeNull();
     }
@@ -68,7 +68,7 @@ public sealed class UserCacheTests
             Allowed = false,
             Email = "c@nm.tv",
         };
-        cache.AddUser(original);
+        cache.AddUser(user: original);
 
         User updated = new()
         {
@@ -77,9 +77,9 @@ public sealed class UserCacheTests
             Allowed = true,
             Email = "c@nm.tv",
         };
-        cache.UpdateUser(updated);
+        cache.UpdateUser(user: updated);
 
-        User? found = cache.GetUser(id);
+        User? found = cache.GetUser(userId: id);
         found.Should().NotBeNull();
         found!.Allowed.Should().BeTrue();
     }
@@ -89,7 +89,7 @@ public sealed class UserCacheTests
     {
         UserCache cache = new();
         cache.AddUser(
-            new()
+            user: new()
             {
                 Id = Guid.NewGuid(),
                 Name = "Dave",
@@ -120,11 +120,11 @@ public sealed class UserCacheTests
             Email = "b@nm.tv",
         };
 
-        cache.AddUser(userA);
-        cache.AddUser(userB);
+        cache.AddUser(user: userA);
+        cache.AddUser(user: userB);
 
-        cache.Users.Should().HaveCount(2);
-        cache.Users.Select(u => u.Id).Should().Contain([userA.Id, userB.Id]);
+        cache.Users.Should().HaveCount(expected: 2);
+        cache.Users.Select(selector: u => u.Id).Should().Contain(expected: [userA.Id, userB.Id]);
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public sealed class UserCacheTests
     {
         UserCache cache = new();
 
-        User? found = cache.GetUser(Guid.NewGuid());
+        User? found = cache.GetUser(userId: Guid.NewGuid());
 
         found.Should().BeNull();
     }
@@ -144,7 +144,7 @@ public sealed class UserCacheTests
         Guid idA = Guid.NewGuid();
         Guid idB = Guid.NewGuid();
         cache.AddUser(
-            new()
+            user: new()
             {
                 Id = idA,
                 Name = "A",
@@ -152,7 +152,7 @@ public sealed class UserCacheTests
             }
         );
 
-        User? found = cache.GetUser(idB);
+        User? found = cache.GetUser(userId: idB);
 
         found.Should().BeNull();
     }
@@ -178,14 +178,14 @@ public sealed class UserCacheTests
             Name = "Test",
             Email = "test@nm.tv",
         };
-        cache.AddUser(user);
+        cache.AddUser(user: user);
 
         IReadOnlyList<User> firstRead = cache.Users;
         IReadOnlyList<User> secondRead = cache.Users;
 
-        firstRead.Should().NotBeSameAs(secondRead);
-        firstRead.Should().HaveCount(1);
-        firstRead[0].Id.Should().Be(userId);
+        firstRead.Should().NotBeSameAs(unexpected: secondRead);
+        firstRead.Should().HaveCount(expected: 1);
+        firstRead[index: 0].Id.Should().Be(expected: userId);
     }
 
     [Fact]
@@ -194,7 +194,7 @@ public sealed class UserCacheTests
         UserCache cache = new();
         Guid unknownId = Guid.NewGuid();
 
-        User? found = cache.GetUser(unknownId);
+        User? found = cache.GetUser(userId: unknownId);
 
         found.Should().BeNull();
     }
@@ -218,12 +218,12 @@ public sealed class UserCacheTests
             Email = "b@nm.tv",
         };
 
-        cache.AddUser(userA);
-        cache.AddUser(userB);
-        cache.RemoveUser(userA);
+        cache.AddUser(user: userA);
+        cache.AddUser(user: userB);
+        cache.RemoveUser(user: userA);
 
-        cache.Users.Should().HaveCount(1);
-        cache.Users[0].Id.Should().Be(idB);
+        cache.Users.Should().HaveCount(expected: 1);
+        cache.Users[index: 0].Id.Should().Be(expected: idB);
     }
 
     [Fact]
@@ -247,8 +247,8 @@ public sealed class UserCacheTests
             Owner = false,
         };
 
-        cache.AddUser(userA);
-        cache.AddUser(userB);
+        cache.AddUser(user: userA);
+        cache.AddUser(user: userB);
 
         User updatedA = new()
         {
@@ -257,18 +257,18 @@ public sealed class UserCacheTests
             Email = "a-updated@nm.tv",
             Owner = true,
         };
-        cache.UpdateUser(updatedA);
+        cache.UpdateUser(user: updatedA);
 
-        User? foundA = cache.GetUser(idA);
-        User? foundB = cache.GetUser(idB);
+        User? foundA = cache.GetUser(userId: idA);
+        User? foundB = cache.GetUser(userId: idB);
 
         foundA.Should().NotBeNull();
         foundA!.Owner.Should().BeTrue();
-        foundA.Name.Should().Be("A Updated");
+        foundA.Name.Should().Be(expected: "A Updated");
 
         foundB.Should().NotBeNull();
         foundB!.Owner.Should().BeFalse();
-        foundB.Name.Should().Be("B");
+        foundB.Name.Should().Be(expected: "B");
     }
 
     [Fact]
@@ -283,7 +283,7 @@ public sealed class UserCacheTests
             Email = "test@nm.tv",
         };
 
-        cache.RemoveUser(user);
+        cache.RemoveUser(user: user);
 
         cache.Users.Should().BeEmpty();
     }
@@ -300,7 +300,7 @@ public sealed class UserCacheTests
             Email = "test@nm.tv",
         };
 
-        cache.UpdateUser(user);
+        cache.UpdateUser(user: user);
 
         cache.Users.Should().BeEmpty();
     }
@@ -310,7 +310,7 @@ public sealed class UserCacheTests
     {
         UserCache cache = new();
         cache.AddUser(
-            new()
+            user: new()
             {
                 Id = Guid.NewGuid(),
                 Name = "User1",
@@ -318,7 +318,7 @@ public sealed class UserCacheTests
             }
         );
         cache.AddUser(
-            new()
+            user: new()
             {
                 Id = Guid.NewGuid(),
                 Name = "User2",
@@ -347,7 +347,7 @@ public sealed class UserCacheTests
         for (int i = 0; i < 10; i++)
         {
             cache.AddUser(
-                new()
+                user: new()
                 {
                     Id = Guid.NewGuid(),
                     Name = $"User{i}",
@@ -356,12 +356,12 @@ public sealed class UserCacheTests
             );
         }
 
-        cache.AddUser(targetUser);
+        cache.AddUser(user: targetUser);
 
         for (int i = 10; i < 20; i++)
         {
             cache.AddUser(
-                new()
+                user: new()
                 {
                     Id = Guid.NewGuid(),
                     Name = $"User{i}",
@@ -370,9 +370,9 @@ public sealed class UserCacheTests
             );
         }
 
-        User? found = cache.GetUser(targetId);
+        User? found = cache.GetUser(userId: targetId);
 
         found.Should().NotBeNull();
-        found!.Name.Should().Be("Target");
+        found!.Name.Should().Be(expected: "Target");
     }
 }

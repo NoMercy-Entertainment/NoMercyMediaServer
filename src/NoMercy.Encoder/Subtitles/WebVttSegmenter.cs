@@ -25,8 +25,8 @@ namespace NoMercy.Encoder.Subtitles;
 public sealed class WebVttSegmenter
 {
     private static readonly Regex TimestampLineRx = new(
-        @"^(?:(\d+):)?(\d{2}):(\d{2})\.(\d{3})\s+-->\s+(?:(\d+):)?(\d{2}):(\d{2})\.(\d{3})",
-        RegexOptions.Compiled
+        pattern: @"^(?:(\d+):)?(\d{2}):(\d{2})\.(\d{3})\s+-->\s+(?:(\d+):)?(\d{2}):(\d{2})\.(\d{3})",
+        options: RegexOptions.Compiled
     );
 
     /// <summary>
@@ -40,10 +40,10 @@ public sealed class WebVttSegmenter
     )
     {
         if (segmentDuration <= TimeSpan.Zero)
-            throw new ArgumentOutOfRangeException(nameof(segmentDuration), "Must be positive.");
+            throw new ArgumentOutOfRangeException(paramName: nameof(segmentDuration), message: "Must be positive.");
 
-        string raw = Encoding.UTF8.GetString(storage.Read(vttFilePath));
-        return SliceContent(raw, segmentDuration);
+        string raw = Encoding.UTF8.GetString(bytes: storage.Read(path: vttFilePath));
+        return SliceContent(vttContent: raw, segmentDuration: segmentDuration);
     }
 
     /// <summary>
@@ -53,38 +53,38 @@ public sealed class WebVttSegmenter
     public IReadOnlyList<WebVttSegment> SliceContent(string vttContent, TimeSpan segmentDuration)
     {
         if (segmentDuration <= TimeSpan.Zero)
-            throw new ArgumentOutOfRangeException(nameof(segmentDuration), "Must be positive.");
+            throw new ArgumentOutOfRangeException(paramName: nameof(segmentDuration), message: "Must be positive.");
 
-        (string header, List<ParsedCue> cues) = Parse(vttContent);
+        (string header, List<ParsedCue> cues) = Parse(vttContent: vttContent);
 
         if (cues.Count == 0)
             return
             [
                 new(
-                    0,
-                    BuildSegment(header, [], segmentDuration),
-                    TimeSpan.Zero,
-                    segmentDuration
+                    Index: 0,
+                    Content: BuildSegment(originalHeader: header, cues: [], segmentDuration: segmentDuration),
+                    StartTime: TimeSpan.Zero,
+                    EndTime: segmentDuration
                 ),
             ];
 
-        TimeSpan totalDuration = cues.Max(c => c.End);
-        int segmentCount = (int)Math.Ceiling(totalDuration / segmentDuration);
+        TimeSpan totalDuration = cues.Max(selector: c => c.End);
+        int segmentCount = (int)Math.Ceiling(a: totalDuration / segmentDuration);
         if (segmentCount == 0)
             segmentCount = 1;
 
-        List<WebVttSegment> result = new(segmentCount);
+        List<WebVttSegment> result = new(capacity: segmentCount);
 
         for (int i = 0; i < segmentCount; i++)
         {
             TimeSpan segStart = segmentDuration * i;
             TimeSpan segEnd = segmentDuration * (i + 1);
 
-            List<ParsedCue> overlapping = cues.Where(c => c.Start < segEnd && c.End > segStart)
+            List<ParsedCue> overlapping = cues.Where(predicate: c => c.Start < segEnd && c.End > segStart)
                 .ToList();
 
-            string content = BuildSegment(header, overlapping, segmentDuration);
-            result.Add(new(i, content, segStart, segEnd));
+            string content = BuildSegment(originalHeader: header, cues: overlapping, segmentDuration: segmentDuration);
+            result.Add(item: new(Index: i, Content: content, StartTime: segStart, EndTime: segEnd));
         }
 
         return result;
@@ -96,7 +96,7 @@ public sealed class WebVttSegmenter
 
     private static (string header, List<ParsedCue> cues) Parse(string vttContent)
     {
-        string[] lines = vttContent.ReplaceLineEndings("\n").Split('\n');
+        string[] lines = vttContent.ReplaceLineEndings(replacementText: "\n").Split(separator: '\n');
 
         StringBuilder headerSb = new();
         List<ParsedCue> cues = [];
@@ -104,16 +104,16 @@ public sealed class WebVttSegmenter
         int idx = 0;
 
         // First line must be "WEBVTT" (possibly with a description after a space/tab).
-        if (idx < lines.Length && lines[idx].StartsWith("WEBVTT", StringComparison.Ordinal))
+        if (idx < lines.Length && lines[idx].StartsWith(value: "WEBVTT", comparisonType: StringComparison.Ordinal))
         {
-            headerSb.AppendLine(lines[idx]);
+            headerSb.AppendLine(value: lines[idx]);
             idx++;
         }
 
         // Collect header block lines until the first blank line.
-        while (idx < lines.Length && !string.IsNullOrWhiteSpace(lines[idx]))
+        while (idx < lines.Length && !string.IsNullOrWhiteSpace(value: lines[idx]))
         {
-            headerSb.AppendLine(lines[idx]);
+            headerSb.AppendLine(value: lines[idx]);
             idx++;
         }
 
@@ -121,7 +121,7 @@ public sealed class WebVttSegmenter
         while (idx < lines.Length)
         {
             // Skip blank lines between blocks.
-            while (idx < lines.Length && string.IsNullOrWhiteSpace(lines[idx]))
+            while (idx < lines.Length && string.IsNullOrWhiteSpace(value: lines[idx]))
                 idx++;
 
             if (idx >= lines.Length)
@@ -129,7 +129,7 @@ public sealed class WebVttSegmenter
 
             // Optional cue identifier (not a timestamp line).
             string? cueId = null;
-            if (!TimestampLineRx.IsMatch(lines[idx]))
+            if (!TimestampLineRx.IsMatch(input: lines[idx]))
             {
                 cueId = lines[idx];
                 idx++;
@@ -139,7 +139,7 @@ public sealed class WebVttSegmenter
                 break;
 
             // Timestamp line.
-            if (!TimestampLineRx.IsMatch(lines[idx]))
+            if (!TimestampLineRx.IsMatch(input: lines[idx]))
             {
                 idx++;
                 continue;
@@ -150,18 +150,18 @@ public sealed class WebVttSegmenter
 
             // Payload lines until blank or EOF.
             StringBuilder payload = new();
-            while (idx < lines.Length && !string.IsNullOrWhiteSpace(lines[idx]))
+            while (idx < lines.Length && !string.IsNullOrWhiteSpace(value: lines[idx]))
             {
                 if (payload.Length > 0)
                     payload.AppendLine();
-                payload.Append(lines[idx]);
+                payload.Append(value: lines[idx]);
                 idx++;
             }
 
-            if (!TryParseTimestamps(timestampLine, out TimeSpan start, out TimeSpan end))
+            if (!TryParseTimestamps(line: timestampLine, start: out TimeSpan start, end: out TimeSpan end))
                 continue;
 
-            cues.Add(new(cueId, timestampLine, start, end, payload.ToString()));
+            cues.Add(item: new(Id: cueId, TimestampLine: timestampLine, Start: start, End: end, Payload: payload.ToString()));
         }
 
         return (headerSb.ToString().TrimEnd(), cues);
@@ -170,24 +170,24 @@ public sealed class WebVttSegmenter
     private static bool TryParseTimestamps(string line, out TimeSpan start, out TimeSpan end)
     {
         start = end = TimeSpan.Zero;
-        Match m = TimestampLineRx.Match(line);
+        Match m = TimestampLineRx.Match(input: line);
         if (!m.Success)
             return false;
 
-        start = ParseTs(m, 1);
-        end = ParseTs(m, 5);
+        start = ParseTs(m: m, hourGroupIndex: 1);
+        end = ParseTs(m: m, hourGroupIndex: 5);
         return true;
     }
 
     private static TimeSpan ParseTs(Match m, int hourGroupIndex)
     {
-        int hours = m.Groups[hourGroupIndex].Success
-            ? int.Parse(m.Groups[hourGroupIndex].Value, CultureInfo.InvariantCulture)
+        int hours = m.Groups[groupnum: hourGroupIndex].Success
+            ? int.Parse(s: m.Groups[groupnum: hourGroupIndex].Value, provider: CultureInfo.InvariantCulture)
             : 0;
-        int minutes = int.Parse(m.Groups[hourGroupIndex + 1].Value, CultureInfo.InvariantCulture);
-        int seconds = int.Parse(m.Groups[hourGroupIndex + 2].Value, CultureInfo.InvariantCulture);
-        int ms = int.Parse(m.Groups[hourGroupIndex + 3].Value, CultureInfo.InvariantCulture);
-        return new(0, hours, minutes, seconds, ms);
+        int minutes = int.Parse(s: m.Groups[groupnum: hourGroupIndex + 1].Value, provider: CultureInfo.InvariantCulture);
+        int seconds = int.Parse(s: m.Groups[groupnum: hourGroupIndex + 2].Value, provider: CultureInfo.InvariantCulture);
+        int ms = int.Parse(s: m.Groups[groupnum: hourGroupIndex + 3].Value, provider: CultureInfo.InvariantCulture);
+        return new(days: 0, hours: hours, minutes: minutes, seconds: seconds, milliseconds: ms);
     }
 
     // ------------------------------------------------------------------
@@ -205,31 +205,31 @@ public sealed class WebVttSegmenter
         // If the original header already contains X-TIMESTAMP-MAP leave it;
         // otherwise inject the standard HLS timestamp map.
         bool hasTimestampMap = originalHeader.Contains(
-            "X-TIMESTAMP-MAP",
-            StringComparison.OrdinalIgnoreCase
+            value: "X-TIMESTAMP-MAP",
+            comparisonType: StringComparison.OrdinalIgnoreCase
         );
 
-        if (!string.IsNullOrWhiteSpace(originalHeader))
+        if (!string.IsNullOrWhiteSpace(value: originalHeader))
         {
-            sb.AppendLine(originalHeader);
+            sb.AppendLine(value: originalHeader);
         }
         else
         {
-            sb.AppendLine("WEBVTT");
+            sb.AppendLine(value: "WEBVTT");
         }
 
         if (!hasTimestampMap)
         {
-            sb.AppendLine("X-TIMESTAMP-MAP=MPEGTS:0,LOCAL:00:00:00.000");
+            sb.AppendLine(value: "X-TIMESTAMP-MAP=MPEGTS:0,LOCAL:00:00:00.000");
         }
 
         foreach (ParsedCue cue in cues)
         {
             sb.AppendLine();
             if (cue.Id is not null)
-                sb.AppendLine(cue.Id);
-            sb.AppendLine(cue.TimestampLine);
-            sb.AppendLine(cue.Payload);
+                sb.AppendLine(value: cue.Id);
+            sb.AppendLine(value: cue.TimestampLine);
+            sb.AppendLine(value: cue.Payload);
         }
 
         return sb.ToString().TrimEnd() + "\n";

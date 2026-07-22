@@ -36,67 +36,67 @@ public class MigrationSafetyHarnessTests : IDisposable
 
     public MigrationSafetyHarnessTests()
     {
-        string runId = Guid.NewGuid().ToString("N");
-        _mediaDbPath = Path.Combine(Path.GetTempPath(), $"nm_migsafety_media_{runId}.db");
-        _queueDbPath = Path.Combine(Path.GetTempPath(), $"nm_migsafety_queue_{runId}.db");
-        _appDbPath = Path.Combine(Path.GetTempPath(), $"nm_migsafety_app_{runId}.db");
+        string runId = Guid.NewGuid().ToString(format: "N");
+        _mediaDbPath = Path.Combine(path1: Path.GetTempPath(), path2: $"nm_migsafety_media_{runId}.db");
+        _queueDbPath = Path.Combine(path1: Path.GetTempPath(), path2: $"nm_migsafety_queue_{runId}.db");
+        _appDbPath = Path.Combine(path1: Path.GetTempPath(), path2: $"nm_migsafety_app_{runId}.db");
     }
 
     [Fact]
     public void MediaContext_Migrate_OnFreshSqliteFile_AppliesFullChain_CreatesCoreTables()
     {
         DbContextOptionsBuilder<MediaContext> builder = new();
-        builder.UseSqlite($"Data Source={_mediaDbPath}");
+        builder.UseSqlite(connectionString: $"Data Source={_mediaDbPath}");
 
-        using MediaContext context = new(builder.Options);
+        using MediaContext context = new(options: builder.Options);
 
         context.Database.Migrate();
 
-        List<string> tableNames = QueryTableNames(context.Database.GetDbConnection());
+        List<string> tableNames = QueryTableNames(connection: context.Database.GetDbConnection());
 
-        Assert.Contains("Movies", tableNames);
-        Assert.Contains("Tvs", tableNames);
-        Assert.Contains("Libraries", tableNames);
-        Assert.Contains("Folders", tableNames);
-        Assert.Contains("VideoFiles", tableNames);
-        Assert.Contains("Drivers", tableNames);
-        Assert.Contains("Users", tableNames);
-        Assert.Contains("Tracks", tableNames);
-        Assert.Contains("__EFMigrationsHistory", tableNames);
+        Assert.Contains(expected: "Movies", collection: tableNames);
+        Assert.Contains(expected: "Tvs", collection: tableNames);
+        Assert.Contains(expected: "Libraries", collection: tableNames);
+        Assert.Contains(expected: "Folders", collection: tableNames);
+        Assert.Contains(expected: "VideoFiles", collection: tableNames);
+        Assert.Contains(expected: "Drivers", collection: tableNames);
+        Assert.Contains(expected: "Users", collection: tableNames);
+        Assert.Contains(expected: "Tracks", collection: tableNames);
+        Assert.Contains(expected: "__EFMigrationsHistory", collection: tableNames);
     }
 
     [Fact]
     public void QueueContext_Migrate_OnFreshSqliteFile_AppliesFullChain_CreatesQueueTables()
     {
         DbContextOptionsBuilder<QueueContext> builder = new();
-        builder.UseSqlite($"Data Source={_queueDbPath}");
+        builder.UseSqlite(connectionString: $"Data Source={_queueDbPath}");
 
-        using QueueContext context = new(builder.Options);
+        using QueueContext context = new(options: builder.Options);
 
         context.Database.Migrate();
 
-        List<string> tableNames = QueryTableNames(context.Database.GetDbConnection());
+        List<string> tableNames = QueryTableNames(connection: context.Database.GetDbConnection());
 
-        Assert.Contains("QueueJobs", tableNames);
-        Assert.Contains("FailedJobs", tableNames);
-        Assert.Contains("CronJobs", tableNames);
-        Assert.Contains("__EFMigrationsHistory", tableNames);
+        Assert.Contains(expected: "QueueJobs", collection: tableNames);
+        Assert.Contains(expected: "FailedJobs", collection: tableNames);
+        Assert.Contains(expected: "CronJobs", collection: tableNames);
+        Assert.Contains(expected: "__EFMigrationsHistory", collection: tableNames);
     }
 
     [Fact]
     public void AppContext_Migrate_OnFreshSqliteFile_AppliesFullChain_CreatesConfigurationTable()
     {
         DbContextOptionsBuilder<AppDbContext> builder = new();
-        builder.UseSqlite($"Data Source={_appDbPath}");
+        builder.UseSqlite(connectionString: $"Data Source={_appDbPath}");
 
-        using AppDbContext context = new(builder.Options);
+        using AppDbContext context = new(options: builder.Options);
 
         context.Database.Migrate();
 
-        List<string> tableNames = QueryTableNames(context.Database.GetDbConnection());
+        List<string> tableNames = QueryTableNames(connection: context.Database.GetDbConnection());
 
-        Assert.Contains("Configuration", tableNames);
-        Assert.Contains("__EFMigrationsHistory", tableNames);
+        Assert.Contains(expected: "Configuration", collection: tableNames);
+        Assert.Contains(expected: "__EFMigrationsHistory", collection: tableNames);
     }
 
     [Fact]
@@ -109,14 +109,14 @@ public class MigrationSafetyHarnessTests : IDisposable
         const int movieId = 1;
 
         DbContextOptionsBuilder<MediaContext> seedBuilder = new();
-        seedBuilder.UseSqlite($"Data Source={_mediaDbPath}");
+        seedBuilder.UseSqlite(connectionString: $"Data Source={_mediaDbPath}");
 
-        await using (MediaContext seedContext = new(seedBuilder.Options))
+        await using (MediaContext seedContext = new(options: seedBuilder.Options))
         {
             seedContext.Database.Migrate();
 
             seedContext.Drivers.Add(
-                new Driver
+                entity: new Driver
                 {
                     Id = driverId,
                     Name = "Local Filesystem",
@@ -124,7 +124,7 @@ public class MigrationSafetyHarnessTests : IDisposable
                 }
             );
             seedContext.Folders.Add(
-                new Folder
+                entity: new Folder
                 {
                     Id = folderId,
                     Path = "/media/movies",
@@ -132,7 +132,7 @@ public class MigrationSafetyHarnessTests : IDisposable
                 }
             );
             seedContext.Libraries.Add(
-                new Library
+                entity: new Library
                 {
                     Id = libraryId,
                     Title = "Movies",
@@ -140,7 +140,7 @@ public class MigrationSafetyHarnessTests : IDisposable
                 }
             );
             seedContext.Movies.Add(
-                new Movie
+                entity: new Movie
                 {
                     Id = movieId,
                     Title = "The Eight Year Reel",
@@ -149,7 +149,7 @@ public class MigrationSafetyHarnessTests : IDisposable
                 }
             );
             seedContext.VideoFiles.Add(
-                new VideoFile
+                entity: new VideoFile
                 {
                     Id = videoFileId,
                     Filename = "the-eight-year-reel.mkv",
@@ -166,52 +166,52 @@ public class MigrationSafetyHarnessTests : IDisposable
         }
 
         DbContextOptionsBuilder<MediaContext> reMigrateBuilder = new();
-        reMigrateBuilder.UseSqlite($"Data Source={_mediaDbPath}");
+        reMigrateBuilder.UseSqlite(connectionString: $"Data Source={_mediaDbPath}");
 
-        await using (MediaContext reMigrateContext = new(reMigrateBuilder.Options))
+        await using (MediaContext reMigrateContext = new(options: reMigrateBuilder.Options))
         {
             reMigrateContext.Database.Migrate();
         }
 
         DbContextOptionsBuilder<MediaContext> readBuilder = new();
-        readBuilder.UseSqlite($"Data Source={_mediaDbPath}");
+        readBuilder.UseSqlite(connectionString: $"Data Source={_mediaDbPath}");
 
-        await using MediaContext readContext = new(readBuilder.Options);
+        await using MediaContext readContext = new(options: readBuilder.Options);
 
         Driver? driver = await readContext
             .Drivers.AsNoTracking()
-            .SingleOrDefaultAsync(d => d.Id == driverId);
+            .SingleOrDefaultAsync(predicate: d => d.Id == driverId);
         Folder? folder = await readContext
             .Folders.AsNoTracking()
-            .SingleOrDefaultAsync(f => f.Id == folderId);
+            .SingleOrDefaultAsync(predicate: f => f.Id == folderId);
         Library? library = await readContext
             .Libraries.AsNoTracking()
-            .SingleOrDefaultAsync(l => l.Id == libraryId);
+            .SingleOrDefaultAsync(predicate: l => l.Id == libraryId);
         Movie? movie = await readContext
             .Movies.AsNoTracking()
-            .SingleOrDefaultAsync(m => m.Id == movieId);
+            .SingleOrDefaultAsync(predicate: m => m.Id == movieId);
         VideoFile? videoFile = await readContext
             .VideoFiles.AsNoTracking()
-            .SingleOrDefaultAsync(v => v.Id == videoFileId);
+            .SingleOrDefaultAsync(predicate: v => v.Id == videoFileId);
 
-        Assert.NotNull(driver);
-        Assert.Equal("Local Filesystem", driver.Name);
+        Assert.NotNull(@object: driver);
+        Assert.Equal(expected: "Local Filesystem", actual: driver.Name);
 
-        Assert.NotNull(folder);
-        Assert.Equal(driverId, folder.DriverId);
-        Assert.Equal("/media/movies", folder.Path);
+        Assert.NotNull(@object: folder);
+        Assert.Equal(expected: driverId, actual: folder.DriverId);
+        Assert.Equal(expected: "/media/movies", actual: folder.Path);
 
-        Assert.NotNull(library);
-        Assert.Equal("Movies", library.Title);
+        Assert.NotNull(@object: library);
+        Assert.Equal(expected: "Movies", actual: library.Title);
 
-        Assert.NotNull(movie);
-        Assert.Equal(libraryId, movie.LibraryId);
-        Assert.Equal("The Eight Year Reel", movie.Title);
+        Assert.NotNull(@object: movie);
+        Assert.Equal(expected: libraryId, actual: movie.LibraryId);
+        Assert.Equal(expected: "The Eight Year Reel", actual: movie.Title);
 
-        Assert.NotNull(videoFile);
-        Assert.Equal(movieId, videoFile.MovieId);
-        Assert.Equal("the-eight-year-reel.mkv", videoFile.Filename);
-        Assert.Equal("/media/movies", videoFile.HostFolder);
+        Assert.NotNull(@object: videoFile);
+        Assert.Equal(expected: movieId, actual: videoFile.MovieId);
+        Assert.Equal(expected: "the-eight-year-reel.mkv", actual: videoFile.Filename);
+        Assert.Equal(expected: "/media/movies", actual: videoFile.HostFolder);
     }
 
     [Fact]
@@ -220,13 +220,13 @@ public class MigrationSafetyHarnessTests : IDisposable
         Ulid driverId = Ulid.NewUlid();
 
         DbContextOptionsBuilder<MediaContext> builder = new();
-        builder.UseSqlite($"Data Source={_mediaDbPath}");
+        builder.UseSqlite(connectionString: $"Data Source={_mediaDbPath}");
 
-        await using MediaContext context = new(builder.Options);
+        await using MediaContext context = new(options: builder.Options);
         context.Database.Migrate();
 
         context.Drivers.Add(
-            new Driver
+            entity: new Driver
             {
                 Id = driverId,
                 Name = "Local Filesystem",
@@ -234,7 +234,7 @@ public class MigrationSafetyHarnessTests : IDisposable
             }
         );
         context.Folders.Add(
-            new Folder
+            entity: new Folder
             {
                 Id = Ulid.NewUlid(),
                 Path = "/media/tv",
@@ -244,7 +244,7 @@ public class MigrationSafetyHarnessTests : IDisposable
         await context.SaveChangesAsync();
 
         context.Folders.Add(
-            new Folder
+            entity: new Folder
             {
                 Id = Ulid.NewUlid(),
                 Path = "/media/tv",
@@ -252,7 +252,7 @@ public class MigrationSafetyHarnessTests : IDisposable
             }
         );
 
-        await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
+        await Assert.ThrowsAsync<DbUpdateException>(testCode: () => context.SaveChangesAsync());
     }
 
     private static List<string> QueryTableNames(DbConnection connection)
@@ -265,7 +265,7 @@ public class MigrationSafetyHarnessTests : IDisposable
 
         List<string> tableNames = [];
         while (reader.Read())
-            tableNames.Add(reader.GetString(0));
+            tableNames.Add(item: reader.GetString(ordinal: 0));
 
         return tableNames;
     }
@@ -279,9 +279,9 @@ public class MigrationSafetyHarnessTests : IDisposable
         SqliteConnection.ClearAllPools();
 
         foreach (string path in new[] { _mediaDbPath, _queueDbPath, _appDbPath })
-            if (File.Exists(path))
-                File.Delete(path);
+            if (File.Exists(path: path))
+                File.Delete(path: path);
 
-        GC.SuppressFinalize(this);
+        GC.SuppressFinalize(obj: this);
     }
 }

@@ -39,22 +39,22 @@ public class LegacyProfileCodecRegressionTests
     private const string GpuName = "NVIDIA GeForce GTX 1060 3GB";
 
     [Theory]
-    [InlineData("hdr-4k")]
-    [InlineData("sdr-1080p")]
+    [InlineData(data: "hdr-4k")]
+    [InlineData(data: "sdr-1080p")]
     public async Task LegacyH264Profile_OnGpuHost_NeverResolvesHevcEncoder(string sourceKind)
     {
         EncodingProfile profile = LoadStoredLegacyProfile();
         MediaInfo media = sourceKind == "hdr-4k" ? BuildHdr4KSource() : BuildSdr1080PSource();
 
-        OutputPlan plan = await RunRealPlan(media, profile);
+        OutputPlan plan = await RunRealPlan(media: media, profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
         video
             .EncoderName.Should()
             .Match(
-                encoderName => encoderName == "libx264" || encoderName.StartsWith("h264_"),
-                "profile stores Codec=0 (H264); resolved encoder was {0}",
-                video.EncoderName
+                predicate: encoderName => encoderName == "libx264" || encoderName.StartsWith("h264_"),
+                because: "profile stores Codec=0 (H264); resolved encoder was {0}",
+                becauseArgs: video.EncoderName
             );
     }
 
@@ -64,10 +64,10 @@ public class LegacyProfileCodecRegressionTests
         EncodingProfile profile = LoadStoredLegacyProfile();
         MediaInfo media = BuildSdr1080PSource();
 
-        OutputPlan plan = await RunRealPlan(media, profile, withGpu: false);
+        OutputPlan plan = await RunRealPlan(media: media, profile: profile, withGpu: false);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        video.EncoderName.Should().Be("libx264");
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        video.EncoderName.Should().Be(expected: "libx264");
     }
 
     [Fact]
@@ -81,28 +81,23 @@ public class LegacyProfileCodecRegressionTests
         EncodingProfile profile = LoadStoredLegacyProfile();
         MediaInfo media = BuildSdr1080PSource();
 
-        OutputPlan plan = await RunRealPlan(media, profile, withGpu: true, nvencInFfmpeg: false);
+        OutputPlan plan = await RunRealPlan(media: media, profile: profile, withGpu: true, nvencInFfmpeg: false);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        video.EncoderName.Should().Be("libx264");
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        video.EncoderName.Should().Be(expected: "libx264");
     }
 
     private static EncodingProfile LoadStoredLegacyProfile()
     {
-        string fixturePath = Path.Combine(
-            AppContext.BaseDirectory,
-            "Profiles",
-            "V2",
-            "Fixtures",
-            "legacy-1080p-regular.json"
+        string fixturePath = Path.Combine(paths: [AppContext.BaseDirectory, "Profiles", "V2", "Fixtures", "legacy-1080p-regular.json"]
         );
 
         // Same parse path as PresetResolver.Resolve: JObject → ToObject.
-        JObject stored = JObject.Parse(File.ReadAllText(fixturePath));
+        JObject stored = JObject.Parse(json: File.ReadAllText(path: fixturePath));
         EncodingProfile? profile = stored.ToObject<EncodingProfile>();
         profile.Should().NotBeNull();
         profile!.Video.Should().NotBeNull();
-        ((int)profile.Video!.Codec).Should().Be(0);
+        ((int)profile.Video!.Codec).Should().Be(expected: 0);
 
         return profile;
     }
@@ -115,7 +110,7 @@ public class LegacyProfileCodecRegressionTests
     )
     {
         CodecRegistry registry = new();
-        CodecResolver codecResolver = new(registry);
+        CodecResolver codecResolver = new(registry: registry);
         HardwarePreferenceResolver hardwarePreferenceResolver = new();
         BitDepthPolicyResolver bitDepthPolicyResolver = new();
 
@@ -128,23 +123,23 @@ public class LegacyProfileCodecRegressionTests
         );
 
         Mock<IHardwareCapabilities> hardware = new();
-        hardware.Setup(h => h.HasGpu).Returns(withGpu);
-        hardware.Setup(h => h.CpuCores).Returns(16);
-        hardware.Setup(h => h.Gpus).Returns(withGpu ? [gpu] : []);
+        hardware.Setup(expression: h => h.HasGpu).Returns(value: withGpu);
+        hardware.Setup(expression: h => h.CpuCores).Returns(value: 16);
+        hardware.Setup(expression: h => h.Gpus).Returns(value: withGpu ? [gpu] : []);
         hardware
-            .Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>()))
-            .Returns(withGpu);
+            .Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>()))
+            .Returns(value: withGpu);
         hardware
-            .Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
-            .Returns(withGpu ? gpu : null);
+            .Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
+            .Returns(value: withGpu ? gpu : null);
         // Real hardware-encoder init probe authority: nvenc is only
         // selectable when the GPU is present AND ffmpeg actually carries the
         // nvenc encoder — mirroring what HardwareEncoderProbe would confirm
         // on Fillz's GTX 1060 host.
         hardware
-            .Setup(h => h.UsableHardwareEncoders)
+            .Setup(expression: h => h.UsableHardwareEncoders)
             .Returns(
-                withGpu && nvencInFfmpeg
+                value: withGpu && nvencInFfmpeg
                     ? new HashSet<string> { "h264_nvenc", "hevc_nvenc" }
                     : new HashSet<string>()
             );
@@ -155,49 +150,49 @@ public class LegacyProfileCodecRegressionTests
                 : ["libx264", "libx265", "aac", "libsvtav1"];
 
         Mock<IFfmpegCapabilities> ffmpegCapabilities = new();
-        ffmpegCapabilities.Setup(c => c.AvailableEncoders).Returns(encoders);
-        ffmpegCapabilities.Setup(c => c.AvailableFilters).Returns(new HashSet<string>());
+        ffmpegCapabilities.Setup(expression: c => c.AvailableEncoders).Returns(value: encoders);
+        ffmpegCapabilities.Setup(expression: c => c.AvailableFilters).Returns(value: new HashSet<string>());
         ffmpegCapabilities
-            .Setup(c => c.HasEncoder(It.IsAny<string>()))
-            .Returns((string name) => encoders.Contains(name));
-        ffmpegCapabilities.Setup(c => c.HasFilter(It.IsAny<string>())).Returns(false);
+            .Setup(expression: c => c.HasEncoder(It.IsAny<string>()))
+            .Returns(valueFunction: (string name) => encoders.Contains(item: name));
+        ffmpegCapabilities.Setup(expression: c => c.HasFilter(It.IsAny<string>())).Returns(value: false);
 
         DateTime measuredAt = DateTime.UtcNow;
         SpeedIndex speedIndex = new(
-            new()
+            Measurements: new()
             {
-                [new(VideoCodecType.H264, "h264_nvenc", 1920, GpuName)] = new(
-                    240,
-                    10.0,
-                    measuredAt
+                [key: new(Codec: VideoCodecType.H264, Encoder: "h264_nvenc", Width: 1920, DeviceName: GpuName)] = new(
+                    Fps: 240,
+                    SpeedMultiplier: 10.0,
+                    MeasuredAt: measuredAt
                 ),
-                [new(VideoCodecType.H265, "hevc_nvenc", 1920, GpuName)] = new(190, 7.9, measuredAt),
-                [new(VideoCodecType.H264, "libx264", 1920, null)] = new(62, 2.6, measuredAt),
-                [new(VideoCodecType.H265, "libx265", 1920, null)] = new(18, 0.7, measuredAt),
+                [key: new(Codec: VideoCodecType.H265, Encoder: "hevc_nvenc", Width: 1920, DeviceName: GpuName)] = new(Fps: 190, SpeedMultiplier: 7.9, MeasuredAt: measuredAt),
+                [key: new(Codec: VideoCodecType.H264, Encoder: "libx264", Width: 1920, DeviceName: null)] = new(Fps: 62, SpeedMultiplier: 2.6, MeasuredAt: measuredAt),
+                [key: new(Codec: VideoCodecType.H265, Encoder: "libx265", Width: 1920, DeviceName: null)] = new(Fps: 18, SpeedMultiplier: 0.7, MeasuredAt: measuredAt),
             }
         );
 
         PlanStage stage = new(
-            new(),
-            new(),
-            new(),
-            codecResolver,
-            hardware.Object,
-            new TonemapSelector(),
-            ffmpegCapabilities.Object,
-            new AbrLadderGenerator(),
-            new NoOpCropDetector(),
-            NullLogger<PlanStage>.Instance,
+            graphBuilder: new(),
+            groupingStrategy: new(),
+            costEstimator: new(),
+            codecResolver: codecResolver,
+            hardware: hardware.Object,
+            tonemapSelector: new TonemapSelector(),
+            ffmpegCapabilities: ffmpegCapabilities.Object,
+            abrLadderGenerator: new AbrLadderGenerator(),
+            cropDetector: new NoOpCropDetector(),
+            logger: NullLogger<PlanStage>.Instance,
             hardwarePreferenceResolver: hardwarePreferenceResolver,
             speedIndex: speedIndex,
             bitDepthPolicyResolver: bitDepthPolicyResolver
         );
 
-        ValidateInput input = new(media, profile);
+        ValidateInput input = new(Media: media, Profile: profile);
         EncodingContext context = EncodingContext.Create();
-        StageResult result = await stage.ExecuteAsync(input, context, CancellationToken.None);
+        StageResult result = await stage.ExecuteAsync(input: input, context: context, ct: CancellationToken.None);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
         return success.Value.OutputPlan;
     }
 
@@ -205,7 +200,7 @@ public class LegacyProfileCodecRegressionTests
         new(
             FilePath: "/movies/Iron.Man.(2008)/Iron.Man.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(126),
+            Duration: TimeSpan.FromMinutes(minutes: 126),
             OverallBitRateKbps: 52000,
             FileSizeBytes: 49_000_000_000,
             VideoStreams:
@@ -252,7 +247,7 @@ public class LegacyProfileCodecRegressionTests
         new(
             FilePath: "/movies/test/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(110),
+            Duration: TimeSpan.FromMinutes(minutes: 110),
             OverallBitRateKbps: 12000,
             FileSizeBytes: 9_000_000_000,
             VideoStreams:

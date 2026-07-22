@@ -15,12 +15,12 @@ namespace NoMercy.MediaProcessing.Inbox;
 
 public sealed record InboxAudioTags
 {
-    [JsonProperty("music_brainz_release_id")]
+    [JsonProperty(propertyName: "music_brainz_release_id")]
     public Guid? MusicBrainzReleaseId { get; init; }
 
-    [JsonProperty("album")]
+    [JsonProperty(propertyName: "album")]
     public string? Album { get; init; }
 
-    [JsonProperty("artist")]
+    [JsonProperty(propertyName: "artist")]
     public string? Artist { get; init; }
 }

@@ -21,16 +21,16 @@ public class VideoFileRepository(IDbContextFactory<MediaContext> contextFactory)
 {
     public async Task<VideoFile?> GetByIdAsync(Ulid id, CancellationToken ct = default)
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
         return await context
             .VideoFiles.AsNoTracking()
-            .FirstOrDefaultAsync(file => file.Id == id, ct);
+            .FirstOrDefaultAsync(predicate: file => file.Id == id, cancellationToken: ct);
     }
 
     public async Task<bool> ExistsAsync(Ulid id, CancellationToken ct = default)
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
-        return await context.VideoFiles.AsNoTracking().AnyAsync(file => file.Id == id, ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        return await context.VideoFiles.AsNoTracking().AnyAsync(predicate: file => file.Id == id, cancellationToken: ct);
     }
 
     public async Task<List<Episode>> GetEncodedEpisodesForSeasonAsync(
@@ -38,13 +38,13 @@ public class VideoFileRepository(IDbContextFactory<MediaContext> contextFactory)
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
         return await context
             .Episodes.AsNoTracking()
-            .Include(episode => episode.VideoFiles)
-            .Where(episode => episode.SeasonId == seasonId && episode.VideoFiles.Count > 0)
-            .OrderBy(episode => episode.EpisodeNumber)
-            .ThenBy(episode => episode.Id)
-            .ToListAsync(ct);
+            .Include(navigationPropertyPath: episode => episode.VideoFiles)
+            .Where(predicate: episode => episode.SeasonId == seasonId && episode.VideoFiles.Count > 0)
+            .OrderBy(keySelector: episode => episode.EpisodeNumber)
+            .ThenBy(keySelector: episode => episode.Id)
+            .ToListAsync(cancellationToken: ct);
     }
 }

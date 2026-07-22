@@ -26,19 +26,19 @@ public class LocalStorageIntegrationTests : IDisposable
 
     public LocalStorageIntegrationTests()
     {
-        _root = Path.Combine(Path.GetTempPath(), "nm-storage-it-" + Path.GetRandomFileName());
-        Directory.CreateDirectory(_root);
+        _root = Path.Combine(path1: Path.GetTempPath(), path2: "nm-storage-it-" + Path.GetRandomFileName());
+        Directory.CreateDirectory(path: _root);
         LocalStorageDriver driver = new();
-        StoragePathGuard guard = new([_root], driver);
-        _storage = new(driver, guard);
+        StoragePathGuard guard = new(allowedRoots: [_root], driver: driver);
+        _storage = new(driver: driver, guard: guard);
     }
 
     public void Dispose()
     {
         try
         {
-            if (Directory.Exists(_root))
-                Directory.Delete(_root, recursive: true);
+            if (Directory.Exists(path: _root))
+                Directory.Delete(path: _root, recursive: true);
         }
         catch
         {
@@ -49,27 +49,27 @@ public class LocalStorageIntegrationTests : IDisposable
     [Fact]
     public async Task Write_then_read_round_trips_bytes()
     {
-        string path = Path.Combine(_root, "round-trip.bin");
+        string path = Path.Combine(path1: _root, path2: "round-trip.bin");
         byte[] payload = [0xDE, 0xAD, 0xBE, 0xEF];
 
-        await _storage.WriteAsync(path, payload, CancellationToken.None);
-        byte[] back = await _storage.ReadAsync(path, CancellationToken.None);
+        await _storage.WriteAsync(path: path, bytes: payload, ct: CancellationToken.None);
+        byte[] back = await _storage.ReadAsync(path: path, ct: CancellationToken.None);
 
-        back.Should().Equal(payload);
+        back.Should().Equal(elements: payload);
     }
 
     [Fact]
     public async Task OpenWriteAsync_overwrite_false_throws_when_file_exists()
     {
-        string path = Path.Combine(_root, "exists.bin");
-        await _storage.WriteAsync(path, [0x00], CancellationToken.None);
+        string path = Path.Combine(path1: _root, path2: "exists.bin");
+        await _storage.WriteAsync(path: path, bytes: [0x00], ct: CancellationToken.None);
 
         Func<Task> act = async () =>
         {
             await using Stream s = await _storage.OpenWriteAsync(
-                path,
-                false,
-                CancellationToken.None
+                path: path,
+                overwrite: false,
+                ct: CancellationToken.None
             );
         };
 
@@ -79,14 +79,14 @@ public class LocalStorageIntegrationTests : IDisposable
     [Fact]
     public async Task ExistsAsync_reports_files_and_directories()
     {
-        string filePath = Path.Combine(_root, "exists-test.bin");
-        string dirPath = Path.Combine(_root, "exists-dir");
-        await _storage.WriteAsync(filePath, [0x01], CancellationToken.None);
-        await _storage.CreateDirectoryAsync(dirPath, CancellationToken.None);
+        string filePath = Path.Combine(path1: _root, path2: "exists-test.bin");
+        string dirPath = Path.Combine(path1: _root, path2: "exists-dir");
+        await _storage.WriteAsync(path: filePath, bytes: [0x01], ct: CancellationToken.None);
+        await _storage.CreateDirectoryAsync(path: dirPath, ct: CancellationToken.None);
 
-        (await _storage.ExistsAsync(filePath, CancellationToken.None)).Should().BeTrue();
-        (await _storage.ExistsAsync(dirPath, CancellationToken.None)).Should().BeTrue();
-        (await _storage.ExistsAsync(Path.Combine(_root, "missing.bin"), CancellationToken.None))
+        (await _storage.ExistsAsync(path: filePath, ct: CancellationToken.None)).Should().BeTrue();
+        (await _storage.ExistsAsync(path: dirPath, ct: CancellationToken.None)).Should().BeTrue();
+        (await _storage.ExistsAsync(path: Path.Combine(path1: _root, path2: "missing.bin"), ct: CancellationToken.None))
             .Should()
             .BeFalse();
     }
@@ -100,159 +100,159 @@ public class LocalStorageIntegrationTests : IDisposable
         // bug — LocalStorageDriver.GetFullPath is a bare Path.GetFullPath that
         // canonicalizes against the process CWD (/app in the container), so the key
         // resolved outside the library root and every local rescan found zero files.
-        Directory.CreateDirectory(Path.Combine(_root, "Anime", "Anime"));
+        Directory.CreateDirectory(path: Path.Combine(path1: _root, path2: "Anime", path3: "Anime"));
         IStorage storage = _storage;
 
-        string viaFacade = storage.GetFullPath("Anime/Anime");
-        viaFacade.Should().StartWith(_root);
-        Directory.Exists(viaFacade).Should().BeTrue();
-        storage.Exists("Anime/Anime").Should().BeTrue();
+        string viaFacade = storage.GetFullPath(path: "Anime/Anime");
+        viaFacade.Should().StartWith(expected: _root);
+        Directory.Exists(path: viaFacade).Should().BeTrue();
+        storage.Exists(path: "Anime/Anime").Should().BeTrue();
 
         // The trap the scan fell into: the raw driver is root-blind and resolves
         // relative to the process CWD, not the library root.
-        string viaDriver = storage.Driver.GetFullPath("Anime/Anime");
-        viaDriver.Should().NotBe(viaFacade);
-        Directory.Exists(viaDriver).Should().BeFalse();
+        string viaDriver = storage.Driver.GetFullPath(path: "Anime/Anime");
+        viaDriver.Should().NotBe(unexpected: viaFacade);
+        Directory.Exists(path: viaDriver).Should().BeFalse();
     }
 
     [Fact]
     public async Task DeleteAsync_removes_file_then_no_op_on_missing()
     {
-        string path = Path.Combine(_root, "to-delete.bin");
-        await _storage.WriteAsync(path, [0x01], CancellationToken.None);
-        await _storage.DeleteAsync(path, CancellationToken.None);
+        string path = Path.Combine(path1: _root, path2: "to-delete.bin");
+        await _storage.WriteAsync(path: path, bytes: [0x01], ct: CancellationToken.None);
+        await _storage.DeleteAsync(path: path, ct: CancellationToken.None);
 
-        File.Exists(path).Should().BeFalse();
+        File.Exists(path: path).Should().BeFalse();
         // Second delete must not throw.
-        await _storage.DeleteAsync(path, CancellationToken.None);
+        await _storage.DeleteAsync(path: path, ct: CancellationToken.None);
     }
 
     [Fact]
     public async Task DeleteDirectoryAsync_recursive_clears_subtree()
     {
-        string dir = Path.Combine(_root, "subtree");
-        await _storage.WriteAsync(Path.Combine(dir, "a.txt"), [0xAA], CancellationToken.None);
+        string dir = Path.Combine(path1: _root, path2: "subtree");
+        await _storage.WriteAsync(path: Path.Combine(path1: dir, path2: "a.txt"), bytes: [0xAA], ct: CancellationToken.None);
         await _storage.WriteAsync(
-            Path.Combine(dir, "nested", "b.txt"),
-            [0xBB],
-            CancellationToken.None
+            path: Path.Combine(path1: dir, path2: "nested", path3: "b.txt"),
+            bytes: [0xBB],
+            ct: CancellationToken.None
         );
 
-        await _storage.DeleteDirectoryAsync(dir, recursive: true, CancellationToken.None);
+        await _storage.DeleteDirectoryAsync(path: dir, recursive: true, ct: CancellationToken.None);
 
-        Directory.Exists(dir).Should().BeFalse();
+        Directory.Exists(path: dir).Should().BeFalse();
     }
 
     [Fact]
     public async Task MoveAsync_relocates_file_and_creates_destination_parent()
     {
-        string from = Path.Combine(_root, "src.bin");
-        string to = Path.Combine(_root, "dest", "moved.bin");
-        await _storage.WriteAsync(from, [0xC0, 0xFE], CancellationToken.None);
+        string from = Path.Combine(path1: _root, path2: "src.bin");
+        string to = Path.Combine(path1: _root, path2: "dest", path3: "moved.bin");
+        await _storage.WriteAsync(path: from, bytes: [0xC0, 0xFE], ct: CancellationToken.None);
 
-        await _storage.MoveAsync(from, to, CancellationToken.None);
+        await _storage.MoveAsync(from: from, to: to, ct: CancellationToken.None);
 
-        File.Exists(from).Should().BeFalse();
-        File.Exists(to).Should().BeTrue();
+        File.Exists(path: from).Should().BeFalse();
+        File.Exists(path: to).Should().BeTrue();
     }
 
     [Fact]
     public async Task CopyAsync_overwrites_existing_target()
     {
-        string from = Path.Combine(_root, "copy-src.bin");
-        string to = Path.Combine(_root, "copy-dst.bin");
-        await _storage.WriteAsync(from, [0x11, 0x22], CancellationToken.None);
-        await _storage.WriteAsync(to, [0x99], CancellationToken.None);
+        string from = Path.Combine(path1: _root, path2: "copy-src.bin");
+        string to = Path.Combine(path1: _root, path2: "copy-dst.bin");
+        await _storage.WriteAsync(path: from, bytes: [0x11, 0x22], ct: CancellationToken.None);
+        await _storage.WriteAsync(path: to, bytes: [0x99], ct: CancellationToken.None);
 
-        await _storage.CopyAsync(from, to, CancellationToken.None);
+        await _storage.CopyAsync(from: from, to: to, ct: CancellationToken.None);
 
-        File.Exists(from).Should().BeTrue();
-        (await _storage.ReadAsync(to, CancellationToken.None)).Should().Equal(0x11, 0x22);
+        File.Exists(path: from).Should().BeTrue();
+        (await _storage.ReadAsync(path: to, ct: CancellationToken.None)).Should().Equal(elements: [0x11, 0x22]);
     }
 
     [Fact]
     public async Task SizeAsync_returns_actual_file_size()
     {
-        string path = Path.Combine(_root, "sized.bin");
+        string path = Path.Combine(path1: _root, path2: "sized.bin");
         byte[] payload = new byte[2048];
-        await _storage.WriteAsync(path, payload, CancellationToken.None);
+        await _storage.WriteAsync(path: path, bytes: payload, ct: CancellationToken.None);
 
-        long size = await _storage.SizeAsync(path, CancellationToken.None);
+        long size = await _storage.SizeAsync(path: path, ct: CancellationToken.None);
 
-        size.Should().Be(2048);
+        size.Should().Be(expected: 2048);
     }
 
     [Fact]
     public async Task LastModifiedAsync_returns_recent_utc_timestamp()
     {
-        string path = Path.Combine(_root, "stamped.bin");
-        await _storage.WriteAsync(path, [0x01], CancellationToken.None);
+        string path = Path.Combine(path1: _root, path2: "stamped.bin");
+        await _storage.WriteAsync(path: path, bytes: [0x01], ct: CancellationToken.None);
 
-        DateTimeOffset stamp = await _storage.LastModifiedAsync(path, CancellationToken.None);
+        DateTimeOffset stamp = await _storage.LastModifiedAsync(path: path, ct: CancellationToken.None);
 
-        stamp.Offset.Should().Be(TimeSpan.Zero);
-        (DateTimeOffset.UtcNow - stamp).Should().BeLessThan(TimeSpan.FromMinutes(1));
+        stamp.Offset.Should().Be(expected: TimeSpan.Zero);
+        (DateTimeOffset.UtcNow - stamp).Should().BeLessThan(expected: TimeSpan.FromMinutes(minutes: 1));
     }
 
     [Fact]
     public async Task ListAsync_recursive_with_pattern_filters_correctly()
     {
-        await _storage.WriteAsync(Path.Combine(_root, "a.txt"), [0x01], CancellationToken.None);
-        await _storage.WriteAsync(Path.Combine(_root, "b.bin"), [0x02], CancellationToken.None);
+        await _storage.WriteAsync(path: Path.Combine(path1: _root, path2: "a.txt"), bytes: [0x01], ct: CancellationToken.None);
+        await _storage.WriteAsync(path: Path.Combine(path1: _root, path2: "b.bin"), bytes: [0x02], ct: CancellationToken.None);
         await _storage.WriteAsync(
-            Path.Combine(_root, "sub", "c.txt"),
-            [0x03],
-            CancellationToken.None
+            path: Path.Combine(path1: _root, path2: "sub", path3: "c.txt"),
+            bytes: [0x03],
+            ct: CancellationToken.None
         );
 
         List<StorageEntry> recursive = [];
         await foreach (
             StorageEntry e in _storage.ListAsync(
-                _root,
-                "*.txt",
+                path: _root,
+                pattern: "*.txt",
                 recursive: true,
-                CancellationToken.None
+                ct: CancellationToken.None
             )
         )
-            recursive.Add(e);
+            recursive.Add(item: e);
 
-        recursive.Select(e => Path.GetFileName(e.Path)).Should().BeEquivalentTo("a.txt", "c.txt");
-        recursive.All(e => !e.IsDirectory).Should().BeTrue();
+        recursive.Select(selector: e => Path.GetFileName(path: e.Path)).Should().BeEquivalentTo(expectation: ["a.txt", "c.txt"]);
+        recursive.All(predicate: e => !e.IsDirectory).Should().BeTrue();
     }
 
     [Fact]
     public async Task HashAsync_sha256_matches_real_file_content()
     {
         // SHA-256("hello") = 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
-        string path = Path.Combine(_root, "hello.txt");
-        await _storage.WriteAsync(path, "hello"u8.ToArray(), CancellationToken.None);
+        string path = Path.Combine(path1: _root, path2: "hello.txt");
+        await _storage.WriteAsync(path: path, bytes: "hello"u8.ToArray(), ct: CancellationToken.None);
 
-        string digest = await _storage.HashAsync(path, "sha256", CancellationToken.None);
+        string digest = await _storage.HashAsync(path: path, algorithm: "sha256", ct: CancellationToken.None);
 
-        digest.Should().Be("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824");
+        digest.Should().Be(expected: "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824");
     }
 
     [Fact]
     public async Task AcquireLocalPathAsync_returns_real_path()
     {
-        string path = Path.Combine(_root, "lease.bin");
-        await _storage.WriteAsync(path, [0x42], CancellationToken.None);
+        string path = Path.Combine(path1: _root, path2: "lease.bin");
+        await _storage.WriteAsync(path: path, bytes: [0x42], ct: CancellationToken.None);
 
         await using LocalPathLease lease = await _storage.AcquireLocalPathAsync(
-            path,
-            CancellationToken.None
+            path: path,
+            ct: CancellationToken.None
         );
 
-        lease.Path.Should().Be(Path.GetFullPath(path));
-        File.Exists(lease.Path).Should().BeTrue();
+        lease.Path.Should().Be(expected: Path.GetFullPath(path: path));
+        File.Exists(path: lease.Path).Should().BeTrue();
     }
 
     [Fact]
     public async Task Guard_rejects_path_outside_allowed_root()
     {
-        string outside = Path.Combine(Path.GetTempPath(), "definitely-not-root.bin");
+        string outside = Path.Combine(path1: Path.GetTempPath(), path2: "definitely-not-root.bin");
 
-        Func<Task> act = () => _storage.WriteAsync(outside, [0x00], CancellationToken.None);
+        Func<Task> act = () => _storage.WriteAsync(path: outside, bytes: [0x00], ct: CancellationToken.None);
 
         await act.Should().ThrowAsync<StoragePathNotAllowedException>();
     }
@@ -264,19 +264,19 @@ public class LocalStorageIntegrationTests : IDisposable
             return;
 
         string outsideDir = Path.Combine(
-            Path.GetTempPath(),
-            "nm-storage-outside-" + Path.GetRandomFileName()
+            path1: Path.GetTempPath(),
+            path2: "nm-storage-outside-" + Path.GetRandomFileName()
         );
-        Directory.CreateDirectory(outsideDir);
+        Directory.CreateDirectory(path: outsideDir);
         try
         {
-            string realTarget = Path.Combine(outsideDir, "secret.bin");
-            await File.WriteAllBytesAsync(realTarget, [0xFF], CancellationToken.None);
+            string realTarget = Path.Combine(path1: outsideDir, path2: "secret.bin");
+            await File.WriteAllBytesAsync(path: realTarget, bytes: [0xFF], cancellationToken: CancellationToken.None);
 
-            string linkPath = Path.Combine(_root, "escape-link");
+            string linkPath = Path.Combine(path1: _root, path2: "escape-link");
             try
             {
-                File.CreateSymbolicLink(linkPath, realTarget);
+                File.CreateSymbolicLink(path: linkPath, pathToTarget: realTarget);
             }
             catch (UnauthorizedAccessException)
             {
@@ -284,7 +284,7 @@ public class LocalStorageIntegrationTests : IDisposable
                 return;
             }
 
-            Func<Task> act = () => _storage.ReadAsync(linkPath, CancellationToken.None);
+            Func<Task> act = () => _storage.ReadAsync(path: linkPath, ct: CancellationToken.None);
 
             await act.Should().ThrowAsync<StoragePathNotAllowedException>();
         }
@@ -292,7 +292,7 @@ public class LocalStorageIntegrationTests : IDisposable
         {
             try
             {
-                Directory.Delete(outsideDir, recursive: true);
+                Directory.Delete(path: outsideDir, recursive: true);
             }
             catch
             { /* best-effort */

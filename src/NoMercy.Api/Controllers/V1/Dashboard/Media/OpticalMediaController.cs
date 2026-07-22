@@ -35,10 +35,10 @@ using NoMercyQueue;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 
 [ApiController]
-[Tags("Dashboard Optical")]
-[ApiVersion(1.0)]
+[Tags(tags: "Dashboard Optical")]
+[ApiVersion(version: 1.0)]
 [Authorize(Policy = "Moderator")]
-[Route("api/v{version:apiVersion}/dashboard/optical")]
+[Route(template: "api/v{version:apiVersion}/dashboard/optical")]
 public class OpticalMediaController(
     DiscSourceFactory discSourceFactory,
     DiscIdentificationService identificationService,
@@ -54,35 +54,35 @@ public class OpticalMediaController(
 {
     // ── Legacy endpoints (re-pointed to Module A) ──────────────────────────
 
-    [HttpGet("drives")]
+    [HttpGet(template: "drives")]
     public IActionResult GetOpticalDrives()
     {
         IEnumerable<object> drives = driveMonitor
             .GetDrives()
-            .Select(d => new
+            .Select(selector: d => new
             {
-                path = d.Path.TrimEnd(Path.DirectorySeparatorChar),
+                path = d.Path.TrimEnd(trimChar: Path.DirectorySeparatorChar),
                 label = d.Label,
                 open = !d.HasDisc,
                 has_disc = d.HasDisc,
                 disc_type = d.DiscType.ToString().ToLowerInvariant(),
             });
 
-        return Ok(drives);
+        return Ok(value: drives);
     }
 
-    [HttpGet("{drivePath}")]
+    [HttpGet(template: "{drivePath}")]
     public async Task<IActionResult> GetDriveContents(string drivePath, CancellationToken ct)
     {
-        DiscDrive? drive = FindDrive(drivePath);
+        DiscDrive? drive = FindDrive(drivePath: drivePath);
         if (drive is null)
-            return NotFoundResponse($"No optical drive found at {drivePath}");
+            return NotFoundResponse(detail: $"No optical drive found at {drivePath}");
 
         if (!drive.HasDisc)
             return Ok(
-                new
+                value: new
                 {
-                    path = drive.Path.TrimEnd(Path.DirectorySeparatorChar),
+                    path = drive.Path.TrimEnd(trimChar: Path.DirectorySeparatorChar),
                     label = drive.Label,
                     open = true,
                     has_disc = false,
@@ -90,12 +90,12 @@ public class OpticalMediaController(
                 }
             );
 
-        IDiscSource? source = discSourceFactory.CreateFor(drive.DiscType);
+        IDiscSource? source = discSourceFactory.CreateFor(type: drive.DiscType);
         if (source is null)
             return Ok(
-                new
+                value: new
                 {
-                    path = drive.Path.TrimEnd(Path.DirectorySeparatorChar),
+                    path = drive.Path.TrimEnd(trimChar: Path.DirectorySeparatorChar),
                     label = drive.Label,
                     open = false,
                     has_disc = true,
@@ -103,12 +103,12 @@ public class OpticalMediaController(
                 }
             );
 
-        DiscInfo info = await source.ProbeAsync(drive, ct);
+        DiscInfo info = await source.ProbeAsync(drive: drive, ct: ct);
 
         return Ok(
-            new
+            value: new
             {
-                path = drive.Path.TrimEnd(Path.DirectorySeparatorChar),
+                path = drive.Path.TrimEnd(trimChar: Path.DirectorySeparatorChar),
                 label = info.DiscTitle ?? info.DiscLabel ?? drive.Label,
                 open = false,
                 has_disc = true,
@@ -118,100 +118,100 @@ public class OpticalMediaController(
         );
     }
 
-    [HttpPost("{drivePath}/process")]
+    [HttpPost(template: "{drivePath}/process")]
     public IActionResult ProcessMedia(string drivePath)
     {
-        if (string.IsNullOrWhiteSpace(drivePath))
-            return BadRequestResponse("Drive path is required");
+        if (string.IsNullOrWhiteSpace(value: drivePath))
+            return BadRequestResponse(detail: "Drive path is required");
 
         // Legacy stub — callers should use the /rip endpoint instead.
         // The old Module B ProcessMedia had DVD/CD stubs that logged
         // "not yet implemented" and returned. That same behaviour is
         // preserved here without pulling in dead code.
-        return Ok("Use /rip to start a rip job.");
+        return Ok(value: "Use /rip to start a rip job.");
     }
 
-    [HttpPost("{drivePath}/open")]
+    [HttpPost(template: "{drivePath}/open")]
     public IActionResult OpenDrive(string drivePath)
     {
-        if (string.IsNullOrWhiteSpace(drivePath))
-            return BadRequestResponse("Drive path is required");
+        if (string.IsNullOrWhiteSpace(value: drivePath))
+            return BadRequestResponse(detail: "Drive path is required");
 
-        bool success = Optical.OpenDrive(drivePath);
+        bool success = Optical.OpenDrive(drivePath: drivePath);
 
         if (!success)
-            return BadRequestResponse("Failed to open drive");
+            return BadRequestResponse(detail: "Failed to open drive");
 
-        return Ok("Drive opened.");
+        return Ok(value: "Drive opened.");
     }
 
-    [HttpPost("{drivePath}/close")]
+    [HttpPost(template: "{drivePath}/close")]
     public IActionResult CloseDrive(string drivePath)
     {
-        if (string.IsNullOrWhiteSpace(drivePath))
-            return BadRequestResponse("Drive path is required");
+        if (string.IsNullOrWhiteSpace(value: drivePath))
+            return BadRequestResponse(detail: "Drive path is required");
 
-        bool success = Optical.CloseDrive(drivePath);
+        bool success = Optical.CloseDrive(drivePath: drivePath);
 
         if (!success)
-            return BadRequestResponse("Failed to close drive");
+            return BadRequestResponse(detail: "Failed to close drive");
 
-        return Ok("Drive closed.");
+        return Ok(value: "Drive closed.");
     }
 
-    [HttpPost("{drivePath}/play/{playlistId}")]
+    [HttpPost(template: "{drivePath}/play/{playlistId}")]
     public async Task<IActionResult> PlayMedia(
         string drivePath,
         string playlistId,
         CancellationToken ct
     )
     {
-        if (string.IsNullOrWhiteSpace(drivePath))
-            return BadRequestResponse("Drive path is required");
+        if (string.IsNullOrWhiteSpace(value: drivePath))
+            return BadRequestResponse(detail: "Drive path is required");
 
-        if (string.IsNullOrWhiteSpace(playlistId))
-            return BadRequestResponse("Playlist ID is required");
+        if (string.IsNullOrWhiteSpace(value: playlistId))
+            return BadRequestResponse(detail: "Playlist ID is required");
 
-        if (!int.TryParse(playlistId, out int titleIndex) || titleIndex < 0)
-            return BadRequestResponse("playlistId must be a non-negative integer title index");
+        if (!int.TryParse(s: playlistId, result: out int titleIndex) || titleIndex < 0)
+            return BadRequestResponse(detail: "playlistId must be a non-negative integer title index");
 
-        DiscDrive? drive = FindDrive(drivePath);
+        DiscDrive? drive = FindDrive(drivePath: drivePath);
         if (drive is null)
-            return NotFoundResponse($"No optical drive found at {drivePath}");
+            return NotFoundResponse(detail: $"No optical drive found at {drivePath}");
 
         if (!drive.HasDisc)
-            return BadRequestResponse($"No disc loaded in drive {drivePath}");
+            return BadRequestResponse(detail: $"No disc loaded in drive {drivePath}");
 
-        if (!sessionManager.CanStartSession(User.UserId().ToString()))
-            return ServiceUnavailableResponse("Maximum concurrent live sessions reached");
+        if (!sessionManager.CanStartSession(userId: User.UserId().ToString()))
+            return ServiceUnavailableResponse(detail: "Maximum concurrent live sessions reached");
 
         ILiveSession session;
         try
         {
             session = await liveDiscSession.StartAsync(
-                drive,
-                titleIndex,
-                TimeSpan.Zero,
+                drive: drive,
+                titleIndex: titleIndex,
+                startPosition: TimeSpan.Zero,
                 preferredQuality: null,
-                ct
+                ct: ct
             );
         }
         catch (InvalidOperationException ex)
         {
-            return ServiceUnavailableResponse(ex.Message);
+            return ServiceUnavailableResponse(detail: ex.Message);
         }
 
-        sessionManager.RegisterSession(session, User.UserId().ToString());
+        sessionManager.RegisterSession(session: session, userId: User.UserId().ToString());
         discSessionRegistry.Register(
-            drive.Path.TrimEnd(Path.DirectorySeparatorChar),
-            session.SessionId
+            drivePath: drive.Path.TrimEnd(trimChar: Path.DirectorySeparatorChar),
+            sessionId: session.SessionId
         );
 
         string playlistUrl = $"/api/v1/streaming/live/sessions/{session.SessionId}/playlist.m3u8";
         LiveQuality quality = session.CurrentQuality;
 
         return Ok(
-            new
+            value: new
             {
                 session_id = session.SessionId,
                 playlist_url = playlistUrl,
@@ -221,20 +221,20 @@ public class OpticalMediaController(
         );
     }
 
-    [HttpPost("{drivePath}/stop")]
+    [HttpPost(template: "{drivePath}/stop")]
     public async Task<IActionResult> StopMedia(string drivePath, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(drivePath))
-            return BadRequestResponse("Drive path is required");
+        if (string.IsNullOrWhiteSpace(value: drivePath))
+            return BadRequestResponse(detail: "Drive path is required");
 
-        string normalised = drivePath.TrimEnd(Path.DirectorySeparatorChar);
+        string normalised = drivePath.TrimEnd(trimChar: Path.DirectorySeparatorChar);
 
-        if (!discSessionRegistry.TryGet(normalised, out string sessionId))
-            return NotFoundResponse($"No active live session for drive {drivePath}");
+        if (!discSessionRegistry.TryGet(drivePath: normalised, sessionId: out string sessionId))
+            return NotFoundResponse(detail: $"No active live session for drive {drivePath}");
 
-        await liveStreamingService.RemoveAsync(sessionId);
-        sessionManager.RemoveSession(sessionId);
-        discSessionRegistry.Remove(normalised);
+        await liveStreamingService.RemoveAsync(sessionId: sessionId);
+        sessionManager.RemoveSession(sessionId: sessionId);
+        discSessionRegistry.Remove(drivePath: normalised);
 
         return NoContent();
     }
@@ -248,20 +248,20 @@ public class OpticalMediaController(
     /// for callers that want to render a multi-title browse UI or pick
     /// between metadata candidates.
     /// </summary>
-    [HttpGet("{drivePath}/probe")]
+    [HttpGet(template: "{drivePath}/probe")]
     public async Task<IActionResult> ProbeDisc(string drivePath, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(drivePath))
-            return BadRequestResponse("Drive path is required");
+        if (string.IsNullOrWhiteSpace(value: drivePath))
+            return BadRequestResponse(detail: "Drive path is required");
 
-        DiscDrive? drive = FindDrive(drivePath);
+        DiscDrive? drive = FindDrive(drivePath: drivePath);
 
         if (drive is null)
-            return NotFoundResponse($"No optical drive found at {drivePath}");
+            return NotFoundResponse(detail: $"No optical drive found at {drivePath}");
 
         if (!drive.HasDisc || drive.DiscType == OpticalDiscType.None)
             return Ok(
-                new
+                value: new
                 {
                     drive_path = drive.Path,
                     label = drive.Label,
@@ -270,15 +270,15 @@ public class OpticalMediaController(
                 }
             );
 
-        IDiscSource? source = discSourceFactory.CreateFor(drive.DiscType);
+        IDiscSource? source = discSourceFactory.CreateFor(type: drive.DiscType);
         if (source is null)
-            return BadRequestResponse($"No reader registered for disc type {drive.DiscType} (yet)");
+            return BadRequestResponse(detail: $"No reader registered for disc type {drive.DiscType} (yet)");
 
-        DiscInfo info = await source.ProbeAsync(drive, ct);
-        DiscIdentification identification = await identificationService.IdentifyAsync(info, ct);
+        DiscInfo info = await source.ProbeAsync(drive: drive, ct: ct);
+        DiscIdentification identification = await identificationService.IdentifyAsync(disc: info, ct: ct);
 
         return Ok(
-            new
+            value: new
             {
                 drive_path = drive.Path,
                 label = info.DiscTitle ?? info.DiscLabel ?? drive.Label,
@@ -296,34 +296,34 @@ public class OpticalMediaController(
     /// candidates ordered by confidence (highest first) so the dashboard
     /// can render a candidate picker before the user confirms.
     /// </summary>
-    [HttpPost("{drivePath}/resolve")]
+    [HttpPost(template: "{drivePath}/resolve")]
     public async Task<IActionResult> ResolveDisc(string drivePath, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(drivePath))
-            return BadRequestResponse("Drive path is required");
+        if (string.IsNullOrWhiteSpace(value: drivePath))
+            return BadRequestResponse(detail: "Drive path is required");
 
-        DiscDrive? drive = FindDrive(drivePath);
+        DiscDrive? drive = FindDrive(drivePath: drivePath);
 
         if (drive is null || !drive.HasDisc)
-            return NotFoundResponse($"No disc loaded in {drivePath}");
+            return NotFoundResponse(detail: $"No disc loaded in {drivePath}");
 
-        IDiscSource? source = discSourceFactory.CreateFor(drive.DiscType);
+        IDiscSource? source = discSourceFactory.CreateFor(type: drive.DiscType);
         if (source is null)
-            return BadRequestResponse($"No reader registered for disc type {drive.DiscType}");
+            return BadRequestResponse(detail: $"No reader registered for disc type {drive.DiscType}");
 
-        DiscInfo info = await source.ProbeAsync(drive, ct);
-        DiscIdentification identification = await identificationService.IdentifyAsync(info, ct);
+        DiscInfo info = await source.ProbeAsync(drive: drive, ct: ct);
+        DiscIdentification identification = await identificationService.IdentifyAsync(disc: info, ct: ct);
 
         return Ok(
-            new
+            value: new
             {
                 drive_path = drive.Path,
                 disc_duration_sec = info.MainTitleDurationSec,
                 needs_manual = identification.NeedsManualAssignment,
                 auto_apply = identification.AutoApply,
                 candidates = identification
-                    .Candidates.Take(5)
-                    .Select(c => new
+                    .Candidates.Take(count: 5)
+                    .Select(selector: c => new
                     {
                         stable_id = c.StableId,
                         media_type = c.Type?.ToString().ToLowerInvariant(),
@@ -344,45 +344,45 @@ public class OpticalMediaController(
     /// the raw rip file into the canonical media-library path and triggers a
     /// library refresh so the file is picked up by the import pipeline.
     /// </summary>
-    [HttpPost("{drivePath}/confirm")]
+    [HttpPost(template: "{drivePath}/confirm")]
     public async Task<IActionResult> ConfirmDisc(
         string drivePath,
         [FromBody] DiscConfirmRequest request,
         CancellationToken ct
     )
     {
-        if (string.IsNullOrWhiteSpace(drivePath))
-            return BadRequestResponse("Drive path is required");
+        if (string.IsNullOrWhiteSpace(value: drivePath))
+            return BadRequestResponse(detail: "Drive path is required");
 
-        if (string.IsNullOrWhiteSpace(request.TmdbId))
-            return BadRequestResponse("TmdbId is required");
+        if (string.IsNullOrWhiteSpace(value: request.TmdbId))
+            return BadRequestResponse(detail: "TmdbId is required");
 
-        if (string.IsNullOrWhiteSpace(request.RipOutputPath))
-            return BadRequestResponse("RipOutputPath is required");
+        if (string.IsNullOrWhiteSpace(value: request.RipOutputPath))
+            return BadRequestResponse(detail: "RipOutputPath is required");
 
-        string ripStagingRoot = Path.Combine(AppFiles.TranscodePath, "ripper");
-        if (!RipStagingPath.IsWithinStaging(request.RipOutputPath, ripStagingRoot))
+        string ripStagingRoot = Path.Combine(path1: AppFiles.TranscodePath, path2: "ripper");
+        if (!RipStagingPath.IsWithinStaging(ripOutputPath: request.RipOutputPath, stagingRoot: ripStagingRoot))
             return BadRequestResponse(
-                "RipOutputPath must be inside the server rip staging directory"
+                detail: "RipOutputPath must be inside the server rip staging directory"
             );
 
-        if (!System.IO.File.Exists(request.RipOutputPath))
-            return NotFoundResponse($"Rip output not found at {request.RipOutputPath}");
+        if (!System.IO.File.Exists(path: request.RipOutputPath))
+            return NotFoundResponse(detail: $"Rip output not found at {request.RipOutputPath}");
 
-        await using MediaContext db = await contextFactory.CreateDbContextAsync(ct);
-        LibraryRepository libraryRepository = new(db, localStorageDriver);
+        await using MediaContext db = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        LibraryRepository libraryRepository = new(context: db, storageDriver: localStorageDriver);
 
-        Folder? targetFolder = await libraryRepository.GetLibraryFolder(request.FolderId);
+        Folder? targetFolder = await libraryRepository.GetLibraryFolder(folderId: request.FolderId);
         if (targetFolder is null)
             return BadRequestResponse(
-                $"FolderId {request.FolderId} does not match any library folder"
+                detail: $"FolderId {request.FolderId} does not match any library folder"
             );
 
         Library? targetLibrary = await libraryRepository.GetLibraryByIdWithFolders(
-            request.LibraryId
+            libraryId: request.LibraryId
         );
         if (targetLibrary is null)
-            return BadRequestResponse($"LibraryId {request.LibraryId} does not match any library");
+            return BadRequestResponse(detail: $"LibraryId {request.LibraryId} does not match any library");
 
         CustomMetadata meta =
             request.MediaType == "tv"
@@ -414,40 +414,40 @@ public class OpticalMediaController(
             Mode: RipMode.RipAndEncode
         );
 
-        string folderRelative = BuildOutputPath(syntheticRequest, targetLibrary.Type, 0, 0);
+        string folderRelative = BuildOutputPath(request: syntheticRequest, libraryType: targetLibrary.Type, titleIndex: 0, batchIndex: 0);
 
         IStorage folderStorage = storageFactory.For(
-            targetFolder.Id,
-            targetFolder.DriverId,
-            string.Empty
+            folderId: targetFolder.Id,
+            driverId: targetFolder.DriverId,
+            subPath: string.Empty
         );
 
-        string parentRelative = ParentRelative(folderRelative);
-        if (!string.IsNullOrEmpty(parentRelative))
-            await folderStorage.CreateDirectoryAsync(parentRelative, ct);
+        string parentRelative = ParentRelative(folderRelative: folderRelative);
+        if (!string.IsNullOrEmpty(value: parentRelative))
+            await folderStorage.CreateDirectoryAsync(path: parentRelative, ct: ct);
 
-        await using (FileStream src = new(request.RipOutputPath, FileMode.Open, FileAccess.Read))
+        await using (FileStream src = new(path: request.RipOutputPath, mode: FileMode.Open, access: FileAccess.Read))
         await using (
-            Stream dst = await folderStorage.OpenWriteAsync(folderRelative, overwrite: true, ct)
+            Stream dst = await folderStorage.OpenWriteAsync(path: folderRelative, overwrite: true, ct: ct)
         )
         {
-            await src.CopyToAsync(dst, ct);
+            await src.CopyToAsync(destination: dst, cancellationToken: ct);
         }
 
         try
         {
-            System.IO.File.Delete(request.RipOutputPath);
+            System.IO.File.Delete(path: request.RipOutputPath);
         }
         catch
         {
             // best effort
         }
 
-        string watcherFolderHost = ResolveHostPath(folderStorage, parentRelative);
+        string watcherFolderHost = ResolveHostPath(storage: folderStorage, subPath: parentRelative);
         if (EventBusProvider.IsConfigured)
         {
             await EventBusProvider.Current.PublishAsync(
-                new FileCreatedEvent
+                @event: new FileCreatedEvent
                 {
                     FolderPath = watcherFolderHost,
                     LibraryId = targetLibrary.Id,
@@ -457,7 +457,7 @@ public class OpticalMediaController(
         }
 
         return Ok(
-            new
+            value: new
             {
                 tmdb_id = request.TmdbId,
                 media_type = request.MediaType,
@@ -473,34 +473,34 @@ public class OpticalMediaController(
     /// <c>ripperHub</c>. Fails fast on DRM-locked discs and missing
     /// destination folders so the background job never starts in a doomed state.
     /// </summary>
-    [HttpPost("{drivePath}/rip")]
+    [HttpPost(template: "{drivePath}/rip")]
     public async Task<IActionResult> RipDisc(
         string drivePath,
         [FromBody] RipRequest request,
         CancellationToken ct
     )
     {
-        if (string.IsNullOrWhiteSpace(drivePath))
-            return BadRequestResponse("Drive path is required");
+        if (string.IsNullOrWhiteSpace(value: drivePath))
+            return BadRequestResponse(detail: "Drive path is required");
 
-        DiscDrive? drive = FindDrive(drivePath);
+        DiscDrive? drive = FindDrive(drivePath: drivePath);
 
         if (drive is null || !drive.HasDisc)
-            return NotFoundResponse($"No disc loaded in {drivePath}");
+            return NotFoundResponse(detail: $"No disc loaded in {drivePath}");
 
         // For CD discs, an empty SelectedTitleIndices is fine — the endpoint
         // defaults to all probed tracks further below. Video discs must supply at least one.
         if (request.SelectedTitleIndices.Length == 0 && drive.DiscType != OpticalDiscType.Cd)
-            return BadRequestResponse("At least one title must be selected");
+            return BadRequestResponse(detail: "At least one title must be selected");
 
         // Fail fast if the disc is DRM-locked the host can't read.
-        IDiscSource? source = discSourceFactory.CreateFor(drive.DiscType);
+        IDiscSource? source = discSourceFactory.CreateFor(type: drive.DiscType);
         if (source is not null)
         {
-            DiscInfo precheck = await source.ProbeAsync(drive, ct);
+            DiscInfo precheck = await source.ProbeAsync(drive: drive, ct: ct);
             if (precheck.Protection is not null)
                 return BadRequestResponse(
-                    $"Cannot rip — disc is {precheck.Protection.Kind}-protected: {precheck.Protection.Message}"
+                    detail: $"Cannot rip — disc is {precheck.Protection.Kind}-protected: {precheck.Protection.Message}"
                 );
         }
 
@@ -509,28 +509,28 @@ public class OpticalMediaController(
         Library? targetLibrary = null;
         if (request.Mode == RipMode.RipAndEncode)
         {
-            await using MediaContext lookupContext = await contextFactory.CreateDbContextAsync(ct);
-            LibraryRepository libraryRepository = new(lookupContext, localStorageDriver);
-            targetFolder = await libraryRepository.GetLibraryFolder(request.FolderId);
+            await using MediaContext lookupContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+            LibraryRepository libraryRepository = new(context: lookupContext, storageDriver: localStorageDriver);
+            targetFolder = await libraryRepository.GetLibraryFolder(folderId: request.FolderId);
             if (targetFolder is null)
                 return BadRequestResponse(
-                    $"FolderId {request.FolderId} does not match any library folder. "
-                        + "RipAndEncode needs a real folder so the rip output lands somewhere "
-                        + "the encoder can read it via the folder's driver."
+                    detail: $"FolderId {request.FolderId} does not match any library folder. "
+                            + "RipAndEncode needs a real folder so the rip output lands somewhere "
+                            + "the encoder can read it via the folder's driver."
                 );
-            targetLibrary = await libraryRepository.GetLibraryByIdWithFolders(request.LibraryId);
+            targetLibrary = await libraryRepository.GetLibraryByIdWithFolders(libraryId: request.LibraryId);
             if (targetLibrary is null)
                 return BadRequestResponse(
-                    $"LibraryId {request.LibraryId} does not match any library."
+                    detail: $"LibraryId {request.LibraryId} does not match any library."
                 );
         }
 
         string sanitisedDrive = drive
-            .Path.TrimEnd(Path.DirectorySeparatorChar)
-            .Replace(":", "")
-            .Replace(Path.DirectorySeparatorChar, '_');
-        string outputDir = Path.Combine(AppFiles.TranscodePath, "ripper", sanitisedDrive);
-        Directory.CreateDirectory(outputDir);
+            .Path.TrimEnd(trimChar: Path.DirectorySeparatorChar)
+            .Replace(oldValue: ":", newValue: "")
+            .Replace(oldChar: Path.DirectorySeparatorChar, newChar: '_');
+        string outputDir = Path.Combine(path1: AppFiles.TranscodePath, path2: "ripper", path3: sanitisedDrive);
+        Directory.CreateDirectory(path: outputDir);
 
         // For audio CDs, default to all probed tracks when the caller sent
         // no SelectedTitleIndices (CD tracks don't map to video-title semantics).
@@ -541,32 +541,32 @@ public class OpticalMediaController(
 
         if (drive.DiscType == OpticalDiscType.Cd && enriched.SelectedTitleIndices.Length == 0)
         {
-            IDiscSource? cdSource = discSourceFactory.CreateFor(OpticalDiscType.Cd);
+            IDiscSource? cdSource = discSourceFactory.CreateFor(type: OpticalDiscType.Cd);
             if (cdSource is not null)
             {
-                DiscInfo cdInfo = await cdSource.ProbeAsync(drive, ct);
+                DiscInfo cdInfo = await cdSource.ProbeAsync(drive: drive, ct: ct);
                 if (cdInfo.AudioTracks is { Length: > 0 })
                 {
                     enriched = enriched with
                     {
-                        SelectedTitleIndices = cdInfo.AudioTracks.Select(t => t.Index).ToArray(),
+                        SelectedTitleIndices = cdInfo.AudioTracks.Select(selector: t => t.Index).ToArray(),
                     };
                 }
             }
         }
 
         DiscRipJob job = new(
-            enriched,
-            outputDir,
-            targetFolder?.Id,
-            targetLibrary?.Id,
-            targetLibrary?.Type
+            request: enriched,
+            outputDir: outputDir,
+            targetFolderId: targetFolder?.Id,
+            targetLibraryId: targetLibrary?.Id,
+            targetLibraryType: targetLibrary?.Type
         );
 
-        QueueRunner.Current!.Dispatcher.Dispatch(job);
+        QueueRunner.Current!.Dispatcher.Dispatch(job: job);
 
         return Accepted(
-            new
+            value: new
             {
                 job_id = job.JobId,
                 drive_path = drive.Path,
@@ -582,11 +582,11 @@ public class OpticalMediaController(
     private DiscDrive? FindDrive(string drivePath) =>
         driveMonitor
             .GetDrives()
-            .FirstOrDefault(d =>
-                d.Path.TrimEnd(Path.DirectorySeparatorChar)
+            .FirstOrDefault(predicate: d =>
+                d.Path.TrimEnd(trimChar: Path.DirectorySeparatorChar)
                     .Equals(
-                        drivePath.TrimEnd(Path.DirectorySeparatorChar),
-                        StringComparison.OrdinalIgnoreCase
+                        value: drivePath.TrimEnd(trimChar: Path.DirectorySeparatorChar),
+                        comparisonType: StringComparison.OrdinalIgnoreCase
                     )
             );
 
@@ -595,11 +595,11 @@ public class OpticalMediaController(
         string libraryType,
         int titleIndex,
         int batchIndex
-    ) => RipOutputPathHelper.Build(request, libraryType, titleIndex, batchIndex);
+    ) => RipOutputPathHelper.Build(request: request, libraryType: libraryType, titleIndex: titleIndex, batchIndex: batchIndex);
 
     private static string ParentRelative(string folderRelative)
     {
-        int slash = folderRelative.LastIndexOf('/');
+        int slash = folderRelative.LastIndexOf(value: '/');
         return slash <= 0 ? "" : folderRelative[..slash];
     }
 
@@ -607,7 +607,7 @@ public class OpticalMediaController(
     {
         try
         {
-            return storage.GetFullPath(subPath);
+            return storage.GetFullPath(path: subPath);
         }
         catch
         {

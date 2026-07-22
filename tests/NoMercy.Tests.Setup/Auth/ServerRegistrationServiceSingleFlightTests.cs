@@ -43,7 +43,7 @@ public class ServerRegistrationServiceSingleFlightTests
     private static ServerRegistrationService MakeService()
     {
         Mock<IAuthTokenStore> authTokenStore = new();
-        authTokenStore.Setup(a => a.AccessToken).Returns("test-access-token");
+        authTokenStore.Setup(expression: a => a.AccessToken).Returns(value: "test-access-token");
 
         Mock<IDbContextFactory<AppDbContext>> dbContextFactory = new();
         // Deliberately unconfigured: GetDeviceName() catches any failure here
@@ -53,28 +53,28 @@ public class ServerRegistrationServiceSingleFlightTests
         Mock<IUserProvisioningService> userProvisioning = new();
 
         Mock<IConnectivityStatus> connectivity = new();
-        connectivity.Setup(c => c.StunPublicIp).Returns((string?)null);
-        connectivity.Setup(c => c.StunPublicPort).Returns((int?)null);
-        connectivity.Setup(c => c.NatStatus).Returns(NatStatus.None);
+        connectivity.Setup(expression: c => c.StunPublicIp).Returns(value: (string?)null);
+        connectivity.Setup(expression: c => c.StunPublicPort).Returns(value: (int?)null);
+        connectivity.Setup(expression: c => c.NatStatus).Returns(value: NatStatus.None);
 
         Mock<ICertificateService> certificateService = new();
 
         return new(
-            authTokenStore.Object,
-            dbContextFactory.Object,
-            userProvisioning.Object,
-            connectivity.Object,
-            certificateService.Object
+            authTokenStore: authTokenStore.Object,
+            appDbContextFactory: dbContextFactory.Object,
+            userProvisioningService: userProvisioning.Object,
+            connectivityStatus: connectivity.Object,
+            certificateService: certificateService.Object
         );
     }
 
     private static void SetLastFailureUtc(ServerRegistrationService service, DateTime value)
     {
         FieldInfo field = typeof(ServerRegistrationService).GetField(
-            "_lastFailureUtc",
-            BindingFlags.NonPublic | BindingFlags.Instance
+            name: "_lastFailureUtc",
+            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
         )!;
-        field.SetValue(service, value);
+        field.SetValue(obj: service, value: value);
     }
 
     [Fact]
@@ -85,12 +85,12 @@ public class ServerRegistrationServiceSingleFlightTests
         Task first = service.Init(maxRetries: 1);
         Task second = service.Init(maxRetries: 1);
 
-        first.Should().BeSameAs(second);
+        first.Should().BeSameAs(expected: second);
 
         // The real HTTP call will fail in this offline test environment —
         // observe the fault so it never surfaces as an unobserved task
         // exception once this background Task is garbage collected.
-        _ = first.ContinueWith(t => _ = t.Exception, TaskContinuationOptions.ExecuteSynchronously);
+        _ = first.ContinueWith(continuationFunction: t => _ = t.Exception, continuationOptions: TaskContinuationOptions.ExecuteSynchronously);
     }
 
     [Fact]
@@ -102,10 +102,10 @@ public class ServerRegistrationServiceSingleFlightTests
         Task second = service.Init(maxRetries: 1);
         Task third = service.Init(maxRetries: 1);
 
-        first.Should().BeSameAs(second);
-        second.Should().BeSameAs(third);
+        first.Should().BeSameAs(expected: second);
+        second.Should().BeSameAs(expected: third);
 
-        _ = first.ContinueWith(t => _ = t.Exception, TaskContinuationOptions.ExecuteSynchronously);
+        _ = first.ContinueWith(continuationFunction: t => _ = t.Exception, continuationOptions: TaskContinuationOptions.ExecuteSynchronously);
     }
 
     [Fact]
@@ -115,10 +115,10 @@ public class ServerRegistrationServiceSingleFlightTests
         // single-flight check — a cooling-down service must not silently
         // join (or start) a registration attempt.
         ServerRegistrationService service = MakeService();
-        SetLastFailureUtc(service, DateTime.UtcNow);
+        SetLastFailureUtc(service: service, value: DateTime.UtcNow);
 
         Action act = () => service.Init(maxRetries: 1);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*cooldown*");
+        act.Should().Throw<InvalidOperationException>().WithMessage(expectedWildcardPattern: "*cooldown*");
     }
 }

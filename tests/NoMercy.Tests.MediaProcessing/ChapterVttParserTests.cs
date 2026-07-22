@@ -16,7 +16,7 @@ using Xunit;
 
 namespace NoMercy.Tests.MediaProcessing;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class ChapterVttParserTests
 {
     // The exact shape ChapterWriter produces: WEBVTT header, then blank-line
@@ -31,14 +31,14 @@ public class ChapterVttParserTests
     [Fact]
     public void Parses_real_chapter_vtt_into_titled_cues_in_milliseconds()
     {
-        List<IChapter> chapters = FileManager.ParseChaptersVtt(RealChaptersVtt);
+        List<IChapter> chapters = FileManager.ParseChaptersVtt(text: RealChaptersVtt);
 
-        chapters.Should().HaveCount(4);
+        chapters.Should().HaveCount(expected: 4);
 
-        chapters[0]
+        chapters[index: 0]
             .Should()
             .BeEquivalentTo(
-                new
+                expectation: new
                 {
                     Id = 0,
                     StartTime = 0,
@@ -46,10 +46,10 @@ public class ChapterVttParserTests
                     Title = "Scene 01",
                 }
             );
-        chapters[1]
+        chapters[index: 1]
             .Should()
             .BeEquivalentTo(
-                new
+                expectation: new
                 {
                     Id = 1,
                     StartTime = 74833,
@@ -57,10 +57,10 @@ public class ChapterVttParserTests
                     Title = "Intro",
                 }
             );
-        chapters[2]
+        chapters[index: 2]
             .Should()
             .BeEquivalentTo(
-                new
+                expectation: new
                 {
                     Id = 2,
                     StartTime = 137417,
@@ -68,10 +68,10 @@ public class ChapterVttParserTests
                     Title = "Scene 03",
                 }
             );
-        chapters[3]
+        chapters[index: 3]
             .Should()
             .BeEquivalentTo(
-                new
+                expectation: new
                 {
                     Id = 3,
                     StartTime = 1592417,
@@ -84,24 +84,24 @@ public class ChapterVttParserTests
     [Fact]
     public void Does_not_emit_header_blank_or_id_lines_as_chapters()
     {
-        List<IChapter> chapters = FileManager.ParseChaptersVtt(RealChaptersVtt);
+        List<IChapter> chapters = FileManager.ParseChaptersVtt(text: RealChaptersVtt);
 
         chapters
-            .Select(chapter => chapter.Title)
+            .Select(selector: chapter => chapter.Title)
             .Should()
-            .NotContain(["WEBVTT", "", "Chapter 1", "00:00:00.000 --> 00:01:14.833"]);
+            .NotContain(unexpected: ["WEBVTT", "", "Chapter 1", "00:00:00.000 --> 00:01:14.833"]);
     }
 
     [Fact]
     public void Handles_crlf_line_endings()
     {
-        string crlf = RealChaptersVtt.Replace("\n", "\r\n");
+        string crlf = RealChaptersVtt.Replace(oldValue: "\n", newValue: "\r\n");
 
-        List<IChapter> chapters = FileManager.ParseChaptersVtt(crlf);
+        List<IChapter> chapters = FileManager.ParseChaptersVtt(text: crlf);
 
-        chapters.Should().HaveCount(4);
-        chapters[0].Title.Should().Be("Scene 01");
-        chapters[0].StartTime.Should().Be(0);
+        chapters.Should().HaveCount(expected: 4);
+        chapters[index: 0].Title.Should().Be(expected: "Scene 01");
+        chapters[index: 0].StartTime.Should().Be(expected: 0);
     }
 
     [Fact]
@@ -112,26 +112,26 @@ public class ChapterVttParserTests
             + "Chapter 1\nnot-a-timestamp --> also-bad\nBroken\n\n"
             + "Chapter 2\n00:00:10.000 --> 00:00:20.000\nGood\n";
 
-        List<IChapter> chapters = FileManager.ParseChaptersVtt(malformed);
+        List<IChapter> chapters = FileManager.ParseChaptersVtt(text: malformed);
 
         // The malformed cue is skipped; the surviving "Good" cue starts at 10s,
         // so a synthetic "Start" chapter is prepended to cover 0 -> 10s.
-        chapters.Should().HaveCount(2);
-        chapters[0].Title.Should().Be("Start");
-        chapters[0].StartTime.Should().Be(0);
-        chapters[0].EndTime.Should().Be(10000);
-        chapters[1].Title.Should().Be("Good");
-        chapters[1].StartTime.Should().Be(10000);
+        chapters.Should().HaveCount(expected: 2);
+        chapters[index: 0].Title.Should().Be(expected: "Start");
+        chapters[index: 0].StartTime.Should().Be(expected: 0);
+        chapters[index: 0].EndTime.Should().Be(expected: 10000);
+        chapters[index: 1].Title.Should().Be(expected: "Good");
+        chapters[index: 1].StartTime.Should().Be(expected: 10000);
     }
 
     [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    [InlineData("WEBVTT")]
-    [InlineData("WEBVTT\n\n")]
+    [InlineData(data: "")]
+    [InlineData(data: "   ")]
+    [InlineData(data: "WEBVTT")]
+    [InlineData(data: "WEBVTT\n\n")]
     public void Returns_empty_for_headerless_or_cueless_input(string text)
     {
-        FileManager.ParseChaptersVtt(text).Should().BeEmpty();
+        FileManager.ParseChaptersVtt(text: text).Should().BeEmpty();
     }
 
     [Fact]
@@ -143,13 +143,13 @@ public class ChapterVttParserTests
         const string lateOnly =
             "WEBVTT\n\n" + "Chapter 1\n00:29:58.833 --> 00:31:15.936\nCredits\n";
 
-        List<IChapter> chapters = FileManager.ParseChaptersVtt(lateOnly);
+        List<IChapter> chapters = FileManager.ParseChaptersVtt(text: lateOnly);
 
-        chapters.Should().HaveCount(2);
-        chapters[0]
+        chapters.Should().HaveCount(expected: 2);
+        chapters[index: 0]
             .Should()
             .BeEquivalentTo(
-                new
+                expectation: new
                 {
                     Id = 0,
                     StartTime = 0,
@@ -157,10 +157,10 @@ public class ChapterVttParserTests
                     Title = "Start",
                 }
             );
-        chapters[1]
+        chapters[index: 1]
             .Should()
             .BeEquivalentTo(
-                new
+                expectation: new
                 {
                     Id = 1,
                     StartTime = 1798833,
@@ -175,10 +175,10 @@ public class ChapterVttParserTests
     {
         // RealChaptersVtt's first cue starts at 00:00:00.000, so the timeline is
         // already covered — no synthetic "Start" chapter, ids unchanged.
-        List<IChapter> chapters = FileManager.ParseChaptersVtt(RealChaptersVtt);
+        List<IChapter> chapters = FileManager.ParseChaptersVtt(text: RealChaptersVtt);
 
-        chapters.Should().HaveCount(4);
-        chapters[0].Title.Should().Be("Scene 01");
-        chapters[0].StartTime.Should().Be(0);
+        chapters.Should().HaveCount(expected: 4);
+        chapters[index: 0].Title.Should().Be(expected: "Scene 01");
+        chapters[index: 0].StartTime.Should().Be(expected: 0);
     }
 }

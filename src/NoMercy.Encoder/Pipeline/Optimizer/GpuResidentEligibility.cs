@@ -36,7 +36,7 @@ public static class GpuResidentEligibility
         {
             if (video.ConvertHdrToSdr)
                 return false;
-            if (!string.IsNullOrWhiteSpace(video.CropFilter))
+            if (!string.IsNullOrWhiteSpace(value: video.CropFilter))
                 return false;
         }
 

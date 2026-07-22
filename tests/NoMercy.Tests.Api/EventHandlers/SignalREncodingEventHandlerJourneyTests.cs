@@ -30,14 +30,14 @@ public class SignalREncodingEventHandlerJourneyTests
     ) BuildChain()
     {
         InMemoryEventBus bus = new();
-        Mock<IClientMessenger> messengerMock = new(MockBehavior.Strict);
+        Mock<IClientMessenger> messengerMock = new(behavior: MockBehavior.Strict);
         messengerMock
-            .Setup(m => m.SendToAll(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>()))
-            .Returns(Task.CompletedTask);
+            .Setup(expression: m => m.SendToAll(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>()))
+            .Returns(value: Task.CompletedTask);
         SignalREncodingEventHandler handler = new(
-            NullLogger<SignalREncodingEventHandler>.Instance,
-            bus,
-            messengerMock.Object
+            logger: NullLogger<SignalREncodingEventHandler>.Instance,
+            eventBus: bus,
+            clientMessenger: messengerMock.Object
         );
         return (bus, messengerMock, handler);
     }
@@ -60,10 +60,10 @@ public class SignalREncodingEventHandlerJourneyTests
             ProfileName = "HLS-1080p",
         };
 
-        await bus.PublishAsync(publishedEvent);
+        await bus.PublishAsync(@event: publishedEvent);
 
         messengerMock.Verify(
-            m =>
+            expression: m =>
                 m.SendToAll(
                     "EncodingStarted",
                     "dashboardHub",
@@ -74,7 +74,7 @@ public class SignalREncodingEventHandlerJourneyTests
                         && dto.ProfileName == "HLS-1080p"
                     )
                 ),
-            Times.Once
+            times: Times.Once
         );
     }
 
@@ -92,17 +92,17 @@ public class SignalREncodingEventHandlerJourneyTests
         {
             JobId = 12,
             Percentage = 42.5,
-            Elapsed = TimeSpan.FromMinutes(4),
-            Estimated = TimeSpan.FromMinutes(6),
+            Elapsed = TimeSpan.FromMinutes(minutes: 4),
+            Estimated = TimeSpan.FromMinutes(minutes: 6),
             Fps = 29.97,
             Speed = 1.5,
             BitrateKbps = 4500,
         };
 
-        await bus.PublishAsync(publishedEvent);
+        await bus.PublishAsync(@event: publishedEvent);
 
         messengerMock.Verify(
-            m =>
+            expression: m =>
                 m.SendToAll(
                     "EncodingProgress",
                     "dashboardHub",
@@ -116,7 +116,7 @@ public class SignalREncodingEventHandlerJourneyTests
                         && dto.BitrateKbps == 4500
                     )
                 ),
-            Times.Once
+            times: Times.Once
         );
     }
 
@@ -134,13 +134,13 @@ public class SignalREncodingEventHandlerJourneyTests
         {
             JobId = 33,
             OutputPath = "/output/movie/playlist.m3u8",
-            Duration = TimeSpan.FromMinutes(118),
+            Duration = TimeSpan.FromMinutes(minutes: 118),
         };
 
-        await bus.PublishAsync(publishedEvent);
+        await bus.PublishAsync(@event: publishedEvent);
 
         messengerMock.Verify(
-            m =>
+            expression: m =>
                 m.SendToAll(
                     "EncodingCompleted",
                     "dashboardHub",
@@ -150,7 +150,7 @@ public class SignalREncodingEventHandlerJourneyTests
                         && dto.Duration == TimeSpan.FromMinutes(118).TotalSeconds
                     )
                 ),
-            Times.Once
+            times: Times.Once
         );
     }
 
@@ -172,10 +172,10 @@ public class SignalREncodingEventHandlerJourneyTests
             ExceptionType = "InvalidOperationException",
         };
 
-        await bus.PublishAsync(publishedEvent);
+        await bus.PublishAsync(@event: publishedEvent);
 
         messengerMock.Verify(
-            m =>
+            expression: m =>
                 m.SendToAll(
                     "EncodingFailed",
                     "dashboardHub",
@@ -186,7 +186,7 @@ public class SignalREncodingEventHandlerJourneyTests
                         && dto.ExceptionType == "InvalidOperationException"
                     )
                 ),
-            Times.Once
+            times: Times.Once
         );
     }
 
@@ -219,10 +219,10 @@ public class SignalREncodingEventHandlerJourneyTests
             IsHdr = false,
         };
 
-        await bus.PublishAsync(publishedEvent);
+        await bus.PublishAsync(@event: publishedEvent);
 
         messengerMock.Verify(
-            m =>
+            expression: m =>
                 m.SendToAll(
                     "encoder-progress",
                     "dashboardHub",
@@ -240,7 +240,7 @@ public class SignalREncodingEventHandlerJourneyTests
                         && dto.SubtitleStreams.SequenceEqual(subtitleStreams)
                     )
                 ),
-            Times.Once
+            times: Times.Once
         );
     }
 
@@ -258,11 +258,11 @@ public class SignalREncodingEventHandlerJourneyTests
 
         EncodingProgressBroadcastedEvent publishedEvent = new() { ProgressData = progressData };
 
-        await bus.PublishAsync(publishedEvent);
+        await bus.PublishAsync(@event: publishedEvent);
 
         messengerMock.Verify(
-            m => m.SendToAll("encoder-progress", "dashboardHub", progressData),
-            Times.Once
+            expression: m => m.SendToAll("encoder-progress", "dashboardHub", progressData),
+            times: Times.Once
         );
     }
 
@@ -277,7 +277,7 @@ public class SignalREncodingEventHandlerJourneyTests
         using SignalREncodingEventHandler _ = handler;
 
         await bus.PublishAsync(
-            new EncodingStartedEvent
+            @event: new EncodingStartedEvent
             {
                 JobId = 1,
                 InputPath = "/a.mkv",
@@ -287,25 +287,25 @@ public class SignalREncodingEventHandlerJourneyTests
         );
 
         await bus.PublishAsync(
-            new EncodingProgressUpdatedEvent
+            @event: new EncodingProgressUpdatedEvent
             {
                 JobId = 1,
                 Percentage = 25.0,
-                Elapsed = TimeSpan.FromSeconds(30),
+                Elapsed = TimeSpan.FromSeconds(seconds: 30),
             }
         );
 
         await bus.PublishAsync(
-            new EncodingCompletedEvent
+            @event: new EncodingCompletedEvent
             {
                 JobId = 1,
                 OutputPath = "/out/playlist.m3u8",
-                Duration = TimeSpan.FromMinutes(90),
+                Duration = TimeSpan.FromMinutes(minutes: 90),
             }
         );
 
         await bus.PublishAsync(
-            new EncodingFailedEvent
+            @event: new EncodingFailedEvent
             {
                 JobId = 2,
                 InputPath = "/b.mkv",
@@ -314,7 +314,7 @@ public class SignalREncodingEventHandlerJourneyTests
         );
 
         await bus.PublishAsync(
-            new EncodingStageChangedEvent
+            @event: new EncodingStageChangedEvent
             {
                 JobId = 3,
                 Status = "analyzing",
@@ -324,28 +324,28 @@ public class SignalREncodingEventHandlerJourneyTests
         );
 
         await bus.PublishAsync(
-            new EncodingProgressBroadcastedEvent { ProgressData = new { stage = "broadcast" } }
+            @event: new EncodingProgressBroadcastedEvent { ProgressData = new { stage = "broadcast" } }
         );
 
         messengerMock.Verify(
-            m => m.SendToAll("EncodingStarted", "dashboardHub", It.IsAny<object>()),
-            Times.Once
+            expression: m => m.SendToAll("EncodingStarted", "dashboardHub", It.IsAny<object>()),
+            times: Times.Once
         );
         messengerMock.Verify(
-            m => m.SendToAll("EncodingProgress", "dashboardHub", It.IsAny<object>()),
-            Times.Once
+            expression: m => m.SendToAll("EncodingProgress", "dashboardHub", It.IsAny<object>()),
+            times: Times.Once
         );
         messengerMock.Verify(
-            m => m.SendToAll("EncodingCompleted", "dashboardHub", It.IsAny<object>()),
-            Times.Once
+            expression: m => m.SendToAll("EncodingCompleted", "dashboardHub", It.IsAny<object>()),
+            times: Times.Once
         );
         messengerMock.Verify(
-            m => m.SendToAll("EncodingFailed", "dashboardHub", It.IsAny<object>()),
-            Times.Once
+            expression: m => m.SendToAll("EncodingFailed", "dashboardHub", It.IsAny<object>()),
+            times: Times.Once
         );
         messengerMock.Verify(
-            m => m.SendToAll("encoder-progress", "dashboardHub", It.IsAny<object>()),
-            Times.Exactly(2)
+            expression: m => m.SendToAll("encoder-progress", "dashboardHub", It.IsAny<object>()),
+            times: Times.Exactly(callCount: 2)
         );
     }
 
@@ -353,19 +353,19 @@ public class SignalREncodingEventHandlerJourneyTests
     public async Task Dispose_AfterSubscription_StopsAllSendToAllCalls()
     {
         InMemoryEventBus bus = new();
-        Mock<IClientMessenger> messengerMock = new(MockBehavior.Strict);
+        Mock<IClientMessenger> messengerMock = new(behavior: MockBehavior.Strict);
         messengerMock
-            .Setup(m => m.SendToAll(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>()))
-            .Returns(Task.CompletedTask);
+            .Setup(expression: m => m.SendToAll(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>()))
+            .Returns(value: Task.CompletedTask);
 
         SignalREncodingEventHandler handler = new(
-            NullLogger<SignalREncodingEventHandler>.Instance,
-            bus,
-            messengerMock.Object
+            logger: NullLogger<SignalREncodingEventHandler>.Instance,
+            eventBus: bus,
+            clientMessenger: messengerMock.Object
         );
 
         await bus.PublishAsync(
-            new EncodingStartedEvent
+            @event: new EncodingStartedEvent
             {
                 JobId = 1,
                 InputPath = "/a.mkv",
@@ -375,14 +375,14 @@ public class SignalREncodingEventHandlerJourneyTests
         );
 
         messengerMock.Verify(
-            m => m.SendToAll("EncodingStarted", "dashboardHub", It.IsAny<object>()),
-            Times.Once
+            expression: m => m.SendToAll("EncodingStarted", "dashboardHub", It.IsAny<object>()),
+            times: Times.Once
         );
 
         handler.Dispose();
 
         await bus.PublishAsync(
-            new EncodingStartedEvent
+            @event: new EncodingStartedEvent
             {
                 JobId = 2,
                 InputPath = "/b.mkv",
@@ -392,8 +392,8 @@ public class SignalREncodingEventHandlerJourneyTests
         );
 
         messengerMock.Verify(
-            m => m.SendToAll("EncodingStarted", "dashboardHub", It.IsAny<object>()),
-            Times.Once
+            expression: m => m.SendToAll("EncodingStarted", "dashboardHub", It.IsAny<object>()),
+            times: Times.Once
         );
     }
 
@@ -402,15 +402,15 @@ public class SignalREncodingEventHandlerJourneyTests
     {
         InMemoryEventBus bus = new();
         List<object?> capturedPayloads = [];
-        Mock<IClientMessenger> messengerMock = new(MockBehavior.Strict);
+        Mock<IClientMessenger> messengerMock = new(behavior: MockBehavior.Strict);
         messengerMock
-            .Setup(m => m.SendToAll(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>()))
-            .Callback<string, string, object?>((_, _, payload) => capturedPayloads.Add(payload))
-            .Returns(Task.CompletedTask);
+            .Setup(expression: m => m.SendToAll(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>()))
+            .Callback<string, string, object?>(action: (_, _, payload) => capturedPayloads.Add(item: payload))
+            .Returns(value: Task.CompletedTask);
         using SignalREncodingEventHandler handler = new(
-            NullLogger<SignalREncodingEventHandler>.Instance,
-            bus,
-            messengerMock.Object
+            logger: NullLogger<SignalREncodingEventHandler>.Instance,
+            eventBus: bus,
+            clientMessenger: messengerMock.Object
         );
 
         EncodingStartedEvent publishedEvent = new()
@@ -421,14 +421,14 @@ public class SignalREncodingEventHandlerJourneyTests
             ProfileName = "hevc",
         };
 
-        await bus.PublishAsync(publishedEvent);
+        await bus.PublishAsync(@event: publishedEvent);
 
         capturedPayloads.Should().ContainSingle();
-        EncodingStartedDto capturedDto = capturedPayloads[0]
+        EncodingStartedDto capturedDto = capturedPayloads[index: 0]
             .Should()
             .BeOfType<EncodingStartedDto>()
             .Subject;
-        capturedDto.Timestamp.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        capturedDto.Timestamp.Should().BeCloseTo(nearbyTime: DateTime.UtcNow, precision: TimeSpan.FromSeconds(seconds: 5));
     }
 
     [Fact]
@@ -445,13 +445,13 @@ public class SignalREncodingEventHandlerJourneyTests
         {
             JobId = 20,
             Percentage = 10.0,
-            Elapsed = TimeSpan.FromSeconds(5),
+            Elapsed = TimeSpan.FromSeconds(seconds: 5),
         };
 
-        await bus.PublishAsync(publishedEvent);
+        await bus.PublishAsync(@event: publishedEvent);
 
         messengerMock.Verify(
-            m =>
+            expression: m =>
                 m.SendToAll(
                     "EncodingProgress",
                     "dashboardHub",
@@ -462,7 +462,7 @@ public class SignalREncodingEventHandlerJourneyTests
                         && dto.BitrateKbps == null
                     )
                 ),
-            Times.Once
+            times: Times.Once
         );
     }
 }

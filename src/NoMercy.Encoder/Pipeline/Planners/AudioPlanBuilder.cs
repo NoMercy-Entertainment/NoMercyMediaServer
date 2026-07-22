@@ -27,21 +27,21 @@ public static class AudioPlanBuilder
         List<AudioOutputPlan> audioPlans = [];
         foreach (AudioOutput audioProfile in profile.Audio)
         {
-            string encoderName = AudioCodecDefinitions.GetEncoder(audioProfile.Codec).FfmpegName;
+            string encoderName = AudioCodecDefinitions.GetEncoder(codecType: audioProfile.Codec).FfmpegName;
             HashSet<string> allowed =
                 audioProfile.AllowedLanguages.Length > 0
                     ? new HashSet<string>(
-                        audioProfile.AllowedLanguages,
-                        StringComparer.OrdinalIgnoreCase
+                        collection: audioProfile.AllowedLanguages,
+                        comparer: StringComparer.OrdinalIgnoreCase
                     )
                     : [];
 
             for (int si = 0; si < media.AudioStreams.Count; si++)
             {
-                AudioStreamInfo stream = media.AudioStreams[si];
+                AudioStreamInfo stream = media.AudioStreams[index: si];
                 string streamLang = stream.Language ?? "und";
 
-                if (allowed.Count > 0 && !allowed.Contains(streamLang))
+                if (allowed.Count > 0 && !allowed.Contains(item: streamLang))
                     continue;
 
                 LoudnessMode loudnessMode = audioProfile.Loudness?.Mode ?? LoudnessMode.None;
@@ -49,9 +49,9 @@ public static class AudioPlanBuilder
                 string? customPanMatrix = audioProfile.Downmix?.CustomPanMatrix;
 
                 string? audioFilter = AudioFilterBuilder.BuildAudioFilter(
-                    loudnessMode,
-                    downmixMode,
-                    customPanMatrix
+                    loudness: loudnessMode,
+                    downmix: downmixMode,
+                    customPanMatrix: customPanMatrix
                 );
 
                 // Policy drives the action: a Copy-policy output (author-declared,
@@ -66,7 +66,7 @@ public static class AudioPlanBuilder
                         : StreamAction.Transcode;
 
                 audioPlans.Add(
-                    new(
+                    item: new(
                         EncoderName: encoderName,
                         BitrateKbps: audioProfile.BitrateKbps,
                         Channels: audioProfile.Channels,
@@ -78,7 +78,7 @@ public static class AudioPlanBuilder
                         PlaylistNameTemplate: audioProfile.PlaylistNameTemplate,
                         AudioFilter: audioFilter,
                         ExtraFlags: audioProfile.CustomArguments is not null
-                            ? new Dictionary<string, string>(audioProfile.CustomArguments)
+                            ? new Dictionary<string, string>(dictionary: audioProfile.CustomArguments)
                             : null,
                         SourceCodecName: stream.Codec.ToLowerInvariant(),
                         SourceStreamIndex: stream.Index
@@ -93,6 +93,6 @@ public static class AudioPlanBuilder
         // streams all collapse to the same directory + filename. Append the
         // source stream index to colliding plans only — single-stream-per-
         // language sources keep their stable templates.
-        return PlanStageDisambiguation.DisambiguateAudio(audioPlans).ToArray();
+        return PlanStageDisambiguation.DisambiguateAudio(plans: audioPlans).ToArray();
     }
 }

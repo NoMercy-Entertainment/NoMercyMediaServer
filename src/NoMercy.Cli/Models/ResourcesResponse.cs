@@ -15,75 +15,75 @@ namespace NoMercy.Cli.Models;
 
 internal class ResourcesResponse
 {
-    [JsonProperty("cpu")]
+    [JsonProperty(propertyName: "cpu")]
     public CpuInfo Cpu { get; set; } = new();
 
-    [JsonProperty("gpu")]
+    [JsonProperty(propertyName: "gpu")]
     public List<GpuInfo> Gpu { get; set; } = [];
 
-    [JsonProperty("memory")]
+    [JsonProperty(propertyName: "memory")]
     public MemoryInfo Memory { get; set; } = new();
 
-    [JsonProperty("storage")]
+    [JsonProperty(propertyName: "storage")]
     public List<StorageInfo> Storage { get; set; } = [];
 }
 
 internal class CpuInfo
 {
-    [JsonProperty("total")]
+    [JsonProperty(propertyName: "total")]
     public double Total { get; set; }
 
-    [JsonProperty("max")]
+    [JsonProperty(propertyName: "max")]
     public double Max { get; set; }
 }
 
 internal class GpuInfo
 {
-    [JsonProperty("core")]
+    [JsonProperty(propertyName: "core")]
     public double Core { get; set; }
 
-    [JsonProperty("memory")]
+    [JsonProperty(propertyName: "memory")]
     public double Memory { get; set; }
 
-    [JsonProperty("encode")]
+    [JsonProperty(propertyName: "encode")]
     public double Encode { get; set; }
 
-    [JsonProperty("decode")]
+    [JsonProperty(propertyName: "decode")]
     public double Decode { get; set; }
 
-    [JsonProperty("index")]
+    [JsonProperty(propertyName: "index")]
     public int Index { get; set; }
 }
 
 internal class MemoryInfo
 {
-    [JsonProperty("available")]
+    [JsonProperty(propertyName: "available")]
     public double Available { get; set; }
 
-    [JsonProperty("use")]
+    [JsonProperty(propertyName: "use")]
     public double Use { get; set; }
 
-    [JsonProperty("total")]
+    [JsonProperty(propertyName: "total")]
     public double Total { get; set; }
 
-    [JsonProperty("percentage")]
+    [JsonProperty(propertyName: "percentage")]
     public double Percentage { get; set; }
 }
 
 internal class StorageInfo
 {
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty("total")]
+    [JsonProperty(propertyName: "total")]
     public double Total { get; set; }
 
-    [JsonProperty("available")]
+    [JsonProperty(propertyName: "available")]
     public double Available { get; set; }
 
-    [JsonProperty("percentage")]
+    [JsonProperty(propertyName: "percentage")]
     public double Percentage { get; set; }
 }

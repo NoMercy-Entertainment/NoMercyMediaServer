@@ -25,7 +25,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Media;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class SpecialResponseItemDtoTests
 {
     private static PeopleDto BuildPerson(long id, string name)
@@ -52,7 +52,7 @@ public class SpecialResponseItemDtoTests
     {
         Movie backing = new() { Id = id, Title = $"Item {id}" };
 
-        return new(backing)
+        return new(movie: backing)
         {
             EpisodeIds = episodeIds ?? [],
             MediaType = mediaType,
@@ -70,20 +70,20 @@ public class SpecialResponseItemDtoTests
     [Fact]
     public void Ctor_SpecialWithItems_AggregatesAndSkipsUnmatchedRefs()
     {
-        PeopleDto shared = BuildPerson(1, "Shared Person");
-        PeopleDto onlyOnTv = BuildPerson(2, "Tv Only Person");
+        PeopleDto shared = BuildPerson(id: 1, name: "Shared Person");
+        PeopleDto onlyOnTv = BuildPerson(id: 2, name: "Tv Only Person");
 
         SpecialItemsDto movieItem = BuildItem(
-            201,
-            "movie",
+            id: 201,
+            mediaType: "movie",
             voteAverage: 8.0,
             totalDuration: 100,
             ratingIso: "US",
             cast: [shared]
         );
         SpecialItemsDto tvItem = BuildItem(
-            300,
-            "tv",
+            id: 300,
+            mediaType: "tv",
             voteAverage: null,
             totalDuration: 50,
             ratingIso: "US",
@@ -102,18 +102,18 @@ public class SpecialResponseItemDtoTests
             Poster = "/poster.jpg",
             Logo = "/logo.jpg",
         };
-        special.SpecialUser.Add(new(specialId, Guid.NewGuid()));
+        special.SpecialUser.Add(item: new(specialId: specialId, userId: Guid.NewGuid()));
 
         Movie movieWithFile = new() { Id = 201 };
-        movieWithFile.VideoFiles.Add(new() { Filename = "a.mkv", HostFolder = "/x" });
+        movieWithFile.VideoFiles.Add(item: new() { Filename = "a.mkv", HostFolder = "/x" });
 
         Episode episode556 = new() { Id = 556 };
-        episode556.VideoFiles.Add(new() { Filename = "b.mkv", HostFolder = "/x" });
+        episode556.VideoFiles.Add(item: new() { Filename = "b.mkv", HostFolder = "/x" });
 
         Episode episode555 = new() { Id = 555 }; // no video files -> excluded from haveEpisodes
 
         SpecialItem itemA = new() { MovieId = 201, Movie = movieWithFile };
-        itemA.UserData.Add(new() { VideoFileId = Ulid.NewUlid() });
+        itemA.UserData.Add(item: new() { VideoFileId = Ulid.NewUlid() });
 
         SpecialItem itemB = new() { EpisodeId = 556, Episode = episode556 };
 
@@ -121,57 +121,57 @@ public class SpecialResponseItemDtoTests
 
         SpecialItem itemD = new() { EpisodeId = 555, Episode = episode555 }; // duplicate match into tvItem
 
-        special.Items.Add(itemA);
-        special.Items.Add(itemB);
-        special.Items.Add(itemCUnmatched);
-        special.Items.Add(itemD);
+        special.Items.Add(item: itemA);
+        special.Items.Add(item: itemB);
+        special.Items.Add(item: itemCUnmatched);
+        special.Items.Add(item: itemD);
 
-        SpecialResponseItemDto dto = new(special, items);
+        SpecialResponseItemDto dto = new(special: special, items: items);
 
-        Assert.Equal(specialId, dto.Id);
-        Assert.Equal("The Best Of", dto.Title);
-        Assert.Equal("ov", dto.Overview);
-        Assert.Equal("/backdrop.jpg", dto.Backdrop);
-        Assert.Equal("specials", dto.Type);
-        Assert.Equal("specials", dto.MediaType);
-        Assert.Equal($"/specials/{specialId}", dto.Link.ToString());
-        Assert.Equal("The Best Of".TitleSort(), dto.TitleSort);
-        Assert.True(dto.Favorite);
+        Assert.Equal(expected: specialId, actual: dto.Id);
+        Assert.Equal(expected: "The Best Of", actual: dto.Title);
+        Assert.Equal(expected: "ov", actual: dto.Overview);
+        Assert.Equal(expected: "/backdrop.jpg", actual: dto.Backdrop);
+        Assert.Equal(expected: "specials", actual: dto.Type);
+        Assert.Equal(expected: "specials", actual: dto.MediaType);
+        Assert.Equal(expected: $"/specials/{specialId}", actual: dto.Link.ToString());
+        Assert.Equal(expected: "The Best Of".TitleSort(), actual: dto.TitleSort);
+        Assert.True(condition: dto.Favorite);
 
-        Assert.Equal(4, dto.NumberOfItems);
+        Assert.Equal(expected: 4, actual: dto.NumberOfItems);
         // haveMovies: only itemA (movie has a video file). haveEpisodes: only itemB (episode556 has a file).
-        Assert.Equal(2, dto.HaveItems);
+        Assert.Equal(expected: 2, actual: dto.HaveItems);
         // Not all 4 special items have user data -> not fully watched.
-        Assert.False(dto.Watched);
+        Assert.False(condition: dto.Watched);
 
-        Assert.Equal(150, dto.TotalDuration); // 100 + 50
-        Assert.Equal(8.0, dto.VoteAverage); // only movieItem has a non-null VoteAverage
+        Assert.Equal(expected: 150, actual: dto.TotalDuration); // 100 + 50
+        Assert.Equal(expected: 8.0, actual: dto.VoteAverage); // only movieItem has a non-null VoteAverage
         dto.ContentRatings.Should().ContainSingle(); // both items share Iso31661 "US"
 
         // itemB (episode 556) and itemD (episode 555) both resolve to tvItem (Id 300);
         // DistinctBy collapses them together with movieItem (Id 201) into two entries.
-        dto.Special.Should().HaveCount(2);
-        dto.Special!.Select(i => i.Id).Should().BeEquivalentTo([201, 300]);
+        dto.Special.Should().HaveCount(expected: 2);
+        dto.Special!.Select(selector: i => i.Id).Should().BeEquivalentTo(expectation: [201, 300]);
 
         // Cast is de-duplicated by person id across items: shared(1), onlyOnTv(2) -> 2 total.
-        dto.Cast.Should().HaveCount(2);
-        dto.Posters.Should().HaveCount(2);
-        dto.Backdrops.Should().HaveCount(2);
-        dto.Genres.Should().HaveCount(2);
+        dto.Cast.Should().HaveCount(expected: 2);
+        dto.Posters.Should().HaveCount(expected: 2);
+        dto.Backdrops.Should().HaveCount(expected: 2);
+        dto.Genres.Should().HaveCount(expected: 2);
 
         // The source items list is mutated in place: its per-item collections are cleared.
-        Assert.Empty(movieItem.Posters);
-        Assert.Empty(movieItem.Backdrops);
-        Assert.Empty(movieItem.Cast);
-        Assert.Empty(movieItem.Genres);
+        Assert.Empty(collection: movieItem.Posters);
+        Assert.Empty(collection: movieItem.Backdrops);
+        Assert.Empty(collection: movieItem.Cast);
+        Assert.Empty(collection: movieItem.Genres);
     }
 
     [Fact]
     public void Ctor_SpecialWithItems_AllItemsHaveUserData_IsWatched()
     {
         SpecialItemsDto movieItem = BuildItem(
-            1,
-            "movie",
+            id: 1,
+            mediaType: "movie",
             voteAverage: null,
             totalDuration: 10,
             ratingIso: "US"
@@ -182,13 +182,13 @@ public class SpecialResponseItemDtoTests
 
         Movie movie = new() { Id = 1 };
         SpecialItem specialItem = new() { MovieId = 1, Movie = movie };
-        specialItem.UserData.Add(new() { VideoFileId = Ulid.NewUlid() });
-        special.Items.Add(specialItem);
+        specialItem.UserData.Add(item: new() { VideoFileId = Ulid.NewUlid() });
+        special.Items.Add(item: specialItem);
 
-        SpecialResponseItemDto dto = new(special, items);
+        SpecialResponseItemDto dto = new(special: special, items: items);
 
-        Assert.True(dto.Watched);
-        Assert.Equal(0, dto.VoteAverage); // no items have a non-null VoteAverage -> Average() is null -> 0
+        Assert.True(condition: dto.Watched);
+        Assert.Equal(expected: 0, actual: dto.VoteAverage); // no items have a non-null VoteAverage -> Average() is null -> 0
     }
 
     [Fact]
@@ -201,13 +201,13 @@ public class SpecialResponseItemDtoTests
             Backdrop = null,
         };
 
-        SpecialResponseItemDto dto = new(special, []);
+        SpecialResponseItemDto dto = new(special: special, items: []);
 
-        Assert.Equal(string.Empty, dto.Title);
-        Assert.Null(dto.Backdrop);
-        Assert.False(dto.Favorite);
-        Assert.Equal(0, dto.NumberOfItems);
-        Assert.Equal(0, dto.HaveItems);
+        Assert.Equal(expected: string.Empty, actual: dto.Title);
+        Assert.Null(@object: dto.Backdrop);
+        Assert.False(condition: dto.Favorite);
+        Assert.Equal(expected: 0, actual: dto.NumberOfItems);
+        Assert.Equal(expected: 0, actual: dto.HaveItems);
     }
 
     [Fact]
@@ -221,10 +221,10 @@ public class SpecialResponseItemDtoTests
             Runtime = 100,
             VoteAverage = 7.0,
         };
-        movieWithRuntime.VideoFiles.Add(new() { Filename = "a.mkv", HostFolder = "/x" });
+        movieWithRuntime.VideoFiles.Add(item: new() { Filename = "a.mkv", HostFolder = "/x" });
         Certification certification = new() { Iso31661 = "US", Rating = "PG" };
         movieWithRuntime.CertificationMovies.Add(
-            new()
+            item: new()
             {
                 CertificationId = 1,
                 Certification = certification,
@@ -233,7 +233,7 @@ public class SpecialResponseItemDtoTests
         );
 
         Episode episode = new() { Id = 2 };
-        episode.VideoFiles.Add(new() { Filename = "b.mkv", HostFolder = "/x" });
+        episode.VideoFiles.Add(item: new() { Filename = "b.mkv", HostFolder = "/x" });
 
         Movie movieWithoutFiles = new()
         {
@@ -242,28 +242,28 @@ public class SpecialResponseItemDtoTests
             VoteAverage = null,
         };
 
-        special.Items.Add(new() { MovieId = 1, Movie = movieWithRuntime });
-        special.Items.Add(new() { EpisodeId = 2, Episode = episode }); // no Movie -> null-safe fallbacks
-        special.Items.Add(new() { MovieId = 3, Movie = movieWithoutFiles }); // no video files, no certifications
+        special.Items.Add(item: new() { MovieId = 1, Movie = movieWithRuntime });
+        special.Items.Add(item: new() { EpisodeId = 2, Episode = episode }); // no Movie -> null-safe fallbacks
+        special.Items.Add(item: new() { MovieId = 3, Movie = movieWithoutFiles }); // no video files, no certifications
 
-        SpecialResponseItemDto dto = new(special);
+        SpecialResponseItemDto dto = new(special: special);
 
-        Assert.Equal(3, dto.NumberOfItems);
-        Assert.Equal(2, dto.HaveItems); // haveMovies=1 (movieWithRuntime) + haveEpisodes=1 (episode)
+        Assert.Equal(expected: 3, actual: dto.NumberOfItems);
+        Assert.Equal(expected: 2, actual: dto.HaveItems); // haveMovies=1 (movieWithRuntime) + haveEpisodes=1 (episode)
 
-        Assert.Empty(dto.Cast);
-        Assert.Empty(dto.Crew);
-        Assert.Empty(dto.Backdrops);
-        Assert.Empty(dto.Posters);
-        Assert.Empty(dto.Genres);
+        Assert.Empty(collection: dto.Cast);
+        Assert.Empty(collection: dto.Crew);
+        Assert.Empty(collection: dto.Backdrops);
+        Assert.Empty(collection: dto.Posters);
+        Assert.Empty(collection: dto.Genres);
 
-        Assert.Equal(150, dto.TotalDuration); // 100 (movie) + 0 (episode item, Movie null) + 50
-        Assert.Equal(7.0, dto.VoteAverage); // only movieWithRuntime has a non-null VoteAverage
+        Assert.Equal(expected: 150, actual: dto.TotalDuration); // 100 (movie) + 0 (episode item, Movie null) + 50
+        Assert.Equal(expected: 7.0, actual: dto.VoteAverage); // only movieWithRuntime has a non-null VoteAverage
 
         // movieWithRuntime -> "US", episode item -> null (no Movie), movieWithoutFiles -> null (no certifications).
         // The two nulls share the same DistinctBy key (null), so distinct count is 2.
-        dto.ContentRatings.Should().HaveCount(2);
-        Assert.False(dto.Favorite);
+        dto.ContentRatings.Should().HaveCount(expected: 2);
+        Assert.False(condition: dto.Favorite);
     }
 
     [Fact]
@@ -272,19 +272,19 @@ public class SpecialResponseItemDtoTests
         Special special = new() { Id = Ulid.NewUlid(), Title = "Counts Special" };
 
         Movie movieWithFile = new() { Id = 1 };
-        movieWithFile.VideoFiles.Add(new() { Filename = "a.mkv", HostFolder = "/x" });
+        movieWithFile.VideoFiles.Add(item: new() { Filename = "a.mkv", HostFolder = "/x" });
 
         Episode episodeWithFile = new() { Id = 2 };
-        episodeWithFile.VideoFiles.Add(new() { Filename = "b.mkv", HostFolder = "/x" });
+        episodeWithFile.VideoFiles.Add(item: new() { Filename = "b.mkv", HostFolder = "/x" });
 
-        special.Items.Add(new() { MovieId = 1, Movie = movieWithFile });
-        special.Items.Add(new() { EpisodeId = 2, Episode = episodeWithFile });
-        special.SpecialUser.Add(new(special.Id, Guid.NewGuid()));
+        special.Items.Add(item: new() { MovieId = 1, Movie = movieWithFile });
+        special.Items.Add(item: new() { EpisodeId = 2, Episode = episodeWithFile });
+        special.SpecialUser.Add(item: new(specialId: special.Id, userId: Guid.NewGuid()));
 
-        SpecialResponseItemDto dto = new(special);
+        SpecialResponseItemDto dto = new(special: special);
 
-        Assert.Equal(2, dto.HaveItems);
-        Assert.True(dto.Favorite);
+        Assert.Equal(expected: 2, actual: dto.HaveItems);
+        Assert.True(condition: dto.Favorite);
     }
 
     private static SpecialDetailDto BuildDetail(string colorPaletteJson)
@@ -316,20 +316,20 @@ public class SpecialResponseItemDtoTests
     public void Ctor_SpecialDetailDto_UsesDirectFieldsNotComputedCounts()
     {
         string colorPaletteJson = JsonConvert.SerializeObject(
-            new ColorPalette { Poster = new() { Dominant = "#123456" } }
+            value: new ColorPalette { Poster = new() { Dominant = "#123456" } }
         );
-        SpecialDetailDto detail = BuildDetail(colorPaletteJson);
+        SpecialDetailDto detail = BuildDetail(colorPaletteJson: colorPaletteJson);
 
         SpecialItemsDto item401 = BuildItem(
-            401,
-            "movie",
+            id: 401,
+            mediaType: "movie",
             voteAverage: 9.0,
             totalDuration: 200,
             ratingIso: "US"
         );
         SpecialItemsDto item402 = BuildItem(
-            402,
-            "tv",
+            id: 402,
+            mediaType: "tv",
             voteAverage: null,
             totalDuration: 80,
             ratingIso: "NL",
@@ -337,37 +337,37 @@ public class SpecialResponseItemDtoTests
         );
         List<SpecialItemsDto> items = [item401, item402];
 
-        SpecialResponseItemDto dto = new(detail, items);
+        SpecialResponseItemDto dto = new(detail: detail, items: items);
 
-        Assert.Equal(detail.Id, dto.Id);
-        Assert.Equal("The Detail Special", dto.Title);
-        Assert.Equal("/x.jpg", dto.Backdrop);
-        Assert.Equal("The Detail Special".TitleSort(), dto.TitleSort);
-        dto.ColorPalette!.Poster!.Dominant.Should().Be("#123456");
+        Assert.Equal(expected: detail.Id, actual: dto.Id);
+        Assert.Equal(expected: "The Detail Special", actual: dto.Title);
+        Assert.Equal(expected: "/x.jpg", actual: dto.Backdrop);
+        Assert.Equal(expected: "The Detail Special".TitleSort(), actual: dto.TitleSort);
+        dto.ColorPalette!.Poster!.Dominant.Should().Be(expected: "#123456");
 
         // Favorite/NumberOfItems/HaveItems come straight from the projection, not from `items`.
-        Assert.True(dto.Favorite);
-        Assert.Equal(10, dto.NumberOfItems);
-        Assert.Equal(7, dto.HaveItems); // HaveMovies(3) + HaveEpisodes(4)
+        Assert.True(condition: dto.Favorite);
+        Assert.Equal(expected: 10, actual: dto.NumberOfItems);
+        Assert.Equal(expected: 7, actual: dto.HaveItems); // HaveMovies(3) + HaveEpisodes(4)
 
-        Assert.Equal(280, dto.TotalDuration); // 200 + 80
-        Assert.Equal(9.0, dto.VoteAverage);
-        dto.ContentRatings.Should().HaveCount(2); // "US" and "NL"
+        Assert.Equal(expected: 280, actual: dto.TotalDuration); // 200 + 80
+        Assert.Equal(expected: 9.0, actual: dto.VoteAverage);
+        dto.ContentRatings.Should().HaveCount(expected: 2); // "US" and "NL"
 
-        dto.Special.Should().HaveCount(2);
-        dto.Special!.Select(i => i.Id).Should().BeEquivalentTo([401, 402]);
+        dto.Special.Should().HaveCount(expected: 2);
+        dto.Special!.Select(selector: i => i.Id).Should().BeEquivalentTo(expectation: [401, 402]);
     }
 
     [Fact]
     public void Ctor_SpecialDetailDto_EmptyColorPaletteAndNotFavorite()
     {
-        SpecialDetailDto detail = BuildDetail(string.Empty);
+        SpecialDetailDto detail = BuildDetail(colorPaletteJson: string.Empty);
         detail.Favorite = false;
 
-        SpecialResponseItemDto dto = new(detail, []);
+        SpecialResponseItemDto dto = new(detail: detail, items: []);
 
-        Assert.Null(dto.ColorPalette);
-        Assert.False(dto.Favorite);
-        Assert.Empty(dto.Special!);
+        Assert.Null(@object: dto.ColorPalette);
+        Assert.False(condition: dto.Favorite);
+        Assert.Empty(collection: dto.Special!);
     }
 }

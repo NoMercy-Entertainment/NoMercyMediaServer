@@ -15,21 +15,21 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class MusicBrainzRecording
 {
-    [JsonProperty("disambiguation")]
+    [JsonProperty(propertyName: "disambiguation")]
     public string? Disambiguation { get; set; }
 
-    [JsonProperty("video")]
+    [JsonProperty(propertyName: "video")]
     public bool Video { get; set; }
 
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public Guid Id { get; set; }
 
-    [JsonProperty("length")]
+    [JsonProperty(propertyName: "length")]
     public int? Length { get; set; }
 
-    [JsonProperty("genres")]
+    [JsonProperty(propertyName: "genres")]
     public MusicBrainzGenreDetails[] Genres { get; set; } = [];
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string Title { get; set; } = string.Empty;
 }

@@ -24,10 +24,10 @@ public static class DesktopIconCreator
 
     public static void CreateDesktopIcon(string appName, string appPath, string iconPath) =>
         CreateDesktopIcon(
-            appName,
-            appPath,
-            iconPath,
-            Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+            appName: appName,
+            appPath: appPath,
+            iconPath: iconPath,
+            desktopPath: Environment.GetFolderPath(folder: Environment.SpecialFolder.Desktop)
         );
 
     /// <summary>
@@ -47,16 +47,16 @@ public static class DesktopIconCreator
     {
         try
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                CreateWindowsShortcut(appName, appPath, iconPath, desktopPath);
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                CreateMacShortcut(appName, appPath, iconPath, desktopPath);
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                CreateLinuxShortcut(appName, appPath, iconPath, desktopPath);
+            if (RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+                CreateWindowsShortcut(appName: appName, appPath: appPath, iconPath: iconPath, desktopPath: desktopPath);
+            else if (RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.OSX))
+                CreateMacShortcut(appName: appName, appPath: appPath, iconPath: iconPath, desktopPath: desktopPath);
+            else if (RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Linux))
+                CreateLinuxShortcut(appName: appName, appPath: appPath, iconPath: iconPath, desktopPath: desktopPath);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error creating desktop icon: {ex.Message}");
+            Console.WriteLine(value: $"Error creating desktop icon: {ex.Message}");
         }
     }
 
@@ -70,13 +70,13 @@ public static class DesktopIconCreator
 #pragma warning disable CA1416
         try
         {
-            string shortcutPath = Path.Combine(desktopPath, $"{appName}.lnk");
+            string shortcutPath = Path.Combine(path1: desktopPath, path2: $"{appName}.lnk");
 
-            Type? id = Type.GetTypeFromProgID("WScript.Shell");
+            Type? id = Type.GetTypeFromProgID(progID: "WScript.Shell");
             if (id == null)
                 return;
 
-            dynamic shell = Activator.CreateInstance(id) ?? throw new InvalidOperationException();
+            dynamic shell = Activator.CreateInstance(type: id) ?? throw new InvalidOperationException();
             if (shell == null)
                 return;
 
@@ -87,7 +87,7 @@ public static class DesktopIconCreator
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error creating Windows shortcut: {ex.Message}");
+            Console.WriteLine(value: $"Error creating Windows shortcut: {ex.Message}");
         }
 #pragma warning restore CA1416
     }
@@ -101,7 +101,7 @@ public static class DesktopIconCreator
     {
         try
         {
-            string aliasPath = Path.Combine(desktopPath, appName);
+            string aliasPath = Path.Combine(path1: desktopPath, path2: appName);
 
             string script =
                 $@"
@@ -111,32 +111,32 @@ public static class DesktopIconCreator
             end tell";
 
             string scriptPath = "/tmp/CreateShortcut.scpt";
-            using (Stream scriptStream = _driver.OpenWrite(scriptPath, overwrite: true))
-            using (StreamWriter scriptWriter = new(scriptStream, Encoding.UTF8, leaveOpen: true))
-                scriptWriter.Write(script);
-            using (Process? osascriptProc = Process.Start("osascript", scriptPath))
+            using (Stream scriptStream = _driver.OpenWrite(path: scriptPath, overwrite: true))
+            using (StreamWriter scriptWriter = new(stream: scriptStream, encoding: Encoding.UTF8, leaveOpen: true))
+                scriptWriter.Write(value: script);
+            using (Process? osascriptProc = Process.Start(fileName: "osascript", arguments: scriptPath))
                 osascriptProc.WaitForExit();
 
-            if (!string.IsNullOrEmpty(iconPath) && _driver.FileExists(iconPath))
+            if (!string.IsNullOrEmpty(value: iconPath) && _driver.FileExists(path: iconPath))
             {
-                string iconDest = Path.Combine(aliasPath, "Icon.icns");
-                _driver.CopyFile(iconPath, iconDest, overwrite: true);
+                string iconDest = Path.Combine(path1: aliasPath, path2: "Icon.icns");
+                _driver.CopyFile(source: iconPath, destination: iconDest, overwrite: true);
 
                 using (
                     Process? shProc = Process.Start(
-                        "sh",
-                        $"-c \"cp '{iconPath}' '{aliasPath}/Icon.icns' && /usr/bin/SetFile -a C '{aliasPath}'\""
+                        fileName: "sh",
+                        arguments: $"-c \"cp '{iconPath}' '{aliasPath}/Icon.icns' && /usr/bin/SetFile -a C '{aliasPath}'\""
                     )
                 )
                     shProc.WaitForExit();
 
-                using (Process? killProc = Process.Start("killall", "Finder"))
+                using (Process? killProc = Process.Start(fileName: "killall", arguments: "Finder"))
                     killProc.WaitForExit();
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error creating Mac shortcut: {ex.Message}");
+            Console.WriteLine(value: $"Error creating Mac shortcut: {ex.Message}");
         }
     }
 
@@ -149,7 +149,7 @@ public static class DesktopIconCreator
     {
         try
         {
-            string shortcutPath = Path.Combine(desktopPath, $"{appName}.desktop");
+            string shortcutPath = Path.Combine(path1: desktopPath, path2: $"{appName}.desktop");
 
             string content =
                 $@"
@@ -160,17 +160,17 @@ public static class DesktopIconCreator
                 Type=Application
                 Terminal=false";
 
-            using (Stream shortcutStream = _driver.OpenWrite(shortcutPath, overwrite: true))
+            using (Stream shortcutStream = _driver.OpenWrite(path: shortcutPath, overwrite: true))
             using (
-                StreamWriter shortcutWriter = new(shortcutStream, Encoding.UTF8, leaveOpen: true)
+                StreamWriter shortcutWriter = new(stream: shortcutStream, encoding: Encoding.UTF8, leaveOpen: true)
             )
-                shortcutWriter.Write(content);
-            using (Process? chmodProc = Process.Start("chmod", $"+x \"{shortcutPath}\""))
+                shortcutWriter.Write(value: content);
+            using (Process? chmodProc = Process.Start(fileName: "chmod", arguments: $"+x \"{shortcutPath}\""))
                 chmodProc.WaitForExit();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error creating Linux shortcut: {ex.Message}");
+            Console.WriteLine(value: $"Error creating Linux shortcut: {ex.Message}");
         }
     }
 }

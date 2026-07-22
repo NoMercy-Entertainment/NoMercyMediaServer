@@ -32,17 +32,17 @@ public class ServerPhaseTrackerSharedTests : IDisposable
         ServerPhaseTracker first = ServerPhaseTracker.Shared();
         ServerPhaseTracker second = ServerPhaseTracker.Shared();
 
-        Assert.Same(first, second);
+        Assert.Same(expected: first, actual: second);
     }
 
     [Fact]
     public void Shared_SetsCurrentOnFirstCall()
     {
-        Assert.Null(ServerPhaseTracker.Current);
+        Assert.Null(@object: ServerPhaseTracker.Current);
 
         ServerPhaseTracker tracker = ServerPhaseTracker.Shared();
 
-        Assert.Same(tracker, ServerPhaseTracker.Current);
+        Assert.Same(expected: tracker, actual: ServerPhaseTracker.Current);
     }
 
     [Fact]
@@ -50,24 +50,24 @@ public class ServerPhaseTrackerSharedTests : IDisposable
     {
         // First "host" resolves the tracker and marks the stages its boot code owns.
         ServiceProvider firstHost = new ServiceCollection()
-            .AddSingleton<IServerPhaseTracker>(_ => ServerPhaseTracker.Shared())
+            .AddSingleton<IServerPhaseTracker>(implementationFactory: _ => ServerPhaseTracker.Shared())
             .BuildServiceProvider();
         IServerPhaseTracker firstTracker = firstHost.GetRequiredService<IServerPhaseTracker>();
-        firstTracker.MarkComplete(BootStage.Essential);
-        firstTracker.MarkComplete(BootStage.Auth);
+        firstTracker.MarkComplete(stage: BootStage.Essential);
+        firstTracker.MarkComplete(stage: BootStage.Auth);
         firstHost.Dispose();
 
         // Second "host" (post-HTTPS restart) builds a fresh container — but the
         // tracker it resolves must already carry the stages the first host marked,
         // otherwise queue workers gated on All would block forever.
         ServiceProvider secondHost = new ServiceCollection()
-            .AddSingleton<IServerPhaseTracker>(_ => ServerPhaseTracker.Shared())
+            .AddSingleton<IServerPhaseTracker>(implementationFactory: _ => ServerPhaseTracker.Shared())
             .BuildServiceProvider();
         IServerPhaseTracker secondTracker = secondHost.GetRequiredService<IServerPhaseTracker>();
 
-        Assert.Same(firstTracker, secondTracker);
-        Assert.True(secondTracker.IsComplete(BootStage.Essential));
-        Assert.True(secondTracker.IsComplete(BootStage.Auth));
+        Assert.Same(expected: firstTracker, actual: secondTracker);
+        Assert.True(condition: secondTracker.IsComplete(stage: BootStage.Essential));
+        Assert.True(condition: secondTracker.IsComplete(stage: BootStage.Auth));
 
         secondHost.Dispose();
     }
@@ -80,21 +80,21 @@ public class ServerPhaseTrackerSharedTests : IDisposable
         // late marks (Binaries/Network from Setup.Start, Hardware from the encoder
         // hosted service) finish the bitset.
         IServerPhaseTracker firstTracker = ServerPhaseTracker.Shared();
-        firstTracker.MarkComplete(BootStage.Essential);
-        firstTracker.MarkComplete(BootStage.Auth);
-        firstTracker.MarkComplete(BootStage.Registered);
+        firstTracker.MarkComplete(stage: BootStage.Essential);
+        firstTracker.MarkComplete(stage: BootStage.Auth);
+        firstTracker.MarkComplete(stage: BootStage.Registered);
 
         IServerPhaseTracker secondTracker = ServerPhaseTracker.Shared();
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
-        Task waiter = secondTracker.WhenReachedAsync(BootStage.All, cts.Token);
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
+        Task waiter = secondTracker.WhenReachedAsync(stage: BootStage.All, ct: cts.Token);
 
-        Assert.False(waiter.IsCompleted);
+        Assert.False(condition: waiter.IsCompleted);
 
-        secondTracker.MarkComplete(BootStage.Hardware);
-        secondTracker.MarkComplete(BootStage.Binaries);
-        secondTracker.MarkComplete(BootStage.Network);
+        secondTracker.MarkComplete(stage: BootStage.Hardware);
+        secondTracker.MarkComplete(stage: BootStage.Binaries);
+        secondTracker.MarkComplete(stage: BootStage.Network);
 
         await waiter;
-        Assert.True(secondTracker.IsComplete(BootStage.All));
+        Assert.True(condition: secondTracker.IsComplete(stage: BootStage.All));
     }
 }

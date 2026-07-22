@@ -76,22 +76,22 @@ public class StorageJobUsageTests
 
         List<Metadata?> movieMetaData =
         [
-            MakeMovieMetadata(folder, videoFileSize: 1000, folderSize: 1200),
-            MakeMovieMetadata("/media/movies/two", videoFileSize: 9999, folderSize: 9999),
+            MakeMovieMetadata(hostFolder: folder, videoFileSize: 1000, folderSize: 1200),
+            MakeMovieMetadata(hostFolder: "/media/movies/two", videoFileSize: 9999, folderSize: 9999),
         ];
 
         StorageUsageDelta delta = StorageJob.ComputeFolderUsageDelta(
-            folder,
-            movieMetaData,
+            folderPath: folder,
+            movieMetaData: movieMetaData,
             tvMetaData: [],
             albumMetaData: []
         );
 
-        delta.Movies.Should().Be(1000);
-        delta.Used.Should().Be(1200);
-        delta.Other.Should().Be(200);
-        delta.Shows.Should().Be(0);
-        delta.Music.Should().Be(0);
+        delta.Movies.Should().Be(expected: 1000);
+        delta.Used.Should().Be(expected: 1200);
+        delta.Other.Should().Be(expected: 200);
+        delta.Shows.Should().Be(expected: 0);
+        delta.Music.Should().Be(expected: 0);
     }
 
     [Fact]
@@ -99,22 +99,22 @@ public class StorageJobUsageTests
     {
         const string folder = "/media/mixed";
 
-        List<Metadata?> movieMetaData = [MakeMovieMetadata(folder, 100, 120)];
-        List<Metadata?> tvMetaData = [MakeTvMetadata(folder, 200, 240)];
-        List<Metadata?> albumMetaData = [MakeAlbumMetadata(folder, 50, 60)];
+        List<Metadata?> movieMetaData = [MakeMovieMetadata(hostFolder: folder, videoFileSize: 100, folderSize: 120)];
+        List<Metadata?> tvMetaData = [MakeTvMetadata(hostFolder: folder, videoFileSize: 200, folderSize: 240)];
+        List<Metadata?> albumMetaData = [MakeAlbumMetadata(hostFolder: folder, audioFileSize: 50, folderSize: 60)];
 
         StorageUsageDelta delta = StorageJob.ComputeFolderUsageDelta(
-            folder,
-            movieMetaData,
-            tvMetaData,
-            albumMetaData
+            folderPath: folder,
+            movieMetaData: movieMetaData,
+            tvMetaData: tvMetaData,
+            albumMetaData: albumMetaData
         );
 
-        delta.Movies.Should().Be(100);
-        delta.Shows.Should().Be(200);
-        delta.Music.Should().Be(50);
-        delta.Used.Should().Be(120 + 240 + 60);
-        delta.Other.Should().Be(20 + 40 + 10);
+        delta.Movies.Should().Be(expected: 100);
+        delta.Shows.Should().Be(expected: 200);
+        delta.Music.Should().Be(expected: 50);
+        delta.Used.Should().Be(expected: 120 + 240 + 60);
+        delta.Other.Should().Be(expected: 20 + 40 + 10);
     }
 
     [Fact]
@@ -123,11 +123,11 @@ public class StorageJobUsageTests
         StorageUsageDelta a = new(Movies: 10, Shows: 20, Music: 30, Other: 40, Used: 50);
         StorageUsageDelta b = new(Movies: 1, Shows: 2, Music: 3, Other: 4, Used: 5);
 
-        StorageUsageDelta ab = a.Add(b);
-        StorageUsageDelta ba = b.Add(a);
+        StorageUsageDelta ab = a.Add(other: b);
+        StorageUsageDelta ba = b.Add(other: a);
 
-        ab.Should().Be(ba);
-        ab.Used.Should().Be(55);
+        ab.Should().Be(expected: ba);
+        ab.Used.Should().Be(expected: 55);
     }
 
     /// <summary>
@@ -147,24 +147,24 @@ public class StorageJobUsageTests
         ConcurrentDictionary<string, StorageUsageDelta> deltas = new();
 
         IEnumerable<Task> tasks = Enumerable
-            .Range(0, concurrentLibraries)
-            .Select(i =>
-                Task.Run(() =>
+            .Range(start: 0, count: concurrentLibraries)
+            .Select(selector: i =>
+                Task.Run(action: () =>
                 {
                     StorageUsageDelta delta = new(Movies: 1, Shows: 2, Music: 3, Other: 4, Used: 5);
-                    deltas.AddOrUpdate(folder, delta, (_, existing) => existing.Add(delta));
+                    deltas.AddOrUpdate(key: folder, addValue: delta, updateValueFactory: (_, existing) => existing.Add(other: delta));
                 })
             );
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks: tasks);
 
-        deltas.Should().ContainKey(folder);
-        StorageUsageDelta total = deltas[folder];
-        total.Movies.Should().Be(1 * concurrentLibraries);
-        total.Shows.Should().Be(2 * concurrentLibraries);
-        total.Music.Should().Be(3 * concurrentLibraries);
-        total.Other.Should().Be(4 * concurrentLibraries);
-        total.Used.Should().Be(5 * concurrentLibraries);
+        deltas.Should().ContainKey(expected: folder);
+        StorageUsageDelta total = deltas[key: folder];
+        total.Movies.Should().Be(expected: 1 * concurrentLibraries);
+        total.Shows.Should().Be(expected: 2 * concurrentLibraries);
+        total.Music.Should().Be(expected: 3 * concurrentLibraries);
+        total.Other.Should().Be(expected: 4 * concurrentLibraries);
+        total.Used.Should().Be(expected: 5 * concurrentLibraries);
     }
 
     /// <summary>
@@ -181,20 +181,20 @@ public class StorageJobUsageTests
         ConcurrentDictionary<string, StorageUsageDelta> deltas = new();
 
         IEnumerable<Task> tasks = Enumerable
-            .Range(0, folderCount * contributionsPerFolder)
-            .Select(i =>
-                Task.Run(() =>
+            .Range(start: 0, count: folderCount * contributionsPerFolder)
+            .Select(selector: i =>
+                Task.Run(action: () =>
                 {
                     string path = $"/media/folder-{i % folderCount}";
                     StorageUsageDelta delta = new(Movies: 0, Shows: 0, Music: 0, Other: 0, Used: 7);
-                    deltas.AddOrUpdate(path, delta, (_, existing) => existing.Add(delta));
+                    deltas.AddOrUpdate(key: path, addValue: delta, updateValueFactory: (_, existing) => existing.Add(other: delta));
                 })
             );
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks: tasks);
 
-        deltas.Should().HaveCount(folderCount);
+        deltas.Should().HaveCount(expected: folderCount);
         foreach (KeyValuePair<string, StorageUsageDelta> entry in deltas)
-            entry.Value.Used.Should().Be(7 * contributionsPerFolder);
+            entry.Value.Used.Should().Be(expected: 7 * contributionsPerFolder);
     }
 }

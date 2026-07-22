@@ -23,16 +23,16 @@ namespace NoMercy.Tests.Cli.Commands;
 /// acknowledged the restart request, and must never report success on a
 /// failed POST.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class RestartCommandTests
 {
     private static async Task<int> RunAsync(ICliClientFactory factory)
     {
-        Option<string?> pipeOption = new("--pipe", "-p");
-        RootCommand root = new("test");
-        root.Options.Add(pipeOption);
-        root.Subcommands.Add(RestartCommand.Create(pipeOption, factory));
-        return await root.Parse(["restart"]).InvokeAsync();
+        Option<string?> pipeOption = new(name: "--pipe", aliases: "-p");
+        RootCommand root = new(description: "test");
+        root.Options.Add(item: pipeOption);
+        root.Subcommands.Add(item: RestartCommand.Create(pipeOption: pipeOption, clientFactory: factory));
+        return await root.Parse(args: ["restart"]).InvokeAsync();
     }
 
     [Fact]
@@ -40,17 +40,17 @@ public sealed class RestartCommandTests
     {
         Mock<ICliClient> client = new();
         client
-            .Setup(c => c.PostAsync(ApiRoutes.Restart, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+            .Setup(expression: c => c.PostAsync(ApiRoutes.Restart, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: true);
 
         Mock<ICliClientFactory> factory = new();
-        factory.Setup(f => f.Create(It.IsAny<string?>())).Returns(client.Object);
+        factory.Setup(expression: f => f.Create(It.IsAny<string?>())).Returns(value: client.Object);
 
         using ConsoleCapture console = new();
-        int exitCode = await RunAsync(factory.Object);
+        int exitCode = await RunAsync(factory: factory.Object);
 
-        exitCode.Should().Be((int)ExitCode.Success);
-        console.Out.Should().Contain("Server restart requested.");
+        exitCode.Should().Be(expected: (int)ExitCode.Success);
+        console.Out.Should().Contain(expected: "Server restart requested.");
     }
 
     [Fact]
@@ -58,16 +58,16 @@ public sealed class RestartCommandTests
     {
         Mock<ICliClient> client = new();
         client
-            .Setup(c => c.PostAsync(ApiRoutes.Restart, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+            .Setup(expression: c => c.PostAsync(ApiRoutes.Restart, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: false);
 
         Mock<ICliClientFactory> factory = new();
-        factory.Setup(f => f.Create(It.IsAny<string?>())).Returns(client.Object);
+        factory.Setup(expression: f => f.Create(It.IsAny<string?>())).Returns(value: client.Object);
 
         using ConsoleCapture console = new();
-        int exitCode = await RunAsync(factory.Object);
+        int exitCode = await RunAsync(factory: factory.Object);
 
-        exitCode.Should().Be((int)ExitCode.ServerError);
-        console.Out.Should().NotContain("requested");
+        exitCode.Should().Be(expected: (int)ExitCode.ServerError);
+        console.Out.Should().NotContain(unexpected: "requested");
     }
 }

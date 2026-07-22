@@ -22,5 +22,5 @@ public sealed class DriveMonitor(IDriveBackend backend) : IDriveMonitor
     public IReadOnlyList<DiscDrive> GetDrives() => backend.GetDrives();
 
     public IAsyncEnumerable<DriveEvent> MonitorAsync(CancellationToken ct) =>
-        backend.ListenAsync(ct);
+        backend.ListenAsync(ct: ct);
 }

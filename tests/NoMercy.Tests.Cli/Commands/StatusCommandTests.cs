@@ -26,16 +26,16 @@ namespace NoMercy.Tests.Cli.Commands;
 /// must appear only when the server actually reports dev mode — never
 /// unconditionally.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class StatusCommandTests
 {
     private static async Task<int> RunAsync(ICliClientFactory factory, params string[] args)
     {
-        Option<string?> pipeOption = new("--pipe", "-p");
-        RootCommand root = new("test");
-        root.Options.Add(pipeOption);
-        root.Subcommands.Add(StatusCommand.Create(pipeOption, factory));
-        return await root.Parse(args).InvokeAsync();
+        Option<string?> pipeOption = new(name: "--pipe", aliases: "-p");
+        RootCommand root = new(description: "test");
+        root.Options.Add(item: pipeOption);
+        root.Subcommands.Add(item: StatusCommand.Create(pipeOption: pipeOption, clientFactory: factory));
+        return await root.Parse(args: args).InvokeAsync();
     }
 
     [Fact]
@@ -43,17 +43,17 @@ public sealed class StatusCommandTests
     {
         Mock<ICliClient> client = new();
         client
-            .Setup(c => c.GetAsync<StatusResponse>(ApiRoutes.Status, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((StatusResponse?)null);
+            .Setup(expression: c => c.GetAsync<StatusResponse>(ApiRoutes.Status, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: (StatusResponse?)null);
 
         Mock<ICliClientFactory> factory = new();
-        factory.Setup(f => f.Create(It.IsAny<string?>())).Returns(client.Object);
+        factory.Setup(expression: f => f.Create(It.IsAny<string?>())).Returns(value: client.Object);
 
         using ConsoleCapture console = new();
-        int exitCode = await RunAsync(factory.Object, "status");
+        int exitCode = await RunAsync(factory: factory.Object, args: "status");
 
-        exitCode.Should().Be((int)ExitCode.ServerError);
-        console.Error.Should().Contain("Could not connect to server.");
+        exitCode.Should().Be(expected: (int)ExitCode.ServerError);
+        console.Error.Should().Contain(expected: "Could not connect to server.");
     }
 
     [Fact]
@@ -68,28 +68,28 @@ public sealed class StatusCommandTests
             Architecture = "x64",
             Os = "Ubuntu 24.04",
             UptimeSeconds = 3661,
-            StartTime = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            StartTime = new DateTime(year: 2026, month: 1, day: 1, hour: 0, minute: 0, second: 0, kind: DateTimeKind.Utc),
             IsDev = false,
         };
 
         Mock<ICliClient> client = new();
         client
-            .Setup(c => c.GetAsync<StatusResponse>(ApiRoutes.Status, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(response);
+            .Setup(expression: c => c.GetAsync<StatusResponse>(ApiRoutes.Status, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: response);
 
         Mock<ICliClientFactory> factory = new();
-        factory.Setup(f => f.Create(It.IsAny<string?>())).Returns(client.Object);
+        factory.Setup(expression: f => f.Create(It.IsAny<string?>())).Returns(value: client.Object);
 
         using ConsoleCapture console = new();
-        int exitCode = await RunAsync(factory.Object, "status");
+        int exitCode = await RunAsync(factory: factory.Object, args: "status");
 
-        exitCode.Should().Be((int)ExitCode.Success);
-        console.Out.Should().Contain("Status:       running");
-        console.Out.Should().Contain("Server:       nomercy-prod");
-        console.Out.Should().Contain("Version:      1.2.3");
-        console.Out.Should().Contain("Platform:     linux (x64)");
-        console.Out.Should().Contain("Uptime:       1h 1m");
-        console.Out.Should().NotContain("Mode:");
+        exitCode.Should().Be(expected: (int)ExitCode.Success);
+        console.Out.Should().Contain(expected: "Status:       running");
+        console.Out.Should().Contain(expected: "Server:       nomercy-prod");
+        console.Out.Should().Contain(expected: "Version:      1.2.3");
+        console.Out.Should().Contain(expected: "Platform:     linux (x64)");
+        console.Out.Should().Contain(expected: "Uptime:       1h 1m");
+        console.Out.Should().NotContain(unexpected: "Mode:");
     }
 
     [Fact]
@@ -110,17 +110,17 @@ public sealed class StatusCommandTests
 
         Mock<ICliClient> client = new();
         client
-            .Setup(c => c.GetAsync<StatusResponse>(ApiRoutes.Status, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(response);
+            .Setup(expression: c => c.GetAsync<StatusResponse>(ApiRoutes.Status, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: response);
 
         Mock<ICliClientFactory> factory = new();
-        factory.Setup(f => f.Create(It.IsAny<string?>())).Returns(client.Object);
+        factory.Setup(expression: f => f.Create(It.IsAny<string?>())).Returns(value: client.Object);
 
         using ConsoleCapture console = new();
-        int exitCode = await RunAsync(factory.Object, "status");
+        int exitCode = await RunAsync(factory: factory.Object, args: "status");
 
-        exitCode.Should().Be((int)ExitCode.Success);
-        console.Out.Should().Contain("Mode:         Development");
+        exitCode.Should().Be(expected: (int)ExitCode.Success);
+        console.Out.Should().Contain(expected: "Mode:         Development");
     }
 
     [Fact]
@@ -128,15 +128,15 @@ public sealed class StatusCommandTests
     {
         Mock<ICliClient> client = new();
         client
-            .Setup(c => c.GetAsync<StatusResponse>(ApiRoutes.Status, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((StatusResponse?)null);
+            .Setup(expression: c => c.GetAsync<StatusResponse>(ApiRoutes.Status, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: (StatusResponse?)null);
 
         Mock<ICliClientFactory> factory = new();
-        factory.Setup(f => f.Create(It.IsAny<string?>())).Returns(client.Object);
+        factory.Setup(expression: f => f.Create(It.IsAny<string?>())).Returns(value: client.Object);
 
         using ConsoleCapture _ = new();
-        await RunAsync(factory.Object, "--pipe", "custom-pipe", "status");
+        await RunAsync(factory: factory.Object, args: ["--pipe", "custom-pipe", "status"]);
 
-        factory.Verify(f => f.Create("custom-pipe"), Times.Once);
+        factory.Verify(expression: f => f.Create("custom-pipe"), times: Times.Once);
     }
 }

@@ -16,37 +16,37 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Storage;
 
-[PrimaryKey(nameof(Id))]
-[Index(nameof(Name), IsUnique = true)]
-[Index(nameof(Type))]
+[PrimaryKey(propertyName: nameof(Id))]
+[Index(propertyName: nameof(Name), IsUnique = true)]
+[Index(propertyName: nameof(Type))]
 public class Driver
 {
     // Stable sentinel for the built-in local-filesystem driver that is
     // auto-seeded on first boot. Hardcoded so every install uses the same
     // Ulid — clients can rely on it without querying the DB.
-    public static readonly Ulid SystemLocalDriverId = Ulid.Parse("01JKQSTS00000000000000000A");
+    public static readonly Ulid SystemLocalDriverId = Ulid.Parse(base32: "01JKQSTS00000000000000000A");
 
-    [DatabaseGenerated(DatabaseGeneratedOption.None)]
-    [JsonProperty("id")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
+    [JsonProperty(propertyName: "id")]
     public Ulid Id { get; set; }
 
     [Required]
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
     [Required]
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty("config")]
+    [JsonProperty(propertyName: "config")]
     public string? Config { get; set; }
 
-    [JsonProperty("created_at")]
+    [JsonProperty(propertyName: "created_at")]
     public DateTimeOffset CreatedAt { get; set; }
 
-    [JsonProperty("updated_at")]
+    [JsonProperty(propertyName: "updated_at")]
     public DateTimeOffset UpdatedAt { get; set; }
 
-    [JsonProperty("folders")]
+    [JsonProperty(propertyName: "folders")]
     public ICollection<Folder> Folders { get; set; } = [];
 }

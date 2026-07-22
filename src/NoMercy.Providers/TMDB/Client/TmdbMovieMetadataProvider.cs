@@ -17,7 +17,7 @@ public class TmdbMovieMetadataProvider : IMovieMetadataProvider
 {
     public async Task<TmdbMovieAppends?> GetMovieAsync(int id, string language, CancellationToken ct = default)
     {
-        using TmdbMovieClient tmdbMovieClient = new(id, language: language);
-        return await tmdbMovieClient.WithAllAppends(true);
+        using TmdbMovieClient tmdbMovieClient = new(id: id, language: language);
+        return await tmdbMovieClient.WithAllAppends(priority: true);
     }
 }

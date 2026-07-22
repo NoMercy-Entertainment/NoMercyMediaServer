@@ -28,7 +28,7 @@ public class HlsTwoPassStrategy(
     ICheckpointStore checkpointStore,
     ILogger<HlsTwoPassStrategy> logger,
     IStorage storage
-) : TwoPassStrategyBase(encoder, checkpointStore, logger, storage)
+) : TwoPassStrategyBase(encoder: encoder, checkpointStore: checkpointStore, logger: logger, storage: storage)
 {
     public override OutputFormat Format => OutputFormat.Hls;
 }

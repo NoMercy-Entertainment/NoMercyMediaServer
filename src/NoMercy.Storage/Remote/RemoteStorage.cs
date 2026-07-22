@@ -27,7 +27,7 @@ public sealed class RemoteStorage : IStorage
 
     public RemoteStorage(IStorageDriver driver)
     {
-        _driver = driver ?? throw new ArgumentNullException(nameof(driver));
+        _driver = driver ?? throw new ArgumentNullException(paramName: nameof(driver));
     }
 
     public IStorageDriver Driver => _driver;
@@ -42,73 +42,73 @@ public sealed class RemoteStorage : IStorage
     {
         if (path is null || path.Length == 0)
             return string.Empty;
-        StoragePathGuard.StructuralValidate(path);
-        StoragePathGuard.RejectAbsolutePath(path);
+        StoragePathGuard.StructuralValidate(requestedPath: path);
+        StoragePathGuard.RejectAbsolutePath(path: path);
         return path;
     }
 
     public async Task<byte[]> ReadAsync(string path, CancellationToken ct)
     {
-        await using Stream stream = _driver.OpenRead(V(path));
+        await using Stream stream = _driver.OpenRead(path: V(path: path));
         using MemoryStream ms = new();
-        await stream.CopyToAsync(ms, ct);
+        await stream.CopyToAsync(destination: ms, cancellationToken: ct);
         return ms.ToArray();
     }
 
     public Task<Stream> OpenReadAsync(string path, CancellationToken ct) =>
-        Task.FromResult(_driver.OpenRead(V(path)));
+        Task.FromResult(result: _driver.OpenRead(path: V(path: path)));
 
     public async Task WriteAsync(string path, byte[] bytes, CancellationToken ct)
     {
-        await using Stream stream = _driver.OpenWrite(V(path), overwrite: true);
-        await stream.WriteAsync(bytes.AsMemory(), ct);
+        await using Stream stream = _driver.OpenWrite(path: V(path: path), overwrite: true);
+        await stream.WriteAsync(buffer: bytes.AsMemory(), cancellationToken: ct);
     }
 
     public Task<Stream> OpenWriteAsync(string path, bool overwrite, CancellationToken ct) =>
-        Task.FromResult(_driver.OpenWrite(V(path), overwrite));
+        Task.FromResult(result: _driver.OpenWrite(path: V(path: path), overwrite: overwrite));
 
     public Task<bool> ExistsAsync(string path, CancellationToken ct) =>
-        Task.FromResult(_driver.FileExists(V(path)) || _driver.DirectoryExists(V(path)));
+        Task.FromResult(result: _driver.FileExists(path: V(path: path)) || _driver.DirectoryExists(path: V(path: path)));
 
     public Task DeleteAsync(string path, CancellationToken ct)
     {
-        if (_driver.FileExists(V(path)))
-            _driver.DeleteFile(V(path));
+        if (_driver.FileExists(path: V(path: path)))
+            _driver.DeleteFile(path: V(path: path));
         return Task.CompletedTask;
     }
 
     public Task DeleteDirectoryAsync(string path, bool recursive, CancellationToken ct)
     {
-        if (_driver.DirectoryExists(V(path)))
-            _driver.DeleteDirectory(V(path), recursive);
+        if (_driver.DirectoryExists(path: V(path: path)))
+            _driver.DeleteDirectory(path: V(path: path), recursive: recursive);
         return Task.CompletedTask;
     }
 
     public Task CreateDirectoryAsync(string path, CancellationToken ct)
     {
-        _driver.CreateDirectory(V(path));
+        _driver.CreateDirectory(path: V(path: path));
         return Task.CompletedTask;
     }
 
     public Task MoveAsync(string from, string to, CancellationToken ct)
     {
-        _driver.MoveFile(V(from), V(to));
+        _driver.MoveFile(source: V(path: from), destination: V(path: to));
         return Task.CompletedTask;
     }
 
     public Task CopyAsync(string from, string to, CancellationToken ct)
     {
-        _driver.CopyFile(V(from), V(to), overwrite: true);
+        _driver.CopyFile(source: V(path: from), destination: V(path: to), overwrite: true);
         return Task.CompletedTask;
     }
 
     public Task<long> SizeAsync(string path, CancellationToken ct) =>
-        Task.FromResult(_driver.GetFileSize(V(path)));
+        Task.FromResult(result: _driver.GetFileSize(path: V(path: path)));
 
     public Task<DateTimeOffset> LastModifiedAsync(string path, CancellationToken ct)
     {
-        DateTime utc = _driver.GetLastWriteTimeUtc(V(path));
-        return Task.FromResult(new DateTimeOffset(utc, TimeSpan.Zero));
+        DateTime utc = _driver.GetLastWriteTimeUtc(path: V(path: path));
+        return Task.FromResult(result: new DateTimeOffset(dateTime: utc, offset: TimeSpan.Zero));
     }
 
     public async IAsyncEnumerable<StorageEntry> ListAsync(
@@ -121,22 +121,22 @@ public sealed class RemoteStorage : IStorage
         SearchOption option = recursive
             ? SearchOption.AllDirectories
             : SearchOption.TopDirectoryOnly;
-        string effectivePattern = string.IsNullOrEmpty(pattern) ? "*" : pattern;
+        string effectivePattern = string.IsNullOrEmpty(value: pattern) ? "*" : pattern;
 
         // Use the driver's batched EnumerateEntries — drivers like S3 and
         // WebDAV pull size + mtime in the same listing call so we don't fan
         // out to N×HEAD/PROPFIND per file (which costs minutes on a 200-segment
         // HLS folder and trips per-request auth quirks on some WebDAV servers).
         foreach (
-            StorageEntryInfo info in _driver.EnumerateEntries(V(path), effectivePattern, option)
+            StorageEntryInfo info in _driver.EnumerateEntries(directory: V(path: path), searchPattern: effectivePattern, option: option)
         )
         {
             ct.ThrowIfCancellationRequested();
             yield return new(
-                info.Path,
-                info.IsDirectory,
-                info.Size,
-                new(info.LastWriteUtc, TimeSpan.Zero)
+                Path: info.Path,
+                IsDirectory: info.IsDirectory,
+                SizeBytes: info.Size,
+                LastModified: new(dateTime: info.LastWriteUtc, offset: TimeSpan.Zero)
             );
             await Task.Yield();
         }
@@ -149,14 +149,14 @@ public sealed class RemoteStorage : IStorage
             "sha256" => SHA256.Create(),
             "md5" => MD5.Create(),
             _ => throw new ArgumentException(
-                $"unsupported hash algorithm: {algorithm} (allowed: sha256, md5)",
-                nameof(algorithm)
+                message: $"unsupported hash algorithm: {algorithm} (allowed: sha256, md5)",
+                paramName: nameof(algorithm)
             ),
         };
 
-        await using Stream stream = _driver.OpenRead(V(path));
-        byte[] digest = await hasher.ComputeHashAsync(stream, ct);
-        return Convert.ToHexString(digest).ToLowerInvariant();
+        await using Stream stream = _driver.OpenRead(path: V(path: path));
+        byte[] digest = await hasher.ComputeHashAsync(inputStream: stream, cancellationToken: ct);
+        return Convert.ToHexString(inArray: digest).ToLowerInvariant();
     }
 
     /// <summary>
@@ -165,33 +165,33 @@ public sealed class RemoteStorage : IStorage
     /// </summary>
     public async Task<LocalPathLease> AcquireLocalPathAsync(string path, CancellationToken ct)
     {
-        Directory.CreateDirectory(StoragePaths.TempRoot);
+        Directory.CreateDirectory(path: StoragePaths.TempRoot);
 #pragma warning disable NMS001 // local temp file for a materialized remote object — OS-native by design
-        string tmp = Path.Combine(StoragePaths.TempRoot, $"nomercy-remote-{Guid.NewGuid():N}");
+        string tmp = Path.Combine(path1: StoragePaths.TempRoot, path2: $"nomercy-remote-{Guid.NewGuid():N}");
 #pragma warning restore NMS001
 
-        await using Stream src = _driver.OpenReadIsolated(V(path));
+        await using Stream src = _driver.OpenReadIsolated(path: V(path: path));
         await using FileStream dst = new(
-            tmp,
-            FileMode.Create,
-            FileAccess.Write,
-            FileShare.None,
-            65536,
+            path: tmp,
+            mode: FileMode.Create,
+            access: FileAccess.Write,
+            share: FileShare.None,
+            bufferSize: 65536,
             useAsync: true
         );
-        await src.CopyToAsync(dst, ct);
+        await src.CopyToAsync(destination: dst, cancellationToken: ct);
 
         return new(
-            tmp,
-            async () =>
+            path: tmp,
+            onDispose: async () =>
             {
                 await Task.Run(
-                    () =>
+                    action: () =>
                     {
-                        if (File.Exists(tmp))
-                            File.Delete(tmp);
+                        if (File.Exists(path: tmp))
+                            File.Delete(path: tmp);
                     },
-                    CancellationToken.None
+                    cancellationToken: CancellationToken.None
                 );
             }
         );
@@ -200,73 +200,73 @@ public sealed class RemoteStorage : IStorage
     // --- Sync companions ----------------------------------------------------
 
     public bool Exists(string path) =>
-        _driver.FileExists(V(path)) || _driver.DirectoryExists(V(path));
+        _driver.FileExists(path: V(path: path)) || _driver.DirectoryExists(path: V(path: path));
 
     public long SizeOrZero(string path) =>
-        _driver.FileExists(V(path)) ? _driver.GetFileSize(V(path)) : 0L;
+        _driver.FileExists(path: V(path: path)) ? _driver.GetFileSize(path: V(path: path)) : 0L;
 
-    public long Size(string path) => _driver.GetFileSize(V(path));
+    public long Size(string path) => _driver.GetFileSize(path: V(path: path));
 
     public DateTimeOffset LastModified(string path) =>
-        new(_driver.GetLastWriteTimeUtc(V(path)), TimeSpan.Zero);
+        new(dateTime: _driver.GetLastWriteTimeUtc(path: V(path: path)), offset: TimeSpan.Zero);
 
-    public void CreateDirectory(string path) => _driver.CreateDirectory(V(path));
+    public void CreateDirectory(string path) => _driver.CreateDirectory(path: V(path: path));
 
     public void Delete(string path)
     {
-        if (_driver.FileExists(V(path)))
-            _driver.DeleteFile(V(path));
+        if (_driver.FileExists(path: V(path: path)))
+            _driver.DeleteFile(path: V(path: path));
     }
 
     public void DeleteDirectory(string path, bool recursive)
     {
-        if (_driver.DirectoryExists(V(path)))
-            _driver.DeleteDirectory(V(path), recursive);
+        if (_driver.DirectoryExists(path: V(path: path)))
+            _driver.DeleteDirectory(path: V(path: path), recursive: recursive);
     }
 
     public byte[] Read(string path)
     {
-        using Stream stream = _driver.OpenRead(V(path));
+        using Stream stream = _driver.OpenRead(path: V(path: path));
         using MemoryStream ms = new();
-        stream.CopyTo(ms);
+        stream.CopyTo(destination: ms);
         return ms.ToArray();
     }
 
-    public Stream OpenRead(string path) => _driver.OpenRead(V(path));
+    public Stream OpenRead(string path) => _driver.OpenRead(path: V(path: path));
 
-    public Stream OpenWrite(string path, bool overwrite) => _driver.OpenWrite(V(path), overwrite);
+    public Stream OpenWrite(string path, bool overwrite) => _driver.OpenWrite(path: V(path: path), overwrite: overwrite);
 
     public void Write(string path, byte[] bytes)
     {
-        using Stream stream = _driver.OpenWrite(V(path), overwrite: true);
-        stream.Write(bytes, 0, bytes.Length);
+        using Stream stream = _driver.OpenWrite(path: V(path: path), overwrite: true);
+        stream.Write(buffer: bytes, offset: 0, count: bytes.Length);
     }
 
-    public void Move(string from, string to) => _driver.MoveFile(V(from), V(to));
+    public void Move(string from, string to) => _driver.MoveFile(source: V(path: from), destination: V(path: to));
 
-    public void Copy(string from, string to) => _driver.CopyFile(V(from), V(to), overwrite: true);
+    public void Copy(string from, string to) => _driver.CopyFile(source: V(path: from), destination: V(path: to), overwrite: true);
 
     public IReadOnlyList<StorageEntry> List(string path, string? pattern, bool recursive)
     {
         SearchOption option = recursive
             ? SearchOption.AllDirectories
             : SearchOption.TopDirectoryOnly;
-        string effectivePattern = string.IsNullOrEmpty(pattern) ? "*" : pattern;
+        string effectivePattern = string.IsNullOrEmpty(value: pattern) ? "*" : pattern;
 
         // Drivers with batched listing (e.g. S3 ListObjectsV2) override
         // EnumerateEntries to return size + mtime in the original page
         // instead of fanning out to N×HEAD per file.
         List<StorageEntry> entries = [];
         foreach (
-            StorageEntryInfo info in _driver.EnumerateEntries(V(path), effectivePattern, option)
+            StorageEntryInfo info in _driver.EnumerateEntries(directory: V(path: path), searchPattern: effectivePattern, option: option)
         )
         {
             entries.Add(
-                new(
-                    info.Path,
-                    info.IsDirectory,
-                    info.Size,
-                    new(info.LastWriteUtc, TimeSpan.Zero)
+                item: new(
+                    Path: info.Path,
+                    IsDirectory: info.IsDirectory,
+                    SizeBytes: info.Size,
+                    LastModified: new(dateTime: info.LastWriteUtc, offset: TimeSpan.Zero)
                 )
             );
         }
@@ -275,26 +275,26 @@ public sealed class RemoteStorage : IStorage
 
     public LocalPathLease AcquireLocalPath(string path)
     {
-        Directory.CreateDirectory(StoragePaths.TempRoot);
+        Directory.CreateDirectory(path: StoragePaths.TempRoot);
 #pragma warning disable NMS001 // local temp file for a materialized remote object — OS-native by design
-        string tmp = Path.Combine(StoragePaths.TempRoot, $"nomercy-remote-{Guid.NewGuid():N}");
+        string tmp = Path.Combine(path1: StoragePaths.TempRoot, path2: $"nomercy-remote-{Guid.NewGuid():N}");
 #pragma warning restore NMS001
 
-        using Stream src = _driver.OpenReadIsolated(V(path));
-        using FileStream dst = new(tmp, FileMode.Create, FileAccess.Write, FileShare.None);
-        src.CopyTo(dst);
+        using Stream src = _driver.OpenReadIsolated(path: V(path: path));
+        using FileStream dst = new(path: tmp, mode: FileMode.Create, access: FileAccess.Write, share: FileShare.None);
+        src.CopyTo(destination: dst);
 
         return new(
-            tmp,
-            async () =>
+            path: tmp,
+            onDispose: async () =>
             {
                 await Task.Run(
-                    () =>
+                    action: () =>
                     {
-                        if (File.Exists(tmp))
-                            File.Delete(tmp);
+                        if (File.Exists(path: tmp))
+                            File.Delete(path: tmp);
                     },
-                    CancellationToken.None
+                    cancellationToken: CancellationToken.None
                 );
             }
         );
@@ -302,22 +302,22 @@ public sealed class RemoteStorage : IStorage
 
     public async Task<string> ReadAllTextAsync(string path, CancellationToken ct)
     {
-        using StreamReader reader = new(_driver.OpenRead(V(path)));
-        return await reader.ReadToEndAsync(ct);
+        using StreamReader reader = new(stream: _driver.OpenRead(path: V(path: path)));
+        return await reader.ReadToEndAsync(cancellationToken: ct);
     }
 
     public async Task WriteAllTextAsync(string path, string contents, CancellationToken ct)
     {
-        await using StreamWriter writer = new(_driver.OpenWrite(V(path), overwrite: true));
-        await writer.WriteAsync(contents.AsMemory(), ct);
-        await writer.FlushAsync(ct);
+        await using StreamWriter writer = new(stream: _driver.OpenWrite(path: V(path: path), overwrite: true));
+        await writer.WriteAsync(buffer: contents.AsMemory(), cancellationToken: ct);
+        await writer.FlushAsync(cancellationToken: ct);
     }
 
     public Task MoveDirectoryAsync(string from, string to, CancellationToken ct)
     {
-        _driver.MoveDirectory(V(from), V(to));
+        _driver.MoveDirectory(source: V(path: from), destination: V(path: to));
         return Task.CompletedTask;
     }
 
-    public void MoveDirectory(string from, string to) => _driver.MoveDirectory(V(from), V(to));
+    public void MoveDirectory(string from, string to) => _driver.MoveDirectory(source: V(path: from), destination: V(path: to));
 }

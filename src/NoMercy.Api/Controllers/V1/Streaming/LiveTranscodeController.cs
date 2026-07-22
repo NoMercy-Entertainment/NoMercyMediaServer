@@ -19,49 +19,49 @@ using NoMercy.Authorization;
 namespace NoMercy.Api.Controllers.V1.Streaming;
 
 [ApiController]
-[Tags("Streaming")]
-[ApiVersion(1.0)]
+[Tags(tags: "Streaming")]
+[ApiVersion(version: 1.0)]
 [Authorize(Policy = "MediaAccess")]
-[Route("api/v{version:apiVersion}/streaming/live")]
+[Route(template: "api/v{version:apiVersion}/streaming/live")]
 public class LiveTranscodeController(ILiveTranscodeService service) : BaseController
 {
-    [HttpGet("sessions")]
+    [HttpGet(template: "sessions")]
     public IActionResult ListSessions()
     {
-        return Ok(service.ListSessions());
+        return Ok(value: service.ListSessions());
     }
 
-    [HttpPost("sessions")]
+    [HttpPost(template: "sessions")]
     public async Task<IActionResult> StartSession(
         [FromBody] StartLiveSessionRequest request,
         [FromQuery] string? deviceId = null,
         CancellationToken ct = default
     )
     {
-        return MapResult(await service.StartSessionAsync(User.UserId(), request, deviceId, ct));
+        return MapResult(result: await service.StartSessionAsync(userId: User.UserId(), request: request, deviceId: deviceId, ct: ct));
     }
 
-    [HttpGet("sessions/{sessionId}/master.m3u8")]
+    [HttpGet(template: "sessions/{sessionId}/master.m3u8")]
     public IActionResult GetMasterPlaylist(string sessionId)
     {
-        LiveResult result = service.GetMasterPlaylist(sessionId);
+        LiveResult result = service.GetMasterPlaylist(sessionId: sessionId);
         if (result.Kind != LiveResultKind.Ok)
-            return MapResult(result);
+            return MapResult(result: result);
 
-        return Content((string)result.Payload!, "application/vnd.apple.mpegurl");
+        return Content(content: (string)result.Payload!, contentType: "application/vnd.apple.mpegurl");
     }
 
-    [HttpGet("sessions/{sessionId}/playlist.m3u8")]
+    [HttpGet(template: "sessions/{sessionId}/playlist.m3u8")]
     public IActionResult GetPlaylist(string sessionId)
     {
-        LiveResult result = service.GetPlaylist(sessionId);
+        LiveResult result = service.GetPlaylist(sessionId: sessionId);
         if (result.Kind != LiveResultKind.Ok)
-            return MapResult(result);
+            return MapResult(result: result);
 
-        return Content((string)result.Payload!, "application/vnd.apple.mpegurl");
+        return Content(content: (string)result.Payload!, contentType: "application/vnd.apple.mpegurl");
     }
 
-    [HttpGet("sessions/{sessionId}/segment/{epoch}/{index:int}.ts")]
+    [HttpGet(template: "sessions/{sessionId}/segment/{epoch}/{index:int}.ts")]
     public async Task<IActionResult> GetSegment(
         string sessionId,
         string epoch,
@@ -69,18 +69,18 @@ public class LiveTranscodeController(ILiveTranscodeService service) : BaseContro
         CancellationToken ct = default
     )
     {
-        LiveResult result = await service.GetSegmentAsync(sessionId, epoch, index, ct);
+        LiveResult result = await service.GetSegmentAsync(sessionId: sessionId, epoch: epoch, index: index, ct: ct);
         if (result.Kind != LiveResultKind.Ok)
-            return MapResult(result);
+            return MapResult(result: result);
 
-        Response.Headers["Accept-Ranges"] = "bytes";
-        return File((Stream)result.Payload!, "video/mp2t", enableRangeProcessing: true);
+        Response.Headers[key: "Accept-Ranges"] = "bytes";
+        return File(fileStream: (Stream)result.Payload!, contentType: "video/mp2t", enableRangeProcessing: true);
     }
 
-    [HttpPost("sessions/{sessionId}/position")]
+    [HttpPost(template: "sessions/{sessionId}/position")]
     public IActionResult ReportPosition(string sessionId, [FromBody] ReportPositionRequest request)
     {
-        return MapResult(service.ReportPosition(sessionId, request));
+        return MapResult(result: service.ReportPosition(sessionId: sessionId, request: request));
     }
 
     /// <summary>
@@ -88,55 +88,55 @@ public class LiveTranscodeController(ILiveTranscodeService service) : BaseContro
     /// <c>LiveTranscodeHub.ReportBufferHealth</c> method to report their
     /// download-buffer depth and observed downlink.
     /// </summary>
-    [HttpPost("sessions/{sessionId}/buffer-health")]
+    [HttpPost(template: "sessions/{sessionId}/buffer-health")]
     public IActionResult ReportBufferHealth(
         string sessionId,
         [FromBody] ReportBufferHealthRequest request
     )
     {
-        return MapResult(service.ReportBufferHealth(sessionId, request));
+        return MapResult(result: service.ReportBufferHealth(sessionId: sessionId, request: request));
     }
 
-    [HttpPost("sessions/{sessionId}/quality")]
+    [HttpPost(template: "sessions/{sessionId}/quality")]
     public async Task<IActionResult> ChangeQuality(
         string sessionId,
         [FromBody] ChangeQualityRequest request,
         CancellationToken ct = default
     )
     {
-        return MapResult(await service.ChangeQualityAsync(sessionId, request, ct));
+        return MapResult(result: await service.ChangeQualityAsync(sessionId: sessionId, request: request, ct: ct));
     }
 
-    [HttpPost("sessions/{sessionId}/seek")]
+    [HttpPost(template: "sessions/{sessionId}/seek")]
     public async Task<IActionResult> Seek(
         string sessionId,
         [FromBody] SeekRequest request,
         CancellationToken ct = default
     )
     {
-        return MapResult(await service.SeekAsync(sessionId, request, ct));
+        return MapResult(result: await service.SeekAsync(sessionId: sessionId, request: request, ct: ct));
     }
 
-    [HttpDelete("sessions/{sessionId}")]
+    [HttpDelete(template: "sessions/{sessionId}")]
     public async Task<IActionResult> EndSession(string sessionId)
     {
-        await service.EndSessionAsync(sessionId, HttpContext.RequestAborted);
+        await service.EndSessionAsync(sessionId: sessionId, ct: HttpContext.RequestAborted);
         return NoContent();
     }
 
     private IActionResult MapResult(LiveResult result) =>
         result.Kind switch
         {
-            LiveResultKind.Ok => Ok(result.Payload),
-            LiveResultKind.BadRequest => BadRequestResponse(result.Message!),
-            LiveResultKind.NotFound => NotFoundResponse(result.Message!),
-            LiveResultKind.Gone => GoneResponse(result.Message!),
-            LiveResultKind.ServiceUnavailable => ServiceUnavailableResponse(result.Message!),
-            LiveResultKind.InternalError => InternalServerErrorResponse(result.Message!),
+            LiveResultKind.Ok => Ok(value: result.Payload),
+            LiveResultKind.BadRequest => BadRequestResponse(detail: result.Message!),
+            LiveResultKind.NotFound => NotFoundResponse(detail: result.Message!),
+            LiveResultKind.Gone => GoneResponse(detail: result.Message!),
+            LiveResultKind.ServiceUnavailable => ServiceUnavailableResponse(detail: result.Message!),
+            LiveResultKind.InternalError => InternalServerErrorResponse(detail: result.Message!),
             LiveResultKind.EncoderError => StatusCode(
-                result.EncoderStatusCode,
-                result.EncoderShape
+                statusCode: result.EncoderStatusCode,
+                value: result.EncoderShape
             ),
-            _ => InternalServerErrorResponse("Unexpected result"),
+            _ => InternalServerErrorResponse(detail: "Unexpected result"),
         };
 }

@@ -15,6 +15,6 @@ namespace NoMercy.Providers.TMDB.Models.WatchProviders;
 
 public class TmdbTvProvider
 {
-    [JsonProperty("results")]
+    [JsonProperty(propertyName: "results")]
     public TmdbTvProviderResult[] Results { get; set; } = [];
 }

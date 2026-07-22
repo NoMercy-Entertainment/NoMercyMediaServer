@@ -29,10 +29,10 @@ namespace NoMercy.Api.Controllers.V1.Encoder;
 /// requesting user to be the server owner.
 /// </summary>
 [ApiController]
-[Tags("Encoder Trusted Publishers")]
-[ApiVersion(1.0)]
+[Tags(tags: "Encoder Trusted Publishers")]
+[ApiVersion(version: 1.0)]
 [Authorize(Policy = "Owner")]
-[Route("api/v{version:apiVersion}/encoder/trusted-publishers")]
+[Route(template: "api/v{version:apiVersion}/encoder/trusted-publishers")]
 public class EncoderTrustedPublishersController(MediaContext mediaContext) : BaseController
 {
     /// <summary>
@@ -44,10 +44,10 @@ public class EncoderTrustedPublishersController(MediaContext mediaContext) : Bas
 
         IReadOnlyList<TrustedPublisherKey> keys = await mediaContext
             .TrustedPublisherKeys.AsNoTracking()
-            .OrderBy(k => k.AddedAt)
+            .OrderBy(keySelector: k => k.AddedAt)
             .ToListAsync();
 
-        return Ok(new { data = keys });
+        return Ok(value: new { data = keys });
     }
 
     /// <summary>
@@ -63,56 +63,59 @@ public class EncoderTrustedPublishersController(MediaContext mediaContext) : Bas
         byte[] publicKeyBytes;
         try
         {
-            publicKeyBytes = Convert.FromBase64String(request.PublicKeyBase64);
+            publicKeyBytes = Convert.FromBase64String(s: request.PublicKeyBase64);
         }
         catch (FormatException)
         {
-            ValidationEnvelope decodeError = ValidationEnvelope.FromRules([
+            ValidationEnvelope decodeError = ValidationEnvelope.FromRules(rules:
+            [
                 new(
-                    EncoderRuleId.TrustedPublisherPublicKeyInvalid,
-                    EncoderRuleSeverity.Error,
-                    "public_key_base64",
-                    "Public key must be a 32-byte Ed25519 key, base64-encoded.",
-                    "Re-export the publisher's key with `openssl pkey -in key.pem -pubout -outform DER | tail -c 32 | base64`."
+                    Id: EncoderRuleId.TrustedPublisherPublicKeyInvalid,
+                    Severity: EncoderRuleSeverity.Error,
+                    Field: "public_key_base64",
+                    Message: "Public key must be a 32-byte Ed25519 key, base64-encoded.",
+                    Fix: "Re-export the publisher's key with `openssl pkey -in key.pem -pubout -outform DER | tail -c 32 | base64`."
                 ),
             ]);
-            return UnprocessableEntity(decodeError);
+            return UnprocessableEntity(error: decodeError);
         }
 
         if (publicKeyBytes.Length != 32)
         {
-            ValidationEnvelope lengthError = ValidationEnvelope.FromRules([
+            ValidationEnvelope lengthError = ValidationEnvelope.FromRules(rules:
+            [
                 new(
-                    EncoderRuleId.TrustedPublisherPublicKeyInvalid,
-                    EncoderRuleSeverity.Error,
-                    "public_key_base64",
-                    "Public key must be a 32-byte Ed25519 key, base64-encoded.",
-                    "Re-export the publisher's key with `openssl pkey -in key.pem -pubout -outform DER | tail -c 32 | base64`."
+                    Id: EncoderRuleId.TrustedPublisherPublicKeyInvalid,
+                    Severity: EncoderRuleSeverity.Error,
+                    Field: "public_key_base64",
+                    Message: "Public key must be a 32-byte Ed25519 key, base64-encoded.",
+                    Fix: "Re-export the publisher's key with `openssl pkey -in key.pem -pubout -outform DER | tail -c 32 | base64`."
                 ),
             ]);
-            return UnprocessableEntity(lengthError);
+            return UnprocessableEntity(error: lengthError);
         }
 
         // --- Compute fingerprint ---
-        string fingerprint = PublicKeyFingerprint.Compute(publicKeyBytes);
+        string fingerprint = PublicKeyFingerprint.Compute(publicKeyBytes: publicKeyBytes);
 
         // --- Conflict check ---
         bool exists = await mediaContext
             .TrustedPublisherKeys.AsNoTracking()
-            .AnyAsync(k => k.Fingerprint == fingerprint);
+            .AnyAsync(predicate: k => k.Fingerprint == fingerprint);
 
         if (exists)
         {
-            ValidationEnvelope conflictError = ValidationEnvelope.FromRules([
+            ValidationEnvelope conflictError = ValidationEnvelope.FromRules(rules:
+            [
                 new(
-                    EncoderRuleId.TrustedPublisherAlreadyTrusted,
-                    EncoderRuleSeverity.Error,
-                    "public_key_base64",
-                    $"A trusted key with fingerprint '{fingerprint}' is already registered.",
-                    "This public key is already trusted. No action needed."
+                    Id: EncoderRuleId.TrustedPublisherAlreadyTrusted,
+                    Severity: EncoderRuleSeverity.Error,
+                    Field: "public_key_base64",
+                    Message: $"A trusted key with fingerprint '{fingerprint}' is already registered.",
+                    Fix: "This public key is already trusted. No action needed."
                 ),
             ]);
-            return Conflict(conflictError);
+            return Conflict(error: conflictError);
         }
 
         // --- Persist ---
@@ -125,28 +128,28 @@ public class EncoderTrustedPublishersController(MediaContext mediaContext) : Bas
             AddedBy = User.UserId().ToString(),
         };
 
-        mediaContext.TrustedPublisherKeys.Add(row);
+        mediaContext.TrustedPublisherKeys.Add(entity: row);
         await mediaContext.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(Create), new { fingerprint = row.Fingerprint }, row);
+        return CreatedAtAction(actionName: nameof(Create), routeValues: new { fingerprint = row.Fingerprint }, value: row);
     }
 
     /// <summary>
     /// Removes a trusted publisher key by its fingerprint. Returns 404 when
     /// the fingerprint is not registered.
     /// </summary>
-    [HttpDelete("{fingerprint}")]
+    [HttpDelete(template: "{fingerprint}")]
     public async Task<IActionResult> Delete(string fingerprint)
     {
 
         TrustedPublisherKey? existing = await mediaContext.TrustedPublisherKeys.FirstOrDefaultAsync(
-            k => k.Fingerprint == fingerprint
+            predicate: k => k.Fingerprint == fingerprint
         );
 
         if (existing is null)
-            return NotFoundResponse($"No trusted key with fingerprint '{fingerprint}' found");
+            return NotFoundResponse(detail: $"No trusted key with fingerprint '{fingerprint}' found");
 
-        mediaContext.TrustedPublisherKeys.Remove(existing);
+        mediaContext.TrustedPublisherKeys.Remove(entity: existing);
         await mediaContext.SaveChangesAsync();
 
         return NoContent();
@@ -154,6 +157,6 @@ public class EncoderTrustedPublishersController(MediaContext mediaContext) : Bas
 }
 
 public record AddTrustedPublisherRequest(
-    [property: JsonProperty("label")] string Label,
-    [property: JsonProperty("public_key_base64")] string PublicKeyBase64
+    [property: JsonProperty(propertyName: "label")] string Label,
+    [property: JsonProperty(propertyName: "public_key_base64")] string PublicKeyBase64
 );

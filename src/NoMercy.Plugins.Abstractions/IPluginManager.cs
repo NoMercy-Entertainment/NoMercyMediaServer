@@ -23,7 +23,7 @@ public interface IPluginManager
         string packageUrl,
         string? expectedChecksum,
         CancellationToken ct = default
-    ) => InstallPluginAsync(packageUrl, ct);
+    ) => InstallPluginAsync(packageUrl: packageUrl, ct: ct);
 
     Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default);
     Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default);

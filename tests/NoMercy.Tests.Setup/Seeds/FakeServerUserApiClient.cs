@@ -36,7 +36,7 @@ internal sealed class FakeServerUserApiClient(
     {
         WasCalled = true;
         return throwInstead is not null
-            ? Task.FromException<ServerUserDtoData[]>(throwInstead)
-            : Task.FromResult(response);
+            ? Task.FromException<ServerUserDtoData[]>(exception: throwInstead)
+            : Task.FromResult(result: response);
     }
 }

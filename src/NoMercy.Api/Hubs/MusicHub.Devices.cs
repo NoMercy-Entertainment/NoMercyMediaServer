@@ -31,9 +31,9 @@ public partial class MusicHub
     /// </summary>
     private Device GetCallerDevice(User user)
     {
-        if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? device))
+        if (!ConnectedClients.Clients.TryGetValue(key: Context.ConnectionId, value: out Client? device))
             throw new InvalidOperationException(
-                $"Connection {Context.ConnectionId} not found in ConnectedClients"
+                message: $"Connection {Context.ConnectionId} not found in ConnectedClients"
             );
         return device;
     }
@@ -46,18 +46,18 @@ public partial class MusicHub
     /// </summary>
     private Device GetOrPromoteActiveDevice(User user)
     {
-        Device caller = GetCallerDevice(user);
+        Device caller = GetCallerDevice(user: user);
 
-        if (_activeDeviceRegistry.TryGet(user.Id, out Device? existing) && existing is not null)
+        if (_activeDeviceRegistry.TryGet(userId: user.Id, device: out Device? existing) && existing is not null)
         {
-            bool existingStillConnected = ConnectedClients.Clients.Values.Any(c =>
-                c.DeviceId.Equals(existing.DeviceId, StringComparison.OrdinalIgnoreCase)
+            bool existingStillConnected = ConnectedClients.Clients.Values.Any(predicate: c =>
+                c.DeviceId.Equals(value: existing.DeviceId, comparisonType: StringComparison.OrdinalIgnoreCase)
             );
             if (existingStillConnected)
                 return existing;
         }
 
-        _activeDeviceRegistry.Set(user.Id, caller);
+        _activeDeviceRegistry.Set(userId: user.Id, device: caller);
         return caller;
     }
 
@@ -72,24 +72,24 @@ public partial class MusicHub
     private async Task<List<Device>> MusicDevicesAsync()
     {
         List<Device> connected = Devices();
-        User? user = UserCacheService.GetUser(Context.User.UserId());
+        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
         if (user is null)
             return connected;
 
         await using MediaContext ctx = await ContextFactory.CreateDbContextAsync();
         List<Device> registeredTvs = await ctx
-            .Devices.Where(d => d.OwnerUserId == user.Id && d.Type == "tv")
+            .Devices.Where(predicate: d => d.OwnerUserId == user.Id && d.Type == "tv")
             .ToListAsync();
 
         HashSet<string> seenDeviceIds = new(
-            connected.Select(d => d.DeviceId),
-            StringComparer.OrdinalIgnoreCase
+            collection: connected.Select(selector: d => d.DeviceId),
+            comparer: StringComparer.OrdinalIgnoreCase
         );
 
         foreach (Device tv in registeredTvs)
         {
-            if (seenDeviceIds.Add(tv.DeviceId))
-                connected.Add(tv);
+            if (seenDeviceIds.Add(item: tv.DeviceId))
+                connected.Add(item: tv);
         }
 
         // Pre-warm sharpcaster's TLS pool for every owned TV so the first
@@ -99,16 +99,16 @@ public partial class MusicHub
         // calls are cheap.
         foreach (Device tv in registeredTvs)
         {
-            if (string.IsNullOrEmpty(tv.Ip))
+            if (string.IsNullOrEmpty(value: tv.Ip))
                 continue;
             string ip = tv.Ip;
-            _ = Task.Run(async () =>
+            _ = Task.Run(function: async () =>
             {
                 try
                 {
-                    string? receiverName = await _chromeCast.FindReceiverNameByIpAsync(ip);
-                    if (!string.IsNullOrEmpty(receiverName))
-                        await _chromeCast.SelectChromecast(receiverName);
+                    string? receiverName = await _chromeCast.FindReceiverNameByIpAsync(ip: ip);
+                    if (!string.IsNullOrEmpty(value: receiverName))
+                        await _chromeCast.SelectChromecast(name: receiverName);
                 }
                 catch
                 {
@@ -123,7 +123,7 @@ public partial class MusicHub
 
     private void UpdateDeviceInfo(MusicPlayerState state)
     {
-        if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? device))
+        if (!ConnectedClients.Clients.TryGetValue(key: Context.ConnectionId, value: out Client? device))
             return;
 
         // Only adopt the caller's device as active when there is no active
@@ -132,8 +132,8 @@ public partial class MusicHub
         // album while music plays on the TV) must NOT steal active back —
         // the new playlist should land on the existing active device.
         bool callerIsActiveOrNoActive =
-            string.IsNullOrEmpty(state.DeviceId)
-            || state.DeviceId.Equals(device.DeviceId, StringComparison.OrdinalIgnoreCase);
+            string.IsNullOrEmpty(value: state.DeviceId)
+            || state.DeviceId.Equals(value: device.DeviceId, comparisonType: StringComparison.OrdinalIgnoreCase);
 
         if (callerIsActiveOrNoActive)
         {
@@ -141,7 +141,7 @@ public partial class MusicHub
             state.VolumePercentage = device.VolumePercent ?? Device.DefaultVolumePercent;
         }
 
-        UpdateDeviceVolumes(state, device.Sub);
+        UpdateDeviceVolumes(state: state, userSub: device.Sub);
     }
 
     private void UpdateDeviceVolumes(MusicPlayerState state, Guid userSub)
@@ -149,9 +149,9 @@ public partial class MusicHub
         Dictionary<string, int> volumes = new();
         foreach (Client client in ConnectedClients.Clients.Values)
         {
-            if (!client.Sub.Equals(userSub))
+            if (!client.Sub.Equals(g: userSub))
                 continue;
-            volumes[client.DeviceId] = client.VolumePercent ?? Device.DefaultVolumePercent;
+            volumes[key: client.DeviceId] = client.VolumePercent ?? Device.DefaultVolumePercent;
         }
 
         state.DeviceVolumes = volumes;
@@ -159,13 +159,13 @@ public partial class MusicHub
 
     public async Task ChangeDeviceCommand(string? deviceId)
     {
-        User? user = UserCacheService.GetUser(Context.User.UserId());
+        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
         if (user is null)
             return;
 
-        if (string.IsNullOrEmpty(deviceId))
+        if (string.IsNullOrEmpty(value: deviceId))
         {
-            await HandleReleaseActiveClaimCommand(user);
+            await HandleReleaseActiveClaimCommand(user: user);
             return;
         }
 
@@ -177,16 +177,16 @@ public partial class MusicHub
         // flag to a sleeping TV but the TV never actually plays. Mobile
         // already drives this through DeviceHub.WakeForMusic; web can't, so
         // the server has to do it on their behalf.
-        bool targetIsLive = connectedDevices.Any(d =>
-            d.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase)
-            && ConnectedClients.Clients.Values.Any(c =>
-                c.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase)
-                && c.Endpoint.Contains("musicHub", StringComparison.OrdinalIgnoreCase)
+        bool targetIsLive = connectedDevices.Any(predicate: d =>
+            d.DeviceId.Equals(value: deviceId, comparisonType: StringComparison.OrdinalIgnoreCase)
+            && ConnectedClients.Clients.Values.Any(predicate: c =>
+                c.DeviceId.Equals(value: deviceId, comparisonType: StringComparison.OrdinalIgnoreCase)
+                && c.Endpoint.Contains(value: "musicHub", comparisonType: StringComparison.OrdinalIgnoreCase)
             )
         );
 
-        Device? targetTv = connectedDevices.FirstOrDefault(d =>
-            d.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase) && d.Type == "tv"
+        Device? targetTv = connectedDevices.FirstOrDefault(predicate: d =>
+            d.DeviceId.Equals(value: deviceId, comparisonType: StringComparison.OrdinalIgnoreCase) && d.Type == "tv"
         );
 
         if (targetTv is not null)
@@ -194,11 +194,11 @@ public partial class MusicHub
             // Software wake: only when the TV's MusicHub side isn't already live.
             // If it's live the app is already foregrounded; sending wake_for_music
             // again would just redundantly bounce the activity stack.
-            if (!targetIsLive && _busRegistry.IsOnline(targetTv.Id))
+            if (!targetIsLive && _busRegistry.IsOnline(deviceId: targetTv.Id))
             {
                 _ = _busRegistry.SendAsync(
-                    targetTv.Id,
-                    new { type = "wake_for_music", session_id = Guid.NewGuid().ToString() }
+                    deviceId: targetTv.Id,
+                    payload: new { type = "wake_for_music", session_id = Guid.NewGuid().ToString() }
                 );
             }
 
@@ -213,15 +213,15 @@ public partial class MusicHub
             string serverIdString = Info.DeviceId.ToString();
             string serverUrl = ResolveServerUrl();
             string locale = ResolveSenderLocale();
-            CastIntent intent = ResolveMusicIntent(user.Id, deviceId);
-            bool apkOnline = _busRegistry.IsOnline(targetUlid);
+            CastIntent intent = ResolveMusicIntent(userId: user.Id, targetDeviceId: deviceId);
+            bool apkOnline = _busRegistry.IsOnline(deviceId: targetUlid);
 
-            _ = Task.Run(() =>
+            _ = Task.Run(function: () =>
                 _castPanelWakeLauncher.LaunchIfColdAsync(
-                    targetIsLive,
-                    targetIp,
-                    apkOnline,
-                    () =>
+                    targetIsLive: targetIsLive,
+                    targetIp: targetIp,
+                    useAndroidReceiver: apkOnline,
+                    resolveLaunchData: () =>
                         _castTokenService.MintAsync(
                             userId: user.Id,
                             serverId: serverIdString,
@@ -234,7 +234,7 @@ public partial class MusicHub
             );
         }
 
-        if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
+        if (_musicPlayerStateManager.TryGetValue(userId: user.Id, state: out MusicPlayerState? playerState))
         {
             playerState.DeviceId = deviceId;
 
@@ -243,15 +243,15 @@ public partial class MusicHub
             // device happened to be at. ResolveTransferVolume prefers a level
             // already known in DeviceVolumes, then the device's own persisted
             // VolumePercent, then the shared safe default.
-            Device? targetDevice = connectedDevices.FirstOrDefault(d =>
-                d.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase)
+            Device? targetDevice = connectedDevices.FirstOrDefault(predicate: d =>
+                d.DeviceId.Equals(value: deviceId, comparisonType: StringComparison.OrdinalIgnoreCase)
             );
             playerState.VolumePercentage = MusicVolumeResolver.ResolveTransferVolume(
-                playerState,
-                deviceId,
-                targetDevice?.VolumePercent
+                state: playerState,
+                targetDeviceId: deviceId,
+                targetPersistedVolume: targetDevice?.VolumePercent
             );
-            playerState.DeviceVolumes[deviceId] = playerState.VolumePercentage;
+            playerState.DeviceVolumes[key: deviceId] = playerState.VolumePercentage;
 
             // A manual switch always gives the newly-promoted device a fresh grace
             // window — without this, a target that hasn't sent its first position
@@ -263,7 +263,7 @@ public partial class MusicHub
             // Time itself doesn't change on a transfer, but the capture instant
             // must — the incoming device needs its own fresh drift-free reference
             // point rather than inheriting one that predates its own handoff.
-            playerState.SetPosition(playerState.Time);
+            playerState.SetPosition(positionMs: playerState.Time);
         }
         else
         {
@@ -277,17 +277,17 @@ public partial class MusicHub
         // themselves (e.g. the web client that initiated this ChangeDevice), while
         // playerState says TV — and downstream calls that consult the registry
         // would see a stale active.
-        Device? targetClient = ConnectedClients.Clients.Values.FirstOrDefault(c =>
-            c.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase)
+        Device? targetClient = ConnectedClients.Clients.Values.FirstOrDefault(predicate: c =>
+            c.DeviceId.Equals(value: deviceId, comparisonType: StringComparison.OrdinalIgnoreCase)
         );
         if (targetClient is not null)
-            _activeDeviceRegistry.Set(user.Id, targetClient);
+            _activeDeviceRegistry.Set(userId: user.Id, device: targetClient);
 
         // Relay-first: the new active device starts playing off this the moment
         // it arrives, so it goes out before the two broadcasts below — those are
         // pure bookkeeping (device-list refresh, old-device status notice) and
         // don't gate anything the target needs in order to begin playback.
-        await _musicPlaybackService.UpdatePlaybackState(user, playerState);
+        await _musicPlaybackService.UpdatePlaybackState(user: user, state: playerState);
 
         EventPayload<BroadcastEventPayload> payload = new()
         {
@@ -305,13 +305,13 @@ public partial class MusicHub
             ],
         };
 
-        await _clientMessenger.SendTo("ChangeDevice", "musicHub", user.Id, payload);
+        await _clientMessenger.SendTo(name: "ChangeDevice", endpoint: "musicHub", userId: user.Id, data: payload);
 
         await _clientMessenger.SendTo(
-            "ConnectedDevicesState",
-            "musicHub",
-            user.Id,
-            connectedDevices
+            name: "ConnectedDevicesState",
+            endpoint: "musicHub",
+            userId: user.Id,
+            data: connectedDevices
         );
     }
 
@@ -330,92 +330,92 @@ public partial class MusicHub
     /// </summary>
     private async Task HandleReleaseActiveClaimCommand(User user)
     {
-        if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? caller))
+        if (!ConnectedClients.Clients.TryGetValue(key: Context.ConnectionId, value: out Client? caller))
             return;
 
-        if (!_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
+        if (!_musicPlayerStateManager.TryGetValue(userId: user.Id, state: out MusicPlayerState? playerState))
             return;
 
         bool callerIsActiveDevice =
-            !string.IsNullOrEmpty(playerState.DeviceId)
-            && playerState.DeviceId.Equals(caller.DeviceId, StringComparison.OrdinalIgnoreCase);
+            !string.IsNullOrEmpty(value: playerState.DeviceId)
+            && playerState.DeviceId.Equals(value: caller.DeviceId, comparisonType: StringComparison.OrdinalIgnoreCase);
 
         if (!callerIsActiveDevice)
         {
             _logger.LogWarning(
-                "{Name}: [MusicHub.ChangeDeviceCommand] release ignored — caller is not the active device",
-                user.Name
+                message: "{Name}: [MusicHub.ChangeDeviceCommand] release ignored — caller is not the active device",
+                args: user.Name
             );
             return;
         }
 
-        _musicPlaybackService.RemoveTimer(user.Id);
-        _activeDeviceRegistry.RemoveIfMatches(user.Id, caller.DeviceId);
+        _musicPlaybackService.RemoveTimer(userId: user.Id);
+        _activeDeviceRegistry.RemoveIfMatches(userId: user.Id, deviceId: caller.DeviceId);
 
         playerState.PlayState = false;
         playerState.DeviceId = null;
-        UpdateActionsDisallows(playerState);
+        UpdateActionsDisallows(state: playerState);
 
-        await _musicPlaybackService.UpdatePlaybackState(user, playerState);
+        await _musicPlaybackService.UpdatePlaybackState(user: user, state: playerState);
     }
 
     public async Task ChangeVolumeCommand(int? volume)
     {
-        await SetDeviceVolumeCommand(null, volume);
+        await SetDeviceVolumeCommand(deviceId: null, volume: volume);
     }
 
     public async Task SetDeviceVolumeCommand(string? deviceId, int? volume)
     {
-        User? user = UserCacheService.GetUser(Context.User.UserId());
+        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
         if (user is null)
             return;
 
         if (volume is null)
             return;
 
-        int clamped = MusicVolumeResolver.Clamp(volume.Value);
+        int clamped = MusicVolumeResolver.Clamp(volume: volume.Value);
 
-        Device? target = ResolveVolumeTarget(user.Id, deviceId);
+        Device? target = ResolveVolumeTarget(userId: user.Id, deviceId: deviceId);
         if (target is null)
             return;
 
-        _activeDeviceRegistry.TryGet(user.Id, out Device? active);
+        _activeDeviceRegistry.TryGet(userId: user.Id, device: out Device? active);
 
         target.VolumePercent = clamped;
 
-        if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
+        if (_musicPlayerStateManager.TryGetValue(userId: user.Id, state: out MusicPlayerState? playerState))
         {
             // The scoped volume_percentage belongs to the active device; only
             // move it when the active device is the one being changed. Either
             // way the device_volumes map always gets the caller's target entry
             // so controller sliders update.
             MusicVolumeResolver.ApplyDeviceVolume(
-                playerState,
-                target.DeviceId,
-                active?.DeviceId,
-                clamped
+                state: playerState,
+                targetDeviceId: target.DeviceId,
+                activeDeviceId: active?.DeviceId,
+                clampedVolume: clamped
             );
-            await _musicPlaybackService.UpdatePlaybackState(user, playerState);
+            await _musicPlaybackService.UpdatePlaybackState(user: user, state: playerState);
         }
 
         // Persist off the critical path — the broadcast already reached clients.
         // An in-line await on ExecuteUpdateAsync added 500+ms of wire latency
         // per volume event on SQLite under load.
         string targetDeviceId = target.DeviceId;
-        _ = Task.Run(async () =>
+        _ = Task.Run(function: async () =>
         {
             try
             {
                 await using MediaContext mediaContext = await ContextFactory.CreateDbContextAsync();
                 await mediaContext
-                    .Devices.Where(d => d.DeviceId == targetDeviceId)
-                    .ExecuteUpdateAsync(d => d.SetProperty(x => x.VolumePercent, clamped));
+                    .Devices.Where(predicate: d => d.DeviceId == targetDeviceId)
+                    .ExecuteUpdateAsync(setPropertyCalls: d => d.SetProperty(propertyExpression: x => x.VolumePercent, valueExpression: clamped));
             }
             catch (Exception ex)
             {
                 _logger.LogInformation(
-                    "SetDeviceVolumeCommand DB persist failed: {Message}",
-                    ex.Message
+                    message: "SetDeviceVolumeCommand DB persist failed: {Message}",
+                    args: ex.Message
                 );
             }
         });
@@ -423,12 +423,12 @@ public partial class MusicHub
 
     private Device? ResolveVolumeTarget(Guid userId, string? deviceId)
     {
-        if (string.IsNullOrEmpty(deviceId))
-            return _activeDeviceRegistry.TryGet(userId, out Device? active) ? active : null;
+        if (string.IsNullOrEmpty(value: deviceId))
+            return _activeDeviceRegistry.TryGet(userId: userId, device: out Device? active) ? active : null;
 
-        return ConnectedClients.Clients.Values.FirstOrDefault(client =>
-            client.Sub.Equals(userId)
-            && client.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase)
+        return ConnectedClients.Clients.Values.FirstOrDefault(predicate: client =>
+            client.Sub.Equals(g: userId)
+            && client.DeviceId.Equals(value: deviceId, comparisonType: StringComparison.OrdinalIgnoreCase)
         );
     }
 }

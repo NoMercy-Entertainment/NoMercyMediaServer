@@ -15,10 +15,10 @@ using NoMercy.Providers.TMDB.Models.Shared;
 
 namespace NoMercy.Tests.Providers.TMDB.Client;
 
-[Trait("Category", "Integration")]
-[Trait("Provider", "TMDB")]
-[Trait("Client", "TmdbSeasonClient")]
-[Collection("TmdbApi")]
+[Trait(name: "Category", value: "Integration")]
+[Trait(name: "Provider", value: "TMDB")]
+[Trait(name: "Client", value: "TmdbSeasonClient")]
+[Collection(name: "TmdbApi")]
 public class TmdbSeasonClientIntegrationTests : TmdbTestBase
 {
     public TmdbSeasonClientIntegrationTests()
@@ -30,19 +30,19 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
     public async Task Details_WithRealApi_ReturnsCompleteSeasonData()
     {
         // Arrange
-        TmdbSeasonClient client = new(ValidTvShowId, ValidSeasonNumber);
+        TmdbSeasonClient client = new(tvId: ValidTvShowId, seasonNumber: ValidSeasonNumber);
 
         // Act
         TmdbSeasonDetails? result = await client.Details();
 
         // Assert
         result.Should().NotBeNull();
-        result!.Id.Should().BeGreaterThan(0);
+        result!.Id.Should().BeGreaterThan(expected: 0);
         result.Name.Should().NotBeNullOrEmpty();
-        result.SeasonNumber.Should().Be(ValidSeasonNumber);
+        result.SeasonNumber.Should().Be(expected: ValidSeasonNumber);
         result.Episodes.Should().NotBeEmpty();
         result.Episodes.First().Name.Should().NotBeNullOrEmpty();
-        result.Episodes.First().EpisodeNumber.Should().BeGreaterThan(0);
+        result.Episodes.First().EpisodeNumber.Should().BeGreaterThan(expected: 0);
         result.AirDate.Should().NotBeNull();
         // Overview can be empty for some seasons, so we just check it's not null
         result.Overview.Should().NotBeNull();
@@ -52,14 +52,14 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
     public async Task WithAllAppends_WithRealApi_ReturnsCompleteData()
     {
         // Arrange
-        TmdbSeasonClient client = new(ValidTvShowId, ValidSeasonNumber);
+        TmdbSeasonClient client = new(tvId: ValidTvShowId, seasonNumber: ValidSeasonNumber);
 
         // Act
         TmdbSeasonAppends? result = await client.WithAllAppends();
 
         // Assert
         result.Should().NotBeNull();
-        result!.SeasonNumber.Should().Be(ValidSeasonNumber);
+        result!.SeasonNumber.Should().Be(expected: ValidSeasonNumber);
         result.TmdbSeasonCredits.Should().NotBeNull();
         result.TmdbSeasonCredits.Cast.Should().NotBeEmpty();
         result.TmdbSeasonImages.Should().NotBeNull();
@@ -71,7 +71,7 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
     public async Task Credits_WithRealApi_ReturnsValidCredits()
     {
         // Arrange
-        TmdbSeasonClient client = new(ValidTvShowId, ValidSeasonNumber);
+        TmdbSeasonClient client = new(tvId: ValidTvShowId, seasonNumber: ValidSeasonNumber);
 
         // Act
         TmdbSeasonCredits? result = await client.Credits();
@@ -81,11 +81,11 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
         result!.Cast.Should().NotBeEmpty();
         result
             .Cast.Should()
-            .AllSatisfy(cast =>
+            .AllSatisfy(expected: cast =>
             {
                 cast.Name.Should().NotBeNullOrEmpty();
                 cast.Character.Should().NotBeNullOrEmpty();
-                cast.Id.Should().BeGreaterThan(0);
+                cast.Id.Should().BeGreaterThan(expected: 0);
             });
 
         result.Crew.Should().NotBeNull();
@@ -94,11 +94,11 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
         {
             result
                 .Crew.Should()
-                .AllSatisfy(crew =>
+                .AllSatisfy(expected: crew =>
                 {
                     crew.Name.Should().NotBeNullOrEmpty();
                     crew.Job.Should().NotBeNullOrEmpty();
-                    crew.Id.Should().BeGreaterThan(0);
+                    crew.Id.Should().BeGreaterThan(expected: 0);
                 });
         }
     }
@@ -107,7 +107,7 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
     public async Task AggregatedCredits_WithRealApi_ReturnsValidCredits()
     {
         // Arrange
-        TmdbSeasonClient client = new(ValidTvShowId, ValidSeasonNumber);
+        TmdbSeasonClient client = new(tvId: ValidTvShowId, seasonNumber: ValidSeasonNumber);
 
         // Act
         TmdbSeasonAggregatedCredits? result = await client.AggregatedCredits();
@@ -117,10 +117,10 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
         result!.Cast.Should().NotBeEmpty();
         result
             .Cast.Should()
-            .AllSatisfy(cast =>
+            .AllSatisfy(expected: cast =>
             {
                 cast.Name.Should().NotBeNullOrEmpty();
-                cast.Id.Should().BeGreaterThan(0);
+                cast.Id.Should().BeGreaterThan(expected: 0);
                 cast.Roles.Should().NotBeEmpty();
             });
 
@@ -130,10 +130,10 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
         {
             result
                 .Crew.Should()
-                .AllSatisfy(crew =>
+                .AllSatisfy(expected: crew =>
                 {
                     crew.Name.Should().NotBeNullOrEmpty();
-                    crew.Id.Should().BeGreaterThan(0);
+                    crew.Id.Should().BeGreaterThan(expected: 0);
                     crew.Jobs.Should().NotBeEmpty();
                 });
         }
@@ -143,14 +143,14 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
     public async Task ExternalIds_WithRealApi_ReturnsValidIds()
     {
         // Arrange
-        TmdbSeasonClient client = new(ValidTvShowId, ValidSeasonNumber);
+        TmdbSeasonClient client = new(tvId: ValidTvShowId, seasonNumber: ValidSeasonNumber);
 
         // Act
         TmdbSeasonExternalIds? result = await client.ExternalIds();
 
         // Assert
         result.Should().NotBeNull();
-        result!.Id.Should().BeGreaterThan(0);
+        result!.Id.Should().BeGreaterThan(expected: 0);
         // External IDs can be null for some seasons, so we just verify structure
     }
 
@@ -158,26 +158,26 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
     public async Task Images_WithRealApi_ReturnsValidImages()
     {
         // Arrange
-        TmdbSeasonClient client = new(ValidTvShowId, ValidSeasonNumber);
+        TmdbSeasonClient client = new(tvId: ValidTvShowId, seasonNumber: ValidSeasonNumber);
 
         // Act
         TmdbSeasonImages? result = await client.Images();
 
         // Assert
         result.Should().NotBeNull();
-        result!.Id.Should().BeGreaterThan(0);
+        result!.Id.Should().BeGreaterThan(expected: 0);
         result.Posters.Should().NotBeNull();
 
         if (result.Posters.Length != 0)
         {
             result
                 .Posters.Should()
-                .AllSatisfy(poster =>
+                .AllSatisfy(expected: poster =>
                 {
                     poster.FilePath.Should().NotBeNullOrEmpty();
-                    poster.Width.Should().BeGreaterThan(0);
-                    poster.Height.Should().BeGreaterThan(0);
-                    poster.VoteAverage.Should().BeGreaterThanOrEqualTo(0);
+                    poster.Width.Should().BeGreaterThan(expected: 0);
+                    poster.Height.Should().BeGreaterThan(expected: 0);
+                    poster.VoteAverage.Should().BeGreaterThanOrEqualTo(expected: 0);
                 });
         }
     }
@@ -186,7 +186,7 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
     public async Task Videos_WithRealApi_ReturnsValidVideos()
     {
         // Arrange
-        TmdbSeasonClient client = new(ValidTvShowId, ValidSeasonNumber);
+        TmdbSeasonClient client = new(tvId: ValidTvShowId, seasonNumber: ValidSeasonNumber);
 
         // Act
         TmdbSeasonVideos? result = await client.Videos();
@@ -200,7 +200,7 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
         {
             result
                 .Results.Should()
-                .AllSatisfy(video =>
+                .AllSatisfy(expected: video =>
                 {
                     video.Key.Should().NotBeNullOrEmpty();
                     video.Name.Should().NotBeNullOrEmpty();
@@ -214,19 +214,19 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
     public async Task Translations_WithRealApi_ReturnsValidTranslations()
     {
         // Arrange
-        TmdbSeasonClient client = new(ValidTvShowId, ValidSeasonNumber);
+        TmdbSeasonClient client = new(tvId: ValidTvShowId, seasonNumber: ValidSeasonNumber);
 
         // Act
         TmdbSharedTranslations? result = await client.Translations();
 
         // Assert
         result.Should().NotBeNull();
-        result!.Id.Should().BeGreaterThan(0);
+        result!.Id.Should().BeGreaterThan(expected: 0);
         result.Translations.Should().NotBeEmpty();
 
         result
             .Translations.Should()
-            .AllSatisfy(translation =>
+            .AllSatisfy(expected: translation =>
             {
                 translation.Iso6391.Should().NotBeNullOrEmpty();
                 translation.Iso31661.Should().NotBeNullOrEmpty();
@@ -238,10 +238,10 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
     public void Episode_WithValidEpisodeNumber_ReturnsEpisodeClient()
     {
         // Arrange
-        TmdbSeasonClient client = new(ValidTvShowId, ValidSeasonNumber);
+        TmdbSeasonClient client = new(tvId: ValidTvShowId, seasonNumber: ValidSeasonNumber);
 
         // Act
-        TmdbEpisodeClient episodeClient = client.Episode(ValidEpisodeNumber);
+        TmdbEpisodeClient episodeClient = client.Episode(episodeNumber: ValidEpisodeNumber);
 
         // Assert
         episodeClient.Should().NotBeNull();
@@ -252,8 +252,8 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
     public async Task Details_WithDifferentSeasons_ReturnsCorrectSeasonNumbers()
     {
         // Arrange
-        TmdbSeasonClient season1Client = new(ValidTvShowId, 1);
-        TmdbSeasonClient season2Client = new(ValidTvShowId, 2);
+        TmdbSeasonClient season1Client = new(tvId: ValidTvShowId, seasonNumber: 1);
+        TmdbSeasonClient season2Client = new(tvId: ValidTvShowId, seasonNumber: 2);
 
         // Act
         TmdbSeasonDetails? season1 = await season1Client.Details();
@@ -261,22 +261,22 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
 
         // Assert
         season1.Should().NotBeNull();
-        season1!.SeasonNumber.Should().Be(1);
+        season1!.SeasonNumber.Should().Be(expected: 1);
 
         season2.Should().NotBeNull();
-        season2!.SeasonNumber.Should().Be(2);
+        season2!.SeasonNumber.Should().Be(expected: 2);
 
-        season1.Id.Should().NotBe(season2.Id);
+        season1.Id.Should().NotBe(unexpected: season2.Id);
     }
 
     [Fact]
     public async Task Changes_WithValidDateRange_ReturnsChanges()
     {
         // Arrange
-        TmdbSeasonClient client = new(ValidTvShowId, ValidSeasonNumber);
+        TmdbSeasonClient client = new(tvId: ValidTvShowId, seasonNumber: ValidSeasonNumber);
 
         // Act
-        TmdbSeasonChanges? result = await client.Changes("2024-01-01", "2024-06-30");
+        TmdbSeasonChanges? result = await client.Changes(startDate: "2024-01-01", endDate: "2024-06-30");
 
         // Assert - Changes endpoint may return null even for valid requests due to TMDB API limitations
         // This is expected behavior as confirmed by testing with multiple active series
@@ -290,57 +290,57 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
     public async Task Changes_WithInvalidDateFormat_HandlesGracefully()
     {
         // Arrange
-        TmdbSeasonClient client = new(ValidTvShowId, ValidSeasonNumber);
+        TmdbSeasonClient client = new(tvId: ValidTvShowId, seasonNumber: ValidSeasonNumber);
 
         // Act
-        Func<Task> act = async () => await client.Changes("invalid-date", "another-invalid-date");
+        Func<Task> act = async () => await client.Changes(startDate: "invalid-date", endDate: "another-invalid-date");
 
         // Assert
-        await act.Should().NotThrowAsync("because invalid dates should be handled gracefully");
+        await act.Should().NotThrowAsync(because: "because invalid dates should be handled gracefully");
     }
 
     [Fact]
     public async Task Details_WithInvalidSeasonNumber_ReturnsNull()
     {
         // Arrange
-        TmdbSeasonClient client = new(ValidTvShowId, 999);
+        TmdbSeasonClient client = new(tvId: ValidTvShowId, seasonNumber: 999);
 
         // Act
         Func<Task> act = async () => await client.Details();
 
         // Assert
         await act.Should()
-            .NotThrowAsync("because invalid season numbers should be handled gracefully");
+            .NotThrowAsync(because: "because invalid season numbers should be handled gracefully");
     }
 
     [Fact]
     public async Task Details_WithInvalidTvShowId_ReturnsNull()
     {
         // Arrange
-        TmdbSeasonClient client = new(999999999, ValidSeasonNumber);
+        TmdbSeasonClient client = new(tvId: 999999999, seasonNumber: ValidSeasonNumber);
 
         // Act
         Func<Task> act = async () => await client.Details();
 
         // Assert
         await act.Should()
-            .NotThrowAsync("because invalid TV show IDs should be handled gracefully");
+            .NotThrowAsync(because: "because invalid TV show IDs should be handled gracefully");
     }
 
     [Fact]
     public async Task MultipleSeasonClients_WorkingConcurrently_PerformCorrectly()
     {
         // Arrange
-        TmdbSeasonClient season1Client = new(ValidTvShowId, 1);
-        TmdbSeasonClient season2Client = new(ValidTvShowId, 2);
-        TmdbSeasonClient season3Client = new(ValidTvShowId, 3);
+        TmdbSeasonClient season1Client = new(tvId: ValidTvShowId, seasonNumber: 1);
+        TmdbSeasonClient season2Client = new(tvId: ValidTvShowId, seasonNumber: 2);
+        TmdbSeasonClient season3Client = new(tvId: ValidTvShowId, seasonNumber: 3);
 
         // Act
         Task<TmdbSeasonDetails?> task1 = season1Client.Details();
         Task<TmdbSeasonDetails?> task2 = season2Client.Details();
         Task<TmdbSeasonDetails?> task3 = season3Client.Details();
 
-        await Task.WhenAll(task1, task2, task3);
+        await Task.WhenAll(tasks: [task1, task2, task3]);
 
         TmdbSeasonDetails? season1 = await task1;
         TmdbSeasonDetails? season2 = await task2;
@@ -351,8 +351,8 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
         season2.Should().NotBeNull();
         season3.Should().NotBeNull();
 
-        season1!.SeasonNumber.Should().Be(1);
-        season2!.SeasonNumber.Should().Be(2);
-        season3!.SeasonNumber.Should().Be(3);
+        season1!.SeasonNumber.Should().Be(expected: 1);
+        season2!.SeasonNumber.Should().Be(expected: 2);
+        season3!.SeasonNumber.Should().Be(expected: 3);
     }
 }

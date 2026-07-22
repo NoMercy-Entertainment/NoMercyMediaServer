@@ -42,14 +42,14 @@ namespace NoMercy.Api.Controllers.V1.Worker;
 /// Returns 503 when distributed encoding isn't enabled.
 /// </summary>
 [ApiController]
-[Tags("Worker Source")]
-[ApiVersion(1.0)]
+[Tags(tags: "Worker Source")]
+[ApiVersion(version: 1.0)]
 [AllowAnonymous]
 // Primary route per the encoder spec.
-[Route("api/v{version:apiVersion}/worker/source")]
+[Route(template: "api/v{version:apiVersion}/worker/source")]
 // Legacy alias — kept for backwards compatibility with workers on older builds.
-[Obsolete("Use /api/v{version}/worker/source — kept for backwards compatibility")]
-[Route("api/v{version:apiVersion}/worker-source")]
+[Obsolete(message: "Use /api/v{version}/worker/source — kept for backwards compatibility")]
+[Route(template: "api/v{version:apiVersion}/worker-source")]
 public class WorkerSourceController(
     IDbContextFactory<MediaContext> contextFactory,
     EncoderOptions encoderOptions,
@@ -57,7 +57,7 @@ public class WorkerSourceController(
     IStorage storage
 ) : BaseController
 {
-    private static readonly TimeSpan MaxSignatureAge = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan MaxSignatureAge = TimeSpan.FromMinutes(minutes: 5);
 
     [HttpGet]
     public async Task<IActionResult> Stream(
@@ -69,40 +69,40 @@ public class WorkerSourceController(
     {
         if (!encoderOptions.IsDistributedEncodingEnabled)
             return ServiceUnavailableResponse(
-                "Distributed encoding is not enabled on this server."
+                detail: "Distributed encoding is not enabled on this server."
             );
 
-        if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(sig))
-            return BadRequestResponse("path and sig query parameters are required");
+        if (string.IsNullOrWhiteSpace(value: path) || string.IsNullOrWhiteSpace(value: sig))
+            return BadRequestResponse(detail: "path and sig query parameters are required");
 
         // Freshness check first — cheap reject for stale / replayed requests.
-        DateTimeOffset requestTime = DateTimeOffset.FromUnixTimeSeconds(ts);
+        DateTimeOffset requestTime = DateTimeOffset.FromUnixTimeSeconds(seconds: ts);
         if ((DateTimeOffset.UtcNow - requestTime).Duration() > MaxSignatureAge)
         {
-            logger.LogWarning("Rejected worker-source request: signature too old");
-            return UnauthenticatedResponse("signature expired");
+            logger.LogWarning(message: "Rejected worker-source request: signature too old");
+            return UnauthenticatedResponse(detail: "signature expired");
         }
 
         // Signature verification.
         byte[] key = encoderOptions.GetDistributedEncodingSigningKey();
         string expectedInput = $"{path}|{ts}";
-        using HMACSHA256 hmac = new(key);
+        using HMACSHA256 hmac = new(key: key);
         string expectedSig = Convert.ToBase64String(
-            hmac.ComputeHash(Encoding.UTF8.GetBytes(expectedInput))
+            inArray: hmac.ComputeHash(buffer: Encoding.UTF8.GetBytes(s: expectedInput))
         );
 
         if (
             !CryptographicOperations.FixedTimeEquals(
-                Encoding.UTF8.GetBytes(sig),
-                Encoding.UTF8.GetBytes(expectedSig)
+                left: Encoding.UTF8.GetBytes(s: sig),
+                right: Encoding.UTF8.GetBytes(s: expectedSig)
             )
         )
         {
             logger.LogWarning(
-                "Rejected worker-source request: signature mismatch for path {Path}",
-                path
+                message: "Rejected worker-source request: signature mismatch for path {Path}",
+                args: path
             );
-            return UnauthenticatedResponse("signature invalid");
+            return UnauthenticatedResponse(detail: "signature invalid");
         }
 
         // Library membership check — only serve paths the server already
@@ -111,38 +111,38 @@ public class WorkerSourceController(
         // VideoFile.HostFolder/Filename are normalised to forward-slash by
         // model setters, so a single forward-slash comparison covers both
         // Windows hosts and Linux workers.
-        string normalizedPath = path.Replace('\\', '/');
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        string normalizedPath = path.Replace(oldChar: '\\', newChar: '/');
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
         bool isKnownFile = await context.VideoFiles.AnyAsync(
-            v => v.HostFolder + "/" + v.Filename == normalizedPath,
-            ct
+            predicate: v => v.HostFolder + "/" + v.Filename == normalizedPath,
+            cancellationToken: ct
         );
 
         if (!isKnownFile)
         {
             logger.LogWarning(
-                "Rejected worker-source request: path {Path} not in VideoFiles table",
-                path
+                message: "Rejected worker-source request: path {Path} not in VideoFiles table",
+                args: path
             );
-            return NotFoundResponse("Source file not found in library");
+            return NotFoundResponse(detail: "Source file not found in library");
         }
 
-        if (!storage.Exists(path))
+        if (!storage.Exists(path: path))
         {
             logger.LogWarning(
-                "Known VideoFile {Path} is missing on disk (deleted since scan?)",
-                path
+                message: "Known VideoFile {Path} is missing on disk (deleted since scan?)",
+                args: path
             );
-            return NotFoundResponse("Source file missing on disk");
+            return NotFoundResponse(detail: "Source file missing on disk");
         }
 
         // PhysicalFile streams without buffering into memory. enableRangeProcessing
         // = true lets the worker issue Range requests for resume after
         // partial downloads.
         return PhysicalFile(
-            path,
+            physicalPath: path,
             contentType: "application/octet-stream",
-            fileDownloadName: Path.GetFileName(path),
+            fileDownloadName: Path.GetFileName(path: path),
             enableRangeProcessing: true
         );
     }

@@ -17,6 +17,6 @@ public class TvdbLanguagesClient : TvdbBaseClient
 {
     public Task<TvdbLanguagesResponse?> Languages(bool? priority = false)
     {
-        return Get<TvdbLanguagesResponse>("languages", priority: priority);
+        return Get<TvdbLanguagesResponse>(url: "languages", priority: priority);
     }
 }

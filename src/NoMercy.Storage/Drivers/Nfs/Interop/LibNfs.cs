@@ -49,14 +49,14 @@ internal static class LibNfs
     static LibNfs()
     {
         NativeLibrary.SetDllImportResolver(
-            typeof(LibNfs).Assembly,
-            (name, asm, searchPath) =>
+            assembly: typeof(LibNfs).Assembly,
+            resolver: (name, asm, searchPath) =>
             {
                 if (name != LibName)
                     return IntPtr.Zero;
 
                 string assemblyDir =
-                    Path.GetDirectoryName(asm.Location) ?? AppContext.BaseDirectory;
+                    Path.GetDirectoryName(path: asm.Location) ?? AppContext.BaseDirectory;
                 string rid =
                     OperatingSystem.IsWindows() ? "win-x64"
                     : OperatingSystem.IsLinux()
@@ -80,15 +80,15 @@ internal static class LibNfs
 
                 string[] candidates =
                 [
-                    Path.Combine(assemblyDir, "runtimes", rid, "native", fileName),
-                    Path.Combine(assemblyDir, fileName),
-                    Path.Combine(AppContext.BaseDirectory, "runtimes", rid, "native", fileName),
-                    Path.Combine(AppContext.BaseDirectory, fileName),
+                    Path.Combine(paths: [assemblyDir, "runtimes", rid, "native", fileName]),
+                    Path.Combine(path1: assemblyDir, path2: fileName),
+                    Path.Combine(paths: [AppContext.BaseDirectory, "runtimes", rid, "native", fileName]),
+                    Path.Combine(path1: AppContext.BaseDirectory, path2: fileName),
                 ];
 
                 foreach (string candidate in candidates)
                 {
-                    if (File.Exists(candidate) && NativeLibrary.TryLoad(candidate, out IntPtr h))
+                    if (File.Exists(path: candidate) && NativeLibrary.TryLoad(libraryPath: candidate, handle: out IntPtr h))
                         return h;
                 }
 
@@ -102,14 +102,14 @@ internal static class LibNfs
     // -----------------------------------------------------------------------
 
     [DllImport(
-        LibName,
+        dllName: LibName,
         EntryPoint = "nfs_init_context",
         CallingConvention = CallingConvention.Cdecl
     )]
     internal static extern IntPtr InitContext();
 
     [DllImport(
-        LibName,
+        dllName: LibName,
         EntryPoint = "nfs_destroy_context",
         CallingConvention = CallingConvention.Cdecl
     )]
@@ -119,24 +119,24 @@ internal static class LibNfs
     // Mount
     // -----------------------------------------------------------------------
 
-    [DllImport(LibName, EntryPoint = "nfs_mount", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(dllName: LibName, EntryPoint = "nfs_mount", CallingConvention = CallingConvention.Cdecl)]
     internal static extern int Mount(
         IntPtr nfs,
-        [MarshalAs(UnmanagedType.LPUTF8Str)] string server,
-        [MarshalAs(UnmanagedType.LPUTF8Str)] string exportPath
+        [MarshalAs(unmanagedType: UnmanagedType.LPUTF8Str)] string server,
+        [MarshalAs(unmanagedType: UnmanagedType.LPUTF8Str)] string exportPath
     );
 
-    [DllImport(LibName, EntryPoint = "nfs_umount", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(dllName: LibName, EntryPoint = "nfs_umount", CallingConvention = CallingConvention.Cdecl)]
     internal static extern int Umount(IntPtr nfs);
 
     // -----------------------------------------------------------------------
     // Auth
     // -----------------------------------------------------------------------
 
-    [DllImport(LibName, EntryPoint = "nfs_set_uid", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(dllName: LibName, EntryPoint = "nfs_set_uid", CallingConvention = CallingConvention.Cdecl)]
     internal static extern void SetUid(IntPtr nfs, int uid);
 
-    [DllImport(LibName, EntryPoint = "nfs_set_gid", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(dllName: LibName, EntryPoint = "nfs_set_gid", CallingConvention = CallingConvention.Cdecl)]
     internal static extern void SetGid(IntPtr nfs, int gid);
 
     /// <summary>
@@ -145,7 +145,7 @@ internal static class LibNfs
     /// Returns 0 on success, negative on error.
     /// </summary>
     [DllImport(
-        LibName,
+        dllName: LibName,
         EntryPoint = "nfs_set_version",
         CallingConvention = CallingConvention.Cdecl
     )]
@@ -160,13 +160,13 @@ internal static class LibNfs
     /// for v3. Must be called before <c>nfs_mount</c>.
     /// </summary>
     [DllImport(
-        LibName,
+        dllName: LibName,
         EntryPoint = "nfs4_set_client_name",
         CallingConvention = CallingConvention.Cdecl
     )]
     internal static extern void SetClientName(
         IntPtr nfs,
-        [MarshalAs(UnmanagedType.LPUTF8Str)] string id
+        [MarshalAs(unmanagedType: UnmanagedType.LPUTF8Str)] string id
     );
 
     /// <summary>
@@ -174,45 +174,45 @@ internal static class LibNfs
     /// identify this client instance to the server. NFSv4 only.
     /// </summary>
     [DllImport(
-        LibName,
+        dllName: LibName,
         EntryPoint = "nfs4_set_verifier",
         CallingConvention = CallingConvention.Cdecl
     )]
     internal static extern void SetVerifier(
         IntPtr nfs,
-        [MarshalAs(UnmanagedType.LPUTF8Str)] string verifier
+        [MarshalAs(unmanagedType: UnmanagedType.LPUTF8Str)] string verifier
     );
 
     // -----------------------------------------------------------------------
     // Error
     // -----------------------------------------------------------------------
 
-    [DllImport(LibName, EntryPoint = "nfs_get_error", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(dllName: LibName, EntryPoint = "nfs_get_error", CallingConvention = CallingConvention.Cdecl)]
     private static extern IntPtr GetErrorPtr(IntPtr nfs);
 
     internal static string GetError(IntPtr nfs)
     {
-        IntPtr ptr = GetErrorPtr(nfs);
+        IntPtr ptr = GetErrorPtr(nfs: nfs);
         return ptr == IntPtr.Zero
             ? "unknown error"
-            : Marshal.PtrToStringUTF8(ptr) ?? "unknown error";
+            : Marshal.PtrToStringUTF8(ptr: ptr) ?? "unknown error";
     }
 
     // -----------------------------------------------------------------------
     // Stat / attribute
     // -----------------------------------------------------------------------
 
-    [DllImport(LibName, EntryPoint = "nfs_stat64", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(dllName: LibName, EntryPoint = "nfs_stat64", CallingConvention = CallingConvention.Cdecl)]
     internal static extern int Stat64(
         IntPtr nfs,
-        [MarshalAs(UnmanagedType.LPUTF8Str)] string path,
+        [MarshalAs(unmanagedType: UnmanagedType.LPUTF8Str)] string path,
         out NfsStat64 stat
     );
 
-    [DllImport(LibName, EntryPoint = "nfs_lstat64", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(dllName: LibName, EntryPoint = "nfs_lstat64", CallingConvention = CallingConvention.Cdecl)]
     internal static extern int Lstat64(
         IntPtr nfs,
-        [MarshalAs(UnmanagedType.LPUTF8Str)] string path,
+        [MarshalAs(unmanagedType: UnmanagedType.LPUTF8Str)] string path,
         out NfsStat64 stat
     );
 
@@ -220,55 +220,55 @@ internal static class LibNfs
     // Directory
     // -----------------------------------------------------------------------
 
-    [DllImport(LibName, EntryPoint = "nfs_opendir", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(dllName: LibName, EntryPoint = "nfs_opendir", CallingConvention = CallingConvention.Cdecl)]
     internal static extern int OpenDir(
         IntPtr nfs,
-        [MarshalAs(UnmanagedType.LPUTF8Str)] string path,
+        [MarshalAs(unmanagedType: UnmanagedType.LPUTF8Str)] string path,
         out IntPtr dir
     );
 
-    [DllImport(LibName, EntryPoint = "nfs_readdir", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(dllName: LibName, EntryPoint = "nfs_readdir", CallingConvention = CallingConvention.Cdecl)]
     internal static extern IntPtr ReadDir(IntPtr nfs, IntPtr dir);
 
-    [DllImport(LibName, EntryPoint = "nfs_closedir", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(dllName: LibName, EntryPoint = "nfs_closedir", CallingConvention = CallingConvention.Cdecl)]
     internal static extern void CloseDir(IntPtr nfs, IntPtr dir);
 
-    [DllImport(LibName, EntryPoint = "nfs_mkdir", CallingConvention = CallingConvention.Cdecl)]
-    internal static extern int MkDir(IntPtr nfs, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);
+    [DllImport(dllName: LibName, EntryPoint = "nfs_mkdir", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int MkDir(IntPtr nfs, [MarshalAs(unmanagedType: UnmanagedType.LPUTF8Str)] string path);
 
-    [DllImport(LibName, EntryPoint = "nfs_rmdir", CallingConvention = CallingConvention.Cdecl)]
-    internal static extern int RmDir(IntPtr nfs, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);
+    [DllImport(dllName: LibName, EntryPoint = "nfs_rmdir", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int RmDir(IntPtr nfs, [MarshalAs(unmanagedType: UnmanagedType.LPUTF8Str)] string path);
 
     // -----------------------------------------------------------------------
     // File I/O
     // -----------------------------------------------------------------------
 
-    [DllImport(LibName, EntryPoint = "nfs_open", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(dllName: LibName, EntryPoint = "nfs_open", CallingConvention = CallingConvention.Cdecl)]
     internal static extern int Open(
         IntPtr nfs,
-        [MarshalAs(UnmanagedType.LPUTF8Str)] string path,
+        [MarshalAs(unmanagedType: UnmanagedType.LPUTF8Str)] string path,
         int flags,
         out IntPtr fh
     );
 
-    [DllImport(LibName, EntryPoint = "nfs_creat", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(dllName: LibName, EntryPoint = "nfs_creat", CallingConvention = CallingConvention.Cdecl)]
     internal static extern int Creat(
         IntPtr nfs,
-        [MarshalAs(UnmanagedType.LPUTF8Str)] string path,
+        [MarshalAs(unmanagedType: UnmanagedType.LPUTF8Str)] string path,
         int mode,
         out IntPtr fh
     );
 
-    [DllImport(LibName, EntryPoint = "nfs_close", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(dllName: LibName, EntryPoint = "nfs_close", CallingConvention = CallingConvention.Cdecl)]
     internal static extern int Close(IntPtr nfs, IntPtr fh);
 
-    [DllImport(LibName, EntryPoint = "nfs_read", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(dllName: LibName, EntryPoint = "nfs_read", CallingConvention = CallingConvention.Cdecl)]
     internal static extern int Read(IntPtr nfs, IntPtr fh, IntPtr buf, int count);
 
-    [DllImport(LibName, EntryPoint = "nfs_write", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(dllName: LibName, EntryPoint = "nfs_write", CallingConvention = CallingConvention.Cdecl)]
     internal static extern int Write(IntPtr nfs, IntPtr fh, IntPtr buf, int count);
 
-    [DllImport(LibName, EntryPoint = "nfs_lseek", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(dllName: LibName, EntryPoint = "nfs_lseek", CallingConvention = CallingConvention.Cdecl)]
     internal static extern long Lseek(
         IntPtr nfs,
         IntPtr fh,
@@ -277,24 +277,24 @@ internal static class LibNfs
         out ulong currentOffset
     );
 
-    [DllImport(LibName, EntryPoint = "nfs_unlink", CallingConvention = CallingConvention.Cdecl)]
-    internal static extern int Unlink(IntPtr nfs, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);
+    [DllImport(dllName: LibName, EntryPoint = "nfs_unlink", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int Unlink(IntPtr nfs, [MarshalAs(unmanagedType: UnmanagedType.LPUTF8Str)] string path);
 
-    [DllImport(LibName, EntryPoint = "nfs_rename", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(dllName: LibName, EntryPoint = "nfs_rename", CallingConvention = CallingConvention.Cdecl)]
     internal static extern int Rename(
         IntPtr nfs,
-        [MarshalAs(UnmanagedType.LPUTF8Str)] string oldPath,
-        [MarshalAs(UnmanagedType.LPUTF8Str)] string newPath
+        [MarshalAs(unmanagedType: UnmanagedType.LPUTF8Str)] string oldPath,
+        [MarshalAs(unmanagedType: UnmanagedType.LPUTF8Str)] string newPath
     );
 
     // -----------------------------------------------------------------------
     // Symlink
     // -----------------------------------------------------------------------
 
-    [DllImport(LibName, EntryPoint = "nfs_readlink", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport(dllName: LibName, EntryPoint = "nfs_readlink", CallingConvention = CallingConvention.Cdecl)]
     internal static extern int Readlink(
         IntPtr nfs,
-        [MarshalAs(UnmanagedType.LPUTF8Str)] string path,
+        [MarshalAs(unmanagedType: UnmanagedType.LPUTF8Str)] string path,
         IntPtr buf,
         int bufSize
     );
@@ -304,22 +304,22 @@ internal static class LibNfs
     // -----------------------------------------------------------------------
 
     [DllImport(
-        LibName,
+        dllName: LibName,
         EntryPoint = "mount_getexports",
         CallingConvention = CallingConvention.Cdecl
     )]
     internal static extern IntPtr MountGetExports(
-        [MarshalAs(UnmanagedType.LPUTF8Str)] string server
+        [MarshalAs(unmanagedType: UnmanagedType.LPUTF8Str)] string server
     );
 
     [DllImport(
-        LibName,
+        dllName: LibName,
         EntryPoint = "mount_free_export_list",
         CallingConvention = CallingConvention.Cdecl
     )]
     internal static extern void MountFreeExportList(IntPtr exports);
 
-    [StructLayout(LayoutKind.Sequential)]
+    [StructLayout(layoutKind: LayoutKind.Sequential)]
     internal struct ExportEntry
     {
         // Field order MUST match the ONC RPC MOUNT `exportnode` (RFC 1813): the
@@ -375,7 +375,7 @@ internal static class LibNfs
     /// order: the three Sec values come first, then the three Nsec values,
     /// then <c>used</c> at the end (NOT interleaved).
     /// </summary>
-    [StructLayout(LayoutKind.Sequential)]
+    [StructLayout(layoutKind: LayoutKind.Sequential)]
     internal struct NfsStat64
     {
         public ulong DevId;
@@ -412,7 +412,7 @@ internal static class LibNfs
     /// and MinGW Windows (long=4), making the tail of the struct platform-
     /// dependent. Reading only up to <c>type</c> (offset 28) is portable.
     /// </summary>
-    [StructLayout(LayoutKind.Sequential)]
+    [StructLayout(layoutKind: LayoutKind.Sequential)]
     internal struct NfsDirent
     {
         public IntPtr Next;
@@ -428,5 +428,5 @@ internal static class LibNfs
     /// non-ASCII filenames intact (e.g. "Käärijä", "東京").
     /// </summary>
     internal static string? ReadDirentName(NfsDirent entry) =>
-        entry.Name == IntPtr.Zero ? null : Marshal.PtrToStringUTF8(entry.Name);
+        entry.Name == IntPtr.Zero ? null : Marshal.PtrToStringUTF8(ptr: entry.Name);
 }

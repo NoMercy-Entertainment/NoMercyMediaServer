@@ -15,6 +15,6 @@ namespace NoMercy.Providers.FanArt.Models;
 
 public class VideoImage : Image
 {
-    [JsonProperty("lang")]
+    [JsonProperty(propertyName: "lang")]
     public string Language { get; set; } = string.Empty;
 }

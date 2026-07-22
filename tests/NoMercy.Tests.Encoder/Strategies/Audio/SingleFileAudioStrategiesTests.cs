@@ -31,7 +31,7 @@ public class SingleFileAudioStrategiesTests
     private static IEncoder MockEncoder()
     {
         Mock<IEncoder> mock = new();
-        mock.Setup(e =>
+        mock.Setup(expression: e =>
                 e.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
@@ -39,7 +39,7 @@ public class SingleFileAudioStrategiesTests
                 )
             )
             .ReturnsAsync(
-                new EncodingResult(
+                value: new EncodingResult(
                     Success: true,
                     OutputPath: "/out/audio",
                     Duration: TimeSpan.Zero,
@@ -54,39 +54,39 @@ public class SingleFileAudioStrategiesTests
     public void Mp3Strategy_DeclaresMp3SinglePass()
     {
         Mp3Strategy strategy = new(
-            MockEncoder(),
-            NullLogger<Mp3Strategy>.Instance,
-            TestStorageFactory.CreateLocal()
+            encoder: MockEncoder(),
+            logger: NullLogger<Mp3Strategy>.Instance,
+            storage: TestStorageFactory.CreateLocal()
         );
 
-        strategy.Format.Should().Be(OutputFormat.Mp3);
-        strategy.EncodeMode.Should().Be(EncodeMode.SinglePass);
+        strategy.Format.Should().Be(expected: OutputFormat.Mp3);
+        strategy.EncodeMode.Should().Be(expected: EncodeMode.SinglePass);
     }
 
     [Fact]
     public void FlacStrategy_DeclaresFlacSinglePass()
     {
         FlacStrategy strategy = new(
-            MockEncoder(),
-            NullLogger<FlacStrategy>.Instance,
-            TestStorageFactory.CreateLocal()
+            encoder: MockEncoder(),
+            logger: NullLogger<FlacStrategy>.Instance,
+            storage: TestStorageFactory.CreateLocal()
         );
 
-        strategy.Format.Should().Be(OutputFormat.Flac);
-        strategy.EncodeMode.Should().Be(EncodeMode.SinglePass);
+        strategy.Format.Should().Be(expected: OutputFormat.Flac);
+        strategy.EncodeMode.Should().Be(expected: EncodeMode.SinglePass);
     }
 
     [Fact]
     public void OggStrategy_DeclaresOggSinglePass()
     {
         OggStrategy strategy = new(
-            MockEncoder(),
-            NullLogger<OggStrategy>.Instance,
-            TestStorageFactory.CreateLocal()
+            encoder: MockEncoder(),
+            logger: NullLogger<OggStrategy>.Instance,
+            storage: TestStorageFactory.CreateLocal()
         );
 
-        strategy.Format.Should().Be(OutputFormat.Ogg);
-        strategy.EncodeMode.Should().Be(EncodeMode.SinglePass);
+        strategy.Format.Should().Be(expected: OutputFormat.Ogg);
+        strategy.EncodeMode.Should().Be(expected: EncodeMode.SinglePass);
     }
 
     [Fact]
@@ -94,7 +94,7 @@ public class SingleFileAudioStrategiesTests
     {
         Mock<IEncoder> encoderMock = new();
         encoderMock
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
@@ -102,31 +102,31 @@ public class SingleFileAudioStrategiesTests
                 )
             )
             .ReturnsAsync(
-                new EncodingResult(
+                value: new EncodingResult(
                     Success: true,
                     OutputPath: "/out/song.mp3",
-                    Duration: TimeSpan.FromSeconds(180),
+                    Duration: TimeSpan.FromSeconds(seconds: 180),
                     Error: null,
                     Metrics: null
                 )
             );
         Mp3Strategy strategy = new(
-            encoderMock.Object,
-            NullLogger<Mp3Strategy>.Instance,
-            TestStorageFactory.CreateLocal()
+            encoder: encoderMock.Object,
+            logger: NullLogger<Mp3Strategy>.Instance,
+            storage: TestStorageFactory.CreateLocal()
         );
 
         EncodingResult result = await strategy.EncodeAsync(
-            new("/in.flac", "/out", null!),
+            request: new(InputPath: "/in.flac", OutputDirectory: "/out", Profile: null!),
             progress: null,
-            CancellationToken.None
+            ct: CancellationToken.None
         );
 
         result.Success.Should().BeTrue();
-        result.OutputPath.Should().Be("/out/song.mp3");
+        result.OutputPath.Should().Be(expected: "/out/song.mp3");
         encoderMock.Verify(
-            e => e.EncodeAsync(It.IsAny<EncodingRequest>(), null, It.IsAny<CancellationToken>()),
-            Times.Once
+            expression: e => e.EncodeAsync(It.IsAny<EncodingRequest>(), null, It.IsAny<CancellationToken>()),
+            times: Times.Once
         );
     }
 
@@ -135,7 +135,7 @@ public class SingleFileAudioStrategiesTests
     {
         Mock<IEncoder> encoderMock = new();
         encoderMock
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
@@ -143,7 +143,7 @@ public class SingleFileAudioStrategiesTests
                 )
             )
             .ReturnsAsync(
-                new EncodingResult(
+                value: new EncodingResult(
                     Success: true,
                     OutputPath: "/out/track.flac",
                     Duration: TimeSpan.Zero,
@@ -152,18 +152,18 @@ public class SingleFileAudioStrategiesTests
                 )
             );
         FlacStrategy strategy = new(
-            encoderMock.Object,
-            NullLogger<FlacStrategy>.Instance,
-            TestStorageFactory.CreateLocal()
+            encoder: encoderMock.Object,
+            logger: NullLogger<FlacStrategy>.Instance,
+            storage: TestStorageFactory.CreateLocal()
         );
 
         EncodingResult result = await strategy.EncodeAsync(
-            new("/in.wav", "/out", null!),
+            request: new(InputPath: "/in.wav", OutputDirectory: "/out", Profile: null!),
             progress: null,
-            CancellationToken.None
+            ct: CancellationToken.None
         );
 
-        result.OutputPath.Should().Be("/out/track.flac");
+        result.OutputPath.Should().Be(expected: "/out/track.flac");
     }
 
     [Fact]
@@ -171,7 +171,7 @@ public class SingleFileAudioStrategiesTests
     {
         Mock<IEncoder> encoderMock = new();
         encoderMock
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
@@ -179,7 +179,7 @@ public class SingleFileAudioStrategiesTests
                 )
             )
             .ReturnsAsync(
-                new EncodingResult(
+                value: new EncodingResult(
                     Success: true,
                     OutputPath: "/out/album.ogg",
                     Duration: TimeSpan.Zero,
@@ -188,17 +188,17 @@ public class SingleFileAudioStrategiesTests
                 )
             );
         OggStrategy strategy = new(
-            encoderMock.Object,
-            NullLogger<OggStrategy>.Instance,
-            TestStorageFactory.CreateLocal()
+            encoder: encoderMock.Object,
+            logger: NullLogger<OggStrategy>.Instance,
+            storage: TestStorageFactory.CreateLocal()
         );
 
         EncodingResult result = await strategy.EncodeAsync(
-            new("/in.flac", "/out", null!),
+            request: new(InputPath: "/in.flac", OutputDirectory: "/out", Profile: null!),
             progress: null,
-            CancellationToken.None
+            ct: CancellationToken.None
         );
 
-        result.OutputPath.Should().Be("/out/album.ogg");
+        result.OutputPath.Should().Be(expected: "/out/album.ogg");
     }
 }

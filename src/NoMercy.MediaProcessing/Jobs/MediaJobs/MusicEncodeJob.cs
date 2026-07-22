@@ -41,7 +41,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
 
     public new void InjectStorageServices(IServiceProvider serviceProvider)
     {
-        base.InjectStorageServices(serviceProvider);
+        base.InjectStorageServices(serviceProvider: serviceProvider);
         _encodingOrchestrator = serviceProvider.GetRequiredService<IEncodingOrchestrator>();
     }
 
@@ -54,15 +54,15 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
     {
         await using MediaContext context = new();
 
-        await using LibraryRepository libraryRepository = new(context, StorageDriver);
+        await using LibraryRepository libraryRepository = new(context: context, storageDriver: StorageDriver);
 
-        Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
+        Folder? folder = await libraryRepository.GetLibraryFolder(folderId: FolderId);
         if (folder is null)
             return;
 
         List<EncodingPreset> presets = folder
-            .EncodingPresetFolders.Where(link => link.Preset is not null)
-            .Select(link => link.Preset!)
+            .EncodingPresetFolders.Where(predicate: link => link.Preset is not null)
+            .Select(selector: link => link.Preset!)
             .ToList();
 
         foreach (EncodingPreset preset in presets)
@@ -83,17 +83,14 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
                 try
                 {
                     encodingProfile = PresetResolver.Resolve(
-                        preset.Id,
-                        new DbPresetLookup(context)
+                        presetId: preset.Id,
+                        lookup: new DbPresetLookup(context: context)
                     );
                 }
                 catch (Exception ex)
                 {
                     Log.LogWarning(
-                        "Skipping preset '{Name}' ({Id}): resolve failed — {Message}",
-                        preset.Name,
-                        preset.Id,
-                        ex.Message
+                        message: "Skipping preset '{Name}' ({Id}): resolve failed — {Message}", args: [preset.Name, preset.Id, ex.Message]
                     );
                     continue;
                 }
@@ -101,8 +98,8 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
                 if (encodingProfile.Audio.Length == 0)
                 {
                     Log.LogInformation(
-                        "Skipping preset {Name}: no audio outputs configured",
-                        preset.Name
+                        message: "Skipping preset {Name}: no audio outputs configured",
+                        args: preset.Name
                     );
                     continue;
                 }
@@ -110,7 +107,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
                 if (EventBusProvider.IsConfigured)
                 {
                     await EventBusProvider.Current.PublishAsync(
-                        new EncodingStartedEvent
+                        @event: new EncodingStartedEvent
                         {
                             JobId = track.Id.GetHashCode(),
                             InputPath = MediaFile.Path,
@@ -123,9 +120,9 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
                 IEncodingOrchestrator orchestrator = _encodingOrchestrator!;
 
                 IStorage folderStorage = StorageFactory.For(
-                    folder.Id,
-                    folder.DriverId,
-                    folder.Path
+                    folderId: folder.Id,
+                    driverId: folder.DriverId,
+                    subPath: folder.Path
                 );
 
                 EncodingRequest request = new(
@@ -137,36 +134,32 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
                 );
 
                 EventBusProgressObserver progressObserver = new(
-                    track.Id.GetHashCode(),
-                    FoundTrack.Title
+                    jobId: track.Id.GetHashCode(),
+                    title: FoundTrack.Title
                 );
 
                 EncodingResult encodeResult = await orchestrator.EncodeAsync(
-                    request,
-                    progressObserver
+                    request: request,
+                    progress: progressObserver
                 );
 
                 if (!encodeResult.Success)
                 {
                     throw new InvalidOperationException(
-                        $"Encoding failed for {MediaFile.Path}: {encodeResult.Error?.Message ?? "unknown error"}"
+                        message: $"Encoding failed for {MediaFile.Path}: {encodeResult.Error?.Message ?? "unknown error"}"
                     );
                 }
 
                 Log.LogInformation(
-                    "Encoded {Path} → {OutputPath} in {TotalSeconds:F1}s ({Unknown})",
-                    MediaFile.Path,
-                    encodeResult.OutputPath,
-                    encodeResult.Duration.TotalSeconds,
-                    encodeResult.Metrics?.EncoderUsed ?? "unknown"
+                    message: "Encoded {Path} → {OutputPath} in {TotalSeconds:F1}s ({Unknown})", args: [MediaFile.Path, encodeResult.OutputPath, encodeResult.Duration.TotalSeconds, encodeResult.Metrics?.EncoderUsed ?? "unknown"]
                 );
 
-                await AddRecording(folder);
+                await AddRecording(folder: folder);
 
                 if (EventBusProvider.IsConfigured)
                 {
                     await EventBusProvider.Current.PublishAsync(
-                        new EncodingStageChangedEvent
+                        @event: new EncodingStageChangedEvent
                         {
                             JobId = track.Id.GetHashCode(),
                             Status = "completed",
@@ -177,7 +170,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
 
                     stopwatch.Stop();
                     await EventBusProvider.Current.PublishAsync(
-                        new EncodingCompletedEvent
+                        @event: new EncodingCompletedEvent
                         {
                             JobId = track.Id.GetHashCode(),
                             OutputPath = FolderMetaData.BasePath,
@@ -188,12 +181,12 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
             }
             catch (Exception e)
             {
-                Log.LogError(e, "Music encode task failed");
+                Log.LogError(exception: e, message: "Music encode task failed");
 
                 if (EventBusProvider.IsConfigured)
                 {
                     await EventBusProvider.Current.PublishAsync(
-                        new EncodingStageChangedEvent
+                        @event: new EncodingStageChangedEvent
                         {
                             JobId = track.Id.GetHashCode(),
                             Status = "failed",
@@ -203,7 +196,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
                     );
 
                     await EventBusProvider.Current.PublishAsync(
-                        new EncodingFailedEvent
+                        @event: new EncodingFailedEvent
                         {
                             JobId = track.Id.GetHashCode(),
                             InputPath = MediaFile.Path,
@@ -224,84 +217,84 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
-        MusicGenreRepository musicGenreRepository = new(context);
+        MusicGenreRepository musicGenreRepository = new(context: context);
 
-        ArtistRepository artistRepository = new(context);
+        ArtistRepository artistRepository = new(context: context);
         ArtistManager artistManager = new(
-            artistRepository,
-            musicGenreRepository,
-            jobDispatcher,
-            StorageFactory,
-            LoggerFactory.CreateLogger<ArtistManager>()
+            artistRepository: artistRepository,
+            musicGenreRepository: musicGenreRepository,
+            jobDispatcher: jobDispatcher,
+            storageFactory: StorageFactory,
+            logger: LoggerFactory.CreateLogger<ArtistManager>()
         );
 
-        RecordingRepository recordingRepository = new(context);
+        RecordingRepository recordingRepository = new(context: context);
         RecordingManager recordingManager = new(
-            recordingRepository,
-            musicGenreRepository,
-            artistRepository,
-            StorageDriver,
-            StorageFactory,
-            LoggerFactory.CreateLogger<RecordingManager>()
+            recordingRepository: recordingRepository,
+            musicGenreRepository: musicGenreRepository,
+            artistRepository: artistRepository,
+            storageDriver: StorageDriver,
+            storageFactory: StorageFactory,
+            logger: LoggerFactory.CreateLogger<RecordingManager>()
         );
 
-        await using MediaScan mediaScan = new(StorageDriver);
+        await using MediaScan mediaScan = new(driver: StorageDriver);
 
         // V3 encoder writes to BasePath — scan picks up all encoded output in that folder
         MediaFolderExtend mediaFolder = (
             await mediaScan
                 .EnableFileListing()
-                .FilterByMediaType("music")
-                .Process(FolderMetaData.BasePath)
+                .FilterByMediaType(mediaType: "music")
+                .Process(rootFolder: FolderMetaData.BasePath)
         ).First();
 
         CoverArtImageManagerManager.CoverPalette? coverPalette =
             await CoverArtImageManagerManager.Add(
-                FolderMetaData.MusicBrainzRelease.MusicBrainzReleaseGroup.Id
+                id: FolderMetaData.MusicBrainzRelease.MusicBrainzReleaseGroup.Id
             );
 
         await Parallel.ForEachAsync(
-            FolderMetaData.MusicBrainzRelease.Media,
-            SystemParallelism.Options,
-            async (media, t) =>
+            source: FolderMetaData.MusicBrainzRelease.Media,
+            parallelOptions: SystemParallelism.Options,
+            body: async (media, t) =>
             {
                 if (
                     !await recordingManager.Store(
-                        FolderMetaData.MusicBrainzRelease,
-                        FoundTrack,
-                        media,
-                        folder,
-                        mediaFolder,
-                        coverPalette
+                        releaseAppends: FolderMetaData.MusicBrainzRelease,
+                        musicBrainzTrack: FoundTrack,
+                        musicBrainzMedia: media,
+                        libraryFolder: folder,
+                        mediaFolder: mediaFolder,
+                        releaseCoverPalette: coverPalette
                     )
                 )
                     return;
 
                 Library? albumLibrary = folder
-                    .FolderLibraries.FirstOrDefault(f => f.LibraryId == LibraryId)
+                    .FolderLibraries.FirstOrDefault(predicate: f => f.LibraryId == LibraryId)
                     ?.Library;
 
                 if (albumLibrary is null)
                 {
-                    Log.LogError("Album Library not found: {LibraryId}", LibraryId);
+                    Log.LogError(message: "Album Library not found: {LibraryId}", args: LibraryId);
                     return;
                 }
 
                 await Parallel.ForEachAsync(
-                    FoundTrack.ArtistCredit,
-                    SystemParallelism.Options,
-                    async (artist, _) =>
+                    source: FoundTrack.ArtistCredit,
+                    parallelOptions: SystemParallelism.Options,
+                    body: async (artist, _) =>
                     {
-                        Log.LogTrace("Storing Artist: {Name}", artist.MusicBrainzArtist.Name);
+                        Log.LogTrace(message: "Storing Artist: {Name}", args: artist.MusicBrainzArtist.Name);
                         await artistManager.Store(
-                            artist.MusicBrainzArtist,
-                            albumLibrary,
-                            folder,
-                            mediaFolder,
-                            FoundTrack
+                            artistCredit: artist.MusicBrainzArtist,
+                            library: albumLibrary,
+                            libraryFolder: folder,
+                            mediaFolder: mediaFolder,
+                            track: FoundTrack
                         );
 
-                        jobDispatcher.DispatchJob<MusicMetadataJob>(artist.MusicBrainzArtist);
+                        jobDispatcher.DispatchJob<MusicMetadataJob>(musicBrainzArtist: artist.MusicBrainzArtist);
                     }
                 );
             }

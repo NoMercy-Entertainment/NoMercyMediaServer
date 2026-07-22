@@ -15,6 +15,6 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public sealed class SetDropFolderRequest
 {
-    [JsonProperty("path")]
+    [JsonProperty(propertyName: "path")]
     public string? Path { get; set; }
 }

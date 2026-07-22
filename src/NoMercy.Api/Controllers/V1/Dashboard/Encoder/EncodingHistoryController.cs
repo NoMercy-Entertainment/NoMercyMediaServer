@@ -20,10 +20,10 @@ using NoMercy.Database.Models.Media;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 
 [ApiController]
-[Tags("Dashboard Encoding History")]
-[ApiVersion(1.0)]
+[Tags(tags: "Dashboard Encoding History")]
+[ApiVersion(version: 1.0)]
 [Authorize]
-[Route("api/v{version:apiVersion}/dashboard/encoding/history", Order = 10)]
+[Route(template: "api/v{version:apiVersion}/dashboard/encoding/history", Order = 10)]
 public class EncodingHistoryController(IEncodingHistoryRepository historyRepository)
     : BaseController
 {
@@ -39,15 +39,15 @@ public class EncodingHistoryController(IEncodingHistoryRepository historyReposit
         [FromQuery] int pageIndex = 0
     )
     {
-        pageSize = Math.Clamp(pageSize, 1, 500);
+        pageSize = Math.Clamp(value: pageSize, min: 1, max: 500);
         if (pageIndex < 0)
             pageIndex = 0;
 
-        List<EncodingHistory> entries = await historyRepository.GetRecentAsync(pageSize, pageIndex);
+        List<EncodingHistory> entries = await historyRepository.GetRecentAsync(pageSize: pageSize, pageIndex: pageIndex);
         int total = await historyRepository.GetTotalCountAsync();
 
         List<EncodingHistoryEntryDto> data = entries
-            .Select(e => new EncodingHistoryEntryDto(
+            .Select(selector: e => new EncodingHistoryEntryDto(
                 Id: e.Id.ToString(),
                 InputPath: e.InputPath,
                 OutputPath: e.OutputPath,
@@ -66,13 +66,13 @@ public class EncodingHistoryController(IEncodingHistoryRepository historyReposit
             .ToList();
 
         return Ok(
-            new HistoryListResponse(
+            value: new HistoryListResponse(
                 Data: data,
                 Meta: new(
                     Total: total,
                     PageSize: pageSize,
                     PageIndex: pageIndex,
-                    TotalPages: (int)Math.Ceiling((double)total / pageSize)
+                    TotalPages: (int)Math.Ceiling(a: (double)total / pageSize)
                 )
             )
         );
@@ -83,28 +83,28 @@ public class EncodingHistoryController(IEncodingHistoryRepository historyReposit
     /// in / out, average speed / fps / compression ratio). One SQL
     /// round-trip, cached for 30 seconds.
     /// </summary>
-    [HttpGet("stats")]
+    [HttpGet(template: "stats")]
     [ResponseCache(Duration = 30)]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Stats()
     {
         EncodingHistoryStats stats = await historyRepository.GetAggregateStatsAsync();
-        return Ok(stats);
+        return Ok(value: stats);
     }
 
     /// <summary>
     /// Delete a single history row. Users clean up individual rows from
     /// the dashboard; the encoded output on disk is untouched.
     /// </summary>
-    [HttpDelete("{id}")]
+    [HttpDelete(template: "{id}")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Delete(string id)
     {
-        if (!Ulid.TryParse(id, out Ulid entryId))
-            return BadRequestResponse("Invalid history id");
+        if (!Ulid.TryParse(base32: id, ulid: out Ulid entryId))
+            return BadRequestResponse(detail: "Invalid history id");
 
-        bool removed = await historyRepository.DeleteAsync(entryId);
-        return removed ? NoContent() : NotFoundResponse("History entry not found");
+        bool removed = await historyRepository.DeleteAsync(id: entryId);
+        return removed ? NoContent() : NotFoundResponse(detail: "History entry not found");
     }
 
     /// <summary>
@@ -112,34 +112,34 @@ public class EncodingHistoryController(IEncodingHistoryRepository historyReposit
     /// omit it to clear the entire history. Owner-only because clearing the
     /// full history is a coarse change.
     /// </summary>
-    [HttpPost("purge")]
+    [HttpPost(template: "purge")]
     [Authorize(Policy = "Owner")]
     public async Task<IActionResult> Purge([FromBody] PurgeHistoryRequest request)
     {
         int removed = request.OlderThanDays.HasValue
             ? await historyRepository.DeleteOlderThanAsync(
-                DateTime.UtcNow.AddDays(-Math.Max(0, request.OlderThanDays.Value))
+                olderThan: DateTime.UtcNow.AddDays(value: -Math.Max(val1: 0, val2: request.OlderThanDays.Value))
             )
             : await historyRepository.DeleteAllAsync();
 
-        return Ok(new { removed });
+        return Ok(value: new { removed });
     }
 }
 
 public record PurgeHistoryRequest(
-    [property: JsonProperty("older_than_days")] int? OlderThanDays = null
+    [property: JsonProperty(propertyName: "older_than_days")] int? OlderThanDays = null
 );
 
 public record HistoryListResponse(
-    [property: JsonProperty("data")] List<EncodingHistoryEntryDto> Data,
-    [property: JsonProperty("meta")] HistoryListMeta Meta
+    [property: JsonProperty(propertyName: "data")] List<EncodingHistoryEntryDto> Data,
+    [property: JsonProperty(propertyName: "meta")] HistoryListMeta Meta
 );
 
 public record HistoryListMeta(
-    [property: JsonProperty("total")] int Total,
-    [property: JsonProperty("page_size")] int PageSize,
-    [property: JsonProperty("page_index")] int PageIndex,
-    [property: JsonProperty("total_pages")] int TotalPages
+    [property: JsonProperty(propertyName: "total")] int Total,
+    [property: JsonProperty(propertyName: "page_size")] int PageSize,
+    [property: JsonProperty(propertyName: "page_index")] int PageIndex,
+    [property: JsonProperty(propertyName: "total_pages")] int TotalPages
 );
 
 /// <summary>
@@ -147,18 +147,18 @@ public record HistoryListMeta(
 /// JsonProperty matches the rest of the dashboard API surface.
 /// </summary>
 public record EncodingHistoryEntryDto(
-    [property: JsonProperty("id")] string Id,
-    [property: JsonProperty("input_path")] string InputPath,
-    [property: JsonProperty("output_path")] string OutputPath,
-    [property: JsonProperty("profile_id")] string? ProfileId,
-    [property: JsonProperty("profile_name")] string ProfileName,
-    [property: JsonProperty("encoder_used")] string EncoderUsed,
-    [property: JsonProperty("gpu_used")] string? GpuUsed,
-    [property: JsonProperty("duration_seconds")] double DurationSeconds,
-    [property: JsonProperty("input_size_bytes")] long InputSizeBytes,
-    [property: JsonProperty("output_size_bytes")] long OutputSizeBytes,
-    [property: JsonProperty("compression_ratio")] double CompressionRatio,
-    [property: JsonProperty("average_speed")] double AverageSpeed,
-    [property: JsonProperty("average_fps")] double AverageFps,
-    [property: JsonProperty("created_at")] DateTime CreatedAt
+    [property: JsonProperty(propertyName: "id")] string Id,
+    [property: JsonProperty(propertyName: "input_path")] string InputPath,
+    [property: JsonProperty(propertyName: "output_path")] string OutputPath,
+    [property: JsonProperty(propertyName: "profile_id")] string? ProfileId,
+    [property: JsonProperty(propertyName: "profile_name")] string ProfileName,
+    [property: JsonProperty(propertyName: "encoder_used")] string EncoderUsed,
+    [property: JsonProperty(propertyName: "gpu_used")] string? GpuUsed,
+    [property: JsonProperty(propertyName: "duration_seconds")] double DurationSeconds,
+    [property: JsonProperty(propertyName: "input_size_bytes")] long InputSizeBytes,
+    [property: JsonProperty(propertyName: "output_size_bytes")] long OutputSizeBytes,
+    [property: JsonProperty(propertyName: "compression_ratio")] double CompressionRatio,
+    [property: JsonProperty(propertyName: "average_speed")] double AverageSpeed,
+    [property: JsonProperty(propertyName: "average_fps")] double AverageFps,
+    [property: JsonProperty(propertyName: "created_at")] DateTime CreatedAt
 );

@@ -27,7 +27,7 @@ public class ColorPalettesTests
             ColorPalette = new ColorPalette { Poster = new() { Dominant = "#123456" } },
         };
 
-        Assert.Contains("#123456", entity._colorPalette);
+        Assert.Contains(expectedSubstring: "#123456", actualString: entity._colorPalette);
     }
 
     [Fact]
@@ -40,8 +40,8 @@ public class ColorPalettesTests
 
         ColorPalette? result = entity.ColorPalette;
 
-        Assert.NotNull(result);
-        Assert.Equal("#123456", result!.Poster!.Dominant);
+        Assert.NotNull(@object: result);
+        Assert.Equal(expected: "#123456", actual: result!.Poster!.Dominant);
     }
 
     [Fact]
@@ -49,6 +49,6 @@ public class ColorPalettesTests
     {
         ColorPalettes entity = new();
 
-        Assert.Null(entity.ColorPalette);
+        Assert.Null(@object: entity.ColorPalette);
     }
 }

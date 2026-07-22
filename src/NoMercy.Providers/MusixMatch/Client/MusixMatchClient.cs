@@ -23,24 +23,24 @@ public class MusixmatchClient : MusixMatchBaseClient
     {
         Dictionary<string, string?> additionalArguments = new()
         {
-            ["q_artist"] = musixMatchTrackParameters.Artist,
-            ["q_track"] = musixMatchTrackParameters.Title,
+            [key: "q_artist"] = musixMatchTrackParameters.Artist,
+            [key: "q_track"] = musixMatchTrackParameters.Title,
         };
 
         if (musixMatchTrackParameters.Album != null)
-            additionalArguments.Add("q_album", musixMatchTrackParameters.Album);
+            additionalArguments.Add(key: "q_album", value: musixMatchTrackParameters.Album);
         if (
             musixMatchTrackParameters.Artists is { Length: > 0 }
         )
             additionalArguments.Add(
-                "q_artists",
-                Join(",", musixMatchTrackParameters.Artists ?? [])
+                key: "q_artists",
+                value: Join(separator: ",", value: musixMatchTrackParameters.Artists ?? [])
             );
         if (
             musixMatchTrackParameters.Duration is { Length: > 0 }
         )
-            additionalArguments.Add("q_duration", musixMatchTrackParameters.Duration ?? Empty);
+            additionalArguments.Add(key: "q_duration", value: musixMatchTrackParameters.Duration ?? Empty);
 
-        return Get<MusixMatchSubtitleGet>("macro.subtitles.get", additionalArguments, priority);
+        return Get<MusixMatchSubtitleGet>(url: "macro.subtitles.get", query: additionalArguments, priority: priority);
     }
 }

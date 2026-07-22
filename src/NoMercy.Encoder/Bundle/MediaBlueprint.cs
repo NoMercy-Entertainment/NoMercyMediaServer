@@ -22,8 +22,8 @@ namespace NoMercy.Encoder.Bundle;
 /// once; each preset run appends an entry to <see cref="Encodes"/>.
 /// </summary>
 public record MediaBlueprint(
-    [property: JsonProperty("version")] int Version,
-    [property: JsonProperty("identity")] BlueprintIdentity Identity,
-    [property: JsonProperty("source")] BlueprintSource Source,
-    [property: JsonProperty("encodes")] IReadOnlyList<BlueprintEncode> Encodes
+    [property: JsonProperty(propertyName: "version")] int Version,
+    [property: JsonProperty(propertyName: "identity")] BlueprintIdentity Identity,
+    [property: JsonProperty(propertyName: "source")] BlueprintSource Source,
+    [property: JsonProperty(propertyName: "encodes")] IReadOnlyList<BlueprintEncode> Encodes
 );

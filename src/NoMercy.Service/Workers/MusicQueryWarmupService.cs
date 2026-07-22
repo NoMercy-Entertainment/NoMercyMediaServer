@@ -35,7 +35,7 @@ public class MusicQueryWarmupService(
 {
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _ = WarmupAsync(cancellationToken);
+        _ = WarmupAsync(cancellationToken: cancellationToken);
         return Task.CompletedTask;
     }
 
@@ -52,23 +52,23 @@ public class MusicQueryWarmupService(
                 scope.ServiceProvider.GetRequiredService<IMusicRepository>();
 
             Guid probe = Guid.Empty;
-            await repository.GetPlaylistTracksAsync(probe, probe, cancellationToken);
-            await repository.GetAlbumTracksAsync(probe, probe, cancellationToken);
-            await repository.GetArtistTracksAsync(probe, probe, cancellationToken);
-            await repository.GetGenreTracksAsync(probe, probe, cancellationToken);
-            await repository.GetTrackAsync(probe, cancellationToken);
+            await repository.GetPlaylistTracksAsync(userId: probe, playlistId: probe, ct: cancellationToken);
+            await repository.GetAlbumTracksAsync(userId: probe, albumId: probe, ct: cancellationToken);
+            await repository.GetArtistTracksAsync(userId: probe, artistId: probe, ct: cancellationToken);
+            await repository.GetGenreTracksAsync(userId: probe, genreId: probe, ct: cancellationToken);
+            await repository.GetTrackAsync(id: probe, ct: cancellationToken);
 
             stopwatch.Stop();
             logger.LogInformation(
-                "Music query warmup completed in {ElapsedMilliseconds}ms",
-                stopwatch.ElapsedMilliseconds
+                message: "Music query warmup completed in {ElapsedMilliseconds}ms",
+                args: stopwatch.ElapsedMilliseconds
             );
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                ex,
-                "Music query warmup failed; continuing — the first real playback start will pay the cold-query cost instead"
+                exception: ex,
+                message: "Music query warmup failed; continuing — the first real playback start will pay the cold-query cost instead"
             );
         }
     }

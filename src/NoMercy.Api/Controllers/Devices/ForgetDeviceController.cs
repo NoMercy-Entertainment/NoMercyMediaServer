@@ -23,8 +23,8 @@ namespace NoMercy.Api.Controllers.Devices;
 
 [ApiController]
 [Authorize]
-[ApiVersion(1.0)]
-[Route("api/v{version:apiVersion}/devices/{deviceId}/forget")]
+[ApiVersion(version: 1.0)]
+[Route(template: "api/v{version:apiVersion}/devices/{deviceId}/forget")]
 public sealed class ForgetDeviceController : BaseController
 {
     private readonly IDbContextFactory<MediaContext> _contextFactory;
@@ -44,27 +44,27 @@ public sealed class ForgetDeviceController : BaseController
     {
         User? user = HttpContext
             .RequestServices.GetRequiredService<IUserCache>()
-            .GetUser(HttpContext.User.UserId());
+            .GetUser(userId: HttpContext.User.UserId());
         if (user is null)
-            return UnauthenticatedResponse("Authentication required.");
-        if (!Ulid.TryParse(deviceId, out Ulid id))
-            return BadRequestResponse("Invalid device id.");
+            return UnauthenticatedResponse(detail: "Authentication required.");
+        if (!Ulid.TryParse(base32: deviceId, ulid: out Ulid id))
+            return BadRequestResponse(detail: "Invalid device id.");
 
         await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
-        Device? device = await ctx.Devices.FindAsync(id);
+        Device? device = await ctx.Devices.FindAsync(keyValues: id);
         if (device is null || device.OwnerUserId != user.Id)
-            return NotFoundResponse("Device not found.");
+            return NotFoundResponse(detail: "Device not found.");
 
         Guid ownerUserId = device.OwnerUserId!.Value;
 
-        ctx.Devices.Remove(device);
+        ctx.Devices.Remove(entity: device);
         await ctx.SaveChangesAsync();
 
         // Force-close the WS if still alive (best-effort); device is already gone from DB.
-        _registry.ForceClose(id);
+        _registry.ForceClose(deviceId: id);
 
         // Broadcast updated device list to all the user's other clients.
-        await _registry.BroadcastChange(ownerUserId);
+        await _registry.BroadcastChange(ownerUserId: ownerUserId);
 
         return NoContent();
     }

@@ -46,56 +46,56 @@ internal sealed record WebDavDriverConfig(string Url, bool IgnoreCertErrors, int
         WebDavDriverConfigRaw? raw;
         try
         {
-            raw = JsonSerializer.Deserialize<WebDavDriverConfigRaw>(json, ParseOptions);
+            raw = JsonSerializer.Deserialize<WebDavDriverConfigRaw>(json: json, options: ParseOptions);
         }
         catch (JsonException ex)
         {
             throw new ArgumentException(
-                $"Failed to parse driver_config for WebDAV folder {folderId}: {ex.Message}",
-                nameof(json),
-                ex
+                message: $"Failed to parse driver_config for WebDAV folder {folderId}: {ex.Message}",
+                paramName: nameof(json),
+                innerException: ex
             );
         }
 
         if (raw is null)
             throw new ArgumentException(
-                $"driver_config deserialized to null for WebDAV folder {folderId}.",
-                nameof(json)
+                message: $"driver_config deserialized to null for WebDAV folder {folderId}.",
+                paramName: nameof(json)
             );
 
-        if (string.IsNullOrWhiteSpace(raw.Url))
+        if (string.IsNullOrWhiteSpace(value: raw.Url))
             throw new ArgumentException(
-                $"driver_config.url is required for WebDAV folder {folderId}.",
-                nameof(json)
+                message: $"driver_config.url is required for WebDAV folder {folderId}.",
+                paramName: nameof(json)
             );
 
         if (raw.HasLegacyFields)
         {
             logger?.LogWarning(
-                "WebDAV folder {FolderId} driver_config contains deprecated fields "
-                    + "(username / passwordRef / bearerTokenRef). These fields are ignored. "
-                    + "Re-save the driver to migrate credentials to the unified credentials store.",
-                folderId
+                message: "WebDAV folder {FolderId} driver_config contains deprecated fields "
+                         + "(username / passwordRef / bearerTokenRef). These fields are ignored. "
+                         + "Re-save the driver to migrate credentials to the unified credentials store.",
+                args: folderId
             );
         }
 
         int timeout = raw.TimeoutSeconds ?? 30;
         if (timeout <= 0)
             throw new ArgumentException(
-                $"driver_config.timeoutSeconds must be positive for WebDAV folder {folderId} (got {timeout}).",
-                nameof(json)
+                message: $"driver_config.timeoutSeconds must be positive for WebDAV folder {folderId} (got {timeout}).",
+                paramName: nameof(json)
             );
 
         return new(
-            NormalizeUrl(raw.Url.Trim()),
-            raw.IgnoreCertErrors ?? false,
-            timeout
+            Url: NormalizeUrl(url: raw.Url.Trim()),
+            IgnoreCertErrors: raw.IgnoreCertErrors ?? false,
+            TimeoutSeconds: timeout
         );
     }
 
     private static string NormalizeUrl(string url)
     {
-        return url.TrimEnd('/') + "/";
+        return url.TrimEnd(trimChar: '/') + "/";
     }
 
     // -----------------------------------------------------------------------
@@ -108,7 +108,7 @@ internal sealed record WebDavDriverConfig(string Url, bool IgnoreCertErrors, int
         bool ignoreCertErrors = false,
         int timeoutSeconds = 30
     ) =>
-        new(NormalizeUrl(url), ignoreCertErrors, timeoutSeconds)
+        new(Url: NormalizeUrl(url: url), IgnoreCertErrors: ignoreCertErrors, TimeoutSeconds: timeoutSeconds)
         {
             Username = username,
             Password = password,
@@ -118,18 +118,18 @@ internal sealed record WebDavDriverConfig(string Url, bool IgnoreCertErrors, int
     // Raw deserialization target (case-insensitive keys)
     // -----------------------------------------------------------------------
     private sealed record WebDavDriverConfigRaw(
-        [property: JsonPropertyName("url")] string? Url,
-        [property: JsonPropertyName("ignoreCertErrors")] bool? IgnoreCertErrors,
-        [property: JsonPropertyName("timeoutSeconds")] int? TimeoutSeconds,
+        [property: JsonPropertyName(name: "url")] string? Url,
+        [property: JsonPropertyName(name: "ignoreCertErrors")] bool? IgnoreCertErrors,
+        [property: JsonPropertyName(name: "timeoutSeconds")] int? TimeoutSeconds,
         // Legacy fields — detected for warning only, values discarded.
-        [property: JsonPropertyName("username")] string? LegacyUsername = null,
-        [property: JsonPropertyName("passwordRef")] string? LegacyPasswordRef = null,
-        [property: JsonPropertyName("bearerTokenRef")] string? LegacyBearerTokenRef = null
+        [property: JsonPropertyName(name: "username")] string? LegacyUsername = null,
+        [property: JsonPropertyName(name: "passwordRef")] string? LegacyPasswordRef = null,
+        [property: JsonPropertyName(name: "bearerTokenRef")] string? LegacyBearerTokenRef = null
     )
     {
         internal bool HasLegacyFields =>
-            !string.IsNullOrWhiteSpace(LegacyUsername)
-            || !string.IsNullOrWhiteSpace(LegacyPasswordRef)
-            || !string.IsNullOrWhiteSpace(LegacyBearerTokenRef);
+            !string.IsNullOrWhiteSpace(value: LegacyUsername)
+            || !string.IsNullOrWhiteSpace(value: LegacyPasswordRef)
+            || !string.IsNullOrWhiteSpace(value: LegacyBearerTokenRef);
     }
 }

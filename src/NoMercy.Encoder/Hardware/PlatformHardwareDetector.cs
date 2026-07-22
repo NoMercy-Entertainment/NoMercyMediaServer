@@ -31,31 +31,31 @@ public partial class PlatformHardwareDetector(
     {
         try
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                return await DetectWindowsGpusAsync(ct);
+            if (RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
+                return await DetectWindowsGpusAsync(ct: ct);
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                return await DetectLinuxGpusAsync(ct);
+            if (RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Linux))
+                return await DetectLinuxGpusAsync(ct: ct);
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                return await DetectMacGpusAsync(ct);
+            if (RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.OSX))
+                return await DetectMacGpusAsync(ct: ct);
 
             logger.LogWarning(
-                "GPU detection not supported on {OS}",
-                RuntimeInformation.OSDescription
+                message: "GPU detection not supported on {OS}",
+                args: RuntimeInformation.OSDescription
             );
             return [];
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "GPU detection failed");
+            logger.LogError(exception: ex, message: "GPU detection failed");
             return [];
         }
     }
 
     public Task<int> DetectCpuCoreCountAsync(CancellationToken ct = default)
     {
-        return Task.FromResult(Environment.ProcessorCount);
+        return Task.FromResult(result: Environment.ProcessorCount);
     }
 
     private async Task<IReadOnlyList<GpuDevice>> DetectWindowsGpusAsync(CancellationToken ct)
@@ -72,7 +72,8 @@ public partial class PlatformHardwareDetector(
         try
         {
             result = await processRunner.RunAsync(
-                "wmic",
+                executable: "wmic",
+                arguments:
                 [
                     "path",
                     "Win32_VideoController",
@@ -80,37 +81,37 @@ public partial class PlatformHardwareDetector(
                     "Name,AdapterRAM,DriverVersion",
                     "/format:csv",
                 ],
-                null,
-                ct
+                workingDirectory: null,
+                cancellationToken: ct
             );
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogInformation(
-                ex,
-                "wmic could not be launched (removed on Windows 11 24H2+) — falling back to PowerShell Get-CimInstance"
+                exception: ex,
+                message: "wmic could not be launched (removed on Windows 11 24H2+) — falling back to PowerShell Get-CimInstance"
             );
             IReadOnlyList<GpuDevice> psDevicesOnLaunchFailure =
-                await DetectWindowsGpusViaPowerShellAsync(ct);
+                await DetectWindowsGpusViaPowerShellAsync(ct: ct);
             if (psDevicesOnLaunchFailure.Count > 0)
                 return psDevicesOnLaunchFailure;
             logger.LogWarning(
-                "Both wmic and PowerShell GPU detection returned no devices on Windows. Hardware benchmark will run CPU-only."
+                message: "Both wmic and PowerShell GPU detection returned no devices on Windows. Hardware benchmark will run CPU-only."
             );
             return [];
         }
 
-        if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.StdOut))
+        if (!result.IsSuccess || string.IsNullOrWhiteSpace(value: result.StdOut))
         {
             logger.LogInformation(
-                "wmic GPU detection unavailable (exit {Code}) — falling back to PowerShell Get-CimInstance",
-                result.ExitCode
+                message: "wmic GPU detection unavailable (exit {Code}) — falling back to PowerShell Get-CimInstance",
+                args: result.ExitCode
             );
-            IReadOnlyList<GpuDevice> psDevices = await DetectWindowsGpusViaPowerShellAsync(ct);
+            IReadOnlyList<GpuDevice> psDevices = await DetectWindowsGpusViaPowerShellAsync(ct: ct);
             if (psDevices.Count > 0)
                 return psDevices;
             logger.LogWarning(
-                "Both wmic and PowerShell GPU detection returned no devices on Windows. Hardware benchmark will run CPU-only."
+                message: "Both wmic and PowerShell GPU detection returned no devices on Windows. Hardware benchmark will run CPU-only."
             );
             return [];
         }
@@ -123,13 +124,13 @@ public partial class PlatformHardwareDetector(
         int driverIndex = -1;
         bool headerParsed = false;
 
-        foreach (string line in result.StdOut.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        foreach (string line in result.StdOut.Split(separator: '\n', options: StringSplitOptions.RemoveEmptyEntries))
         {
             string trimmed = line.Trim();
-            if (string.IsNullOrWhiteSpace(trimmed))
+            if (string.IsNullOrWhiteSpace(value: trimmed))
                 continue;
 
-            string[] parts = trimmed.Split(',');
+            string[] parts = trimmed.Split(separator: ',');
 
             if (!headerParsed)
             {
@@ -137,11 +138,11 @@ public partial class PlatformHardwareDetector(
                 for (int i = 0; i < parts.Length; i++)
                 {
                     string col = parts[i].Trim();
-                    if (col.Equals("Name", StringComparison.OrdinalIgnoreCase))
+                    if (col.Equals(value: "Name", comparisonType: StringComparison.OrdinalIgnoreCase))
                         nameIndex = i;
-                    else if (col.Equals("AdapterRAM", StringComparison.OrdinalIgnoreCase))
+                    else if (col.Equals(value: "AdapterRAM", comparisonType: StringComparison.OrdinalIgnoreCase))
                         ramIndex = i;
-                    else if (col.Equals("DriverVersion", StringComparison.OrdinalIgnoreCase))
+                    else if (col.Equals(value: "DriverVersion", comparisonType: StringComparison.OrdinalIgnoreCase))
                         driverIndex = i;
                 }
 
@@ -149,7 +150,7 @@ public partial class PlatformHardwareDetector(
                 {
                     headerParsed = true;
                 }
-                else if (trimmed.StartsWith("Node", StringComparison.Ordinal))
+                else if (trimmed.StartsWith(value: "Node", comparisonType: StringComparison.Ordinal))
                 {
                     // Old-style header without column discovery — fall back to positional
                     // CSV format: Node,AdapterRAM,DriverVersion,Name
@@ -170,19 +171,19 @@ public partial class PlatformHardwareDetector(
             string? driverVersion =
                 driverIndex >= 0 && driverIndex < parts.Length ? parts[driverIndex].Trim() : null;
 
-            if (string.IsNullOrWhiteSpace(name))
+            if (string.IsNullOrWhiteSpace(value: name))
                 continue;
 
-            if (string.IsNullOrWhiteSpace(driverVersion))
+            if (string.IsNullOrWhiteSpace(value: driverVersion))
                 driverVersion = null;
 
-            _ = long.TryParse(adapterRamStr, out long adapterRamBytes);
+            _ = long.TryParse(s: adapterRamStr, result: out long adapterRamBytes);
             long vramMb = adapterRamBytes / (1024 * 1024);
 
-            GpuDevice? device = await BuildGpuDeviceAsync(name, vramMb, driverVersion)
-                .ConfigureAwait(false);
+            GpuDevice? device = await BuildGpuDeviceAsync(name: name, vramMb: vramMb, driverVersion: driverVersion)
+                .ConfigureAwait(continueOnCapturedContext: false);
             if (device is not null)
-                devices.Add(device);
+                devices.Add(item: device);
         }
 
         // Some wmic builds on Windows 11 return an empty stdout instead of an
@@ -190,9 +191,9 @@ public partial class PlatformHardwareDetector(
         if (devices.Count == 0)
         {
             logger.LogInformation(
-                "wmic returned 0 GPUs — falling back to PowerShell Get-CimInstance"
+                message: "wmic returned 0 GPUs — falling back to PowerShell Get-CimInstance"
             );
-            IReadOnlyList<GpuDevice> psDevices = await DetectWindowsGpusViaPowerShellAsync(ct);
+            IReadOnlyList<GpuDevice> psDevices = await DetectWindowsGpusViaPowerShellAsync(ct: ct);
             if (psDevices.Count > 0)
                 return psDevices;
         }
@@ -219,42 +220,40 @@ public partial class PlatformHardwareDetector(
             + "ForEach-Object { \"$($_.Name)|$($_.AdapterRAM)|$($_.DriverVersion)\" }";
 
         ProcessResult result = await processRunner.RunAsync(
-            "powershell",
-            ["-NoProfile", "-NonInteractive", "-Command", Script],
-            null,
-            ct
+            executable: "powershell",
+            arguments: ["-NoProfile", "-NonInteractive", "-Command", Script],
+            workingDirectory: null,
+            cancellationToken: ct
         );
 
-        if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.StdOut))
+        if (!result.IsSuccess || string.IsNullOrWhiteSpace(value: result.StdOut))
         {
             logger.LogWarning(
-                "PowerShell Get-CimInstance failed (exit {Code}): {Err}",
-                result.ExitCode,
-                result.StdErr
+                message: "PowerShell Get-CimInstance failed (exit {Code}): {Err}", args: [result.ExitCode, result.StdErr]
             );
             return [];
         }
 
         List<GpuDevice> devices = [];
-        foreach (string line in result.StdOut.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        foreach (string line in result.StdOut.Split(separator: '\n', options: StringSplitOptions.RemoveEmptyEntries))
         {
-            string[] parts = line.Trim().Split('|');
+            string[] parts = line.Trim().Split(separator: '|');
             if (parts.Length < 2)
                 continue;
 
             string name = parts[0].Trim();
-            if (string.IsNullOrWhiteSpace(name))
+            if (string.IsNullOrWhiteSpace(value: name))
                 continue;
 
-            _ = long.TryParse(parts[1].Trim(), out long adapterRamBytes);
+            _ = long.TryParse(s: parts[1].Trim(), result: out long adapterRamBytes);
             long vramMb = adapterRamBytes / (1024 * 1024);
             string? driverVersion =
-                parts.Length >= 3 && !string.IsNullOrWhiteSpace(parts[2]) ? parts[2].Trim() : null;
+                parts.Length >= 3 && !string.IsNullOrWhiteSpace(value: parts[2]) ? parts[2].Trim() : null;
 
-            GpuDevice? device = await BuildGpuDeviceAsync(name, vramMb, driverVersion)
-                .ConfigureAwait(false);
+            GpuDevice? device = await BuildGpuDeviceAsync(name: name, vramMb: vramMb, driverVersion: driverVersion)
+                .ConfigureAwait(continueOnCapturedContext: false);
             if (device is not null)
-                devices.Add(device);
+                devices.Add(item: device);
         }
         return devices;
     }
@@ -274,54 +273,54 @@ public partial class PlatformHardwareDetector(
         // /dev/nvidia0, /dev/nvidiactl, /dev/nvidia-uvm but never /dev/dri.
         // The old dri-gated early return silently dropped NVENC there and
         // fell back to CPU-only encoding.
-        List<GpuDevice> nvidiaDevices = await DetectNvidiaGpusAsync(ct).ConfigureAwait(false);
+        List<GpuDevice> nvidiaDevices = await DetectNvidiaGpusAsync(ct: ct).ConfigureAwait(continueOnCapturedContext: false);
 
-        bool hasDri = storage.Exists("/dev/dri");
+        bool hasDri = storage.Exists(path: "/dev/dri");
 
         if (!hasDri)
         {
             if (nvidiaDevices.Count > 0)
                 logger.LogInformation(
-                    "NVIDIA GPU detected via nvidia-smi without /dev/dri — NVENC available (nvidia-container-toolkit Docker case)"
+                    message: "NVIDIA GPU detected via nvidia-smi without /dev/dri — NVENC available (nvidia-container-toolkit Docker case)"
                 );
             else
                 logger.LogInformation(
-                    "No /dev/dri and no NVIDIA GPU found via nvidia-smi — no GPU acceleration available"
+                    message: "No /dev/dri and no NVIDIA GPU found via nvidia-smi — no GPU acceleration available"
                 );
 
             return nvidiaDevices;
         }
 
-        ProcessResult result = await processRunner.RunAsync("lspci", ["-nn"], null, ct);
+        ProcessResult result = await processRunner.RunAsync(executable: "lspci", arguments: ["-nn"], workingDirectory: null, cancellationToken: ct);
 
         if (!result.IsSuccess)
         {
-            logger.LogWarning("lspci failed (exit {Code}): {Err}", result.ExitCode, result.StdErr);
+            logger.LogWarning(message: "lspci failed (exit {Code}): {Err}", args: [result.ExitCode, result.StdErr]);
             return nvidiaDevices;
         }
 
         List<GpuDevice> devices = [.. nvidiaDevices];
 
-        foreach (string line in result.StdOut.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        foreach (string line in result.StdOut.Split(separator: '\n', options: StringSplitOptions.RemoveEmptyEntries))
         {
             // Match VGA compatible controller or 3D controller lines
-            Match match = VgaControllerPattern().Match(line);
+            Match match = VgaControllerPattern().Match(input: line);
             if (!match.Success)
                 continue;
 
-            string name = match.Groups["name"].Value.Trim();
+            string name = match.Groups[groupname: "name"].Value.Trim();
 
             // Already captured this card via nvidia-smi (which gives real
             // VRAM + driver version) — don't double-count it from lspci.
-            if (nvidiaDevices.Count > 0 && ClassifyVendor(name) == GpuVendor.Nvidia)
+            if (nvidiaDevices.Count > 0 && ClassifyVendor(name: name) == GpuVendor.Nvidia)
                 continue;
 
             // Linux lspci doesn't report VRAM — estimate from name or use 0
-            long vramMb = EstimateVramFromName(name);
+            long vramMb = EstimateVramFromName(name: name);
 
-            GpuDevice? device = await BuildGpuDeviceAsync(name, vramMb).ConfigureAwait(false);
+            GpuDevice? device = await BuildGpuDeviceAsync(name: name, vramMb: vramMb).ConfigureAwait(continueOnCapturedContext: false);
             if (device is not null)
-                devices.Add(device);
+                devices.Add(item: device);
         }
 
         return devices;
@@ -341,31 +340,32 @@ public partial class PlatformHardwareDetector(
         {
             result = await processRunner
                 .RunAsync(
-                    "nvidia-smi",
+                    executable: "nvidia-smi",
+                    arguments:
                     [
                         "--query-gpu=name,memory.total,driver_version",
                         "--format=csv,noheader,nounits",
                     ],
-                    null,
-                    ct
+                    workingDirectory: null,
+                    cancellationToken: ct
                 )
-                .ConfigureAwait(false);
+                .ConfigureAwait(continueOnCapturedContext: false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogDebug(ex, "nvidia-smi not available — skipping NVIDIA NVENC probe");
+            logger.LogDebug(exception: ex, message: "nvidia-smi not available — skipping NVIDIA NVENC probe");
             return [];
         }
 
-        if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.StdOut))
+        if (!result.IsSuccess || string.IsNullOrWhiteSpace(value: result.StdOut))
         {
             // Secondary hint: NVIDIA device nodes exist but nvidia-smi failed
             // (driver mismatch, missing binary in a minimal container, etc).
             // Log it — this is the "GPU is there but we can't see it" case.
-            if (storage.Exists("/dev/nvidia0") || storage.Exists("/dev/nvidiactl"))
+            if (storage.Exists(path: "/dev/nvidia0") || storage.Exists(path: "/dev/nvidiactl"))
                 logger.LogWarning(
-                    "NVIDIA device nodes present (/dev/nvidia0 or /dev/nvidiactl) but nvidia-smi query failed (exit {Code}) — NVENC detection skipped. Verify the NVIDIA driver / nvidia-smi is available inside the container.",
-                    result.ExitCode
+                    message: "NVIDIA device nodes present (/dev/nvidia0 or /dev/nvidiactl) but nvidia-smi query failed (exit {Code}) — NVENC detection skipped. Verify the NVIDIA driver / nvidia-smi is available inside the container.",
+                    args: result.ExitCode
                 );
 
             return [];
@@ -373,21 +373,21 @@ public partial class PlatformHardwareDetector(
 
         List<GpuDevice> devices = [];
 
-        foreach (string line in result.StdOut.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        foreach (string line in result.StdOut.Split(separator: '\n', options: StringSplitOptions.RemoveEmptyEntries))
         {
-            string[] parts = line.Split(',');
+            string[] parts = line.Split(separator: ',');
             string name = parts[0].Trim();
-            if (string.IsNullOrWhiteSpace(name))
+            if (string.IsNullOrWhiteSpace(value: name))
                 continue;
 
-            long vramMb = parts.Length >= 2 && long.TryParse(parts[1].Trim(), out long mb) ? mb : 0;
+            long vramMb = parts.Length >= 2 && long.TryParse(s: parts[1].Trim(), result: out long mb) ? mb : 0;
             string? driverVersion =
-                parts.Length >= 3 && !string.IsNullOrWhiteSpace(parts[2]) ? parts[2].Trim() : null;
+                parts.Length >= 3 && !string.IsNullOrWhiteSpace(value: parts[2]) ? parts[2].Trim() : null;
 
-            GpuDevice? device = await BuildGpuDeviceAsync(name, vramMb, driverVersion)
-                .ConfigureAwait(false);
+            GpuDevice? device = await BuildGpuDeviceAsync(name: name, vramMb: vramMb, driverVersion: driverVersion)
+                .ConfigureAwait(continueOnCapturedContext: false);
             if (device is not null)
-                devices.Add(device);
+                devices.Add(item: device);
         }
 
         return devices;
@@ -396,18 +396,16 @@ public partial class PlatformHardwareDetector(
     private async Task<IReadOnlyList<GpuDevice>> DetectMacGpusAsync(CancellationToken ct)
     {
         ProcessResult result = await processRunner.RunAsync(
-            "system_profiler",
-            ["SPDisplaysDataType"],
-            null,
-            ct
+            executable: "system_profiler",
+            arguments: ["SPDisplaysDataType"],
+            workingDirectory: null,
+            cancellationToken: ct
         );
 
         if (!result.IsSuccess)
         {
             logger.LogWarning(
-                "system_profiler failed (exit {Code}): {Err}",
-                result.ExitCode,
-                result.StdErr
+                message: "system_profiler failed (exit {Code}): {Err}", args: [result.ExitCode, result.StdErr]
             );
             return [];
         }
@@ -416,35 +414,35 @@ public partial class PlatformHardwareDetector(
         string? currentChipset = null;
         long currentVramMb = 0;
 
-        foreach (string line in result.StdOut.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        foreach (string line in result.StdOut.Split(separator: '\n', options: StringSplitOptions.RemoveEmptyEntries))
         {
             string trimmed = line.Trim();
 
             // Chipset line: "Chipset Model: Apple M2 Pro" or "Chipset Model: AMD Radeon Pro 5500M"
-            Match chipsetMatch = MacChipsetPattern().Match(trimmed);
+            Match chipsetMatch = MacChipsetPattern().Match(input: trimmed);
             if (chipsetMatch.Success)
             {
                 // Flush previous GPU if any
                 if (currentChipset is not null)
                 {
-                    GpuDevice? prev = await BuildGpuDeviceAsync(currentChipset, currentVramMb)
-                        .ConfigureAwait(false);
+                    GpuDevice? prev = await BuildGpuDeviceAsync(name: currentChipset, vramMb: currentVramMb)
+                        .ConfigureAwait(continueOnCapturedContext: false);
                     if (prev is not null)
-                        devices.Add(prev);
+                        devices.Add(item: prev);
                 }
 
-                currentChipset = chipsetMatch.Groups["name"].Value.Trim();
+                currentChipset = chipsetMatch.Groups[groupname: "name"].Value.Trim();
                 currentVramMb = 0;
                 continue;
             }
 
             // VRAM line: "VRAM (Total): 16 GB" or "VRAM (Dynamic, Max): 21845 MB"
-            Match vramMatch = MacVramPattern().Match(trimmed);
+            Match vramMatch = MacVramPattern().Match(input: trimmed);
             if (vramMatch.Success && currentChipset is not null)
             {
-                if (long.TryParse(vramMatch.Groups["size"].Value, out long size))
+                if (long.TryParse(s: vramMatch.Groups[groupname: "size"].Value, result: out long size))
                 {
-                    string unit = vramMatch.Groups["unit"].Value.ToUpperInvariant();
+                    string unit = vramMatch.Groups[groupname: "unit"].Value.ToUpperInvariant();
                     currentVramMb = unit == "GB" ? size * 1024 : size;
                 }
             }
@@ -453,10 +451,10 @@ public partial class PlatformHardwareDetector(
         // Flush last GPU
         if (currentChipset is not null)
         {
-            GpuDevice? last = await BuildGpuDeviceAsync(currentChipset, currentVramMb)
-                .ConfigureAwait(false);
+            GpuDevice? last = await BuildGpuDeviceAsync(name: currentChipset, vramMb: currentVramMb)
+                .ConfigureAwait(continueOnCapturedContext: false);
             if (last is not null)
-                devices.Add(last);
+                devices.Add(item: last);
         }
 
         return devices;
@@ -468,27 +466,27 @@ public partial class PlatformHardwareDetector(
         string? driverVersion = null
     )
     {
-        GpuVendor? vendor = ClassifyVendor(name);
+        GpuVendor? vendor = ClassifyVendor(name: name);
         if (vendor is null)
         {
-            logger.LogDebug("Skipping non-GPU adapter: {Name}", name);
+            logger.LogDebug(message: "Skipping non-GPU adapter: {Name}", args: name);
             return null;
         }
 
-        List<VideoCodecType> supportedCodecs = await DetectSupportedCodecsAsync(vendor.Value, name)
-            .ConfigureAwait(false);
+        List<VideoCodecType> supportedCodecs = await DetectSupportedCodecsAsync(vendor: vendor.Value, gpuName: name)
+            .ConfigureAwait(continueOnCapturedContext: false);
         if (supportedCodecs.Count == 0)
         {
             logger.LogDebug(
-                "GPU {Name} detected but no hardware encoders available in FFmpeg",
-                name
+                message: "GPU {Name} detected but no hardware encoders available in FFmpeg",
+                args: name
             );
             return null;
         }
 
-        int maxSessions = ResolveMaxSessions(vendor.Value, name);
+        int maxSessions = ResolveMaxSessions(vendor: vendor.Value, name: name);
 
-        return new(vendor.Value, name, vramMb, maxSessions, supportedCodecs, driverVersion);
+        return new(Vendor: vendor.Value, Name: name, VramMb: vramMb, MaxEncoderSessions: maxSessions, SupportedCodecs: supportedCodecs, DriverVersion: driverVersion);
     }
 
     private async Task<List<VideoCodecType>> DetectSupportedCodecsAsync(
@@ -544,9 +542,9 @@ public partial class PlatformHardwareDetector(
         // For unknown / future GPU SKUs we default to "allowed" so the
         // probe-and-log fallback covers any pattern miss — a real card
         // without AV1 support emits a visible Information-level log.
-        bool gpuSupportsAv1 = await new Av1CapabilityProbe(processRunner, logger)
-            .SupportsAsync(vendor, gpuName)
-            .ConfigureAwait(false);
+        bool gpuSupportsAv1 = await new Av1CapabilityProbe(processRunner: processRunner, logger: logger)
+            .SupportsAsync(vendor: vendor, gpuName: gpuName)
+            .ConfigureAwait(continueOnCapturedContext: false);
 
         foreach ((VideoCodecType codec, string[] encoderNames) in mappings)
         {
@@ -555,9 +553,9 @@ public partial class PlatformHardwareDetector(
 
             foreach (string encoderName in encoderNames)
             {
-                if (ffmpegCapabilities.HasEncoder(encoderName))
+                if (ffmpegCapabilities.HasEncoder(name: encoderName))
                 {
-                    codecs.Add(codec);
+                    codecs.Add(item: codec);
                     break;
                 }
             }
@@ -571,28 +569,28 @@ public partial class PlatformHardwareDetector(
         string upper = name.ToUpperInvariant();
 
         if (
-            upper.Contains("NVIDIA")
-            || upper.Contains("GEFORCE")
-            || upper.Contains("QUADRO")
-            || upper.Contains("TESLA")
+            upper.Contains(value: "NVIDIA")
+            || upper.Contains(value: "GEFORCE")
+            || upper.Contains(value: "QUADRO")
+            || upper.Contains(value: "TESLA")
         )
             return GpuVendor.Nvidia;
 
-        if (upper.Contains("AMD") || upper.Contains("RADEON") || upper.Contains("NAVI"))
+        if (upper.Contains(value: "AMD") || upper.Contains(value: "RADEON") || upper.Contains(value: "NAVI"))
             return GpuVendor.Amd;
 
         if (
-            upper.Contains("INTEL")
+            upper.Contains(value: "INTEL")
             && (
-                upper.Contains("ARC")
-                || upper.Contains("UHD")
-                || upper.Contains("IRIS")
-                || upper.Contains("HD GRAPHICS")
+                upper.Contains(value: "ARC")
+                || upper.Contains(value: "UHD")
+                || upper.Contains(value: "IRIS")
+                || upper.Contains(value: "HD GRAPHICS")
             )
         )
             return GpuVendor.Intel;
 
-        if (upper.Contains("APPLE") && AppleSiliconPattern().IsMatch(upper))
+        if (upper.Contains(value: "APPLE") && AppleSiliconPattern().IsMatch(input: upper))
             return GpuVendor.Apple;
 
         return null;
@@ -612,18 +610,18 @@ public partial class PlatformHardwareDetector(
 
         // Professional/datacenter cards — unlimited sessions
         bool isProfessional =
-            upper.Contains("QUADRO")
-            || upper.Contains("TESLA")
-            || upper.Contains("RTX A")
-            || upper.Contains("RTX L")
-            || upper.Contains("A100")
-            || upper.Contains("A40")
-            || upper.Contains("A30")
-            || upper.Contains("A16")
-            || upper.Contains("A10")
-            || upper.Contains("L40")
-            || upper.Contains("H100")
-            || upper.Contains("H200");
+            upper.Contains(value: "QUADRO")
+            || upper.Contains(value: "TESLA")
+            || upper.Contains(value: "RTX A")
+            || upper.Contains(value: "RTX L")
+            || upper.Contains(value: "A100")
+            || upper.Contains(value: "A40")
+            || upper.Contains(value: "A30")
+            || upper.Contains(value: "A16")
+            || upper.Contains(value: "A10")
+            || upper.Contains(value: "L40")
+            || upper.Contains(value: "H100")
+            || upper.Contains(value: "H200");
 
         if (isProfessional)
             return int.MaxValue;
@@ -635,29 +633,29 @@ public partial class PlatformHardwareDetector(
     private static long EstimateVramFromName(string name)
     {
         // Try to extract VRAM from name patterns like "16GB", "8 GB"
-        Match match = VramPattern().Match(name);
-        if (match.Success && int.TryParse(match.Groups["size"].Value, out int sizeGb))
+        Match match = VramPattern().Match(input: name);
+        if (match.Success && int.TryParse(s: match.Groups[groupname: "size"].Value, result: out int sizeGb))
             return sizeGb * 1024L;
 
         return 0;
     }
 
     [GeneratedRegex(
-        @"(?:VGA compatible|3D) controller.*?:\s*(?<name>.+?)(?:\s+\[[\da-f]{4}:[\da-f]{4}\])?$",
-        RegexOptions.IgnoreCase
+        pattern: @"(?:VGA compatible|3D) controller.*?:\s*(?<name>.+?)(?:\s+\[[\da-f]{4}:[\da-f]{4}\])?$",
+        options: RegexOptions.IgnoreCase
     )]
     private static partial Regex VgaControllerPattern();
 
-    [GeneratedRegex(@"(?<size>\d+)\s*GB", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(pattern: @"(?<size>\d+)\s*GB", options: RegexOptions.IgnoreCase)]
     private static partial Regex VramPattern();
 
     // Matches "M1", "M2 Pro", "M3 Max", "M4 Ultra", "M17" etc — any Apple Silicon generation
-    [GeneratedRegex(@"\bM\d+", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(pattern: @"\bM\d+", options: RegexOptions.IgnoreCase)]
     private static partial Regex AppleSiliconPattern();
 
-    [GeneratedRegex(@"^Chipset Model:\s*(?<name>.+)$")]
+    [GeneratedRegex(pattern: @"^Chipset Model:\s*(?<name>.+)$")]
     private static partial Regex MacChipsetPattern();
 
-    [GeneratedRegex(@"^VRAM\s*\([^)]*\):\s*(?<size>\d+)\s*(?<unit>MB|GB)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(pattern: @"^VRAM\s*\([^)]*\):\s*(?<size>\d+)\s*(?<unit>MB|GB)", options: RegexOptions.IgnoreCase)]
     private static partial Regex MacVramPattern();
 }

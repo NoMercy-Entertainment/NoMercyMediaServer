@@ -29,7 +29,7 @@ public class DeviceAwareVariantSelectorTests
         int bitrateKbps,
         int audioChannels,
         string aCodec
-    ) => new(index, height, width, vCodec, bitrateKbps, audioChannels, aCodec);
+    ) => new(Index: index, Height: height, Width: width, VideoCodec: vCodec, VideoBitrateKbps: bitrateKbps, AudioChannels: audioChannels, AudioCodec: aCodec);
 
     // ──────────────────────────────────────────────────────────────────────────
     // Test 1: No caps → variant 0, no constraints
@@ -40,17 +40,17 @@ public class DeviceAwareVariantSelectorTests
     {
         VariantDescriptor[] variants =
         [
-            V(0, 1080, 1920, "h264", 6000, 6, "eac3"),
-            V(1, 720, 1280, "h264", 3000, 2, "aac"),
+            V(index: 0, height: 1080, width: 1920, vCodec: "h264", bitrateKbps: 6000, audioChannels: 6, aCodec: "eac3"),
+            V(index: 1, height: 720, width: 1280, vCodec: "h264", bitrateKbps: 3000, audioChannels: 2, aCodec: "aac"),
         ];
 
-        VariantSelection sel = _selector.Select(variants, null);
+        VariantSelection sel = _selector.Select(variants: variants, caps: null);
 
-        sel.VariantIndex.Should().Be(0);
+        sel.VariantIndex.Should().Be(expected: 0);
         sel.AppliedCapabilities.Should().BeNull();
         sel.AudioConstraint.Should().BeNull();
         sel.VideoConstraint.Should().BeNull();
-        sel.Reason.Should().Contain("no capabilities declared");
+        sel.Reason.Should().Contain(expected: "no capabilities declared");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -71,13 +71,13 @@ public class DeviceAwareVariantSelectorTests
 
         VariantDescriptor[] variants =
         [
-            V(0, 1080, 1920, "h264", 6000, 6, "eac3"),
-            V(1, 720, 1280, "h264", 3000, 2, "aac"),
+            V(index: 0, height: 1080, width: 1920, vCodec: "h264", bitrateKbps: 6000, audioChannels: 6, aCodec: "eac3"),
+            V(index: 1, height: 720, width: 1280, vCodec: "h264", bitrateKbps: 3000, audioChannels: 2, aCodec: "aac"),
         ];
 
-        VariantSelection sel = _selector.Select(variants, caps);
+        VariantSelection sel = _selector.Select(variants: variants, caps: caps);
 
-        sel.VariantIndex.Should().Be(0);
+        sel.VariantIndex.Should().Be(expected: 0);
         sel.AudioConstraint.Should().BeNull();
         sel.VideoConstraint.Should().BeNull();
     }
@@ -101,14 +101,14 @@ public class DeviceAwareVariantSelectorTests
 
         VariantDescriptor[] variants =
         [
-            V(0, 1080, 1920, "h264", 6000, 6, "eac3"),
-            V(1, 1080, 1920, "h264", 4000, 6, "ac3"),
+            V(index: 0, height: 1080, width: 1920, vCodec: "h264", bitrateKbps: 6000, audioChannels: 6, aCodec: "eac3"),
+            V(index: 1, height: 1080, width: 1920, vCodec: "h264", bitrateKbps: 4000, audioChannels: 6, aCodec: "ac3"),
         ];
 
-        VariantSelection sel = _selector.Select(variants, caps);
+        VariantSelection sel = _selector.Select(variants: variants, caps: caps);
 
         sel.VariantIndex.Should().BeNull();
-        sel.AudioConstraint.Should().Be(new AudioConstraint(2, "aac"));
+        sel.AudioConstraint.Should().Be(expected: new AudioConstraint(Channels: 2, Codec: "aac"));
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -126,13 +126,13 @@ public class DeviceAwareVariantSelectorTests
             RamTier = DeviceRamTier.Standard,
         };
 
-        VariantDescriptor[] variants = [V(0, 720, 1280, "h264", 3000, 2, "opus")];
+        VariantDescriptor[] variants = [V(index: 0, height: 720, width: 1280, vCodec: "h264", bitrateKbps: 3000, audioChannels: 2, aCodec: "opus")];
 
-        VariantSelection sel = _selector.Select(variants, caps);
+        VariantSelection sel = _selector.Select(variants: variants, caps: caps);
 
         sel.VariantIndex.Should().BeNull();
         sel.AudioConstraint.Should().NotBeNull();
-        sel.AudioConstraint!.Codec.Should().Be("aac");
+        sel.AudioConstraint!.Codec.Should().Be(expected: "aac");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -149,13 +149,13 @@ public class DeviceAwareVariantSelectorTests
             RamTier = DeviceRamTier.Standard,
         };
 
-        VariantDescriptor[] variants = [V(0, 2160, 3840, "h264", 15000, 2, "aac")];
+        VariantDescriptor[] variants = [V(index: 0, height: 2160, width: 3840, vCodec: "h264", bitrateKbps: 15000, audioChannels: 2, aCodec: "aac")];
 
-        VariantSelection sel = _selector.Select(variants, caps);
+        VariantSelection sel = _selector.Select(variants: variants, caps: caps);
 
         sel.VariantIndex.Should().BeNull();
         sel.VideoConstraint.Should().NotBeNull();
-        sel.VideoConstraint!.MaxHeight.Should().Be(1080);
+        sel.VideoConstraint!.MaxHeight.Should().Be(expected: 1080);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -171,13 +171,13 @@ public class DeviceAwareVariantSelectorTests
             RamTier = DeviceRamTier.Standard,
         };
 
-        VariantDescriptor[] variants = [V(0, 1080, 1920, "hevc", 6000, 2, "aac")];
+        VariantDescriptor[] variants = [V(index: 0, height: 1080, width: 1920, vCodec: "hevc", bitrateKbps: 6000, audioChannels: 2, aCodec: "aac")];
 
-        VariantSelection sel = _selector.Select(variants, caps);
+        VariantSelection sel = _selector.Select(variants: variants, caps: caps);
 
         sel.VariantIndex.Should().BeNull();
         sel.VideoConstraint.Should().NotBeNull();
-        sel.VideoConstraint!.Codec.Should().Be("h264");
+        sel.VideoConstraint!.Codec.Should().Be(expected: "h264");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -198,13 +198,13 @@ public class DeviceAwareVariantSelectorTests
 
         VariantDescriptor[] variants =
         [
-            V(0, 1080, 1920, "h264", 6000, 6, "eac3"),
-            V(1, 720, 1280, "h264", 3000, 2, "aac"),
+            V(index: 0, height: 1080, width: 1920, vCodec: "h264", bitrateKbps: 6000, audioChannels: 6, aCodec: "eac3"),
+            V(index: 1, height: 720, width: 1280, vCodec: "h264", bitrateKbps: 3000, audioChannels: 2, aCodec: "aac"),
         ];
 
-        VariantSelection sel = _selector.Select(variants, caps);
+        VariantSelection sel = _selector.Select(variants: variants, caps: caps);
 
-        sel.VariantIndex.Should().Be(1);
+        sel.VariantIndex.Should().Be(expected: 1);
         sel.AudioConstraint.Should().BeNull();
         sel.VideoConstraint.Should().BeNull();
     }
@@ -226,15 +226,15 @@ public class DeviceAwareVariantSelectorTests
 
         VariantDescriptor[] variants =
         [
-            V(0, 1080, 1920, "h264", 7000, 2, "aac"),
-            V(1, 720, 1280, "h264", 4000, 2, "aac"),
-            V(2, 480, 854, "h264", 1500, 2, "aac"),
+            V(index: 0, height: 1080, width: 1920, vCodec: "h264", bitrateKbps: 7000, audioChannels: 2, aCodec: "aac"),
+            V(index: 1, height: 720, width: 1280, vCodec: "h264", bitrateKbps: 4000, audioChannels: 2, aCodec: "aac"),
+            V(index: 2, height: 480, width: 854, vCodec: "h264", bitrateKbps: 1500, audioChannels: 2, aCodec: "aac"),
         ];
 
-        VariantSelection sel = _selector.Select(variants, caps);
+        VariantSelection sel = _selector.Select(variants: variants, caps: caps);
 
         // Variant 0 at 7000 kbps is within 8000 kbps ceiling and is highest
-        sel.VariantIndex.Should().Be(0);
+        sel.VariantIndex.Should().Be(expected: 0);
         sel.AudioConstraint.Should().BeNull();
         sel.VideoConstraint.Should().BeNull();
     }
@@ -256,13 +256,13 @@ public class DeviceAwareVariantSelectorTests
 
         VariantDescriptor[] variants =
         [
-            V(0, 720, 1280, "h264", 3000, 2, "aac"), // above ceiling
-            V(1, 480, 854, "h264", 1500, 2, "aac"), // below ceiling
+            V(index: 0, height: 720, width: 1280, vCodec: "h264", bitrateKbps: 3000, audioChannels: 2, aCodec: "aac"), // above ceiling
+            V(index: 1, height: 480, width: 854, vCodec: "h264", bitrateKbps: 1500, audioChannels: 2, aCodec: "aac"), // below ceiling
         ];
 
-        VariantSelection sel = _selector.Select(variants, caps);
+        VariantSelection sel = _selector.Select(variants: variants, caps: caps);
 
-        sel.VariantIndex.Should().Be(1); // only variant within LowRam ceiling
+        sel.VariantIndex.Should().Be(expected: 1); // only variant within LowRam ceiling
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -286,13 +286,13 @@ public class DeviceAwareVariantSelectorTests
 
         VariantDescriptor[] variants =
         [
-            V(0, 2160, 3840, "hevc", 15000, 6, "eac3"), // filtered by codec+height
-            V(1, 1080, 1920, "h264", 6000, 2, "aac"), // matches all caps
+            V(index: 0, height: 2160, width: 3840, vCodec: "hevc", bitrateKbps: 15000, audioChannels: 6, aCodec: "eac3"), // filtered by codec+height
+            V(index: 1, height: 1080, width: 1920, vCodec: "h264", bitrateKbps: 6000, audioChannels: 2, aCodec: "aac"), // matches all caps
         ];
 
-        VariantSelection sel = _selector.Select(variants, caps);
+        VariantSelection sel = _selector.Select(variants: variants, caps: caps);
 
-        sel.VariantIndex.Should().Be(1);
+        sel.VariantIndex.Should().Be(expected: 1);
         sel.AudioConstraint.Should().BeNull();
         sel.VideoConstraint.Should().BeNull();
     }
@@ -304,14 +304,14 @@ public class DeviceAwareVariantSelectorTests
     [Fact]
     public void Reason_IsAlwaysNonEmpty()
     {
-        VariantDescriptor[] variants = [V(0, 1080, 1920, "h264", 5000, 2, "aac")];
+        VariantDescriptor[] variants = [V(index: 0, height: 1080, width: 1920, vCodec: "h264", bitrateKbps: 5000, audioChannels: 2, aCodec: "aac")];
 
-        VariantSelection noCaps = _selector.Select(variants, null);
+        VariantSelection noCaps = _selector.Select(variants: variants, caps: null);
         noCaps.Reason.Should().NotBeNullOrEmpty();
 
         VariantSelection withCaps = _selector.Select(
-            variants,
-            new() { RamTier = DeviceRamTier.Standard }
+            variants: variants,
+            caps: new() { RamTier = DeviceRamTier.Standard }
         );
         withCaps.Reason.Should().NotBeNullOrEmpty();
     }
@@ -333,13 +333,13 @@ public class DeviceAwareVariantSelectorTests
 
         VariantDescriptor[] variants =
         [
-            V(0, 720, 1280, "h264", 3000, 2, "aac"), // 3000 > 2000 LowRam ceiling
-            V(1, 1080, 1920, "h264", 6000, 2, "aac"), // 6000 > 2000
+            V(index: 0, height: 720, width: 1280, vCodec: "h264", bitrateKbps: 3000, audioChannels: 2, aCodec: "aac"), // 3000 > 2000 LowRam ceiling
+            V(index: 1, height: 1080, width: 1920, vCodec: "h264", bitrateKbps: 6000, audioChannels: 2, aCodec: "aac"), // 6000 > 2000
         ];
 
-        VariantSelection sel = _selector.Select(variants, caps);
+        VariantSelection sel = _selector.Select(variants: variants, caps: caps);
 
         sel.VariantIndex.Should().BeNull();
-        sel.Reason.Should().Contain("LowRam");
+        sel.Reason.Should().Contain(expected: "LowRam");
     }
 }

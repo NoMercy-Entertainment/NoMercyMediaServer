@@ -33,7 +33,7 @@ public class MusicPlaybackService
     private readonly MusicActiveDeviceRegistry _activeDeviceRegistry;
     private readonly ILogger<MusicPlaybackService>? _logger;
     private readonly string[] _repeatStates = ["off", "one", "all"];
-    private static int PlayerStateEventId => Interlocked.Increment(ref field);
+    private static int PlayerStateEventId => Interlocked.Increment(location: ref field);
 
     public MusicPlaybackService(
         MusicPlayerStateManager stateManager,
@@ -94,15 +94,15 @@ public class MusicPlaybackService
 
     private SemaphoreSlim GetStateLock(Guid userId)
     {
-        return _stateLocks.GetOrAdd(userId, _ => new(1, 1));
+        return _stateLocks.GetOrAdd(key: userId, valueFactory: _ => new(initialCount: 1, maxCount: 1));
     }
 
     internal void StartPlaybackTimer(User user)
     {
-        if (_timers.TryGetValue(user.Id, out Timer? existingTimer))
+        if (_timers.TryGetValue(key: user.Id, value: out Timer? existingTimer))
             existingTimer.Dispose();
 
-        if (!_stateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
+        if (!_stateManager.TryGetValue(userId: user.Id, state: out MusicPlayerState? playerState))
             return;
 
         // Any (re)start of the ticking loop counts as proof of life, regardless of
@@ -113,26 +113,26 @@ public class MusicPlaybackService
         // make the active device look instantly stale to the check below.
         playerState.LastActiveHeartbeatUtc = DateTime.UtcNow;
 
-        SemaphoreSlim stateLock = GetStateLock(user.Id);
+        SemaphoreSlim stateLock = GetStateLock(userId: user.Id);
 
         Timer timer = new(
-            async _ =>
+            callback: async _ =>
             {
-                if (!await stateLock.WaitAsync(0))
+                if (!await stateLock.WaitAsync(millisecondsTimeout: 0))
                     return; // Skip tick if previous tick is still running
                 try
                 {
-                    if (!_stateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
+                    if (!_stateManager.TryGetValue(userId: user.Id, state: out MusicPlayerState? playerState))
                         return;
                     if (!playerState.PlayState || playerState.CurrentItem is null)
                         return;
 
                     if (
-                        IsActiveDeviceStale(playerState, DateTime.UtcNow)
-                        && !IsPlaybackStartInFlight(user.Id)
+                        IsActiveDeviceStale(state: playerState, nowUtc: DateTime.UtcNow)
+                        && !IsPlaybackStartInFlight(userId: user.Id)
                     )
                     {
-                        await EndStaleActiveSessionAsync(user, playerState);
+                        await EndStaleActiveSessionAsync(user: user, state: playerState);
                         return;
                     }
 
@@ -152,9 +152,9 @@ public class MusicPlaybackService
                                 IDbContextFactory<MediaContext>
                             >();
                         await using MediaContext ctx = await factory.CreateDbContextAsync();
-                        await ctx.MusicPlays.AddAsync(new(user.Id, playerState.CurrentItem.Id));
+                        await ctx.MusicPlays.AddAsync(entity: new(userId: user.Id, trackId: playerState.CurrentItem.Id));
                         await ctx.SaveChangesAsync();
-                        await PublishProgressEventAsync(user.Id, playerState);
+                        await PublishProgressEventAsync(userId: user.Id, state: playerState);
                     }
 
                     // Send crossfade signal to clients ~10s before track ends
@@ -164,9 +164,9 @@ public class MusicPlaybackService
                     )
                     {
                         playerState.CrossfadeSignalSent = true;
-                        PlaylistTrackDto? nextItem = PeekNextTrack(playerState);
+                        PlaylistTrackDto? nextItem = PeekNextTrack(state: playerState);
                         if (nextItem != null)
-                            await SendPrepareCrossfadeSignal(user, nextItem);
+                            await SendPrepareCrossfadeSignal(user: user, nextItem: nextItem);
                     }
 
                     if (playerState.Time >= duration)
@@ -183,7 +183,7 @@ public class MusicPlaybackService
                             playerState.CrossfadeDeviceId = null;
                         }
 
-                        await HandleTrackCompletion(user, playerState);
+                        await HandleTrackCompletion(user: user, state: playerState);
                     }
                 }
                 finally
@@ -191,17 +191,17 @@ public class MusicPlaybackService
                     stateLock.Release();
                 }
             },
-            null,
-            100,
-            TimerInterval
+            state: null,
+            dueTime: 100,
+            period: TimerInterval
         );
 
-        _timers[user.Id] = timer;
+        _timers[key: user.Id] = timer;
     }
 
     public void RemoveTimer(Guid userId)
     {
-        if (_timers.TryRemove(userId, out Timer? timer))
+        if (_timers.TryRemove(key: userId, value: out Timer? timer))
             timer.Dispose();
     }
 
@@ -217,15 +217,15 @@ public class MusicPlaybackService
     /// </summary>
     internal void BeginPlaybackStart(Guid userId)
     {
-        _playbackStartsInFlight[userId] = 0;
+        _playbackStartsInFlight[key: userId] = 0;
 
-        if (_stateManager.TryGetValue(userId, out MusicPlayerState? state))
+        if (_stateManager.TryGetValue(userId: userId, state: out MusicPlayerState? state))
             state.LastActiveHeartbeatUtc = DateTime.UtcNow;
     }
 
     internal void EndPlaybackStart(Guid userId)
     {
-        _playbackStartsInFlight.TryRemove(userId, out _);
+        _playbackStartsInFlight.TryRemove(key: userId, value: out _);
     }
 
     /// <summary>
@@ -241,7 +241,7 @@ public class MusicPlaybackService
     /// </summary>
     internal bool IsPlaybackStartInFlight(Guid userId)
     {
-        return _playbackStartsInFlight.ContainsKey(userId);
+        return _playbackStartsInFlight.ContainsKey(key: userId);
     }
 
     /// <summary>
@@ -257,11 +257,11 @@ public class MusicPlaybackService
     /// </summary>
     internal static bool IsActiveDeviceStale(MusicPlayerState state, DateTime nowUtc)
     {
-        if (!state.PlayState || string.IsNullOrEmpty(state.DeviceId))
+        if (!state.PlayState || string.IsNullOrEmpty(value: state.DeviceId))
             return false;
 
         return nowUtc - state.LastActiveHeartbeatUtc
-            > TimeSpan.FromMilliseconds(ActiveDeviceStaleTimeoutMs);
+            > TimeSpan.FromMilliseconds(milliseconds: ActiveDeviceStaleTimeoutMs);
     }
 
     /// <summary>
@@ -273,9 +273,9 @@ public class MusicPlaybackService
     /// </summary>
     internal static bool IsCallerTheActiveDevice(MusicPlayerState state, string? callerDeviceId)
     {
-        return !string.IsNullOrEmpty(state.DeviceId)
-            && !string.IsNullOrEmpty(callerDeviceId)
-            && state.DeviceId.Equals(callerDeviceId, StringComparison.OrdinalIgnoreCase);
+        return !string.IsNullOrEmpty(value: state.DeviceId)
+            && !string.IsNullOrEmpty(value: callerDeviceId)
+            && state.DeviceId.Equals(value: callerDeviceId, comparisonType: StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -290,7 +290,7 @@ public class MusicPlaybackService
     /// </summary>
     internal static bool TryRefreshHeartbeat(MusicPlayerState state, string? callerDeviceId)
     {
-        if (!IsCallerTheActiveDevice(state, callerDeviceId))
+        if (!IsCallerTheActiveDevice(state: state, callerDeviceId: callerDeviceId))
             return false;
 
         state.LastActiveHeartbeatUtc = DateTime.UtcNow;
@@ -312,7 +312,7 @@ public class MusicPlaybackService
             return true;
 
         return state.CurrentItem is not null
-            && Guid.TryParse(itemId, out Guid parsed)
+            && Guid.TryParse(input: itemId, result: out Guid parsed)
             && parsed == state.CurrentItem.Id;
     }
 
@@ -333,23 +333,20 @@ public class MusicPlaybackService
         string? staleDeviceId = state.DeviceId;
 
         _logger?.LogWarning(
-            "Music session for user {UserId}: active device {DeviceId} stopped reporting position for over {TimeoutMs}ms — ending the session",
-            user.Id,
-            staleDeviceId,
-            ActiveDeviceStaleTimeoutMs
+            message: "Music session for user {UserId}: active device {DeviceId} stopped reporting position for over {TimeoutMs}ms — ending the session", args: [user.Id, staleDeviceId, ActiveDeviceStaleTimeoutMs]
         );
 
-        RemoveTimer(user.Id);
+        RemoveTimer(userId: user.Id);
 
-        if (!string.IsNullOrEmpty(staleDeviceId))
-            _activeDeviceRegistry.RemoveIfMatches(user.Id, staleDeviceId);
+        if (!string.IsNullOrEmpty(value: staleDeviceId))
+            _activeDeviceRegistry.RemoveIfMatches(userId: user.Id, deviceId: staleDeviceId);
 
         state.CurrentItem = null;
         state.PlayState = false;
-        state.SetPosition(0);
+        state.SetPosition(positionMs: 0);
         state.Backlog = [];
         state.Playlist = [];
-        state.CurrentList = new("", UriKind.Relative);
+        state.CurrentList = new(uriString: "", uriKind: UriKind.Relative);
         state.DeviceId = null;
         state.Actions = new()
         {
@@ -368,7 +365,7 @@ public class MusicPlaybackService
             },
         };
 
-        await UpdatePlaybackState(user, state);
+        await UpdatePlaybackState(user: user, state: state);
     }
 
     /// <summary>
@@ -380,13 +377,13 @@ public class MusicPlaybackService
     /// </summary>
     public void StartCrossfade(Guid userId, string deviceId, int fadeDurationMs)
     {
-        if (!_stateManager.TryGetValue(userId, out MusicPlayerState? state))
+        if (!_stateManager.TryGetValue(userId: userId, state: out MusicPlayerState? state))
             return;
 
         state.IsCrossfading = true;
         state.CrossfadeDeviceId = deviceId;
         state.CrossfadeTimeout = DateTime.UtcNow.AddMilliseconds(
-            fadeDurationMs + CrossfadeSafetyMarginMs
+            value: fadeDurationMs + CrossfadeSafetyMarginMs
         );
     }
 
@@ -398,7 +395,7 @@ public class MusicPlaybackService
     /// </summary>
     public async Task CompleteCrossfade(User user, string deviceId, Guid newTrackId)
     {
-        if (!_stateManager.TryGetValue(user.Id, out MusicPlayerState? state))
+        if (!_stateManager.TryGetValue(userId: user.Id, state: out MusicPlayerState? state))
             return;
 
         // Only accept from the device that started the crossfade.
@@ -406,7 +403,7 @@ public class MusicPlaybackService
             return;
 
         // Locate the new track.  It must be at the head of the upcoming playlist.
-        PlaylistTrackDto? newTrack = state.Playlist.FirstOrDefault(t => t.Id == newTrackId);
+        PlaylistTrackDto? newTrack = state.Playlist.FirstOrDefault(predicate: t => t.Id == newTrackId);
         if (newTrack is null)
         {
             // Track not found — clear the flag and let the server do its own advance on the
@@ -416,34 +413,34 @@ public class MusicPlaybackService
             return;
         }
 
-        RemoveTimer(user.Id);
+        RemoveTimer(userId: user.Id);
 
-        int currentIndex = state.Playlist.IndexOf(newTrack);
+        int currentIndex = state.Playlist.IndexOf(item: newTrack);
 
         // Move the current item to the backlog.
         if (state.CurrentItem != null)
-            state.Backlog.Add(state.CurrentItem);
+            state.Backlog.Add(item: state.CurrentItem);
 
         // Move all tracks before newTrack to the backlog (they were skipped).
         for (int i = 0; i < currentIndex; i++)
-            state.Backlog.Add(state.Playlist[i]);
+            state.Backlog.Add(item: state.Playlist[index: i]);
 
-        state.Playlist.RemoveRange(0, currentIndex + 1);
+        state.Playlist.RemoveRange(index: 0, count: currentIndex + 1);
         state.CurrentItem = newTrack;
-        state.SetPosition(0);
-        state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
+        state.SetPosition(positionMs: 0);
+        state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(value: 1);
         state.CrossfadeSignalSent = false;
         state.IsCrossfading = false;
         state.CrossfadeDeviceId = null;
         state.PlayState = true;
 
-        await UpdatePlaybackState(user, state);
-        StartPlaybackTimer(user);
+        await UpdatePlaybackState(user: user, state: state);
+        StartPlaybackTimer(user: user);
     }
 
     public void DebouncedUpdatePlaybackState(User user, MusicPlayerState state)
     {
-        if (_broadcastTimers.TryRemove(user.Id, out Timer? existing))
+        if (_broadcastTimers.TryRemove(key: user.Id, value: out Timer? existing))
             existing.Dispose();
 
         // Epoch-ms so this line correlates directly against the scheduling call's
@@ -452,53 +449,44 @@ public class MusicPlaybackService
         long scheduledMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
         Timer timer = new(
-            async _ =>
+            callback: async _ =>
             {
-                _broadcastTimers.TryRemove(user.Id, out Timer? _);
+                _broadcastTimers.TryRemove(key: user.Id, value: out Timer? _);
                 long firedMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                await UpdatePlaybackState(user, state);
+                await UpdatePlaybackState(user: user, state: state);
                 long sentMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
                 _logger?.LogInformation(
-                    "{UserId}: [MusicPlaybackService.DebouncedUpdatePlaybackState] scheduledMs={ScheduledMs} firedMs={FiredMs} (+{FireDelayMs}ms) sentMs={SentMs} (+{SendMs}ms) totalMs={TotalMs}ms playlist={PlaylistCount} backlog={BacklogCount}",
-                    user.Id,
-                    scheduledMs,
-                    firedMs,
-                    firedMs - scheduledMs,
-                    sentMs,
-                    sentMs - firedMs,
-                    sentMs - scheduledMs,
-                    state.Playlist.Count,
-                    state.Backlog.Count
+                    message: "{UserId}: [MusicPlaybackService.DebouncedUpdatePlaybackState] scheduledMs={ScheduledMs} firedMs={FiredMs} (+{FireDelayMs}ms) sentMs={SentMs} (+{SendMs}ms) totalMs={TotalMs}ms playlist={PlaylistCount} backlog={BacklogCount}", args: [user.Id, scheduledMs, firedMs, firedMs - scheduledMs, sentMs, sentMs - firedMs, sentMs - scheduledMs, state.Playlist.Count, state.Backlog.Count]
                 );
             },
-            null,
-            BroadcastDebounceMs,
-            Timeout.Infinite
+            state: null,
+            dueTime: BroadcastDebounceMs,
+            period: Timeout.Infinite
         );
 
-        _broadcastTimers[user.Id] = timer;
+        _broadcastTimers[key: user.Id] = timer;
     }
 
     private async Task HandleTrackCompletion(User user, MusicPlayerState state)
     {
         if (state.CurrentItem == null)
             return;
-        RemoveTimer(user.Id);
+        RemoveTimer(userId: user.Id);
 
-        int currentIndex = state.Playlist.IndexOf(state.CurrentItem);
+        int currentIndex = state.Playlist.IndexOf(item: state.CurrentItem);
 
         bool wasLastTrack = state.Repeat == "off" && currentIndex + 1 >= state.Playlist.Count;
         if (wasLastTrack)
         {
-            await PublishCompletedEventAsync(user.Id, state);
+            await PublishCompletedEventAsync(userId: user.Id, state: state);
         }
 
-        UpdateStateBasedOnRepeatMode(state, currentIndex);
+        UpdateStateBasedOnRepeatMode(state: state, currentIndex: currentIndex);
         state.CrossfadeSignalSent = false; // Reset for next track
 
-        await UpdatePlaybackState(user, state);
-        StartPlaybackTimer(user);
+        await UpdatePlaybackState(user: user, state: state);
+        StartPlaybackTimer(user: user);
     }
 
     public async Task ApplyItemLikeAsync(
@@ -508,7 +496,7 @@ public class MusicPlaybackService
         CancellationToken cancellationToken = default
     )
     {
-        if (!_stateManager.TryGetValue(userId, out MusicPlayerState? playerState))
+        if (!_stateManager.TryGetValue(userId: userId, state: out MusicPlayerState? playerState))
             return;
 
         if (playerState.CurrentItem is not null && playerState.CurrentItem.Id == itemId)
@@ -521,11 +509,11 @@ public class MusicPlaybackService
         await using AsyncServiceScope scope = _serviceProvider.CreateAsyncScope();
         IUserRepository userRepository =
             scope.ServiceProvider.GetRequiredService<IUserRepository>();
-        User? user = await userRepository.GetByIdAsync(userId);
+        User? user = await userRepository.GetByIdAsync(userId: userId);
         if (user is null)
             return;
 
-        await UpdatePlaybackState(user, playerState);
+        await UpdatePlaybackState(user: user, state: playerState);
     }
 
     public async Task UpdatePlaybackState(User user, MusicPlayerState? state)
@@ -535,7 +523,7 @@ public class MusicPlaybackService
         {
             long nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-            if (ShouldCoalesceBroadcast(user.Id, state, nowMs))
+            if (ShouldCoalesceBroadcast(userId: user.Id, state: state, nowMs: nowMs))
                 return;
 
             // Same instant for both: Timestamp predates ServerTimeMs and some
@@ -549,7 +537,7 @@ public class MusicPlaybackService
             // and MusicPlayerState.Seq. Lets a client drop a broadcast that
             // arrives out of order instead of racing it against one it already
             // applied.
-            state.Seq = _stateManager.NextSeq(user.Id);
+            state.Seq = _stateManager.NextSeq(userId: user.Id);
 
             // Broadcast a lyric-stripped queue projection, never the stored
             // state — see MusicPlayerState.CloneForBroadcast for why queue-item
@@ -571,7 +559,7 @@ public class MusicPlaybackService
             ],
         };
 
-        await _clientMessenger.SendTo("MusicPlayerState", "musicHub", user.Id, payload);
+        await _clientMessenger.SendTo(name: "MusicPlayerState", endpoint: "musicHub", userId: user.Id, data: payload);
     }
 
     /// <summary>
@@ -586,16 +574,16 @@ public class MusicPlaybackService
     private bool ShouldCoalesceBroadcast(Guid userId, MusicPlayerState state, long nowMs)
     {
         BroadcastFingerprint fingerprint = new(
-            state.CurrentItem?.Id,
-            state.PlayState,
-            state.Time / BroadcastTimeBucketMs,
-            nowMs
+            ItemId: state.CurrentItem?.Id,
+            PlayState: state.PlayState,
+            TimeBucket: state.Time / BroadcastTimeBucketMs,
+            AtMs: nowMs
         );
 
         if (
             _lastBroadcastFingerprints.TryGetValue(
-                userId,
-                out BroadcastFingerprint previousFingerprint
+                key: userId,
+                value: out BroadcastFingerprint previousFingerprint
             )
             && previousFingerprint.ItemId == fingerprint.ItemId
             && previousFingerprint.PlayState == fingerprint.PlayState
@@ -604,7 +592,7 @@ public class MusicPlaybackService
         )
             return true;
 
-        _lastBroadcastFingerprints[userId] = fingerprint;
+        _lastBroadcastFingerprints[key: userId] = fingerprint;
         return false;
     }
 
@@ -623,7 +611,7 @@ public class MusicPlaybackService
             return;
 
         await bus.PublishAsync(
-            new PlaybackStartedEvent
+            @event: new PlaybackStartedEvent
             {
                 UserId = userId,
                 MediaId = 0,
@@ -644,13 +632,13 @@ public class MusicPlaybackService
         int duration = state.CurrentItem.Duration.ToMilliSeconds();
 
         await bus.PublishAsync(
-            new PlaybackProgressUpdatedEvent
+            @event: new PlaybackProgressUpdatedEvent
             {
                 UserId = userId,
                 MediaId = 0,
                 MediaIdentifier = state.CurrentItem.Id.ToString(),
-                Position = TimeSpan.FromMilliseconds(state.Time),
-                Duration = TimeSpan.FromMilliseconds(duration),
+                Position = TimeSpan.FromMilliseconds(milliseconds: state.Time),
+                Duration = TimeSpan.FromMilliseconds(milliseconds: duration),
             }
         );
     }
@@ -663,7 +651,7 @@ public class MusicPlaybackService
             return;
 
         await bus.PublishAsync(
-            new PlaybackCompletedEvent
+            @event: new PlaybackCompletedEvent
             {
                 UserId = userId,
                 MediaId = 0,
@@ -695,7 +683,7 @@ public class MusicPlaybackService
             crossfade_duration_ms = 3000,
             timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
         };
-        await _clientMessenger.SendTo("PrepareCrossfade", "musicHub", user.Id, payload);
+        await _clientMessenger.SendTo(name: "PrepareCrossfade", endpoint: "musicHub", userId: user.Id, data: payload);
     }
 
     private void UpdateStateBasedOnRepeatMode(MusicPlayerState state, int currentIndex)
@@ -703,14 +691,14 @@ public class MusicPlaybackService
         switch (state.Repeat)
         {
             case "one":
-                state.SetPosition(0);
+                state.SetPosition(positionMs: 0);
                 break;
             case "all":
                 if (currentIndex == state.Playlist.Count - 1)
                 {
                     // Move the current item to the backlog
                     if (state.CurrentItem != null)
-                        state.Backlog.Add(state.CurrentItem);
+                        state.Backlog.Add(item: state.CurrentItem);
 
                     // Move the backlog to the playlist and start from the beginning
                     state.Playlist = [.. state.Backlog];
@@ -719,42 +707,42 @@ public class MusicPlaybackService
                     if (state.Playlist.Count > 0)
                     {
                         state.CurrentItem = state.Playlist.First();
-                        state.Playlist.RemoveAt(0);
-                        state.SetPosition(0);
+                        state.Playlist.RemoveAt(index: 0);
+                        state.SetPosition(positionMs: 0);
                         state.PlayState = true;
                     }
                     else
                     {
                         // If the playlist is empty, stop playback
                         state.PlayState = false;
-                        state.SetPosition(0);
+                        state.SetPosition(positionMs: 0);
                         state.CurrentItem = null;
                     }
                 }
                 else
                 {
                     if (state.CurrentItem != null)
-                        state.Backlog.Add(state.CurrentItem);
-                    state.CurrentItem = state.Playlist[currentIndex + 1];
-                    state.Playlist.RemoveAt(currentIndex + 1);
-                    state.SetPosition(0);
+                        state.Backlog.Add(item: state.CurrentItem);
+                    state.CurrentItem = state.Playlist[index: currentIndex + 1];
+                    state.Playlist.RemoveAt(index: currentIndex + 1);
+                    state.SetPosition(positionMs: 0);
                 }
 
                 break;
             default:
                 if (state.CurrentItem != null)
-                    state.Backlog.Add(state.CurrentItem);
+                    state.Backlog.Add(item: state.CurrentItem);
                 if (currentIndex + 1 < state.Playlist.Count)
                 {
                     state.PlayState = true;
-                    state.SetPosition(0);
-                    state.CurrentItem = state.Playlist[currentIndex + 1];
-                    state.Playlist.RemoveAt(currentIndex + 1);
+                    state.SetPosition(positionMs: 0);
+                    state.CurrentItem = state.Playlist[index: currentIndex + 1];
+                    state.Playlist.RemoveAt(index: currentIndex + 1);
                 }
                 else
                 {
                     state.PlayState = false;
-                    state.SetPosition(0);
+                    state.SetPosition(positionMs: 0);
                     state.CurrentItem = null;
                 }
 

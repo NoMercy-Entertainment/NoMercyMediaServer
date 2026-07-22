@@ -44,19 +44,19 @@ public class DbDriverFingerprintStore(
     private string LegacyJsonPath()
     {
         string dir =
-            Path.GetDirectoryName(options.SpeedIndexCachePath ?? "speed_index.json")
+            Path.GetDirectoryName(path: options.SpeedIndexCachePath ?? "speed_index.json")
             ?? Path.GetTempPath();
-        return Path.Combine(dir, "driver_fingerprint.json");
+        return Path.Combine(path1: dir, path2: "driver_fingerprint.json");
     }
 
     public async Task<string?> LoadHashAsync(CancellationToken ct = default)
     {
         try
         {
-            await using AppDbContext db = await contextFactory.CreateDbContextAsync(ct);
+            await using AppDbContext db = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
             Configuration? row = await db
                 .Configuration.AsNoTracking()
-                .FirstOrDefaultAsync(c => c.Key == ConfigKey, ct);
+                .FirstOrDefaultAsync(predicate: c => c.Key == ConfigKey, cancellationToken: ct);
 
             string? hash = row?.Value is { Length: > 0 } v ? v : null;
 
@@ -64,7 +64,7 @@ public class DbDriverFingerprintStore(
             // through, then delete it so the file never reappears.
             if (hash is null)
             {
-                hash = await TryImportLegacyJsonAsync(db, ct);
+                hash = await TryImportLegacyJsonAsync(db: db, ct: ct);
             }
 
             return hash;
@@ -72,8 +72,8 @@ public class DbDriverFingerprintStore(
         catch (Exception ex)
         {
             logger.LogWarning(
-                ex,
-                "Could not load driver fingerprint from AppDbContext.Configuration — treating as missing"
+                exception: ex,
+                message: "Could not load driver fingerprint from AppDbContext.Configuration — treating as missing"
             );
             return null;
         }
@@ -83,27 +83,27 @@ public class DbDriverFingerprintStore(
     {
         try
         {
-            await using AppDbContext db = await contextFactory.CreateDbContextAsync(ct);
+            await using AppDbContext db = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
             Configuration? row = await db.Configuration.FirstOrDefaultAsync(
-                c => c.Key == ConfigKey,
-                ct
+                predicate: c => c.Key == ConfigKey,
+                cancellationToken: ct
             );
             if (row is null)
             {
-                db.Configuration.Add(new() { Key = ConfigKey, Value = hash });
+                db.Configuration.Add(entity: new() { Key = ConfigKey, Value = hash });
             }
             else
             {
                 row.Value = hash;
-                db.Configuration.Update(row);
+                db.Configuration.Update(entity: row);
             }
-            await db.SaveChangesAsync(ct);
+            await db.SaveChangesAsync(cancellationToken: ct);
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                ex,
-                "Could not save driver fingerprint to AppDbContext.Configuration"
+                exception: ex,
+                message: "Could not save driver fingerprint to AppDbContext.Configuration"
             );
         }
     }
@@ -111,37 +111,37 @@ public class DbDriverFingerprintStore(
     private async Task<string?> TryImportLegacyJsonAsync(AppDbContext db, CancellationToken ct)
     {
         string legacy = LegacyJsonPath();
-        if (!storage.Exists(legacy))
+        if (!storage.Exists(path: legacy))
             return null;
 
         try
         {
-            string json = Encoding.UTF8.GetString(storage.Read(legacy));
-            FingerprintDto? dto = JsonConvert.DeserializeObject<FingerprintDto>(json);
+            string json = Encoding.UTF8.GetString(bytes: storage.Read(path: legacy));
+            FingerprintDto? dto = JsonConvert.DeserializeObject<FingerprintDto>(value: json);
             string? hash = dto?.Hash is { Length: > 0 } h ? h : null;
             if (hash is null)
                 return null;
 
-            db.Configuration.Add(new() { Key = ConfigKey, Value = hash });
-            await db.SaveChangesAsync(ct);
+            db.Configuration.Add(entity: new() { Key = ConfigKey, Value = hash });
+            await db.SaveChangesAsync(cancellationToken: ct);
 
             // Delete the file only after the row commits — losing the file
             // before the DB write would leave the install fingerprint-less.
             try
             {
-                storage.Delete(legacy);
+                storage.Delete(path: legacy);
             }
             catch (Exception ex)
             {
                 logger.LogDebug(
-                    ex,
-                    "Imported legacy driver_fingerprint.json but could not delete the file at {Path}",
-                    legacy
+                    exception: ex,
+                    message: "Imported legacy driver_fingerprint.json but could not delete the file at {Path}",
+                    args: legacy
                 );
             }
 
             logger.LogInformation(
-                "Migrated legacy driver_fingerprint.json into AppDbContext.Configuration"
+                message: "Migrated legacy driver_fingerprint.json into AppDbContext.Configuration"
             );
 
             return hash;
@@ -149,13 +149,13 @@ public class DbDriverFingerprintStore(
         catch (Exception ex)
         {
             logger.LogWarning(
-                ex,
-                "Legacy driver_fingerprint.json at {Path} could not be imported — ignoring",
-                legacy
+                exception: ex,
+                message: "Legacy driver_fingerprint.json at {Path} could not be imported — ignoring",
+                args: legacy
             );
             return null;
         }
     }
 
-    private sealed record FingerprintDto([property: JsonProperty("hash")] string Hash);
+    private sealed record FingerprintDto([property: JsonProperty(propertyName: "hash")] string Hash);
 }

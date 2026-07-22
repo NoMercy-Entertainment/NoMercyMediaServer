@@ -24,7 +24,7 @@ public class FanArtMovieClient : FanArtBaseClient
             //
         };
 
-        return Get<FanArtMovie>("movies/" + id, queryParams, priority);
+        return Get<FanArtMovie>(url: "movies/" + id, query: queryParams, priority: priority);
     }
 
     public Task<FanArtLatest[]?> Latest(Guid id, bool priority = false)
@@ -34,6 +34,6 @@ public class FanArtMovieClient : FanArtBaseClient
             //
         };
 
-        return Get<FanArtLatest[]>("movies/latest", queryParams, priority);
+        return Get<FanArtLatest[]>(url: "movies/latest", query: queryParams, priority: priority);
     }
 }

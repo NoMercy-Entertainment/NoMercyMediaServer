@@ -21,20 +21,20 @@ namespace NoMercy.Tests.Providers.TVDB.Models;
 /// TvdbTagOption.Tag have setters, so JSON deserialization can
 /// populate them. Without setters, Newtonsoft.Json silently skips the values.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class TvdbModelPropertyTests
 {
     [Fact]
     public void ForSeries_HasSetter()
     {
         PropertyInfo? prop = typeof(TvdbAwardCategory).GetProperty(
-            nameof(TvdbAwardCategory.ForSeries)
+            name: nameof(TvdbAwardCategory.ForSeries)
         );
 
-        Assert.NotNull(prop);
+        Assert.NotNull(@object: prop);
         Assert.True(
-            prop.CanWrite,
-            "TvdbAwardCategory.ForSeries must have a setter for JSON deserialization"
+            condition: prop.CanWrite,
+            userMessage: "TvdbAwardCategory.ForSeries must have a setter for JSON deserialization"
         );
     }
 
@@ -42,111 +42,111 @@ public class TvdbModelPropertyTests
     public void ForSeries_DeserializesTrue()
     {
         string json = """{"forSeries": true}""";
-        TvdbAwardCategory? result = JsonConvert.DeserializeObject<TvdbAwardCategory>(json);
+        TvdbAwardCategory? result = JsonConvert.DeserializeObject<TvdbAwardCategory>(value: json);
 
-        Assert.NotNull(result);
-        Assert.True(result.ForSeries);
+        Assert.NotNull(@object: result);
+        Assert.True(condition: result.ForSeries);
     }
 
     [Fact]
     public void ForSeries_DeserializesFalse()
     {
         string json = """{"forSeries": false}""";
-        TvdbAwardCategory? result = JsonConvert.DeserializeObject<TvdbAwardCategory>(json);
+        TvdbAwardCategory? result = JsonConvert.DeserializeObject<TvdbAwardCategory>(value: json);
 
-        Assert.NotNull(result);
-        Assert.False(result.ForSeries);
+        Assert.NotNull(@object: result);
+        Assert.False(condition: result.ForSeries);
     }
 
     [Fact]
     public void ForSeries_RoundTrip()
     {
         TvdbAwardCategory original = new() { ForSeries = true };
-        string json = JsonConvert.SerializeObject(original);
-        TvdbAwardCategory? deserialized = JsonConvert.DeserializeObject<TvdbAwardCategory>(json);
+        string json = JsonConvert.SerializeObject(value: original);
+        TvdbAwardCategory? deserialized = JsonConvert.DeserializeObject<TvdbAwardCategory>(value: json);
 
-        Assert.NotNull(deserialized);
-        Assert.Equal(original.ForSeries, deserialized.ForSeries);
+        Assert.NotNull(@object: deserialized);
+        Assert.Equal(expected: original.ForSeries, actual: deserialized.ForSeries);
     }
 
     [Fact]
     public void ForSeries_JsonPropertyAttribute()
     {
         PropertyInfo? prop = typeof(TvdbAwardCategory).GetProperty(
-            nameof(TvdbAwardCategory.ForSeries)
+            name: nameof(TvdbAwardCategory.ForSeries)
         );
 
-        Assert.NotNull(prop);
+        Assert.NotNull(@object: prop);
 
         JsonPropertyAttribute? attr = prop.GetCustomAttribute<JsonPropertyAttribute>();
-        Assert.NotNull(attr);
-        Assert.Equal("forSeries", attr.PropertyName);
+        Assert.NotNull(@object: attr);
+        Assert.Equal(expected: "forSeries", actual: attr.PropertyName);
     }
 
     [Fact]
     public void Tag_HasSetter()
     {
-        PropertyInfo? prop = typeof(TvdbTagOption).GetProperty(nameof(TvdbTagOption.Tag));
+        PropertyInfo? prop = typeof(TvdbTagOption).GetProperty(name: nameof(TvdbTagOption.Tag));
 
-        Assert.NotNull(prop);
-        Assert.True(prop.CanWrite, "TvdbTagOption.Tag must have a setter for JSON deserialization");
+        Assert.NotNull(@object: prop);
+        Assert.True(condition: prop.CanWrite, userMessage: "TvdbTagOption.Tag must have a setter for JSON deserialization");
     }
 
     [Fact]
     public void Tag_DeserializesValue()
     {
         string json = """{"tag": 42}""";
-        TvdbTagOption? result = JsonConvert.DeserializeObject<TvdbTagOption>(json);
+        TvdbTagOption? result = JsonConvert.DeserializeObject<TvdbTagOption>(value: json);
 
-        Assert.NotNull(result);
-        Assert.Equal(42, result.Tag);
+        Assert.NotNull(@object: result);
+        Assert.Equal(expected: 42, actual: result.Tag);
     }
 
     [Fact]
     public void Tag_DeserializesZero()
     {
         string json = """{"tag": 0}""";
-        TvdbTagOption? result = JsonConvert.DeserializeObject<TvdbTagOption>(json);
+        TvdbTagOption? result = JsonConvert.DeserializeObject<TvdbTagOption>(value: json);
 
-        Assert.NotNull(result);
-        Assert.Equal(0, result.Tag);
+        Assert.NotNull(@object: result);
+        Assert.Equal(expected: 0, actual: result.Tag);
     }
 
     [Fact]
     public void Tag_RoundTrip()
     {
         TvdbTagOption original = new() { Tag = 99 };
-        string json = JsonConvert.SerializeObject(original);
-        TvdbTagOption? deserialized = JsonConvert.DeserializeObject<TvdbTagOption>(json);
+        string json = JsonConvert.SerializeObject(value: original);
+        TvdbTagOption? deserialized = JsonConvert.DeserializeObject<TvdbTagOption>(value: json);
 
-        Assert.NotNull(deserialized);
-        Assert.Equal(original.Tag, deserialized.Tag);
+        Assert.NotNull(@object: deserialized);
+        Assert.Equal(expected: original.Tag, actual: deserialized.Tag);
     }
 
     [Fact]
     public void Tag_JsonPropertyAttribute()
     {
-        PropertyInfo? prop = typeof(TvdbTagOption).GetProperty(nameof(TvdbTagOption.Tag));
+        PropertyInfo? prop = typeof(TvdbTagOption).GetProperty(name: nameof(TvdbTagOption.Tag));
 
-        Assert.NotNull(prop);
+        Assert.NotNull(@object: prop);
 
         JsonPropertyAttribute? attr = prop.GetCustomAttribute<JsonPropertyAttribute>();
-        Assert.NotNull(attr);
-        Assert.Equal("tag", attr.PropertyName);
+        Assert.NotNull(@object: attr);
+        Assert.Equal(expected: "tag", actual: attr.PropertyName);
     }
 
     [Fact]
     public void Tag_DefaultValue()
     {
         TvdbTagOption instance = new();
-        Assert.Equal(0, instance.Tag);
+        Assert.Equal(expected: 0, actual: instance.Tag);
     }
 
     [Fact]
     public void ForSeries_DefaultValue()
     {
         TvdbAwardCategory instance = new();
-        Assert.False(instance.ForSeries);
+        Assert.False(condition: instance.ForSeries);
     }
 
     [Fact]
@@ -162,14 +162,14 @@ public class TvdbModelPropertyTests
             }
             """;
 
-        TvdbAwardCategory? result = JsonConvert.DeserializeObject<TvdbAwardCategory>(json);
+        TvdbAwardCategory? result = JsonConvert.DeserializeObject<TvdbAwardCategory>(value: json);
 
-        Assert.NotNull(result);
-        Assert.True(result.AllowCoNominees);
-        Assert.False(result.ForMovies);
-        Assert.True(result.ForSeries);
-        Assert.Equal(5, result.Id);
-        Assert.Equal("Best Drama", result.Name);
+        Assert.NotNull(@object: result);
+        Assert.True(condition: result.AllowCoNominees);
+        Assert.False(condition: result.ForMovies);
+        Assert.True(condition: result.ForSeries);
+        Assert.Equal(expected: 5, actual: result.Id);
+        Assert.Equal(expected: "Best Drama", actual: result.Name);
     }
 
     [Fact]
@@ -185,13 +185,13 @@ public class TvdbModelPropertyTests
             }
             """;
 
-        TvdbTagOption? result = JsonConvert.DeserializeObject<TvdbTagOption>(json);
+        TvdbTagOption? result = JsonConvert.DeserializeObject<TvdbTagOption>(value: json);
 
-        Assert.NotNull(result);
-        Assert.Equal("Some help", result.HelpText);
-        Assert.Equal(10, result.Id);
-        Assert.Equal("Action", result.Name);
-        Assert.Equal(7, result.Tag);
-        Assert.Equal("Genre", result.TagName);
+        Assert.NotNull(@object: result);
+        Assert.Equal(expected: "Some help", actual: result.HelpText);
+        Assert.Equal(expected: 10, actual: result.Id);
+        Assert.Equal(expected: "Action", actual: result.Name);
+        Assert.Equal(expected: 7, actual: result.Tag);
+        Assert.Equal(expected: "Genre", actual: result.TagName);
     }
 }

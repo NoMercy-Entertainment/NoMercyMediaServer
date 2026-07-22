@@ -34,7 +34,7 @@ namespace NoMercy.Tests.Api.Jobs;
 // with no storage access — Handle() still reaches its final, unconditional
 // LibraryRefreshedEvent publish with an empty file scan.
 // ---------------------------------------------------------------------------
-[Trait("Category", "Jobs")]
+[Trait(name: "Category", value: "Jobs")]
 public class FindMediaFilesJobTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -50,9 +50,9 @@ public class FindMediaFilesJobTests : IClassFixture<NoMercyApiFactory>
         IEventBus eventBus = _factory.Services.GetRequiredService<IEventBus>();
         List<LibraryRefreshedEvent> captured = [];
         using IDisposable subscription = eventBus.Subscribe<LibraryRefreshedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                captured.Add(evt);
+                captured.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
@@ -64,7 +64,7 @@ public class FindMediaFilesJobTests : IClassFixture<NoMercyApiFactory>
             Type = MediaTypes.MovieMediaType,
         };
 
-        FindMediaFilesJob job = new(unseededMovieId, library)
+        FindMediaFilesJob job = new(id: unseededMovieId, library: library)
         {
             LoggerFactory = NullLoggerFactory.Instance,
         };
@@ -74,12 +74,12 @@ public class FindMediaFilesJobTests : IClassFixture<NoMercyApiFactory>
         captured
             .Should()
             .ContainSingle(
-                evt =>
+                predicate: evt =>
                     evt.QueryKey.SequenceEqual(
                         new object?[] { MediaTypes.MovieMediaType, unseededMovieId.ToString() }
                     ),
-                "the published id element must be the STRING form of the scan id, not a raw int — "
-                    + "a bare `Id` element here would fail this SequenceEqual against \"555555\""
+                because: "the published id element must be the STRING form of the scan id, not a raw int — "
+                         + "a bare `Id` element here would fail this SequenceEqual against \"555555\""
             );
     }
 }

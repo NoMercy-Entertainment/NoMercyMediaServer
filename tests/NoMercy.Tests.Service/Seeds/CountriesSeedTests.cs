@@ -23,7 +23,7 @@ namespace NoMercy.Tests.Service.Seeds;
 /// table has any rows — otherwise every boot re-fetches the full country list
 /// from the network for data that never changes.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class CountriesSeedTests : IDisposable
 {
     private readonly SqliteConnection _connection;
@@ -31,16 +31,16 @@ public sealed class CountriesSeedTests : IDisposable
 
     public CountriesSeedTests()
     {
-        _connection = new("DataSource=:memory:");
+        _connection = new(connectionString: "DataSource=:memory:");
         _connection.Open();
         _options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(
-                _connection,
-                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+                connection: _connection,
+                sqliteOptionsAction: o => o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery)
             )
             .Options;
 
-        using MediaContext ctx = new(_options);
+        using MediaContext ctx = new(options: _options);
         ctx.Database.EnsureCreated();
     }
 
@@ -49,9 +49,9 @@ public sealed class CountriesSeedTests : IDisposable
     [Fact]
     public async Task Init_CountriesAlreadySeeded_ReturnsWithoutCallingNetwork()
     {
-        await using MediaContext seedContext = new(_options);
+        await using MediaContext seedContext = new(options: _options);
         seedContext.Countries.Add(
-            new()
+            entity: new()
             {
                 Iso31661 = "US",
                 EnglishName = "United States of America",
@@ -60,11 +60,11 @@ public sealed class CountriesSeedTests : IDisposable
         );
         await seedContext.SaveChangesAsync();
 
-        await using MediaContext context = new(_options);
+        await using MediaContext context = new(options: _options);
 
-        await CountriesSeed.Init(context);
+        await CountriesSeed.Init(dbContext: context);
 
         int count = await context.Countries.CountAsync();
-        Assert.Equal(1, count);
+        Assert.Equal(expected: 1, actual: count);
     }
 }

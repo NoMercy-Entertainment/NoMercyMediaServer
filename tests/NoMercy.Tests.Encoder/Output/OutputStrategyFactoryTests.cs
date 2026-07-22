@@ -19,38 +19,40 @@ namespace NoMercy.Tests.Encoder.Output;
 public class OutputStrategyFactoryTests
 {
     [Theory]
-    [InlineData(OutputFormat.Hls, typeof(HlsOutputStrategy))]
-    [InlineData(OutputFormat.Mkv, typeof(MkvOutputStrategy))]
-    [InlineData(OutputFormat.Mp4, typeof(Mp4OutputStrategy))]
-    [InlineData(OutputFormat.Dash, typeof(DashOutputStrategy))]
-    [InlineData(OutputFormat.Mp3, typeof(Mp3OutputStrategy))]
-    [InlineData(OutputFormat.Flac, typeof(FlacOutputStrategy))]
-    [InlineData(OutputFormat.Ogg, typeof(OggOutputStrategy))]
+    [InlineData(data: [OutputFormat.Hls, typeof(HlsOutputStrategy)])]
+    [InlineData(data: [OutputFormat.Mkv, typeof(MkvOutputStrategy)])]
+    [InlineData(data: [OutputFormat.Mp4, typeof(Mp4OutputStrategy)])]
+    [InlineData(data: [OutputFormat.Dash, typeof(DashOutputStrategy)])]
+    [InlineData(data: [OutputFormat.Mp3, typeof(Mp3OutputStrategy)])]
+    [InlineData(data: [OutputFormat.Flac, typeof(FlacOutputStrategy)])]
+    [InlineData(data: [OutputFormat.Ogg, typeof(OggOutputStrategy)])]
     public void Resolve_BuiltInFormat_ReturnsMatchingStrategy(OutputFormat format, Type expected)
     {
-        OutputStrategyFactory factory = new([
-            new HlsOutputStrategy(TestStorageFactory.CreateLocal()),
-            new MkvOutputStrategy(TestStorageFactory.CreateLocal()),
-            new Mp4OutputStrategy(TestStorageFactory.CreateLocal()),
-            new DashOutputStrategy(TestStorageFactory.CreateLocal()),
-            new Mp3OutputStrategy(TestStorageFactory.CreateLocal()),
-            new FlacOutputStrategy(TestStorageFactory.CreateLocal()),
-            new OggOutputStrategy(TestStorageFactory.CreateLocal()),
+        OutputStrategyFactory factory = new(strategies:
+        [
+            new HlsOutputStrategy(storage: TestStorageFactory.CreateLocal()),
+            new MkvOutputStrategy(storage: TestStorageFactory.CreateLocal()),
+            new Mp4OutputStrategy(storage: TestStorageFactory.CreateLocal()),
+            new DashOutputStrategy(storage: TestStorageFactory.CreateLocal()),
+            new Mp3OutputStrategy(storage: TestStorageFactory.CreateLocal()),
+            new FlacOutputStrategy(storage: TestStorageFactory.CreateLocal()),
+            new OggOutputStrategy(storage: TestStorageFactory.CreateLocal()),
         ]);
 
-        IOutputStrategy resolved = factory.Resolve(format);
+        IOutputStrategy resolved = factory.Resolve(format: format);
 
-        resolved.Should().BeOfType(expected);
+        resolved.Should().BeOfType(expectedType: expected);
     }
 
     [Fact]
     public void Resolve_UnknownFormat_Throws()
     {
-        OutputStrategyFactory factory = new([
-            new HlsOutputStrategy(TestStorageFactory.CreateLocal()),
+        OutputStrategyFactory factory = new(strategies:
+        [
+            new HlsOutputStrategy(storage: TestStorageFactory.CreateLocal()),
         ]);
 
-        Action act = () => factory.Resolve((OutputFormat)99);
+        Action act = () => factory.Resolve(format: (OutputFormat)99);
 
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
@@ -61,14 +63,15 @@ public class OutputStrategyFactoryTests
         // Last-registration-wins: plugin HLS strategy registered after built-in
         // should be preferred by the factory.
         FakeHlsStrategy pluginOverride = new();
-        OutputStrategyFactory factory = new([
-            new HlsOutputStrategy(TestStorageFactory.CreateLocal()),
+        OutputStrategyFactory factory = new(strategies:
+        [
+            new HlsOutputStrategy(storage: TestStorageFactory.CreateLocal()),
             pluginOverride,
         ]);
 
-        IOutputStrategy resolved = factory.Resolve(OutputFormat.Hls);
+        IOutputStrategy resolved = factory.Resolve(format: OutputFormat.Hls);
 
-        resolved.Should().BeSameAs(pluginOverride);
+        resolved.Should().BeSameAs(expected: pluginOverride);
     }
 
     private sealed class FakeHlsStrategy : IOutputStrategy

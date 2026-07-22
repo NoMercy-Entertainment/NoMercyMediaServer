@@ -24,5 +24,5 @@ public sealed record ExistingOutputSnapshot(
     int ValidOcrSidecarCount
 )
 {
-    public static readonly ExistingOutputSnapshot Empty = new(null, [], 0);
+    public static readonly ExistingOutputSnapshot Empty = new(ProfileFingerprint: null, BundleFiles: [], ValidOcrSidecarCount: 0);
 }

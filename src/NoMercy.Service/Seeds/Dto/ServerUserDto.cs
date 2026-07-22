@@ -15,27 +15,27 @@ namespace NoMercy.Service.Seeds.Dto;
 
 public class ServerUserDto
 {
-    [JsonProperty("data")]
+    [JsonProperty(propertyName: "data")]
     public ServerUserDtoData[] Data { get; set; } = [];
 }
 
 public class ServerUserDtoData
 {
-    [JsonProperty("user_id")]
+    [JsonProperty(propertyName: "user_id")]
     public string UserId { get; set; } = string.Empty;
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("email")]
+    [JsonProperty(propertyName: "email")]
     public string Email { get; set; } = string.Empty;
 
-    [JsonProperty("enabled")]
+    [JsonProperty(propertyName: "enabled")]
     public bool Enabled { get; set; } = true;
 
-    [JsonProperty("avatar")]
+    [JsonProperty(propertyName: "avatar")]
     public Uri? Avatar { get; set; }
 
-    [JsonProperty("is_owner")]
+    [JsonProperty(propertyName: "is_owner")]
     public bool IsOwner { get; set; }
 }

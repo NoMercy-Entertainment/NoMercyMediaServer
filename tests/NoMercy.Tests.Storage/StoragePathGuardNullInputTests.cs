@@ -20,21 +20,21 @@ namespace NoMercy.Tests.Storage;
 /// "scope root", and a null caller-supplied path must hit the exact same
 /// early-return, not a <see cref="NullReferenceException"/>).
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class StoragePathGuardNullInputTests
 {
     [Fact]
     public void StructuralValidate_accepts_null_the_same_as_empty()
     {
-        Action act = () => StoragePathGuard.StructuralValidate(null);
+        Action act = () => StoragePathGuard.StructuralValidate(requestedPath: null);
 
         act.Should()
-            .NotThrow("null must be treated as the scope root just like empty string (Rule 3)");
+            .NotThrow(because: "null must be treated as the scope root just like empty string (Rule 3)");
     }
 
     [Fact]
     public void IsRootedAnyStyle_returns_false_for_null()
     {
-        StoragePathGuard.IsRootedAnyStyle(null).Should().BeFalse();
+        StoragePathGuard.IsRootedAnyStyle(path: null).Should().BeFalse();
     }
 }

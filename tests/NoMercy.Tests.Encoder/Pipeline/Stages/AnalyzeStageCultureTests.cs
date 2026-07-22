@@ -35,37 +35,37 @@ public class AnalyzeStageCultureTests
 
     public AnalyzeStageCultureTests()
     {
-        _stage = new(_analyzer.Object, _storage.Object, NullLogger<AnalyzeStage>.Instance);
-        _context = new("test-correlation", Decisions: _log);
-        _storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(true);
+        _stage = new(analyzer: _analyzer.Object, storage: _storage.Object, logger: NullLogger<AnalyzeStage>.Instance);
+        _context = new(CorrelationId: "test-correlation", Decisions: _log);
+        _storage.Setup(expression: s => s.Exists(It.IsAny<string>())).Returns(value: true);
     }
 
     [Theory]
-    [InlineData("de-DE")]
-    [InlineData("nl-NL")]
-    [InlineData("fr-FR")]
+    [InlineData(data: "de-DE")]
+    [InlineData(data: "nl-NL")]
+    [InlineData(data: "fr-FR")]
     public async Task VfrDecisionMessage_StaysPeriodDecimalUnderCommaCulture(string culture)
     {
         CultureInfo previous = Thread.CurrentThread.CurrentCulture;
         try
         {
-            Thread.CurrentThread.CurrentCulture = new(culture);
+            Thread.CurrentThread.CurrentCulture = new(name: culture);
 
             _analyzer
-                .Setup(a =>
+                .Setup(expression: a =>
                     a.AnalyzeAsync(
                         It.IsAny<string>(),
                         It.IsAny<IStorage>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .ReturnsAsync(BuildMediaInfo(realFps: 30.0, avgFps: 24.0));
+                .ReturnsAsync(value: BuildMediaInfo(realFps: 30.0, avgFps: 24.0));
 
-            await _stage.ExecuteAsync("/movies/x.mkv", _context, default);
+            await _stage.ExecuteAsync(inputPath: "/movies/x.mkv", context: _context, ct: default);
 
-            string message = _log.Snapshot().Single(d => d.Key == "analyze.vfr_detected").Message;
-            message.Should().Contain("30.000").And.Contain("24.000");
-            message.Should().NotContain("30,000").And.NotContain("24,000");
+            string message = _log.Snapshot().Single(predicate: d => d.Key == "analyze.vfr_detected").Message;
+            message.Should().Contain(expected: "30.000").And.Contain(expected: "24.000");
+            message.Should().NotContain(unexpected: "30,000").And.NotContain(unexpected: "24,000");
         }
         finally
         {
@@ -77,7 +77,7 @@ public class AnalyzeStageCultureTests
         new(
             FilePath: "/movies/x.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(90),
+            Duration: TimeSpan.FromMinutes(minutes: 90),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 7_200_000_000,
             VideoStreams:

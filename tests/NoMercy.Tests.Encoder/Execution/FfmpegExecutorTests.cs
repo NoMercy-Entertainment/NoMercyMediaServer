@@ -26,7 +26,7 @@ public class FfmpegExecutorTests
 
     public FfmpegExecutorTests()
     {
-        _executor = new(_processRunner.Object, NullLogger<FfmpegExecutor>.Instance);
+        _executor = new(processRunner: _processRunner.Object, logger: NullLogger<FfmpegExecutor>.Instance);
     }
 
     [Fact]
@@ -35,10 +35,10 @@ public class FfmpegExecutorTests
         SetupSuccess();
         FfmpegCommand cmd = BuildSimpleCommand();
 
-        ExecutionResult result = await _executor.ExecuteAsync(cmd, TimeSpan.FromMinutes(1));
+        ExecutionResult result = await _executor.ExecuteAsync(command: cmd, inputDuration: TimeSpan.FromMinutes(minutes: 1));
 
         result.Success.Should().BeTrue();
-        result.ExitCode.Should().Be(0);
+        result.ExitCode.Should().Be(expected: 0);
         result.Error.Should().BeNull();
     }
 
@@ -46,7 +46,7 @@ public class FfmpegExecutorTests
     public async Task FailedExecution_ReturnsErrorWithClassification()
     {
         _processRunner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -59,27 +59,27 @@ public class FfmpegExecutorTests
                 )
             )
             .ReturnsAsync(
-                new ProcessResult(
-                    1,
-                    "",
-                    "No such file or directory: /input.mkv",
-                    TimeSpan.FromSeconds(1)
+                value: new ProcessResult(
+                    ExitCode: 1,
+                    StdOut: "",
+                    StdErr: "No such file or directory: /input.mkv",
+                    Duration: TimeSpan.FromSeconds(seconds: 1)
                 )
             );
 
         FfmpegCommand cmd = BuildSimpleCommand();
-        ExecutionResult result = await _executor.ExecuteAsync(cmd, TimeSpan.FromMinutes(1));
+        ExecutionResult result = await _executor.ExecuteAsync(command: cmd, inputDuration: TimeSpan.FromMinutes(minutes: 1));
 
         result.Success.Should().BeFalse();
         result.Error.Should().NotBeNull();
-        result.Error!.Kind.Should().Be(EncodingErrorKind.InputNotFound);
+        result.Error!.Kind.Should().Be(expected: EncodingErrorKind.InputNotFound);
     }
 
     [Fact]
     public async Task ProgressCallback_Invoked()
     {
         _processRunner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -101,40 +101,40 @@ public class FfmpegExecutorTests
                 CancellationToken,
                 Action<int>?
             >(
-                (exe, args, onStdOut, onStdErr, dir, ct, kill, onStarted) =>
+                action: (exe, args, onStdOut, onStdErr, dir, ct, kill, onStarted) =>
                 {
-                    onStdOut?.Invoke("frame=100");
-                    onStdOut?.Invoke("fps=30.0");
-                    onStdOut?.Invoke("out_time_us=30000000");
-                    onStdOut?.Invoke("speed=2.0x");
-                    onStdOut?.Invoke("progress=continue");
-                    onStdOut?.Invoke("frame=200");
-                    onStdOut?.Invoke("fps=30.0");
-                    onStdOut?.Invoke("out_time_us=60000000");
-                    onStdOut?.Invoke("speed=2.0x");
-                    onStdOut?.Invoke("progress=end");
+                    onStdOut?.Invoke(obj: "frame=100");
+                    onStdOut?.Invoke(obj: "fps=30.0");
+                    onStdOut?.Invoke(obj: "out_time_us=30000000");
+                    onStdOut?.Invoke(obj: "speed=2.0x");
+                    onStdOut?.Invoke(obj: "progress=continue");
+                    onStdOut?.Invoke(obj: "frame=200");
+                    onStdOut?.Invoke(obj: "fps=30.0");
+                    onStdOut?.Invoke(obj: "out_time_us=60000000");
+                    onStdOut?.Invoke(obj: "speed=2.0x");
+                    onStdOut?.Invoke(obj: "progress=end");
                 }
             )
-            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.FromSeconds(30)));
+            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.FromSeconds(seconds: 30)));
 
         List<EncodingProgress> progressEvents = [];
         FfmpegCommand cmd = BuildSimpleCommand();
 
         await _executor.ExecuteAsync(
-            cmd,
-            TimeSpan.FromMinutes(1),
-            onProgress: p => progressEvents.Add(p)
+            command: cmd,
+            inputDuration: TimeSpan.FromMinutes(minutes: 1),
+            onProgress: p => progressEvents.Add(item: p)
         );
 
         progressEvents.Should().NotBeEmpty();
-        progressEvents.Last().PercentComplete.Should().BeGreaterThan(0);
+        progressEvents.Last().PercentComplete.Should().BeGreaterThan(expected: 0);
     }
 
     [Fact]
     public async Task DiskFullError_Classified()
     {
         _processRunner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -147,21 +147,21 @@ public class FfmpegExecutorTests
                 )
             )
             .ReturnsAsync(
-                new ProcessResult(1, "", "Error: No space left on device", TimeSpan.FromSeconds(1))
+                value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "Error: No space left on device", Duration: TimeSpan.FromSeconds(seconds: 1))
             );
 
         ExecutionResult result = await _executor.ExecuteAsync(
-            BuildSimpleCommand(),
-            TimeSpan.FromMinutes(1)
+            command: BuildSimpleCommand(),
+            inputDuration: TimeSpan.FromMinutes(minutes: 1)
         );
 
-        result.Error!.Kind.Should().Be(EncodingErrorKind.DiskFull);
+        result.Error!.Kind.Should().Be(expected: EncodingErrorKind.DiskFull);
     }
 
     private void SetupSuccess()
     {
         _processRunner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -173,11 +173,11 @@ public class FfmpegExecutorTests
                     It.IsAny<Action<int>?>()
                 )
             )
-            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.FromSeconds(10)));
+            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.FromSeconds(seconds: 10)));
     }
 
     private static FfmpegCommand BuildSimpleCommand()
     {
-        return new("ffmpeg", ["-i", "/input.mkv", "/output.mp4"], null);
+        return new(Executable: "ffmpeg", Arguments: ["-i", "/input.mkv", "/output.mp4"], WorkingDirectory: null);
     }
 }

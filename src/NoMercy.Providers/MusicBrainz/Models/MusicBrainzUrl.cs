@@ -15,9 +15,9 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class MusicBrainzUrl
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public Guid Id { get; set; }
 
-    [JsonProperty("resource")]
+    [JsonProperty(propertyName: "resource")]
     public Uri Resource { get; set; } = null!;
 }

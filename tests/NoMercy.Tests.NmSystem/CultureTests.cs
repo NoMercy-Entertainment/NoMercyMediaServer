@@ -18,107 +18,107 @@ namespace NoMercy.Tests.NmSystem;
 /// special und/mul/zxx labels and legacy bibliographic codes) and the
 /// CultureInfo to bibliographic tag mapping used for subtitle/audio language tags.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class CultureTests
 {
     [Theory]
-    [InlineData("en", "English")]
-    [InlineData("nl", "Dutch")]
-    [InlineData("de", "German")]
-    [InlineData("fr", "French")]
+    [InlineData(data: ["en", "English"])]
+    [InlineData(data: ["nl", "Dutch"])]
+    [InlineData(data: ["de", "German"])]
+    [InlineData(data: ["fr", "French"])]
     public void EnglishLanguageName_ResolvesCommonCodes(string code, string expected)
     {
-        Culture.EnglishLanguageName(code).Should().Be(expected);
+        Culture.EnglishLanguageName(code: code).Should().Be(expected: expected);
     }
 
     [Theory]
-    [InlineData("und", "Unknown")]
-    [InlineData("mul", "Multiple Languages")]
-    [InlineData("zxx", "No Language")]
+    [InlineData(data: ["und", "Unknown"])]
+    [InlineData(data: ["mul", "Multiple Languages"])]
+    [InlineData(data: ["zxx", "No Language"])]
     public void EnglishLanguageName_ResolvesSpecialCodes(string code, string expected)
     {
-        Culture.EnglishLanguageName(code).Should().Be(expected);
+        Culture.EnglishLanguageName(code: code).Should().Be(expected: expected);
     }
 
     [Fact]
     public void EnglishLanguageName_ResolvesLegacyBibliographicCode()
     {
         // "ger" is the bibliographic form of "deu" — both resolve to German.
-        Culture.EnglishLanguageName("ger").Should().Be("German");
+        Culture.EnglishLanguageName(code: "ger").Should().Be(expected: "German");
     }
 
     [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    [InlineData(null)]
+    [InlineData(data: "")]
+    [InlineData(data: "   ")]
+    [InlineData(data: null)]
     public void EnglishLanguageName_BlankCodeIsUnknown(string? code)
     {
-        Culture.EnglishLanguageName(code!).Should().Be("Unknown");
+        Culture.EnglishLanguageName(code: code!).Should().Be(expected: "Unknown");
     }
 
     [Fact]
     public void EnglishLanguageName_UnknownCodeUppercasesInput()
     {
-        Culture.EnglishLanguageName("qqq").Should().Be("QQQ");
+        Culture.EnglishLanguageName(code: "qqq").Should().Be(expected: "QQQ");
     }
 
     [Fact]
     public void EnglishLanguageTag_MapsToBibliographicCode()
     {
-        new CultureInfo("nl").EnglishLanguageTag().Should().Be("dut");
-        new CultureInfo("de").EnglishLanguageTag().Should().Be("ger");
+        new CultureInfo(name: "nl").EnglishLanguageTag().Should().Be(expected: "dut");
+        new CultureInfo(name: "de").EnglishLanguageTag().Should().Be(expected: "ger");
     }
 
     [Fact]
     public void EnglishLanguageTag_KeepsEnglishAsEng()
     {
-        new CultureInfo("en").EnglishLanguageTag().Should().Be("eng");
+        new CultureInfo(name: "en").EnglishLanguageTag().Should().Be(expected: "eng");
     }
 
     [Theory]
-    [InlineData("nl", "dut")]
-    [InlineData("nld", "dut")]
-    [InlineData("nl-NL", "dut")]
-    [InlineData("de", "ger")]
-    [InlineData("fr", "fre")]
-    [InlineData("cs", "cze")]
+    [InlineData(data: ["nl", "dut"])]
+    [InlineData(data: ["nld", "dut"])]
+    [InlineData(data: ["nl-NL", "dut"])]
+    [InlineData(data: ["de", "ger"])]
+    [InlineData(data: ["fr", "fre"])]
+    [InlineData(data: ["cs", "cze"])]
     public void BibliographicLanguageCode_MapsToTheCodeOpenSubtitlesAccepts(
         string code,
         string expected
     )
     {
-        Culture.BibliographicLanguageCode(code).Should().Be(expected);
+        Culture.BibliographicLanguageCode(code: code).Should().Be(expected: expected);
     }
 
     [Theory]
-    [InlineData("dut")]
-    [InlineData("ger")]
-    [InlineData("eng")]
-    [InlineData("jpn")]
+    [InlineData(data: "dut")]
+    [InlineData(data: "ger")]
+    [InlineData(data: "eng")]
+    [InlineData(data: "jpn")]
     public void BibliographicLanguageCode_IsIdempotent(string code)
     {
-        Culture.BibliographicLanguageCode(code).Should().Be(code);
+        Culture.BibliographicLanguageCode(code: code).Should().Be(expected: code);
         Culture
-            .BibliographicLanguageCode(Culture.BibliographicLanguageCode(code))
+            .BibliographicLanguageCode(code: Culture.BibliographicLanguageCode(code: code))
             .Should()
-            .Be(code);
+            .Be(expected: code);
     }
 
     [Theory]
-    [InlineData("en", "eng")]
-    [InlineData("ja", "jpn")]
-    [InlineData("hu", "hun")]
+    [InlineData(data: ["en", "eng"])]
+    [InlineData(data: ["ja", "jpn"])]
+    [InlineData(data: ["hu", "hun"])]
     public void BibliographicLanguageCode_LeavesNonLegacyCodesOnTheirIso3Form(
         string code,
         string expected
     )
     {
-        Culture.BibliographicLanguageCode(code).Should().Be(expected);
+        Culture.BibliographicLanguageCode(code: code).Should().Be(expected: expected);
     }
 
     [Fact]
     public void BibliographicLanguageCode_PassesThroughAnUnknownCode()
     {
-        Culture.BibliographicLanguageCode("zzz").Should().Be("zzz");
+        Culture.BibliographicLanguageCode(code: "zzz").Should().Be(expected: "zzz");
     }
 }

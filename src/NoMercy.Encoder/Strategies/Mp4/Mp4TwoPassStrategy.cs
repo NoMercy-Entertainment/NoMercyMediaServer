@@ -28,7 +28,7 @@ public class Mp4TwoPassStrategy(
     ICheckpointStore checkpointStore,
     ILogger<Mp4TwoPassStrategy> logger,
     IStorage storage
-) : TwoPassStrategyBase(encoder, checkpointStore, logger, storage)
+) : TwoPassStrategyBase(encoder: encoder, checkpointStore: checkpointStore, logger: logger, storage: storage)
 {
     public override OutputFormat Format => OutputFormat.Mp4;
 }

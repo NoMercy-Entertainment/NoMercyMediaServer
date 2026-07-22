@@ -18,19 +18,19 @@ namespace NoMercy.Database;
 
 public class Timestamps
 {
-    [DefaultValue("CURRENT_TIMESTAMP")]
-    [JsonProperty("created_at")]
-    [TypeConverter("TIMESTAMP")]
+    [DefaultValue(value: "CURRENT_TIMESTAMP")]
+    [JsonProperty(propertyName: "created_at")]
+    [TypeConverter(typeName: "TIMESTAMP")]
     [Timestamp]
     [Required]
-    [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.Computed)]
     public DateTime CreatedAt { get; set; }
 
-    [DefaultValue("CURRENT_TIMESTAMP")]
-    [JsonProperty("updated_at")]
-    [TypeConverter("TIMESTAMP")]
+    [DefaultValue(value: "CURRENT_TIMESTAMP")]
+    [JsonProperty(propertyName: "updated_at")]
+    [TypeConverter(typeName: "TIMESTAMP")]
     [Timestamp]
     [Required]
-    [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.Computed)]
     public DateTime UpdatedAt { get; set; }
 }

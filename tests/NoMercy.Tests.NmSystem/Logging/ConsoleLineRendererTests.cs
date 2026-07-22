@@ -21,95 +21,95 @@ namespace NoMercy.Tests.NmSystem;
 /// the hanging gutter for continuation lines, and that colour escapes add zero
 /// display width (so alignment is identical coloured or plain).
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class ConsoleLineRendererTests
 {
-    private static readonly DateTime At = new(2026, 6, 29, 14, 23, 7, DateTimeKind.Utc);
+    private static readonly DateTime At = new(year: 2026, month: 6, day: 29, hour: 14, minute: 23, second: 7, kind: DateTimeKind.Utc);
 
     [Fact]
     public void Render_Plain_SingleLine_IsAligned()
     {
         string line = ConsoleLineRenderer.Render(
-            At,
-            LogLevel.Information,
-            LogCategories.Resolve("moviedb"),
-            "Fetching \"Inception\"",
-            null,
-            NoMercyConsoleTheme.Dark,
+            timestamp: At,
+            level: LogLevel.Information,
+            category: LogCategories.Resolve(key: "moviedb"),
+            message: "Fetching \"Inception\"",
+            exception: null,
+            theme: NoMercyConsoleTheme.Dark,
             color: false
         );
 
-        line.Should().Be("14:23:07       TheMovieDB │ Fetching \"Inception\"");
+        line.Should().Be(expected: "14:23:07       TheMovieDB │ Fetching \"Inception\"");
     }
 
     [Fact]
     public void Render_Warning_KeepsCategoryColumnAligned()
     {
         string info = ConsoleLineRenderer.Render(
-            At,
-            LogLevel.Information,
-            LogCategories.Resolve("moviedb"),
-            "x",
-            null,
-            NoMercyConsoleTheme.Dark,
+            timestamp: At,
+            level: LogLevel.Information,
+            category: LogCategories.Resolve(key: "moviedb"),
+            message: "x",
+            exception: null,
+            theme: NoMercyConsoleTheme.Dark,
             color: false
         );
         string warn = ConsoleLineRenderer.Render(
-            At,
-            LogLevel.Warning,
-            LogCategories.Resolve("moviedb"),
-            "x",
-            null,
-            NoMercyConsoleTheme.Dark,
+            timestamp: At,
+            level: LogLevel.Warning,
+            category: LogCategories.Resolve(key: "moviedb"),
+            message: "x",
+            exception: null,
+            theme: NoMercyConsoleTheme.Dark,
             color: false
         );
 
-        warn.Should().Contain("!");
-        info.IndexOf("TheMovieDB", StringComparison.Ordinal)
+        warn.Should().Contain(expected: "!");
+        info.IndexOf(value: "TheMovieDB", comparisonType: StringComparison.Ordinal)
             .Should()
-            .Be(warn.IndexOf("TheMovieDB", StringComparison.Ordinal));
+            .Be(expected: warn.IndexOf(value: "TheMovieDB", comparisonType: StringComparison.Ordinal));
     }
 
     [Fact]
     public void Render_MultiLineMessage_HangsUnderGutter()
     {
         string block = ConsoleLineRenderer.Render(
-            At,
-            LogLevel.Information,
-            LogCategories.Resolve("moviedb"),
-            "first\nsecond",
-            null,
-            NoMercyConsoleTheme.Dark,
+            timestamp: At,
+            level: LogLevel.Information,
+            category: LogCategories.Resolve(key: "moviedb"),
+            message: "first\nsecond",
+            exception: null,
+            theme: NoMercyConsoleTheme.Dark,
             color: false
         );
 
-        string[] lines = block.Split('\n');
-        lines.Should().HaveCount(2);
-        lines[1].Should().Be(new string(' ', 26) + "│ second");
+        string[] lines = block.Split(separator: '\n');
+        lines.Should().HaveCount(expected: 2);
+        lines[1].Should().Be(expected: new string(c: ' ', count: 26) + "│ second");
     }
 
     [Fact]
     public void Render_Coloured_HasSameDisplayWidthAsPlain()
     {
         string plain = ConsoleLineRenderer.Render(
-            At,
-            LogLevel.Warning,
-            LogCategories.Resolve("musicbrainz"),
-            "Rate limit 429",
-            null,
-            NoMercyConsoleTheme.Dark,
+            timestamp: At,
+            level: LogLevel.Warning,
+            category: LogCategories.Resolve(key: "musicbrainz"),
+            message: "Rate limit 429",
+            exception: null,
+            theme: NoMercyConsoleTheme.Dark,
             color: false
         );
         string coloured = ConsoleLineRenderer.Render(
-            At,
-            LogLevel.Warning,
-            LogCategories.Resolve("musicbrainz"),
-            "Rate limit 429",
-            null,
-            NoMercyConsoleTheme.Dark,
+            timestamp: At,
+            level: LogLevel.Warning,
+            category: LogCategories.Resolve(key: "musicbrainz"),
+            message: "Rate limit 429",
+            exception: null,
+            theme: NoMercyConsoleTheme.Dark,
             color: true
         );
 
-        DisplayWidth.Of(coloured).Should().Be(DisplayWidth.Of(plain));
+        DisplayWidth.Of(text: coloured).Should().Be(expected: DisplayWidth.Of(text: plain));
     }
 }

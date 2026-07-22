@@ -27,8 +27,8 @@ internal sealed class WebDavWriteStream : Stream
 
     internal WebDavWriteStream(IWebDavClient client, string uri, bool overwrite)
     {
-        _client = client ?? throw new ArgumentNullException(nameof(client));
-        _uri = uri ?? throw new ArgumentNullException(nameof(uri));
+        _client = client ?? throw new ArgumentNullException(paramName: nameof(client));
+        _uri = uri ?? throw new ArgumentNullException(paramName: nameof(uri));
         _overwrite = overwrite;
 
         // Buffer the body on disk instead of a MemoryStream: a multi-GB media
@@ -37,14 +37,14 @@ internal sealed class WebDavWriteStream : Stream
         // body off the heap while remaining seekable, so PutFile still sends a
         // Content-Length (WebDAV servers commonly reject chunked PUTs).
         // DeleteOnClose removes the temp file when the stream is disposed.
-        string tempPath = Path.Combine(Path.GetTempPath(), $"nm-webdav-{Guid.NewGuid():N}.tmp");
+        string tempPath = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-webdav-{Guid.NewGuid():N}.tmp");
         _buffer = new(
-            tempPath,
-            FileMode.CreateNew,
-            FileAccess.ReadWrite,
-            FileShare.None,
+            path: tempPath,
+            mode: FileMode.CreateNew,
+            access: FileAccess.ReadWrite,
+            share: FileShare.None,
             bufferSize: 81920,
-            FileOptions.DeleteOnClose | FileOptions.Asynchronous
+            options: FileOptions.DeleteOnClose | FileOptions.Asynchronous
         );
     }
 
@@ -59,21 +59,21 @@ internal sealed class WebDavWriteStream : Stream
     }
 
     public override void Write(byte[] buffer, int offset, int count) =>
-        _buffer.Write(buffer, offset, count);
+        _buffer.Write(buffer: buffer, offset: offset, count: count);
 
-    public override void Write(ReadOnlySpan<byte> buffer) => _buffer.Write(buffer);
+    public override void Write(ReadOnlySpan<byte> buffer) => _buffer.Write(buffer: buffer);
 
     public override Task WriteAsync(
         byte[] buffer,
         int offset,
         int count,
         CancellationToken cancellationToken
-    ) => _buffer.WriteAsync(buffer, offset, count, cancellationToken);
+    ) => _buffer.WriteAsync(buffer: buffer, offset: offset, count: count, cancellationToken: cancellationToken);
 
     public override ValueTask WriteAsync(
         ReadOnlyMemory<byte> buffer,
         CancellationToken cancellationToken = default
-    ) => _buffer.WriteAsync(buffer, cancellationToken);
+    ) => _buffer.WriteAsync(buffer: buffer, cancellationToken: cancellationToken);
 
     public override void Flush() { }
 
@@ -94,12 +94,12 @@ internal sealed class WebDavWriteStream : Stream
 
         if (disposing)
         {
-            _buffer.Seek(0, SeekOrigin.Begin);
-            PutAsync(CancellationToken.None).GetAwaiter().GetResult();
+            _buffer.Seek(offset: 0, origin: SeekOrigin.Begin);
+            PutAsync(ct: CancellationToken.None).GetAwaiter().GetResult();
             _buffer.Dispose();
         }
 
-        base.Dispose(disposing);
+        base.Dispose(disposing: disposing);
     }
 
     public override async ValueTask DisposeAsync()
@@ -108,8 +108,8 @@ internal sealed class WebDavWriteStream : Stream
             return;
         _disposed = true;
 
-        _buffer.Seek(0, SeekOrigin.Begin);
-        await PutAsync(CancellationToken.None);
+        _buffer.Seek(offset: 0, origin: SeekOrigin.Begin);
+        await PutAsync(ct: CancellationToken.None);
         _buffer.Dispose();
 
         await base.DisposeAsync();
@@ -124,20 +124,20 @@ internal sealed class WebDavWriteStream : Stream
             : new()
             {
                 CancellationToken = ct,
-                Headers = [new("If-None-Match", "*")],
+                Headers = [new(key: "If-None-Match", value: "*")],
             };
 
-        WebDavResponse response = await _client.PutFile(_uri, _buffer, parameters);
+        WebDavResponse response = await _client.PutFile(requestUri: _uri, stream: _buffer, parameters: parameters);
 
         if (!response.IsSuccessful)
         {
             if (!_overwrite && response.StatusCode == 412)
                 throw new IOException(
-                    $"Cannot write to '{_uri}': the resource already exists and overwrite is false (HTTP 412 Precondition Failed)."
+                    message: $"Cannot write to '{_uri}': the resource already exists and overwrite is false (HTTP 412 Precondition Failed)."
                 );
 
             throw new IOException(
-                $"WebDAV PUT to '{_uri}' failed: HTTP {response.StatusCode} — {response.Description}"
+                message: $"WebDAV PUT to '{_uri}' failed: HTTP {response.StatusCode} — {response.Description}"
             );
         }
     }

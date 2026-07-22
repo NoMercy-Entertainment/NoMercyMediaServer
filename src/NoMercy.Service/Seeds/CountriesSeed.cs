@@ -26,14 +26,14 @@ public static class CountriesSeed
         if (hasCountries)
             return;
 
-        Logger.Setup("Adding Countries", LogEventLevel.Verbose);
+        Logger.Setup(message: "Adding Countries", level: LogEventLevel.Verbose);
 
         TmdbConfigClient tmdbConfigClient = new();
 
         Country[] countries =
             (await tmdbConfigClient.Countries())
                 ?.ToList()
-                .ConvertAll<Country>(country =>
+                .ConvertAll<Country>(converter: country =>
                     new()
                     {
                         Iso31661 = country.Iso31661,
@@ -47,9 +47,9 @@ public static class CountriesSeed
         try
         {
             await dbContext
-                .Countries.UpsertRange(countries)
-                .On(v => new { v.Iso31661 })
-                .WhenMatched(v =>
+                .Countries.UpsertRange(entities: countries)
+                .On(match: v => new { v.Iso31661 })
+                .WhenMatched(updater: v =>
                     new()
                     {
                         Iso31661 = v.Iso31661,
@@ -61,7 +61,7 @@ public static class CountriesSeed
         }
         catch (Exception e)
         {
-            Logger.Setup($"Countries seed failed: {e.Message}", LogEventLevel.Warning);
+            Logger.Setup(message: $"Countries seed failed: {e.Message}", level: LogEventLevel.Warning);
         }
     }
 }

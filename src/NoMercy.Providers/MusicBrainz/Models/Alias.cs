@@ -15,21 +15,21 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class Alias : MusicBrainzLifeSpan
 {
-    [JsonProperty("locale")]
+    [JsonProperty(propertyName: "locale")]
     public string? Locale { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("primary")]
+    [JsonProperty(propertyName: "primary")]
     public bool? Primary { get; set; }
 
-    [JsonProperty("sort-name")]
+    [JsonProperty(propertyName: "sort-name")]
     public string SortName { get; set; } = string.Empty;
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string? Type { get; set; }
 
-    [JsonProperty("type-id")]
+    [JsonProperty(propertyName: "type-id")]
     public Guid? TypeId { get; set; }
 }

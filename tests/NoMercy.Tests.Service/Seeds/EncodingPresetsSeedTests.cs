@@ -26,7 +26,7 @@ namespace NoMercy.Tests.Service.Seeds;
 /// EVERY boot, not once. It must be idempotent (upserts, never duplicates) and
 /// must never let one bad preset's failure take down the rest of startup.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class EncodingPresetsSeedTests : IDisposable
 {
     private readonly SqliteConnection _connection;
@@ -34,16 +34,16 @@ public sealed class EncodingPresetsSeedTests : IDisposable
 
     public EncodingPresetsSeedTests()
     {
-        _connection = new("DataSource=:memory:");
+        _connection = new(connectionString: "DataSource=:memory:");
         _connection.Open();
         _options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(
-                _connection,
-                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+                connection: _connection,
+                sqliteOptionsAction: o => o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery)
             )
             .Options;
 
-        using MediaContext ctx = new(_options);
+        using MediaContext ctx = new(options: _options);
         ctx.Database.EnsureCreated();
     }
 
@@ -52,27 +52,27 @@ public sealed class EncodingPresetsSeedTests : IDisposable
     [Fact]
     public async Task Init_FreshDatabase_SeedsBuiltInPresets()
     {
-        await using MediaContext context = new(_options);
+        await using MediaContext context = new(options: _options);
 
-        await EncodingPresetsSeed.Init(context, Mock.Of<IStorage>());
+        await EncodingPresetsSeed.Init(context: context, storage: Mock.Of<IStorage>());
 
-        int count = await context.EncodingPresets.CountAsync(p => p.IsBuiltIn);
-        Assert.True(count > 0, "expected at least one built-in preset to be seeded");
+        int count = await context.EncodingPresets.CountAsync(predicate: p => p.IsBuiltIn);
+        Assert.True(condition: count > 0, userMessage: "expected at least one built-in preset to be seeded");
     }
 
     [Fact]
     public async Task Init_RunTwice_IsIdempotent()
     {
-        await using MediaContext firstRun = new(_options);
-        await EncodingPresetsSeed.Init(firstRun, Mock.Of<IStorage>());
+        await using MediaContext firstRun = new(options: _options);
+        await EncodingPresetsSeed.Init(context: firstRun, storage: Mock.Of<IStorage>());
 
-        await using MediaContext secondRun = new(_options);
-        await EncodingPresetsSeed.Init(secondRun, Mock.Of<IStorage>());
+        await using MediaContext secondRun = new(options: _options);
+        await EncodingPresetsSeed.Init(context: secondRun, storage: Mock.Of<IStorage>());
 
-        await using MediaContext verifyContext = new(_options);
+        await using MediaContext verifyContext = new(options: _options);
         List<EncodingPreset> presets = await verifyContext
-            .EncodingPresets.Where(p => p.IsBuiltIn)
+            .EncodingPresets.Where(predicate: p => p.IsBuiltIn)
             .ToListAsync();
-        Assert.Equal(presets.Select(p => p.Id).Distinct().Count(), presets.Count);
+        Assert.Equal(expected: presets.Select(selector: p => p.Id).Distinct().Count(), actual: presets.Count);
     }
 }

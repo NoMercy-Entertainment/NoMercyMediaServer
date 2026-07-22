@@ -15,18 +15,18 @@ namespace NoMercy.Database.Models.Users;
 
 public class DeviceDropNotice : Timestamps
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public Ulid Id { get; set; } = Ulid.NewUlid();
 
-    [JsonProperty("user_id")]
+    [JsonProperty(propertyName: "user_id")]
     public Guid UserId { get; set; }
 
-    [JsonProperty("device_name")]
+    [JsonProperty(propertyName: "device_name")]
     public string DeviceName { get; set; } = "";
 
-    [JsonProperty("reason")]
+    [JsonProperty(propertyName: "reason")]
     public string Reason { get; set; } = ""; // "ttl" | "efuse" | "manual"
 
-    [JsonProperty("acknowledged")]
+    [JsonProperty(propertyName: "acknowledged")]
     public bool Acknowledged { get; set; }
 }

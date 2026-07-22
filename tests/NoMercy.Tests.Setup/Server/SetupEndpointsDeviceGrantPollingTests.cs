@@ -48,7 +48,7 @@ namespace NoMercy.Tests.Setup.Server;
 /// RFC 8628 minimum <c>Math.Clamp</c> floor already enforces >= 1s), so most scenarios
 /// here cost only 1-2 real seconds of wall-clock wait.
 /// </remarks>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
 {
     private readonly AppDbContext _appContext;
@@ -62,34 +62,34 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
     {
         SetupTerminalUi.ForceInteractiveForTests = false;
 
-        _originalAppPath = Environment.GetEnvironmentVariable("NOMERCY_APP_PATH");
-        _tempAppPath = Path.Combine(Path.GetTempPath(), $"nm-devicegrant-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempAppPath);
-        Environment.SetEnvironmentVariable("NOMERCY_APP_PATH", _tempAppPath);
+        _originalAppPath = Environment.GetEnvironmentVariable(variable: "NOMERCY_APP_PATH");
+        _tempAppPath = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-devicegrant-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: _tempAppPath);
+        Environment.SetEnvironmentVariable(variable: "NOMERCY_APP_PATH", value: _tempAppPath);
         NoMercy.NmSystem.Information.AppFiles.CreateAppFolders();
 
         ServiceCollection services = new();
         services.AddDataProtection().UseEphemeralDataProtectionProvider();
         ServiceProvider provider = services.BuildServiceProvider();
-        TokenStore.Initialize(provider);
+        TokenStore.Initialize(serviceProvider: provider);
 
         DbContextOptionsBuilder<AppDbContext> optionsBuilder = new();
-        optionsBuilder.UseSqlite("Data Source=:memory:");
-        _appContext = new(optionsBuilder.Options);
+        optionsBuilder.UseSqlite(connectionString: "Data Source=:memory:");
+        _appContext = new(options: optionsBuilder.Options);
         _appContext.Database.OpenConnection();
         _appContext.Database.EnsureCreated();
 
-        _authManager = new(_appContext, new LocalStorageDriver(), new AuthTokenStore());
+        _authManager = new(appContext: _appContext, driver: new LocalStorageDriver(), authTokenStore: new AuthTokenStore());
         _setupState = new();
 
         using AppDbContext onDisk = new();
         onDisk.Database.EnsureCreated();
-        Start.Certificate = new CertificateService(NullLogger<CertificateService>.Instance, null!);
+        Start.Certificate = new CertificateService(logger: NullLogger<CertificateService>.Instance, httpClientFactory: null!);
 
         _originalTokenClientId = ExternalServicesConfig.Current.TokenClientId;
         ExternalServicesConfig.Current.TokenClientId = "nomercy-server";
 
-        CronWorker.SignalDatabaseReady(true);
+        CronWorker.SignalDatabaseReady(success: true);
     }
 
     public void Dispose()
@@ -99,18 +99,18 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
         _appContext.Dispose();
         Start.Certificate = null;
         ExternalServicesConfig.Current.TokenClientId = _originalTokenClientId ?? "nomercy-server";
-        Environment.SetEnvironmentVariable("NOMERCY_APP_PATH", _originalAppPath);
+        Environment.SetEnvironmentVariable(variable: "NOMERCY_APP_PATH", value: _originalAppPath);
         try
         {
-            if (Directory.Exists(_tempAppPath))
-                Directory.Delete(_tempAppPath, recursive: true);
+            if (Directory.Exists(path: _tempAppPath))
+                Directory.Delete(path: _tempAppPath, recursive: true);
         }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
     }
 
     private SetupEndpoints BuildEndpoints() =>
-        new(_setupState, _authManager, new NoOpRegistrationService());
+        new(state: _setupState, authManager: _authManager, serverRegistrationService: new NoOpRegistrationService());
 
     private static DefaultHttpContext BuildPostContext(string path)
     {
@@ -123,7 +123,7 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
 
     private static string DeviceAuthResponseJson(int expiresIn, int interval) =>
         JsonConvert.SerializeObject(
-            new DeviceAuthResponse
+            value: new DeviceAuthResponse
             {
                 UserCode = "ABCD-1234",
                 VerificationUri = "https://auth.nomercy.tv/device",
@@ -153,16 +153,16 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
         {
             // The initial device-code request hits ".../auth/device"; every
             // subsequent poll tick hits the plain token endpoint.
-            bool isDeviceCodeRequest = req.Path.EndsWith("/device");
+            bool isDeviceCodeRequest = req.Path.EndsWith(value: "/device");
             if (isDeviceCodeRequest)
-                return new(200, JsonConvert.SerializeObject(deviceResponse));
+                return new(StatusCode: 200, Body: JsonConvert.SerializeObject(value: deviceResponse));
 
             // Every other POST is a poll tick against the token endpoint.
             if (pollResponses.Count == 0)
-                return new(400, "{\"error\":\"authorization_pending\"}");
+                return new(StatusCode: 400, Body: "{\"error\":\"authorization_pending\"}");
 
             (int status, string body) = pollResponses.Dequeue();
-            return new(status, body);
+            return new(StatusCode: status, Body: body);
         };
         return server;
     }
@@ -171,22 +171,22 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
     public async Task PollDeviceGrant_AuthorizationPendingThenSuccess_StoresTokensAndAuthenticates()
     {
         string jwt = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().WriteToken(
-            new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
+            token: new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
                 issuer: "https://auth.nomercy.tv/realms/NoMercyTV",
                 audience: "nomercy-server",
                 claims:
                 [
                     new(
-                        System.Security.Claims.ClaimTypes.NameIdentifier,
-                        Guid.NewGuid().ToString()
+                        type: System.Security.Claims.ClaimTypes.NameIdentifier,
+                        value: Guid.NewGuid().ToString()
                     ),
                 ],
-                notBefore: DateTime.UtcNow.AddMinutes(-5),
-                expires: DateTime.UtcNow.AddHours(1)
+                notBefore: DateTime.UtcNow.AddMinutes(value: -5),
+                expires: DateTime.UtcNow.AddHours(value: 1)
             )
         );
         string successBody = JsonConvert.SerializeObject(
-            new AuthResponse
+            value: new AuthResponse
             {
                 AccessToken = jwt,
                 RefreshToken = "refresh-1",
@@ -196,11 +196,11 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
         );
 
         Queue<(int, string)> pollResponses = new();
-        pollResponses.Enqueue((400, "{\"error\":\"authorization_pending\"}"));
-        pollResponses.Enqueue((200, successBody));
+        pollResponses.Enqueue(item: (400, "{\"error\":\"authorization_pending\"}"));
+        pollResponses.Enqueue(item: (200, successBody));
 
         using LoopbackHttpServer server = BuildPollingServer(
-            new()
+            deviceResponse: new()
             {
                 UserCode = "ABCD-1234",
                 VerificationUri = "https://auth.nomercy.tv/device",
@@ -209,23 +209,23 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
                 ExpiresIn = 600,
                 Interval = 1,
             },
-            pollResponses
+            pollResponses: pollResponses
         );
         using ExternalServicesConfigScope scope = new(authBaseUrl: server.BaseUrl);
 
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildPostContext("/setup/device-code");
+        DefaultHttpContext context = BuildPostContext(path: "/setup/device-code");
 
-        await endpoints.HandleRequestAsync(context);
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+        await endpoints.HandleRequestAsync(context: context);
+        Assert.Equal(expected: StatusCodes.Status200OK, actual: context.Response.StatusCode);
 
-        DateTime deadline = DateTime.UtcNow.AddSeconds(10);
+        DateTime deadline = DateTime.UtcNow.AddSeconds(value: 10);
         while (_setupState.CurrentPhase < SetupPhase.Authenticated && DateTime.UtcNow < deadline)
-            await Task.Delay(100);
+            await Task.Delay(millisecondsDelay: 100);
 
         Assert.True(
-            _setupState.CurrentPhase >= SetupPhase.Authenticated,
-            $"expected at least Authenticated, was {_setupState.CurrentPhase}"
+            condition: _setupState.CurrentPhase >= SetupPhase.Authenticated,
+            userMessage: $"expected at least Authenticated, was {_setupState.CurrentPhase}"
         );
     }
 
@@ -234,11 +234,11 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
     {
         Queue<(int, string)> pollResponses = new();
         pollResponses.Enqueue(
-            (400, "{\"error\":\"access_denied\",\"error_description\":\"User declined\"}")
+            item: (400, "{\"error\":\"access_denied\",\"error_description\":\"User declined\"}")
         );
 
         using LoopbackHttpServer server = BuildPollingServer(
-            new()
+            deviceResponse: new()
             {
                 UserCode = "ABCD-1234",
                 VerificationUri = "https://auth.nomercy.tv/device",
@@ -247,42 +247,42 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
                 ExpiresIn = 600,
                 Interval = 1,
             },
-            pollResponses
+            pollResponses: pollResponses
         );
         using ExternalServicesConfigScope scope = new(authBaseUrl: server.BaseUrl);
 
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildPostContext("/setup/device-code");
-        await endpoints.HandleRequestAsync(context);
+        DefaultHttpContext context = BuildPostContext(path: "/setup/device-code");
+        await endpoints.HandleRequestAsync(context: context);
 
-        DateTime deadline = DateTime.UtcNow.AddSeconds(10);
+        DateTime deadline = DateTime.UtcNow.AddSeconds(value: 10);
         while (_setupState.ErrorMessage is null && DateTime.UtcNow < deadline)
-            await Task.Delay(100);
+            await Task.Delay(millisecondsDelay: 100);
 
-        Assert.Equal(SetupPhase.Unauthenticated, _setupState.CurrentPhase);
-        Assert.NotNull(_setupState.ErrorMessage);
+        Assert.Equal(expected: SetupPhase.Unauthenticated, actual: _setupState.CurrentPhase);
+        Assert.NotNull(@object: _setupState.ErrorMessage);
     }
 
     [Fact]
     public async Task PollDeviceGrant_SlowDown_BacksOffThenSucceeds()
     {
         string jwt = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().WriteToken(
-            new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
+            token: new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
                 issuer: "https://auth.nomercy.tv/realms/NoMercyTV",
                 audience: "nomercy-server",
                 claims:
                 [
                     new(
-                        System.Security.Claims.ClaimTypes.NameIdentifier,
-                        Guid.NewGuid().ToString()
+                        type: System.Security.Claims.ClaimTypes.NameIdentifier,
+                        value: Guid.NewGuid().ToString()
                     ),
                 ],
-                notBefore: DateTime.UtcNow.AddMinutes(-5),
-                expires: DateTime.UtcNow.AddHours(1)
+                notBefore: DateTime.UtcNow.AddMinutes(value: -5),
+                expires: DateTime.UtcNow.AddHours(value: 1)
             )
         );
         string successBody = JsonConvert.SerializeObject(
-            new AuthResponse
+            value: new AuthResponse
             {
                 AccessToken = jwt,
                 RefreshToken = "refresh-1",
@@ -292,11 +292,11 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
         );
 
         Queue<(int, string)> pollResponses = new();
-        pollResponses.Enqueue((400, "{\"error\":\"slow_down\"}"));
-        pollResponses.Enqueue((200, successBody));
+        pollResponses.Enqueue(item: (400, "{\"error\":\"slow_down\"}"));
+        pollResponses.Enqueue(item: (200, successBody));
 
         using LoopbackHttpServer server = BuildPollingServer(
-            new()
+            deviceResponse: new()
             {
                 UserCode = "ABCD-1234",
                 VerificationUri = "https://auth.nomercy.tv/device",
@@ -305,23 +305,23 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
                 ExpiresIn = 600,
                 Interval = 1,
             },
-            pollResponses
+            pollResponses: pollResponses
         );
         using ExternalServicesConfigScope scope = new(authBaseUrl: server.BaseUrl);
 
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildPostContext("/setup/device-code");
-        await endpoints.HandleRequestAsync(context);
+        DefaultHttpContext context = BuildPostContext(path: "/setup/device-code");
+        await endpoints.HandleRequestAsync(context: context);
 
         // slow_down clamps the NEXT interval to +5s (1 -> 6) before retrying, so this
         // scenario genuinely costs several real seconds.
-        DateTime deadline = DateTime.UtcNow.AddSeconds(15);
+        DateTime deadline = DateTime.UtcNow.AddSeconds(value: 15);
         while (_setupState.CurrentPhase < SetupPhase.Authenticated && DateTime.UtcNow < deadline)
-            await Task.Delay(200);
+            await Task.Delay(millisecondsDelay: 200);
 
         Assert.True(
-            _setupState.CurrentPhase >= SetupPhase.Authenticated,
-            $"expected at least Authenticated, was {_setupState.CurrentPhase}"
+            condition: _setupState.CurrentPhase >= SetupPhase.Authenticated,
+            userMessage: $"expected at least Authenticated, was {_setupState.CurrentPhase}"
         );
     }
 
@@ -334,21 +334,21 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
         // fire-and-forget background poll task.
         using LoopbackHttpServer server = new();
         server.Handler = req =>
-            req.Path.EndsWith("/device")
-                ? new(200, DeviceAuthResponseJson(expiresIn: 600, interval: 1))
+            req.Path.EndsWith(value: "/device")
+                ? new(StatusCode: 200, Body: DeviceAuthResponseJson(expiresIn: 600, interval: 1))
                 : LoopbackResponse.Aborted();
         using ExternalServicesConfigScope scope = new(authBaseUrl: server.BaseUrl);
 
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildPostContext("/setup/device-code");
-        await endpoints.HandleRequestAsync(context);
+        DefaultHttpContext context = BuildPostContext(path: "/setup/device-code");
+        await endpoints.HandleRequestAsync(context: context);
 
-        DateTime deadline = DateTime.UtcNow.AddSeconds(10);
+        DateTime deadline = DateTime.UtcNow.AddSeconds(value: 10);
         while (_setupState.ErrorMessage is null && DateTime.UtcNow < deadline)
-            await Task.Delay(100);
+            await Task.Delay(millisecondsDelay: 100);
 
-        Assert.Equal(SetupPhase.Unauthenticated, _setupState.CurrentPhase);
-        Assert.NotNull(_setupState.ErrorMessage);
+        Assert.Equal(expected: SetupPhase.Unauthenticated, actual: _setupState.CurrentPhase);
+        Assert.NotNull(@object: _setupState.ErrorMessage);
     }
 
     [Fact]
@@ -361,24 +361,24 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
         using LoopbackHttpServer server = new();
         server.Handler = req =>
         {
-            if (req.Path.EndsWith("/device"))
-                return new(200, DeviceAuthResponseJson(expiresIn: 600, interval: 1));
-            Interlocked.Increment(ref pollCount);
-            return new(400, "{\"error\":\"authorization_pending\"}");
+            if (req.Path.EndsWith(value: "/device"))
+                return new(StatusCode: 200, Body: DeviceAuthResponseJson(expiresIn: 600, interval: 1));
+            Interlocked.Increment(location: ref pollCount);
+            return new(StatusCode: 400, Body: "{\"error\":\"authorization_pending\"}");
         };
         using ExternalServicesConfigScope scope = new(authBaseUrl: server.BaseUrl);
 
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildPostContext("/setup/device-code");
-        await endpoints.HandleRequestAsync(context);
+        DefaultHttpContext context = BuildPostContext(path: "/setup/device-code");
+        await endpoints.HandleRequestAsync(context: context);
 
         // Immediately mark authenticated via the browser-SSO path before the first
         // poll tick (1s later) fires.
-        _setupState.TransitionTo(SetupPhase.Authenticating);
-        _setupState.TransitionTo(SetupPhase.Authenticated);
+        _setupState.TransitionTo(targetPhase: SetupPhase.Authenticating);
+        _setupState.TransitionTo(targetPhase: SetupPhase.Authenticated);
 
-        await Task.Delay(1500);
+        await Task.Delay(millisecondsDelay: 1500);
 
-        Assert.Equal(0, pollCount);
+        Assert.Equal(expected: 0, actual: pollCount);
     }
 }

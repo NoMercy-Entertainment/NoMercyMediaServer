@@ -35,15 +35,15 @@ namespace NoMercy.Tests.Cli.Commands;
 /// going through the factory, so these run against a real
 /// <see cref="FakeManagementPipeServer"/> named pipe instead of a mock.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class LogsCommandFollowTests
 {
     public LogsCommandFollowTests()
     {
         PrivateReflection.ResetStaticField(
-            typeof(LogsCommand),
-            "_lastEntryTime",
-            DateTime.MinValue
+            type: typeof(LogsCommand),
+            fieldName: "_lastEntryTime",
+            value: DateTime.MinValue
         );
     }
 
@@ -51,16 +51,16 @@ public sealed class LogsCommandFollowTests
     {
         Mock<ICliClient> client = new();
         client
-            .Setup(c =>
+            .Setup(expression: c =>
                 c.GetAsync<List<LogEntryResponse>>(
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync([]);
+            .ReturnsAsync(value: []);
 
         Mock<ICliClientFactory> factory = new();
-        factory.Setup(f => f.Create(It.IsAny<string?>())).Returns(client.Object);
+        factory.Setup(expression: f => f.Create(It.IsAny<string?>())).Returns(value: client.Object);
         return factory;
     }
 
@@ -71,11 +71,11 @@ public sealed class LogsCommandFollowTests
         params string[] extraArgs
     )
     {
-        Option<string?> pipeOption = new("--pipe", "-p");
-        RootCommand root = new("test");
-        root.Options.Add(pipeOption);
-        root.Subcommands.Add(LogsCommand.Create(pipeOption, factory));
-        return await root.Parse(["--pipe", pipeName, "logs", "--follow", .. extraArgs])
+        Option<string?> pipeOption = new(name: "--pipe", aliases: "-p");
+        RootCommand root = new(description: "test");
+        root.Options.Add(item: pipeOption);
+        root.Subcommands.Add(item: LogsCommand.Create(pipeOption: pipeOption, clientFactory: factory));
+        return await root.Parse(args: ["--pipe", pipeName, "logs", "--follow", .. extraArgs])
             .InvokeAsync(cancellationToken: ct);
     }
 
@@ -83,12 +83,12 @@ public sealed class LogsCommandFollowTests
     public async Task Follow_ParsesEventStream_SkippingNonDataAndMalformedLines_AndApplyingFilters()
     {
         FakeManagementPipeServer server = new();
-        Task<string> serverTask = server.RunOnceAsync(async stream =>
+        Task<string> serverTask = server.RunOnceAsync(respond: async stream =>
         {
             await FakeManagementPipeServer.WriteResponseAsync(
-                stream,
-                200,
-                "OK",
+                stream: stream,
+                statusCode: 200,
+                reasonPhrase: "OK",
                 body: string.Empty,
                 contentType: "text/event-stream"
             );
@@ -111,57 +111,53 @@ public sealed class LogsCommandFollowTests
                 "",
             ];
 
-            byte[] bytes = Encoding.UTF8.GetBytes(string.Join("\n", lines) + "\n");
-            await stream.WriteAsync(bytes);
+            byte[] bytes = Encoding.UTF8.GetBytes(s: string.Join(separator: "\n", value: lines) + "\n");
+            await stream.WriteAsync(buffer: bytes);
         });
 
         using ConsoleCapture console = new();
         int exitCode = await RunAsync(
-            EmptyBatchFactory().Object,
-            server.PipeName,
-            CancellationToken.None,
-            "--level",
-            "Information,Error",
-            "--type",
-            "App"
+            factory: EmptyBatchFactory().Object,
+            pipeName: server.PipeName,
+            ct: CancellationToken.None, extraArgs: ["--level", "Information,Error", "--type", "App"]
         );
 
         await serverTask;
-        exitCode.Should().Be((int)ExitCode.Success);
-        console.Out.Should().Contain("kept: info");
-        console.Out.Should().Contain("kept: error");
-        console.Out.Should().NotContain("dropped: wrong level");
-        console.Out.Should().NotContain("dropped: wrong type");
+        exitCode.Should().Be(expected: (int)ExitCode.Success);
+        console.Out.Should().Contain(expected: "kept: info");
+        console.Out.Should().Contain(expected: "kept: error");
+        console.Out.Should().NotContain(unexpected: "dropped: wrong level");
+        console.Out.Should().NotContain(unexpected: "dropped: wrong type");
     }
 
     [Fact]
     public async Task Follow_OperatorCancelsWhileStreaming_ReturnsSuccess()
     {
         FakeManagementPipeServer server = new();
-        Task<string> serverTask = server.RunOnceAsync(async stream =>
+        Task<string> serverTask = server.RunOnceAsync(respond: async stream =>
         {
             await FakeManagementPipeServer.WriteResponseAsync(
-                stream,
-                200,
-                "OK",
+                stream: stream,
+                statusCode: 200,
+                reasonPhrase: "OK",
                 body: string.Empty,
                 contentType: "text/event-stream"
             );
 
             // Keep the connection open without sending a terminator so the
             // client is blocked in ReadLineAsync when the token cancels below.
-            await Task.Delay(TimeSpan.FromMilliseconds(500));
+            await Task.Delay(delay: TimeSpan.FromMilliseconds(milliseconds: 500));
         });
 
         using CancellationTokenSource cts = new();
-        cts.CancelAfter(TimeSpan.FromMilliseconds(150));
+        cts.CancelAfter(delay: TimeSpan.FromMilliseconds(milliseconds: 150));
 
         using ConsoleCapture console = new();
-        int exitCode = await RunAsync(EmptyBatchFactory().Object, server.PipeName, cts.Token);
+        int exitCode = await RunAsync(factory: EmptyBatchFactory().Object, pipeName: server.PipeName, ct: cts.Token);
 
         await serverTask;
-        exitCode.Should().Be((int)ExitCode.Success);
-        console.Error.Should().NotContain("Stream disconnected");
+        exitCode.Should().Be(expected: (int)ExitCode.Success);
+        console.Error.Should().NotContain(unexpected: "Stream disconnected");
     }
 
     [Fact]
@@ -171,12 +167,12 @@ public sealed class LogsCommandFollowTests
 
         using ConsoleCapture console = new();
         int exitCode = await RunAsync(
-            EmptyBatchFactory().Object,
-            unusedPipeName,
-            CancellationToken.None
+            factory: EmptyBatchFactory().Object,
+            pipeName: unusedPipeName,
+            ct: CancellationToken.None
         );
 
-        exitCode.Should().Be((int)ExitCode.ServerError);
-        console.Error.Should().Contain("Stream disconnected");
+        exitCode.Should().Be(expected: (int)ExitCode.ServerError);
+        console.Error.Should().Contain(expected: "Stream disconnected");
     }
 }

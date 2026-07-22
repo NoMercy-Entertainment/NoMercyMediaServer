@@ -22,10 +22,10 @@ namespace NoMercy.OpticalMedia.Sources;
 /// </summary>
 public sealed class DiscSourceFactory(IEnumerable<IDiscSource> sources)
 {
-    private readonly Dictionary<OpticalDiscType, IDiscSource> _byType = sources.ToDictionary(s =>
+    private readonly Dictionary<OpticalDiscType, IDiscSource> _byType = sources.ToDictionary(keySelector: s =>
         s.Type
     );
 
     public IDiscSource? CreateFor(OpticalDiscType type) =>
-        _byType.TryGetValue(type, out IDiscSource? source) ? source : null;
+        _byType.TryGetValue(key: type, value: out IDiscSource? source) ? source : null;
 }

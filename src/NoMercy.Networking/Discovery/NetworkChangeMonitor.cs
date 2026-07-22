@@ -29,7 +29,7 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
     private readonly INetworkDiscovery _networkDiscovery;
     private readonly IConnectivityManager _connectivityManager;
     private readonly IConnectivityStatus _connectivityStatus;
-    private readonly SemaphoreSlim _reevaluationLock = new(1, 1);
+    private readonly SemaphoreSlim _reevaluationLock = new(initialCount: 1, maxCount: 1);
 
     private readonly IAuthTokenStore _authTokenStore;
 
@@ -54,7 +54,7 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
     {
         NetworkChange.NetworkAddressChanged += OnNetworkAddressChanged;
         NetworkChange.NetworkAvailabilityChanged += OnNetworkAvailabilityChanged;
-        _logger.LogDebug("Network change monitor started");
+        _logger.LogDebug(message: "Network change monitor started");
         return Task.CompletedTask;
     }
 
@@ -65,7 +65,7 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
     // collaborators.
     internal async void OnNetworkAddressChanged(object? sender, EventArgs e)
     {
-        if (!await _reevaluationLock.WaitAsync(0))
+        if (!await _reevaluationLock.WaitAsync(millisecondsTimeout: 0))
             return;
 
         try
@@ -77,21 +77,21 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
             if (newIp == oldIp)
                 return;
 
-            _logger.LogInformation("Network address changed: {OldIp} → {NewIp}", oldIp, newIp);
+            _logger.LogInformation(message: "Network address changed: {OldIp} → {NewIp}", args: [oldIp, newIp]);
             _networkDiscovery.InternalIp = newIp;
 
             // Re-discover external IP (force past the one-shot completion gate)
             await _networkDiscovery.ForceRediscoveryAsync();
 
             // Re-evaluate connectivity strategies
-            await _connectivityManager.EvaluateAsync(CancellationToken.None);
+            await _connectivityManager.EvaluateAsync(ct: CancellationToken.None);
 
             // Send update to NoMercy API
             await SendUpdate();
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Network change handling failed: {Message}", ex.Message);
+            _logger.LogWarning(message: "Network change handling failed: {Message}", args: ex.Message);
         }
         finally
         {
@@ -108,19 +108,19 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
         // raises both events, and two concurrent EvaluateAsync calls would race on
         // the ConnectivityManager's active strategy (tear down / double-establish
         // the tunnel or port-forward against each other).
-        if (!await _reevaluationLock.WaitAsync(0))
+        if (!await _reevaluationLock.WaitAsync(millisecondsTimeout: 0))
             return;
 
         try
         {
             await _networkDiscovery.ForceRediscoveryAsync();
-            await _connectivityManager.EvaluateAsync(CancellationToken.None);
+            await _connectivityManager.EvaluateAsync(ct: CancellationToken.None);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(
-                "Network availability change handling failed: {Message}",
-                ex.Message
+                message: "Network availability change handling failed: {Message}",
+                args: ex.Message
             );
         }
         finally
@@ -136,13 +136,13 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
         // UDP socket trick: OS picks the outbound source address — always the real LAN IP.
         try
         {
-            using Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, 0);
-            socket.Connect("8.8.8.8", 65530);
+            using Socket socket = new(addressFamily: AddressFamily.InterNetwork, socketType: SocketType.Dgram, protocolType: 0);
+            socket.Connect(host: "8.8.8.8", port: 65530);
             IPAddress? address = (socket.LocalEndPoint as IPEndPoint)?.Address;
             if (
                 address is not null
-                && !IPAddress.IsLoopback(address)
-                && !address.Equals(IPAddress.Any)
+                && !IPAddress.IsLoopback(address: address)
+                && !address.Equals(comparand: IPAddress.Any)
                 && address.AddressFamily == AddressFamily.InterNetwork
             )
             {
@@ -173,9 +173,9 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
                 {
                     if (addr.Address.AddressFamily != AddressFamily.InterNetwork)
                         continue;
-                    if (IPAddress.IsLoopback(addr.Address))
+                    if (IPAddress.IsLoopback(address: addr.Address))
                         continue;
-                    if (addr.Address.Equals(IPAddress.Any))
+                    if (addr.Address.Equals(comparand: IPAddress.Any))
                         continue;
 
                     string nicIp = addr.Address.ToString();
@@ -216,33 +216,33 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
                 { "stun_nat_type", _connectivityStatus.NatStatus.ToString() },
             };
 
-            _logger.LogInformation("Your IP address has changed, updating server information...");
+            _logger.LogInformation(message: "Your IP address has changed, updating server information...");
 
             string? token = _authTokenStore.AccessToken;
-            if (string.IsNullOrEmpty(token))
+            if (string.IsNullOrEmpty(value: token))
             {
-                _logger.LogTrace("Skipping network change ping — no auth token");
+                _logger.LogTrace(message: "Skipping network change ping — no auth token");
                 return;
             }
 
-            GenericHttpClient authClient = new(ExternalServicesConfig.Current.ApiServerBaseUrl);
-            authClient.SetDefaultHeaders(ExternalServicesConfig.Current.UserAgent, token);
+            GenericHttpClient authClient = new(baseUrl: ExternalServicesConfig.Current.ApiServerBaseUrl);
+            authClient.SetDefaultHeaders(userAgent: ExternalServicesConfig.Current.UserAgent, bearerToken: token);
             string response = await authClient.SendAndReadAsync(
-                HttpMethod.Post,
-                "ping",
-                new FormUrlEncodedContent(serverData)
+                method: HttpMethod.Post,
+                endpoint: "ping",
+                content: new FormUrlEncodedContent(nameValueCollection: serverData)
             );
 
-            object? data = JsonConvert.DeserializeObject(response);
+            object? data = JsonConvert.DeserializeObject(value: response);
 
             if (data == null)
-                throw new("Failed to update server information");
+                throw new(message: "Failed to update server information");
 
-            _logger.LogInformation("Server information updated successfully");
+            _logger.LogInformation(message: "Server information updated successfully");
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Failed to send IP update: {Message}", ex.Message);
+            _logger.LogWarning(message: "Failed to send IP update: {Message}", args: ex.Message);
         }
     }
 
@@ -258,6 +258,6 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
         NetworkChange.NetworkAddressChanged -= OnNetworkAddressChanged;
         NetworkChange.NetworkAvailabilityChanged -= OnNetworkAvailabilityChanged;
         _reevaluationLock.Dispose();
-        GC.SuppressFinalize(this);
+        GC.SuppressFinalize(obj: this);
     }
 }

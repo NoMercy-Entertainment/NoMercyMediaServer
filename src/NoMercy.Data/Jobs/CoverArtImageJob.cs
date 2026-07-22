@@ -30,7 +30,7 @@ public class CoverArtImageJob : IShouldQueue, IJobStorageInjector
     public ILoggerFactory LoggerFactory { get; set; } = null!;
 
     [JsonIgnore]
-    private ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
+    private ILogger Log => field ??= LoggerFactory.CreateLogger(type: GetType());
 
     public void InjectStorageServices(IServiceProvider serviceProvider)
     {
@@ -69,15 +69,15 @@ public class CoverArtImageJob : IShouldQueue, IJobStorageInjector
             if (MusicBrainzRelease is null)
                 return;
 
-            Uri? coverPalette = await FetchCover(MusicBrainzRelease);
+            Uri? coverPalette = await FetchCover(musicBrainzReleaseAppends: MusicBrainzRelease);
             if (coverPalette is null)
                 return;
 
             await using MediaContext mediaContext = new();
             Album? album = await mediaContext
-                .Albums.Include(a => a.AlbumTrack)
-                    .ThenInclude(a => a.Track)
-                .FirstOrDefaultAsync(a => a.Id == MusicBrainzRelease.Id);
+                .Albums.Include(navigationPropertyPath: a => a.AlbumTrack)
+                    .ThenInclude(navigationPropertyPath: a => a.Track)
+                .FirstOrDefaultAsync(predicate: a => a.Id == MusicBrainzRelease.Id);
             if (album is null)
                 return;
 
@@ -96,9 +96,9 @@ public class CoverArtImageJob : IShouldQueue, IJobStorageInjector
         }
         catch (Exception e)
         {
-            if (e.Message.Contains("404"))
+            if (e.Message.Contains(value: "404"))
                 return;
-            Log.LogTrace(e.Message);
+            Log.LogTrace(message: e.Message);
         }
     }
 
@@ -108,18 +108,18 @@ public class CoverArtImageJob : IShouldQueue, IJobStorageInjector
         if (!hasCover)
             return null;
 
-        CoverArtCoverArtClient coverArtCoverArtClient = new(musicBrainzReleaseAppends.Id);
+        CoverArtCoverArtClient coverArtCoverArtClient = new(id: musicBrainzReleaseAppends.Id);
         CoverArtCovers? covers = await coverArtCoverArtClient.Cover();
         if (covers is null)
             return null;
 
         List<CoverArtImage> coverList = covers
-            .Images.Where(image => image.Types.Contains("Front"))
+            .Images.Where(predicate: image => image.Types.Contains(value: "Front"))
             .ToList();
 
         foreach (CoverArtImage coverItem in coverList)
         {
-            if (!coverItem.CoverArtThumbnails.Large.HasSuccessStatus("image/*"))
+            if (!coverItem.CoverArtThumbnails.Large.HasSuccessStatus(contentType: "image/*"))
                 continue;
 
             return coverItem.CoverArtThumbnails.Large;

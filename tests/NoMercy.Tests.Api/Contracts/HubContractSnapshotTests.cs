@@ -17,7 +17,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Contracts;
 
-[Trait("Category", "Contract")]
+[Trait(name: "Category", value: "Contract")]
 public class HubContractSnapshotTests
 {
     private static readonly string[] ConnectionHubBaseMethods =
@@ -144,86 +144,86 @@ public class HubContractSnapshotTests
     private static string FormatType(Type type)
     {
         if (type.IsArray)
-            return FormatType(type.GetElementType()!) + "[]";
+            return FormatType(type: type.GetElementType()!) + "[]";
 
         if (type.IsGenericType)
         {
             Type definition = type.GetGenericTypeDefinition();
             string rawName = definition.FullName ?? definition.Name;
-            string baseName = rawName[..rawName.IndexOf('`')].Replace('+', '.');
-            string args = string.Join(", ", type.GetGenericArguments().Select(FormatType));
+            string baseName = rawName[..rawName.IndexOf(value: '`')].Replace(oldChar: '+', newChar: '.');
+            string args = string.Join(separator: ", ", values: type.GetGenericArguments().Select(selector: FormatType));
             return $"{baseName}<{args}>";
         }
 
-        return (type.FullName ?? type.Name).Replace('+', '.');
+        return (type.FullName ?? type.Name).Replace(oldChar: '+', newChar: '.');
     }
 
     private static string[] ActualHubMethods(Type hubType)
     {
         return hubType
-            .GetMethods(BindingFlags.Public | BindingFlags.Instance)
-            .Where(m => m.DeclaringType != typeof(object))
-            .Where(m => m.DeclaringType != typeof(Hub))
-            .Where(m => !m.IsSpecialName)
-            .Select(m =>
+            .GetMethods(bindingAttr: BindingFlags.Public | BindingFlags.Instance)
+            .Where(predicate: m => m.DeclaringType != typeof(object))
+            .Where(predicate: m => m.DeclaringType != typeof(Hub))
+            .Where(predicate: m => !m.IsSpecialName)
+            .Select(selector: m =>
             {
                 string parameters = string.Join(
-                    ", ",
-                    m.GetParameters().Select(p => FormatType(p.ParameterType))
+                    separator: ", ",
+                    values: m.GetParameters().Select(selector: p => FormatType(type: p.ParameterType))
                 );
-                return $"{m.Name}({parameters}) -> {FormatType(m.ReturnType)}";
+                return $"{m.Name}({parameters}) -> {FormatType(type: m.ReturnType)}";
             })
-            .OrderBy(s => s, StringComparer.Ordinal)
+            .OrderBy(keySelector: s => s, comparer: StringComparer.Ordinal)
             .ToArray();
     }
 
     private static void AssertHubContract(Type hubType, string[] hubSpecificMethods)
     {
         string[] expected = ConnectionHubBaseMethods
-            .Concat(hubSpecificMethods)
-            .OrderBy(s => s, StringComparer.Ordinal)
+            .Concat(second: hubSpecificMethods)
+            .OrderBy(keySelector: s => s, comparer: StringComparer.Ordinal)
             .ToArray();
 
-        string[] actual = ActualHubMethods(hubType);
+        string[] actual = ActualHubMethods(hubType: hubType);
 
-        Assert.Equal(expected, actual);
+        Assert.Equal(expected: expected, actual: actual);
     }
 
     [Fact]
     public void CastHub_MatchesLockedContract() =>
-        AssertHubContract(typeof(CastHub), CastHubMethods);
+        AssertHubContract(hubType: typeof(CastHub), hubSpecificMethods: CastHubMethods);
 
     [Fact]
     public void ContentAnalysisHub_MatchesLockedContract() =>
-        AssertHubContract(typeof(ContentAnalysisHub), ContentAnalysisHubMethods);
+        AssertHubContract(hubType: typeof(ContentAnalysisHub), hubSpecificMethods: ContentAnalysisHubMethods);
 
     [Fact]
     public void DashboardHub_MatchesLockedContract() =>
-        AssertHubContract(typeof(DashboardHub), DashboardHubMethods);
+        AssertHubContract(hubType: typeof(DashboardHub), hubSpecificMethods: DashboardHubMethods);
 
     [Fact]
     public void DeviceHub_MatchesLockedContract() =>
-        AssertHubContract(typeof(DeviceHub), DeviceHubMethods);
+        AssertHubContract(hubType: typeof(DeviceHub), hubSpecificMethods: DeviceHubMethods);
 
     [Fact]
     public void DrivesHub_MatchesLockedContract() =>
-        AssertHubContract(typeof(DrivesHub), DrivesHubMethods);
+        AssertHubContract(hubType: typeof(DrivesHub), hubSpecificMethods: DrivesHubMethods);
 
     [Fact]
     public void LiveTranscodeHub_MatchesLockedContract() =>
-        AssertHubContract(typeof(LiveTranscodeHub), LiveTranscodeHubMethods);
+        AssertHubContract(hubType: typeof(LiveTranscodeHub), hubSpecificMethods: LiveTranscodeHubMethods);
 
     [Fact]
     public void MusicHub_MatchesLockedContract() =>
-        AssertHubContract(typeof(MusicHub), MusicHubMethods);
+        AssertHubContract(hubType: typeof(MusicHub), hubSpecificMethods: MusicHubMethods);
 
     [Fact]
     public void RipperHub_MatchesLockedContract() =>
-        AssertHubContract(typeof(RipperHub), RipperHubMethods);
+        AssertHubContract(hubType: typeof(RipperHub), hubSpecificMethods: RipperHubMethods);
 
     [Fact]
     public void VideoHub_MatchesLockedContract() =>
-        AssertHubContract(typeof(VideoHub), VideoHubMethods);
+        AssertHubContract(hubType: typeof(VideoHub), hubSpecificMethods: VideoHubMethods);
 
     [Fact]
     public void AllConnectionHubSubclasses_MatchTheKnownHubSet()
@@ -232,16 +232,16 @@ public class HubContractSnapshotTests
 
         string[] actualHubTypeNames = apiAssembly
             .GetTypes()
-            .Where(t => t is { IsClass: true, IsPublic: true, IsAbstract: false })
-            .Where(t => typeof(ConnectionHub).IsAssignableFrom(t))
-            .Select(t => t.Name)
-            .OrderBy(n => n, StringComparer.Ordinal)
+            .Where(predicate: t => t is { IsClass: true, IsPublic: true, IsAbstract: false })
+            .Where(predicate: t => typeof(ConnectionHub).IsAssignableFrom(c: t))
+            .Select(selector: t => t.Name)
+            .OrderBy(keySelector: n => n, comparer: StringComparer.Ordinal)
             .ToArray();
 
         string[] expectedHubTypeNames = KnownHubTypeNames
-            .OrderBy(n => n, StringComparer.Ordinal)
+            .OrderBy(keySelector: n => n, comparer: StringComparer.Ordinal)
             .ToArray();
 
-        Assert.Equal(expectedHubTypeNames, actualHubTypeNames);
+        Assert.Equal(expected: expectedHubTypeNames, actual: actualHubTypeNames);
     }
 }

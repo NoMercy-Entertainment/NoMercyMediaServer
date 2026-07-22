@@ -15,6 +15,6 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record DirectoryRequest
 {
-    [JsonProperty("path")]
+    [JsonProperty(propertyName: "path")]
     public string Path { get; set; } = string.Empty;
 }

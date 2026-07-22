@@ -20,26 +20,26 @@ using NoMercy.OpticalMedia.Sources.Bluray;
 
 namespace NoMercy.Tests.OpticalMedia.Sources;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class DiscScannerTests
 {
     private static DiscScanner MakeSut(IProcessRunner? runner = null)
     {
         EncoderOptions options = new() { FfprobePathOverride = "ffprobe" };
         IProcessRunner processRunner = runner ?? Moq.Mock.Of<IProcessRunner>();
-        return new(options, processRunner, NullLogger<DiscScanner>.Instance);
+        return new(options: options, processRunner: processRunner, logger: NullLogger<DiscScanner>.Instance);
     }
 
     [Fact]
     public void Parse_EmptyJson_ReturnsSingleEmptyTitle()
     {
         string json = """{"format":{}}""";
-        DiscInfo result = DiscScanner.Parse(json, OpticalDiscType.BluRay);
+        DiscInfo result = DiscScanner.Parse(json: json, discType: OpticalDiscType.BluRay);
 
-        result.Type.Should().Be(OpticalDiscType.BluRay);
-        result.Titles.Should().HaveCount(1);
-        result.Titles[0].Duration.Should().Be(TimeSpan.Zero);
-        result.TotalDuration.Should().Be(TimeSpan.Zero);
+        result.Type.Should().Be(expected: OpticalDiscType.BluRay);
+        result.Titles.Should().HaveCount(expected: 1);
+        result.Titles[0].Duration.Should().Be(expected: TimeSpan.Zero);
+        result.TotalDuration.Should().Be(expected: TimeSpan.Zero);
     }
 
     [Fact]
@@ -54,15 +54,15 @@ public class DiscScannerTests
             }
             """;
 
-        DiscInfo result = DiscScanner.Parse(json, OpticalDiscType.Dvd);
+        DiscInfo result = DiscScanner.Parse(json: json, discType: OpticalDiscType.Dvd);
 
-        result.Titles.Should().HaveCount(1);
-        result.Titles[0].Name.Should().Be("Test Movie");
+        result.Titles.Should().HaveCount(expected: 1);
+        result.Titles[0].Name.Should().Be(expected: "Test Movie");
         result
             .Titles[0]
             .Duration.Should()
-            .BeCloseTo(TimeSpan.FromSeconds(7200.5), TimeSpan.FromMilliseconds(1));
-        result.Type.Should().Be(OpticalDiscType.Dvd);
+            .BeCloseTo(nearbyTime: TimeSpan.FromSeconds(value: 7200.5), precision: TimeSpan.FromMilliseconds(milliseconds: 1));
+        result.Type.Should().Be(expected: OpticalDiscType.Dvd);
     }
 
     [Fact]
@@ -84,13 +84,13 @@ public class DiscScannerTests
             }
             """;
 
-        DiscInfo result = DiscScanner.Parse(json, OpticalDiscType.BluRay);
+        DiscInfo result = DiscScanner.Parse(json: json, discType: OpticalDiscType.BluRay);
 
-        result.Titles[0].VideoStreams.Should().HaveCount(1);
-        result.Titles[0].VideoStreams[0].Codec.Should().Be("h264");
-        result.Titles[0].VideoStreams[0].Width.Should().Be(1920);
-        result.Titles[0].VideoStreams[0].Height.Should().Be(1080);
-        result.Titles[0].VideoStreams[0].PixelFormat.Should().Be("yuv420p");
+        result.Titles[0].VideoStreams.Should().HaveCount(expected: 1);
+        result.Titles[0].VideoStreams[0].Codec.Should().Be(expected: "h264");
+        result.Titles[0].VideoStreams[0].Width.Should().Be(expected: 1920);
+        result.Titles[0].VideoStreams[0].Height.Should().Be(expected: 1080);
+        result.Titles[0].VideoStreams[0].PixelFormat.Should().Be(expected: "yuv420p");
     }
 
     [Fact]
@@ -112,13 +112,13 @@ public class DiscScannerTests
             }
             """;
 
-        DiscInfo result = DiscScanner.Parse(json, OpticalDiscType.Dvd);
+        DiscInfo result = DiscScanner.Parse(json: json, discType: OpticalDiscType.Dvd);
 
-        result.Titles[0].AudioStreams.Should().HaveCount(1);
-        result.Titles[0].AudioStreams[0].Codec.Should().Be("ac3");
-        result.Titles[0].AudioStreams[0].Channels.Should().Be(6);
-        result.Titles[0].AudioStreams[0].SampleRate.Should().Be(48000);
-        result.Titles[0].AudioStreams[0].Language.Should().Be("eng");
+        result.Titles[0].AudioStreams.Should().HaveCount(expected: 1);
+        result.Titles[0].AudioStreams[0].Codec.Should().Be(expected: "ac3");
+        result.Titles[0].AudioStreams[0].Channels.Should().Be(expected: 6);
+        result.Titles[0].AudioStreams[0].SampleRate.Should().Be(expected: 48000);
+        result.Titles[0].AudioStreams[0].Language.Should().Be(expected: "eng");
     }
 
     [Fact]
@@ -138,11 +138,11 @@ public class DiscScannerTests
             }
             """;
 
-        DiscInfo result = DiscScanner.Parse(json, OpticalDiscType.Dvd);
+        DiscInfo result = DiscScanner.Parse(json: json, discType: OpticalDiscType.Dvd);
 
-        result.Titles[0].Subtitles.Should().HaveCount(1);
-        result.Titles[0].Subtitles[0].Codec.Should().Be("dvd_subtitle");
-        result.Titles[0].Subtitles[0].Language.Should().Be("eng");
+        result.Titles[0].Subtitles.Should().HaveCount(expected: 1);
+        result.Titles[0].Subtitles[0].Codec.Should().Be(expected: "dvd_subtitle");
+        result.Titles[0].Subtitles[0].Language.Should().Be(expected: "eng");
     }
 
     [Fact]
@@ -172,11 +172,11 @@ public class DiscScannerTests
             }
             """;
 
-        DiscInfo result = DiscScanner.Parse(json, OpticalDiscType.BluRay);
+        DiscInfo result = DiscScanner.Parse(json: json, discType: OpticalDiscType.BluRay);
 
-        result.Titles[0].AudioStreams.Should().HaveCount(2);
-        result.Titles[0].AudioStreams[0].Language.Should().Be("eng");
-        result.Titles[0].AudioStreams[1].Language.Should().Be("fra");
+        result.Titles[0].AudioStreams.Should().HaveCount(expected: 2);
+        result.Titles[0].AudioStreams[0].Language.Should().Be(expected: "eng");
+        result.Titles[0].AudioStreams[1].Language.Should().Be(expected: "fra");
     }
 
     [Fact]
@@ -200,13 +200,13 @@ public class DiscScannerTests
             }
             """;
 
-        DiscInfo result = DiscScanner.Parse(json, OpticalDiscType.Dvd);
+        DiscInfo result = DiscScanner.Parse(json: json, discType: OpticalDiscType.Dvd);
 
-        result.Titles[0].Chapters.Should().HaveCount(2);
-        result.Titles[0].Chapters[0].Start.Should().Be(TimeSpan.Zero);
-        result.Titles[0].Chapters[0].Title.Should().Be("Prologue");
-        result.Titles[0].Chapters[1].Start.Should().Be(TimeSpan.FromSeconds(600));
-        result.Titles[0].Chapters[1].Title.Should().Be("Main Feature");
+        result.Titles[0].Chapters.Should().HaveCount(expected: 2);
+        result.Titles[0].Chapters[0].Start.Should().Be(expected: TimeSpan.Zero);
+        result.Titles[0].Chapters[0].Title.Should().Be(expected: "Prologue");
+        result.Titles[0].Chapters[1].Start.Should().Be(expected: TimeSpan.FromSeconds(seconds: 600));
+        result.Titles[0].Chapters[1].Title.Should().Be(expected: "Main Feature");
     }
 
     [Fact]
@@ -227,7 +227,7 @@ public class DiscScannerTests
             }
             """;
 
-        DiscInfo result = DiscScanner.Parse(json, OpticalDiscType.BluRay);
+        DiscInfo result = DiscScanner.Parse(json: json, discType: OpticalDiscType.BluRay);
 
         result.Titles[0].AudioStreams[0].Language.Should().BeNull();
     }
@@ -247,7 +247,7 @@ public class DiscScannerTests
             }
             """;
 
-        DiscInfo result = DiscScanner.Parse(json, OpticalDiscType.Dvd);
+        DiscInfo result = DiscScanner.Parse(json: json, discType: OpticalDiscType.Dvd);
 
         result.Titles[0].Chapters[0].Title.Should().BeNull();
     }
@@ -257,11 +257,11 @@ public class DiscScannerTests
     {
         string json = """{ invalid json }""";
 
-        Action act = () => DiscScanner.Parse(json, OpticalDiscType.BluRay);
+        Action act = () => DiscScanner.Parse(json: json, discType: OpticalDiscType.BluRay);
 
         act.Should()
             .Throw<InvalidOperationException>()
-            .WithMessage("*ffprobe output was not valid JSON*");
+            .WithMessage(expectedWildcardPattern: "*ffprobe output was not valid JSON*");
     }
 
     [Fact]
@@ -282,11 +282,11 @@ public class DiscScannerTests
             }
             """;
 
-        DiscInfo result = DiscScanner.Parse(json, OpticalDiscType.BluRay);
+        DiscInfo result = DiscScanner.Parse(json: json, discType: OpticalDiscType.BluRay);
 
-        result.Titles[0].Duration.Should().Be(TimeSpan.Zero);
-        result.Titles[0].VideoStreams[0].Width.Should().Be(1920);
-        result.Titles[0].VideoStreams[0].Height.Should().Be(1080);
+        result.Titles[0].Duration.Should().Be(expected: TimeSpan.Zero);
+        result.Titles[0].VideoStreams[0].Width.Should().Be(expected: 1920);
+        result.Titles[0].VideoStreams[0].Height.Should().Be(expected: 1080);
     }
 
     [Fact]
@@ -304,7 +304,7 @@ public class DiscScannerTests
             }
             """;
 
-        DiscInfo result = DiscScanner.Parse(json, OpticalDiscType.BluRay);
+        DiscInfo result = DiscScanner.Parse(json: json, discType: OpticalDiscType.BluRay);
 
         result.Titles[0].VideoStreams.Should().BeEmpty();
         result.Titles[0].AudioStreams.Should().BeEmpty();
@@ -316,7 +316,7 @@ public class DiscScannerTests
     {
         string json = """{"format": {"duration": "3600"}}""";
 
-        DiscInfo result = DiscScanner.Parse(json, OpticalDiscType.BluRay);
+        DiscInfo result = DiscScanner.Parse(json: json, discType: OpticalDiscType.BluRay);
 
         result.Titles[0].IsMainFeature.Should().BeTrue();
     }
@@ -326,22 +326,22 @@ public class DiscScannerTests
     {
         string json = """{"format": {"duration": "3600"}}""";
 
-        DiscInfo result = DiscScanner.Parse(json, OpticalDiscType.BluRay);
+        DiscInfo result = DiscScanner.Parse(json: json, discType: OpticalDiscType.BluRay);
 
-        result.Titles[0].Index.Should().Be(0);
+        result.Titles[0].Index.Should().Be(expected: 0);
     }
 
     [Theory]
-    [InlineData(OpticalDiscType.BluRay)]
-    [InlineData(OpticalDiscType.Dvd)]
-    [InlineData(OpticalDiscType.Cd)]
+    [InlineData(data: OpticalDiscType.BluRay)]
+    [InlineData(data: OpticalDiscType.Dvd)]
+    [InlineData(data: OpticalDiscType.Cd)]
     public void Parse_DiscTypePassedThrough(OpticalDiscType type)
     {
         string json = """{"format":{}}""";
 
-        DiscInfo result = DiscScanner.Parse(json, type);
+        DiscInfo result = DiscScanner.Parse(json: json, discType: type);
 
-        result.Type.Should().Be(type);
+        result.Type.Should().Be(expected: type);
     }
 
     [Fact]
@@ -349,9 +349,9 @@ public class DiscScannerTests
     {
         string json = """{"format":{"duration":"3600"}}""";
 
-        DiscInfo result = DiscScanner.Parse(json, OpticalDiscType.BluRay);
+        DiscInfo result = DiscScanner.Parse(json: json, discType: OpticalDiscType.BluRay);
 
-        result.Titles[0].EstimatedSizeBytes.Should().Be(0);
+        result.Titles[0].EstimatedSizeBytes.Should().Be(expected: 0);
     }
 
     [Fact]
@@ -379,11 +379,11 @@ public class DiscScannerTests
             }
             """;
 
-        DiscInfo result = DiscScanner.Parse(json, OpticalDiscType.BluRay);
+        DiscInfo result = DiscScanner.Parse(json: json, discType: OpticalDiscType.BluRay);
 
-        result.Titles[0].VideoStreams.Should().HaveCount(2);
-        result.Titles[0].VideoStreams[0].Codec.Should().Be("h264");
-        result.Titles[0].VideoStreams[1].Codec.Should().Be("hevc");
+        result.Titles[0].VideoStreams.Should().HaveCount(expected: 2);
+        result.Titles[0].VideoStreams[0].Codec.Should().Be(expected: "h264");
+        result.Titles[0].VideoStreams[1].Codec.Should().Be(expected: "hevc");
     }
 
     // ── ScanAsync — end to end via mocked IProcessRunner ──────────────────
@@ -393,7 +393,7 @@ public class DiscScannerTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -402,25 +402,25 @@ public class DiscScannerTests
                 )
             )
             .ReturnsAsync(
-                new ProcessResult(0, """{"format":{"duration":"3600"}}""", "", TimeSpan.Zero)
+                value: new ProcessResult(ExitCode: 0, StdOut: """{"format":{"duration":"3600"}}""", StdErr: "", Duration: TimeSpan.Zero)
             );
 
-        DiscScanner sut = MakeSut(runner.Object);
+        DiscScanner sut = MakeSut(runner: runner.Object);
 
-        DiscInfo result = await sut.ScanAsync("/dev/sr0", CancellationToken.None);
+        DiscInfo result = await sut.ScanAsync(drivePath: "/dev/sr0", ct: CancellationToken.None);
 
-        result.Type.Should().Be(OpticalDiscType.Dvd);
-        result.Titles.Should().HaveCount(1);
+        result.Type.Should().Be(expected: OpticalDiscType.Dvd);
+        result.Titles.Should().HaveCount(expected: 1);
         // Only one ffprobe call for a non-Blu-ray path — no 1s pre-probe.
         runner.Verify(
-            r =>
+            expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Once
+            times: Times.Once
         );
     }
 
@@ -429,7 +429,7 @@ public class DiscScannerTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .SetupSequence(r =>
+            .SetupSequence(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -437,26 +437,26 @@ public class DiscScannerTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.Zero)) // pre-probe
+            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)) // pre-probe
             .ReturnsAsync(
-                new ProcessResult(0, """{"format":{"duration":"5400"}}""", "", TimeSpan.Zero)
+                value: new ProcessResult(ExitCode: 0, StdOut: """{"format":{"duration":"5400"}}""", StdErr: "", Duration: TimeSpan.Zero)
             ); // full scan
 
-        DiscScanner sut = MakeSut(runner.Object);
+        DiscScanner sut = MakeSut(runner: runner.Object);
 
-        DiscInfo result = await sut.ScanAsync("bluray:/dev/sr0", CancellationToken.None);
+        DiscInfo result = await sut.ScanAsync(drivePath: "bluray:/dev/sr0", ct: CancellationToken.None);
 
-        result.Type.Should().Be(OpticalDiscType.BluRay);
-        result.Titles[0].Duration.Should().Be(TimeSpan.FromSeconds(5400));
+        result.Type.Should().Be(expected: OpticalDiscType.BluRay);
+        result.Titles[0].Duration.Should().Be(expected: TimeSpan.FromSeconds(seconds: 5400));
         runner.Verify(
-            r =>
+            expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Exactly(2)
+            times: Times.Exactly(callCount: 2)
         );
     }
 
@@ -465,7 +465,7 @@ public class DiscScannerTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -473,11 +473,11 @@ public class DiscScannerTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(new ProcessResult(1, "", "aacs: no matching certificate", TimeSpan.Zero));
+            .ReturnsAsync(value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "aacs: no matching certificate", Duration: TimeSpan.Zero));
 
-        DiscScanner sut = MakeSut(runner.Object);
+        DiscScanner sut = MakeSut(runner: runner.Object);
 
-        Func<Task> act = () => sut.ScanAsync("bluray:/dev/sr0", CancellationToken.None);
+        Func<Task> act = () => sut.ScanAsync(drivePath: "bluray:/dev/sr0", ct: CancellationToken.None);
 
         await act.Should().ThrowAsync<Exception>();
     }
@@ -487,7 +487,7 @@ public class DiscScannerTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -495,11 +495,11 @@ public class DiscScannerTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(new ProcessResult(1, "", "no such file", TimeSpan.Zero));
+            .ReturnsAsync(value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "no such file", Duration: TimeSpan.Zero));
 
-        DiscScanner sut = MakeSut(runner.Object);
+        DiscScanner sut = MakeSut(runner: runner.Object);
 
-        DiscInfo result = await sut.ScanAsync("/dev/sr0", CancellationToken.None);
+        DiscInfo result = await sut.ScanAsync(drivePath: "/dev/sr0", ct: CancellationToken.None);
 
         result.Titles.Should().BeEmpty();
         result.DiscLabel.Should().BeNull();
@@ -510,7 +510,7 @@ public class DiscScannerTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -518,11 +518,11 @@ public class DiscScannerTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(new ProcessResult(0, "{ not valid json", "", TimeSpan.Zero));
+            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "{ not valid json", StdErr: "", Duration: TimeSpan.Zero));
 
-        DiscScanner sut = MakeSut(runner.Object);
+        DiscScanner sut = MakeSut(runner: runner.Object);
 
-        DiscInfo result = await sut.ScanAsync("/dev/sr0", CancellationToken.None);
+        DiscInfo result = await sut.ScanAsync(drivePath: "/dev/sr0", ct: CancellationToken.None);
 
         result.Titles.Should().BeEmpty();
     }
@@ -535,7 +535,7 @@ public class DiscScannerTests
         // cancelled) must be swallowed and the real scan must still run.
         Mock<IProcessRunner> runner = new();
         runner
-            .SetupSequence(r =>
+            .SetupSequence(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -543,16 +543,16 @@ public class DiscScannerTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ThrowsAsync(new OperationCanceledException("pre-probe timed out"))
+            .ThrowsAsync(exception: new OperationCanceledException(message: "pre-probe timed out"))
             .ReturnsAsync(
-                new ProcessResult(0, """{"format":{"duration":"1800"}}""", "", TimeSpan.Zero)
+                value: new ProcessResult(ExitCode: 0, StdOut: """{"format":{"duration":"1800"}}""", StdErr: "", Duration: TimeSpan.Zero)
             );
 
-        DiscScanner sut = MakeSut(runner.Object);
+        DiscScanner sut = MakeSut(runner: runner.Object);
 
-        DiscInfo result = await sut.ScanAsync("bluray:/dev/sr0", CancellationToken.None);
+        DiscInfo result = await sut.ScanAsync(drivePath: "bluray:/dev/sr0", ct: CancellationToken.None);
 
-        result.Titles[0].Duration.Should().Be(TimeSpan.FromSeconds(1800));
+        result.Titles[0].Duration.Should().Be(expected: TimeSpan.FromSeconds(seconds: 1800));
     }
 
     // ── ClassifyBluRayStderr — direct unit tests (pure function) ───────────
@@ -560,7 +560,7 @@ public class DiscScannerTests
     [Fact]
     public void ClassifyBluRayStderr_EmptyStderr_DoesNotThrow()
     {
-        Action act = () => DiscScanner.ClassifyBluRayStderr("/dev/sr0", "");
+        Action act = () => DiscScanner.ClassifyBluRayStderr(drivePath: "/dev/sr0", stderr: "");
         act.Should().NotThrow();
     }
 
@@ -568,7 +568,7 @@ public class DiscScannerTests
     public void ClassifyBluRayStderr_AacsNoMatchingCertificate_ThrowsDiscAacsCertMissing()
     {
         Action act = () =>
-            DiscScanner.ClassifyBluRayStderr("/dev/sr0", "aacs: no matching certificate");
+            DiscScanner.ClassifyBluRayStderr(drivePath: "/dev/sr0", stderr: "aacs: no matching certificate");
 
         act.Should().Throw<EncoderRuntimeException>();
     }
@@ -577,18 +577,18 @@ public class DiscScannerTests
     public void ClassifyBluRayStderr_BdplusNoMatchingConverter_ThrowsDiscBdplusConverterMissing()
     {
         Action act = () =>
-            DiscScanner.ClassifyBluRayStderr("/dev/sr0", "bdplus: no matching converter");
+            DiscScanner.ClassifyBluRayStderr(drivePath: "/dev/sr0", stderr: "bdplus: no matching converter");
 
         act.Should().Throw<EncoderRuntimeException>();
     }
 
     [Theory]
-    [InlineData("Protocol not found")]
-    [InlineData("No such file or directory")]
-    [InlineData("Input/output error")]
+    [InlineData(data: "Protocol not found")]
+    [InlineData(data: "No such file or directory")]
+    [InlineData(data: "Input/output error")]
     public void ClassifyBluRayStderr_ProtocolLevelFailure_ThrowsDiscReadError(string stderrText)
     {
-        Action act = () => DiscScanner.ClassifyBluRayStderr("/dev/sr0", stderrText);
+        Action act = () => DiscScanner.ClassifyBluRayStderr(drivePath: "/dev/sr0", stderr: stderrText);
 
         act.Should().Throw<EncoderRuntimeException>();
     }
@@ -597,7 +597,7 @@ public class DiscScannerTests
     public void ClassifyBluRayStderr_UnrecognizedStderr_DoesNotThrow()
     {
         Action act = () =>
-            DiscScanner.ClassifyBluRayStderr("/dev/sr0", "some unrelated ffmpeg warning");
+            DiscScanner.ClassifyBluRayStderr(drivePath: "/dev/sr0", stderr: "some unrelated ffmpeg warning");
 
         act.Should().NotThrow();
     }
@@ -607,11 +607,11 @@ public class DiscScannerTests
     {
         string stderr = "aacs: no matching certificate for volume 0123456789ABCDEF0123456789ABCDEF";
 
-        Action act = () => DiscScanner.ClassifyBluRayStderr("/dev/sr0", stderr);
+        Action act = () => DiscScanner.ClassifyBluRayStderr(drivePath: "/dev/sr0", stderr: stderr);
 
         act.Should()
             .Throw<EncoderRuntimeException>()
-            .Where(ex => ex.Message.Contains("0123456789ABCDEF0123456789ABCDEF"));
+            .Where(exceptionExpression: ex => ex.Message.Contains("0123456789ABCDEF0123456789ABCDEF"));
     }
 
     [Fact]
@@ -623,7 +623,7 @@ public class DiscScannerTests
         // the sibling ScanAsync failure test above.
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -631,11 +631,11 @@ public class DiscScannerTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(new ProcessResult(1, "", "", TimeSpan.Zero));
+            .ReturnsAsync(value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "", Duration: TimeSpan.Zero));
 
-        DiscScanner sut = MakeSut(runner.Object);
+        DiscScanner sut = MakeSut(runner: runner.Object);
 
-        DiscInfo result = await sut.ScanAsync("/dev/sr0", CancellationToken.None);
+        DiscInfo result = await sut.ScanAsync(drivePath: "/dev/sr0", ct: CancellationToken.None);
 
         result.Titles.Should().BeEmpty();
     }
@@ -644,8 +644,8 @@ public class DiscScannerTests
     public void ClassifyBluRayStderr_NoHexVolumeId_FallsBackToDrivePath()
     {
         Action act = () =>
-            DiscScanner.ClassifyBluRayStderr("/dev/sr0", "aacs: no matching certificate");
+            DiscScanner.ClassifyBluRayStderr(drivePath: "/dev/sr0", stderr: "aacs: no matching certificate");
 
-        act.Should().Throw<EncoderRuntimeException>().Where(ex => ex.Message.Contains("/dev/sr0"));
+        act.Should().Throw<EncoderRuntimeException>().Where(exceptionExpression: ex => ex.Message.Contains("/dev/sr0"));
     }
 }

@@ -41,32 +41,32 @@ public class PluginLifecycleManagerTests : IDisposable
     public PluginLifecycleManagerTests()
     {
         _tempDir = Path.Combine(
-            Path.GetTempPath(),
-            "nomercy-lifecycle-mgr-" + Guid.NewGuid().ToString("N")
+            path1: Path.GetTempPath(),
+            path2: "nomercy-lifecycle-mgr-" + Guid.NewGuid().ToString(format: "N")
         );
-        Directory.CreateDirectory(_tempDir);
+        Directory.CreateDirectory(path: _tempDir);
 
         _eventBus = new();
         _registry = new();
         PluginLoader loader = new(
-            _eventBus,
-            new MinimalServiceProvider(),
-            NullLogger.Instance,
-            _tempDir,
-            TestStorageHelper.CreateStorage(_tempDir),
-            _registry,
-            new PluginVerifier(),
-            new PluginConsentService(new InMemoryConsentStore())
+            eventBus: _eventBus,
+            serviceProvider: new MinimalServiceProvider(),
+            logger: NullLogger.Instance,
+            pluginsPath: _tempDir,
+            storage: TestStorageHelper.CreateStorage(rootPath: _tempDir),
+            registry: _registry,
+            verifier: new PluginVerifier(),
+            consentService: new PluginConsentService(store: new InMemoryConsentStore())
         );
 
         _lifecycle = new(
-            _eventBus,
-            new MinimalServiceProvider(),
-            NullLogger.Instance,
-            _tempDir,
-            TestStorageHelper.CreateStorage(_tempDir),
-            _registry,
-            loader
+            eventBus: _eventBus,
+            serviceProvider: new MinimalServiceProvider(),
+            logger: NullLogger.Instance,
+            pluginsPath: _tempDir,
+            storage: TestStorageHelper.CreateStorage(rootPath: _tempDir),
+            registry: _registry,
+            loader: loader
         );
     }
 
@@ -74,8 +74,8 @@ public class PluginLifecycleManagerTests : IDisposable
     {
         try
         {
-            if (Directory.Exists(_tempDir))
-                Directory.Delete(_tempDir, recursive: true);
+            if (Directory.Exists(path: _tempDir))
+                Directory.Delete(path: _tempDir, recursive: true);
         }
         catch (IOException) { }
     }
@@ -86,7 +86,7 @@ public class PluginLifecycleManagerTests : IDisposable
             Id = id,
             Name = "Test Plugin",
             Description = "d",
-            Version = new(1, 0, 0),
+            Version = new(major: 1, minor: 0, build: 0),
             Status = status,
             AssemblyPath = assemblyPath,
         };
@@ -96,7 +96,7 @@ public class PluginLifecycleManagerTests : IDisposable
     [Fact]
     public async Task EnablePluginAsync_UnknownId_ThrowsInvalidOperation()
     {
-        Func<Task> act = () => _lifecycle.EnablePluginAsync(Guid.NewGuid());
+        Func<Task> act = () => _lifecycle.EnablePluginAsync(pluginId: Guid.NewGuid());
 
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
@@ -106,13 +106,13 @@ public class PluginLifecycleManagerTests : IDisposable
     {
         Guid id = Guid.NewGuid();
         FakePlugin plugin = new();
-        _registry[id] = new(Info(id, PluginStatus.Active), plugin, null);
+        _registry[id: id] = new(info: Info(id: id, status: PluginStatus.Active), instance: plugin, loadContext: null);
 
-        await _lifecycle.EnablePluginAsync(id);
+        await _lifecycle.EnablePluginAsync(pluginId: id);
 
         plugin
             .InitializeCallCount.Should()
-            .Be(0, "an already-active plugin must not be re-initialized");
+            .Be(expected: 0, because: "an already-active plugin must not be re-initialized");
     }
 
     [Fact]
@@ -120,22 +120,22 @@ public class PluginLifecycleManagerTests : IDisposable
     {
         Guid id = Guid.NewGuid();
         FakePlugin plugin = new();
-        _registry[id] = new(Info(id, PluginStatus.Disabled), plugin, null);
+        _registry[id: id] = new(info: Info(id: id, status: PluginStatus.Disabled), instance: plugin, loadContext: null);
         List<PluginLoadedEvent> loaded = [];
         _eventBus.Subscribe<PluginLoadedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                loaded.Add(evt);
+                loaded.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
 
-        await _lifecycle.EnablePluginAsync(id);
+        await _lifecycle.EnablePluginAsync(pluginId: id);
 
-        plugin.InitializeCallCount.Should().Be(1);
-        _registry.TryGetValue(id, out LoadedPlugin? afterward).Should().BeTrue();
-        afterward!.Info.Status.Should().Be(PluginStatus.Active);
-        loaded.Should().ContainSingle(e => e.PluginId == id.ToString());
+        plugin.InitializeCallCount.Should().Be(expected: 1);
+        _registry.TryGetValue(id: id, plugin: out LoadedPlugin? afterward).Should().BeTrue();
+        afterward!.Info.Status.Should().Be(expected: PluginStatus.Active);
+        loaded.Should().ContainSingle(predicate: e => e.PluginId == id.ToString());
     }
 
     [Fact]
@@ -143,14 +143,14 @@ public class PluginLifecycleManagerTests : IDisposable
     {
         Guid id = Guid.NewGuid();
         FakePlugin plugin = new();
-        _registry[id] = new(Info(id, PluginStatus.Disabled), plugin, null);
-        string dataFolder = Path.Combine(_tempDir, "data", id.ToString("N"));
+        _registry[id: id] = new(info: Info(id: id, status: PluginStatus.Disabled), instance: plugin, loadContext: null);
+        string dataFolder = Path.Combine(path1: _tempDir, path2: "data", path3: id.ToString(format: "N"));
 
-        Directory.Exists(dataFolder).Should().BeFalse();
+        Directory.Exists(path: dataFolder).Should().BeFalse();
 
-        await _lifecycle.EnablePluginAsync(id);
+        await _lifecycle.EnablePluginAsync(pluginId: id);
 
-        Directory.Exists(dataFolder).Should().BeTrue();
+        Directory.Exists(path: dataFolder).Should().BeTrue();
     }
 
     [Fact]
@@ -163,10 +163,10 @@ public class PluginLifecycleManagerTests : IDisposable
         // is that the null-instance branch defers to the loader instead of
         // trying to call Initialize() on a null reference.
         Guid id = Guid.NewGuid();
-        string assemblyPath = Path.Combine(_tempDir, "missing-plugin.dll");
-        _registry[id] = new(Info(id, PluginStatus.Disabled, assemblyPath), null, null);
+        string assemblyPath = Path.Combine(path1: _tempDir, path2: "missing-plugin.dll");
+        _registry[id: id] = new(info: Info(id: id, status: PluginStatus.Disabled, assemblyPath: assemblyPath), instance: null, loadContext: null);
 
-        Func<Task> act = () => _lifecycle.EnablePluginAsync(id);
+        Func<Task> act = () => _lifecycle.EnablePluginAsync(pluginId: id);
 
         await act.Should().NotThrowAsync();
     }
@@ -181,17 +181,17 @@ public class PluginLifecycleManagerTests : IDisposable
         // malfunction.
         Guid id = Guid.NewGuid();
         FakePlugin plugin = new();
-        _registry[id] = new(Info(id, PluginStatus.Deleted), plugin, null);
+        _registry[id: id] = new(info: Info(id: id, status: PluginStatus.Deleted), instance: plugin, loadContext: null);
 
-        Func<Task> act = () => _lifecycle.EnablePluginAsync(id);
+        Func<Task> act = () => _lifecycle.EnablePluginAsync(pluginId: id);
 
         await act.Should().ThrowAsync<InvalidOperationException>();
-        _registry.TryGetValue(id, out LoadedPlugin? afterward).Should().BeTrue();
+        _registry.TryGetValue(id: id, plugin: out LoadedPlugin? afterward).Should().BeTrue();
         afterward!
             .Info.Status.Should()
             .Be(
-                PluginStatus.Deleted,
-                "the failed transition must not be recorded as Malfunctioned"
+                expected: PluginStatus.Deleted,
+                because: "the failed transition must not be recorded as Malfunctioned"
             );
     }
 
@@ -200,21 +200,21 @@ public class PluginLifecycleManagerTests : IDisposable
     {
         Guid id = Guid.NewGuid();
         ThrowingInitializePlugin plugin = new();
-        _registry[id] = new(Info(id, PluginStatus.Disabled), plugin, null);
+        _registry[id: id] = new(info: Info(id: id, status: PluginStatus.Disabled), instance: plugin, loadContext: null);
         List<PluginErrorOccurredEvent> errors = [];
         _eventBus.Subscribe<PluginErrorOccurredEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                errors.Add(evt);
+                errors.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
 
-        await _lifecycle.EnablePluginAsync(id);
+        await _lifecycle.EnablePluginAsync(pluginId: id);
 
-        _registry.TryGetValue(id, out LoadedPlugin? afterward).Should().BeTrue();
-        afterward!.Info.Status.Should().Be(PluginStatus.Malfunctioned);
-        errors.Should().ContainSingle(e => e.PluginId == id.ToString());
+        _registry.TryGetValue(id: id, plugin: out LoadedPlugin? afterward).Should().BeTrue();
+        afterward!.Info.Status.Should().Be(expected: PluginStatus.Malfunctioned);
+        errors.Should().ContainSingle(predicate: e => e.PluginId == id.ToString());
     }
 
     // ── DisablePluginAsync ───────────────────────────────────────────────────
@@ -222,7 +222,7 @@ public class PluginLifecycleManagerTests : IDisposable
     [Fact]
     public async Task DisablePluginAsync_UnknownId_ThrowsInvalidOperation()
     {
-        Func<Task> act = () => _lifecycle.DisablePluginAsync(Guid.NewGuid());
+        Func<Task> act = () => _lifecycle.DisablePluginAsync(pluginId: Guid.NewGuid());
 
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
@@ -232,13 +232,13 @@ public class PluginLifecycleManagerTests : IDisposable
     {
         Guid id = Guid.NewGuid();
         FakePlugin plugin = new();
-        _registry[id] = new(Info(id, PluginStatus.Disabled), plugin, null);
+        _registry[id: id] = new(info: Info(id: id, status: PluginStatus.Disabled), instance: plugin, loadContext: null);
 
-        await _lifecycle.DisablePluginAsync(id);
+        await _lifecycle.DisablePluginAsync(pluginId: id);
 
         plugin
             .DisposeCallCount.Should()
-            .Be(0, "an already-disabled plugin's instance must not be disposed again");
+            .Be(expected: 0, because: "an already-disabled plugin's instance must not be disposed again");
     }
 
     [Fact]
@@ -246,22 +246,22 @@ public class PluginLifecycleManagerTests : IDisposable
     {
         Guid id = Guid.NewGuid();
         FakePlugin plugin = new();
-        _registry[id] = new(Info(id, PluginStatus.Active), plugin, null);
+        _registry[id: id] = new(info: Info(id: id, status: PluginStatus.Active), instance: plugin, loadContext: null);
 
-        await _lifecycle.DisablePluginAsync(id);
+        await _lifecycle.DisablePluginAsync(pluginId: id);
 
-        plugin.DisposeCallCount.Should().Be(1);
-        _registry.TryGetValue(id, out LoadedPlugin? afterward).Should().BeTrue();
-        afterward!.Info.Status.Should().Be(PluginStatus.Disabled);
+        plugin.DisposeCallCount.Should().Be(expected: 1);
+        _registry.TryGetValue(id: id, plugin: out LoadedPlugin? afterward).Should().BeTrue();
+        afterward!.Info.Status.Should().Be(expected: PluginStatus.Disabled);
     }
 
     [Fact]
     public async Task DisablePluginAsync_ActiveWithNullInstance_DoesNotThrow()
     {
         Guid id = Guid.NewGuid();
-        _registry[id] = new(Info(id, PluginStatus.Active), null, null);
+        _registry[id: id] = new(info: Info(id: id, status: PluginStatus.Active), instance: null, loadContext: null);
 
-        Func<Task> act = () => _lifecycle.DisablePluginAsync(id);
+        Func<Task> act = () => _lifecycle.DisablePluginAsync(pluginId: id);
 
         await act.Should().NotThrowAsync();
     }
@@ -271,7 +271,7 @@ public class PluginLifecycleManagerTests : IDisposable
     [Fact]
     public async Task UninstallPluginAsync_UnknownId_ThrowsInvalidOperation()
     {
-        Func<Task> act = () => _lifecycle.UninstallPluginAsync(Guid.NewGuid());
+        Func<Task> act = () => _lifecycle.UninstallPluginAsync(pluginId: Guid.NewGuid());
 
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
@@ -281,12 +281,12 @@ public class PluginLifecycleManagerTests : IDisposable
     {
         Guid id = Guid.NewGuid();
         FakePlugin plugin = new();
-        _registry[id] = new(Info(id, PluginStatus.Active), plugin, null);
+        _registry[id: id] = new(info: Info(id: id, status: PluginStatus.Active), instance: plugin, loadContext: null);
 
-        await _lifecycle.UninstallPluginAsync(id);
+        await _lifecycle.UninstallPluginAsync(pluginId: id);
 
-        _registry.TryGetValue(id, out _).Should().BeFalse();
-        plugin.DisposeCallCount.Should().Be(1);
+        _registry.TryGetValue(id: id, plugin: out _).Should().BeFalse();
+        plugin.DisposeCallCount.Should().Be(expected: 1);
     }
 
     [Fact]
@@ -294,9 +294,9 @@ public class PluginLifecycleManagerTests : IDisposable
     {
         Guid id = Guid.NewGuid();
         FakePlugin plugin = new();
-        _registry[id] = new(Info(id, PluginStatus.Active, assemblyPath: null), plugin, null);
+        _registry[id: id] = new(info: Info(id: id, status: PluginStatus.Active, assemblyPath: null), instance: plugin, loadContext: null);
 
-        Func<Task> act = () => _lifecycle.UninstallPluginAsync(id);
+        Func<Task> act = () => _lifecycle.UninstallPluginAsync(pluginId: id);
 
         await act.Should().NotThrowAsync();
     }
@@ -305,27 +305,27 @@ public class PluginLifecycleManagerTests : IDisposable
     public async Task UninstallPluginAsync_AssemblyDirectoryExists_DeletesIt()
     {
         Guid id = Guid.NewGuid();
-        string pluginDir = Path.Combine(_tempDir, "SomePlugin");
-        Directory.CreateDirectory(pluginDir);
-        string assemblyPath = Path.Combine(pluginDir, "SomePlugin.dll");
-        File.WriteAllBytes(assemblyPath, [1, 2, 3]);
+        string pluginDir = Path.Combine(path1: _tempDir, path2: "SomePlugin");
+        Directory.CreateDirectory(path: pluginDir);
+        string assemblyPath = Path.Combine(path1: pluginDir, path2: "SomePlugin.dll");
+        File.WriteAllBytes(path: assemblyPath, bytes: [1, 2, 3]);
         FakePlugin plugin = new();
-        _registry[id] = new(Info(id, PluginStatus.Active, assemblyPath), plugin, null);
+        _registry[id: id] = new(info: Info(id: id, status: PluginStatus.Active, assemblyPath: assemblyPath), instance: plugin, loadContext: null);
 
-        await _lifecycle.UninstallPluginAsync(id);
+        await _lifecycle.UninstallPluginAsync(pluginId: id);
 
-        Directory.Exists(pluginDir).Should().BeFalse();
+        Directory.Exists(path: pluginDir).Should().BeFalse();
     }
 
     [Fact]
     public async Task UninstallPluginAsync_AssemblyDirectoryAlreadyGone_DoesNotThrow()
     {
         Guid id = Guid.NewGuid();
-        string assemblyPath = Path.Combine(_tempDir, "GoneAlready", "GoneAlready.dll");
+        string assemblyPath = Path.Combine(path1: _tempDir, path2: "GoneAlready", path3: "GoneAlready.dll");
         FakePlugin plugin = new();
-        _registry[id] = new(Info(id, PluginStatus.Active, assemblyPath), plugin, null);
+        _registry[id: id] = new(info: Info(id: id, status: PluginStatus.Active, assemblyPath: assemblyPath), instance: plugin, loadContext: null);
 
-        Func<Task> act = () => _lifecycle.UninstallPluginAsync(id);
+        Func<Task> act = () => _lifecycle.UninstallPluginAsync(pluginId: id);
 
         await act.Should().NotThrowAsync();
     }
@@ -334,26 +334,26 @@ public class PluginLifecycleManagerTests : IDisposable
     public async Task UninstallPluginAsync_NullInstance_DoesNotThrow()
     {
         Guid id = Guid.NewGuid();
-        _registry[id] = new(Info(id, PluginStatus.Active), null, null);
+        _registry[id: id] = new(info: Info(id: id, status: PluginStatus.Active), instance: null, loadContext: null);
 
-        Func<Task> act = () => _lifecycle.UninstallPluginAsync(id);
+        Func<Task> act = () => _lifecycle.UninstallPluginAsync(pluginId: id);
 
         await act.Should().NotThrowAsync();
-        _registry.TryGetValue(id, out _).Should().BeFalse();
+        _registry.TryGetValue(id: id, plugin: out _).Should().BeFalse();
     }
 
     [Fact]
     public async Task UninstallPluginAsync_RealLoadContext_UnloadsIt()
     {
         Guid id = Guid.NewGuid();
-        string dummyPath = Path.Combine(_tempDir, $"unload-target-{Guid.NewGuid():N}.dll");
-        File.WriteAllBytes(dummyPath, []);
-        PluginLoadContext loadContext = new(dummyPath);
+        string dummyPath = Path.Combine(path1: _tempDir, path2: $"unload-target-{Guid.NewGuid():N}.dll");
+        File.WriteAllBytes(path: dummyPath, bytes: []);
+        PluginLoadContext loadContext = new(pluginPath: dummyPath);
         bool unloaded = false;
         loadContext.Unloading += _ => unloaded = true;
-        _registry[id] = new(Info(id, PluginStatus.Active), null, loadContext);
+        _registry[id: id] = new(info: Info(id: id, status: PluginStatus.Active), instance: null, loadContext: loadContext);
 
-        await _lifecycle.UninstallPluginAsync(id);
+        await _lifecycle.UninstallPluginAsync(pluginId: id);
 
         unloaded.Should().BeTrue();
     }
@@ -368,11 +368,11 @@ public class PluginLifecycleManagerTests : IDisposable
         // for this root-path shape.
         Guid id = Guid.NewGuid();
         string rootPath = Path.DirectorySeparatorChar.ToString();
-        Path.GetDirectoryName(rootPath).Should().BeNull("this is exactly the edge case under test");
+        Path.GetDirectoryName(path: rootPath).Should().BeNull(because: "this is exactly the edge case under test");
         FakePlugin plugin = new();
-        _registry[id] = new(Info(id, PluginStatus.Active, assemblyPath: rootPath), plugin, null);
+        _registry[id: id] = new(info: Info(id: id, status: PluginStatus.Active, assemblyPath: rootPath), instance: plugin, loadContext: null);
 
-        Func<Task> act = () => _lifecycle.UninstallPluginAsync(id);
+        Func<Task> act = () => _lifecycle.UninstallPluginAsync(pluginId: id);
 
         await act.Should().NotThrowAsync();
     }
@@ -388,29 +388,29 @@ public class PluginLifecycleManagerTests : IDisposable
         // race during a genuine uninstall), which a bare `catch (IOException)`
         // does not cover.
         Guid id = Guid.NewGuid();
-        string pluginDir = Path.Combine(_tempDir, "ReadOnlyPlugin");
-        Directory.CreateDirectory(pluginDir);
-        string assemblyPath = Path.Combine(pluginDir, "ReadOnlyPlugin.dll");
-        string readOnlyFilePath = Path.Combine(pluginDir, "readonly.bin");
-        File.WriteAllBytes(assemblyPath, [1, 2, 3]);
-        File.WriteAllBytes(readOnlyFilePath, [4, 5, 6]);
-        File.SetAttributes(readOnlyFilePath, FileAttributes.ReadOnly);
+        string pluginDir = Path.Combine(path1: _tempDir, path2: "ReadOnlyPlugin");
+        Directory.CreateDirectory(path: pluginDir);
+        string assemblyPath = Path.Combine(path1: pluginDir, path2: "ReadOnlyPlugin.dll");
+        string readOnlyFilePath = Path.Combine(path1: pluginDir, path2: "readonly.bin");
+        File.WriteAllBytes(path: assemblyPath, bytes: [1, 2, 3]);
+        File.WriteAllBytes(path: readOnlyFilePath, bytes: [4, 5, 6]);
+        File.SetAttributes(path: readOnlyFilePath, fileAttributes: FileAttributes.ReadOnly);
         FakePlugin plugin = new();
-        _registry[id] = new(Info(id, PluginStatus.Active, assemblyPath), plugin, null);
+        _registry[id: id] = new(info: Info(id: id, status: PluginStatus.Active, assemblyPath: assemblyPath), instance: plugin, loadContext: null);
 
         try
         {
-            Func<Task> act = () => _lifecycle.UninstallPluginAsync(id);
+            Func<Task> act = () => _lifecycle.UninstallPluginAsync(pluginId: id);
 
             await act.Should().NotThrowAsync();
             Directory
-                .Exists(pluginDir)
+                .Exists(path: pluginDir)
                 .Should()
-                .BeTrue("the read-only file blocked the recursive delete");
+                .BeTrue(because: "the read-only file blocked the recursive delete");
         }
         finally
         {
-            File.SetAttributes(readOnlyFilePath, FileAttributes.Normal);
+            File.SetAttributes(path: readOnlyFilePath, fileAttributes: FileAttributes.Normal);
         }
     }
 
@@ -418,30 +418,30 @@ public class PluginLifecycleManagerTests : IDisposable
     public async Task UninstallPluginAsync_DeleteDirectoryFails_LogsWarningInsteadOfThrowing()
     {
         Guid id = Guid.NewGuid();
-        string pluginDir = Path.Combine(_tempDir, "LockedPlugin");
-        Directory.CreateDirectory(pluginDir);
-        string assemblyPath = Path.Combine(pluginDir, "LockedPlugin.dll");
-        string lockedFilePath = Path.Combine(pluginDir, "locked.bin");
-        File.WriteAllBytes(assemblyPath, [1, 2, 3]);
-        File.WriteAllBytes(lockedFilePath, [4, 5, 6]);
+        string pluginDir = Path.Combine(path1: _tempDir, path2: "LockedPlugin");
+        Directory.CreateDirectory(path: pluginDir);
+        string assemblyPath = Path.Combine(path1: pluginDir, path2: "LockedPlugin.dll");
+        string lockedFilePath = Path.Combine(path1: pluginDir, path2: "locked.bin");
+        File.WriteAllBytes(path: assemblyPath, bytes: [1, 2, 3]);
+        File.WriteAllBytes(path: lockedFilePath, bytes: [4, 5, 6]);
         FakePlugin plugin = new();
-        _registry[id] = new(Info(id, PluginStatus.Active, assemblyPath), plugin, null);
+        _registry[id: id] = new(info: Info(id: id, status: PluginStatus.Active, assemblyPath: assemblyPath), instance: plugin, loadContext: null);
 
         // Hold an exclusive, non-shared handle open on a file inside the plugin
         // directory for the duration of the delete attempt — the only real way
         // to make Directory.Delete(recursive: true) throw IOException rather
         // than fabricating the exception directly.
         using FileStream lockHandle = new(
-            lockedFilePath,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.None
+            path: lockedFilePath,
+            mode: FileMode.Open,
+            access: FileAccess.Read,
+            share: FileShare.None
         );
 
-        Func<Task> act = () => _lifecycle.UninstallPluginAsync(id);
+        Func<Task> act = () => _lifecycle.UninstallPluginAsync(pluginId: id);
 
         await act.Should().NotThrowAsync();
-        Directory.Exists(pluginDir).Should().BeTrue("the locked file blocked the recursive delete");
+        Directory.Exists(path: pluginDir).Should().BeTrue(because: "the locked file blocked the recursive delete");
     }
 
     private sealed class FakePlugin : IPlugin
@@ -452,7 +452,7 @@ public class PluginLifecycleManagerTests : IDisposable
         public string Name => "fake";
         public string Description => "d";
         public Guid Id { get; } = Guid.NewGuid();
-        public Version Version { get; } = new(1, 0);
+        public Version Version { get; } = new(major: 1, minor: 0);
 
         public void Initialize(IPluginContext context) => InitializeCallCount++;
 
@@ -464,10 +464,10 @@ public class PluginLifecycleManagerTests : IDisposable
         public string Name => "throwing";
         public string Description => "d";
         public Guid Id { get; } = Guid.NewGuid();
-        public Version Version { get; } = new(1, 0);
+        public Version Version { get; } = new(major: 1, minor: 0);
 
         public void Initialize(IPluginContext context) =>
-            throw new ApplicationException("initialize boom");
+            throw new ApplicationException(message: "initialize boom");
 
         public void Dispose() { }
     }

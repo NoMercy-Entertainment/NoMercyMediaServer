@@ -38,7 +38,7 @@ file sealed class TestableDiscRipJob(Folder folder, Library library) : DiscRipJo
         Ulid folderId,
         Ulid libraryId,
         CancellationToken cancellationToken
-    ) => Task.FromResult<(Folder?, Library?)>((folder, library));
+    ) => Task.FromResult<(Folder?, Library?)>(result: (folder, library));
 }
 
 /// <summary>
@@ -47,8 +47,8 @@ file sealed class TestableDiscRipJob(Folder folder, Library library) : DiscRipJo
 /// <see cref="IJobDispatcher"/> directly via <see cref="DiscRipJob.JobDispatcher"/>.
 /// The MediaContext DB fetch is bypassed via <see cref="TestableDiscRipJob"/>.
 /// </summary>
-[Collection("EventBusProvider")]
-[Trait("Category", "Unit")]
+[Collection(name: "EventBusProvider")]
+[Trait(name: "Category", value: "Unit")]
 public class DiscRipJobEncodeDispatchTests
 {
     private static readonly Ulid KnownFolderId = Ulid.NewUlid();
@@ -115,7 +115,7 @@ public class DiscRipJobEncodeDispatchTests
             TitleIndex: 1,
             OutputPath: outputPath,
             Success: true,
-            Duration: TimeSpan.FromMinutes(90),
+            Duration: TimeSpan.FromMinutes(minutes: 90),
             OutputSizeBytes: 1_000_000,
             Error: null
         );
@@ -124,20 +124,20 @@ public class DiscRipJobEncodeDispatchTests
     {
         Mock<IStorage> storageMock = new();
         storageMock
-            .Setup(s => s.GetFullPath(It.IsAny<string>()))
-            .Returns<string>(relative => hostPath + "/" + relative.TrimStart('/'));
+            .Setup(expression: s => s.GetFullPath(It.IsAny<string>()))
+            .Returns<string>(valueFunction: relative => hostPath + "/" + relative.TrimStart(trimChar: '/'));
         storageMock
-            .Setup(s => s.CreateDirectoryAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .Setup(expression: s => s.CreateDirectoryAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(value: Task.CompletedTask);
         storageMock
-            .Setup(s =>
+            .Setup(expression: s =>
                 s.OpenWriteAsync(
                     It.IsAny<string>(),
                     It.IsAny<bool>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(Stream.Null);
+            .ReturnsAsync(value: Stream.Null);
         return storageMock;
     }
 
@@ -152,10 +152,10 @@ public class DiscRipJobEncodeDispatchTests
     {
         Mock<IStorageFactory> factoryMock = new();
         factoryMock
-            .Setup(f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
-            .Returns(folderStorage);
+            .Setup(expression: f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
+            .Returns(value: folderStorage);
 
-        TestableDiscRipJob job = new(folder, library)
+        TestableDiscRipJob job = new(folder: folder, library: library)
         {
             Request = request,
             OutputDir = Path.GetTempPath(),
@@ -164,8 +164,8 @@ public class DiscRipJobEncodeDispatchTests
             TargetLibraryType = library.Type,
             DiscRipper = ripper,
             IdentificationService = new(
-                [],
-                NullLogger<DiscIdentificationService>.Instance
+                identifiers: [],
+                logger: NullLogger<DiscIdentificationService>.Instance
             ),
             StorageFactory = factoryMock.Object,
             StorageDriver = Mock.Of<IStorageDriver>(),
@@ -182,50 +182,50 @@ public class DiscRipJobEncodeDispatchTests
     [Fact]
     public async Task Handle_VideoRipAndEncode_ExplicitMatchingPreset_DispatchesVideoEncodeJobWithPresetId()
     {
-        string tempFile = Path.Combine(Path.GetTempPath(), "title_01.mkv");
-        await File.WriteAllBytesAsync(tempFile, []);
+        string tempFile = Path.Combine(path1: Path.GetTempPath(), path2: "title_01.mkv");
+        await File.WriteAllBytesAsync(path: tempFile, bytes: []);
 
         try
         {
             Mock<IDiscRipper> ripperMock = new();
             ripperMock
-                .Setup(r =>
+                .Setup(expression: r =>
                     r.RipAsync(
                         It.IsAny<RipRequest>(),
                         It.IsAny<string>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .ReturnsAsync([MakeRipResult(tempFile)]);
+                .ReturnsAsync(value: [MakeRipResult(outputPath: tempFile)]);
 
             List<VideoEncodeJob> dispatched = [];
             Mock<IJobDispatcher> dispatcherMock = new();
             dispatcherMock
-                .Setup(d =>
+                .Setup(expression: d =>
                     d.Dispatch(It.IsAny<IShouldQueue>(), It.IsAny<string>(), It.IsAny<int>())
                 )
                 .Callback<IShouldQueue, string, int>(
-                    (job, _, _) =>
+                    action: (job, _, _) =>
                     {
                         if (job is VideoEncodeJob encodeJob)
-                            dispatched.Add(encodeJob);
+                            dispatched.Add(item: encodeJob);
                     }
                 );
 
             Mock<IEventBus> busMock = new();
             busMock
-                .Setup(b =>
+                .Setup(expression: b =>
                     b.PublishAsync(
                         It.IsAny<DriveStateChangedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .Returns(Task.CompletedTask);
-            EventBusProvider.Configure(busMock.Object);
+                .Returns(value: Task.CompletedTask);
+            EventBusProvider.Configure(eventBus: busMock.Object);
 
-            Folder folder = MakeFolder([MakePresetLink(KnownPresetId)]);
+            Folder folder = MakeFolder(presetLinks: [MakePresetLink(presetId: KnownPresetId)]);
             Library library = MakeLibrary();
-            Mock<IStorage> storageMock = MakeStorageMock("/media/movies");
+            Mock<IStorage> storageMock = MakeStorageMock(hostPath: "/media/movies");
 
             RipRequest request = MakeVideoRequest(
                 discType: OpticalDiscType.Dvd,
@@ -233,28 +233,28 @@ public class DiscRipJobEncodeDispatchTests
             );
 
             DiscRipJob job = BuildJob(
-                request,
-                ripperMock.Object,
-                dispatcherMock.Object,
-                storageMock.Object,
-                folder,
-                library
+                request: request,
+                ripper: ripperMock.Object,
+                jobDispatcher: dispatcherMock.Object,
+                folderStorage: storageMock.Object,
+                folder: folder,
+                library: library
             );
 
             await job.Handle();
 
-            dispatched.Should().HaveCount(1, "one VideoEncodeJob must be dispatched per title");
+            dispatched.Should().HaveCount(expected: 1, because: "one VideoEncodeJob must be dispatched per title");
 
-            VideoEncodeJob encodeJob = dispatched[0];
-            encodeJob.LibraryId.Should().Be(KnownLibraryId);
-            encodeJob.FolderId.Should().Be(KnownFolderId);
+            VideoEncodeJob encodeJob = dispatched[index: 0];
+            encodeJob.LibraryId.Should().Be(expected: KnownLibraryId);
+            encodeJob.FolderId.Should().Be(expected: KnownFolderId);
             encodeJob.InputFile.Should().NotBeNullOrEmpty();
-            encodeJob.PresetId.Should().Be(KnownPresetId);
+            encodeJob.PresetId.Should().Be(expected: KnownPresetId);
         }
         finally
         {
-            if (File.Exists(tempFile))
-                File.Delete(tempFile);
+            if (File.Exists(path: tempFile))
+                File.Delete(path: tempFile);
         }
     }
 
@@ -263,52 +263,52 @@ public class DiscRipJobEncodeDispatchTests
     [Fact]
     public async Task Handle_VideoRipAndEncode_EncodingProfileIdNotInFolder_DispatchesWithNullPresetId()
     {
-        string tempFile = Path.Combine(Path.GetTempPath(), "title_02.mkv");
-        await File.WriteAllBytesAsync(tempFile, []);
+        string tempFile = Path.Combine(path1: Path.GetTempPath(), path2: "title_02.mkv");
+        await File.WriteAllBytesAsync(path: tempFile, bytes: []);
 
         try
         {
             Mock<IDiscRipper> ripperMock = new();
             ripperMock
-                .Setup(r =>
+                .Setup(expression: r =>
                     r.RipAsync(
                         It.IsAny<RipRequest>(),
                         It.IsAny<string>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .ReturnsAsync([MakeRipResult(tempFile)]);
+                .ReturnsAsync(value: [MakeRipResult(outputPath: tempFile)]);
 
             List<VideoEncodeJob> dispatched = [];
             Mock<IJobDispatcher> dispatcherMock = new();
             dispatcherMock
-                .Setup(d =>
+                .Setup(expression: d =>
                     d.Dispatch(It.IsAny<IShouldQueue>(), It.IsAny<string>(), It.IsAny<int>())
                 )
                 .Callback<IShouldQueue, string, int>(
-                    (job, _, _) =>
+                    action: (job, _, _) =>
                     {
                         if (job is VideoEncodeJob encodeJob)
-                            dispatched.Add(encodeJob);
+                            dispatched.Add(item: encodeJob);
                     }
                 );
 
             Mock<IEventBus> busMock = new();
             busMock
-                .Setup(b =>
+                .Setup(expression: b =>
                     b.PublishAsync(
                         It.IsAny<DriveStateChangedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .Returns(Task.CompletedTask);
-            EventBusProvider.Configure(busMock.Object);
+                .Returns(value: Task.CompletedTask);
+            EventBusProvider.Configure(eventBus: busMock.Object);
 
             // Folder has KnownPresetId but request asks for a different one
             Ulid differentPresetId = Ulid.NewUlid();
-            Folder folder = MakeFolder([MakePresetLink(KnownPresetId)]);
+            Folder folder = MakeFolder(presetLinks: [MakePresetLink(presetId: KnownPresetId)]);
             Library library = MakeLibrary();
-            Mock<IStorage> storageMock = MakeStorageMock("/media/movies");
+            Mock<IStorage> storageMock = MakeStorageMock(hostPath: "/media/movies");
 
             RipRequest request = MakeVideoRequest(
                 discType: OpticalDiscType.BluRay,
@@ -316,23 +316,23 @@ public class DiscRipJobEncodeDispatchTests
             );
 
             DiscRipJob job = BuildJob(
-                request,
-                ripperMock.Object,
-                dispatcherMock.Object,
-                storageMock.Object,
-                folder,
-                library
+                request: request,
+                ripper: ripperMock.Object,
+                jobDispatcher: dispatcherMock.Object,
+                folderStorage: storageMock.Object,
+                folder: folder,
+                library: library
             );
 
             await job.Handle();
 
-            dispatched.Should().HaveCount(1);
-            dispatched[0].PresetId.Should().BeNull("unmatched profile id must fall back to null");
+            dispatched.Should().HaveCount(expected: 1);
+            dispatched[index: 0].PresetId.Should().BeNull(because: "unmatched profile id must fall back to null");
         }
         finally
         {
-            if (File.Exists(tempFile))
-                File.Delete(tempFile);
+            if (File.Exists(path: tempFile))
+                File.Delete(path: tempFile);
         }
     }
 
@@ -341,50 +341,50 @@ public class DiscRipJobEncodeDispatchTests
     [Fact]
     public async Task Handle_VideoRipAndEncode_NullEncodingProfileId_DispatchesWithNullPresetId()
     {
-        string tempFile = Path.Combine(Path.GetTempPath(), "title_03.mkv");
-        await File.WriteAllBytesAsync(tempFile, []);
+        string tempFile = Path.Combine(path1: Path.GetTempPath(), path2: "title_03.mkv");
+        await File.WriteAllBytesAsync(path: tempFile, bytes: []);
 
         try
         {
             Mock<IDiscRipper> ripperMock = new();
             ripperMock
-                .Setup(r =>
+                .Setup(expression: r =>
                     r.RipAsync(
                         It.IsAny<RipRequest>(),
                         It.IsAny<string>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .ReturnsAsync([MakeRipResult(tempFile)]);
+                .ReturnsAsync(value: [MakeRipResult(outputPath: tempFile)]);
 
             List<VideoEncodeJob> dispatched = [];
             Mock<IJobDispatcher> dispatcherMock = new();
             dispatcherMock
-                .Setup(d =>
+                .Setup(expression: d =>
                     d.Dispatch(It.IsAny<IShouldQueue>(), It.IsAny<string>(), It.IsAny<int>())
                 )
                 .Callback<IShouldQueue, string, int>(
-                    (job, _, _) =>
+                    action: (job, _, _) =>
                     {
                         if (job is VideoEncodeJob encodeJob)
-                            dispatched.Add(encodeJob);
+                            dispatched.Add(item: encodeJob);
                     }
                 );
 
             Mock<IEventBus> busMock = new();
             busMock
-                .Setup(b =>
+                .Setup(expression: b =>
                     b.PublishAsync(
                         It.IsAny<DriveStateChangedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .Returns(Task.CompletedTask);
-            EventBusProvider.Configure(busMock.Object);
+                .Returns(value: Task.CompletedTask);
+            EventBusProvider.Configure(eventBus: busMock.Object);
 
-            Folder folder = MakeFolder([MakePresetLink(KnownPresetId)]);
+            Folder folder = MakeFolder(presetLinks: [MakePresetLink(presetId: KnownPresetId)]);
             Library library = MakeLibrary();
-            Mock<IStorage> storageMock = MakeStorageMock("/media/movies");
+            Mock<IStorage> storageMock = MakeStorageMock(hostPath: "/media/movies");
 
             RipRequest request = MakeVideoRequest(
                 discType: OpticalDiscType.Dvd,
@@ -392,23 +392,23 @@ public class DiscRipJobEncodeDispatchTests
             );
 
             DiscRipJob job = BuildJob(
-                request,
-                ripperMock.Object,
-                dispatcherMock.Object,
-                storageMock.Object,
-                folder,
-                library
+                request: request,
+                ripper: ripperMock.Object,
+                jobDispatcher: dispatcherMock.Object,
+                folderStorage: storageMock.Object,
+                folder: folder,
+                library: library
             );
 
             await job.Handle();
 
-            dispatched.Should().HaveCount(1);
-            dispatched[0].PresetId.Should().BeNull("absent profile id must produce null PresetId");
+            dispatched.Should().HaveCount(expected: 1);
+            dispatched[index: 0].PresetId.Should().BeNull(because: "absent profile id must produce null PresetId");
         }
         finally
         {
-            if (File.Exists(tempFile))
-                File.Delete(tempFile);
+            if (File.Exists(path: tempFile))
+                File.Delete(path: tempFile);
         }
     }
 
@@ -419,49 +419,49 @@ public class DiscRipJobEncodeDispatchTests
     {
         Mock<IDiscRipper> ripperMock = new();
         ripperMock
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RipAsync(
                     It.IsAny<RipRequest>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync([]);
+            .ReturnsAsync(value: []);
 
         List<IShouldQueue> dispatched = [];
         Mock<IJobDispatcher> dispatcherMock = new();
         dispatcherMock
-            .Setup(d => d.Dispatch(It.IsAny<IShouldQueue>(), It.IsAny<string>(), It.IsAny<int>()))
-            .Callback<IShouldQueue, string, int>((job, _, _) => dispatched.Add(job));
+            .Setup(expression: d => d.Dispatch(It.IsAny<IShouldQueue>(), It.IsAny<string>(), It.IsAny<int>()))
+            .Callback<IShouldQueue, string, int>(action: (job, _, _) => dispatched.Add(item: job));
 
         Mock<IEventBus> busMock = new();
         busMock
-            .Setup(b =>
+            .Setup(expression: b =>
                 b.PublishAsync(It.IsAny<DriveStateChangedEvent>(), It.IsAny<CancellationToken>())
             )
-            .Returns(Task.CompletedTask);
-        EventBusProvider.Configure(busMock.Object);
+            .Returns(value: Task.CompletedTask);
+        EventBusProvider.Configure(eventBus: busMock.Object);
 
         Folder folder = MakeFolder();
         Library library = MakeLibrary();
-        Mock<IStorage> storageMock = MakeStorageMock("/media/music");
+        Mock<IStorage> storageMock = MakeStorageMock(hostPath: "/media/music");
 
         RipRequest request = MakeVideoRequest(discType: OpticalDiscType.Cd);
 
         DiscRipJob job = BuildJob(
-            request,
-            ripperMock.Object,
-            dispatcherMock.Object,
-            storageMock.Object,
-            folder,
-            library
+            request: request,
+            ripper: ripperMock.Object,
+            jobDispatcher: dispatcherMock.Object,
+            folderStorage: storageMock.Object,
+            folder: folder,
+            library: library
         );
 
         await job.Handle();
 
         dispatched
             .Should()
-            .NotContain(j => j is VideoEncodeJob, "CD rips must not trigger video encode");
+            .NotContain(predicate: j => j is VideoEncodeJob, because: "CD rips must not trigger video encode");
     }
 
     // ── Dispatcher null falls back to FileCreatedEvent ───────────────────
@@ -469,61 +469,61 @@ public class DiscRipJobEncodeDispatchTests
     [Fact]
     public async Task Handle_VideoRipAndEncode_NullDispatcher_FallsBackToFileCreatedEvent()
     {
-        string tempFile = Path.Combine(Path.GetTempPath(), "title_04.mkv");
-        await File.WriteAllBytesAsync(tempFile, []);
+        string tempFile = Path.Combine(path1: Path.GetTempPath(), path2: "title_04.mkv");
+        await File.WriteAllBytesAsync(path: tempFile, bytes: []);
 
         try
         {
             Mock<IDiscRipper> ripperMock = new();
             ripperMock
-                .Setup(r =>
+                .Setup(expression: r =>
                     r.RipAsync(
                         It.IsAny<RipRequest>(),
                         It.IsAny<string>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .ReturnsAsync([MakeRipResult(tempFile)]);
+                .ReturnsAsync(value: [MakeRipResult(outputPath: tempFile)]);
 
             List<object> publishedEvents = [];
             Mock<IEventBus> busMock = new();
             busMock
-                .Setup(b =>
+                .Setup(expression: b =>
                     b.PublishAsync(
                         It.IsAny<DriveStateChangedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
                 .Callback<DriveStateChangedEvent, CancellationToken>(
-                    (evt, _) => publishedEvents.Add(evt)
+                    action: (evt, _) => publishedEvents.Add(item: evt)
                 )
-                .Returns(Task.CompletedTask);
+                .Returns(value: Task.CompletedTask);
             busMock
-                .Setup(b =>
+                .Setup(expression: b =>
                     b.PublishAsync(
                         It.IsAny<NoMercy.Events.FileWatcher.FileCreatedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
                 .Callback<NoMercy.Events.FileWatcher.FileCreatedEvent, CancellationToken>(
-                    (evt, _) => publishedEvents.Add(evt)
+                    action: (evt, _) => publishedEvents.Add(item: evt)
                 )
-                .Returns(Task.CompletedTask);
-            EventBusProvider.Configure(busMock.Object);
+                .Returns(value: Task.CompletedTask);
+            EventBusProvider.Configure(eventBus: busMock.Object);
 
-            Folder folder = MakeFolder([MakePresetLink(KnownPresetId)]);
+            Folder folder = MakeFolder(presetLinks: [MakePresetLink(presetId: KnownPresetId)]);
             Library library = MakeLibrary();
-            Mock<IStorage> storageMock = MakeStorageMock("/media/movies");
+            Mock<IStorage> storageMock = MakeStorageMock(hostPath: "/media/movies");
 
             RipRequest request = MakeVideoRequest(discType: OpticalDiscType.Dvd);
 
             DiscRipJob job = BuildJob(
-                request,
-                ripperMock.Object,
+                request: request,
+                ripper: ripperMock.Object,
                 jobDispatcher: null,
-                storageMock.Object,
-                folder,
-                library
+                folderStorage: storageMock.Object,
+                folder: folder,
+                library: library
             );
 
             await job.Handle();
@@ -531,12 +531,12 @@ public class DiscRipJobEncodeDispatchTests
             publishedEvents
                 .OfType<NoMercy.Events.FileWatcher.FileCreatedEvent>()
                 .Should()
-                .HaveCount(1, "null dispatcher must fall back to FileCreatedEvent");
+                .HaveCount(expected: 1, because: "null dispatcher must fall back to FileCreatedEvent");
         }
         finally
         {
-            if (File.Exists(tempFile))
-                File.Delete(tempFile);
+            if (File.Exists(path: tempFile))
+                File.Delete(path: tempFile);
         }
     }
 }

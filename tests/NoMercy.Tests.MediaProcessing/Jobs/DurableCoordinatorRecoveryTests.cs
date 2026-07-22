@@ -28,7 +28,7 @@ namespace NoMercy.Tests.MediaProcessing.Jobs;
 ///   3. A null <c>Coordinator</c> on the payload signals the initial-run path
 ///      (not a coordinator wake-up).
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class DurableCoordinatorRecoveryTests
 {
     private static readonly JsonSerializerSettings SerializerSettings = new()
@@ -68,21 +68,21 @@ public class DurableCoordinatorRecoveryTests
             ExpectedFinalCount: 3
         );
 
-        string json = JsonConvert.SerializeObject(original, SerializerSettings);
+        string json = JsonConvert.SerializeObject(value: original, settings: SerializerSettings);
         CoordinatorState? restored = JsonConvert.DeserializeObject<CoordinatorState>(
-            json,
-            SerializerSettings
+            value: json,
+            settings: SerializerSettings
         );
 
         restored.Should().NotBeNull();
-        restored!.GroupTag.Should().Be(groupTag);
-        restored.TaskIds.Should().BeEquivalentTo(taskIds);
-        restored.Phase.Should().Be(CoordinatorPhase.WaitPass1);
-        restored.Pass1DispatchedAt.Should().BeCloseTo(now, TimeSpan.FromMilliseconds(1));
+        restored!.GroupTag.Should().Be(expected: groupTag);
+        restored.TaskIds.Should().BeEquivalentTo(expectation: taskIds);
+        restored.Phase.Should().Be(expected: CoordinatorPhase.WaitPass1);
+        restored.Pass1DispatchedAt.Should().BeCloseTo(nearbyTime: now, precision: TimeSpan.FromMilliseconds(milliseconds: 1));
         restored.Pass2DispatchedAt.Should().BeNull();
         restored.Pass1StatsPath.Should().BeNull();
-        restored.PresetId.Should().Be(presetId);
-        restored.ExpectedFinalCount.Should().Be(3);
+        restored.PresetId.Should().Be(expected: presetId);
+        restored.ExpectedFinalCount.Should().Be(expected: 3);
     }
 
     [Fact]
@@ -92,21 +92,21 @@ public class DurableCoordinatorRecoveryTests
             GroupTag: "grp-abc",
             TaskIds: ["task-pass2-0", "task-audio-0"],
             Phase: CoordinatorPhase.WaitChildren,
-            Pass1DispatchedAt: DateTime.UtcNow.AddSeconds(-30),
-            Pass2DispatchedAt: DateTime.UtcNow.AddSeconds(-5),
+            Pass1DispatchedAt: DateTime.UtcNow.AddSeconds(value: -30),
+            Pass2DispatchedAt: DateTime.UtcNow.AddSeconds(value: -5),
             Pass1StatsPath: "/tmp/stats/x264",
             PresetId: Ulid.NewUlid(),
             ExpectedFinalCount: 2
         );
 
-        string json = JsonConvert.SerializeObject(state, SerializerSettings);
+        string json = JsonConvert.SerializeObject(value: state, settings: SerializerSettings);
         CoordinatorState? restored = JsonConvert.DeserializeObject<CoordinatorState>(
-            json,
-            SerializerSettings
+            value: json,
+            settings: SerializerSettings
         );
 
-        restored!.Phase.Should().Be(CoordinatorPhase.WaitChildren);
-        restored.Pass1StatsPath.Should().Be("/tmp/stats/x264");
+        restored!.Phase.Should().Be(expected: CoordinatorPhase.WaitChildren);
+        restored.Pass1StatsPath.Should().Be(expected: "/tmp/stats/x264");
     }
 
     [Fact]
@@ -123,13 +123,13 @@ public class DurableCoordinatorRecoveryTests
             ExpectedFinalCount: 1
         );
 
-        string json = JsonConvert.SerializeObject(state, SerializerSettings);
+        string json = JsonConvert.SerializeObject(value: state, settings: SerializerSettings);
         CoordinatorState? restored = JsonConvert.DeserializeObject<CoordinatorState>(
-            json,
-            SerializerSettings
+            value: json,
+            settings: SerializerSettings
         );
 
-        restored!.Phase.Should().Be(CoordinatorPhase.Finalize);
+        restored!.Phase.Should().Be(expected: CoordinatorPhase.Finalize);
     }
 
     [Fact]
@@ -144,7 +144,7 @@ public class DurableCoordinatorRecoveryTests
             Coordinator = null,
         };
 
-        job.Coordinator.Should().BeNull("a null Coordinator property signals the initial-run path");
+        job.Coordinator.Should().BeNull(because: "a null Coordinator property signals the initial-run path");
     }
 
     [Fact]
@@ -171,9 +171,9 @@ public class DurableCoordinatorRecoveryTests
         };
 
         job.Coordinator.Should()
-            .NotBeNull("a non-null Coordinator property signals the coordinator wake-up path");
-        job.Coordinator!.Phase.Should().Be(CoordinatorPhase.WaitChildren);
-        job.Coordinator.GroupTag.Should().Be("grp-123");
+            .NotBeNull(because: "a non-null Coordinator property signals the coordinator wake-up path");
+        job.Coordinator!.Phase.Should().Be(expected: CoordinatorPhase.WaitChildren);
+        job.Coordinator.GroupTag.Should().Be(expected: "grp-123");
     }
 
     [Fact]
@@ -199,19 +199,19 @@ public class DurableCoordinatorRecoveryTests
             Coordinator = state,
         };
 
-        string json = JsonConvert.SerializeObject(original, SerializerSettings);
+        string json = JsonConvert.SerializeObject(value: original, settings: SerializerSettings);
 
         VideoEncodeJob? restored = JsonConvert.DeserializeObject<VideoEncodeJob>(
-            json,
-            SerializerSettings
+            value: json,
+            settings: SerializerSettings
         );
 
         restored.Should().NotBeNull();
         restored!
             .Coordinator.Should()
-            .NotBeNull("coordinator state must survive a full job payload round-trip");
-        restored.Coordinator!.Phase.Should().Be(CoordinatorPhase.WaitPass1);
-        restored.Coordinator.GroupTag.Should().Be("grp-roundtrip");
-        restored.Coordinator.TaskIds.Should().BeEquivalentTo(["t1", "t2"]);
+            .NotBeNull(because: "coordinator state must survive a full job payload round-trip");
+        restored.Coordinator!.Phase.Should().Be(expected: CoordinatorPhase.WaitPass1);
+        restored.Coordinator.GroupTag.Should().Be(expected: "grp-roundtrip");
+        restored.Coordinator.TaskIds.Should().BeEquivalentTo(expectation: ["t1", "t2"]);
     }
 }

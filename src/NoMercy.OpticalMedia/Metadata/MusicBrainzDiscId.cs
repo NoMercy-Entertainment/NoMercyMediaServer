@@ -51,28 +51,28 @@ public static class MusicBrainzDiscId
         if (toc.TrackOffsetsSectors.Length != trackCount)
         {
             throw new ArgumentException(
-                $"TrackOffsetsSectors length ({toc.TrackOffsetsSectors.Length}) "
-                    + $"does not match LastTrack - FirstTrack + 1 ({trackCount}).",
-                nameof(toc)
+                message: $"TrackOffsetsSectors length ({toc.TrackOffsetsSectors.Length}) "
+                         + $"does not match LastTrack - FirstTrack + 1 ({trackCount}).",
+                paramName: nameof(toc)
             );
         }
 
         StringBuilder sb = new(capacity: 4 + 8 + TocSlots * 8);
 
-        sb.Append(toc.FirstTrack.ToString("X2", CultureInfo.InvariantCulture));
-        sb.Append(toc.LastTrack.ToString("X2", CultureInfo.InvariantCulture));
-        sb.Append(toc.LeadOutOffsetSectors.ToString("X8", CultureInfo.InvariantCulture));
+        sb.Append(value: toc.FirstTrack.ToString(format: "X2", provider: CultureInfo.InvariantCulture));
+        sb.Append(value: toc.LastTrack.ToString(format: "X2", provider: CultureInfo.InvariantCulture));
+        sb.Append(value: toc.LeadOutOffsetSectors.ToString(format: "X8", provider: CultureInfo.InvariantCulture));
 
         for (int slotIndex = 0; slotIndex < TocSlots; slotIndex++)
         {
             int offset = slotIndex < trackCount ? toc.TrackOffsetsSectors[slotIndex] : 0;
-            sb.Append(offset.ToString("X8", CultureInfo.InvariantCulture));
+            sb.Append(value: offset.ToString(format: "X8", provider: CultureInfo.InvariantCulture));
         }
 
-        byte[] inputBytes = Encoding.ASCII.GetBytes(sb.ToString());
-        byte[] sha1 = SHA1.HashData(inputBytes);
+        byte[] inputBytes = Encoding.ASCII.GetBytes(s: sb.ToString());
+        byte[] sha1 = SHA1.HashData(source: inputBytes);
 
-        string base64 = Convert.ToBase64String(sha1);
-        return base64.Replace('+', '.').Replace('/', '_').Replace('=', '-');
+        string base64 = Convert.ToBase64String(inArray: sha1);
+        return base64.Replace(oldChar: '+', newChar: '.').Replace(oldChar: '/', newChar: '_').Replace(oldChar: '=', newChar: '-');
     }
 }

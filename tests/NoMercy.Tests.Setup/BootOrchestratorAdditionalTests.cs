@@ -36,12 +36,14 @@ namespace NoMercy.Tests.Setup;
 /// </summary>
 /// <remarks>
 /// <see cref="AuthManager.IsDesktopEnvironment"/> is unconditionally true on Windows and
-/// macOS, so <see cref="BootOrchestrator.StartHeadlessDeviceCodeFlowAsync"/> and its
-/// private <c>PollDeviceGrant</c> helper are dead code on this dev machine and covered
-/// by the project's headless Linux CI leg — see the itemized test below, which only
-/// locks the Windows early-return.
+/// macOS, but on Linux it depends on DISPLAY/WAYLAND_DISPLAY being set — and CI runs
+/// this suite on a single headless ubuntu-latest runner (no separate per-OS leg), where
+/// neither is set by default. The test below forces DISPLAY so the desktop early-return
+/// is what actually runs everywhere this suite executes; <see cref="BootOrchestrator
+/// .StartHeadlessDeviceCodeFlowAsync"/>'s device-code-flow body and its private
+/// <c>PollDeviceGrant</c> helper remain untested here.
 /// </remarks>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class BootOrchestratorAdditionalTests : IDisposable
 {
     private readonly AppDbContext _appContext;
@@ -53,23 +55,23 @@ public sealed class BootOrchestratorAdditionalTests : IDisposable
 
     public BootOrchestratorAdditionalTests()
     {
-        _originalAppPath = Environment.GetEnvironmentVariable("NOMERCY_APP_PATH");
-        _tempAppPath = Path.Combine(Path.GetTempPath(), $"nm-bootorch-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempAppPath);
-        Environment.SetEnvironmentVariable("NOMERCY_APP_PATH", _tempAppPath);
+        _originalAppPath = Environment.GetEnvironmentVariable(variable: "NOMERCY_APP_PATH");
+        _tempAppPath = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-bootorch-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: _tempAppPath);
+        Environment.SetEnvironmentVariable(variable: "NOMERCY_APP_PATH", value: _tempAppPath);
 
         ServiceCollection services = new();
         services.AddDataProtection().UseEphemeralDataProtectionProvider();
         _serviceProvider = services.BuildServiceProvider();
-        TokenStore.Initialize(_serviceProvider);
+        TokenStore.Initialize(serviceProvider: _serviceProvider);
 
         DbContextOptionsBuilder<AppDbContext> optionsBuilder = new();
-        optionsBuilder.UseSqlite("Data Source=:memory:");
-        _appContext = new(optionsBuilder.Options);
+        optionsBuilder.UseSqlite(connectionString: "Data Source=:memory:");
+        _appContext = new(options: optionsBuilder.Options);
         _appContext.Database.OpenConnection();
         _appContext.Database.EnsureCreated();
 
-        _authManager = new(_appContext, new LocalStorageDriver(), new AuthTokenStore());
+        _authManager = new(appContext: _appContext, driver: new LocalStorageDriver(), authTokenStore: new AuthTokenStore());
         _setupState = new();
 
         // CertificateService.LoadFromDb/HasValidCertificate open their OWN on-disk
@@ -87,11 +89,11 @@ public sealed class BootOrchestratorAdditionalTests : IDisposable
         _appContext.Database.CloseConnection();
         _appContext.Dispose();
         _serviceProvider.Dispose();
-        Environment.SetEnvironmentVariable("NOMERCY_APP_PATH", _originalAppPath);
+        Environment.SetEnvironmentVariable(variable: "NOMERCY_APP_PATH", value: _originalAppPath);
         try
         {
-            if (Directory.Exists(_tempAppPath))
-                Directory.Delete(_tempAppPath, recursive: true);
+            if (Directory.Exists(path: _tempAppPath))
+                Directory.Delete(path: _tempAppPath, recursive: true);
         }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
@@ -102,58 +104,58 @@ public sealed class BootOrchestratorAdditionalTests : IDisposable
         ICertificateService? certificateService = null
     ) =>
         new(
-            _setupState,
-            _authManager,
-            new FakeApiKeyLoader(),
-            new FakeDegradedModeRecovery(),
-            registrationService ?? new FakeServerRegistrationService(),
-            new AuthTokenStore(),
-            certificateService
-                ?? new CertificateService(NullLogger<CertificateService>.Instance, null!)
+            setupState: _setupState,
+            authManager: _authManager,
+            apiKeyLoader: new FakeApiKeyLoader(),
+            degradedModeRecovery: new FakeDegradedModeRecovery(),
+            serverRegistrationService: registrationService ?? new FakeServerRegistrationService(),
+            authTokenStore: new AuthTokenStore(),
+            certificateService: certificateService
+                                ?? new CertificateService(logger: NullLogger<CertificateService>.Instance, httpClientFactory: null!)
         );
 
     [Fact]
     public async Task RunAsync_NoValidToken_ReturnsTrue_EntersSetupMode()
     {
         using LoopbackHttpServer server = new();
-        server.Handler = _ => new(200, "{}");
+        server.Handler = _ => new(StatusCode: 200, Body: "{}");
         using ExternalServicesConfigScope scope = new(authBaseUrl: server.BaseUrl);
 
         BootOrchestrator orchestrator = BuildOrchestrator();
 
-        bool needsSetup = await orchestrator.RunAsync(_serviceProvider, CancellationToken.None);
+        bool needsSetup = await orchestrator.RunAsync(services: _serviceProvider, ct: CancellationToken.None);
 
-        Assert.True(needsSetup);
+        Assert.True(condition: needsSetup);
     }
 
     [Fact]
     public async Task RunAsync_KeycloakWellKnownReachable_DoesNotThrow()
     {
         using LoopbackHttpServer server = new();
-        server.Handler = _ => new(200, "{\"issuer\":\"https://auth.nomercy.tv/realms/NoMercyTV\"}");
+        server.Handler = _ => new(StatusCode: 200, Body: "{\"issuer\":\"https://auth.nomercy.tv/realms/NoMercyTV\"}");
         using ExternalServicesConfigScope scope = new(authBaseUrl: server.BaseUrl);
 
         BootOrchestrator orchestrator = BuildOrchestrator();
 
-        bool needsSetup = await orchestrator.RunAsync(_serviceProvider, CancellationToken.None);
+        bool needsSetup = await orchestrator.RunAsync(services: _serviceProvider, ct: CancellationToken.None);
 
         // No cached token in the in-memory DB either way — this test's purpose is
         // proving the reachable-well-known branch itself completes cleanly.
-        Assert.True(needsSetup);
+        Assert.True(condition: needsSetup);
     }
 
     [Fact]
     public async Task RunAsync_KeycloakWellKnownReturnsError_StillProceedsWithoutThrowing()
     {
         using LoopbackHttpServer server = new();
-        server.Handler = _ => new(503, "service unavailable");
+        server.Handler = _ => new(StatusCode: 503, Body: "service unavailable");
         using ExternalServicesConfigScope scope = new(authBaseUrl: server.BaseUrl);
 
         BootOrchestrator orchestrator = BuildOrchestrator();
 
-        bool needsSetup = await orchestrator.RunAsync(_serviceProvider, CancellationToken.None);
+        bool needsSetup = await orchestrator.RunAsync(services: _serviceProvider, ct: CancellationToken.None);
 
-        Assert.True(needsSetup);
+        Assert.True(condition: needsSetup);
     }
 
     [Fact]
@@ -166,9 +168,9 @@ public sealed class BootOrchestratorAdditionalTests : IDisposable
 
         BootOrchestrator orchestrator = BuildOrchestrator();
 
-        bool needsSetup = await orchestrator.RunAsync(_serviceProvider, CancellationToken.None);
+        bool needsSetup = await orchestrator.RunAsync(services: _serviceProvider, ct: CancellationToken.None);
 
-        Assert.True(needsSetup);
+        Assert.True(condition: needsSetup);
     }
 
     [Fact]
@@ -178,57 +180,69 @@ public sealed class BootOrchestratorAdditionalTests : IDisposable
         // RunRegistrationAsync's own TransitionTo(Registering) is only a valid move
         // from Authenticated per SetupState's state machine — mirror the real call
         // sequence (RunAsync/RunPostAuthAsync always reach Authenticated first).
-        _setupState.TransitionTo(SetupPhase.Authenticating);
-        _setupState.TransitionTo(SetupPhase.Authenticated);
+        _setupState.TransitionTo(targetPhase: SetupPhase.Authenticating);
+        _setupState.TransitionTo(targetPhase: SetupPhase.Authenticated);
 
-        bool certAcquired = await orchestrator.RunRegistrationAsync(CancellationToken.None);
+        bool certAcquired = await orchestrator.RunRegistrationAsync(ct: CancellationToken.None);
 
         // No certificate has been stored in the fresh on-disk DB, so registration
         // succeeds but certificate acquisition does not — the phase still reaches
         // Complete (partial functionality beats no functionality).
-        Assert.False(certAcquired);
-        Assert.Equal(SetupPhase.Complete, _setupState.CurrentPhase);
+        Assert.False(condition: certAcquired);
+        Assert.Equal(expected: SetupPhase.Complete, actual: _setupState.CurrentPhase);
     }
 
     [Fact]
     public async Task RunRegistrationAsync_RegistrationThrows_SetsErrorAndStillMarksComplete()
     {
         ThrowingServerRegistrationService throwing = new();
-        BootOrchestrator orchestrator = BuildOrchestrator(throwing);
-        _setupState.TransitionTo(SetupPhase.Authenticating);
-        _setupState.TransitionTo(SetupPhase.Authenticated);
+        BootOrchestrator orchestrator = BuildOrchestrator(registrationService: throwing);
+        _setupState.TransitionTo(targetPhase: SetupPhase.Authenticating);
+        _setupState.TransitionTo(targetPhase: SetupPhase.Authenticated);
 
-        bool certAcquired = await orchestrator.RunRegistrationAsync(CancellationToken.None);
+        bool certAcquired = await orchestrator.RunRegistrationAsync(ct: CancellationToken.None);
 
         // TransitionTo(Complete) clears ErrorMessage as part of every transition (see
         // SetupState.TransitionTo) — the observable contract here is "never throws,
         // still reaches Complete degraded" rather than a surviving error message.
-        Assert.False(certAcquired);
-        Assert.Equal(SetupPhase.Complete, _setupState.CurrentPhase);
+        Assert.False(condition: certAcquired);
+        Assert.Equal(expected: SetupPhase.Complete, actual: _setupState.CurrentPhase);
     }
 
     [Fact]
     public async Task StartHeadlessDeviceCodeFlowAsync_OnDesktopEnvironment_ReturnsImmediately()
     {
-        // AuthManager.IsDesktopEnvironment() is unconditionally true on Windows/macOS —
-        // this locks that early return; the device-code-flow body below it (and its
-        // PollDeviceGrant helper) are only reachable on a headless Linux runner with no
-        // DISPLAY/WAYLAND_DISPLAY set, which the project's Linux CI leg exercises.
-        BootOrchestrator orchestrator = BuildOrchestrator();
+        // AuthManager.IsDesktopEnvironment() is unconditionally true on Windows/macOS,
+        // but on Linux it depends on DISPLAY/WAYLAND_DISPLAY — and CI runs this suite
+        // on a headless ubuntu-latest runner (no separate per-OS leg), where both are
+        // unset. Force DISPLAY for the duration of this test so the desktop early-return
+        // branch is what actually runs on every OS this suite executes on; without it,
+        // CI instead falls into the device-code-flow body, which makes a real network
+        // call and runs out the 2s clock below.
+        string? originalDisplay = Environment.GetEnvironmentVariable(variable: "DISPLAY");
+        Environment.SetEnvironmentVariable(variable: "DISPLAY", value: ":0");
+        try
+        {
+            BootOrchestrator orchestrator = BuildOrchestrator();
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(2));
-        await orchestrator.StartHeadlessDeviceCodeFlowAsync(cts.Token);
+            using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 2));
+            await orchestrator.StartHeadlessDeviceCodeFlowAsync(ct: cts.Token);
 
-        Assert.False(
-            cts.IsCancellationRequested,
-            "should return immediately, not run out the clock"
-        );
+            Assert.False(
+                condition: cts.IsCancellationRequested,
+                userMessage: "should return immediately, not run out the clock"
+            );
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(variable: "DISPLAY", value: originalDisplay);
+        }
     }
 
     private sealed class ThrowingServerRegistrationService : IServerRegistrationService
     {
         public Task Init(int maxRetries = 5) =>
-            throw new InvalidOperationException("simulated registration failure");
+            throw new InvalidOperationException(message: "simulated registration failure");
 
         public Task GetTunnelAvailability() => Task.CompletedTask;
     }

@@ -36,7 +36,7 @@ public class DegradedModeStartupTests
 
         // This test validates the probe doesn't throw — the actual result
         // depends on the environment. We verify the method completes without exception.
-        Assert.IsType<bool>(result);
+        Assert.IsType<bool>(@object: result);
     }
 
     [Fact]
@@ -50,8 +50,8 @@ public class DegradedModeStartupTests
         // Should complete without hanging — result may be true or false depending
         // on how fast the connection happens
         Assert.True(
-            elapsed.TotalSeconds < 30,
-            $"NetworkProbe should not block indefinitely, took {elapsed.TotalSeconds}s"
+            condition: elapsed.TotalSeconds < 30,
+            userMessage: $"NetworkProbe should not block indefinitely, took {elapsed.TotalSeconds}s"
         );
     }
 
@@ -60,13 +60,13 @@ public class DegradedModeStartupTests
     {
         DeferredTasks deferred = new();
 
-        Assert.False(deferred.ApiKeysLoaded);
-        Assert.False(deferred.Authenticated);
-        Assert.False(deferred.NetworkDiscovered);
-        Assert.False(deferred.Registered);
-        Assert.False(deferred.SeedsRun);
-        Assert.False(deferred.BinariesReady);
-        Assert.False(deferred.AllCompleted);
+        Assert.False(condition: deferred.ApiKeysLoaded);
+        Assert.False(condition: deferred.Authenticated);
+        Assert.False(condition: deferred.NetworkDiscovered);
+        Assert.False(condition: deferred.Registered);
+        Assert.False(condition: deferred.SeedsRun);
+        Assert.False(condition: deferred.BinariesReady);
+        Assert.False(condition: deferred.AllCompleted);
     }
 
     [Fact]
@@ -83,13 +83,13 @@ public class DegradedModeStartupTests
             AllCompleted = true,
         };
 
-        Assert.True(deferred.ApiKeysLoaded);
-        Assert.True(deferred.Authenticated);
-        Assert.True(deferred.NetworkDiscovered);
-        Assert.True(deferred.SeedsRun);
-        Assert.True(deferred.Registered);
-        Assert.True(deferred.BinariesReady);
-        Assert.True(deferred.AllCompleted);
+        Assert.True(condition: deferred.ApiKeysLoaded);
+        Assert.True(condition: deferred.Authenticated);
+        Assert.True(condition: deferred.NetworkDiscovered);
+        Assert.True(condition: deferred.SeedsRun);
+        Assert.True(condition: deferred.Registered);
+        Assert.True(condition: deferred.BinariesReady);
+        Assert.True(condition: deferred.AllCompleted);
     }
 
     [Fact]
@@ -98,7 +98,7 @@ public class DegradedModeStartupTests
         // Reset static state
         Start.IsDegradedMode = false;
 
-        Assert.False(Start.IsDegradedMode);
+        Assert.False(condition: Start.IsDegradedMode);
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public class DegradedModeStartupTests
     {
         Start.IsDegradedMode = true;
 
-        Assert.True(Start.IsDegradedMode);
+        Assert.True(condition: Start.IsDegradedMode);
 
         // Reset
         Start.IsDegradedMode = false;
@@ -120,13 +120,13 @@ public class DegradedModeStartupTests
         // Should return immediately without looping
         DateTime start = DateTime.UtcNow;
         // Mock dependencies or use real ones if they don't hit network
-        DegradedModeRecovery recovery = new(new AuthTokenStore(), null!, null!, null!);
-        await recovery.StartRecoveryLoop(deferred);
+        DegradedModeRecovery recovery = new(authTokenStore: new AuthTokenStore(), apiKeyLoader: null!, apiKeyStore: null!, serverRegistrationService: null!);
+        await recovery.StartRecoveryLoop(tasks: deferred);
         TimeSpan elapsed = DateTime.UtcNow - start;
 
         Assert.True(
-            elapsed.TotalSeconds < 5,
-            $"Recovery loop should exit immediately when AllCompleted is true, took {elapsed.TotalSeconds}s"
+            condition: elapsed.TotalSeconds < 5,
+            userMessage: $"Recovery loop should exit immediately when AllCompleted is true, took {elapsed.TotalSeconds}s"
         );
     }
 
@@ -136,17 +136,17 @@ public class DegradedModeStartupTests
         // GetInternalIp now uses NetworkInterface enumeration first,
         // which works without network connectivity
         NetworkDiscovery discovery = new(
-            NullLogger<NetworkDiscovery>.Instance,
-            new LocalStorageDriver(),
-            new AuthTokenStore(),
-            new ConnectivityStatus(),
-            new()
+            logger: NullLogger<NetworkDiscovery>.Instance,
+            driver: new LocalStorageDriver(),
+            authTokenStore: new AuthTokenStore(),
+            connectivityStatus: new ConnectivityStatus(),
+            networkProbeConfig: new()
         );
         string ip = discovery.InternalIp;
 
         Assert.False(
-            string.IsNullOrEmpty(ip),
-            "GetInternalIp should return a valid IP via NetworkInterface enumeration"
+            condition: string.IsNullOrEmpty(value: ip),
+            userMessage: "GetInternalIp should return a valid IP via NetworkInterface enumeration"
         );
     }
 
@@ -154,18 +154,18 @@ public class DegradedModeStartupTests
     public void GetInternalIp_ReturnsValidIpFormat()
     {
         NetworkDiscovery discovery = new(
-            NullLogger<NetworkDiscovery>.Instance,
-            new LocalStorageDriver(),
-            new AuthTokenStore(),
-            new ConnectivityStatus(),
-            new()
+            logger: NullLogger<NetworkDiscovery>.Instance,
+            driver: new LocalStorageDriver(),
+            authTokenStore: new AuthTokenStore(),
+            connectivityStatus: new ConnectivityStatus(),
+            networkProbeConfig: new()
         );
         string ip = discovery.InternalIp;
 
         // Should be a valid IPv4 address
-        bool isValid = IPAddress.TryParse(ip, out IPAddress? parsed);
-        Assert.True(isValid, $"GetInternalIp returned '{ip}' which is not a valid IP address");
-        Assert.Equal(AddressFamily.InterNetwork, parsed!.AddressFamily);
+        bool isValid = IPAddress.TryParse(ipString: ip, address: out IPAddress? parsed);
+        Assert.True(condition: isValid, userMessage: $"GetInternalIp returned '{ip}' which is not a valid IP address");
+        Assert.Equal(expected: AddressFamily.InterNetwork, actual: parsed!.AddressFamily);
     }
 
     [Fact]
@@ -174,54 +174,54 @@ public class DegradedModeStartupTests
         // The API rejects registration with required|string|ip — an empty internal_ip
         // returns 422 and the server never comes online.
         NetworkDiscovery discovery = new(
-            NullLogger<NetworkDiscovery>.Instance,
-            new LocalStorageDriver(),
-            new AuthTokenStore(),
-            new ConnectivityStatus(),
-            new()
+            logger: NullLogger<NetworkDiscovery>.Instance,
+            driver: new LocalStorageDriver(),
+            authTokenStore: new AuthTokenStore(),
+            connectivityStatus: new ConnectivityStatus(),
+            networkProbeConfig: new()
         );
 
         Assert.True(
-            IPAddress.TryParse(discovery.RegistrationInternalIp, out IPAddress? parsed),
-            $"RegistrationInternalIp returned '{discovery.RegistrationInternalIp}', not a valid IP"
+            condition: IPAddress.TryParse(ipString: discovery.RegistrationInternalIp, address: out IPAddress? parsed),
+            userMessage: $"RegistrationInternalIp returned '{discovery.RegistrationInternalIp}', not a valid IP"
         );
-        Assert.Equal(AddressFamily.InterNetwork, parsed!.AddressFamily);
+        Assert.Equal(expected: AddressFamily.InterNetwork, actual: parsed!.AddressFamily);
     }
 
     [Theory]
-    [InlineData("127.0.0.1")]
-    [InlineData("")]
+    [InlineData(data: "127.0.0.1")]
+    [InlineData(data: "")]
     public void RegistrationInternalIp_FallsBackToSentinel_WhenNonRoutable(string discovered)
     {
         NetworkDiscovery discovery = new(
-            NullLogger<NetworkDiscovery>.Instance,
-            new LocalStorageDriver(),
-            new AuthTokenStore(),
-            new ConnectivityStatus(),
-            new()
+            logger: NullLogger<NetworkDiscovery>.Instance,
+            driver: new LocalStorageDriver(),
+            authTokenStore: new AuthTokenStore(),
+            connectivityStatus: new ConnectivityStatus(),
+            networkProbeConfig: new()
         )
         {
             InternalIp = discovered,
         };
 
-        Assert.Equal("0.0.0.0", discovery.RegistrationInternalIp);
+        Assert.Equal(expected: "0.0.0.0", actual: discovery.RegistrationInternalIp);
     }
 
     [Fact]
     public void RegistrationInternalIp_PassesThroughRoutableIp()
     {
         NetworkDiscovery discovery = new(
-            NullLogger<NetworkDiscovery>.Instance,
-            new LocalStorageDriver(),
-            new AuthTokenStore(),
-            new ConnectivityStatus(),
-            new()
+            logger: NullLogger<NetworkDiscovery>.Instance,
+            driver: new LocalStorageDriver(),
+            authTokenStore: new AuthTokenStore(),
+            connectivityStatus: new ConnectivityStatus(),
+            networkProbeConfig: new()
         )
         {
             InternalIp = "192.168.1.50",
         };
 
-        Assert.Equal("192.168.1.50", discovery.RegistrationInternalIp);
+        Assert.Equal(expected: "192.168.1.50", actual: discovery.RegistrationInternalIp);
     }
 }
 
@@ -235,8 +235,8 @@ public class DegradedModeStartupPhasingTests
         ConcurrentBag<(string Name, int Phase)> executionLog = [];
 
         // Phase 1: Required (no network)
-        executionLog.Add(("CreateFolders", 1));
-        executionLog.Add(("ApiInfo", 1));
+        executionLog.Add(item: ("CreateFolders", 1));
+        executionLog.Add(item: ("ApiInfo", 1));
 
         // Phase 2: Auth with network check
         bool hasNetwork = true;
@@ -244,39 +244,39 @@ public class DegradedModeStartupPhasingTests
 
         if (hasNetwork)
         {
-            await Task.Run(() => executionLog.Add(("Auth", 2)));
+            await Task.Run(action: () => executionLog.Add(item: ("Auth", 2)));
             hasAuth = true;
         }
 
-        Task binariesTask = Task.Run(async () =>
+        Task binariesTask = Task.Run(function: async () =>
         {
-            await Task.Delay(30);
-            executionLog.Add(("Binaries", 2));
+            await Task.Delay(millisecondsDelay: 30);
+            executionLog.Add(item: ("Binaries", 2));
         });
 
         // Phase 3: Network-dependent tasks
-        Task networkingTask = Task.Run(async () =>
+        Task networkingTask = Task.Run(function: async () =>
         {
-            await Task.Delay(40);
-            executionLog.Add(("Networking", 3));
+            await Task.Delay(millisecondsDelay: 40);
+            executionLog.Add(item: ("Networking", 3));
         });
 
         if (hasNetwork && hasAuth)
         {
             List<Task> parallelTasks =
             [
-                Task.Run(() =>
+                Task.Run(function: () =>
                 {
-                    executionLog.Add(("DatabaseSeeder", 3));
+                    executionLog.Add(item: ("DatabaseSeeder", 3));
                     return Task.CompletedTask;
                 }),
-                Task.Run(() =>
+                Task.Run(function: () =>
                 {
-                    executionLog.Add(("ChromeCast", 3));
+                    executionLog.Add(item: ("ChromeCast", 3));
                     return Task.CompletedTask;
                 }),
             ];
-            await Task.WhenAll(parallelTasks);
+            await Task.WhenAll(tasks: parallelTasks);
         }
 
         await networkingTask;
@@ -284,21 +284,21 @@ public class DegradedModeStartupPhasingTests
         // Phase 4: Register
         if (hasNetwork && hasAuth)
         {
-            executionLog.Add(("Register", 4));
+            executionLog.Add(item: ("Register", 4));
         }
 
         await binariesTask;
 
         // Verify all tasks ran
         List<(string Name, int Phase)> logList = executionLog.ToList();
-        Assert.Contains(logList, e => e is { Name: "CreateFolders", Phase: 1 });
-        Assert.Contains(logList, e => e is { Name: "ApiInfo", Phase: 1 });
-        Assert.Contains(logList, e => e is { Name: "Auth", Phase: 2 });
-        Assert.Contains(logList, e => e is { Name: "Binaries", Phase: 2 });
-        Assert.Contains(logList, e => e is { Name: "Networking", Phase: 3 });
-        Assert.Contains(logList, e => e is { Name: "DatabaseSeeder", Phase: 3 });
-        Assert.Contains(logList, e => e is { Name: "ChromeCast", Phase: 3 });
-        Assert.Contains(logList, e => e is { Name: "Register", Phase: 4 });
+        Assert.Contains(collection: logList, filter: e => e is { Name: "CreateFolders", Phase: 1 });
+        Assert.Contains(collection: logList, filter: e => e is { Name: "ApiInfo", Phase: 1 });
+        Assert.Contains(collection: logList, filter: e => e is { Name: "Auth", Phase: 2 });
+        Assert.Contains(collection: logList, filter: e => e is { Name: "Binaries", Phase: 2 });
+        Assert.Contains(collection: logList, filter: e => e is { Name: "Networking", Phase: 3 });
+        Assert.Contains(collection: logList, filter: e => e is { Name: "DatabaseSeeder", Phase: 3 });
+        Assert.Contains(collection: logList, filter: e => e is { Name: "ChromeCast", Phase: 3 });
+        Assert.Contains(collection: logList, filter: e => e is { Name: "Register", Phase: 4 });
     }
 
     [Fact]
@@ -313,13 +313,13 @@ public class DegradedModeStartupPhasingTests
         bool hasAuth = false;
 
         // Phase 1
-        executionLog.Add(("CreateFolders", 1));
-        executionLog.Add(("ApiInfo", 1));
+        executionLog.Add(item: ("CreateFolders", 1));
+        executionLog.Add(item: ("ApiInfo", 1));
 
         // Phase 2: No network, use fallback
         if (!hasNetwork)
         {
-            executionLog.Add(("AuthFallback", 2));
+            executionLog.Add(item: ("AuthFallback", 2));
             hasAuth = false; // No cached token
         }
 
@@ -331,10 +331,10 @@ public class DegradedModeStartupPhasingTests
         }
 
         // Register should NOT run in degraded mode
-        bool registerRan = executionLog.Any(e => e.Name == "Register");
+        bool registerRan = executionLog.Any(predicate: e => e.Name == "Register");
 
-        Assert.False(registerRan, "Register should not run in degraded mode");
-        Assert.True(recoveryLoopScheduled, "Recovery loop should be scheduled in degraded mode");
+        Assert.False(condition: registerRan, userMessage: "Register should not run in degraded mode");
+        Assert.True(condition: recoveryLoopScheduled, userMessage: "Recovery loop should be scheduled in degraded mode");
     }
 
     [Fact]
@@ -343,13 +343,13 @@ public class DegradedModeStartupPhasingTests
         // Auth.InitWithFallback was replaced by AuthManager.InitializeAsync (requires DI).
         // Verify the static helpers on AuthManager are available and don't throw on this platform.
         bool isDesktop = AuthManager.IsDesktopEnvironment();
-        Assert.IsType<bool>(isDesktop);
+        Assert.IsType<bool>(@object: isDesktop);
 
         string verifier = AuthManager.GenerateCodeVerifier();
-        Assert.NotEmpty(verifier);
+        Assert.NotEmpty(collection: verifier);
 
-        string challenge = AuthManager.GenerateCodeChallenge(verifier);
-        Assert.NotEmpty(challenge);
+        string challenge = AuthManager.GenerateCodeChallenge(codeVerifier: verifier);
+        Assert.NotEmpty(collection: challenge);
     }
 }
 
@@ -361,14 +361,14 @@ public class CloudflareFallbackTests
         // ExternalIp property should return "0.0.0.0" when no IP has been discovered,
         // not throw an exception
         NetworkDiscovery discovery = new(
-            NullLogger<NetworkDiscovery>.Instance,
-            new LocalStorageDriver(),
-            new AuthTokenStore(),
-            new ConnectivityStatus(),
-            new()
+            logger: NullLogger<NetworkDiscovery>.Instance,
+            driver: new LocalStorageDriver(),
+            authTokenStore: new AuthTokenStore(),
+            connectivityStatus: new ConnectivityStatus(),
+            networkProbeConfig: new()
         );
         string ip = discovery.ExternalIp;
-        Assert.NotNull(ip);
+        Assert.NotNull(@object: ip);
     }
 
     [Fact]
@@ -381,10 +381,10 @@ public class CloudflareFallbackTests
         try
         {
             bool result = new CertificateService(
-                NullLogger<CertificateService>.Instance,
-                null!
+                logger: NullLogger<CertificateService>.Instance,
+                httpClientFactory: null!
             ).HasValidCertificate();
-            Assert.False(result, "No certificate should be present in the test environment");
+            Assert.False(condition: result, userMessage: "No certificate should be present in the test environment");
         }
         catch (SqliteException)
         {
@@ -404,9 +404,9 @@ public class CloudflareFallbackTests
         try
         {
             await new CertificateService(
-                NullLogger<CertificateService>.Instance,
-                null!
-            ).RenewSslCertificate(null, maxRetries: 1);
+                logger: NullLogger<CertificateService>.Instance,
+                httpClientFactory: null!
+            ).RenewSslCertificate(accessToken: null, maxRetries: 1);
         }
         catch (SqliteException)
         {
@@ -420,8 +420,8 @@ public class CloudflareFallbackTests
             try
             {
                 hasCert = new CertificateService(
-                    NullLogger<CertificateService>.Instance,
-                    null!
+                    logger: NullLogger<CertificateService>.Instance,
+                    httpClientFactory: null!
                 ).HasValidCertificate();
             }
             catch (SqliteException)
@@ -430,8 +430,8 @@ public class CloudflareFallbackTests
             }
 
             Assert.False(
-                hasCert,
-                "RenewSslCertificate should only throw when no existing cert is present"
+                condition: hasCert,
+                userMessage: "RenewSslCertificate should only throw when no existing cert is present"
             );
         }
     }
@@ -444,18 +444,18 @@ public class CloudflareFallbackTests
         try
         {
             NetworkDiscovery discovery = new(
-                NullLogger<NetworkDiscovery>.Instance,
-                new LocalStorageDriver(),
-                new AuthTokenStore(),
-                new ConnectivityStatus(),
-                new()
+                logger: NullLogger<NetworkDiscovery>.Instance,
+                driver: new LocalStorageDriver(),
+                authTokenStore: new AuthTokenStore(),
+                connectivityStatus: new ConnectivityStatus(),
+                networkProbeConfig: new()
             );
             await discovery.DiscoverExternalIpAsync();
         }
         catch (Exception ex)
         {
             Assert.Fail(
-                $"DiscoverExternalIpAsync should not throw when external IP API is unavailable: {ex.Message}"
+                message: $"DiscoverExternalIpAsync should not throw when external IP API is unavailable: {ex.Message}"
             );
         }
     }
@@ -466,41 +466,41 @@ public class CloudflareFallbackTests
         // Verify the external IP caching mechanism works:
         // Set an IP → verify it persists → verify it can be read back
         string testIp = "203.0.113.42";
-        string cacheFile = Path.Combine(AppFiles.ConfigPath, "external_ip.cache");
+        string cacheFile = Path.Combine(path1: AppFiles.ConfigPath, path2: "external_ip.cache");
 
         try
         {
             // Ensure config directory exists
             string configDir = AppFiles.ConfigPath;
-            if (!Directory.Exists(configDir))
-                Directory.CreateDirectory(configDir);
+            if (!Directory.Exists(path: configDir))
+                Directory.CreateDirectory(path: configDir);
 
             // Write cache file directly (simulates what CacheExternalIp does)
-            File.WriteAllText(cacheFile, testIp);
+            File.WriteAllText(path: cacheFile, contents: testIp);
 
             // Read it back
-            string cached = File.ReadAllText(cacheFile).Trim();
-            Assert.Equal(testIp, cached);
+            string cached = File.ReadAllText(path: cacheFile).Trim();
+            Assert.Equal(expected: testIp, actual: cached);
         }
         finally
         {
             // Cleanup
-            if (File.Exists(cacheFile))
-                File.Delete(cacheFile);
+            if (File.Exists(path: cacheFile))
+                File.Delete(path: cacheFile);
         }
     }
 
     [Fact]
     public void ExternalIpCache_ReturnsNull_WhenFileDoesNotExist()
     {
-        string cacheFile = Path.Combine(AppFiles.ConfigPath, "external_ip.cache");
+        string cacheFile = Path.Combine(path1: AppFiles.ConfigPath, path2: "external_ip.cache");
 
         // Ensure no cache file
-        if (File.Exists(cacheFile))
-            File.Delete(cacheFile);
+        if (File.Exists(path: cacheFile))
+            File.Delete(path: cacheFile);
 
         // The cache should gracefully handle missing files
-        Assert.False(File.Exists(cacheFile));
+        Assert.False(condition: File.Exists(path: cacheFile));
     }
 }
 
@@ -517,10 +517,10 @@ public class DegradedModeBinaryProvisioningTests : IDisposable
 
     public DegradedModeBinaryProvisioningTests()
     {
-        _previousAppPath = Environment.GetEnvironmentVariable("NOMERCY_APP_PATH");
-        _tempAppPath = Path.Combine(Path.GetTempPath(), "nm-binprov-" + Guid.NewGuid());
-        Directory.CreateDirectory(_tempAppPath);
-        Environment.SetEnvironmentVariable("NOMERCY_APP_PATH", _tempAppPath);
+        _previousAppPath = Environment.GetEnvironmentVariable(variable: "NOMERCY_APP_PATH");
+        _tempAppPath = Path.Combine(path1: Path.GetTempPath(), path2: "nm-binprov-" + Guid.NewGuid());
+        Directory.CreateDirectory(path: _tempAppPath);
+        Environment.SetEnvironmentVariable(variable: "NOMERCY_APP_PATH", value: _tempAppPath);
 
         ServerPhaseTracker.ResetSharedForTests();
     }
@@ -528,12 +528,12 @@ public class DegradedModeBinaryProvisioningTests : IDisposable
     public void Dispose()
     {
         ServerPhaseTracker.ResetSharedForTests();
-        Environment.SetEnvironmentVariable("NOMERCY_APP_PATH", _previousAppPath);
+        Environment.SetEnvironmentVariable(variable: "NOMERCY_APP_PATH", value: _previousAppPath);
 
         try
         {
-            if (Directory.Exists(_tempAppPath))
-                Directory.Delete(_tempAppPath, recursive: true);
+            if (Directory.Exists(path: _tempAppPath))
+                Directory.Delete(path: _tempAppPath, recursive: true);
         }
         catch (IOException)
         {
@@ -550,15 +550,15 @@ public class DegradedModeBinaryProvisioningTests : IDisposable
         // Simulates a retry tick after ffmpeg landed on disk (either this attempt's
         // own download or a previous one) — provisioning must not re-download, and
         // must flip both the DTO flag and BootStage.Binaries so encoder queues unblock.
-        Directory.CreateDirectory(AppFiles.FfmpegFolder);
-        await File.WriteAllTextAsync(AppFiles.FfmpegPath, "fake-ffmpeg-binary");
+        Directory.CreateDirectory(path: AppFiles.FfmpegFolder);
+        await File.WriteAllTextAsync(path: AppFiles.FfmpegPath, contents: "fake-ffmpeg-binary");
 
         ServerPhaseTracker tracker = ServerPhaseTracker.Shared();
         DeferredTasks tasks = new();
 
-        await DegradedModeRecovery.TryProvisionBinariesAsync(tasks);
+        await DegradedModeRecovery.TryProvisionBinariesAsync(tasks: tasks);
 
-        Assert.True(tasks.BinariesReady);
-        Assert.True(tracker.IsComplete(BootStage.Binaries));
+        Assert.True(condition: tasks.BinariesReady);
+        Assert.True(condition: tracker.IsComplete(stage: BootStage.Binaries));
     }
 }

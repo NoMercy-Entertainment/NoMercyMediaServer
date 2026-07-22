@@ -59,7 +59,7 @@ public class FinalizeStage(
         CancellationToken ct
     )
     {
-        logger.LogInformation("[{CorrelationId}] Finalizing output", context.CorrelationId);
+        logger.LogInformation(message: "[{CorrelationId}] Finalizing output", args: context.CorrelationId);
 
         try
         {
@@ -70,9 +70,9 @@ public class FinalizeStage(
             // Null → spec defaults. Never skip everything.
             HlsDerivatives derivatives = input.HlsDerivatives ?? new HlsDerivatives();
 
-            effectiveStorage.CreateDirectory(input.OutputDirectory);
+            effectiveStorage.CreateDirectory(path: input.OutputDirectory);
 
-            IOutputStrategy strategy = outputStrategyFactory.Resolve(input.Plan.Format);
+            IOutputStrategy strategy = outputStrategyFactory.Resolve(format: input.Plan.Format);
 
             // GenerateMasterPlaylist — master playlist written by the output strategy.
             // The flag currently gates the whole FinalizeAsync call because the output
@@ -80,14 +80,14 @@ public class FinalizeStage(
             // two apart is a strategy-level change, not a finalize-stage concern.
             if (derivatives.GenerateMasterPlaylist)
             {
-                input.Progress?.OnStageStarted("Building Master Playlist");
+                input.Progress?.OnStageStarted(stageName: "Building Master Playlist");
                 await strategy.FinalizeAsync(
-                    input.OutputDirectory,
-                    input.Plan,
-                    input.MediaTitle,
-                    ct
+                    outputDirectory: input.OutputDirectory,
+                    plan: input.Plan,
+                    mediaTitle: input.MediaTitle,
+                    ct: ct
                 );
-                input.Progress?.OnStageCompleted("Building Master Playlist", TimeSpan.Zero);
+                input.Progress?.OnStageCompleted(stageName: "Building Master Playlist", duration: TimeSpan.Zero);
             }
 
             // GenerateChapters — write chapters.vtt from MediaInfo.
@@ -97,31 +97,29 @@ public class FinalizeStage(
                 && context.MediaInfo.Chapters.Count > 0
             )
             {
-                input.Progress?.OnStageStarted("Extracting chapters");
+                input.Progress?.OnStageStarted(stageName: "Extracting chapters");
                 await chapterWriter.WriteChaptersAsync(
-                    input.OutputDirectory,
-                    context.MediaInfo.Chapters,
-                    ct,
+                    outputDirectory: input.OutputDirectory,
+                    chapters: context.MediaInfo.Chapters,
+                    ct: ct,
                     includeThumbUris: derivatives.GenerateChapterThumbs
                 );
-                input.Progress?.OnStageCompleted("Extracting chapters", TimeSpan.Zero);
+                input.Progress?.OnStageCompleted(stageName: "Extracting chapters", duration: TimeSpan.Zero);
 
                 logger.LogDebug(
-                    "[{CorrelationId}] Wrote {Count} chapters to chapters.vtt",
-                    context.CorrelationId,
-                    context.MediaInfo.Chapters.Count
+                    message: "[{CorrelationId}] Wrote {Count} chapters to chapters.vtt", args: [context.CorrelationId, context.MediaInfo.Chapters.Count]
                 );
             }
 
             // GenerateFontsJson — write fonts.json manifest from previously extracted fonts.
             if (derivatives.GenerateFontsJson)
             {
-                input.Progress?.OnStageStarted("Extracting fonts");
+                input.Progress?.OnStageStarted(stageName: "Extracting fonts");
                 int fontsWritten = await fontExtractor.WriteFontManifestAsync(
-                    input.OutputDirectory,
-                    ct
+                    outputDirectory: input.OutputDirectory,
+                    ct: ct
                 );
-                input.Progress?.OnStageCompleted("Extracting fonts", TimeSpan.Zero);
+                input.Progress?.OnStageCompleted(stageName: "Extracting fonts", duration: TimeSpan.Zero);
 
                 // Completeness gate: a source with embedded fonts whose extraction
                 // came up short would render subtitles with missing glyphs. Fail
@@ -129,26 +127,26 @@ public class FinalizeStage(
                 // only publishes to the destination when the result is successful.
                 int expectedFonts = context.MediaInfo is null
                     ? 0
-                    : fontExtractor.CountFontAttachments(context.MediaInfo.Attachments);
+                    : fontExtractor.CountFontAttachments(attachments: context.MediaInfo.Attachments);
 
                 if (expectedFonts > 0 && fontsWritten < expectedFonts)
                     return new StageFailure(
-                        new(
-                            EncodingErrorKind.Unknown,
-                            $"Font extraction incomplete: source has {expectedFonts} embedded font(s) "
-                                + $"but only {fontsWritten} were extracted. Subtitle rendering would be "
-                                + "missing fonts, so the output is not published.",
-                            null,
-                            Name,
-                            true
+                        Error: new(
+                            Kind: EncodingErrorKind.Unknown,
+                            Message: $"Font extraction incomplete: source has {expectedFonts} embedded font(s) "
+                                     + $"but only {fontsWritten} were extracted. Subtitle rendering would be "
+                                     + "missing fonts, so the output is not published.",
+                            FfmpegStderr: null,
+                            StageName: Name,
+                            Recoverable: true
                         )
                     );
             }
             else
             {
                 logger.LogDebug(
-                    "[{CorrelationId}] Skipping fonts.json (GenerateFontsJson=false)",
-                    context.CorrelationId
+                    message: "[{CorrelationId}] Skipping fonts.json (GenerateFontsJson=false)",
+                    args: context.CorrelationId
                 );
             }
 
@@ -160,14 +158,14 @@ public class FinalizeStage(
             // error instead of a successful encode missing the requested artifact.
             if (derivatives.GenerateIFramePlaylists)
                 throw new NotSupportedException(
-                    "HlsDerivatives.GenerateIFramePlaylists is set but no IFramePlaylistGenerator "
-                        + "is wired. Leave it false until I-frame playlist support lands."
+                    message: "HlsDerivatives.GenerateIFramePlaylists is set but no IFramePlaylistGenerator "
+                             + "is wired. Leave it false until I-frame playlist support lands."
                 );
 
             if (derivatives.ExtractClosedCaptions)
                 throw new NotSupportedException(
-                    "HlsDerivatives.ExtractClosedCaptions is set but no CcExtractor is wired. "
-                        + "Leave it false until CEA-608/708 extraction lands."
+                    message: "HlsDerivatives.ExtractClosedCaptions is set but no CcExtractor is wired. "
+                             + "Leave it false until CEA-608/708 extraction lands."
                 );
 
             // SubtitleImsc is reserved for future work — log a warning instead
@@ -177,17 +175,17 @@ public class FinalizeStage(
             // see the same intent on the editor side.
             if (derivatives.SubtitleImsc)
                 logger.LogWarning(
-                    "[{CorrelationId}] HlsDerivatives.SubtitleImsc is true but IMSC subtitle output is not implemented — flag ignored. Untick it in the encoder profile to silence this warning.",
-                    context.CorrelationId
+                    message: "[{CorrelationId}] HlsDerivatives.SubtitleImsc is true but IMSC subtitle output is not implemented — flag ignored. Untick it in the encoder profile to silence this warning.",
+                    args: context.CorrelationId
                 );
 
             IReadOnlyList<StorageEntry> allEntries = effectiveStorage.List(
-                input.OutputDirectory,
-                "*",
+                path: input.OutputDirectory,
+                pattern: "*",
                 recursive: true
             );
 
-            long totalSize = allEntries.Where(e => !e.IsDirectory).Sum(e => e.SizeBytes);
+            long totalSize = allEntries.Where(predicate: e => !e.IsDirectory).Sum(selector: e => e.SizeBytes);
 
             // Emit .nomercy.json when the encode has a resolved BundleLayout and
             // the writer is wired (DI singleton). Skipped when layout is null
@@ -198,27 +196,27 @@ public class FinalizeStage(
                 && context.MediaInfo is not null
             )
                 await WriteBlueprintAsync(
-                    effectiveStorage,
-                    input.OutputDirectory,
-                    layout,
-                    input.Plan,
-                    allEntries,
-                    context,
-                    input.Profile,
-                    ct
+                    effectiveStorage: effectiveStorage,
+                    outputDirectory: input.OutputDirectory,
+                    layout: layout,
+                    plan: input.Plan,
+                    allEntries: allEntries,
+                    context: context,
+                    profile: input.Profile,
+                    ct: ct
                 );
 
-            return new StageSuccess<FinalizeOutput>(new(input.OutputDirectory, totalSize));
+            return new StageSuccess<FinalizeOutput>(Value: new(OutputPath: input.OutputDirectory, OutputSizeBytes: totalSize));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return new StageFailure(
-                new(
-                    EncodingErrorKind.Unknown,
-                    $"Finalization failed: {ex.Message}",
-                    null,
-                    Name,
-                    false
+                Error: new(
+                    Kind: EncodingErrorKind.Unknown,
+                    Message: $"Finalization failed: {ex.Message}",
+                    FfmpegStderr: null,
+                    StageName: Name,
+                    Recoverable: false
                 )
             );
         }
@@ -238,20 +236,20 @@ public class FinalizeStage(
         // Relative to the media folder, which is where the encoder actually writes
         // video_*/, audio_*/ and the rest — allEntries comes from listing
         // input.OutputDirectory, so entry.Path is already in that domain.
-        string dirPrefix = outputDirectory.TrimEnd('/') + "/";
+        string dirPrefix = outputDirectory.TrimEnd(trimChar: '/') + "/";
 
         List<string> relFiles = [];
         foreach (StorageEntry entry in allEntries)
         {
             if (entry.IsDirectory)
                 continue;
-            string rel = entry.Path.StartsWith(dirPrefix, StringComparison.OrdinalIgnoreCase)
+            string rel = entry.Path.StartsWith(value: dirPrefix, comparisonType: StringComparison.OrdinalIgnoreCase)
                 ? entry.Path[dirPrefix.Length..]
                 : entry.Path;
             // Exclude the blueprint itself from its own file list.
-            if (rel.Equals(MediaBlueprintWriter.FileName, StringComparison.OrdinalIgnoreCase))
+            if (rel.Equals(value: MediaBlueprintWriter.FileName, comparisonType: StringComparison.OrdinalIgnoreCase))
                 continue;
-            relFiles.Add(rel);
+            relFiles.Add(item: rel);
         }
 
         string encoderVersion = typeof(FinalizeStage).Assembly.GetName().Version?.ToString() ?? "3";
@@ -272,29 +270,24 @@ public class FinalizeStage(
         // like every rendition does. originalSourcePath carries the real source, not
         // the staging lease MediaInfo.FilePath points at.
         await blueprintWriter!.WriteAsync(
-            effectiveStorage,
-            outputDirectory,
-            context.MediaInfo!,
-            BlueprintIdentityFactory.From(context.MediaItem!),
-            plan,
-            layout,
-            relFiles,
+            storage: effectiveStorage,
+            mediaRootPath: outputDirectory,
+            source: context.MediaInfo!,
+            identity: BlueprintIdentityFactory.From(media: context.MediaItem!),
+            plan: plan,
+            layout: layout,
+            outputFiles: relFiles,
             outputLocation: mediaRoot,
             encoderVersion: encoderVersion,
-            profileFingerprint: profile is not null ? ProfileFingerprint.Compute(profile) : null,
+            profileFingerprint: profile is not null ? ProfileFingerprint.Compute(profile: profile) : null,
             createdAt: DateTime.UtcNow,
             completedAt: DateTime.UtcNow,
-            ct,
+            ct: ct,
             originalSourcePath: context.OriginalInputPath
         );
 
         logger.LogInformation(
-            "[{CorrelationId}] Wrote {FileName} into staging {StagingDir} ({FileCount} files); publishes to media root {MediaRoot}",
-            context.CorrelationId,
-            MediaBlueprintWriter.FileName,
-            outputDirectory,
-            relFiles.Count,
-            mediaRoot
+            message: "[{CorrelationId}] Wrote {FileName} into staging {StagingDir} ({FileCount} files); publishes to media root {MediaRoot}", args: [context.CorrelationId, MediaBlueprintWriter.FileName, outputDirectory, relFiles.Count, mediaRoot]
         );
     }
 }

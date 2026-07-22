@@ -15,18 +15,18 @@ namespace NoMercy.Providers.KitsuIo;
 
 public class Data
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty("links")]
+    [JsonProperty(propertyName: "links")]
     public Links Links { get; set; } = new();
 
-    [JsonProperty("attributes")]
+    [JsonProperty(propertyName: "attributes")]
     public Attributes Attributes { get; set; } = new();
 
-    [JsonProperty("relationships")]
+    [JsonProperty(propertyName: "relationships")]
     public Dictionary<string, Relationship> Relationships { get; set; } = new();
 }

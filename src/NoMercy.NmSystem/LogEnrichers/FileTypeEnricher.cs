@@ -18,10 +18,10 @@ internal class FileTypeEnricher : ILogEventEnricher
 {
     public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
     {
-        logEvent.Properties.TryGetValue("ConsoleType", out LogEventPropertyValue? value);
+        logEvent.Properties.TryGetValue(key: "ConsoleType", value: out LogEventPropertyValue? value);
 
-        string type = value?.ToString().Replace("\"", "") ?? "app";
+        string type = value?.ToString().Replace(oldValue: "\"", newValue: "") ?? "app";
 
-        logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty("Type", type));
+        logEvent.AddOrUpdateProperty(property: propertyFactory.CreateProperty(name: "Type", value: type));
     }
 }

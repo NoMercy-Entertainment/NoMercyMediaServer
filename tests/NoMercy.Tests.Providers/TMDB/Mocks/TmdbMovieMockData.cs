@@ -39,14 +39,14 @@ public static class TmdbMovieMockData
             Runtime = 152,
             Status = "Released",
             Tagline = "Welcome to a world without rules.",
-            ReleaseDate = DateTime.Parse("2008-07-16"),
+            ReleaseDate = DateTime.Parse(s: "2008-07-16"),
             OriginalLanguage = "en",
             Popularity = 123.456,
             VoteAverage = 9.0,
             VoteCount = 32000,
             Video = false,
             ImdbId = "tt0468569",
-            Homepage = new("http://www.42entertainment.com/work/whysoserious"),
+            Homepage = new(uriString: "http://www.42entertainment.com/work/whysoserious"),
         };
     }
 
@@ -62,7 +62,7 @@ public static class TmdbMovieMockData
             OriginalTitle = "Test Movie",
             Adult = false,
             Status = "Released",
-            ReleaseDate = DateTime.Parse("2024-01-01"),
+            ReleaseDate = DateTime.Parse(s: "2024-01-01"),
             OriginalLanguage = "en",
         };
     }
@@ -158,11 +158,11 @@ public static class TmdbMovieMockData
             OriginalTitle = $"Test Movie {id}",
             Adult = false,
             Status = "Released",
-            ReleaseDate = DateTime.Parse("2024-01-01"),
+            ReleaseDate = DateTime.Parse(s: "2024-01-01"),
             OriginalLanguage = "en",
             Overview = $"This is a test movie with ID {id}.",
             Popularity = id * 0.1,
-            VoteAverage = Math.Min(10.0, id * 0.01 + 5.0),
+            VoteAverage = Math.Min(val1: 10.0, val2: id * 0.01 + 5.0),
             VoteCount = id * 10,
             Runtime = 90 + (id % 60),
         };

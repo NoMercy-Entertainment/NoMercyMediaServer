@@ -41,4 +41,4 @@ public class ContentAnalysisHub(
     IDbContextFactory<MediaContext> contextFactory,
     ConnectedClients connectedClients,
     IActivityLogger activityLogger
-) : ConnectionHub(httpContextAccessor, contextFactory, connectedClients, activityLogger) { }
+) : ConnectionHub(httpContextAccessor: httpContextAccessor, contextFactory: contextFactory, connectedClients: connectedClients, activityLogger: activityLogger) { }

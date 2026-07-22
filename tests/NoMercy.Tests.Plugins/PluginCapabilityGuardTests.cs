@@ -20,17 +20,17 @@ public class PluginCapabilityGuardTests
     [Fact]
     public void NullCaps_ImplicitlyDeclaresBaselineHooksOnly()
     {
-        Assert.True(PluginCapabilityGuard.DeclaresHook(null, PluginHookCapability.MediaSource));
-        Assert.True(PluginCapabilityGuard.DeclaresHook(null, PluginHookCapability.Metadata));
-        Assert.False(PluginCapabilityGuard.DeclaresHook(null, PluginHookCapability.Auth));
-        Assert.False(PluginCapabilityGuard.DeclaresHook(null, PluginHookCapability.ScheduledTask));
+        Assert.True(condition: PluginCapabilityGuard.DeclaresHook(capabilities: null, hook: PluginHookCapability.MediaSource));
+        Assert.True(condition: PluginCapabilityGuard.DeclaresHook(capabilities: null, hook: PluginHookCapability.Metadata));
+        Assert.False(condition: PluginCapabilityGuard.DeclaresHook(capabilities: null, hook: PluginHookCapability.Auth));
+        Assert.False(condition: PluginCapabilityGuard.DeclaresHook(capabilities: null, hook: PluginHookCapability.ScheduledTask));
     }
 
     [Fact]
     public void ExplicitCaps_OnlyDeclaredHooksAllowed()
     {
         PluginCapabilities caps = new() { Hooks = ["auth"] };
-        Assert.True(PluginCapabilityGuard.DeclaresHook(caps, PluginHookCapability.Auth));
-        Assert.False(PluginCapabilityGuard.DeclaresHook(caps, PluginHookCapability.MediaSource));
+        Assert.True(condition: PluginCapabilityGuard.DeclaresHook(capabilities: caps, hook: PluginHookCapability.Auth));
+        Assert.False(condition: PluginCapabilityGuard.DeclaresHook(capabilities: caps, hook: PluginHookCapability.MediaSource));
     }
 }

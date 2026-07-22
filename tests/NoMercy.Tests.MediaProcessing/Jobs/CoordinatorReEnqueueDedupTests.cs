@@ -26,7 +26,7 @@ namespace NoMercy.Tests.MediaProcessing.Jobs;
 // publishes with only the first bundle's variants.
 //
 // Fix: WakeSequence bumps on every ReEnqueueSelf, guaranteeing payload divergence.
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class CoordinatorReEnqueueDedupTests
 {
     [Fact]
@@ -43,7 +43,7 @@ public class CoordinatorReEnqueueDedupTests
             ExpectedFinalCount: 1
         );
 
-        Assert.Equal(0, state.WakeSequence);
+        Assert.Equal(expected: 0, actual: state.WakeSequence);
     }
 
     [Fact]
@@ -69,10 +69,10 @@ public class CoordinatorReEnqueueDedupTests
         VideoEncodeJob firstJob = new() { Coordinator = first };
         VideoEncodeJob secondJob = new() { Coordinator = second };
 
-        string firstPayload = SerializationHelper.Serialize(firstJob);
-        string secondPayload = SerializationHelper.Serialize(secondJob);
+        string firstPayload = SerializationHelper.Serialize(obj: firstJob);
+        string secondPayload = SerializationHelper.Serialize(obj: secondJob);
 
-        Assert.NotEqual(firstPayload, secondPayload);
+        Assert.NotEqual(expected: firstPayload, actual: secondPayload);
     }
 
     [Fact]
@@ -96,6 +96,6 @@ public class CoordinatorReEnqueueDedupTests
         VideoEncodeJob jobA = new() { Coordinator = a };
         VideoEncodeJob jobB = new() { Coordinator = a };
 
-        Assert.Equal(SerializationHelper.Serialize(jobA), SerializationHelper.Serialize(jobB));
+        Assert.Equal(expected: SerializationHelper.Serialize(obj: jobA), actual: SerializationHelper.Serialize(obj: jobB));
     }
 }

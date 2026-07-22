@@ -45,40 +45,40 @@ public class SetupModeMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        string path = (context.Request.Path.Value?.TrimEnd('/')).OrEmpty();
+        string path = (context.Request.Path.Value?.TrimEnd(trimChar: '/')).OrEmpty();
         string pathLower = path.ToLowerInvariant();
 
         // Always serve setup routes (even after Complete) — the setup page
         // JS shows the success screen and redirects to the HTTPS URL.
         foreach (string route in SetupHandledRoutes)
         {
-            if (pathLower == route || pathLower.StartsWith(route + "/"))
+            if (pathLower == route || pathLower.StartsWith(value: route + "/"))
             {
-                await _setupEndpoints.HandleRequestAsync(context);
+                await _setupEndpoints.HandleRequestAsync(context: context);
                 return;
             }
         }
 
         if (!_setupState.IsSetupRequired)
         {
-            await _next(context);
+            await _next(context: context);
             return;
         }
 
         foreach (string route in SetupHandledRoutes)
         {
-            if (pathLower == route || pathLower.StartsWith(route + "/"))
+            if (pathLower == route || pathLower.StartsWith(value: route + "/"))
             {
-                await _setupEndpoints.HandleRequestAsync(context);
+                await _setupEndpoints.HandleRequestAsync(context: context);
                 return;
             }
         }
 
         foreach (string route in PassthroughRoutes)
         {
-            if (pathLower == route || pathLower.StartsWith(route + "/"))
+            if (pathLower == route || pathLower.StartsWith(value: route + "/"))
             {
-                await _next(context);
+                await _next(context: context);
                 return;
             }
         }
@@ -93,7 +93,7 @@ public class SetupModeMiddleware
             setup_url = "/setup",
         };
 
-        string json = JsonConvert.SerializeObject(response, Formatting.Indented);
-        await context.Response.WriteAsync(json, Encoding.UTF8);
+        string json = JsonConvert.SerializeObject(value: response, formatting: Formatting.Indented);
+        await context.Response.WriteAsync(text: json, encoding: Encoding.UTF8);
     }
 }

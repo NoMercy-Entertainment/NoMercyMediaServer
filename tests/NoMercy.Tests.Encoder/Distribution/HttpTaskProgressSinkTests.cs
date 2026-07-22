@@ -31,8 +31,8 @@ public class HttpTaskProgressSinkTests
         new(
             CorrelationId: "corr",
             PercentComplete: percent,
-            Elapsed: TimeSpan.FromSeconds(10),
-            EstimatedRemaining: TimeSpan.FromSeconds(10),
+            Elapsed: TimeSpan.FromSeconds(seconds: 10),
+            EstimatedRemaining: TimeSpan.FromSeconds(seconds: 10),
             CurrentFps: 30,
             CurrentSpeed: 1.5,
             CurrentStage: "encode",
@@ -50,10 +50,10 @@ public class HttpTaskProgressSinkTests
             CancellationToken cancellationToken
         )
         {
-            Interlocked.Increment(ref RequestCount);
+            Interlocked.Increment(location: ref RequestCount);
             if (ThrowOnSend is not null)
                 throw ThrowOnSend;
-            return Task.FromResult(new HttpResponseMessage(StatusCode));
+            return Task.FromResult(result: new HttpResponseMessage(statusCode: StatusCode));
         }
     }
 
@@ -64,15 +64,15 @@ public class HttpTaskProgressSinkTests
         TestHandler handler = new();
         Mock<IHttpClientFactory> factory = new();
         factory
-            .Setup(f => f.CreateClient(It.IsAny<string>()))
-            .Returns(() => new(handler, disposeHandler: false));
+            .Setup(expression: f => f.CreateClient(It.IsAny<string>()))
+            .Returns(valueFunction: () => new(handler: handler, disposeHandler: false));
         EncoderOptions options = new() { CoordinatorUrl = coordinatorUrl, WorkerId = "w1" };
 
         return (
             new(
-                factory.Object,
-                options,
-                NullLogger<HttpTaskProgressSink>.Instance
+                httpClientFactory: factory.Object,
+                options: options,
+                logger: NullLogger<HttpTaskProgressSink>.Instance
             ),
             handler
         );
@@ -85,9 +85,9 @@ public class HttpTaskProgressSinkTests
         // The sink must short-circuit before even resolving an HttpClient.
         (HttpTaskProgressSink sink, TestHandler handler) = Build(coordinatorUrl: null);
 
-        sink.Report("task-1", Progress());
+        sink.Report(taskId: "task-1", progress: Progress());
 
-        handler.RequestCount.Should().Be(0);
+        handler.RequestCount.Should().Be(expected: 0);
     }
 
     [Fact]
@@ -95,9 +95,9 @@ public class HttpTaskProgressSinkTests
     {
         (HttpTaskProgressSink sink, TestHandler handler) = Build(coordinatorUrl: "   ");
 
-        sink.Report("task-1", Progress());
+        sink.Report(taskId: "task-1", progress: Progress());
 
-        handler.RequestCount.Should().Be(0);
+        handler.RequestCount.Should().Be(expected: 0);
     }
 
     [Fact]
@@ -105,11 +105,11 @@ public class HttpTaskProgressSinkTests
     {
         (HttpTaskProgressSink sink, TestHandler handler) = Build();
 
-        sink.Report("task-1", Progress());
+        sink.Report(taskId: "task-1", progress: Progress());
 
         // Fire-and-forget; give the background task a moment to land.
-        await WaitForCount(handler, 1);
-        handler.RequestCount.Should().Be(1);
+        await WaitForCount(handler: handler, expected: 1);
+        handler.RequestCount.Should().Be(expected: 1);
     }
 
     [Fact]
@@ -119,11 +119,11 @@ public class HttpTaskProgressSinkTests
         // window MUST NOT trigger another POST.
         (HttpTaskProgressSink sink, TestHandler handler) = Build();
 
-        sink.Report("task-1", Progress(percent: 10));
-        sink.Report("task-1", Progress(percent: 11));
+        sink.Report(taskId: "task-1", progress: Progress(percent: 10));
+        sink.Report(taskId: "task-1", progress: Progress(percent: 11));
 
-        await WaitForCount(handler, 1);
-        handler.RequestCount.Should().Be(1);
+        await WaitForCount(handler: handler, expected: 1);
+        handler.RequestCount.Should().Be(expected: 1);
     }
 
     [Fact]
@@ -133,11 +133,11 @@ public class HttpTaskProgressSinkTests
         // push immediately even when called back-to-back.
         (HttpTaskProgressSink sink, TestHandler handler) = Build();
 
-        sink.Report("task-a", Progress());
-        sink.Report("task-b", Progress());
+        sink.Report(taskId: "task-a", progress: Progress());
+        sink.Report(taskId: "task-b", progress: Progress());
 
-        await WaitForCount(handler, 2);
-        handler.RequestCount.Should().Be(2);
+        await WaitForCount(handler: handler, expected: 2);
+        handler.RequestCount.Should().Be(expected: 2);
     }
 
     [Fact]
@@ -146,12 +146,12 @@ public class HttpTaskProgressSinkTests
         // ffmpeg's progress thread MUST NOT receive an exception from a
         // failed coordinator push. Best-effort.
         (HttpTaskProgressSink sink, TestHandler handler) = Build();
-        handler.ThrowOnSend = new HttpRequestException("DNS unreachable");
+        handler.ThrowOnSend = new HttpRequestException(message: "DNS unreachable");
 
-        Action act = () => sink.Report("task-1", Progress());
+        Action act = () => sink.Report(taskId: "task-1", progress: Progress());
 
         act.Should().NotThrow();
-        await Task.Delay(50);
+        await Task.Delay(millisecondsDelay: 50);
     }
 
     [Fact]
@@ -161,16 +161,16 @@ public class HttpTaskProgressSinkTests
         (HttpTaskProgressSink sink, TestHandler handler) = Build();
         handler.StatusCode = HttpStatusCode.InternalServerError;
 
-        sink.Report("task-1", Progress());
+        sink.Report(taskId: "task-1", progress: Progress());
 
-        await WaitForCount(handler, 1);
-        handler.RequestCount.Should().Be(1);
+        await WaitForCount(handler: handler, expected: 1);
+        handler.RequestCount.Should().Be(expected: 1);
     }
 
     private static async Task WaitForCount(TestHandler handler, int expected)
     {
         // Fire-and-forget — poll briefly so the background task can run.
         for (int i = 0; i < 50 && handler.RequestCount < expected; i++)
-            await Task.Delay(10);
+            await Task.Delay(millisecondsDelay: 10);
     }
 }

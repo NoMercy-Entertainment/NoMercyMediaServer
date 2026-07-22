@@ -21,7 +21,7 @@ public class StreamActionResolver
     private readonly ISubtitleRouter _subtitleRouter;
 
     public StreamActionResolver()
-        : this(new SubtitleRouter()) { }
+        : this(subtitleRouter: new SubtitleRouter()) { }
 
     public StreamActionResolver(ISubtitleRouter subtitleRouter)
     {
@@ -33,15 +33,15 @@ public class StreamActionResolver
     // (e.g. DTS has two aliases).
     private static readonly Dictionary<AudioCodecType, HashSet<string>> AudioCodecNames = new()
     {
-        [AudioCodecType.Aac] = ["aac"],
-        [AudioCodecType.Flac] = ["flac"],
-        [AudioCodecType.Opus] = ["opus"],
-        [AudioCodecType.Ac3] = ["ac3"],
-        [AudioCodecType.Eac3] = ["eac3"],
-        [AudioCodecType.Mp3] = ["mp3"],
-        [AudioCodecType.Vorbis] = ["vorbis"],
-        [AudioCodecType.TrueHd] = ["truehd"],
-        [AudioCodecType.Dts] = ["dts", "dca"],
+        [key: AudioCodecType.Aac] = ["aac"],
+        [key: AudioCodecType.Flac] = ["flac"],
+        [key: AudioCodecType.Opus] = ["opus"],
+        [key: AudioCodecType.Ac3] = ["ac3"],
+        [key: AudioCodecType.Eac3] = ["eac3"],
+        [key: AudioCodecType.Mp3] = ["mp3"],
+        [key: AudioCodecType.Vorbis] = ["vorbis"],
+        [key: AudioCodecType.TrueHd] = ["truehd"],
+        [key: AudioCodecType.Dts] = ["dts", "dca"],
     };
 
     // Lossless source codecs: if the source stream carries one of these names
@@ -51,10 +51,10 @@ public class StreamActionResolver
     // Maps VideoCodecType enum values to the ffprobe codec_name strings.
     private static readonly Dictionary<VideoCodecType, HashSet<string>> VideoCodecNames = new()
     {
-        [VideoCodecType.H264] = ["h264", "avc"],
-        [VideoCodecType.H265] = ["hevc", "h265"],
-        [VideoCodecType.Vp9] = ["vp9"],
-        [VideoCodecType.Av1] = ["av1"],
+        [key: VideoCodecType.H264] = ["h264", "avc"],
+        [key: VideoCodecType.H265] = ["hevc", "h265"],
+        [key: VideoCodecType.Vp9] = ["vp9"],
+        [key: VideoCodecType.Av1] = ["av1"],
     };
 
     // Lossy target codecs — every AudioCodecType NOT in the lossless set.
@@ -85,8 +85,8 @@ public class StreamActionResolver
         string sourceCodec = source.Codec.ToLowerInvariant();
 
         // Lossless source heading toward a lossy profile → must transcode.
-        bool sourceLossless = LosslessSourceCodecs.Contains(sourceCodec);
-        bool targetLossy = !LosslessTargetCodecs.Contains(profile.Codec);
+        bool sourceLossless = LosslessSourceCodecs.Contains(item: sourceCodec);
+        bool targetLossy = !LosslessTargetCodecs.Contains(item: profile.Codec);
 
         if (sourceLossless && targetLossy)
         {
@@ -95,8 +95,8 @@ public class StreamActionResolver
 
         // Codec name must match.
         bool codecMatches =
-            AudioCodecNames.TryGetValue(profile.Codec, out HashSet<string>? names)
-            && names.Contains(sourceCodec);
+            AudioCodecNames.TryGetValue(key: profile.Codec, value: out HashSet<string>? names)
+            && names.Contains(item: sourceCodec);
 
         if (!codecMatches)
         {
@@ -141,9 +141,9 @@ public class StreamActionResolver
             ? SubtitleSourceType.Text
             : SubtitleSourceType.Bitmap;
 
-        SubtitleRouting routing = _subtitleRouter.Resolve(sourceType, format, profile.Policy);
+        SubtitleRouting routing = _subtitleRouter.Resolve(source: sourceType, container: format, policy: profile.Policy);
 
-        return MapToStreamAction(routing.Action);
+        return MapToStreamAction(action: routing.Action);
     }
 
     // SubtitleRouter speaks the granular Phase 4 vocabulary (ExtractVtt /
@@ -182,8 +182,8 @@ public class StreamActionResolver
         string sourceCodec = source.Codec.ToLowerInvariant();
 
         bool codecMatches =
-            VideoCodecNames.TryGetValue(profile.Codec, out HashSet<string>? names)
-            && names.Contains(sourceCodec);
+            VideoCodecNames.TryGetValue(key: profile.Codec, value: out HashSet<string>? names)
+            && names.Contains(item: sourceCodec);
 
         if (!codecMatches)
         {

@@ -15,33 +15,33 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class MusicBrainzWork
 {
-    [JsonProperty("attributes")]
+    [JsonProperty(propertyName: "attributes")]
     public object[] Attributes { get; set; } = [];
 
-    [JsonProperty("disambiguation")]
+    [JsonProperty(propertyName: "disambiguation")]
     public string Disambiguation { get; set; } = string.Empty;
 
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public Guid Id { get; set; }
 
-    [JsonProperty("iswcs")]
+    [JsonProperty(propertyName: "iswcs")]
     public string[] Iswcs { get; set; } = [];
 
-    [JsonProperty("language")]
+    [JsonProperty(propertyName: "language")]
     public string Language { get; set; } = string.Empty;
 
-    [JsonProperty("languages")]
+    [JsonProperty(propertyName: "languages")]
     public string[] Languages { get; set; } = [];
 
-    [JsonProperty("relations")]
+    [JsonProperty(propertyName: "relations")]
     public MusicBrainzWorkRelation[] Relations { get; set; } = [];
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty("type-id")]
+    [JsonProperty(propertyName: "type-id")]
     public Guid? TypeId { get; set; }
 }

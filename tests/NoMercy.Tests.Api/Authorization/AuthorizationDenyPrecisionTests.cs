@@ -29,13 +29,13 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Authorization;
 
-[Trait("Category", "Authorization")]
+[Trait(name: "Category", value: "Authorization")]
 public sealed class AuthorizationDenyPrecisionTests
 {
-    private static readonly Guid OwnerId = Guid.Parse("aa000000-0000-0000-0000-000000000001");
-    private static readonly Guid ModeratorId = Guid.Parse("bb000000-0000-0000-0000-000000000002");
-    private static readonly Guid AllowedId = Guid.Parse("cc000000-0000-0000-0000-000000000003");
-    private static readonly Guid BlockedId = Guid.Parse("dd000000-0000-0000-0000-000000000004");
+    private static readonly Guid OwnerId = Guid.Parse(input: "aa000000-0000-0000-0000-000000000001");
+    private static readonly Guid ModeratorId = Guid.Parse(input: "bb000000-0000-0000-0000-000000000002");
+    private static readonly Guid AllowedId = Guid.Parse(input: "cc000000-0000-0000-0000-000000000003");
+    private static readonly Guid BlockedId = Guid.Parse(input: "dd000000-0000-0000-0000-000000000004");
 
     private static User OwnerUser =>
         new()
@@ -83,17 +83,17 @@ public sealed class AuthorizationDenyPrecisionTests
 
     private static ClaimsPrincipal PrincipalFor(Guid userId)
     {
-        List<Claim> claims = [new(ClaimTypes.NameIdentifier, userId.ToString())];
-        return new(new ClaimsIdentity(claims, "TestScheme"));
+        List<Claim> claims = [new(type: ClaimTypes.NameIdentifier, value: userId.ToString())];
+        return new(identity: new ClaimsIdentity(claims: claims, authenticationType: "TestScheme"));
     }
 
     private static (MediaAuthorizationHandler handler, UserCache cache) BuildHandler()
     {
         UserCache cache = new();
-        MediaAuthorizationPolicy policy = new(cache);
+        MediaAuthorizationPolicy policy = new(userCache: cache);
         MediaAuthorizationHandler handler = new(
-            policy,
-            NullLogger<MediaAuthorizationHandler>.Instance
+            policy: policy,
+            logger: NullLogger<MediaAuthorizationHandler>.Instance
         );
         return (handler, cache);
     }
@@ -101,39 +101,39 @@ public sealed class AuthorizationDenyPrecisionTests
     private static AuthorizationHandlerContext HandlerContext(
         ClaimsPrincipal user,
         IAuthorizationRequirement requirement
-    ) => new([requirement], user, null);
+    ) => new(requirements: [requirement], user: user, resource: null);
 
     private static IAuthorizationService BuildNamedPolicyService(UserCache cache)
     {
         ServiceCollection services = new();
         services.AddLogging();
-        services.AddSingleton<IUserCache>(cache);
+        services.AddSingleton<IUserCache>(implementationInstance: cache);
         services.AddSingleton<IMediaAuthorizationPolicy, MediaAuthorizationPolicy>();
         services.AddScoped<IAuthorizationHandler, MediaAuthorizationHandler>();
         services
             .AddAuthorizationBuilder()
             .AddPolicy(
-                "Owner",
-                policy =>
+                name: "Owner",
+                configurePolicy: policy =>
                 {
                     policy.RequireAuthenticatedUser();
-                    policy.AddRequirements(new OwnerRequirement());
+                    policy.AddRequirements(requirements: new OwnerRequirement());
                 }
             )
             .AddPolicy(
-                "Moderator",
-                policy =>
+                name: "Moderator",
+                configurePolicy: policy =>
                 {
                     policy.RequireAuthenticatedUser();
-                    policy.AddRequirements(new ModeratorRequirement());
+                    policy.AddRequirements(requirements: new ModeratorRequirement());
                 }
             )
             .AddPolicy(
-                "MediaAccess",
-                policy =>
+                name: "MediaAccess",
+                configurePolicy: policy =>
                 {
                     policy.RequireAuthenticatedUser();
-                    policy.AddRequirements(new MediaAccessRequirement());
+                    policy.AddRequirements(requirements: new MediaAccessRequirement());
                 }
             );
         ServiceProvider provider = services.BuildServiceProvider();
@@ -144,14 +144,14 @@ public sealed class AuthorizationDenyPrecisionTests
     public async Task OwnerRequirement_Denies_WhenPrincipalIsModeratorNotOwner()
     {
         (MediaAuthorizationHandler handler, UserCache cache) = BuildHandler();
-        cache.AddUser(OwnerUser);
-        cache.AddUser(ModeratorUser);
+        cache.AddUser(user: OwnerUser);
+        cache.AddUser(user: ModeratorUser);
         AuthorizationHandlerContext ctx = HandlerContext(
-            PrincipalFor(ModeratorId),
-            new OwnerRequirement()
+            user: PrincipalFor(userId: ModeratorId),
+            requirement: new OwnerRequirement()
         );
 
-        await handler.HandleAsync(ctx);
+        await handler.HandleAsync(context: ctx);
 
         ctx.HasSucceeded.Should().BeFalse();
     }
@@ -160,13 +160,13 @@ public sealed class AuthorizationDenyPrecisionTests
     public async Task OwnerRequirement_Admits_WhenPrincipalIsOwnerRegardlessOfManageFlag()
     {
         (MediaAuthorizationHandler handler, UserCache cache) = BuildHandler();
-        cache.AddUser(OwnerUser);
+        cache.AddUser(user: OwnerUser);
         AuthorizationHandlerContext ctx = HandlerContext(
-            PrincipalFor(OwnerId),
-            new OwnerRequirement()
+            user: PrincipalFor(userId: OwnerId),
+            requirement: new OwnerRequirement()
         );
 
-        await handler.HandleAsync(ctx);
+        await handler.HandleAsync(context: ctx);
 
         ctx.HasSucceeded.Should().BeTrue();
     }
@@ -175,13 +175,13 @@ public sealed class AuthorizationDenyPrecisionTests
     public async Task ModeratorRequirement_Admits_WhenPrincipalIsOwnerWithoutManageFlag()
     {
         (MediaAuthorizationHandler handler, UserCache cache) = BuildHandler();
-        cache.AddUser(OwnerUser);
+        cache.AddUser(user: OwnerUser);
         AuthorizationHandlerContext ctx = HandlerContext(
-            PrincipalFor(OwnerId),
-            new ModeratorRequirement()
+            user: PrincipalFor(userId: OwnerId),
+            requirement: new ModeratorRequirement()
         );
 
-        await handler.HandleAsync(ctx);
+        await handler.HandleAsync(context: ctx);
 
         ctx.HasSucceeded.Should().BeTrue();
     }
@@ -190,13 +190,13 @@ public sealed class AuthorizationDenyPrecisionTests
     public async Task ModeratorRequirement_Denies_WhenPrincipalHasAllowedButNotManageOrOwner()
     {
         (MediaAuthorizationHandler handler, UserCache cache) = BuildHandler();
-        cache.AddUser(AllowedUser);
+        cache.AddUser(user: AllowedUser);
         AuthorizationHandlerContext ctx = HandlerContext(
-            PrincipalFor(AllowedId),
-            new ModeratorRequirement()
+            user: PrincipalFor(userId: AllowedId),
+            requirement: new ModeratorRequirement()
         );
 
-        await handler.HandleAsync(ctx);
+        await handler.HandleAsync(context: ctx);
 
         ctx.HasSucceeded.Should().BeFalse();
     }
@@ -205,13 +205,13 @@ public sealed class AuthorizationDenyPrecisionTests
     public async Task MediaAccessRequirement_Admits_WhenPrincipalIsOwnerWithoutAllowedFlag()
     {
         (MediaAuthorizationHandler handler, UserCache cache) = BuildHandler();
-        cache.AddUser(OwnerUser);
+        cache.AddUser(user: OwnerUser);
         AuthorizationHandlerContext ctx = HandlerContext(
-            PrincipalFor(OwnerId),
-            new MediaAccessRequirement()
+            user: PrincipalFor(userId: OwnerId),
+            requirement: new MediaAccessRequirement()
         );
 
-        await handler.HandleAsync(ctx);
+        await handler.HandleAsync(context: ctx);
 
         ctx.HasSucceeded.Should().BeTrue();
     }
@@ -220,13 +220,13 @@ public sealed class AuthorizationDenyPrecisionTests
     public async Task MediaAccessRequirement_Denies_WhenPrincipalIsInCacheButAllowedFalse()
     {
         (MediaAuthorizationHandler handler, UserCache cache) = BuildHandler();
-        cache.AddUser(BlockedUser);
+        cache.AddUser(user: BlockedUser);
         AuthorizationHandlerContext ctx = HandlerContext(
-            PrincipalFor(BlockedId),
-            new MediaAccessRequirement()
+            user: PrincipalFor(userId: BlockedId),
+            requirement: new MediaAccessRequirement()
         );
 
-        await handler.HandleAsync(ctx);
+        await handler.HandleAsync(context: ctx);
 
         ctx.HasSucceeded.Should().BeFalse();
     }
@@ -235,13 +235,13 @@ public sealed class AuthorizationDenyPrecisionTests
     public async Task OwnerPolicy_Denies_WhenPrincipalIsModeratorNotOwner()
     {
         UserCache cache = new();
-        cache.AddUser(OwnerUser);
-        cache.AddUser(ModeratorUser);
-        IAuthorizationService authService = BuildNamedPolicyService(cache);
+        cache.AddUser(user: OwnerUser);
+        cache.AddUser(user: ModeratorUser);
+        IAuthorizationService authService = BuildNamedPolicyService(cache: cache);
 
         AuthorizationResult result = await authService.AuthorizeAsync(
-            PrincipalFor(ModeratorId),
-            "Owner"
+            user: PrincipalFor(userId: ModeratorId),
+            policyName: "Owner"
         );
 
         result.Succeeded.Should().BeFalse();
@@ -251,12 +251,12 @@ public sealed class AuthorizationDenyPrecisionTests
     public async Task OwnerPolicy_Admits_WhenPrincipalIsOwner()
     {
         UserCache cache = new();
-        cache.AddUser(OwnerUser);
-        IAuthorizationService authService = BuildNamedPolicyService(cache);
+        cache.AddUser(user: OwnerUser);
+        IAuthorizationService authService = BuildNamedPolicyService(cache: cache);
 
         AuthorizationResult result = await authService.AuthorizeAsync(
-            PrincipalFor(OwnerId),
-            "Owner"
+            user: PrincipalFor(userId: OwnerId),
+            policyName: "Owner"
         );
 
         result.Succeeded.Should().BeTrue();
@@ -266,12 +266,12 @@ public sealed class AuthorizationDenyPrecisionTests
     public async Task ModeratorPolicy_Denies_WhenPrincipalHasAllowedButNotManageOrOwner()
     {
         UserCache cache = new();
-        cache.AddUser(AllowedUser);
-        IAuthorizationService authService = BuildNamedPolicyService(cache);
+        cache.AddUser(user: AllowedUser);
+        IAuthorizationService authService = BuildNamedPolicyService(cache: cache);
 
         AuthorizationResult result = await authService.AuthorizeAsync(
-            PrincipalFor(AllowedId),
-            "Moderator"
+            user: PrincipalFor(userId: AllowedId),
+            policyName: "Moderator"
         );
 
         result.Succeeded.Should().BeFalse();
@@ -281,12 +281,12 @@ public sealed class AuthorizationDenyPrecisionTests
     public async Task ModeratorPolicy_Admits_WhenPrincipalIsModeratorWithManageFlag()
     {
         UserCache cache = new();
-        cache.AddUser(ModeratorUser);
-        IAuthorizationService authService = BuildNamedPolicyService(cache);
+        cache.AddUser(user: ModeratorUser);
+        IAuthorizationService authService = BuildNamedPolicyService(cache: cache);
 
         AuthorizationResult result = await authService.AuthorizeAsync(
-            PrincipalFor(ModeratorId),
-            "Moderator"
+            user: PrincipalFor(userId: ModeratorId),
+            policyName: "Moderator"
         );
 
         result.Succeeded.Should().BeTrue();
@@ -296,12 +296,12 @@ public sealed class AuthorizationDenyPrecisionTests
     public async Task ModeratorPolicy_Admits_WhenPrincipalIsOwnerWithoutManageFlag()
     {
         UserCache cache = new();
-        cache.AddUser(OwnerUser);
-        IAuthorizationService authService = BuildNamedPolicyService(cache);
+        cache.AddUser(user: OwnerUser);
+        IAuthorizationService authService = BuildNamedPolicyService(cache: cache);
 
         AuthorizationResult result = await authService.AuthorizeAsync(
-            PrincipalFor(OwnerId),
-            "Moderator"
+            user: PrincipalFor(userId: OwnerId),
+            policyName: "Moderator"
         );
 
         result.Succeeded.Should().BeTrue();
@@ -311,12 +311,12 @@ public sealed class AuthorizationDenyPrecisionTests
     public async Task MediaAccessPolicy_Denies_WhenPrincipalIsInCacheButAllowedFalse()
     {
         UserCache cache = new();
-        cache.AddUser(BlockedUser);
-        IAuthorizationService authService = BuildNamedPolicyService(cache);
+        cache.AddUser(user: BlockedUser);
+        IAuthorizationService authService = BuildNamedPolicyService(cache: cache);
 
         AuthorizationResult result = await authService.AuthorizeAsync(
-            PrincipalFor(BlockedId),
-            "MediaAccess"
+            user: PrincipalFor(userId: BlockedId),
+            policyName: "MediaAccess"
         );
 
         result.Succeeded.Should().BeFalse();
@@ -326,12 +326,12 @@ public sealed class AuthorizationDenyPrecisionTests
     public async Task MediaAccessPolicy_Admits_WhenPrincipalHasAllowedFlag()
     {
         UserCache cache = new();
-        cache.AddUser(AllowedUser);
-        IAuthorizationService authService = BuildNamedPolicyService(cache);
+        cache.AddUser(user: AllowedUser);
+        IAuthorizationService authService = BuildNamedPolicyService(cache: cache);
 
         AuthorizationResult result = await authService.AuthorizeAsync(
-            PrincipalFor(AllowedId),
-            "MediaAccess"
+            user: PrincipalFor(userId: AllowedId),
+            policyName: "MediaAccess"
         );
 
         result.Succeeded.Should().BeTrue();
@@ -341,12 +341,12 @@ public sealed class AuthorizationDenyPrecisionTests
     public async Task MediaAccessPolicy_Admits_WhenPrincipalIsOwnerWithoutAllowedFlag()
     {
         UserCache cache = new();
-        cache.AddUser(OwnerUser);
-        IAuthorizationService authService = BuildNamedPolicyService(cache);
+        cache.AddUser(user: OwnerUser);
+        IAuthorizationService authService = BuildNamedPolicyService(cache: cache);
 
         AuthorizationResult result = await authService.AuthorizeAsync(
-            PrincipalFor(OwnerId),
-            "MediaAccess"
+            user: PrincipalFor(userId: OwnerId),
+            policyName: "MediaAccess"
         );
 
         result.Succeeded.Should().BeTrue();
@@ -356,11 +356,11 @@ public sealed class AuthorizationDenyPrecisionTests
     public async Task IsOwner_Denies_WhenPrincipalIdMatchesNonOwnerInMultiUserCache()
     {
         UserCache cache = new();
-        cache.AddUser(OwnerUser);
-        cache.AddUser(ModeratorUser);
-        MediaAuthorizationPolicy policy = new(cache);
+        cache.AddUser(user: OwnerUser);
+        cache.AddUser(user: ModeratorUser);
+        MediaAuthorizationPolicy policy = new(userCache: cache);
 
-        bool result = policy.IsOwner(PrincipalFor(ModeratorId));
+        bool result = policy.IsOwner(principal: PrincipalFor(userId: ModeratorId));
 
         result.Should().BeFalse();
         await Task.CompletedTask;
@@ -370,12 +370,12 @@ public sealed class AuthorizationDenyPrecisionTests
     public async Task IsOwner_Admits_WhenPrincipalIdMatchesOwnerInMultiUserCache()
     {
         UserCache cache = new();
-        cache.AddUser(ModeratorUser);
-        cache.AddUser(AllowedUser);
-        cache.AddUser(OwnerUser);
-        MediaAuthorizationPolicy policy = new(cache);
+        cache.AddUser(user: ModeratorUser);
+        cache.AddUser(user: AllowedUser);
+        cache.AddUser(user: OwnerUser);
+        MediaAuthorizationPolicy policy = new(userCache: cache);
 
-        bool result = policy.IsOwner(PrincipalFor(OwnerId));
+        bool result = policy.IsOwner(principal: PrincipalFor(userId: OwnerId));
 
         result.Should().BeTrue();
         await Task.CompletedTask;
@@ -385,11 +385,11 @@ public sealed class AuthorizationDenyPrecisionTests
     public async Task Policy_SeesUserAddedAfterConstruction()
     {
         UserCache cache = new();
-        MediaAuthorizationPolicy policy = new(cache);
+        MediaAuthorizationPolicy policy = new(userCache: cache);
 
-        bool beforeAdd = policy.IsAllowed(PrincipalFor(AllowedId));
-        cache.AddUser(AllowedUser);
-        bool afterAdd = policy.IsAllowed(PrincipalFor(AllowedId));
+        bool beforeAdd = policy.IsAllowed(principal: PrincipalFor(userId: AllowedId));
+        cache.AddUser(user: AllowedUser);
+        bool afterAdd = policy.IsAllowed(principal: PrincipalFor(userId: AllowedId));
 
         beforeAdd.Should().BeFalse();
         afterAdd.Should().BeTrue();
@@ -400,10 +400,10 @@ public sealed class AuthorizationDenyPrecisionTests
     public async Task Policy_DeniesAfterAllowedFlagRevokedViaUpdateUser()
     {
         UserCache cache = new();
-        cache.AddUser(AllowedUser);
-        MediaAuthorizationPolicy policy = new(cache);
+        cache.AddUser(user: AllowedUser);
+        MediaAuthorizationPolicy policy = new(userCache: cache);
 
-        bool beforeRevoke = policy.IsAllowed(PrincipalFor(AllowedId));
+        bool beforeRevoke = policy.IsAllowed(principal: PrincipalFor(userId: AllowedId));
 
         User revoked = new()
         {
@@ -414,9 +414,9 @@ public sealed class AuthorizationDenyPrecisionTests
             Name = "Allowed",
             Email = "allowed@nm.tv",
         };
-        cache.UpdateUser(revoked);
+        cache.UpdateUser(user: revoked);
 
-        bool afterRevoke = policy.IsAllowed(PrincipalFor(AllowedId));
+        bool afterRevoke = policy.IsAllowed(principal: PrincipalFor(userId: AllowedId));
 
         beforeRevoke.Should().BeTrue();
         afterRevoke.Should().BeFalse();
@@ -427,12 +427,12 @@ public sealed class AuthorizationDenyPrecisionTests
     public async Task Policy_DeniesAfterUserRemovedFromCache()
     {
         UserCache cache = new();
-        cache.AddUser(AllowedUser);
-        MediaAuthorizationPolicy policy = new(cache);
+        cache.AddUser(user: AllowedUser);
+        MediaAuthorizationPolicy policy = new(userCache: cache);
 
-        bool beforeRemove = policy.IsAllowed(PrincipalFor(AllowedId));
-        cache.RemoveUser(AllowedUser);
-        bool afterRemove = policy.IsAllowed(PrincipalFor(AllowedId));
+        bool beforeRemove = policy.IsAllowed(principal: PrincipalFor(userId: AllowedId));
+        cache.RemoveUser(user: AllowedUser);
+        bool afterRemove = policy.IsAllowed(principal: PrincipalFor(userId: AllowedId));
 
         beforeRemove.Should().BeTrue();
         afterRemove.Should().BeFalse();
@@ -461,14 +461,14 @@ public sealed class AuthorizationDenyPrecisionTests
 
         requirements
             .Should()
-            .AllSatisfy(req =>
+            .AllSatisfy(expected: req =>
             {
                 string reqName = req.Name;
-                IEnumerable<string> firesOnBad = documentedCoverage.Where(n =>
-                    n.StartsWith(reqName, StringComparison.Ordinal) && n.Contains("Denies")
+                IEnumerable<string> firesOnBad = documentedCoverage.Where(predicate: n =>
+                    n.StartsWith(value: reqName, comparisonType: StringComparison.Ordinal) && n.Contains(value: "Denies")
                 );
-                IEnumerable<string> silentOnValid = documentedCoverage.Where(n =>
-                    n.StartsWith(reqName, StringComparison.Ordinal) && n.Contains("Admits")
+                IEnumerable<string> silentOnValid = documentedCoverage.Where(predicate: n =>
+                    n.StartsWith(value: reqName, comparisonType: StringComparison.Ordinal) && n.Contains(value: "Admits")
                 );
 
                 firesOnBad
@@ -485,7 +485,7 @@ public sealed class AuthorizationDenyPrecisionTests
     }
 }
 
-[Trait("Category", "Authorization")]
+[Trait(name: "Category", value: "Authorization")]
 public sealed class TokenParamAuthDenyPrecisionTests : IAsyncLifetime, IDisposable
 {
     private readonly SqliteConnection _connection;
@@ -496,15 +496,15 @@ public sealed class TokenParamAuthDenyPrecisionTests : IAsyncLifetime, IDisposab
 
     public TokenParamAuthDenyPrecisionTests()
     {
-        _connection = new($"DataSource={Guid.NewGuid():N};Mode=Memory;Cache=Shared");
+        _connection = new(connectionString: $"DataSource={Guid.NewGuid():N};Mode=Memory;Cache=Shared");
         _connection.Open();
 
         _dbOptions = new DbContextOptionsBuilder<MediaContext>()
-            .UseSqlite(_connection)
-            .AddInterceptors(new SqliteNormalizeSearchInterceptor())
+            .UseSqlite(connection: _connection)
+            .AddInterceptors(interceptors: new SqliteNormalizeSearchInterceptor())
             .Options;
 
-        using MediaContext ctx = new(_dbOptions);
+        using MediaContext ctx = new(options: _dbOptions);
         ctx.Database.EnsureCreated();
 
         Driver driver = new()
@@ -516,7 +516,7 @@ public sealed class TokenParamAuthDenyPrecisionTests : IAsyncLifetime, IDisposab
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow,
         };
-        ctx.Drivers.Add(driver);
+        ctx.Drivers.Add(entity: driver);
 
         Folder folder = new()
         {
@@ -524,7 +524,7 @@ public sealed class TokenParamAuthDenyPrecisionTests : IAsyncLifetime, IDisposab
             Path = "/media",
             DriverId = Driver.SystemLocalDriverId,
         };
-        ctx.Folders.Add(folder);
+        ctx.Folders.Add(entity: folder);
 
         User user = new()
         {
@@ -533,15 +533,15 @@ public sealed class TokenParamAuthDenyPrecisionTests : IAsyncLifetime, IDisposab
             Email = "k@nm.tv",
             Allowed = true,
         };
-        ctx.Users.Add(user);
+        ctx.Users.Add(entity: user);
         ctx.SaveChanges();
     }
 
     public async Task InitializeAsync()
     {
         UserCache.Current.Reset();
-        await using MediaContext ctx = new(_dbOptions);
-        await UserCache.Current.InitializeAsync(ctx);
+        await using MediaContext ctx = new(options: _dbOptions);
+        await UserCache.Current.InitializeAsync(context: ctx);
     }
 
     public Task DisposeAsync()
@@ -557,7 +557,7 @@ public sealed class TokenParamAuthDenyPrecisionTests : IAsyncLifetime, IDisposab
     }
 
     private static TokenParamAuthMiddleware BuildMiddleware(RequestDelegate next) =>
-        new(next, new LiveIngestKeyStore(), NullLogger<TokenParamAuthMiddleware>.Instance);
+        new(next: next, ingestKeyStore: new LiveIngestKeyStore(), logger: NullLogger<TokenParamAuthMiddleware>.Instance);
 
     private static HttpContext BuildContext(string path, ClaimsPrincipal? user = null)
     {
@@ -571,28 +571,28 @@ public sealed class TokenParamAuthDenyPrecisionTests : IAsyncLifetime, IDisposab
 
     private static ClaimsPrincipal PrincipalWithSub(string sub)
     {
-        List<Claim> claims = [new(ClaimTypes.NameIdentifier, sub)];
-        return new(new ClaimsIdentity(claims, "TestScheme"));
+        List<Claim> claims = [new(type: ClaimTypes.NameIdentifier, value: sub)];
+        return new(identity: new ClaimsIdentity(claims: claims, authenticationType: "TestScheme"));
     }
 
     [Fact]
     public async Task Denies_WithForbidden_WhenSubIsGuidEmptyString()
     {
         bool nextCalled = false;
-        TokenParamAuthMiddleware middleware = BuildMiddleware(_ =>
+        TokenParamAuthMiddleware middleware = BuildMiddleware(next: _ =>
         {
             nextCalled = true;
             return Task.CompletedTask;
         });
         HttpContext context = BuildContext(
-            $"/{KnownFolderId}/some-file.mkv",
-            user: PrincipalWithSub(Guid.Empty.ToString())
+            path: $"/{KnownFolderId}/some-file.mkv",
+            user: PrincipalWithSub(sub: Guid.Empty.ToString())
         );
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
         nextCalled.Should().BeFalse();
-        context.Response.StatusCode.Should().Be((int)HttpStatusCode.Forbidden);
+        context.Response.StatusCode.Should().Be(expected: (int)HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -600,15 +600,15 @@ public sealed class TokenParamAuthDenyPrecisionTests : IAsyncLifetime, IDisposab
     {
         UserCache.Current.Reset();
         bool nextCalled = false;
-        TokenParamAuthMiddleware middleware = BuildMiddleware(_ =>
+        TokenParamAuthMiddleware middleware = BuildMiddleware(next: _ =>
         {
             nextCalled = true;
             return Task.CompletedTask;
         });
         Ulid ulidLookingPath = Ulid.NewUlid();
-        HttpContext context = BuildContext($"/{ulidLookingPath}/some-file.mkv");
+        HttpContext context = BuildContext(path: $"/{ulidLookingPath}/some-file.mkv");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
         nextCalled.Should().BeTrue();
     }

@@ -27,7 +27,7 @@ public class PeopleRepository(MediaContext context) : IPeopleRepository
     {
         return context
             .People.AsNoTracking()
-            .Where(person =>
+            .Where(predicate: person =>
                 person.Casts.Any(cast =>
                     cast.Tv != null
                     && cast.Tv.Library.LibraryUsers.FirstOrDefault(u => u.UserId.Equals(userId))
@@ -39,35 +39,35 @@ public class PeopleRepository(MediaContext context) : IPeopleRepository
                         != null
                 )
             )
-            .Include(person =>
+            .Include(navigationPropertyPath: person =>
                 person.Translations.Where(translation => translation.Iso6391 == language)
             )
-            .OrderByDescending(person => person.Popularity)
-            .ThenBy(person => person.Id)
-            .Skip(page * take)
-            .Take(take)
-            .ToListAsync(ct);
+            .OrderByDescending(keySelector: person => person.Popularity)
+            .ThenBy(keySelector: person => person.Id)
+            .Skip(count: page * take)
+            .Take(count: take)
+            .ToListAsync(cancellationToken: ct);
     }
 
     public Task<Person?> GetPersonWithCreditsAsync(int id, CancellationToken ct = default)
     {
         return context
             .People.AsNoTracking()
-            .Where(person => person.Id == id)
-            .Include(person => person.Casts)
-                .ThenInclude(cast => cast.Movie)
-                    .ThenInclude(movie => movie!.VideoFiles)
-            .Include(person => person.Casts)
-                .ThenInclude(cast => cast.Tv)
-                    .ThenInclude(tv => tv!.Episodes)
-                        .ThenInclude(episode => episode.VideoFiles)
-            .Include(person => person.Crews)
-                .ThenInclude(crew => crew.Movie)
-                    .ThenInclude(movie => movie!.VideoFiles)
-            .Include(person => person.Crews)
-                .ThenInclude(crew => crew.Tv)
-                    .ThenInclude(tv => tv!.Episodes)
-                        .ThenInclude(episode => episode.VideoFiles)
-            .FirstOrDefaultAsync(ct);
+            .Where(predicate: person => person.Id == id)
+            .Include(navigationPropertyPath: person => person.Casts)
+                .ThenInclude(navigationPropertyPath: cast => cast.Movie)
+                    .ThenInclude(navigationPropertyPath: movie => movie!.VideoFiles)
+            .Include(navigationPropertyPath: person => person.Casts)
+                .ThenInclude(navigationPropertyPath: cast => cast.Tv)
+                    .ThenInclude(navigationPropertyPath: tv => tv!.Episodes)
+                        .ThenInclude(navigationPropertyPath: episode => episode.VideoFiles)
+            .Include(navigationPropertyPath: person => person.Crews)
+                .ThenInclude(navigationPropertyPath: crew => crew.Movie)
+                    .ThenInclude(navigationPropertyPath: movie => movie!.VideoFiles)
+            .Include(navigationPropertyPath: person => person.Crews)
+                .ThenInclude(navigationPropertyPath: crew => crew.Tv)
+                    .ThenInclude(navigationPropertyPath: tv => tv!.Episodes)
+                        .ThenInclude(navigationPropertyPath: episode => episode.VideoFiles)
+            .FirstOrDefaultAsync(cancellationToken: ct);
     }
 }

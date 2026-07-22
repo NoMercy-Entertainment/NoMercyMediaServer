@@ -38,13 +38,13 @@ public class MetadataInjectorBuildStageIntegrationTests
 
     private static BuildStage CreateStageWithInjector(IMetadataInjector injector) =>
         new(
-            new() { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
-            new FontExtractor(TestStorageFactory.CreateLocal()),
-            new SubtitleExtractor(),
-            OutputStrategyFactoryTestHelper.Create(),
-            [],
-            NullLogger<BuildStage>.Instance,
-            TestStorageFactory.CreateLocal(),
+            options: new() { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
+            fontExtractor: new FontExtractor(storage: TestStorageFactory.CreateLocal()),
+            subtitleExtractor: new SubtitleExtractor(),
+            outputStrategyFactory: OutputStrategyFactoryTestHelper.Create(),
+            drmProcessors: [],
+            logger: NullLogger<BuildStage>.Instance,
+            storage: TestStorageFactory.CreateLocal(),
             metadataInjector: injector
         );
 
@@ -56,8 +56,8 @@ public class MetadataInjectorBuildStageIntegrationTests
                     GroupId: "g0",
                     Nodes:
                     [
-                        new("decode_0", OperationType.Decode, [], new()),
-                        new("encode_0", OperationType.Encode, ["decode_0"], new()),
+                        new(Id: "decode_0", Operation: OperationType.Decode, DependsOn: [], Parameters: new()),
+                        new(Id: "encode_0", Operation: OperationType.Encode, DependsOn: ["decode_0"], Parameters: new()),
                     ],
                     DeviceId: null,
                     GpuSlotsRequired: 0,
@@ -66,7 +66,7 @@ public class MetadataInjectorBuildStageIntegrationTests
                     Priority: 1
                 ),
             ],
-            EstimatedTotalDuration: TimeSpan.FromMinutes(90),
+            EstimatedTotalDuration: TimeSpan.FromMinutes(minutes: 90),
             OutputPlan: new(
                 Format: OutputFormat.Mkv,
                 VideoOutputs:
@@ -111,7 +111,7 @@ public class MetadataInjectorBuildStageIntegrationTests
     public async Task BuildStage_WithMovieMediaItem_CommandContainsMetadataTitleFlag()
     {
         MetadataInjector injector = new();
-        BuildStage stage = CreateStageWithInjector(injector);
+        BuildStage stage = CreateStageWithInjector(injector: injector);
 
         // EnableMetadataInjection must be explicitly turned on — MediaItem alone
         // no longer activates injection (see the contract note above the class).
@@ -128,32 +128,32 @@ public class MetadataInjectorBuildStageIntegrationTests
 
         ExecutionPlan plan = BuildMkvPlan();
         BuildInput input = new(
-            plan,
-            "/movies/fight_club.mkv",
-            "/tmp/nmtest-output/fc",
-            "Fight Club.NoMercy"
+            Plan: plan,
+            InputPath: "/movies/fight_club.mkv",
+            OutputDirectory: "/tmp/nmtest-output/fc",
+            MediaTitle: "Fight Club.NoMercy"
         );
 
-        StageResult result = await stage.ExecuteAsync(input, context, default);
+        StageResult result = await stage.ExecuteAsync(input: input, context: context, ct: default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
         commands.Should().NotBeEmpty();
 
         string[] args = commands[0].Arguments;
-        ContainsPair(args, "-metadata", "title=Fight Club")
+        ContainsPair(args: args, flag: "-metadata", value: "title=Fight Club")
             .Should()
-            .BeTrue("BuildStage must forward -metadata title from MediaItem");
-        ContainsPair(args, "-metadata", "year=1999")
+            .BeTrue(because: "BuildStage must forward -metadata title from MediaItem");
+        ContainsPair(args: args, flag: "-metadata", value: "year=1999")
             .Should()
-            .BeTrue("BuildStage must forward -metadata year from MediaItem");
+            .BeTrue(because: "BuildStage must forward -metadata year from MediaItem");
     }
 
     [Fact]
     public async Task BuildStage_WithEpisodeMediaItem_CommandContainsShowAndEpisodeFlags()
     {
         MetadataInjector injector = new();
-        BuildStage stage = CreateStageWithInjector(injector);
+        BuildStage stage = CreateStageWithInjector(injector: injector);
 
         EncodingContext context = EncodingContext.Create() with
         {
@@ -171,47 +171,47 @@ public class MetadataInjectorBuildStageIntegrationTests
 
         ExecutionPlan plan = BuildMkvPlan();
         BuildInput input = new(
-            plan,
-            "/tv/breaking_bad_s01e01.mkv",
-            "/tmp/nmtest-output/bb",
-            "Pilot.NoMercy"
+            Plan: plan,
+            InputPath: "/tv/breaking_bad_s01e01.mkv",
+            OutputDirectory: "/tmp/nmtest-output/bb",
+            MediaTitle: "Pilot.NoMercy"
         );
 
-        StageResult result = await stage.ExecuteAsync(input, context, default);
+        StageResult result = await stage.ExecuteAsync(input: input, context: context, ct: default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
         string[] args = commands[0].Arguments;
 
-        ContainsPair(args, "-metadata", "show=Breaking Bad")
+        ContainsPair(args: args, flag: "-metadata", value: "show=Breaking Bad")
             .Should()
-            .BeTrue("expected -metadata show=");
-        ContainsPair(args, "-metadata", "season_number=1")
+            .BeTrue(because: "expected -metadata show=");
+        ContainsPair(args: args, flag: "-metadata", value: "season_number=1")
             .Should()
-            .BeTrue("expected -metadata season_number=");
-        ContainsPair(args, "-metadata", "episode_id=1")
+            .BeTrue(because: "expected -metadata season_number=");
+        ContainsPair(args: args, flag: "-metadata", value: "episode_id=1")
             .Should()
-            .BeTrue("expected -metadata episode_id=");
+            .BeTrue(because: "expected -metadata episode_id=");
     }
 
     [Fact]
     public async Task BuildStage_NullMediaItem_NoMetadataFlagsEmitted()
     {
         MetadataInjector injector = new();
-        BuildStage stage = CreateStageWithInjector(injector);
+        BuildStage stage = CreateStageWithInjector(injector: injector);
 
         EncodingContext context = EncodingContext.Create();
 
         ExecutionPlan plan = BuildMkvPlan();
-        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
+        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
 
-        StageResult result = await stage.ExecuteAsync(input, context, default);
+        StageResult result = await stage.ExecuteAsync(input: input, context: context, ct: default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
         string[] args = commands[0].Arguments;
 
-        args.Should().NotContain("-metadata", "no -metadata flags when context has no MediaItem");
+        args.Should().NotContain(unexpected: "-metadata", because: "no -metadata flags when context has no MediaItem");
     }
 
     [Fact]
@@ -223,7 +223,7 @@ public class MetadataInjectorBuildStageIntegrationTests
         // EnableMetadataInjection is the only signal allowed to do that, and it
         // defaults to false on every request VideoEncodeJob builds today.
         MetadataInjector injector = new();
-        BuildStage stage = CreateStageWithInjector(injector);
+        BuildStage stage = CreateStageWithInjector(injector: injector);
 
         EncodingContext context = EncodingContext.Create() with
         {
@@ -237,9 +237,9 @@ public class MetadataInjectorBuildStageIntegrationTests
         };
 
         ExecutionPlan plan = BuildMkvPlan();
-        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
+        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
 
-        StageResult result = await stage.ExecuteAsync(input, context, default);
+        StageResult result = await stage.ExecuteAsync(input: input, context: context, ct: default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
@@ -247,8 +247,8 @@ public class MetadataInjectorBuildStageIntegrationTests
 
         args.Should()
             .NotContain(
-                "-metadata",
-                "MediaItem is pure identity — it must not inject -metadata unless EnableMetadataInjection is explicitly true"
+                unexpected: "-metadata",
+                because: "MediaItem is pure identity — it must not inject -metadata unless EnableMetadataInjection is explicitly true"
             );
     }
 
@@ -262,7 +262,7 @@ public class MetadataInjectorBuildStageIntegrationTests
         ServiceCollection services = new();
         services.AddLogging();
         services.AddSingleton<IHostApplicationLifetime, TestHostApplicationLifetime>();
-        services.AddNoMercyEncoder(opts =>
+        services.AddNoMercyEncoder(configure: opts =>
         {
             opts.FfmpegPathOverride = "ffmpeg";
             opts.FfprobePathOverride = "ffprobe";

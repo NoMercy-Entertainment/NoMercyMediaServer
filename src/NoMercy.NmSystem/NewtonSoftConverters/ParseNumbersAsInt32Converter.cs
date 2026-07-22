@@ -24,7 +24,7 @@ public class ParseNumbersAsInt32Converter : JsonConverter
     {
         if (value is int intValue)
         {
-            writer.WriteValue(intValue);
+            writer.WriteValue(value: intValue);
         }
         // Fallback to default serialization for other types
         // serializer.Serialize(writer, value);
@@ -37,6 +37,6 @@ public class ParseNumbersAsInt32Converter : JsonConverter
         JsonSerializer serializer
     )
     {
-        return reader.Value is long ? Convert.ToInt64(reader.Value ?? 0) : reader.Value;
+        return reader.Value is long ? Convert.ToInt64(value: reader.Value ?? 0) : reader.Value;
     }
 }

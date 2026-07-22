@@ -37,7 +37,7 @@ public class MusicMetadataJob : AbstractMusicDescriptionJob
 
     [ActivatorUtilitiesConstructor]
     public MusicMetadataJob(ILoggerFactory loggerFactory)
-        : base(loggerFactory) { }
+        : base(loggerFactory: loggerFactory) { }
 
     public MusicMetadataJob(MusicBrainzArtist musicBrainzArtist)
     {
@@ -65,23 +65,23 @@ public class MusicMetadataJob : AbstractMusicDescriptionJob
         try
         {
             TadbArtistClient artistClient = new();
-            TadbArtist? result = await artistClient.ByMusicBrainzId(MusicBrainzArtist.Id);
+            TadbArtist? result = await artistClient.ByMusicBrainzId(id: MusicBrainzArtist.Id);
             if (result?.Descriptions is null)
                 return;
 
             await using MediaContext context = new();
-            Artist? artist = await context.Artists.FindAsync(MusicBrainzArtist.Id);
+            Artist? artist = await context.Artists.FindAsync(keyValues: MusicBrainzArtist.Id);
             if (artist == null)
                 return;
 
             artist.Description = result
-                .Descriptions.Where(x => x.Iso31661 == "EN")
-                .Select(x => x.Description)
+                .Descriptions.Where(predicate: x => x.Iso31661 == "EN")
+                .Select(selector: x => x.Description)
                 .FirstOrDefault();
             artist.Year = result.IntFormedYear?.ToInt();
             await context.SaveChangesAsync();
 
-            List<Translation> translations = result.Descriptions.ConvertAll(x => new Translation
+            List<Translation> translations = result.Descriptions.ConvertAll(converter: x => new Translation
             {
                 ArtistId = MusicBrainzArtist.Id,
                 Iso31661 = x.Iso31661,
@@ -89,10 +89,10 @@ public class MusicMetadataJob : AbstractMusicDescriptionJob
             });
 
             await context
-                .Translations.UpsertRange(translations)
-                .On(x => new { x.ArtistId, x.Iso31661 })
+                .Translations.UpsertRange(entities: translations)
+                .On(match: x => new { x.ArtistId, x.Iso31661 })
                 .WhenMatched(
-                    (s, i) =>
+                    updater: (s, i) =>
                         new()
                         {
                             ArtistId = s.ArtistId,
@@ -104,9 +104,9 @@ public class MusicMetadataJob : AbstractMusicDescriptionJob
         }
         catch (Exception e)
         {
-            if (e.Message.Contains("404"))
+            if (e.Message.Contains(value: "404"))
                 return;
-            Log.LogTrace(e.Message);
+            Log.LogTrace(message: e.Message);
         }
     }
 
@@ -118,30 +118,30 @@ public class MusicMetadataJob : AbstractMusicDescriptionJob
         try
         {
             TadbReleaseGroupClient releaseClient = new();
-            TadbAlbum? result = await releaseClient.ByMusicBrainzId(MusicBrainzReleaseGroup.Id);
+            TadbAlbum? result = await releaseClient.ByMusicBrainzId(id: MusicBrainzReleaseGroup.Id);
             if (result?.Descriptions is null)
                 return;
 
             await using MediaContext context = new();
             ReleaseGroup? releaseGroup = await context.ReleaseGroups.FindAsync(
-                MusicBrainzReleaseGroup.Id
+                keyValues: MusicBrainzReleaseGroup.Id
             );
             if (releaseGroup == null)
                 return;
 
             string? description = result
-                .Descriptions.Where(x => x.Iso31661 == "EN")
-                .Select(x => x.Description)
+                .Descriptions.Where(predicate: x => x.Iso31661 == "EN")
+                .Select(selector: x => x.Description)
                 .FirstOrDefault();
 
             bool hasUpdatedDescription =
-                !string.IsNullOrEmpty(description) && releaseGroup.Description != description;
+                !string.IsNullOrEmpty(value: description) && releaseGroup.Description != description;
 
             releaseGroup.Description = description;
             if (hasUpdatedDescription)
                 await context.SaveChangesAsync();
 
-            List<Translation> translations = result.Descriptions.ConvertAll(x => new Translation
+            List<Translation> translations = result.Descriptions.ConvertAll(converter: x => new Translation
             {
                 ReleaseGroupId = MusicBrainzReleaseGroup.Id,
                 Iso31661 = x.Iso31661,
@@ -149,10 +149,10 @@ public class MusicMetadataJob : AbstractMusicDescriptionJob
             });
 
             await context
-                .Translations.UpsertRange(translations)
-                .On(x => new { x.ReleaseGroupId, x.Iso31661 })
+                .Translations.UpsertRange(entities: translations)
+                .On(match: x => new { x.ReleaseGroupId, x.Iso31661 })
                 .WhenMatched(
-                    (s, i) =>
+                    updater: (s, i) =>
                         new()
                         {
                             ReleaseGroupId = s.ReleaseGroupId,
@@ -164,9 +164,9 @@ public class MusicMetadataJob : AbstractMusicDescriptionJob
         }
         catch (Exception e)
         {
-            if (e.Message.Contains("404"))
+            if (e.Message.Contains(value: "404"))
                 return;
-            Log.LogTrace(e.Message);
+            Log.LogTrace(message: e.Message);
         }
     }
 }

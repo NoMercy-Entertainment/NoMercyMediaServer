@@ -20,18 +20,18 @@ namespace NoMercy.Providers.TMDB.Models.Find;
 
 public class TmdbFindById
 {
-    [JsonProperty("movie_results")]
+    [JsonProperty(propertyName: "movie_results")]
     public TmdbMovie[] MovieResults { get; set; } = [];
 
-    [JsonProperty("person_results")]
+    [JsonProperty(propertyName: "person_results")]
     public TmdbPerson[] PersonResults { get; set; } = [];
 
-    [JsonProperty("tv_results")]
+    [JsonProperty(propertyName: "tv_results")]
     public TmdbTvShow[] TvResults { get; set; } = [];
 
-    [JsonProperty("tv_episode_results")]
+    [JsonProperty(propertyName: "tv_episode_results")]
     public TmdbEpisode[] TvEpisodeResults { get; set; } = [];
 
-    [JsonProperty("tv_season_results")]
+    [JsonProperty(propertyName: "tv_season_results")]
     public TmdbSeason[] TvSeasonResults { get; set; } = [];
 }

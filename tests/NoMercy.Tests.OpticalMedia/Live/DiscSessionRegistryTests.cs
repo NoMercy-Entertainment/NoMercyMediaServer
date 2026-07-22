@@ -20,7 +20,7 @@ namespace NoMercy.Tests.OpticalMedia.Live;
 /// Registration must be overwritable, lookup must fail cleanly for an
 /// unregistered drive, and removal must be idempotent.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class DiscSessionRegistryTests
 {
     [Fact]
@@ -28,7 +28,7 @@ public class DiscSessionRegistryTests
     {
         DiscSessionRegistry registry = new();
 
-        bool found = registry.TryGet("D:\\", out string sessionId);
+        bool found = registry.TryGet(drivePath: "D:\\", sessionId: out string sessionId);
 
         found.Should().BeFalse();
         sessionId.Should().BeNull();
@@ -39,11 +39,11 @@ public class DiscSessionRegistryTests
     {
         DiscSessionRegistry registry = new();
 
-        registry.Register("D:\\", "session-123");
-        bool found = registry.TryGet("D:\\", out string sessionId);
+        registry.Register(drivePath: "D:\\", sessionId: "session-123");
+        bool found = registry.TryGet(drivePath: "D:\\", sessionId: out string sessionId);
 
         found.Should().BeTrue();
-        sessionId.Should().Be("session-123");
+        sessionId.Should().Be(expected: "session-123");
     }
 
     [Fact]
@@ -51,21 +51,21 @@ public class DiscSessionRegistryTests
     {
         DiscSessionRegistry registry = new();
 
-        registry.Register("D:\\", "session-old");
-        registry.Register("D:\\", "session-new");
-        registry.TryGet("D:\\", out string sessionId);
+        registry.Register(drivePath: "D:\\", sessionId: "session-old");
+        registry.Register(drivePath: "D:\\", sessionId: "session-new");
+        registry.TryGet(drivePath: "D:\\", sessionId: out string sessionId);
 
-        sessionId.Should().Be("session-new");
+        sessionId.Should().Be(expected: "session-new");
     }
 
     [Fact]
     public void Remove_RegisteredDrive_ClearsMapping()
     {
         DiscSessionRegistry registry = new();
-        registry.Register("D:\\", "session-123");
+        registry.Register(drivePath: "D:\\", sessionId: "session-123");
 
-        registry.Remove("D:\\");
-        bool found = registry.TryGet("D:\\", out _);
+        registry.Remove(drivePath: "D:\\");
+        bool found = registry.TryGet(drivePath: "D:\\", sessionId: out _);
 
         found.Should().BeFalse();
     }
@@ -75,7 +75,7 @@ public class DiscSessionRegistryTests
     {
         DiscSessionRegistry registry = new();
 
-        Action act = () => registry.Remove("D:\\");
+        Action act = () => registry.Remove(drivePath: "D:\\");
 
         act.Should().NotThrow();
     }
@@ -85,10 +85,10 @@ public class DiscSessionRegistryTests
     {
         DiscSessionRegistry registry = new();
 
-        registry.Register("D:\\", "session-123");
-        bool found = registry.TryGet("d:\\", out string sessionId);
+        registry.Register(drivePath: "D:\\", sessionId: "session-123");
+        bool found = registry.TryGet(drivePath: "d:\\", sessionId: out string sessionId);
 
         found.Should().BeTrue();
-        sessionId.Should().Be("session-123");
+        sessionId.Should().Be(expected: "session-123");
     }
 }

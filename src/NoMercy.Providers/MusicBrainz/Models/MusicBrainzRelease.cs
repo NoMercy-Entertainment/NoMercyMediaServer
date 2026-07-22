@@ -16,71 +16,71 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class MusicBrainzRelease
 {
-    [JsonProperty("barcode")]
+    [JsonProperty(propertyName: "barcode")]
     public string Barcode { get; set; } = string.Empty;
 
-    [JsonProperty("country")]
+    [JsonProperty(propertyName: "country")]
     public string Country { get; set; } = string.Empty;
 
-    [JsonProperty("score")]
+    [JsonProperty(propertyName: "score")]
     public int? Score { get; set; }
 
-    [JsonProperty("disambiguation")]
+    [JsonProperty(propertyName: "disambiguation")]
     public string? Disambiguation { get; set; }
 
-    [JsonProperty("genres")]
+    [JsonProperty(propertyName: "genres")]
     public MusicBrainzGenreDetails[] Genres { get; set; } = [];
 
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public Guid Id { get; set; }
 
-    [JsonProperty("media")]
+    [JsonProperty(propertyName: "media")]
     public MusicBrainzMedia[] Media { get; set; } = [];
 
-    [JsonProperty("packaging")]
+    [JsonProperty(propertyName: "packaging")]
     public string Packaging { get; set; } = string.Empty;
 
-    [JsonProperty("packaging-id")]
+    [JsonProperty(propertyName: "packaging-id")]
     public Guid? PackagingId { get; set; }
 
-    [JsonProperty("quality")]
+    [JsonProperty(propertyName: "quality")]
     public string Quality { get; set; } = string.Empty;
 
-    [JsonProperty("release-events")]
+    [JsonProperty(propertyName: "release-events")]
     public ReleaseEvent[]? ReleaseEvents { get; set; } = [];
 
-    [JsonProperty("release-group")]
+    [JsonProperty(propertyName: "release-group")]
     public MusicBrainzReleaseGroup MusicBrainzReleaseGroup { get; set; } = new();
 
-    [JsonProperty("status")]
+    [JsonProperty(propertyName: "status")]
     public string Status { get; set; } = string.Empty;
 
-    [JsonProperty("status-id")]
+    [JsonProperty(propertyName: "status-id")]
     public Guid? StatusId { get; set; }
 
-    [JsonProperty("artist-credit")]
+    [JsonProperty(propertyName: "artist-credit")]
     public ReleaseArtistCredit[] ArtistCredit { get; set; } = [];
 
-    [JsonProperty("text-representation")]
+    [JsonProperty(propertyName: "text-representation")]
     public MusicBrainzTextRepresentation MusicBrainzTextRepresentation { get; set; } = new();
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty("area")]
+    [JsonProperty(propertyName: "area")]
     public MusicBrainzArea MusicBrainzArea { get; set; } = new();
 
     // ReSharper disable once InconsistentNaming
-    [JsonProperty("date")]
+    [JsonProperty(propertyName: "date")]
     private string _date { get; set; } = string.Empty;
 
-    [JsonProperty("dateTime")]
+    [JsonProperty(propertyName: "dateTime")]
     public DateTime? DateTime
     {
         get =>
-            !string.IsNullOrWhiteSpace(_date)
-            && !string.IsNullOrEmpty(_date)
-            && _date.TryParseToDateTime(out DateTime dt)
+            !string.IsNullOrWhiteSpace(value: _date)
+            && !string.IsNullOrEmpty(value: _date)
+            && _date.TryParseToDateTime(dateTime: out DateTime dt)
                 ? dt
                 : null;
         set => _date = value.ToString().OrEmpty();

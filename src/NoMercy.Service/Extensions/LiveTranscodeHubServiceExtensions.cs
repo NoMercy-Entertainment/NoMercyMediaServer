@@ -26,7 +26,7 @@ public static class LiveTranscodeHubServiceExtensions
         // SignalR-backed implementation. Uses Replace (not TryAdd) so the Api-layer
         // transport wins over the encoder's TryAddSingleton default.
         services.Replace(
-            ServiceDescriptor.Singleton<ILiveSessionTransport, SignalRLiveSessionTransport>()
+            descriptor: ServiceDescriptor.Singleton<ILiveSessionTransport, SignalRLiveSessionTransport>()
         );
 
         return services;

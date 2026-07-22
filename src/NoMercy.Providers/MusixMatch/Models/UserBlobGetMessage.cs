@@ -15,6 +15,6 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class UserBlobGetMessage
 {
-    [JsonProperty("header")]
+    [JsonProperty(propertyName: "header")]
     public UserBlobGetMessageHeader Header { get; set; } = new();
 }

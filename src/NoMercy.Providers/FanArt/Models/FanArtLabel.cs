@@ -15,12 +15,12 @@ namespace NoMercy.Providers.FanArt.Models;
 
 public class FanArtLabel
 {
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty("musiclabel")]
+    [JsonProperty(propertyName: "musiclabel")]
     public MusicLabel[] Labels { get; set; } = [];
 }

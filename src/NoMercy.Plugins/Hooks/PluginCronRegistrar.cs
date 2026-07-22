@@ -32,18 +32,18 @@ public class PluginCronRegistrar(IPluginManager pluginManager, CronWorker cronWo
         )
         {
             PluginCapabilities? capabilities = installed
-                .FirstOrDefault(info => info.Id == plugin.Id)
+                .FirstOrDefault(predicate: info => info.Id == plugin.Id)
                 ?.Capabilities;
 
             if (
                 !PluginCapabilityGuard.DeclaresHook(
-                    capabilities,
-                    PluginHookCapability.ScheduledTask
+                    capabilities: capabilities,
+                    hook: PluginHookCapability.ScheduledTask
                 )
             )
                 continue;
 
-            cronWorker.RegisterExecutor(new PluginCronExecutor(plugin));
+            cronWorker.RegisterExecutor(executor: new PluginCronExecutor(plugin: plugin));
         }
     }
 }

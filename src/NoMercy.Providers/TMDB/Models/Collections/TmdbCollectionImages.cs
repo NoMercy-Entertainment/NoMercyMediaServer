@@ -16,15 +16,15 @@ namespace NoMercy.Providers.TMDB.Models.Collections;
 
 public class TmdbCollectionImages
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("backdrops")]
+    [JsonProperty(propertyName: "backdrops")]
     public TmdbImage[] Backdrops { get; set; } = [];
 
-    [JsonProperty("posters")]
+    [JsonProperty(propertyName: "posters")]
     public TmdbImage[] Posters { get; set; } = [];
 
-    [JsonProperty("logos")]
+    [JsonProperty(propertyName: "logos")]
     public TmdbImage[] Logos { get; set; } = [];
 }

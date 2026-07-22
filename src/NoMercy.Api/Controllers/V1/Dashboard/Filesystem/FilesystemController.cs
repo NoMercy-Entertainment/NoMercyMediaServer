@@ -21,31 +21,31 @@ using NoMercy.NmSystem.Dto;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Filesystem;
 
 [ApiController]
-[Tags("Dashboard Filesystem")]
-[ApiVersion(1.0)]
+[Tags(tags: "Dashboard Filesystem")]
+[ApiVersion(version: 1.0)]
 [Authorize(Policy = "Moderator")]
-[Route("api/v{version:apiVersion}/dashboard/filesystem")]
+[Route(template: "api/v{version:apiVersion}/dashboard/filesystem")]
 public class FilesystemController(
     FilesystemRepository filesystem,
     ILogger<FilesystemController> logger
 ) : BaseController
 {
     [HttpPost]
-    [Route("ls")]
+    [Route(template: "ls")]
     public IActionResult List([FromBody] DirectoryListRequest request)
     {
         try
         {
             (string? parent, List<DirectoryTree> entries) = filesystem.List(
-                request.Folder,
-                request.WithEmpty
+                folder: request.Folder,
+                withEmpty: request.WithEmpty
             );
 
             return Ok(
-                new DirectoryTreeListing
+                value: new DirectoryTreeListing
                 {
                     Status = "ok",
-                    Path = string.IsNullOrEmpty(request.Folder) ? null : request.Folder,
+                    Path = string.IsNullOrEmpty(value: request.Folder) ? null : request.Folder,
                     Parent = parent,
                     Data = entries,
                 }
@@ -53,25 +53,25 @@ public class FilesystemController(
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Filesystem request failed");
+            logger.LogError(exception: e, message: "Filesystem request failed");
             return InternalServerErrorResponse(
-                "Something went wrong retrieving the directory tree"
+                detail: "Something went wrong retrieving the directory tree"
             );
         }
     }
 
     [HttpPost]
-    [Route("home")]
+    [Route(template: "home")]
     public IActionResult Home([FromBody] DirectoryListRequest? request)
     {
         bool withEmpty = request?.WithEmpty ?? false;
 
         try
         {
-            (string path, string? parent, List<DirectoryTree> entries) = filesystem.Home(withEmpty);
+            (string path, string? parent, List<DirectoryTree> entries) = filesystem.Home(withEmpty: withEmpty);
 
             return Ok(
-                new DirectoryTreeListing
+                value: new DirectoryTreeListing
                 {
                     Status = "ok",
                     Path = path,
@@ -82,25 +82,25 @@ public class FilesystemController(
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Filesystem request failed");
+            logger.LogError(exception: e, message: "Filesystem request failed");
             return InternalServerErrorResponse(
-                "Something went wrong retrieving the home directory"
+                detail: "Something went wrong retrieving the home directory"
             );
         }
     }
 
     [HttpPost]
-    [Route("roots")]
+    [Route(template: "roots")]
     public IActionResult Roots([FromBody] DirectoryListRequest? request)
     {
         bool withEmpty = request?.WithEmpty ?? false;
 
         try
         {
-            List<DirectoryTree> entries = filesystem.Roots(withEmpty);
+            List<DirectoryTree> entries = filesystem.Roots(withEmpty: withEmpty);
 
             return Ok(
-                new DirectoryTreeListing
+                value: new DirectoryTreeListing
                 {
                     Status = "ok",
                     Path = "roots",
@@ -111,36 +111,36 @@ public class FilesystemController(
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Filesystem request failed");
-            return InternalServerErrorResponse("Something went wrong retrieving the drive list");
+            logger.LogError(exception: e, message: "Filesystem request failed");
+            return InternalServerErrorResponse(detail: "Something went wrong retrieving the drive list");
         }
     }
 
     [HttpPost]
-    [Route("mkdir")]
+    [Route(template: "mkdir")]
     public IActionResult Mkdir([FromBody] MkdirRequest request)
     {
         try
         {
-            string path = filesystem.Mkdir(request.Parent, request.Name);
-            return Ok(new MkdirResponse { Status = "ok", Path = path });
+            string path = filesystem.Mkdir(parent: request.Parent, name: request.Name);
+            return Ok(value: new MkdirResponse { Status = "ok", Path = path });
         }
         catch (ArgumentException e)
         {
-            return BadRequestResponse(e.Message);
+            return BadRequestResponse(detail: e.Message);
         }
         catch (DirectoryNotFoundException e)
         {
-            return NotFoundResponse(e.Message);
+            return NotFoundResponse(detail: e.Message);
         }
         catch (UnauthorizedAccessException e)
         {
-            return UnauthorizedResponse(e.Message);
+            return UnauthorizedResponse(detail: e.Message);
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Filesystem request failed");
-            return InternalServerErrorResponse("Something went wrong creating the folder");
+            logger.LogError(exception: e, message: "Filesystem request failed");
+            return InternalServerErrorResponse(detail: "Something went wrong creating the folder");
         }
     }
 }

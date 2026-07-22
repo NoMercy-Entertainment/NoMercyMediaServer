@@ -26,7 +26,7 @@ namespace NoMercy.Tests.Queue;
 /// behavioral gaps: implicit retry loops, cross-queue isolation, currentJobId guard,
 /// attempt boundary precision, and exception preservation.
 /// </summary>
-[Trait("Category", "Characterization")]
+[Trait(name: "Category", value: "Characterization")]
 public class QueueBehaviorTests : IDisposable
 {
     private readonly QueueContext _context;
@@ -36,7 +36,7 @@ public class QueueBehaviorTests : IDisposable
     public QueueBehaviorTests()
     {
         (_context, _adapter) = TestQueueContextFactory.CreateInMemoryContextWithAdapter();
-        _jobQueue = new(_adapter);
+        _jobQueue = new(context: _adapter);
     }
 
     public void Dispose()
@@ -55,35 +55,35 @@ public class QueueBehaviorTests : IDisposable
         {
             Queue = "retry-test",
             Payload = SerializationHelper.Serialize(
-                new TestJob { Message = "retry me", ShouldFail = true }
+                obj: new TestJob { Message = "retry me", ShouldFail = true }
             ),
             AvailableAt = DateTime.UtcNow,
             Priority = 1,
             Attempts = 0,
         };
-        _context.QueueJobs.Add(job);
+        _context.QueueJobs.Add(entity: job);
         _context.SaveChanges();
 
-        QueueJobModel? reserved = _jobQueue.ReserveJob("retry-test", null);
-        Assert.NotNull(reserved);
-        Assert.Equal(1, reserved.Attempts);
-        Assert.NotNull(reserved.ReservedAt);
+        QueueJobModel? reserved = _jobQueue.ReserveJob(name: "retry-test", currentJobId: null);
+        Assert.NotNull(@object: reserved);
+        Assert.Equal(expected: 1, actual: reserved.Attempts);
+        Assert.NotNull(value: reserved.ReservedAt);
 
         // Act — fail it (Attempts=1 < default maxAttempts=3)
-        _jobQueue.FailJob(reserved, new InvalidOperationException("boom"));
+        _jobQueue.FailJob(queueJob: reserved, exception: new InvalidOperationException(message: "boom"));
 
         // Assert — job stays in QueueJobs with ReservedAt cleared
         QueueJob? stillInQueue = _context.QueueJobs.FirstOrDefault();
-        Assert.NotNull(stillInQueue);
-        Assert.Null(stillInQueue.ReservedAt);
-        Assert.Equal(1, stillInQueue.Attempts);
-        Assert.Equal(0, _context.FailedJobs.Count());
+        Assert.NotNull(@object: stillInQueue);
+        Assert.Null(value: stillInQueue.ReservedAt);
+        Assert.Equal(expected: 1, actual: stillInQueue.Attempts);
+        Assert.Equal(expected: 0, actual: _context.FailedJobs.Count());
 
         // Act 2 — reserve again (Attempts goes to 2)
-        QueueJobModel? secondReserve = _jobQueue.ReserveJob("retry-test", null);
-        Assert.NotNull(secondReserve);
-        Assert.Equal(2, secondReserve.Attempts);
-        Assert.NotNull(secondReserve.ReservedAt);
+        QueueJobModel? secondReserve = _jobQueue.ReserveJob(name: "retry-test", currentJobId: null);
+        Assert.NotNull(@object: secondReserve);
+        Assert.Equal(expected: 2, actual: secondReserve.Attempts);
+        Assert.NotNull(value: secondReserve.ReservedAt);
     }
 
     [Fact]
@@ -94,62 +94,62 @@ public class QueueBehaviorTests : IDisposable
         QueueJob job = new()
         {
             Queue = "retry-loop",
-            Payload = SerializationHelper.Serialize(testJob),
+            Payload = SerializationHelper.Serialize(obj: testJob),
             AvailableAt = DateTime.UtcNow,
             Attempts = 0,
         };
-        _context.QueueJobs.Add(job);
+        _context.QueueJobs.Add(entity: job);
         await _context.SaveChangesAsync();
 
         // Attempt 1: reserve, execute (fail), fail-job
-        QueueJobModel? attempt1 = _jobQueue.ReserveJob("retry-loop", null);
-        Assert.NotNull(attempt1);
-        Assert.Equal(1, attempt1.Attempts);
+        QueueJobModel? attempt1 = _jobQueue.ReserveJob(name: "retry-loop", currentJobId: null);
+        Assert.NotNull(@object: attempt1);
+        Assert.Equal(expected: 1, actual: attempt1.Attempts);
         try
         {
             IShouldQueue exec1 = (IShouldQueue)
-                SerializationHelper.Deserialize<object>(attempt1.Payload);
+                SerializationHelper.Deserialize<object>(data: attempt1.Payload);
             await exec1.Handle();
         }
         catch (Exception ex)
         {
-            _jobQueue.FailJob(attempt1, ex);
+            _jobQueue.FailJob(queueJob: attempt1, exception: ex);
         }
-        Assert.Equal(1, _context.QueueJobs.Count());
-        Assert.Equal(0, _context.FailedJobs.Count());
+        Assert.Equal(expected: 1, actual: _context.QueueJobs.Count());
+        Assert.Equal(expected: 0, actual: _context.FailedJobs.Count());
 
         // Attempt 2: reserve, execute (fail), fail-job
-        QueueJobModel? attempt2 = _jobQueue.ReserveJob("retry-loop", null);
-        Assert.NotNull(attempt2);
-        Assert.Equal(2, attempt2.Attempts);
+        QueueJobModel? attempt2 = _jobQueue.ReserveJob(name: "retry-loop", currentJobId: null);
+        Assert.NotNull(@object: attempt2);
+        Assert.Equal(expected: 2, actual: attempt2.Attempts);
         try
         {
             IShouldQueue exec2 = (IShouldQueue)
-                SerializationHelper.Deserialize<object>(attempt2.Payload);
+                SerializationHelper.Deserialize<object>(data: attempt2.Payload);
             await exec2.Handle();
         }
         catch (Exception ex)
         {
-            _jobQueue.FailJob(attempt2, ex);
+            _jobQueue.FailJob(queueJob: attempt2, exception: ex);
         }
-        Assert.Equal(1, _context.QueueJobs.Count());
-        Assert.Equal(0, _context.FailedJobs.Count());
+        Assert.Equal(expected: 1, actual: _context.QueueJobs.Count());
+        Assert.Equal(expected: 0, actual: _context.FailedJobs.Count());
 
         // Attempt 3: reserve, execute (succeed this time), delete
-        QueueJobModel? attempt3 = _jobQueue.ReserveJob("retry-loop", null);
-        Assert.NotNull(attempt3);
-        Assert.Equal(3, attempt3.Attempts);
+        QueueJobModel? attempt3 = _jobQueue.ReserveJob(name: "retry-loop", currentJobId: null);
+        Assert.NotNull(@object: attempt3);
+        Assert.Equal(expected: 3, actual: attempt3.Attempts);
 
         // Deserialize and fix it
-        TestJob fixedJob = SerializationHelper.Deserialize<TestJob>(attempt3.Payload);
+        TestJob fixedJob = SerializationHelper.Deserialize<TestJob>(data: attempt3.Payload);
         fixedJob.ShouldFail = false;
         await fixedJob.Handle();
-        _jobQueue.DeleteJob(attempt3);
+        _jobQueue.DeleteJob(queueJob: attempt3);
 
         // Assert — job completed, no failed jobs
-        Assert.True(fixedJob.HasExecuted);
-        Assert.Equal(0, _context.QueueJobs.Count());
-        Assert.Equal(0, _context.FailedJobs.Count());
+        Assert.True(condition: fixedJob.HasExecuted);
+        Assert.Equal(expected: 0, actual: _context.QueueJobs.Count());
+        Assert.Equal(expected: 0, actual: _context.FailedJobs.Count());
     }
 
     // ── Attempt Boundary: exact maxAttempts triggers permanent failure ──
@@ -158,7 +158,7 @@ public class QueueBehaviorTests : IDisposable
     public void FailJob_AtExactMaxAttempts_MovesToFailedJobs()
     {
         // Arrange — use maxAttempts=2 and set Attempts=2 (at boundary)
-        JobQueue jobQueue = new(_adapter, maxAttempts: 2);
+        JobQueue jobQueue = new(context: _adapter, maxAttempts: 2);
         QueueJob job = new()
         {
             Queue = "boundary-test",
@@ -167,7 +167,7 @@ public class QueueBehaviorTests : IDisposable
             ReservedAt = DateTime.UtcNow,
             Attempts = 2,
         };
-        _context.QueueJobs.Add(job);
+        _context.QueueJobs.Add(entity: job);
         _context.SaveChanges();
 
         // Act — pass a QueueJobModel to the JobQueue method
@@ -180,21 +180,21 @@ public class QueueBehaviorTests : IDisposable
             ReservedAt = job.ReservedAt,
             Attempts = 2,
         };
-        jobQueue.FailJob(jobModel, new InvalidOperationException("at boundary"));
+        jobQueue.FailJob(queueJob: jobModel, exception: new InvalidOperationException(message: "at boundary"));
 
         // Assert — moved to FailedJobs, removed from QueueJobs
-        Assert.Equal(0, _context.QueueJobs.Count());
+        Assert.Equal(expected: 0, actual: _context.QueueJobs.Count());
         FailedJob? failed = _context.FailedJobs.FirstOrDefault();
-        Assert.NotNull(failed);
-        Assert.Equal("boundary-test", failed.Queue);
-        Assert.Equal("boundary payload", failed.Payload);
+        Assert.NotNull(@object: failed);
+        Assert.Equal(expected: "boundary-test", actual: failed.Queue);
+        Assert.Equal(expected: "boundary payload", actual: failed.Payload);
     }
 
     [Fact]
     public void FailJob_OneUnderMaxAttempts_StaysInQueue()
     {
         // Arrange — use maxAttempts=2 and set Attempts=1 (one under)
-        JobQueue jobQueue = new(_adapter, maxAttempts: 2);
+        JobQueue jobQueue = new(context: _adapter, maxAttempts: 2);
         QueueJob job = new()
         {
             Queue = "boundary-test",
@@ -203,7 +203,7 @@ public class QueueBehaviorTests : IDisposable
             ReservedAt = DateTime.UtcNow,
             Attempts = 1,
         };
-        _context.QueueJobs.Add(job);
+        _context.QueueJobs.Add(entity: job);
         _context.SaveChanges();
 
         // Act — pass a QueueJobModel to the JobQueue method
@@ -216,21 +216,21 @@ public class QueueBehaviorTests : IDisposable
             ReservedAt = job.ReservedAt,
             Attempts = 1,
         };
-        jobQueue.FailJob(jobModel, new InvalidOperationException("under boundary"));
+        jobQueue.FailJob(queueJob: jobModel, exception: new InvalidOperationException(message: "under boundary"));
 
         // Assert — stays in QueueJobs, not in FailedJobs
-        Assert.Equal(1, _context.QueueJobs.Count());
-        Assert.Equal(0, _context.FailedJobs.Count());
+        Assert.Equal(expected: 1, actual: _context.QueueJobs.Count());
+        Assert.Equal(expected: 0, actual: _context.FailedJobs.Count());
         QueueJob? remaining = _context.QueueJobs.FirstOrDefault();
-        Assert.NotNull(remaining);
-        Assert.Null(remaining.ReservedAt);
+        Assert.NotNull(@object: remaining);
+        Assert.Null(value: remaining.ReservedAt);
     }
 
     [Fact]
     public void FailJob_AboveMaxAttempts_MovesToFailedJobs()
     {
         // Arrange — use maxAttempts=2 and set Attempts=5 (well above)
-        JobQueue jobQueue = new(_adapter, maxAttempts: 2);
+        JobQueue jobQueue = new(context: _adapter, maxAttempts: 2);
         QueueJob job = new()
         {
             Queue = "boundary-test",
@@ -239,7 +239,7 @@ public class QueueBehaviorTests : IDisposable
             ReservedAt = DateTime.UtcNow,
             Attempts = 5,
         };
-        _context.QueueJobs.Add(job);
+        _context.QueueJobs.Add(entity: job);
         _context.SaveChanges();
 
         // Act — pass a QueueJobModel to the JobQueue method
@@ -252,11 +252,11 @@ public class QueueBehaviorTests : IDisposable
             ReservedAt = job.ReservedAt,
             Attempts = 5,
         };
-        jobQueue.FailJob(jobModel, new InvalidOperationException("above boundary"));
+        jobQueue.FailJob(queueJob: jobModel, exception: new InvalidOperationException(message: "above boundary"));
 
         // Assert
-        Assert.Equal(0, _context.QueueJobs.Count());
-        Assert.Equal(1, _context.FailedJobs.Count());
+        Assert.Equal(expected: 0, actual: _context.QueueJobs.Count());
+        Assert.Equal(expected: 1, actual: _context.FailedJobs.Count());
     }
 
     // ── Full Lifecycle: enqueue → exhaust retries → permanent fail → manual retry → succeed ──
@@ -265,55 +265,55 @@ public class QueueBehaviorTests : IDisposable
     public async Task FullRetryLifecycle_ExhaustRetriesThenManualRetry_Succeeds()
     {
         // Arrange
-        JobQueue jobQueue = new(_adapter, maxAttempts: 2);
+        JobQueue jobQueue = new(context: _adapter, maxAttempts: 2);
         TestJob testJob = new() { Message = "lifecycle", ShouldFail = true };
         QueueJob job = new()
         {
             Queue = "lifecycle",
-            Payload = SerializationHelper.Serialize(testJob),
+            Payload = SerializationHelper.Serialize(obj: testJob),
             AvailableAt = DateTime.UtcNow,
             Attempts = 0,
         };
-        _context.QueueJobs.Add(job);
+        _context.QueueJobs.Add(entity: job);
         await _context.SaveChangesAsync();
 
         // Attempt 1: reserve (Attempts → 1), fail
-        QueueJobModel? a1 = jobQueue.ReserveJob("lifecycle", null);
-        Assert.NotNull(a1);
-        jobQueue.FailJob(a1, new("fail 1"));
-        Assert.Equal(1, _context.QueueJobs.Count());
-        Assert.Equal(0, _context.FailedJobs.Count());
+        QueueJobModel? a1 = jobQueue.ReserveJob(name: "lifecycle", currentJobId: null);
+        Assert.NotNull(@object: a1);
+        jobQueue.FailJob(queueJob: a1, exception: new(message: "fail 1"));
+        Assert.Equal(expected: 1, actual: _context.QueueJobs.Count());
+        Assert.Equal(expected: 0, actual: _context.FailedJobs.Count());
 
         // Attempt 2: reserve (Attempts → 2 = maxAttempts), fail → permanent failure
-        QueueJobModel? a2 = jobQueue.ReserveJob("lifecycle", null);
-        Assert.NotNull(a2);
-        Assert.Equal(2, a2.Attempts);
-        jobQueue.FailJob(a2, new("fail 2"));
-        Assert.Equal(0, _context.QueueJobs.Count());
-        Assert.Equal(1, _context.FailedJobs.Count());
+        QueueJobModel? a2 = jobQueue.ReserveJob(name: "lifecycle", currentJobId: null);
+        Assert.NotNull(@object: a2);
+        Assert.Equal(expected: 2, actual: a2.Attempts);
+        jobQueue.FailJob(queueJob: a2, exception: new(message: "fail 2"));
+        Assert.Equal(expected: 0, actual: _context.QueueJobs.Count());
+        Assert.Equal(expected: 1, actual: _context.FailedJobs.Count());
 
         // Manual retry using RetryFailedJobs
         jobQueue.RetryFailedJobs();
-        Assert.Equal(1, _context.QueueJobs.Count());
-        Assert.Equal(0, _context.FailedJobs.Count());
+        Assert.Equal(expected: 1, actual: _context.QueueJobs.Count());
+        Assert.Equal(expected: 0, actual: _context.FailedJobs.Count());
 
         // Verify attempts were reset to 0
         QueueJob? retried = _context.QueueJobs.FirstOrDefault();
-        Assert.NotNull(retried);
-        Assert.Equal(0, retried.Attempts);
-        Assert.Null(retried.ReservedAt);
+        Assert.NotNull(@object: retried);
+        Assert.Equal(expected: 0, actual: retried.Attempts);
+        Assert.Null(value: retried.ReservedAt);
 
         // Attempt 3: reserve and succeed
-        QueueJobModel? a3 = jobQueue.ReserveJob("lifecycle", null);
-        Assert.NotNull(a3);
-        TestJob fixedJob = SerializationHelper.Deserialize<TestJob>(a3.Payload);
+        QueueJobModel? a3 = jobQueue.ReserveJob(name: "lifecycle", currentJobId: null);
+        Assert.NotNull(@object: a3);
+        TestJob fixedJob = SerializationHelper.Deserialize<TestJob>(data: a3.Payload);
         fixedJob.ShouldFail = false;
         await fixedJob.Handle();
-        jobQueue.DeleteJob(a3);
+        jobQueue.DeleteJob(queueJob: a3);
 
-        Assert.True(fixedJob.HasExecuted);
-        Assert.Equal(0, _context.QueueJobs.Count());
-        Assert.Equal(0, _context.FailedJobs.Count());
+        Assert.True(condition: fixedJob.HasExecuted);
+        Assert.Equal(expected: 0, actual: _context.QueueJobs.Count());
+        Assert.Equal(expected: 0, actual: _context.FailedJobs.Count());
     }
 
     // ── Cross-Queue Isolation ──
@@ -329,19 +329,19 @@ public class QueueBehaviorTests : IDisposable
             AvailableAt = DateTime.UtcNow,
             Attempts = 0,
         };
-        _context.QueueJobs.Add(job);
+        _context.QueueJobs.Add(entity: job);
         _context.SaveChanges();
 
         // Act — reserve on queue "beta"
-        QueueJobModel? reserved = _jobQueue.ReserveJob("beta", null);
+        QueueJobModel? reserved = _jobQueue.ReserveJob(name: "beta", currentJobId: null);
 
         // Assert
-        Assert.Null(reserved);
+        Assert.Null(@object: reserved);
         // Original job untouched
         QueueJob? original = _context.QueueJobs.FirstOrDefault();
-        Assert.NotNull(original);
-        Assert.Null(original.ReservedAt);
-        Assert.Equal(0, original.Attempts);
+        Assert.NotNull(@object: original);
+        Assert.Null(value: original.ReservedAt);
+        Assert.Equal(expected: 0, actual: original.Attempts);
     }
 
     [Fact]
@@ -364,18 +364,18 @@ public class QueueBehaviorTests : IDisposable
             Priority = 1,
             Attempts = 0,
         };
-        _context.QueueJobs.AddRange(alphaJob, betaJob);
+        _context.QueueJobs.AddRange(entities: [alphaJob, betaJob]);
         _context.SaveChanges();
 
         // Act
-        QueueJobModel? reservedAlpha = _jobQueue.ReserveJob("alpha", null);
-        QueueJobModel? reservedBeta = _jobQueue.ReserveJob("beta", null);
+        QueueJobModel? reservedAlpha = _jobQueue.ReserveJob(name: "alpha", currentJobId: null);
+        QueueJobModel? reservedBeta = _jobQueue.ReserveJob(name: "beta", currentJobId: null);
 
         // Assert
-        Assert.NotNull(reservedAlpha);
-        Assert.Equal("alpha payload", reservedAlpha.Payload);
-        Assert.NotNull(reservedBeta);
-        Assert.Equal("beta payload", reservedBeta.Payload);
+        Assert.NotNull(@object: reservedAlpha);
+        Assert.Equal(expected: "alpha payload", actual: reservedAlpha.Payload);
+        Assert.NotNull(@object: reservedBeta);
+        Assert.Equal(expected: "beta payload", actual: reservedBeta.Payload);
     }
 
     // ── currentJobId Guard ──
@@ -395,19 +395,19 @@ public class QueueBehaviorTests : IDisposable
             Priority = 1,
             Attempts = 0,
         };
-        _context.QueueJobs.Add(job);
+        _context.QueueJobs.Add(entity: job);
         _context.SaveChanges();
 
         // Act — pass non-null currentJobId
-        QueueJobModel? reserved = _jobQueue.ReserveJob("guard-test", 42L);
+        QueueJobModel? reserved = _jobQueue.ReserveJob(name: "guard-test", currentJobId: 42L);
 
         // Assert — worker busy, should not get another job
-        Assert.Null(reserved);
+        Assert.Null(@object: reserved);
         // Original job still unreserved
         QueueJob? original = _context.QueueJobs.FirstOrDefault();
-        Assert.NotNull(original);
-        Assert.Null(original.ReservedAt);
-        Assert.Equal(0, original.Attempts);
+        Assert.NotNull(@object: original);
+        Assert.Null(value: original.ReservedAt);
+        Assert.Equal(expected: 0, actual: original.Attempts);
     }
 
     [Fact]
@@ -422,15 +422,15 @@ public class QueueBehaviorTests : IDisposable
             Priority = 1,
             Attempts = 0,
         };
-        _context.QueueJobs.Add(job);
+        _context.QueueJobs.Add(entity: job);
         _context.SaveChanges();
 
         // Act
-        QueueJobModel? reserved = _jobQueue.ReserveJob("guard-test", null);
+        QueueJobModel? reserved = _jobQueue.ReserveJob(name: "guard-test", currentJobId: null);
 
         // Assert
-        Assert.NotNull(reserved);
-        Assert.Equal("guard payload null", reserved.Payload);
+        Assert.NotNull(@object: reserved);
+        Assert.Equal(expected: "guard payload null", actual: reserved.Payload);
     }
 
     // ── Exception Content Preserved in FailedJob ──
@@ -439,7 +439,7 @@ public class QueueBehaviorTests : IDisposable
     public void FailJob_ExceptionContentPreserved_InFailedJobRecord()
     {
         // Arrange
-        JobQueue jobQueue = new(_adapter, maxAttempts: 1);
+        JobQueue jobQueue = new(context: _adapter, maxAttempts: 1);
         QueueJob job = new()
         {
             Queue = "exception-test",
@@ -448,11 +448,11 @@ public class QueueBehaviorTests : IDisposable
             ReservedAt = DateTime.UtcNow,
             Attempts = 1,
         };
-        _context.QueueJobs.Add(job);
+        _context.QueueJobs.Add(entity: job);
         _context.SaveChanges();
 
-        InvalidOperationException innerEx = new("root cause detail");
-        AggregateException outerEx = new("wrapper", innerEx);
+        InvalidOperationException innerEx = new(message: "root cause detail");
+        AggregateException outerEx = new(message: "wrapper", innerException: innerEx);
 
         // Act — pass a QueueJobModel to the JobQueue method
         QueueJobModel jobModel = new()
@@ -464,21 +464,21 @@ public class QueueBehaviorTests : IDisposable
             ReservedAt = job.ReservedAt,
             Attempts = 1,
         };
-        jobQueue.FailJob(jobModel, outerEx);
+        jobQueue.FailJob(queueJob: jobModel, exception: outerEx);
 
         // Assert
         FailedJob? failed = _context.FailedJobs.FirstOrDefault();
-        Assert.NotNull(failed);
-        Assert.Contains("root cause detail", failed.Exception);
-        Assert.NotEqual(Guid.Empty, failed.Uuid);
-        Assert.Equal("default", failed.Connection);
+        Assert.NotNull(@object: failed);
+        Assert.Contains(expectedSubstring: "root cause detail", actualString: failed.Exception);
+        Assert.NotEqual(expected: Guid.Empty, actual: failed.Uuid);
+        Assert.Equal(expected: "default", actual: failed.Connection);
     }
 
     [Fact]
     public void FailJob_NoInnerException_UsesOuterException()
     {
         // Arrange
-        JobQueue jobQueue = new(_adapter, maxAttempts: 1);
+        JobQueue jobQueue = new(context: _adapter, maxAttempts: 1);
         QueueJob job = new()
         {
             Queue = "exception-test",
@@ -487,10 +487,10 @@ public class QueueBehaviorTests : IDisposable
             ReservedAt = DateTime.UtcNow,
             Attempts = 1,
         };
-        _context.QueueJobs.Add(job);
+        _context.QueueJobs.Add(entity: job);
         _context.SaveChanges();
 
-        InvalidOperationException exception = new("direct error message");
+        InvalidOperationException exception = new(message: "direct error message");
 
         // Act — pass a QueueJobModel to the JobQueue method
         QueueJobModel jobModel = new()
@@ -502,12 +502,12 @@ public class QueueBehaviorTests : IDisposable
             ReservedAt = job.ReservedAt,
             Attempts = 1,
         };
-        jobQueue.FailJob(jobModel, exception);
+        jobQueue.FailJob(queueJob: jobModel, exception: exception);
 
         // Assert
         FailedJob? failed = _context.FailedJobs.FirstOrDefault();
-        Assert.NotNull(failed);
-        Assert.Contains("direct error message", failed.Exception);
+        Assert.NotNull(@object: failed);
+        Assert.Contains(expectedSubstring: "direct error message", actualString: failed.Exception);
     }
 
     // ── RetryFailedJobs Resets Attempts ──
@@ -525,7 +525,7 @@ public class QueueBehaviorTests : IDisposable
             Exception = "some error",
             FailedAt = DateTime.UtcNow,
         };
-        _context.FailedJobs.Add(failedJob);
+        _context.FailedJobs.Add(entity: failedJob);
         _context.SaveChanges();
 
         // Act
@@ -533,11 +533,11 @@ public class QueueBehaviorTests : IDisposable
 
         // Assert
         QueueJob? requeuedJob = _context.QueueJobs.FirstOrDefault();
-        Assert.NotNull(requeuedJob);
-        Assert.Equal(0, requeuedJob.Attempts);
-        Assert.Null(requeuedJob.ReservedAt);
-        Assert.Equal("reset-test", requeuedJob.Queue);
-        Assert.Equal("reset payload", requeuedJob.Payload);
+        Assert.NotNull(@object: requeuedJob);
+        Assert.Equal(expected: 0, actual: requeuedJob.Attempts);
+        Assert.Null(value: requeuedJob.ReservedAt);
+        Assert.Equal(expected: "reset-test", actual: requeuedJob.Queue);
+        Assert.Equal(expected: "reset payload", actual: requeuedJob.Payload);
     }
 
     [Fact]
@@ -553,7 +553,7 @@ public class QueueBehaviorTests : IDisposable
             Exception = "err",
             FailedAt = DateTime.UtcNow,
         };
-        _context.FailedJobs.Add(failedJob);
+        _context.FailedJobs.Add(entity: failedJob);
         _context.SaveChanges();
 
         // Act
@@ -561,8 +561,8 @@ public class QueueBehaviorTests : IDisposable
 
         // Assert
         QueueJob? requeued = _context.QueueJobs.FirstOrDefault();
-        Assert.NotNull(requeued);
-        Assert.Equal("specific-queue-name", requeued.Queue);
+        Assert.NotNull(@object: requeued);
+        Assert.Equal(expected: "specific-queue-name", actual: requeued.Queue);
     }
 
     // ── Enqueue: Different Payloads on Same Queue ──
@@ -574,22 +574,22 @@ public class QueueBehaviorTests : IDisposable
         QueueJobModel job1 = new()
         {
             Queue = "same-queue",
-            Payload = SerializationHelper.Serialize(new TestJob { Message = "job-A" }),
+            Payload = SerializationHelper.Serialize(obj: new TestJob { Message = "job-A" }),
             AvailableAt = DateTime.UtcNow,
         };
         QueueJobModel job2 = new()
         {
             Queue = "same-queue",
-            Payload = SerializationHelper.Serialize(new TestJob { Message = "job-B" }),
+            Payload = SerializationHelper.Serialize(obj: new TestJob { Message = "job-B" }),
             AvailableAt = DateTime.UtcNow,
         };
 
         // Act
-        _jobQueue.Enqueue(job1);
-        _jobQueue.Enqueue(job2);
+        _jobQueue.Enqueue(queueJob: job1);
+        _jobQueue.Enqueue(queueJob: job2);
 
         // Assert
-        Assert.Equal(2, _context.QueueJobs.Count());
+        Assert.Equal(expected: 2, actual: _context.QueueJobs.Count());
     }
 
     [Fact]
@@ -599,7 +599,7 @@ public class QueueBehaviorTests : IDisposable
         // regardless of queue name. So same payload on different queues is still a duplicate.
 
         // Arrange
-        string payload = SerializationHelper.Serialize(new TestJob { Message = "shared" });
+        string payload = SerializationHelper.Serialize(obj: new TestJob { Message = "shared" });
         QueueJobModel job1 = new()
         {
             Queue = "queue-1",
@@ -614,11 +614,11 @@ public class QueueBehaviorTests : IDisposable
         };
 
         // Act
-        _jobQueue.Enqueue(job1);
-        _jobQueue.Enqueue(job2);
+        _jobQueue.Enqueue(queueJob: job1);
+        _jobQueue.Enqueue(queueJob: job2);
 
         // Assert — global duplicate prevention: only 1 job stored
-        Assert.Equal(1, _context.QueueJobs.Count());
+        Assert.Equal(expected: 1, actual: _context.QueueJobs.Count());
     }
 
     // ── ReserveJob: Already-Reserved Job Not Double-Reserved ──
@@ -635,18 +635,18 @@ public class QueueBehaviorTests : IDisposable
             Priority = 1,
             Attempts = 0,
         };
-        _context.QueueJobs.Add(job);
+        _context.QueueJobs.Add(entity: job);
         _context.SaveChanges();
 
         // Act — reserve once
-        QueueJobModel? first = _jobQueue.ReserveJob("double-reserve", null);
-        Assert.NotNull(first);
+        QueueJobModel? first = _jobQueue.ReserveJob(name: "double-reserve", currentJobId: null);
+        Assert.NotNull(@object: first);
 
         // Act — reserve again (job is now reserved, ReservedAt != null)
-        QueueJobModel? second = _jobQueue.ReserveJob("double-reserve", null);
+        QueueJobModel? second = _jobQueue.ReserveJob(name: "double-reserve", currentJobId: null);
 
         // Assert — no unreserved jobs left
-        Assert.Null(second);
+        Assert.Null(@object: second);
     }
 
     [Fact]
@@ -669,19 +669,19 @@ public class QueueBehaviorTests : IDisposable
             Priority = 1,
             Attempts = 0,
         };
-        _context.QueueJobs.AddRange(job1, job2);
+        _context.QueueJobs.AddRange(entities: [job1, job2]);
         _context.SaveChanges();
 
         // Act — reserve first (deletes it to simulate worker finishing)
-        QueueJobModel? first = _jobQueue.ReserveJob("seq-reserve", null);
-        Assert.NotNull(first);
-        Assert.Equal("payload-1", first.Payload); // Higher priority
-        _jobQueue.DeleteJob(first);
+        QueueJobModel? first = _jobQueue.ReserveJob(name: "seq-reserve", currentJobId: null);
+        Assert.NotNull(@object: first);
+        Assert.Equal(expected: "payload-1", actual: first.Payload); // Higher priority
+        _jobQueue.DeleteJob(queueJob: first);
 
         // Act — reserve second
-        QueueJobModel? second = _jobQueue.ReserveJob("seq-reserve", null);
-        Assert.NotNull(second);
-        Assert.Equal("payload-2", second.Payload);
+        QueueJobModel? second = _jobQueue.ReserveJob(name: "seq-reserve", currentJobId: null);
+        Assert.NotNull(@object: second);
+        Assert.Equal(expected: "payload-2", actual: second.Payload);
     }
 
     // ── Dequeue vs ReserveJob: Dequeue removes without reservation ──
@@ -697,17 +697,17 @@ public class QueueBehaviorTests : IDisposable
             AvailableAt = DateTime.UtcNow,
             Attempts = 0,
         };
-        _context.QueueJobs.Add(job);
+        _context.QueueJobs.Add(entity: job);
         _context.SaveChanges();
 
         // Act
         QueueJobModel? dequeued = _jobQueue.Dequeue();
 
         // Assert — job removed entirely (not just reserved)
-        Assert.NotNull(dequeued);
-        Assert.Equal(0, _context.QueueJobs.Count());
+        Assert.NotNull(@object: dequeued);
+        Assert.Equal(expected: 0, actual: _context.QueueJobs.Count());
         // Attempts not incremented (Dequeue doesn't touch Attempts)
-        Assert.Equal(0, dequeued.Attempts);
+        Assert.Equal(expected: 0, actual: dequeued.Attempts);
     }
 
     // ── DeleteJob: Idempotent behavior ──
@@ -722,7 +722,7 @@ public class QueueBehaviorTests : IDisposable
             Payload = "delete payload",
             AvailableAt = DateTime.UtcNow,
         };
-        _context.QueueJobs.Add(job);
+        _context.QueueJobs.Add(entity: job);
         _context.SaveChanges();
 
         // Create a QueueJobModel for JobQueue interaction
@@ -735,14 +735,14 @@ public class QueueBehaviorTests : IDisposable
         };
 
         // Act — delete once
-        _jobQueue.DeleteJob(jobModel);
-        Assert.Equal(0, _context.QueueJobs.Count());
+        _jobQueue.DeleteJob(queueJob: jobModel);
+        Assert.Equal(expected: 0, actual: _context.QueueJobs.Count());
 
         // Act — delete again (catch block in DeleteJob swallows the exception)
-        Exception? ex = Record.Exception(() => _jobQueue.DeleteJob(jobModel));
+        Exception? ex = Record.Exception(testCode: () => _jobQueue.DeleteJob(queueJob: jobModel));
 
         // Assert — no exception propagated
-        Assert.Null(ex);
+        Assert.Null(@object: ex);
     }
 
     // ── Serialization Round-Trip Through Queue ──
@@ -755,29 +755,29 @@ public class QueueBehaviorTests : IDisposable
         QueueJob job = new()
         {
             Queue = "serde-test",
-            Payload = SerializationHelper.Serialize(original),
+            Payload = SerializationHelper.Serialize(obj: original),
             AvailableAt = DateTime.UtcNow,
             Priority = 1,
             Attempts = 0,
         };
-        _context.QueueJobs.Add(job);
+        _context.QueueJobs.Add(entity: job);
         await _context.SaveChangesAsync();
 
         // Act — reserve and deserialize
-        QueueJobModel? reserved = _jobQueue.ReserveJob("serde-test", null);
-        Assert.NotNull(reserved);
-        object deserialized = SerializationHelper.Deserialize<object>(reserved.Payload);
+        QueueJobModel? reserved = _jobQueue.ReserveJob(name: "serde-test", currentJobId: null);
+        Assert.NotNull(@object: reserved);
+        object deserialized = SerializationHelper.Deserialize<object>(data: reserved.Payload);
 
         // Assert — type and state preserved
-        Assert.IsType<AnotherTestJob>(deserialized);
+        Assert.IsType<AnotherTestJob>(@object: deserialized);
         AnotherTestJob roundTripped = (AnotherTestJob)deserialized;
-        Assert.Equal(42, roundTripped.Value);
-        Assert.False(roundTripped.HasExecuted);
+        Assert.Equal(expected: 42, actual: roundTripped.Value);
+        Assert.False(condition: roundTripped.HasExecuted);
 
         // Execute and verify
         await roundTripped.Handle();
-        Assert.True(roundTripped.HasExecuted);
-        Assert.Equal(84, roundTripped.Value);
+        Assert.True(condition: roundTripped.HasExecuted);
+        Assert.Equal(expected: 84, actual: roundTripped.Value);
     }
 
     // ── Multiple Failed Jobs: RetryFailedJobs processes all ──
@@ -789,7 +789,7 @@ public class QueueBehaviorTests : IDisposable
         for (int i = 0; i < 5; i++)
         {
             _context.FailedJobs.Add(
-                new()
+                entity: new()
                 {
                     Uuid = Guid.NewGuid(),
                     Connection = "default",
@@ -801,19 +801,19 @@ public class QueueBehaviorTests : IDisposable
             );
         }
         _context.SaveChanges();
-        Assert.Equal(5, _context.FailedJobs.Count());
+        Assert.Equal(expected: 5, actual: _context.FailedJobs.Count());
 
         // Act
         _jobQueue.RetryFailedJobs();
 
         // Assert
-        Assert.Equal(0, _context.FailedJobs.Count());
-        Assert.Equal(5, _context.QueueJobs.Count());
+        Assert.Equal(expected: 0, actual: _context.FailedJobs.Count());
+        Assert.Equal(expected: 5, actual: _context.QueueJobs.Count());
 
         List<QueueJob> requeued = _context.QueueJobs.ToList();
         for (int i = 0; i < 5; i++)
         {
-            Assert.Contains(requeued, j => j.Queue == $"queue-{i}" && j.Payload == $"payload-{i}");
+            Assert.Contains(collection: requeued, filter: j => j.Queue == $"queue-{i}" && j.Payload == $"payload-{i}");
         }
     }
 
@@ -841,17 +841,17 @@ public class QueueBehaviorTests : IDisposable
             Exception = "retry-error",
             FailedAt = DateTime.UtcNow,
         };
-        _context.FailedJobs.AddRange(keep, retry);
+        _context.FailedJobs.AddRange(entities: [keep, retry]);
         _context.SaveChanges();
 
         // Act
-        _jobQueue.RetryFailedJobs(retry.Id);
+        _jobQueue.RetryFailedJobs(failedJobId: retry.Id);
 
         // Assert
-        Assert.Equal(1, _context.FailedJobs.Count());
-        Assert.Equal("keep", _context.FailedJobs.First().Queue);
-        Assert.Equal(1, _context.QueueJobs.Count());
-        Assert.Equal("retry-payload", _context.QueueJobs.First().Payload);
+        Assert.Equal(expected: 1, actual: _context.FailedJobs.Count());
+        Assert.Equal(expected: "keep", actual: _context.FailedJobs.First().Queue);
+        Assert.Equal(expected: 1, actual: _context.QueueJobs.Count());
+        Assert.Equal(expected: "retry-payload", actual: _context.QueueJobs.First().Payload);
     }
 
     // ── Priority Ordering Across Multiple Reserves ──
@@ -864,7 +864,7 @@ public class QueueBehaviorTests : IDisposable
         foreach (int p in priorities)
         {
             _context.QueueJobs.Add(
-                new()
+                entity: new()
                 {
                     Queue = "priority-order",
                     Payload = $"priority-{p}",
@@ -880,14 +880,14 @@ public class QueueBehaviorTests : IDisposable
         List<int> reservedOrder = [];
         for (int i = 0; i < 5; i++)
         {
-            QueueJobModel? reserved = _jobQueue.ReserveJob("priority-order", null);
-            Assert.NotNull(reserved);
-            reservedOrder.Add(reserved.Priority);
-            _jobQueue.DeleteJob(reserved);
+            QueueJobModel? reserved = _jobQueue.ReserveJob(name: "priority-order", currentJobId: null);
+            Assert.NotNull(@object: reserved);
+            reservedOrder.Add(item: reserved.Priority);
+            _jobQueue.DeleteJob(queueJob: reserved);
         }
 
         // Assert — descending priority order
-        Assert.Equal([5, 4, 3, 2, 1], reservedOrder);
+        Assert.Equal(expected: [5, 4, 3, 2, 1], actual: reservedOrder);
     }
 
     // ── Enqueue After Delete: Same Payload Can Be Re-enqueued ──
@@ -903,12 +903,12 @@ public class QueueBehaviorTests : IDisposable
             Payload = payload,
             AvailableAt = DateTime.UtcNow,
         };
-        _jobQueue.Enqueue(job);
-        Assert.Equal(1, _context.QueueJobs.Count());
+        _jobQueue.Enqueue(queueJob: job);
+        Assert.Equal(expected: 1, actual: _context.QueueJobs.Count());
 
         // Delete it
-        _jobQueue.DeleteJob(job);
-        Assert.Equal(0, _context.QueueJobs.Count());
+        _jobQueue.DeleteJob(queueJob: job);
+        Assert.Equal(expected: 0, actual: _context.QueueJobs.Count());
 
         // Act — enqueue same payload again
         QueueJobModel job2 = new()
@@ -917,10 +917,10 @@ public class QueueBehaviorTests : IDisposable
             Payload = payload,
             AvailableAt = DateTime.UtcNow,
         };
-        _jobQueue.Enqueue(job2);
+        _jobQueue.Enqueue(queueJob: job2);
 
         // Assert — job is back
-        Assert.Equal(1, _context.QueueJobs.Count());
+        Assert.Equal(expected: 1, actual: _context.QueueJobs.Count());
     }
 
     // ── FailJob: ReservedAt is always cleared ──
@@ -937,7 +937,7 @@ public class QueueBehaviorTests : IDisposable
             ReservedAt = DateTime.UtcNow,
             Attempts = 1,
         };
-        _context.QueueJobs.Add(job);
+        _context.QueueJobs.Add(entity: job);
         _context.SaveChanges();
 
         // Act — pass a QueueJobModel to the JobQueue method
@@ -950,11 +950,11 @@ public class QueueBehaviorTests : IDisposable
             ReservedAt = job.ReservedAt,
             Attempts = 1,
         };
-        _jobQueue.FailJob(jobModel, new("test"));
+        _jobQueue.FailJob(queueJob: jobModel, exception: new(message: "test"));
 
         // Assert
         QueueJob? updated = _context.QueueJobs.FirstOrDefault();
-        Assert.NotNull(updated);
-        Assert.Null(updated.ReservedAt);
+        Assert.NotNull(@object: updated);
+        Assert.Null(value: updated.ReservedAt);
     }
 }

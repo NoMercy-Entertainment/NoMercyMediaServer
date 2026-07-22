@@ -15,9 +15,9 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record MkdirResponse
 {
-    [JsonProperty("status")]
+    [JsonProperty(propertyName: "status")]
     public string Status { get; set; } = "ok";
 
-    [JsonProperty("path")]
+    [JsonProperty(propertyName: "path")]
     public string Path { get; set; } = string.Empty;
 }

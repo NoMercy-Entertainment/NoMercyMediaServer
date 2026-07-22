@@ -81,36 +81,36 @@ public sealed class SubtitleRouter : ISubtitleRouter
     {
         // Audio-only containers carry no subtitles by definition.
         if (container is OutputFormat.Mp3 or OutputFormat.Flac or OutputFormat.Ogg)
-            return new(SubtitleAction.None, "container has no subtitle support");
+            return new(Action: SubtitleAction.None, Reason: "container has no subtitle support");
 
         // Omit — caller explicitly wants no subtitle output.
         if (policy == SubtitlePolicy.Omit)
-            return new(SubtitleAction.None, "subtitle omitted by policy");
+            return new(Action: SubtitleAction.None, Reason: "subtitle omitted by policy");
 
         // BurnIn always wins — caller picked it explicitly.
         if (policy == SubtitlePolicy.BurnIn)
-            return new(SubtitleAction.BurnIn);
+            return new(Action: SubtitleAction.BurnIn);
 
         return (source, container) switch
         {
-            (SubtitleSourceType.Text, OutputFormat.Mkv) => new(SubtitleAction.Copy),
-            (SubtitleSourceType.Text, OutputFormat.Hls) => new(SubtitleAction.ExtractVtt),
+            (SubtitleSourceType.Text, OutputFormat.Mkv) => new(Action: SubtitleAction.Copy),
+            (SubtitleSourceType.Text, OutputFormat.Hls) => new(Action: SubtitleAction.ExtractVtt),
             // text+mp4+Extract → MovText (mov_text is the native MP4 text track).
             // Copy explicitly skips the embed and writes a .vtt sidecar
             // so external player UIs can pick it up without parsing the moov.
             (SubtitleSourceType.Text, OutputFormat.Mp4) => policy switch
             {
-                SubtitlePolicy.Copy => new(SubtitleAction.ExtractVttSidecar),
-                _ => new(SubtitleAction.MovText),
+                SubtitlePolicy.Copy => new(Action: SubtitleAction.ExtractVttSidecar),
+                _ => new(Action: SubtitleAction.MovText),
             },
-            (SubtitleSourceType.Text, OutputFormat.Dash) => new(SubtitleAction.ExtractVttSidecar),
+            (SubtitleSourceType.Text, OutputFormat.Dash) => new(Action: SubtitleAction.ExtractVttSidecar),
 
-            (SubtitleSourceType.Bitmap, OutputFormat.Mkv) => new(SubtitleAction.Copy),
-            (SubtitleSourceType.Bitmap, OutputFormat.Hls) => new(SubtitleAction.Ocr),
-            (SubtitleSourceType.Bitmap, OutputFormat.Mp4) => new(SubtitleAction.OcrSidecar),
-            (SubtitleSourceType.Bitmap, OutputFormat.Dash) => new(SubtitleAction.OcrSidecar),
+            (SubtitleSourceType.Bitmap, OutputFormat.Mkv) => new(Action: SubtitleAction.Copy),
+            (SubtitleSourceType.Bitmap, OutputFormat.Hls) => new(Action: SubtitleAction.Ocr),
+            (SubtitleSourceType.Bitmap, OutputFormat.Mp4) => new(Action: SubtitleAction.OcrSidecar),
+            (SubtitleSourceType.Bitmap, OutputFormat.Dash) => new(Action: SubtitleAction.OcrSidecar),
 
-            _ => new(SubtitleAction.None, $"no routing for {source} → {container} ({policy})"),
+            _ => new(Action: SubtitleAction.None, Reason: $"no routing for {source} → {container} ({policy})"),
         };
     }
 }

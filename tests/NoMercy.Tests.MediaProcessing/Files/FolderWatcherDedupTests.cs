@@ -29,34 +29,34 @@ public class FolderWatcherDedupTests
     public void Watch_SameFolderTwice_KeepsOneWatcherNotStacked()
     {
         string dir = Path.Combine(
-            Path.GetTempPath(),
-            "nm-fw-dedup-" + Guid.NewGuid().ToString("N")
+            path1: Path.GetTempPath(),
+            path2: "nm-fw-dedup-" + Guid.NewGuid().ToString(format: "N")
         );
-        Directory.CreateDirectory(dir);
+        Directory.CreateDirectory(path: dir);
 
         Mock<IStorageDriver> driver = new();
-        driver.Setup(d => d.DirectoryExists(It.IsAny<string>())).Returns(true);
+        driver.Setup(expression: d => d.DirectoryExists(It.IsAny<string>())).Returns(value: true);
 
-        FolderWatcher watcher = new(driver.Object);
+        FolderWatcher watcher = new(storageDriver: driver.Object);
         try
         {
             // Within-assembly parallelism is disabled, so this clears the static set
             // of any watcher another test left behind before we measure.
             watcher.Dispose();
 
-            watcher.Watch([dir]);
+            watcher.Watch(paths: [dir]);
             int afterFirst = FolderWatcher.WatcherCount;
 
-            watcher.Watch([dir]);
+            watcher.Watch(paths: [dir]);
             int afterSecond = FolderWatcher.WatcherCount;
 
-            Assert.Equal(1, afterFirst);
-            Assert.Equal(1, afterSecond);
+            Assert.Equal(expected: 1, actual: afterFirst);
+            Assert.Equal(expected: 1, actual: afterSecond);
         }
         finally
         {
             watcher.Dispose();
-            Directory.Delete(dir, recursive: true);
+            Directory.Delete(path: dir, recursive: true);
         }
     }
 }

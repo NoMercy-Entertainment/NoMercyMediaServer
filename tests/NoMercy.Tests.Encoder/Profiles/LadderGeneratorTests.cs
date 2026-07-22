@@ -82,35 +82,35 @@ public class LadderGeneratorTests
         ScopedDecisionLog log = new();
         LadderRung[] userRungs =
         [
-            new(800, 450, VideoCodecType.H264, 1000, 1100, 1500, 24),
-            new(640, 360, VideoCodecType.H264, 600, 660, 900, 24),
+            new(Width: 800, Height: 450, Codec: VideoCodecType.H264, BitrateKbps: 1000, MaxBitrateKbps: 1100, BufferSizeKbps: 1500, Framerate: 24),
+            new(Width: 640, Height: 360, Codec: VideoCodecType.H264, BitrateKbps: 600, MaxBitrateKbps: 660, BufferSizeKbps: 900, Framerate: 24),
         ];
 
         IReadOnlyList<VideoOutput> outputs = _generator.Generate(
-            Reference(),
-            Source(3840, 2160),
-            userRungs,
-            log
+            reference: Reference(),
+            source: Source(width: 3840, height: 2160),
+            userRungs: userRungs,
+            decisions: log
         );
 
-        outputs.Should().HaveCount(2);
-        outputs[0].Width.Should().Be(800);
-        outputs[0].BitrateKbps.Should().Be(1000);
-        outputs[1].Width.Should().Be(640);
-        outputs[1].BitrateKbps.Should().Be(600);
+        outputs.Should().HaveCount(expected: 2);
+        outputs[index: 0].Width.Should().Be(expected: 800);
+        outputs[index: 0].BitrateKbps.Should().Be(expected: 1000);
+        outputs[index: 1].Width.Should().Be(expected: 640);
+        outputs[index: 1].BitrateKbps.Should().Be(expected: 600);
         // User-rungs path zeroes the CRF.
-        outputs.Should().AllSatisfy(o => o.Crf.Should().Be(0));
+        outputs.Should().AllSatisfy(expected: o => o.Crf.Should().Be(expected: 0));
     }
 
     [Fact]
     public void Generate_UserSuppliedRungs_EmitsSuppliedDecision()
     {
         ScopedDecisionLog log = new();
-        LadderRung[] userRungs = [new(640, 360, VideoCodecType.H264, 800, 880, 1200, 24)];
+        LadderRung[] userRungs = [new(Width: 640, Height: 360, Codec: VideoCodecType.H264, BitrateKbps: 800, MaxBitrateKbps: 880, BufferSizeKbps: 1200, Framerate: 24)];
 
-        _ = _generator.Generate(Reference(), Source(1920, 1080), userRungs, log);
+        _ = _generator.Generate(reference: Reference(), source: Source(width: 1920, height: 1080), userRungs: userRungs, decisions: log);
 
-        log.Snapshot().Should().Contain(d => d.Key == "plan.ladder_user_supplied");
+        log.Snapshot().Should().Contain(predicate: d => d.Key == "plan.ladder_user_supplied");
     }
 
     [Fact]
@@ -120,15 +120,15 @@ public class LadderGeneratorTests
         ScopedDecisionLog log = new();
 
         IReadOnlyList<VideoOutput> outputs = _generator.Generate(
-            Reference(),
-            Source(1920, 1080),
+            reference: Reference(),
+            source: Source(width: 1920, height: 1080),
             userRungs: [],
-            log
+            decisions: log
         );
 
         outputs.Should().NotBeEmpty();
         // 1080p hits the table exactly; rungs are 1080p, 720p, 480p, 360p.
-        outputs.Should().HaveCount(4);
+        outputs.Should().HaveCount(expected: 4);
     }
 
     // ── source upscaling guard ──────────────────────────────────────────────
@@ -140,14 +140,14 @@ public class LadderGeneratorTests
         ScopedDecisionLog log = new();
 
         IReadOnlyList<VideoOutput> outputs = _generator.Generate(
-            Reference(),
-            Source(1280, 720),
+            reference: Reference(),
+            source: Source(width: 1280, height: 720),
             userRungs: null,
-            log
+            decisions: log
         );
 
-        outputs.Should().NotContain(o => o.Width > 1280 || (o.Height ?? 0) > 720);
-        log.Snapshot().Should().Contain(d => d.Key == "plan.ladder_rung_skipped_above_source");
+        outputs.Should().NotContain(predicate: o => o.Width > 1280 || (o.Height ?? 0) > 720);
+        log.Snapshot().Should().Contain(predicate: d => d.Key == "plan.ladder_rung_skipped_above_source");
     }
 
     [Fact]
@@ -157,17 +157,17 @@ public class LadderGeneratorTests
         ScopedDecisionLog log = new();
 
         IReadOnlyList<VideoOutput> outputs = _generator.Generate(
-            Reference(),
-            Source(3840, 2160),
+            reference: Reference(),
+            source: Source(width: 3840, height: 2160),
             userRungs: null,
-            log
+            decisions: log
         );
 
-        outputs.Should().Contain(o => o.Width == 3840 && o.Height == 2160);
+        outputs.Should().Contain(predicate: o => o.Width == 3840 && o.Height == 2160);
         outputs
-            .Count(o => o is { Width: 3840, Height: 2160 })
+            .Count(predicate: o => o is { Width: 3840, Height: 2160 })
             .Should()
-            .Be(1, "native rung must not be duplicated when source matches the table exactly");
+            .Be(expected: 1, because: "native rung must not be duplicated when source matches the table exactly");
     }
 
     // ── codec scaling ───────────────────────────────────────────────────────
@@ -179,15 +179,15 @@ public class LadderGeneratorTests
         ScopedDecisionLog log = new();
 
         IReadOnlyList<VideoOutput> hevcOutputs = _generator.Generate(
-            Reference(VideoCodecType.H265),
-            Source(1920, 1080),
+            reference: Reference(codec: VideoCodecType.H265),
+            source: Source(width: 1920, height: 1080),
             userRungs: null,
-            log
+            decisions: log
         );
 
-        VideoOutput? rung1080 = hevcOutputs.FirstOrDefault(o => o.Width == 1920);
+        VideoOutput? rung1080 = hevcOutputs.FirstOrDefault(predicate: o => o.Width == 1920);
         rung1080.Should().NotBeNull();
-        rung1080!.BitrateKbps.Should().Be(3000);
+        rung1080!.BitrateKbps.Should().Be(expected: 3000);
     }
 
     [Fact]
@@ -197,15 +197,15 @@ public class LadderGeneratorTests
         ScopedDecisionLog log = new();
 
         IReadOnlyList<VideoOutput> av1Outputs = _generator.Generate(
-            Reference(VideoCodecType.Av1),
-            Source(1920, 1080),
+            reference: Reference(codec: VideoCodecType.Av1),
+            source: Source(width: 1920, height: 1080),
             userRungs: null,
-            log
+            decisions: log
         );
 
-        VideoOutput? rung1080 = av1Outputs.FirstOrDefault(o => o.Width == 1920);
+        VideoOutput? rung1080 = av1Outputs.FirstOrDefault(predicate: o => o.Width == 1920);
         rung1080.Should().NotBeNull();
-        rung1080!.BitrateKbps.Should().Be(2500);
+        rung1080!.BitrateKbps.Should().Be(expected: 2500);
     }
 
     [Fact]
@@ -215,15 +215,15 @@ public class LadderGeneratorTests
         ScopedDecisionLog log = new();
 
         IReadOnlyList<VideoOutput> vp9Outputs = _generator.Generate(
-            Reference(VideoCodecType.Vp9),
-            Source(1920, 1080),
+            reference: Reference(codec: VideoCodecType.Vp9),
+            source: Source(width: 1920, height: 1080),
             userRungs: null,
-            log
+            decisions: log
         );
 
-        VideoOutput? rung1080 = vp9Outputs.FirstOrDefault(o => o.Width == 1920);
+        VideoOutput? rung1080 = vp9Outputs.FirstOrDefault(predicate: o => o.Width == 1920);
         rung1080.Should().NotBeNull();
-        rung1080!.BitrateKbps.Should().Be(3250);
+        rung1080!.BitrateKbps.Should().Be(expected: 3250);
     }
 
     [Fact]
@@ -234,13 +234,13 @@ public class LadderGeneratorTests
         ScopedDecisionLog log = new();
 
         _ = _generator.Generate(
-            Reference(VideoCodecType.Av1),
-            Source(1920, 1080),
+            reference: Reference(codec: VideoCodecType.Av1),
+            source: Source(width: 1920, height: 1080),
             userRungs: null,
-            log
+            decisions: log
         );
 
-        log.Snapshot().Should().NotContain(d => d.Key == "analyze.ladder_codec_default");
+        log.Snapshot().Should().NotContain(predicate: d => d.Key == "analyze.ladder_codec_default");
     }
 
     [Fact]
@@ -249,13 +249,13 @@ public class LadderGeneratorTests
         ScopedDecisionLog log = new();
 
         _ = _generator.Generate(
-            Reference(VideoCodecType.Vp9),
-            Source(1920, 1080),
+            reference: Reference(codec: VideoCodecType.Vp9),
+            source: Source(width: 1920, height: 1080),
             userRungs: null,
-            log
+            decisions: log
         );
 
-        log.Snapshot().Should().NotContain(d => d.Key == "analyze.ladder_codec_default");
+        log.Snapshot().Should().NotContain(predicate: d => d.Key == "analyze.ladder_codec_default");
     }
 
     [Fact]
@@ -266,25 +266,25 @@ public class LadderGeneratorTests
         ScopedDecisionLog av1Log = new();
 
         IReadOnlyList<VideoOutput> h264Outputs = _generator.Generate(
-            Reference(VideoCodecType.H264),
-            Source(3840, 2160),
+            reference: Reference(codec: VideoCodecType.H264),
+            source: Source(width: 3840, height: 2160),
             userRungs: null,
-            h264Log
+            decisions: h264Log
         );
 
         IReadOnlyList<VideoOutput> av1Outputs = _generator.Generate(
-            Reference(VideoCodecType.Av1),
-            Source(3840, 2160),
+            reference: Reference(codec: VideoCodecType.Av1),
+            source: Source(width: 3840, height: 2160),
             userRungs: null,
-            av1Log
+            decisions: av1Log
         );
 
-        av1Outputs.Should().HaveCount(h264Outputs.Count);
-        av1Outputs.Should().AllSatisfy(rung => rung.BitrateKbps.Should().BePositive());
+        av1Outputs.Should().HaveCount(expected: h264Outputs.Count);
+        av1Outputs.Should().AllSatisfy(expected: rung => rung.BitrateKbps.Should().BePositive());
 
         for (int i = 0; i < av1Outputs.Count; i++)
         {
-            av1Outputs[i].BitrateKbps.Should().BeLessThan(h264Outputs[i].BitrateKbps);
+            av1Outputs[index: i].BitrateKbps.Should().BeLessThan(expected: h264Outputs[index: i].BitrateKbps);
         }
     }
 
@@ -296,25 +296,25 @@ public class LadderGeneratorTests
         ScopedDecisionLog vp9Log = new();
 
         IReadOnlyList<VideoOutput> h264Outputs = _generator.Generate(
-            Reference(VideoCodecType.H264),
-            Source(3840, 2160),
+            reference: Reference(codec: VideoCodecType.H264),
+            source: Source(width: 3840, height: 2160),
             userRungs: null,
-            h264Log
+            decisions: h264Log
         );
 
         IReadOnlyList<VideoOutput> vp9Outputs = _generator.Generate(
-            Reference(VideoCodecType.Vp9),
-            Source(3840, 2160),
+            reference: Reference(codec: VideoCodecType.Vp9),
+            source: Source(width: 3840, height: 2160),
             userRungs: null,
-            vp9Log
+            decisions: vp9Log
         );
 
-        vp9Outputs.Should().HaveCount(h264Outputs.Count);
-        vp9Outputs.Should().AllSatisfy(rung => rung.BitrateKbps.Should().BePositive());
+        vp9Outputs.Should().HaveCount(expected: h264Outputs.Count);
+        vp9Outputs.Should().AllSatisfy(expected: rung => rung.BitrateKbps.Should().BePositive());
 
         for (int i = 0; i < vp9Outputs.Count; i++)
         {
-            vp9Outputs[i].BitrateKbps.Should().BeLessThan(h264Outputs[i].BitrateKbps);
+            vp9Outputs[index: i].BitrateKbps.Should().BeLessThan(expected: h264Outputs[index: i].BitrateKbps);
         }
     }
 
@@ -327,30 +327,30 @@ public class LadderGeneratorTests
         ScopedDecisionLog av1Log = new();
 
         IReadOnlyList<VideoOutput> h264Outputs = _generator.Generate(
-            Reference(VideoCodecType.H264),
-            Source(3840, 2160),
+            reference: Reference(codec: VideoCodecType.H264),
+            source: Source(width: 3840, height: 2160),
             userRungs: null,
-            h264Log
+            decisions: h264Log
         );
 
         IReadOnlyList<VideoOutput> vp9Outputs = _generator.Generate(
-            Reference(VideoCodecType.Vp9),
-            Source(3840, 2160),
+            reference: Reference(codec: VideoCodecType.Vp9),
+            source: Source(width: 3840, height: 2160),
             userRungs: null,
-            vp9Log
+            decisions: vp9Log
         );
 
         IReadOnlyList<VideoOutput> av1Outputs = _generator.Generate(
-            Reference(VideoCodecType.Av1),
-            Source(3840, 2160),
+            reference: Reference(codec: VideoCodecType.Av1),
+            source: Source(width: 3840, height: 2160),
             userRungs: null,
-            av1Log
+            decisions: av1Log
         );
 
         for (int i = 0; i < h264Outputs.Count; i++)
         {
-            av1Outputs[i].BitrateKbps.Should().BeLessThan(vp9Outputs[i].BitrateKbps);
-            vp9Outputs[i].BitrateKbps.Should().BeLessThan(h264Outputs[i].BitrateKbps);
+            av1Outputs[index: i].BitrateKbps.Should().BeLessThan(expected: vp9Outputs[index: i].BitrateKbps);
+            vp9Outputs[index: i].BitrateKbps.Should().BeLessThan(expected: h264Outputs[index: i].BitrateKbps);
         }
     }
 
@@ -362,20 +362,20 @@ public class LadderGeneratorTests
         ScopedDecisionLog log = new();
 
         IReadOnlyList<VideoOutput> outputs = _generator.Generate(
-            Reference(VideoCodecType.H264),
-            Source(3840, 2160),
+            reference: Reference(codec: VideoCodecType.H264),
+            source: Source(width: 3840, height: 2160),
             userRungs: null,
-            log
+            decisions: log
         );
 
         // All six rungs fit a 4K source; bitrates come directly from the H264 table.
-        outputs.Should().HaveCount(6);
-        outputs.Single(o => o.Width == 3840).BitrateKbps.Should().Be(15000);
-        outputs.Single(o => o.Width == 2560).BitrateKbps.Should().Be(8000);
-        outputs.Single(o => o.Width == 1920).BitrateKbps.Should().Be(5000);
-        outputs.Single(o => o.Width == 1280).BitrateKbps.Should().Be(3000);
-        outputs.Single(o => o.Width == 854).BitrateKbps.Should().Be(1500);
-        outputs.Single(o => o.Width == 640).BitrateKbps.Should().Be(800);
+        outputs.Should().HaveCount(expected: 6);
+        outputs.Single(predicate: o => o.Width == 3840).BitrateKbps.Should().Be(expected: 15000);
+        outputs.Single(predicate: o => o.Width == 2560).BitrateKbps.Should().Be(expected: 8000);
+        outputs.Single(predicate: o => o.Width == 1920).BitrateKbps.Should().Be(expected: 5000);
+        outputs.Single(predicate: o => o.Width == 1280).BitrateKbps.Should().Be(expected: 3000);
+        outputs.Single(predicate: o => o.Width == 854).BitrateKbps.Should().Be(expected: 1500);
+        outputs.Single(predicate: o => o.Width == 640).BitrateKbps.Should().Be(expected: 800);
     }
 
     [Fact]
@@ -394,21 +394,21 @@ public class LadderGeneratorTests
         {
             ScopedDecisionLog log = new();
             IReadOnlyList<VideoOutput> outputs = _generator.Generate(
-                Reference(codec),
-                Source(3840, 2160),
+                reference: Reference(codec: codec),
+                source: Source(width: 3840, height: 2160),
                 userRungs: null,
-                log
+                decisions: log
             );
 
             // Outputs are ordered descending by resolution already; bitrates should follow.
-            int[] bitrates = outputs.Select(o => o.BitrateKbps).ToArray();
+            int[] bitrates = outputs.Select(selector: o => o.BitrateKbps).ToArray();
             for (int i = 1; i < bitrates.Length; i++)
             {
                 bitrates[i]
                     .Should()
                     .BeLessThanOrEqualTo(
-                        bitrates[i - 1],
-                        $"codec {codec}: rung {i} bitrate {bitrates[i]} must not exceed rung {i - 1} bitrate {bitrates[i - 1]}"
+                        expected: bitrates[i - 1],
+                        because: $"codec {codec}: rung {i} bitrate {bitrates[i]} must not exceed rung {i - 1} bitrate {bitrates[i - 1]}"
                     );
             }
         }
@@ -424,14 +424,14 @@ public class LadderGeneratorTests
         ScopedDecisionLog log = new();
 
         _ = _generator.Generate(
-            Reference(),
-            Source(1920, 1080),
+            reference: Reference(),
+            source: Source(width: 1920, height: 1080),
             userRungs: null,
-            log,
+            decisions: log,
             complexity: ComplexityHint.Auto
         );
 
-        log.Snapshot().Should().Contain(d => d.Key == "plan.ladder_complexity_unknown");
+        log.Snapshot().Should().Contain(predicate: d => d.Key == "plan.ladder_complexity_unknown");
     }
 
     [Fact]
@@ -442,15 +442,15 @@ public class LadderGeneratorTests
         ScopedDecisionLog log = new();
 
         IReadOnlyList<VideoOutput> outputs = _generator.Generate(
-            Reference(),
-            Source(3840, 2160),
+            reference: Reference(),
+            source: Source(width: 3840, height: 2160),
             userRungs: null,
-            log,
+            decisions: log,
             complexity: ComplexityHint.Animated
         );
 
-        outputs.Select(o => o.Height).Should().BeEquivalentTo(new int?[] { 2160, 1080, 480 });
-        log.Snapshot().Should().Contain(d => d.Key == "plan.ladder_animated_thinned");
+        outputs.Select(selector: o => o.Height).Should().BeEquivalentTo(expectation: new int?[] { 2160, 1080, 480 });
+        log.Snapshot().Should().Contain(predicate: d => d.Key == "plan.ladder_animated_thinned");
     }
 
     [Fact]
@@ -459,16 +459,16 @@ public class LadderGeneratorTests
         ScopedDecisionLog log = new();
 
         IReadOnlyList<VideoOutput> outputs = _generator.Generate(
-            Reference(),
-            Source(3840, 2160),
+            reference: Reference(),
+            source: Source(width: 3840, height: 2160),
             userRungs: null,
-            log,
+            decisions: log,
             complexity: ComplexityHint.Grainy
         );
 
         // All six default rungs fit a 4K source.
-        outputs.Should().HaveCount(6);
-        log.Snapshot().Should().Contain(d => d.Key == "plan.ladder_grainy_full");
+        outputs.Should().HaveCount(expected: 6);
+        log.Snapshot().Should().Contain(predicate: d => d.Key == "plan.ladder_grainy_full");
     }
 
     [Fact]
@@ -478,14 +478,14 @@ public class LadderGeneratorTests
         ScopedDecisionLog log = new();
 
         IReadOnlyList<VideoOutput> outputs = _generator.Generate(
-            Reference(),
-            Source(3840, 2160),
+            reference: Reference(),
+            source: Source(width: 3840, height: 2160),
             userRungs: null,
-            log,
+            decisions: log,
             complexity: ComplexityHint.LiveAction
         );
 
-        outputs.Should().HaveCount(6);
+        outputs.Should().HaveCount(expected: 6);
     }
 
     // ── native (non-table) source resolution ────────────────────────────────
@@ -497,18 +497,18 @@ public class LadderGeneratorTests
         ScopedDecisionLog log = new();
 
         IReadOnlyList<VideoOutput> outputs = _generator.Generate(
-            Reference(),
-            Source(2560, 1440),
+            reference: Reference(),
+            source: Source(width: 2560, height: 1440),
             userRungs: null,
-            log,
+            decisions: log,
             complexity: ComplexityHint.LiveAction
         );
 
-        outputs[0].Width.Should().Be(2560);
-        outputs[0].Height.Should().Be(1440);
+        outputs[index: 0].Width.Should().Be(expected: 2560);
+        outputs[index: 0].Height.Should().Be(expected: 1440);
         // Below the table 1080 rung (5000 kbps) and above the next 720 rung —
         // interpolated value lands between.
-        outputs[0].BitrateKbps.Should().BeGreaterThan(5000);
+        outputs[index: 0].BitrateKbps.Should().BeGreaterThan(expected: 5000);
     }
 
     [Fact]
@@ -518,15 +518,15 @@ public class LadderGeneratorTests
         ScopedDecisionLog log = new();
 
         IReadOnlyList<VideoOutput> outputs = _generator.Generate(
-            Reference(),
-            Source(7680, 4320),
+            reference: Reference(),
+            source: Source(width: 7680, height: 4320),
             userRungs: null,
-            log,
+            decisions: log,
             complexity: ComplexityHint.LiveAction
         );
 
-        outputs[0].Width.Should().Be(7680);
-        outputs[0].BitrateKbps.Should().Be(15000); // top table entry bitrate
+        outputs[index: 0].Width.Should().Be(expected: 7680);
+        outputs[index: 0].BitrateKbps.Should().Be(expected: 15000); // top table entry bitrate
     }
 
     [Fact]
@@ -538,20 +538,20 @@ public class LadderGeneratorTests
         VideoOutput reference = Reference() with { Preset = "slow", Level = "4.1" };
 
         IReadOnlyList<VideoOutput> outputs = _generator.Generate(
-            reference,
-            Source(1920, 1080),
+            reference: reference,
+            source: Source(width: 1920, height: 1080),
             userRungs: null,
-            log
+            decisions: log
         );
 
         outputs
             .Should()
-            .AllSatisfy(o =>
+            .AllSatisfy(expected: o =>
             {
-                o.Preset.Should().Be("slow");
-                o.Level.Should().Be("4.1");
-                o.Codec.Should().Be(VideoCodecType.H264);
-                o.Crf.Should().Be(0);
+                o.Preset.Should().Be(expected: "slow");
+                o.Level.Should().Be(expected: "4.1");
+                o.Codec.Should().Be(expected: VideoCodecType.H264);
+                o.Crf.Should().Be(expected: 0);
             });
     }
 }

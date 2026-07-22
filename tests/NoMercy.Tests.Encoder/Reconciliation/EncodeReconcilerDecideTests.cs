@@ -29,18 +29,18 @@ public class EncodeReconcilerDecideTests
     public void Decide_ReturnsSkip_WhenFingerprintMatchesAndEveryOutputIsPresentAndValid()
     {
         EncodingProfile profile = MakeHlsProfile();
-        string fingerprint = ProfileFingerprint.Compute(profile);
+        string fingerprint = ProfileFingerprint.Compute(profile: profile);
         ExistingOutputSnapshot existing = new(
-            fingerprint,
-            AllPresentFiles(),
+            ProfileFingerprint: fingerprint,
+            BundleFiles: AllPresentFiles(),
             ValidOcrSidecarCount: 0
         );
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 0, existing)
+            input: new(Profile: profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 0, Existing: existing)
         );
 
-        decision.Action.Should().Be(ReconciliationAction.Skip);
+        decision.Action.Should().Be(expected: ReconciliationAction.Skip);
         decision.MissingKinds.Should().BeEmpty();
         decision.NeedsSubtitleOcr.Should().BeFalse();
     }
@@ -54,19 +54,19 @@ public class EncodeReconcilerDecideTests
         // never re-run Build/Execute for this file; MissingKinds must stay
         // empty and only NeedsSubtitleOcr should be set.
         EncodingProfile profile = MakeHlsProfile();
-        string fingerprint = ProfileFingerprint.Compute(profile);
+        string fingerprint = ProfileFingerprint.Compute(profile: profile);
         ExistingOutputSnapshot existing = new(
-            fingerprint,
-            AllPresentFiles(),
+            ProfileFingerprint: fingerprint,
+            BundleFiles: AllPresentFiles(),
             ValidOcrSidecarCount: 0
         );
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 1, existing)
+            input: new(Profile: profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 1, Existing: existing)
         );
 
-        decision.Action.Should().Be(ReconciliationAction.Partial);
-        decision.MissingKinds.Should().BeEmpty("nothing in the decomposed plan is missing");
+        decision.Action.Should().Be(expected: ReconciliationAction.Partial);
+        decision.MissingKinds.Should().BeEmpty(because: "nothing in the decomposed plan is missing");
         decision.NeedsSubtitleOcr.Should().BeTrue();
     }
 
@@ -79,19 +79,19 @@ public class EncodeReconcilerDecideTests
         // output carrying thumbs_160x90.webp is complete and must not re-run the
         // thumbnail pass.
         EncodingProfile profile = MakeHlsProfile();
-        profile.Thumbnails.Should().BeNull("this preset relies on the sprite default");
+        profile.Thumbnails.Should().BeNull(because: "this preset relies on the sprite default");
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(
-                profile,
+            input: new(
+                Profile: profile,
                 IsSingleFileOutput: false,
                 BitmapSubtitleStreamCount: 0,
-                new(ProfileFingerprint.Compute(profile), AllPresentFiles(), ValidOcrSidecarCount: 0)
+                Existing: new(ProfileFingerprint: ProfileFingerprint.Compute(profile: profile), BundleFiles: AllPresentFiles(), ValidOcrSidecarCount: 0)
             )
         );
 
-        decision.MissingKinds.Should().NotContain(EncodeTaskKind.Thumbnails);
-        decision.Action.Should().Be(ReconciliationAction.Skip);
+        decision.MissingKinds.Should().NotContain(unexpected: EncodeTaskKind.Thumbnails);
+        decision.Action.Should().Be(expected: ReconciliationAction.Skip);
     }
 
     [Fact]
@@ -101,39 +101,39 @@ public class EncodeReconcilerDecideTests
         // never sets Thumbnails still wants one, so the gap must be topped up.
         EncodingProfile profile = MakeHlsProfile();
         List<ExistingOutputEntry> withoutSprite = AllPresentFiles()
-            .Where(f => !f.RelativePath.StartsWith("thumbs_", StringComparison.Ordinal))
+            .Where(predicate: f => !f.RelativePath.StartsWith(value: "thumbs_", comparisonType: StringComparison.Ordinal))
             .ToList();
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(
-                profile,
+            input: new(
+                Profile: profile,
                 IsSingleFileOutput: false,
                 BitmapSubtitleStreamCount: 0,
-                new(ProfileFingerprint.Compute(profile), withoutSprite, ValidOcrSidecarCount: 0)
+                Existing: new(ProfileFingerprint: ProfileFingerprint.Compute(profile: profile), BundleFiles: withoutSprite, ValidOcrSidecarCount: 0)
             )
         );
 
-        decision.Action.Should().Be(ReconciliationAction.Partial);
-        decision.MissingKinds.Should().Contain(EncodeTaskKind.Thumbnails);
-        decision.MissingKinds.Should().NotContain(EncodeTaskKind.Video);
+        decision.Action.Should().Be(expected: ReconciliationAction.Partial);
+        decision.MissingKinds.Should().Contain(expected: EncodeTaskKind.Thumbnails);
+        decision.MissingKinds.Should().NotContain(unexpected: EncodeTaskKind.Video);
     }
 
     [Fact]
     public void Decide_ReturnsPartialSubtitleOnly_WhenTheDeclaredSubtitleTrackIsMissing()
     {
         EncodingProfile profile = MakeHlsProfile();
-        string fingerprint = ProfileFingerprint.Compute(profile);
+        string fingerprint = ProfileFingerprint.Compute(profile: profile);
         List<ExistingOutputEntry> files = AllPresentFiles()
-            .Where(f => !f.RelativePath.StartsWith("subtitles/", StringComparison.Ordinal))
+            .Where(predicate: f => !f.RelativePath.StartsWith(value: "subtitles/", comparisonType: StringComparison.Ordinal))
             .ToList();
-        ExistingOutputSnapshot existing = new(fingerprint, files, ValidOcrSidecarCount: 0);
+        ExistingOutputSnapshot existing = new(ProfileFingerprint: fingerprint, BundleFiles: files, ValidOcrSidecarCount: 0);
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 0, existing)
+            input: new(Profile: profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 0, Existing: existing)
         );
 
-        decision.Action.Should().Be(ReconciliationAction.Partial);
-        decision.MissingKinds.Should().ContainSingle().Which.Should().Be(EncodeTaskKind.Subtitle);
+        decision.Action.Should().Be(expected: ReconciliationAction.Partial);
+        decision.MissingKinds.Should().ContainSingle().Which.Should().Be(expected: EncodeTaskKind.Subtitle);
         decision.NeedsSubtitleOcr.Should().BeFalse();
     }
 
@@ -146,19 +146,19 @@ public class EncodeReconcilerDecideTests
         // Confirmed live against a real special (0 video / 1 audio bundle); pinned
         // here so that decomposed-bundle path cannot regress unseen.
         EncodingProfile profile = MakeHlsProfile();
-        string fingerprint = ProfileFingerprint.Compute(profile);
+        string fingerprint = ProfileFingerprint.Compute(profile: profile);
         List<ExistingOutputEntry> files = AllPresentFiles()
-            .Where(f => !f.RelativePath.StartsWith("audio_", StringComparison.Ordinal))
+            .Where(predicate: f => !f.RelativePath.StartsWith(value: "audio_", comparisonType: StringComparison.Ordinal))
             .ToList();
-        ExistingOutputSnapshot existing = new(fingerprint, files, ValidOcrSidecarCount: 0);
+        ExistingOutputSnapshot existing = new(ProfileFingerprint: fingerprint, BundleFiles: files, ValidOcrSidecarCount: 0);
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 0, existing)
+            input: new(Profile: profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 0, Existing: existing)
         );
 
-        decision.Action.Should().Be(ReconciliationAction.Partial);
-        decision.MissingKinds.Should().ContainSingle().Which.Should().Be(EncodeTaskKind.Audio);
-        decision.MissingKinds.Should().NotContain(EncodeTaskKind.Video);
+        decision.Action.Should().Be(expected: ReconciliationAction.Partial);
+        decision.MissingKinds.Should().ContainSingle().Which.Should().Be(expected: EncodeTaskKind.Audio);
+        decision.MissingKinds.Should().NotContain(unexpected: EncodeTaskKind.Video);
     }
 
     [Fact]
@@ -166,16 +166,16 @@ public class EncodeReconcilerDecideTests
     {
         EncodingProfile profile = MakeHlsProfile();
         ExistingOutputSnapshot existing = new(
-            "stale-fingerprint-from-before-the-preset-was-edited",
-            AllPresentFiles(),
+            ProfileFingerprint: "stale-fingerprint-from-before-the-preset-was-edited",
+            BundleFiles: AllPresentFiles(),
             ValidOcrSidecarCount: 0
         );
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 0, existing)
+            input: new(Profile: profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 0, Existing: existing)
         );
 
-        decision.Action.Should().Be(ReconciliationAction.Full);
+        decision.Action.Should().Be(expected: ReconciliationAction.Full);
         decision.MissingKinds.Should().BeEmpty();
     }
 
@@ -187,26 +187,26 @@ public class EncodeReconcilerDecideTests
         // of an operator's entire library the moment the server upgrades —
         // unacceptable for a self-hosted product.
         EncodingProfile profile = MakeHlsProfile();
-        ExistingOutputSnapshot existing = new(null, AllPresentFiles(), ValidOcrSidecarCount: 0);
+        ExistingOutputSnapshot existing = new(ProfileFingerprint: null, BundleFiles: AllPresentFiles(), ValidOcrSidecarCount: 0);
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 0, existing)
+            input: new(Profile: profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 0, Existing: existing)
         );
 
-        decision.Action.Should().Be(ReconciliationAction.Skip);
+        decision.Action.Should().Be(expected: ReconciliationAction.Skip);
     }
 
     [Fact]
     public void Decide_ReturnsPartialOcrOnly_WhenNoFingerprintAndBitmapOcrVttIsMissing()
     {
         EncodingProfile profile = MakeHlsProfile();
-        ExistingOutputSnapshot existing = new(null, AllPresentFiles(), ValidOcrSidecarCount: 0);
+        ExistingOutputSnapshot existing = new(ProfileFingerprint: null, BundleFiles: AllPresentFiles(), ValidOcrSidecarCount: 0);
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 2, existing)
+            input: new(Profile: profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 2, Existing: existing)
         );
 
-        decision.Action.Should().Be(ReconciliationAction.Partial);
+        decision.Action.Should().Be(expected: ReconciliationAction.Partial);
         decision.MissingKinds.Should().BeEmpty();
         decision.NeedsSubtitleOcr.Should().BeTrue();
     }
@@ -215,10 +215,10 @@ public class EncodeReconcilerDecideTests
     public void Decide_TreatsAZeroByteOutputAsInvalid_AndRePairsOnlyThatKind()
     {
         EncodingProfile profile = MakeHlsProfile();
-        string fingerprint = ProfileFingerprint.Compute(profile);
+        string fingerprint = ProfileFingerprint.Compute(profile: profile);
         List<ExistingOutputEntry> files = AllPresentFiles()
-            .Select(f =>
-                f.RelativePath.StartsWith("audio_", StringComparison.Ordinal)
+            .Select(selector: f =>
+                f.RelativePath.StartsWith(value: "audio_", comparisonType: StringComparison.Ordinal)
                     ? f with
                     {
                         SizeBytes = 0,
@@ -226,58 +226,58 @@ public class EncodeReconcilerDecideTests
                     : f
             )
             .ToList();
-        ExistingOutputSnapshot existing = new(fingerprint, files, ValidOcrSidecarCount: 0);
+        ExistingOutputSnapshot existing = new(ProfileFingerprint: fingerprint, BundleFiles: files, ValidOcrSidecarCount: 0);
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 0, existing)
+            input: new(Profile: profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 0, Existing: existing)
         );
 
-        decision.Action.Should().Be(ReconciliationAction.Partial);
-        decision.MissingKinds.Should().ContainSingle().Which.Should().Be(EncodeTaskKind.Audio);
+        decision.Action.Should().Be(expected: ReconciliationAction.Partial);
+        decision.MissingKinds.Should().ContainSingle().Which.Should().Be(expected: EncodeTaskKind.Audio);
     }
 
     [Fact]
     public void Decide_ReturnsFull_WhenForced_RegardlessOfFingerprintOrWhatIsPresent()
     {
         EncodingProfile profile = MakeHlsProfile();
-        string fingerprint = ProfileFingerprint.Compute(profile);
+        string fingerprint = ProfileFingerprint.Compute(profile: profile);
         ExistingOutputSnapshot existing = new(
-            fingerprint,
-            AllPresentFiles(),
+            ProfileFingerprint: fingerprint,
+            BundleFiles: AllPresentFiles(),
             ValidOcrSidecarCount: 5
         );
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(
-                profile,
+            input: new(
+                Profile: profile,
                 IsSingleFileOutput: false,
                 BitmapSubtitleStreamCount: 0,
-                existing,
+                Existing: existing,
                 Force: true
             )
         );
 
-        decision.Action.Should().Be(ReconciliationAction.Full);
+        decision.Action.Should().Be(expected: ReconciliationAction.Full);
     }
 
     [Fact]
     public void Decide_ReturnsFull_WhenTheMasterPlaylistIsMissing_EvenIfTheFingerprintMatches()
     {
         EncodingProfile profile = MakeHlsProfile();
-        string fingerprint = ProfileFingerprint.Compute(profile);
+        string fingerprint = ProfileFingerprint.Compute(profile: profile);
         List<ExistingOutputEntry> files = AllPresentFiles()
-            .Where(f =>
-                f.RelativePath.Contains('/')
-                || !f.RelativePath.EndsWith(".m3u8", StringComparison.Ordinal)
+            .Where(predicate: f =>
+                f.RelativePath.Contains(value: '/')
+                || !f.RelativePath.EndsWith(value: ".m3u8", comparisonType: StringComparison.Ordinal)
             )
             .ToList();
-        ExistingOutputSnapshot existing = new(fingerprint, files, ValidOcrSidecarCount: 0);
+        ExistingOutputSnapshot existing = new(ProfileFingerprint: fingerprint, BundleFiles: files, ValidOcrSidecarCount: 0);
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 0, existing)
+            input: new(Profile: profile, IsSingleFileOutput: false, BitmapSubtitleStreamCount: 0, Existing: existing)
         );
 
-        decision.Action.Should().Be(ReconciliationAction.Full);
+        decision.Action.Should().Be(expected: ReconciliationAction.Full);
     }
 
     [Fact]
@@ -286,15 +286,15 @@ public class EncodeReconcilerDecideTests
         EncodingProfile profile = MakeMkvProfile();
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(
-                profile,
+            input: new(
+                Profile: profile,
                 IsSingleFileOutput: true,
                 BitmapSubtitleStreamCount: 0,
-                ExistingOutputSnapshot.Empty
+                Existing: ExistingOutputSnapshot.Empty
             )
         );
 
-        decision.Action.Should().Be(ReconciliationAction.Full);
+        decision.Action.Should().Be(expected: ReconciliationAction.Full);
     }
 
     [Fact]
@@ -302,16 +302,16 @@ public class EncodeReconcilerDecideTests
     {
         EncodingProfile profile = MakeMkvProfile();
         ExistingOutputSnapshot existing = new(
-            null,
-            [new ExistingOutputEntry("Movie Title.NoMercy.mkv", 900_000_000)],
+            ProfileFingerprint: null,
+            BundleFiles: [new ExistingOutputEntry(RelativePath: "Movie Title.NoMercy.mkv", SizeBytes: 900_000_000)],
             ValidOcrSidecarCount: 0
         );
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(profile, IsSingleFileOutput: true, BitmapSubtitleStreamCount: 1, existing)
+            input: new(Profile: profile, IsSingleFileOutput: true, BitmapSubtitleStreamCount: 1, Existing: existing)
         );
 
-        decision.Action.Should().Be(ReconciliationAction.Partial);
+        decision.Action.Should().Be(expected: ReconciliationAction.Partial);
         decision.MissingKinds.Should().BeEmpty();
         decision.NeedsSubtitleOcr.Should().BeTrue();
     }
@@ -329,27 +329,27 @@ public class EncodeReconcilerDecideTests
     {
         EncodingProfile profile = MakeHlsProfile();
         ExistingOutputSnapshot existing = new(
-            ProfileFingerprint.Compute(profile),
-            FilesWithoutChapters(),
+            ProfileFingerprint: ProfileFingerprint.Compute(profile: profile),
+            BundleFiles: FilesWithoutChapters(),
             ValidOcrSidecarCount: 0
         );
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(
-                profile,
+            input: new(
+                Profile: profile,
                 IsSingleFileOutput: false,
                 BitmapSubtitleStreamCount: 0,
-                existing,
+                Existing: existing,
                 SourceChapterCount: 0
             )
         );
 
-        decision.MissingKinds.Should().NotContain(EncodeTaskKind.Chapters);
+        decision.MissingKinds.Should().NotContain(unexpected: EncodeTaskKind.Chapters);
         decision
             .Action.Should()
             .Be(
-                ReconciliationAction.Skip,
-                "everything the source can produce is present, so there is nothing to do"
+                expected: ReconciliationAction.Skip,
+                because: "everything the source can produce is present, so there is nothing to do"
             );
     }
 
@@ -358,17 +358,17 @@ public class EncodeReconcilerDecideTests
     {
         EncodingProfile profile = MakeHlsProfile();
         ExistingOutputSnapshot existing = new(
-            ProfileFingerprint.Compute(profile),
-            FilesWithoutChapters(),
+            ProfileFingerprint: ProfileFingerprint.Compute(profile: profile),
+            BundleFiles: FilesWithoutChapters(),
             ValidOcrSidecarCount: 0
         );
 
         ReconciliationDecision decision = _reconciler.Decide(
-            new(
-                profile,
+            input: new(
+                Profile: profile,
                 IsSingleFileOutput: false,
                 BitmapSubtitleStreamCount: 0,
-                existing,
+                Existing: existing,
                 SourceChapterCount: 6
             )
         );
@@ -376,8 +376,8 @@ public class EncodeReconcilerDecideTests
         decision
             .MissingKinds.Should()
             .Contain(
-                EncodeTaskKind.Chapters,
-                "the source has chapters, so a missing chapters.vtt is a real gap"
+                expected: EncodeTaskKind.Chapters,
+                because: "the source has chapters, so a missing chapters.vtt is a real gap"
             );
     }
 
@@ -386,7 +386,7 @@ public class EncodeReconcilerDecideTests
     // ------------------------------------------------------------------
 
     private static List<ExistingOutputEntry> FilesWithoutChapters() =>
-        AllPresentFiles().Where(f => f.RelativePath != "chapters.vtt").ToList();
+        AllPresentFiles().Where(predicate: f => f.RelativePath != "chapters.vtt").ToList();
 
     // Names here mirror what the encoder actually writes. The sprite pair in
     // particular comes from ThumbnailGenerator's `thumbs_{W}x{H}` shape at the
@@ -394,13 +394,13 @@ public class EncodeReconcilerDecideTests
     // would prove nothing about a real output directory.
     private static List<ExistingOutputEntry> AllPresentFiles() =>
         [
-            new("web-1080p_master.m3u8", 500),
-            new("video_1920x1080_sdr/video_1920x1080_sdr.m3u8", 300),
-            new("audio_eng_aac/audio_eng_aac.m3u8", 200),
-            new("subtitles/eng.vtt", 150),
-            new("chapters.vtt", 80),
-            new("thumbs_160x90.webp", 298_000),
-            new("thumbs_160x90.vtt", 4_000),
+            new(RelativePath: "web-1080p_master.m3u8", SizeBytes: 500),
+            new(RelativePath: "video_1920x1080_sdr/video_1920x1080_sdr.m3u8", SizeBytes: 300),
+            new(RelativePath: "audio_eng_aac/audio_eng_aac.m3u8", SizeBytes: 200),
+            new(RelativePath: "subtitles/eng.vtt", SizeBytes: 150),
+            new(RelativePath: "chapters.vtt", SizeBytes: 80),
+            new(RelativePath: "thumbs_160x90.webp", SizeBytes: 298_000),
+            new(RelativePath: "thumbs_160x90.vtt", SizeBytes: 4_000),
         ];
 
     private static EncodingProfile MakeHlsProfile() =>

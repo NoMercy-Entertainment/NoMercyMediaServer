@@ -21,17 +21,17 @@ public class FilePermissions
 {
     public static async Task SetExecutionPermissions(string path)
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
         {
             // LOCAL-ONLY: FilePermissions is a static class in NmSystem; no reference to NoMercy.Providers.
             IStorageDriver driver = new LocalStorageDriver();
 
-            if (driver.FileExists(path))
-                await Shell.ExecAsync("chmod", $"+x \"{path}\"");
-            else if (driver.DirectoryExists(path))
-                await Shell.ExecAsync("chmod", $"-R +x \"{path}\"");
+            if (driver.FileExists(path: path))
+                await Shell.ExecAsync(executable: "chmod", arguments: $"+x \"{path}\"");
+            else if (driver.DirectoryExists(path: path))
+                await Shell.ExecAsync(executable: "chmod", arguments: $"-R +x \"{path}\"");
 
-            Logger.System($"Set execution permissions for {path}", LogEventLevel.Verbose);
+            Logger.System(message: $"Set execution permissions for {path}", level: LogEventLevel.Verbose);
         }
     }
 }

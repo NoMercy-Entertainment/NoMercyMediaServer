@@ -28,19 +28,19 @@ public class PluginManagerVerificationTests : IDisposable
     public PluginManagerVerificationTests()
     {
         _tempPluginsDir = Path.Combine(
-            Path.GetTempPath(),
-            "nomercy-plugin-verify-tests-" + Guid.NewGuid().ToString("N")
+            path1: Path.GetTempPath(),
+            path2: "nomercy-plugin-verify-tests-" + Guid.NewGuid().ToString(format: "N")
         );
-        Directory.CreateDirectory(_tempPluginsDir);
+        Directory.CreateDirectory(path: _tempPluginsDir);
 
         _manager = new(
-            new InMemoryEventBus(),
-            new MinimalServiceProvider(),
-            NullLogger<PluginManager>.Instance,
-            _tempPluginsDir,
-            TestStorageHelper.CreateStorage(_tempPluginsDir),
-            TestStorageHelper.CreateBackend(),
-            new PluginVerifier()
+            eventBus: new InMemoryEventBus(),
+            serviceProvider: new MinimalServiceProvider(),
+            logger: NullLogger<PluginManager>.Instance,
+            pluginsPath: _tempPluginsDir,
+            storage: TestStorageHelper.CreateStorage(rootPath: _tempPluginsDir),
+            driver: TestStorageHelper.CreateBackend(),
+            verifier: new PluginVerifier()
         );
     }
 
@@ -50,9 +50,9 @@ public class PluginManagerVerificationTests : IDisposable
 
         try
         {
-            if (Directory.Exists(_tempPluginsDir))
+            if (Directory.Exists(path: _tempPluginsDir))
             {
-                Directory.Delete(_tempPluginsDir, recursive: true);
+                Directory.Delete(path: _tempPluginsDir, recursive: true);
             }
         }
         catch (IOException)
@@ -63,59 +63,59 @@ public class PluginManagerVerificationTests : IDisposable
 
     private string WriteSourceDll(byte[] bytes)
     {
-        string path = Path.Combine(_tempPluginsDir, $"source-{Guid.NewGuid():N}.dll");
-        File.WriteAllBytes(path, bytes);
+        string path = Path.Combine(path1: _tempPluginsDir, path2: $"source-{Guid.NewGuid():N}.dll");
+        File.WriteAllBytes(path: path, bytes: bytes);
         return path;
     }
 
     private string InstalledPathFor(string sourceDll)
     {
-        string pluginName = Path.GetFileNameWithoutExtension(sourceDll);
-        return Path.Combine(_tempPluginsDir, pluginName, Path.GetFileName(sourceDll));
+        string pluginName = Path.GetFileNameWithoutExtension(path: sourceDll);
+        return Path.Combine(path1: _tempPluginsDir, path2: pluginName, path3: Path.GetFileName(path: sourceDll));
     }
 
     [Fact]
     public async Task InstallPluginAsync_ChecksumMismatch_ThrowsAndDoesNotCopy()
     {
-        string sourceDll = WriteSourceDll([9, 9, 9]);
+        string sourceDll = WriteSourceDll(bytes: [9, 9, 9]);
 
-        Func<Task> act = () => _manager.InstallPluginAsync(sourceDll, expectedChecksum: "deadbeef");
+        Func<Task> act = () => _manager.InstallPluginAsync(packagePath: sourceDll, expectedChecksum: "deadbeef");
 
         await act.Should().ThrowAsync<PluginVerificationException>();
-        File.Exists(InstalledPathFor(sourceDll)).Should().BeFalse();
+        File.Exists(path: InstalledPathFor(sourceDll: sourceDll)).Should().BeFalse();
     }
 
     [Fact]
     public async Task InstallPluginAsync_ChecksumMatch_CopiesAssembly()
     {
         byte[] bytes = [1, 2, 3, 4, 5];
-        string sourceDll = WriteSourceDll(bytes);
-        string sha = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+        string sourceDll = WriteSourceDll(bytes: bytes);
+        string sha = Convert.ToHexString(inArray: SHA256.HashData(source: bytes)).ToLowerInvariant();
 
-        await _manager.InstallPluginAsync(sourceDll, expectedChecksum: sha);
+        await _manager.InstallPluginAsync(packagePath: sourceDll, expectedChecksum: sha);
 
-        File.Exists(InstalledPathFor(sourceDll)).Should().BeTrue();
+        File.Exists(path: InstalledPathFor(sourceDll: sourceDll)).Should().BeTrue();
     }
 
     [Fact]
     public async Task InstallPluginAsync_NoExpectedChecksum_SkipsVerificationAndCopies()
     {
-        string sourceDll = WriteSourceDll([7, 7, 7]);
+        string sourceDll = WriteSourceDll(bytes: [7, 7, 7]);
 
-        await _manager.InstallPluginAsync(sourceDll);
+        await _manager.InstallPluginAsync(packagePath: sourceDll);
 
-        File.Exists(InstalledPathFor(sourceDll)).Should().BeTrue();
+        File.Exists(path: InstalledPathFor(sourceDll: sourceDll)).Should().BeTrue();
     }
 
     [Fact]
     public async Task LoadPluginFromManifestAsync_AbiMismatch_MarksMalfunctionedInsteadOfInstantiating()
     {
         Guid pluginId = Guid.NewGuid();
-        string pluginDir = Path.Combine(_tempPluginsDir, "AbiMismatchPlugin");
-        Directory.CreateDirectory(pluginDir);
+        string pluginDir = Path.Combine(path1: _tempPluginsDir, path2: "AbiMismatchPlugin");
+        Directory.CreateDirectory(path: pluginDir);
 
-        string dllPath = Path.Combine(pluginDir, "AbiMismatchPlugin.dll");
-        await File.WriteAllBytesAsync(dllPath, [1, 2, 3]);
+        string dllPath = Path.Combine(path1: pluginDir, path2: "AbiMismatchPlugin.dll");
+        await File.WriteAllBytesAsync(path: dllPath, bytes: [1, 2, 3]);
 
         string manifestJson =
             $@"{{
@@ -126,17 +126,17 @@ public class PluginManagerVerificationTests : IDisposable
             ""assembly"": ""AbiMismatchPlugin.dll"",
             ""targetAbi"": ""11.0""
         }}";
-        string manifestPath = Path.Combine(pluginDir, "plugin.json");
-        await File.WriteAllTextAsync(manifestPath, manifestJson);
+        string manifestPath = Path.Combine(path1: pluginDir, path2: "plugin.json");
+        await File.WriteAllTextAsync(path: manifestPath, contents: manifestJson);
 
-        await _manager.LoadPluginFromManifestAsync(manifestPath);
+        await _manager.LoadPluginFromManifestAsync(manifestPath: manifestPath);
 
-        PluginInfo? info = _manager.GetInstalledPlugins().FirstOrDefault(p => p.Id == pluginId);
+        PluginInfo? info = _manager.GetInstalledPlugins().FirstOrDefault(predicate: p => p.Id == pluginId);
 
         info.Should().NotBeNull();
-        info!.Status.Should().Be(PluginStatus.Malfunctioned);
+        info!.Status.Should().Be(expected: PluginStatus.Malfunctioned);
         info.Verified.Should().BeFalse();
-        _manager.GetPluginInstance(pluginId).Should().BeNull();
+        _manager.GetPluginInstance(pluginId: pluginId).Should().BeNull();
     }
 
     private sealed class MinimalServiceProvider : IServiceProvider

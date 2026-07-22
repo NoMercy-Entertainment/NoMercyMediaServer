@@ -23,11 +23,11 @@ public static class LauncherSettings
     {
         try
         {
-            if (!File.Exists(SettingsFile))
+            if (!File.Exists(path: SettingsFile))
                 return new();
 
-            string json = File.ReadAllText(SettingsFile);
-            return JsonConvert.DeserializeObject<TraySettings>(json) ?? new();
+            string json = File.ReadAllText(path: SettingsFile);
+            return JsonConvert.DeserializeObject<TraySettings>(value: json) ?? new();
         }
         catch
         {
@@ -39,12 +39,12 @@ public static class LauncherSettings
     {
         try
         {
-            string? directory = Path.GetDirectoryName(SettingsFile);
-            if (directory is not null && !Directory.Exists(directory))
-                Directory.CreateDirectory(directory);
+            string? directory = Path.GetDirectoryName(path: SettingsFile);
+            if (directory is not null && !Directory.Exists(path: directory))
+                Directory.CreateDirectory(path: directory);
 
-            string json = JsonConvert.SerializeObject(settings, Formatting.Indented);
-            File.WriteAllText(SettingsFile, json);
+            string json = JsonConvert.SerializeObject(value: settings, formatting: Formatting.Indented);
+            File.WriteAllText(path: SettingsFile, contents: json);
         }
         catch
         {

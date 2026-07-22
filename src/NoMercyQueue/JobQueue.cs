@@ -28,7 +28,7 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
     /// Signalled once per <see cref="Enqueue"/> call so idle workers wake
     /// immediately instead of waiting out a fixed poll interval.
     /// </summary>
-    internal readonly SemaphoreSlim WorkAvailable = new(0);
+    internal readonly SemaphoreSlim WorkAvailable = new(initialCount: 0);
 
     public void ResetAllReservedJobs()
     {
@@ -42,11 +42,11 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
     {
         lock (_writeLock)
         {
-            bool exists = context.JobExists(queueJob.Payload);
+            bool exists = context.JobExists(payload: queueJob.Payload);
             if (exists)
                 return;
 
-            context.AddJob(queueJob);
+            context.AddJob(job: queueJob);
         }
 
         WorkAvailable.Release();
@@ -56,11 +56,11 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
     {
         lock (_writeLock)
         {
-            QueueJobModel? job = context.GetNextJob("", 255, null, DateTime.UtcNow);
+            QueueJobModel? job = context.GetNextJob(queueName: "", maxAttempts: 255, currentJobId: null, now: DateTime.UtcNow);
             if (job == null)
                 return job;
 
-            context.RemoveJob(job);
+            context.RemoveJob(job: job);
 
             return job;
         }
@@ -73,10 +73,10 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
             lock (_writeLock)
             {
                 QueueJobModel? job = context.GetNextJob(
-                    name,
-                    maxAttempts,
-                    currentJobId,
-                    DateTime.UtcNow
+                    queueName: name,
+                    maxAttempts: maxAttempts,
+                    currentJobId: currentJobId,
+                    now: DateTime.UtcNow
                 );
 
                 if (job == null)
@@ -86,7 +86,7 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
                 // run — they would produce orphaned output. Move them directly
                 // to FailedJobs with a synthetic exception so the dashboard
                 // shows "failed-by-parent" rather than silently dropping them.
-                if (job.ParentJobId.HasValue && context.IsParentFailed(job.ParentJobId.Value))
+                if (job.ParentJobId.HasValue && context.IsParentFailed(parentJobId: job.ParentJobId.Value))
                 {
                     FailedJobModel skipped = new()
                     {
@@ -99,14 +99,14 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
                             $"{{\"Message\":\"Skipped: parent job {job.ParentJobId} failed\"}}",
                         FailedAt = DateTime.UtcNow,
                     };
-                    context.AddFailedJobAndRemoveJob(skipped, job);
+                    context.AddFailedJobAndRemoveJob(failedJob: skipped, job: job);
                     return null;
                 }
 
                 job.ReservedAt = DateTime.UtcNow;
                 job.Attempts++;
 
-                context.UpdateJob(job);
+                context.UpdateJob(job: job);
 
                 return job;
             }
@@ -115,16 +115,16 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
         {
             if (e.Source == "Microsoft.EntityFrameworkCore.Relational")
             {
-                logger?.LogDebug(e, "Queue DB contention reserving a job on {Queue}", name);
+                logger?.LogDebug(exception: e, message: "Queue DB contention reserving a job on {Queue}", args: name);
                 return null;
             }
             if (attempt < MaxDbRetryAttempts)
             {
-                Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs));
-                return ReserveJob(name, currentJobId, attempt + 1);
+                Thread.Sleep(millisecondsTimeout: BaseRetryDelayMs + Random.Shared.Next(maxValue: MaxJitterMs));
+                return ReserveJob(name: name, currentJobId: currentJobId, attempt: attempt + 1);
             }
 
-            logger?.LogError(e, "Failed to reserve a job on {Queue}", name);
+            logger?.LogError(exception: e, message: "Failed to reserve a job on {Queue}", args: name);
         }
 
         return null;
@@ -148,16 +148,16 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
                         Payload = queueJob.Payload,
                         ParentJobId = queueJob.Id,
                         Exception = JsonConvert.SerializeObject(
-                            exception.InnerException ?? exception
+                            value: exception.InnerException ?? exception
                         ),
                         FailedAt = DateTime.UtcNow,
                     };
 
-                    context.AddFailedJobAndRemoveJob(failedJob, queueJob);
+                    context.AddFailedJobAndRemoveJob(failedJob: failedJob, job: queueJob);
                 }
                 else
                 {
-                    context.UpdateJob(queueJob);
+                    context.UpdateJob(job: queueJob);
                 }
 
                 context.SaveChanges();
@@ -167,17 +167,17 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
         {
             if (e.Source == "Microsoft.EntityFrameworkCore.Relational")
             {
-                logger?.LogDebug(e, "Queue DB contention failing job {JobId}", queueJob.Id);
+                logger?.LogDebug(exception: e, message: "Queue DB contention failing job {JobId}", args: queueJob.Id);
                 return;
             }
             if (attempt < MaxDbRetryAttempts)
             {
-                Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs));
-                FailJob(queueJob, exception, attempt + 1);
+                Thread.Sleep(millisecondsTimeout: BaseRetryDelayMs + Random.Shared.Next(maxValue: MaxJitterMs));
+                FailJob(queueJob: queueJob, exception: exception, attempt: attempt + 1);
             }
             else
             {
-                logger?.LogError(e, "Failed to record job failure for {JobId}", queueJob.Id);
+                logger?.LogError(exception: e, message: "Failed to record job failure for {JobId}", args: queueJob.Id);
             }
         }
     }
@@ -205,8 +205,8 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
             {
                 job.ReservedAt = null;
                 job.AvailableAt = DateTime.UtcNow + availableAfter;
-                job.Attempts = (byte)Math.Max(0, job.Attempts - 1);
-                context.UpdateJob(job);
+                job.Attempts = (byte)Math.Max(val1: 0, val2: job.Attempts - 1);
+                context.UpdateJob(job: job);
                 context.SaveChanges();
             }
         }
@@ -215,20 +215,20 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
             if (e.Source == "Microsoft.EntityFrameworkCore.Relational")
             {
                 logger?.LogDebug(
-                    e,
-                    "Queue DB contention releasing reservation for job {JobId}",
-                    job.Id
+                    exception: e,
+                    message: "Queue DB contention releasing reservation for job {JobId}",
+                    args: job.Id
                 );
                 return;
             }
             if (attempt < MaxDbRetryAttempts)
             {
-                Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs));
-                ReleaseReservation(job, availableAfter, attempt + 1);
+                Thread.Sleep(millisecondsTimeout: BaseRetryDelayMs + Random.Shared.Next(maxValue: MaxJitterMs));
+                ReleaseReservation(job: job, availableAfter: availableAfter, attempt: attempt + 1);
             }
             else
             {
-                logger?.LogError(e, "Failed to release reservation for job {JobId}", job.Id);
+                logger?.LogError(exception: e, message: "Failed to release reservation for job {JobId}", args: job.Id);
             }
         }
     }
@@ -250,7 +250,7 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
         {
             lock (_writeLock)
             {
-                context.UpdateJobPayload(jobId, newPayload, DateTime.UtcNow + availableAfter);
+                context.UpdateJobPayload(jobId: jobId, newPayload: newPayload, availableAt: DateTime.UtcNow + availableAfter);
             }
 
             WorkAvailable.Release();
@@ -259,17 +259,17 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
         {
             if (e.Source == "Microsoft.EntityFrameworkCore.Relational")
             {
-                logger?.LogDebug(e, "Queue DB contention updating payload for job {JobId}", jobId);
+                logger?.LogDebug(exception: e, message: "Queue DB contention updating payload for job {JobId}", args: jobId);
                 return;
             }
             if (attempt < MaxDbRetryAttempts)
             {
-                Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs));
-                UpdateJobPayload(jobId, newPayload, availableAfter, attempt + 1);
+                Thread.Sleep(millisecondsTimeout: BaseRetryDelayMs + Random.Shared.Next(maxValue: MaxJitterMs));
+                UpdateJobPayload(jobId: jobId, newPayload: newPayload, availableAfter: availableAfter, attempt: attempt + 1);
             }
             else
             {
-                logger?.LogError(e, "Failed to update payload for job {JobId}", jobId);
+                logger?.LogError(exception: e, message: "Failed to update payload for job {JobId}", args: jobId);
             }
         }
     }
@@ -294,8 +294,8 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
                 job.ReservedAt = null;
                 job.AvailableAt = DateTime.UtcNow;
                 job.Attempts = 0;
-                context.UpdateJob(job);
-                context.UpdateJobPayload(job.Id, newPayload, DateTime.UtcNow);
+                context.UpdateJob(job: job);
+                context.UpdateJobPayload(jobId: job.Id, newPayload: newPayload, availableAt: DateTime.UtcNow);
                 context.SaveChanges();
             }
 
@@ -305,17 +305,17 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
         {
             if (e.Source == "Microsoft.EntityFrameworkCore.Relational")
             {
-                logger?.LogDebug(e, "Queue DB contention requeuing job {JobId}", job.Id);
+                logger?.LogDebug(exception: e, message: "Queue DB contention requeuing job {JobId}", args: job.Id);
                 return;
             }
             if (attempt < MaxDbRetryAttempts)
             {
-                Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs));
-                Requeue(job, newQueue, newPayload, attempt + 1);
+                Thread.Sleep(millisecondsTimeout: BaseRetryDelayMs + Random.Shared.Next(maxValue: MaxJitterMs));
+                Requeue(job: job, newQueue: newQueue, newPayload: newPayload, attempt: attempt + 1);
             }
             else
             {
-                logger?.LogError(e, "Failed to requeue job {JobId}", job.Id);
+                logger?.LogError(exception: e, message: "Failed to requeue job {JobId}", args: job.Id);
             }
         }
     }
@@ -326,24 +326,24 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
         {
             lock (_writeLock)
             {
-                context.RemoveJob(queueJob);
+                context.RemoveJob(job: queueJob);
             }
         }
         catch (Exception e)
         {
             if (e.Source == "Microsoft.EntityFrameworkCore.Relational")
             {
-                logger?.LogDebug(e, "Queue DB contention deleting job {JobId}", queueJob.Id);
+                logger?.LogDebug(exception: e, message: "Queue DB contention deleting job {JobId}", args: queueJob.Id);
                 return;
             }
             if (attempt < MaxDbRetryAttempts)
             {
-                Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs));
-                DeleteJob(queueJob, attempt + 1);
+                Thread.Sleep(millisecondsTimeout: BaseRetryDelayMs + Random.Shared.Next(maxValue: MaxJitterMs));
+                DeleteJob(queueJob: queueJob, attempt: attempt + 1);
                 return;
             }
 
-            logger?.LogError(e, "Failed to delete queue job {JobId}", queueJob.Id);
+            logger?.LogError(exception: e, message: "Failed to delete queue job {JobId}", args: queueJob.Id);
         }
     }
 
@@ -353,13 +353,13 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
         {
             lock (_writeLock)
             {
-                FailedJobModel? failedJob = context.FindFailedJob(failedJobId);
+                FailedJobModel? failedJob = context.FindFailedJob(id: failedJobId);
                 if (failedJob == null)
                     return;
 
-                context.RemoveFailedJob(failedJob);
+                context.RemoveFailedJob(failedJob: failedJob);
                 context.AddJob(
-                    new()
+                    job: new()
                     {
                         Queue = failedJob.Queue,
                         Payload = failedJob.Payload,
@@ -376,20 +376,20 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
             if (e.Source == "Microsoft.EntityFrameworkCore.Relational")
             {
                 logger?.LogDebug(
-                    e,
-                    "Queue DB contention requeuing failed job {FailedJobId}",
-                    failedJobId
+                    exception: e,
+                    message: "Queue DB contention requeuing failed job {FailedJobId}",
+                    args: failedJobId
                 );
                 return;
             }
             if (attempt < MaxDbRetryAttempts)
             {
-                Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs));
-                RequeueFailedJob(failedJobId, attempt + 1);
+                Thread.Sleep(millisecondsTimeout: BaseRetryDelayMs + Random.Shared.Next(maxValue: MaxJitterMs));
+                RequeueFailedJob(failedJobId: failedJobId, attempt: attempt + 1);
             }
             else
             {
-                logger?.LogError(e, "Failed to requeue failed job {FailedJobId}", failedJobId);
+                logger?.LogError(exception: e, message: "Failed to requeue failed job {FailedJobId}", args: failedJobId);
             }
         }
     }
@@ -398,12 +398,12 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
     {
         lock (_writeLock)
         {
-            IReadOnlyList<FailedJobModel> failedJobs = context.GetFailedJobs(failedJobId);
+            IReadOnlyList<FailedJobModel> failedJobs = context.GetFailedJobs(failedJobId: failedJobId);
 
             foreach (FailedJobModel failedJob in failedJobs)
             {
                 context.AddJob(
-                    new()
+                    job: new()
                     {
                         Queue = failedJob.Queue,
                         Payload = failedJob.Payload,
@@ -412,7 +412,7 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
                     }
                 );
 
-                context.RemoveFailedJob(failedJob);
+                context.RemoveFailedJob(failedJob: failedJob);
             }
 
             context.SaveChanges();

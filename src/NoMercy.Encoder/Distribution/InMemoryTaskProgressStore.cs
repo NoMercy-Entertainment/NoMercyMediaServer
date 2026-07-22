@@ -21,13 +21,13 @@ namespace NoMercy.Encoder.Distribution;
 public class InMemoryTaskProgressStore : ITaskProgressStore
 {
     private const int MaxEntries = 500;
-    private static readonly TimeSpan StaleAfter = TimeSpan.FromMinutes(15);
+    private static readonly TimeSpan StaleAfter = TimeSpan.FromMinutes(minutes: 15);
 
     private readonly ConcurrentDictionary<string, TaskProgressSnapshot> _snapshots = new();
 
     public void Update(string taskId, TaskProgressSnapshot snapshot)
     {
-        _snapshots[taskId] = snapshot;
+        _snapshots[key: taskId] = snapshot;
 
         // Evict stale entries lazily on every write to avoid a background
         // cleanup thread. Cheap: bounded-size concurrent dict + one linq
@@ -37,12 +37,12 @@ public class InMemoryTaskProgressStore : ITaskProgressStore
     }
 
     public TaskProgressSnapshot? Get(string taskId) =>
-        _snapshots.TryGetValue(taskId, out TaskProgressSnapshot? snap) ? snap : null;
+        _snapshots.TryGetValue(key: taskId, value: out TaskProgressSnapshot? snap) ? snap : null;
 
     public IReadOnlyList<TaskProgressSnapshot> GetAll()
     {
         DateTime cutoff = DateTime.UtcNow - StaleAfter;
-        return _snapshots.Values.Where(s => s.ReceivedAtUtc >= cutoff).ToArray();
+        return _snapshots.Values.Where(predicate: s => s.ReceivedAtUtc >= cutoff).ToArray();
     }
 
     private void EvictStale()
@@ -50,11 +50,11 @@ public class InMemoryTaskProgressStore : ITaskProgressStore
         DateTime cutoff = DateTime.UtcNow - StaleAfter;
         foreach (
             KeyValuePair<string, TaskProgressSnapshot> kvp in _snapshots
-                .Where(kvp => kvp.Value.ReceivedAtUtc < cutoff)
+                .Where(predicate: kvp => kvp.Value.ReceivedAtUtc < cutoff)
                 .ToArray()
         )
         {
-            _snapshots.TryRemove(kvp.Key, out _);
+            _snapshots.TryRemove(key: kvp.Key, value: out _);
         }
     }
 }

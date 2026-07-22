@@ -29,7 +29,7 @@ public class WriteLockTests : IDisposable
     public WriteLockTests()
     {
         (_context, _adapter) = TestQueueContextFactory.CreateInMemoryContextWithAdapter();
-        _jobQueue = new(_adapter);
+        _jobQueue = new(context: _adapter);
     }
 
     public void Dispose()
@@ -43,17 +43,17 @@ public class WriteLockTests : IDisposable
     {
         // Use reflection to verify the lock object is a dedicated object, not the Context
         FieldInfo? writeLockField = typeof(JobQueue).GetField(
-            "_writeLock",
-            BindingFlags.NonPublic | BindingFlags.Instance
+            name: "_writeLock",
+            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
         );
 
-        Assert.NotNull(writeLockField);
+        Assert.NotNull(@object: writeLockField);
 
-        object? writeLockValue = writeLockField.GetValue(_jobQueue);
-        Assert.NotNull(writeLockValue);
+        object? writeLockValue = writeLockField.GetValue(obj: _jobQueue);
+        Assert.NotNull(@object: writeLockValue);
 
         // The lock object must be a dedicated object (not a DbContext or IQueueContext)
-        Assert.IsNotType<QueueContext>(writeLockValue);
+        Assert.IsNotType<QueueContext>(@object: writeLockValue);
     }
 
     [Fact]
@@ -61,20 +61,20 @@ public class WriteLockTests : IDisposable
     {
         // Each JobQueue owns its own write lock; independent queues do not serialise against each other
         using QueueContext context2 = TestQueueContextFactory.CreateInMemoryContext();
-        IQueueContext adapter2 = new EfQueueContextAdapter(context2);
-        JobQueue jobQueue2 = new(adapter2);
+        IQueueContext adapter2 = new EfQueueContextAdapter(context: context2);
+        JobQueue jobQueue2 = new(context: adapter2);
 
         FieldInfo? writeLockField = typeof(JobQueue).GetField(
-            "_writeLock",
-            BindingFlags.NonPublic | BindingFlags.Instance
+            name: "_writeLock",
+            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
         );
 
-        Assert.NotNull(writeLockField);
+        Assert.NotNull(@object: writeLockField);
 
         // Static field — same value regardless of instance
-        object? lockFromInstance1 = writeLockField.GetValue(_jobQueue);
-        object? lockFromInstance2 = writeLockField.GetValue(jobQueue2);
-        Assert.NotSame(lockFromInstance1, lockFromInstance2);
+        object? lockFromInstance1 = writeLockField.GetValue(obj: _jobQueue);
+        object? lockFromInstance2 = writeLockField.GetValue(obj: jobQueue2);
+        Assert.NotSame(expected: lockFromInstance1, actual: lockFromInstance2);
 
         adapter2.Dispose();
     }
@@ -85,19 +85,19 @@ public class WriteLockTests : IDisposable
         // Arrange — use a shared context for all threads (simulates the real
         // static JobQueue pattern where one context is shared)
         int jobCount = 20;
-        CountdownEvent countdown = new(jobCount);
+        CountdownEvent countdown = new(initialCount: jobCount);
         List<Exception> errors = [];
 
         // Act — enqueue jobs from multiple threads concurrently
         for (int i = 0; i < jobCount; i++)
         {
             int index = i;
-            ThreadPool.QueueUserWorkItem(_ =>
+            ThreadPool.QueueUserWorkItem(callBack: _ =>
             {
                 try
                 {
                     _jobQueue.Enqueue(
-                        new()
+                        queueJob: new()
                         {
                             Queue = "concurrent-test",
                             Payload = $"payload-{index}",
@@ -110,7 +110,7 @@ public class WriteLockTests : IDisposable
                 {
                     lock (errors)
                     {
-                        errors.Add(ex);
+                        errors.Add(item: ex);
                     }
                 }
                 finally
@@ -120,14 +120,14 @@ public class WriteLockTests : IDisposable
             });
         }
 
-        bool completed = countdown.Wait(TimeSpan.FromSeconds(10));
+        bool completed = countdown.Wait(timeout: TimeSpan.FromSeconds(seconds: 10));
 
         // Assert
-        Assert.True(completed, "Not all enqueue operations completed within timeout");
-        Assert.Empty(errors);
+        Assert.True(condition: completed, userMessage: "Not all enqueue operations completed within timeout");
+        Assert.Empty(collection: errors);
 
         int totalJobs = _context.QueueJobs.Count();
-        Assert.Equal(jobCount, totalJobs);
+        Assert.Equal(expected: jobCount, actual: totalJobs);
     }
 
     [Fact]
@@ -137,7 +137,7 @@ public class WriteLockTests : IDisposable
         for (int i = 0; i < 10; i++)
         {
             _context.QueueJobs.Add(
-                new()
+                entity: new()
                 {
                     Queue = "integrity-test",
                     Payload = $"seed-{i}",
@@ -150,19 +150,19 @@ public class WriteLockTests : IDisposable
 
         int enqueueCount = 10;
         int dequeueCount = 5;
-        CountdownEvent countdown = new(enqueueCount + dequeueCount);
+        CountdownEvent countdown = new(initialCount: enqueueCount + dequeueCount);
         List<Exception> errors = [];
 
         // Enqueue new jobs concurrently
         for (int i = 0; i < enqueueCount; i++)
         {
             int index = i;
-            ThreadPool.QueueUserWorkItem(_ =>
+            ThreadPool.QueueUserWorkItem(callBack: _ =>
             {
                 try
                 {
                     _jobQueue.Enqueue(
-                        new()
+                        queueJob: new()
                         {
                             Queue = "integrity-test",
                             Payload = $"new-{index}",
@@ -175,7 +175,7 @@ public class WriteLockTests : IDisposable
                 {
                     lock (errors)
                     {
-                        errors.Add(ex);
+                        errors.Add(item: ex);
                     }
                 }
                 finally
@@ -189,21 +189,21 @@ public class WriteLockTests : IDisposable
         List<QueueJobModel?> dequeued = [];
         for (int i = 0; i < dequeueCount; i++)
         {
-            ThreadPool.QueueUserWorkItem(_ =>
+            ThreadPool.QueueUserWorkItem(callBack: _ =>
             {
                 try
                 {
                     QueueJobModel? job = _jobQueue.Dequeue();
                     lock (dequeued)
                     {
-                        dequeued.Add(job);
+                        dequeued.Add(item: job);
                     }
                 }
                 catch (Exception ex)
                 {
                     lock (errors)
                     {
-                        errors.Add(ex);
+                        errors.Add(item: ex);
                     }
                 }
                 finally
@@ -213,15 +213,15 @@ public class WriteLockTests : IDisposable
             });
         }
 
-        bool completed = countdown.Wait(TimeSpan.FromSeconds(10));
+        bool completed = countdown.Wait(timeout: TimeSpan.FromSeconds(seconds: 10));
 
         // Assert
-        Assert.True(completed, "Not all operations completed within timeout");
-        Assert.Empty(errors);
+        Assert.True(condition: completed, userMessage: "Not all operations completed within timeout");
+        Assert.Empty(collection: errors);
 
         // Total should be: 10 seeded + 10 new - dequeued (non-null)
-        int dequeuedCount = dequeued.Count(j => j != null);
+        int dequeuedCount = dequeued.Count(predicate: j => j != null);
         int remaining = _context.QueueJobs.Count();
-        Assert.Equal(20 - dequeuedCount, remaining);
+        Assert.Equal(expected: 20 - dequeuedCount, actual: remaining);
     }
 }

@@ -21,7 +21,7 @@ using NoMercy.Storage;
 
 namespace NoMercy.Tests.OpticalMedia.Sources;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class CdDiscSourceTests
 {
     private static CdDiscSource MakeSut(
@@ -32,7 +32,7 @@ public class CdDiscSourceTests
         EncoderOptions options = new() { FfprobePathOverride = "ffprobe" };
         IProcessRunner runner = processRunner ?? Mock.Of<IProcessRunner>();
         IStorageDriver driver = storageDriver ?? Mock.Of<IStorageDriver>();
-        return new(options, runner, driver, NullLogger<CdDiscSource>.Instance);
+        return new(options: options, processRunner: runner, storageDriver: driver, logger: NullLogger<CdDiscSource>.Instance);
     }
 
     // ── ParseTracks (static, internal — accessible via InternalsVisibleTo) ─
@@ -41,7 +41,7 @@ public class CdDiscSourceTests
     public void ParseTracks_EmptyStreams_ReturnsEmpty()
     {
         string json = """{"streams": []}""";
-        DiscTrack[] tracks = CdDiscSource.ParseTracks(json);
+        DiscTrack[] tracks = CdDiscSource.ParseTracks(json: json);
         tracks.Should().BeEmpty();
     }
 
@@ -49,7 +49,7 @@ public class CdDiscSourceTests
     public void ParseTracks_NoStreamsProperty_ReturnsEmpty()
     {
         string json = """{"format":{}}""";
-        DiscTrack[] tracks = CdDiscSource.ParseTracks(json);
+        DiscTrack[] tracks = CdDiscSource.ParseTracks(json: json);
         tracks.Should().BeEmpty();
     }
 
@@ -64,7 +64,7 @@ public class CdDiscSourceTests
             }
             """;
 
-        DiscTrack[] tracks = CdDiscSource.ParseTracks(json);
+        DiscTrack[] tracks = CdDiscSource.ParseTracks(json: json);
         tracks.Should().BeEmpty();
     }
 
@@ -85,15 +85,15 @@ public class CdDiscSourceTests
             }
             """;
 
-        DiscTrack[] tracks = CdDiscSource.ParseTracks(json);
+        DiscTrack[] tracks = CdDiscSource.ParseTracks(json: json);
 
-        tracks.Should().HaveCount(1);
-        tracks[0].Index.Should().Be(1);
+        tracks.Should().HaveCount(expected: 1);
+        tracks[0].Index.Should().Be(expected: 1);
         tracks[0]
             .Duration.Should()
-            .BeCloseTo(TimeSpan.FromSeconds(240.5), TimeSpan.FromMilliseconds(1));
-        tracks[0].SampleRate.Should().Be(44100);
-        tracks[0].Channels.Should().Be(2);
+            .BeCloseTo(nearbyTime: TimeSpan.FromSeconds(value: 240.5), precision: TimeSpan.FromMilliseconds(milliseconds: 1));
+        tracks[0].SampleRate.Should().Be(expected: 44100);
+        tracks[0].Channels.Should().Be(expected: 2);
     }
 
     [Fact]
@@ -109,12 +109,12 @@ public class CdDiscSourceTests
             }
             """;
 
-        DiscTrack[] tracks = CdDiscSource.ParseTracks(json);
+        DiscTrack[] tracks = CdDiscSource.ParseTracks(json: json);
 
-        tracks.Should().HaveCount(3);
-        tracks[0].Index.Should().Be(1);
-        tracks[1].Index.Should().Be(2);
-        tracks[2].Index.Should().Be(3);
+        tracks.Should().HaveCount(expected: 3);
+        tracks[0].Index.Should().Be(expected: 1);
+        tracks[1].Index.Should().Be(expected: 2);
+        tracks[2].Index.Should().Be(expected: 3);
     }
 
     // ── EnumerateDataCd uses IStorageDriver, not System.IO ─────────────────
@@ -124,7 +124,7 @@ public class CdDiscSourceTests
     {
         Mock<IProcessRunner> runnerMock = new();
         runnerMock
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -133,7 +133,7 @@ public class CdDiscSourceTests
                 )
             )
             .ReturnsAsync(
-                new ProcessResult(
+                value: new ProcessResult(
                     ExitCode: 1,
                     StdOut: "",
                     StdErr: "no tracks",
@@ -143,18 +143,18 @@ public class CdDiscSourceTests
 
         Mock<IStorageDriver> driverMock = new();
         driverMock
-            .Setup(d =>
+            .Setup(expression: d =>
                 d.EnumerateFileSystemEntries(
                     It.IsAny<string>(),
                     It.IsAny<string>(),
                     It.IsAny<SearchOption>()
                 )
             )
-            .Returns(["D:\\file1.mp3", "D:\\file2.mp3"]);
+            .Returns(value: ["D:\\file1.mp3", "D:\\file2.mp3"]);
 
-        driverMock.Setup(d => d.DirectoryExists(It.IsAny<string>())).Returns(false);
+        driverMock.Setup(expression: d => d.DirectoryExists(It.IsAny<string>())).Returns(value: false);
 
-        CdDiscSource sut = MakeSut(runnerMock.Object, driverMock.Object);
+        CdDiscSource sut = MakeSut(processRunner: runnerMock.Object, storageDriver: driverMock.Object);
 
         DiscDrive drive = new(
             Path: "D:\\",
@@ -162,21 +162,21 @@ public class CdDiscSourceTests
             HasDisc: true,
             DiscType: OpticalDiscType.Cd
         );
-        DiscInfo info = await sut.ProbeAsync(drive, CancellationToken.None);
+        DiscInfo info = await sut.ProbeAsync(drive: drive, ct: CancellationToken.None);
 
         driverMock.Verify(
-            d =>
+            expression: d =>
                 d.EnumerateFileSystemEntries(
                     It.IsAny<string>(),
                     "*",
                     SearchOption.TopDirectoryOnly
                 ),
-            Times.Once
+            times: Times.Once
         );
 
-        info.AudioTracks.Should().HaveCount(2);
-        info.AudioTracks![0].Title.Should().Be("file1.mp3");
-        info.AudioTracks![1].Title.Should().Be("file2.mp3");
+        info.AudioTracks.Should().HaveCount(expected: 2);
+        info.AudioTracks![0].Title.Should().Be(expected: "file1.mp3");
+        info.AudioTracks![1].Title.Should().Be(expected: "file2.mp3");
     }
 
     [Fact]
@@ -184,7 +184,7 @@ public class CdDiscSourceTests
     {
         Mock<IProcessRunner> runnerMock = new();
         runnerMock
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -193,24 +193,24 @@ public class CdDiscSourceTests
                 )
             )
             .ReturnsAsync(
-                new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
+                value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
             );
 
         Mock<IStorageDriver> driverMock = new();
         driverMock
-            .Setup(d =>
+            .Setup(expression: d =>
                 d.EnumerateFileSystemEntries(
                     It.IsAny<string>(),
                     It.IsAny<string>(),
                     It.IsAny<SearchOption>()
                 )
             )
-            .Returns(["D:\\subfolder", "D:\\readme.txt"]);
+            .Returns(value: ["D:\\subfolder", "D:\\readme.txt"]);
 
-        driverMock.Setup(d => d.DirectoryExists("D:\\subfolder")).Returns(true);
-        driverMock.Setup(d => d.DirectoryExists("D:\\readme.txt")).Returns(false);
+        driverMock.Setup(expression: d => d.DirectoryExists("D:\\subfolder")).Returns(value: true);
+        driverMock.Setup(expression: d => d.DirectoryExists("D:\\readme.txt")).Returns(value: false);
 
-        CdDiscSource sut = MakeSut(runnerMock.Object, driverMock.Object);
+        CdDiscSource sut = MakeSut(processRunner: runnerMock.Object, storageDriver: driverMock.Object);
 
         DiscDrive drive = new(
             Path: "D:\\",
@@ -218,10 +218,10 @@ public class CdDiscSourceTests
             HasDisc: true,
             DiscType: OpticalDiscType.Cd
         );
-        DiscInfo info = await sut.ProbeAsync(drive, CancellationToken.None);
+        DiscInfo info = await sut.ProbeAsync(drive: drive, ct: CancellationToken.None);
 
-        info.AudioTracks.Should().HaveCount(1);
-        info.AudioTracks![0].Title.Should().Be("readme.txt");
+        info.AudioTracks.Should().HaveCount(expected: 1);
+        info.AudioTracks![0].Title.Should().Be(expected: "readme.txt");
     }
 
     [Fact]
@@ -237,7 +237,7 @@ public class CdDiscSourceTests
 
         Mock<IProcessRunner> runnerMock = new();
         runnerMock
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -246,7 +246,7 @@ public class CdDiscSourceTests
                 )
             )
             .ReturnsAsync(
-                new ProcessResult(
+                value: new ProcessResult(
                     ExitCode: 0,
                     StdOut: ffprobeJson,
                     StdErr: "",
@@ -256,7 +256,7 @@ public class CdDiscSourceTests
 
         Mock<IStorageDriver> driverMock = new();
 
-        CdDiscSource sut = MakeSut(runnerMock.Object, driverMock.Object);
+        CdDiscSource sut = MakeSut(processRunner: runnerMock.Object, storageDriver: driverMock.Object);
 
         DiscDrive drive = new(
             Path: "/dev/sr0",
@@ -264,19 +264,19 @@ public class CdDiscSourceTests
             HasDisc: true,
             DiscType: OpticalDiscType.Cd
         );
-        DiscInfo info = await sut.ProbeAsync(drive, CancellationToken.None);
+        DiscInfo info = await sut.ProbeAsync(drive: drive, ct: CancellationToken.None);
 
         driverMock.Verify(
-            d =>
+            expression: d =>
                 d.EnumerateFileSystemEntries(
                     It.IsAny<string>(),
                     It.IsAny<string>(),
                     It.IsAny<SearchOption>()
                 ),
-            Times.Never
+            times: Times.Never
         );
 
-        info.AudioTracks.Should().HaveCount(1);
+        info.AudioTracks.Should().HaveCount(expected: 1);
     }
 
     // ── ProbeTitleAsync ──────────────────────────────────────────────────────
@@ -285,13 +285,13 @@ public class CdDiscSourceTests
     public async Task ProbeTitleAsync_ReturnsSkeletonTitleForRequestedIndex()
     {
         CdDiscSource sut = MakeSut();
-        DiscDrive drive = new("D:\\", "AUDIO_CD", true, OpticalDiscType.Cd);
+        DiscDrive drive = new(Path: "D:\\", Label: "AUDIO_CD", HasDisc: true, DiscType: OpticalDiscType.Cd);
 
-        DiscTitle title = await sut.ProbeTitleAsync(drive, 4, CancellationToken.None);
+        DiscTitle title = await sut.ProbeTitleAsync(drive: drive, titleIndex: 4, ct: CancellationToken.None);
 
-        title.Index.Should().Be(4);
-        title.Name.Should().Be("Track 04");
-        title.Duration.Should().Be(TimeSpan.Zero);
+        title.Index.Should().Be(expected: 4);
+        title.Name.Should().Be(expected: "Track 04");
+        title.Duration.Should().Be(expected: TimeSpan.Zero);
         title.IsMainFeature.Should().BeFalse();
         title.VideoStreams.Should().BeEmpty();
     }
@@ -303,7 +303,7 @@ public class CdDiscSourceTests
     {
         Mock<IProcessRunner> runnerMock = new();
         runnerMock
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -312,7 +312,7 @@ public class CdDiscSourceTests
                 )
             )
             .ReturnsAsync(
-                new ProcessResult(
+                value: new ProcessResult(
                     ExitCode: 0,
                     StdOut: "{ not valid json",
                     StdErr: "",
@@ -322,24 +322,24 @@ public class CdDiscSourceTests
 
         Mock<IStorageDriver> driverMock = new();
         driverMock
-            .Setup(d =>
+            .Setup(expression: d =>
                 d.EnumerateFileSystemEntries(
                     It.IsAny<string>(),
                     It.IsAny<string>(),
                     It.IsAny<SearchOption>()
                 )
             )
-            .Returns(["D:\\readme.txt"]);
-        driverMock.Setup(d => d.DirectoryExists(It.IsAny<string>())).Returns(false);
+            .Returns(value: ["D:\\readme.txt"]);
+        driverMock.Setup(expression: d => d.DirectoryExists(It.IsAny<string>())).Returns(value: false);
 
-        CdDiscSource sut = MakeSut(runnerMock.Object, driverMock.Object);
+        CdDiscSource sut = MakeSut(processRunner: runnerMock.Object, storageDriver: driverMock.Object);
 
-        DiscDrive drive = new("D:\\", "DATA", true, OpticalDiscType.Cd);
-        DiscInfo info = await sut.ProbeAsync(drive, CancellationToken.None);
+        DiscDrive drive = new(Path: "D:\\", Label: "DATA", HasDisc: true, DiscType: OpticalDiscType.Cd);
+        DiscInfo info = await sut.ProbeAsync(drive: drive, ct: CancellationToken.None);
 
         info.AudioTracks.Should()
-            .HaveCount(1, "malformed JSON must degrade to the data-CD fallback");
-        info.AudioTracks![0].Title.Should().Be("readme.txt");
+            .HaveCount(expected: 1, because: "malformed JSON must degrade to the data-CD fallback");
+        info.AudioTracks![0].Title.Should().Be(expected: "readme.txt");
     }
 
     // ── EnumerateDataCd exception handling ─────────────────────────────────
@@ -349,7 +349,7 @@ public class CdDiscSourceTests
     {
         Mock<IProcessRunner> runnerMock = new();
         runnerMock
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -358,26 +358,26 @@ public class CdDiscSourceTests
                 )
             )
             .ReturnsAsync(
-                new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
+                value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
             );
 
         Mock<IStorageDriver> driverMock = new();
         driverMock
-            .Setup(d =>
+            .Setup(expression: d =>
                 d.EnumerateFileSystemEntries(
                     It.IsAny<string>(),
                     It.IsAny<string>(),
                     It.IsAny<SearchOption>()
                 )
             )
-            .Throws(new UnauthorizedAccessException("access denied"));
+            .Throws(exception: new UnauthorizedAccessException(message: "access denied"));
 
-        CdDiscSource sut = MakeSut(runnerMock.Object, driverMock.Object);
+        CdDiscSource sut = MakeSut(processRunner: runnerMock.Object, storageDriver: driverMock.Object);
 
-        DiscDrive drive = new("D:\\", "DATA", true, OpticalDiscType.Cd);
-        DiscInfo info = await sut.ProbeAsync(drive, CancellationToken.None);
+        DiscDrive drive = new(Path: "D:\\", Label: "DATA", HasDisc: true, DiscType: OpticalDiscType.Cd);
+        DiscInfo info = await sut.ProbeAsync(drive: drive, ct: CancellationToken.None);
 
-        info.AudioTracks.Should().BeEmpty("enumeration failure must degrade gracefully, not throw");
+        info.AudioTracks.Should().BeEmpty(because: "enumeration failure must degrade gracefully, not throw");
     }
 
     // ── Type property ────────────────────────────────────────────────────────
@@ -386,6 +386,6 @@ public class CdDiscSourceTests
     public void Type_IsCd()
     {
         CdDiscSource sut = MakeSut();
-        sut.Type.Should().Be(OpticalDiscType.Cd);
+        sut.Type.Should().Be(expected: OpticalDiscType.Cd);
     }
 }

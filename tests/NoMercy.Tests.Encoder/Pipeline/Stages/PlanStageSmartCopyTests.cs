@@ -46,55 +46,55 @@ public class PlanStageSmartCopyTests
 
     public PlanStageSmartCopyTests()
     {
-        _hardware.Setup(h => h.HasGpu).Returns(false);
-        _hardware.Setup(h => h.CpuCores).Returns(8);
-        _hardware.Setup(h => h.Gpus).Returns([]);
-        _hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
+        _hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
+        _hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
+        _hardware.Setup(expression: h => h.Gpus).Returns(value: []);
+        _hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
         _hardware
-            .Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
-            .Returns((GpuDevice?)null);
+            .Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
+            .Returns(value: (GpuDevice?)null);
 
         _codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     VideoCodecType.Copy,
                     It.IsAny<IHardwareCapabilities>(),
                     It.IsAny<EncoderPreference>()
                 )
             )
-            .Returns(BuildResolvedCodec("copy", supports10Bit: true));
+            .Returns(value: BuildResolvedCodec(ffmpegName: "copy", supports10Bit: true));
 
         _codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     VideoCodecType.H265,
                     It.IsAny<IHardwareCapabilities>(),
                     It.IsAny<EncoderPreference>()
                 )
             )
-            .Returns(BuildResolvedCodec("libx265", supports10Bit: true));
+            .Returns(value: BuildResolvedCodec(ffmpegName: "libx265", supports10Bit: true));
 
         _codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     VideoCodecType.H264,
                     It.IsAny<IHardwareCapabilities>(),
                     It.IsAny<EncoderPreference>()
                 )
             )
-            .Returns(BuildResolvedCodec("libx264", supports10Bit: false));
+            .Returns(value: BuildResolvedCodec(ffmpegName: "libx264", supports10Bit: false));
 
         _stage = new(
-            new(),
-            new(),
-            new(),
-            _codecResolver.Object,
-            _hardware.Object,
-            new TonemapSelector(),
-            new Mock<IFfmpegCapabilities>().Object,
-            new AbrLadderGenerator(),
-            new NoOpCropDetector(),
-            NullLogger<PlanStage>.Instance
+            graphBuilder: new(),
+            groupingStrategy: new(),
+            costEstimator: new(),
+            codecResolver: _codecResolver.Object,
+            hardware: _hardware.Object,
+            tonemapSelector: new TonemapSelector(),
+            ffmpegCapabilities: new Mock<IFfmpegCapabilities>().Object,
+            abrLadderGenerator: new AbrLadderGenerator(),
+            cropDetector: new NoOpCropDetector(),
+            logger: NullLogger<PlanStage>.Instance
         );
     }
 
@@ -107,7 +107,7 @@ public class PlanStageSmartCopyTests
                 Presets: ffmpegName == "copy" ? [] : ["medium"],
                 Profiles: ffmpegName == "copy" ? [] : ["main", "main10"],
                 Levels: ffmpegName == "copy" ? [] : ["5.1"],
-                QualityRange: new(0, 51, 23),
+                QualityRange: new(Min: 0, Max: 51, Default: 23),
                 SupportedRateControl: [RateControlMode.Crf],
                 Supports10Bit: supports10Bit,
                 SupportsHdr: supports10Bit,
@@ -128,7 +128,7 @@ public class PlanStageSmartCopyTests
         new(
             FilePath: "/movies/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromHours(2),
+            Duration: TimeSpan.FromHours(hours: 2),
             OverallBitRateKbps: 16000,
             FileSizeBytes: 14_400_000_000,
             VideoStreams:
@@ -204,15 +204,15 @@ public class PlanStageSmartCopyTests
     public async Task HevcMain10SourceMatchingHlsFmp4Profile_DowngradesToCopy()
     {
         MediaInfo media = BuildHevcMain10Media();
-        EncodingProfile profile = BuildProfile(HevcMain10Video());
+        EncodingProfile profile = BuildProfile(video: HevcMain10Video());
 
-        ValidateInput input = new(media, profile);
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        ValidateInput input = new(Media: media, Profile: profile);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
-        VideoOutputPlan video = Assert.Single(success.Value.OutputPlan.VideoOutputs);
-        video.MapLabel.Should().Be("0:v:0");
-        video.EncoderName.Should().Be("copy");
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
+        VideoOutputPlan video = Assert.Single(collection: success.Value.OutputPlan.VideoOutputs);
+        video.MapLabel.Should().Be(expected: "0:v:0");
+        video.EncoderName.Should().Be(expected: "copy");
     }
 
     [Fact]
@@ -233,16 +233,16 @@ public class PlanStageSmartCopyTests
             Subtitles: []
         );
 
-        ValidateInput input = new(media, profile);
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        ValidateInput input = new(Media: media, Profile: profile);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
-        VideoOutputPlan video = Assert.Single(success.Value.OutputPlan.VideoOutputs);
-        video.MapLabel.Should().Be("0:v:0");
-        video.EncoderName.Should().Be("copy");
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
+        VideoOutputPlan video = Assert.Single(collection: success.Value.OutputPlan.VideoOutputs);
+        video.MapLabel.Should().Be(expected: "0:v:0");
+        video.EncoderName.Should().Be(expected: "copy");
         success
             .Value.OutputPlan.Thumbnails.Should()
-            .NotBeNull("sprites still get planned for copy");
+            .NotBeNull(because: "sprites still get planned for copy");
     }
 
     [Fact]
@@ -251,15 +251,15 @@ public class PlanStageSmartCopyTests
         // HlsTs only carries H.264 — ContainerCompatibility.SupportsVideo blocks
         // the downgrade even though codec/res/bitrate/bit-depth all match.
         MediaInfo media = BuildHevcMain10Media();
-        EncodingProfile profile = BuildProfile(HevcMain10Video(), Container.HlsTs);
+        EncodingProfile profile = BuildProfile(video: HevcMain10Video(), container: Container.HlsTs);
 
-        ValidateInput input = new(media, profile);
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        ValidateInput input = new(Media: media, Profile: profile);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
-        VideoOutputPlan video = Assert.Single(success.Value.OutputPlan.VideoOutputs);
-        video.MapLabel.Should().Be("[v0]");
-        video.EncoderName.Should().Be("libx265");
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
+        VideoOutputPlan video = Assert.Single(collection: success.Value.OutputPlan.VideoOutputs);
+        video.MapLabel.Should().Be(expected: "[v0]");
+        video.EncoderName.Should().Be(expected: "libx265");
     }
 
     [Fact]
@@ -287,45 +287,45 @@ public class PlanStageSmartCopyTests
             SegmentNameTemplate: "video/{label}",
             PlaylistNameTemplate: "video/{label}/playlist"
         );
-        EncodingProfile profile = BuildProfile(h264Video);
+        EncodingProfile profile = BuildProfile(video: h264Video);
 
-        ValidateInput input = new(media, profile);
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        ValidateInput input = new(Media: media, Profile: profile);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
-        VideoOutputPlan video = Assert.Single(success.Value.OutputPlan.VideoOutputs);
-        video.MapLabel.Should().Be("[v0]");
-        video.EncoderName.Should().Be("libx264");
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
+        VideoOutputPlan video = Assert.Single(collection: success.Value.OutputPlan.VideoOutputs);
+        video.MapLabel.Should().Be(expected: "[v0]");
+        video.EncoderName.Should().Be(expected: "libx264");
     }
 
     [Fact]
     public async Task HdrSourceWithConvertHdrToSdrProfile_StaysTranscode()
     {
         MediaInfo media = BuildHevcMain10Media(hdr: true);
-        EncodingProfile profile = BuildProfile(HevcMain10Video(convertHdrToSdr: true));
+        EncodingProfile profile = BuildProfile(video: HevcMain10Video(convertHdrToSdr: true));
 
-        ValidateInput input = new(media, profile);
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        ValidateInput input = new(Media: media, Profile: profile);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
-        VideoOutputPlan video = Assert.Single(success.Value.OutputPlan.VideoOutputs);
-        video.MapLabel.Should().Be("[v0]");
-        video.EncoderName.Should().Be("libx265");
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
+        VideoOutputPlan video = Assert.Single(collection: success.Value.OutputPlan.VideoOutputs);
+        video.MapLabel.Should().Be(expected: "[v0]");
+        video.EncoderName.Should().Be(expected: "libx265");
     }
 
     [Fact]
     public async Task TenBitSourceAgainstEightBitProfile_StaysTranscode()
     {
         MediaInfo media = BuildHevcMain10Media();
-        EncodingProfile profile = BuildProfile(HevcMain10Video(bitDepth: 8));
+        EncodingProfile profile = BuildProfile(video: HevcMain10Video(bitDepth: 8));
 
-        ValidateInput input = new(media, profile);
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        ValidateInput input = new(Media: media, Profile: profile);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
-        VideoOutputPlan video = Assert.Single(success.Value.OutputPlan.VideoOutputs);
-        video.MapLabel.Should().Be("[v0]");
-        video.EncoderName.Should().Be("libx265");
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
+        VideoOutputPlan video = Assert.Single(collection: success.Value.OutputPlan.VideoOutputs);
+        video.MapLabel.Should().Be(expected: "[v0]");
+        video.EncoderName.Should().Be(expected: "libx265");
     }
 
     [Fact]
@@ -378,14 +378,14 @@ public class PlanStageSmartCopyTests
             }
         );
 
-        ValidateInput input = new(media, profile);
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        ValidateInput input = new(Media: media, Profile: profile);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
-        success.Value.OutputPlan.VideoOutputs.Should().HaveCount(2);
-        success.Value.OutputPlan.VideoOutputs[0].MapLabel.Should().Be("0:v:0");
-        success.Value.OutputPlan.VideoOutputs[0].EncoderName.Should().Be("copy");
-        success.Value.OutputPlan.VideoOutputs[1].MapLabel.Should().Be("[v1]");
-        success.Value.OutputPlan.VideoOutputs[1].EncoderName.Should().Be("libx265");
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
+        success.Value.OutputPlan.VideoOutputs.Should().HaveCount(expected: 2);
+        success.Value.OutputPlan.VideoOutputs[0].MapLabel.Should().Be(expected: "0:v:0");
+        success.Value.OutputPlan.VideoOutputs[0].EncoderName.Should().Be(expected: "copy");
+        success.Value.OutputPlan.VideoOutputs[1].MapLabel.Should().Be(expected: "[v1]");
+        success.Value.OutputPlan.VideoOutputs[1].EncoderName.Should().Be(expected: "libx265");
     }
 }

@@ -52,24 +52,24 @@ public abstract class SingleFileAudioOutputStrategy(IStorage storage) : IOutputS
         string outputDirectory
     )
     {
-        string outputPath = Path.Combine(outputDirectory, $"output{Extension}");
+        string outputPath = Path.Combine(path1: outputDirectory, path2: $"output{Extension}");
 
         AudioOutputPlan? audio = plan.AudioOutputs.Length > 0 ? plan.AudioOutputs[0] : null;
-        string? audioCodec = ResolveAudioCodec(audio);
+        string? audioCodec = ResolveAudioCodec(audio: audio);
 
         List<string> mapStreams = [];
         if (audio is not null)
-            mapStreams.Add(audio.MapLabel);
+            mapStreams.Add(item: audio.MapLabel);
 
-        Dictionary<string, string> extraFlags = new() { ["-f"] = MuxerName };
+        Dictionary<string, string> extraFlags = new() { [key: "-f"] = MuxerName };
 
-        if (audio is { Action: StreamAction.Transcode } && !string.IsNullOrEmpty(audio.AudioFilter))
+        if (audio is { Action: StreamAction.Transcode } && !string.IsNullOrEmpty(value: audio.AudioFilter))
         {
-            extraFlags["-af"] = audio.AudioFilter;
+            extraFlags[key: "-af"] = audio.AudioFilter;
         }
 
         builder.AddOutput(
-            new(
+            output: new(
                 FilePath: outputPath,
                 AudioCodec: audioCodec,
                 AudioBitrateKbps: audio?.Action == StreamAction.Transcode
@@ -88,13 +88,13 @@ public abstract class SingleFileAudioOutputStrategy(IStorage storage) : IOutputS
         CancellationToken ct
     )
     {
-        string sourcePath = Path.Combine(outputDirectory, $"output{Extension}");
-        string targetPath = Path.Combine(outputDirectory, $"{mediaTitle}{Extension}");
+        string sourcePath = Path.Combine(path1: outputDirectory, path2: $"output{Extension}");
+        string targetPath = Path.Combine(path1: outputDirectory, path2: $"{mediaTitle}{Extension}");
 
-        if (storage.Exists(sourcePath) && sourcePath != targetPath)
+        if (storage.Exists(path: sourcePath) && sourcePath != targetPath)
         {
-            storage.Delete(targetPath);
-            storage.Move(sourcePath, targetPath);
+            storage.Delete(path: targetPath);
+            storage.Move(from: sourcePath, to: targetPath);
         }
 
         return Task.CompletedTask;
@@ -112,7 +112,7 @@ public abstract class SingleFileAudioOutputStrategy(IStorage storage) : IOutputS
     }
 }
 
-public class Mp3OutputStrategy(IStorage storage) : SingleFileAudioOutputStrategy(storage)
+public class Mp3OutputStrategy(IStorage storage) : SingleFileAudioOutputStrategy(storage: storage)
 {
     public override OutputFormat Format => OutputFormat.Mp3;
     protected override string Extension => ".mp3";
@@ -124,7 +124,7 @@ public class Mp3OutputStrategy(IStorage storage) : SingleFileAudioOutputStrategy
     protected override string? ForcedCodec => "libmp3lame";
 }
 
-public class FlacOutputStrategy(IStorage storage) : SingleFileAudioOutputStrategy(storage)
+public class FlacOutputStrategy(IStorage storage) : SingleFileAudioOutputStrategy(storage: storage)
 {
     public override OutputFormat Format => OutputFormat.Flac;
     protected override string Extension => ".flac";
@@ -132,7 +132,7 @@ public class FlacOutputStrategy(IStorage storage) : SingleFileAudioOutputStrateg
     protected override string? ForcedCodec => "flac";
 }
 
-public class OggOutputStrategy(IStorage storage) : SingleFileAudioOutputStrategy(storage)
+public class OggOutputStrategy(IStorage storage) : SingleFileAudioOutputStrategy(storage: storage)
 {
     public override OutputFormat Format => OutputFormat.Ogg;
     protected override string Extension => ".ogg";

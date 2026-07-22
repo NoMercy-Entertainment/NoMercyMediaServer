@@ -22,17 +22,17 @@ namespace NoMercy.Tests.Providers.CoverArt.Client;
 /// Image.Load was called on the already-consumed stream — producing corrupt images.
 /// The fix: Read content once as byte[] and use it for both file writing and image loading.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class CoverArtCoverArtClientTests
 {
     private static MethodInfo GetDownloadMethod()
     {
         MethodInfo? method = typeof(CoverArtCoverArtClient).GetMethod(
-            "Download",
-            BindingFlags.Public | BindingFlags.Static
+            name: "Download",
+            bindingAttr: BindingFlags.Public | BindingFlags.Static
         );
 
-        Assert.NotNull(method);
+        Assert.NotNull(@object: method);
         return method;
     }
 
@@ -40,7 +40,7 @@ public class CoverArtCoverArtClientTests
     {
         AsyncStateMachineAttribute? attr = method.GetCustomAttribute<AsyncStateMachineAttribute>();
 
-        Assert.NotNull(attr);
+        Assert.NotNull(@object: attr);
         return attr.StateMachineType;
     }
 
@@ -49,10 +49,10 @@ public class CoverArtCoverArtClientTests
     {
         MethodInfo method = GetDownloadMethod();
 
-        Assert.True(method.IsStatic, "Download should be a static method");
+        Assert.True(condition: method.IsStatic, userMessage: "Download should be a static method");
 
         AsyncStateMachineAttribute? attr = method.GetCustomAttribute<AsyncStateMachineAttribute>();
-        Assert.NotNull(attr);
+        Assert.NotNull(@object: attr);
     }
 
     [Fact]
@@ -60,8 +60,8 @@ public class CoverArtCoverArtClientTests
     {
         MethodInfo method = GetDownloadMethod();
 
-        Assert.True(method.ReturnType.IsGenericType);
-        Assert.Equal(typeof(Task<>), method.ReturnType.GetGenericTypeDefinition());
+        Assert.True(condition: method.ReturnType.IsGenericType);
+        Assert.Equal(expected: typeof(Task<>), actual: method.ReturnType.GetGenericTypeDefinition());
     }
 
     [Fact]
@@ -70,31 +70,31 @@ public class CoverArtCoverArtClientTests
         MethodInfo method = GetDownloadMethod();
         ParameterInfo[] parameters = method.GetParameters();
 
-        Assert.Equal(3, parameters.Length);
-        Assert.Equal(typeof(Uri), parameters[0].ParameterType);
-        Assert.Equal("url", parameters[0].Name);
-        Assert.Equal(typeof(bool?), parameters[1].ParameterType);
-        Assert.Equal("download", parameters[1].Name);
-        Assert.True(parameters[1].HasDefaultValue);
-        Assert.Equal(true, parameters[1].DefaultValue);
-        Assert.Equal("maxDecodeSize", parameters[2].Name);
-        Assert.Equal("Size", Nullable.GetUnderlyingType(parameters[2].ParameterType)?.Name);
-        Assert.True(parameters[2].HasDefaultValue);
-        Assert.Null(parameters[2].DefaultValue);
+        Assert.Equal(expected: 3, actual: parameters.Length);
+        Assert.Equal(expected: typeof(Uri), actual: parameters[0].ParameterType);
+        Assert.Equal(expected: "url", actual: parameters[0].Name);
+        Assert.Equal(expected: typeof(bool?), actual: parameters[1].ParameterType);
+        Assert.Equal(expected: "download", actual: parameters[1].Name);
+        Assert.True(condition: parameters[1].HasDefaultValue);
+        Assert.Equal(expected: true, actual: parameters[1].DefaultValue);
+        Assert.Equal(expected: "maxDecodeSize", actual: parameters[2].Name);
+        Assert.Equal(expected: "Size", actual: Nullable.GetUnderlyingType(nullableType: parameters[2].ParameterType)?.Name);
+        Assert.True(condition: parameters[2].HasDefaultValue);
+        Assert.Null(@object: parameters[2].DefaultValue);
     }
 
     [Fact]
     public void Download_StateMachine_DoesNotCallReadAsStreamAsync()
     {
         MethodInfo method = GetDownloadMethod();
-        Type stateMachineType = GetStateMachineType(method);
+        Type stateMachineType = GetStateMachineType(method: method);
 
         MethodInfo moveNext = stateMachineType.GetMethod(
-            "MoveNext",
-            BindingFlags.NonPublic | BindingFlags.Instance
+            name: "MoveNext",
+            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
         )!;
 
-        Assert.NotNull(moveNext);
+        Assert.NotNull(@object: moveNext);
 
         byte[] ilBytes = moveNext.GetMethodBody()!.GetILAsByteArray()!;
         Module module = stateMachineType.Module;
@@ -105,10 +105,10 @@ public class CoverArtCoverArtClientTests
         {
             if ((ilBytes[i] == 0x28 || ilBytes[i] == 0x6F) && i + 4 < ilBytes.Length)
             {
-                int token = BitConverter.ToInt32(ilBytes, i + 1);
+                int token = BitConverter.ToInt32(value: ilBytes, startIndex: i + 1);
                 try
                 {
-                    MethodBase? calledMethod = module.ResolveMethod(token);
+                    MethodBase? calledMethod = module.ResolveMethod(metadataToken: token);
                     if (calledMethod?.Name == "ReadAsStreamAsync")
                     {
                         callsReadAsStream = true;
@@ -123,9 +123,9 @@ public class CoverArtCoverArtClientTests
         }
 
         Assert.False(
-            callsReadAsStream,
-            "PROV-H12 regression: Download should NOT call ReadAsStreamAsync. "
-                + "Content must be read once as byte[] to avoid stream-consumed-then-reused bug."
+            condition: callsReadAsStream,
+            userMessage: "PROV-H12 regression: Download should NOT call ReadAsStreamAsync. "
+                         + "Content must be read once as byte[] to avoid stream-consumed-then-reused bug."
         );
     }
 
@@ -133,14 +133,14 @@ public class CoverArtCoverArtClientTests
     public void Download_StateMachine_CallsReadAsByteArrayAsync()
     {
         MethodInfo method = GetDownloadMethod();
-        Type stateMachineType = GetStateMachineType(method);
+        Type stateMachineType = GetStateMachineType(method: method);
 
         MethodInfo moveNext = stateMachineType.GetMethod(
-            "MoveNext",
-            BindingFlags.NonPublic | BindingFlags.Instance
+            name: "MoveNext",
+            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
         )!;
 
-        Assert.NotNull(moveNext);
+        Assert.NotNull(@object: moveNext);
 
         byte[] ilBytes = moveNext.GetMethodBody()!.GetILAsByteArray()!;
         Module module = stateMachineType.Module;
@@ -151,10 +151,10 @@ public class CoverArtCoverArtClientTests
         {
             if ((ilBytes[i] == 0x28 || ilBytes[i] == 0x6F) && i + 4 < ilBytes.Length)
             {
-                int token = BitConverter.ToInt32(ilBytes, i + 1);
+                int token = BitConverter.ToInt32(value: ilBytes, startIndex: i + 1);
                 try
                 {
-                    MethodBase? calledMethod = module.ResolveMethod(token);
+                    MethodBase? calledMethod = module.ResolveMethod(metadataToken: token);
                     if (calledMethod?.Name == "ReadAsByteArrayAsync")
                     {
                         callsReadAsByteArray = true;
@@ -169,8 +169,8 @@ public class CoverArtCoverArtClientTests
         }
 
         Assert.True(
-            callsReadAsByteArray,
-            "PROV-H12: Download must call ReadAsByteArrayAsync to buffer the content once."
+            condition: callsReadAsByteArray,
+            userMessage: "PROV-H12: Download must call ReadAsByteArrayAsync to buffer the content once."
         );
     }
 
@@ -178,11 +178,11 @@ public class CoverArtCoverArtClientTests
     public void Download_StateMachine_CallsReadAsByteArrayAsyncExactlyOnce()
     {
         MethodInfo method = GetDownloadMethod();
-        Type stateMachineType = GetStateMachineType(method);
+        Type stateMachineType = GetStateMachineType(method: method);
 
         MethodInfo moveNext = stateMachineType.GetMethod(
-            "MoveNext",
-            BindingFlags.NonPublic | BindingFlags.Instance
+            name: "MoveNext",
+            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
         )!;
 
         byte[] ilBytes = moveNext.GetMethodBody()!.GetILAsByteArray()!;
@@ -194,10 +194,10 @@ public class CoverArtCoverArtClientTests
         {
             if ((ilBytes[i] == 0x28 || ilBytes[i] == 0x6F) && i + 4 < ilBytes.Length)
             {
-                int token = BitConverter.ToInt32(ilBytes, i + 1);
+                int token = BitConverter.ToInt32(value: ilBytes, startIndex: i + 1);
                 try
                 {
-                    MethodBase? calledMethod = module.ResolveMethod(token);
+                    MethodBase? calledMethod = module.ResolveMethod(metadataToken: token);
                     if (calledMethod?.Name == "ReadAsByteArrayAsync")
                         readByteArrayCount++;
                 }
@@ -208,18 +208,18 @@ public class CoverArtCoverArtClientTests
             }
         }
 
-        Assert.Equal(1, readByteArrayCount);
+        Assert.Equal(expected: 1, actual: readByteArrayCount);
     }
 
     [Fact]
     public void Download_StateMachine_DoesNotCallContentReadMultipleTimes()
     {
         MethodInfo method = GetDownloadMethod();
-        Type stateMachineType = GetStateMachineType(method);
+        Type stateMachineType = GetStateMachineType(method: method);
 
         MethodInfo moveNext = stateMachineType.GetMethod(
-            "MoveNext",
-            BindingFlags.NonPublic | BindingFlags.Instance
+            name: "MoveNext",
+            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
         )!;
 
         byte[] ilBytes = moveNext.GetMethodBody()!.GetILAsByteArray()!;
@@ -231,10 +231,10 @@ public class CoverArtCoverArtClientTests
         {
             if ((ilBytes[i] == 0x28 || ilBytes[i] == 0x6F) && i + 4 < ilBytes.Length)
             {
-                int token = BitConverter.ToInt32(ilBytes, i + 1);
+                int token = BitConverter.ToInt32(value: ilBytes, startIndex: i + 1);
                 try
                 {
-                    MethodBase? calledMethod = module.ResolveMethod(token);
+                    MethodBase? calledMethod = module.ResolveMethod(metadataToken: token);
                     if (
                         calledMethod?.Name
                         is "ReadAsByteArrayAsync"
@@ -252,18 +252,18 @@ public class CoverArtCoverArtClientTests
             }
         }
 
-        Assert.Equal(1, contentReadCalls);
+        Assert.Equal(expected: 1, actual: contentReadCalls);
     }
 
     [Fact]
     public void Download_StateMachine_ImageLoadUsesByteArrayOverload()
     {
         MethodInfo method = GetDownloadMethod();
-        Type stateMachineType = GetStateMachineType(method);
+        Type stateMachineType = GetStateMachineType(method: method);
 
         MethodInfo moveNext = stateMachineType.GetMethod(
-            "MoveNext",
-            BindingFlags.NonPublic | BindingFlags.Instance
+            name: "MoveNext",
+            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
         )!;
 
         byte[] ilBytes = moveNext.GetMethodBody()!.GetILAsByteArray()!;
@@ -275,10 +275,10 @@ public class CoverArtCoverArtClientTests
         {
             if ((ilBytes[i] == 0x28 || ilBytes[i] == 0x6F) && i + 4 < ilBytes.Length)
             {
-                int token = BitConverter.ToInt32(ilBytes, i + 1);
+                int token = BitConverter.ToInt32(value: ilBytes, startIndex: i + 1);
                 try
                 {
-                    MethodBase? calledMethod = module.ResolveMethod(token);
+                    MethodBase? calledMethod = module.ResolveMethod(metadataToken: token);
                     if (calledMethod?.Name == "Load" && calledMethod.GetParameters().Length > 0)
                     {
                         ParameterInfo firstParam = calledMethod.GetParameters()[0];
@@ -299,9 +299,9 @@ public class CoverArtCoverArtClientTests
         }
 
         Assert.True(
-            hasImageLoadWithByteArray,
-            "PROV-H12: Image.Load should use the byte[] overload, not Stream, "
-                + "to avoid consuming a stream that might be reused."
+            condition: hasImageLoadWithByteArray,
+            userMessage: "PROV-H12: Image.Load should use the byte[] overload, not Stream, "
+                         + "to avoid consuming a stream that might be reused."
         );
     }
 }

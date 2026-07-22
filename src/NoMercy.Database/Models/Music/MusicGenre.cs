@@ -15,15 +15,15 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Music;
 
-[Index(nameof(Name))]
-[PrimaryKey(nameof(Id))]
+[Index(propertyName: nameof(Name))]
+[PrimaryKey(propertyName: nameof(Id))]
 public class MusicGenre
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.None)]
-    [JsonProperty("id")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
+    [JsonProperty(propertyName: "id")]
     public Guid Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
     public ICollection<AlbumMusicGenre> AlbumMusicGenres { get; set; } = [];

@@ -41,7 +41,7 @@ internal sealed class NfsReadStream : Stream
     private bool _disposed;
 
     internal NfsReadStream(IntPtr nfs, IntPtr fh, long length, SemaphoreSlim driverLock)
-        : this(nfs, fh, length, driverLock, LibNfsPInvoke.Instance) { }
+        : this(nfs: nfs, fh: fh, length: length, driverLock: driverLock, libNfs: LibNfsPInvoke.Instance) { }
 
     internal NfsReadStream(
         IntPtr nfs,
@@ -68,16 +68,16 @@ internal sealed class NfsReadStream : Stream
     public override long Position
     {
         get => _position;
-        set => Seek(value, SeekOrigin.Begin);
+        set => Seek(offset: value, origin: SeekOrigin.Begin);
     }
 
     public override int Read(byte[] buffer, int offset, int count)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        ObjectDisposedException.ThrowIf(condition: _disposed, instance: this);
         if (count <= 0)
             return 0;
 
-        int toRead = (int)Math.Min(count, _length - _position);
+        int toRead = (int)Math.Min(val1: count, val2: _length - _position);
         if (toRead <= 0)
             return 0;
 
@@ -85,8 +85,8 @@ internal sealed class NfsReadStream : Stream
 
         while (totalRead < toRead)
         {
-            int chunk = Math.Min(_chunkSize, toRead - totalRead);
-            IntPtr pinned = Marshal.AllocHGlobal(chunk);
+            int chunk = Math.Min(val1: _chunkSize, val2: toRead - totalRead);
+            IntPtr pinned = Marshal.AllocHGlobal(cb: chunk);
             try
             {
                 int n;
@@ -96,9 +96,9 @@ internal sealed class NfsReadStream : Stream
                     _lock.Wait();
                     try
                     {
-                        n = _libNfs.Read(_nfs, _fh, pinned, chunk);
+                        n = _libNfs.Read(nfs: _nfs, fh: _fh, buf: pinned, count: chunk);
                         if (n < 0)
-                            err = _libNfs.GetError(_nfs);
+                            err = _libNfs.GetError(nfs: _nfs);
                     }
                     finally
                     {
@@ -110,21 +110,21 @@ internal sealed class NfsReadStream : Stream
                     // Driver was disposed while we were waiting on the lock.
                     // Surface as IOException so the HTTP pipeline can finish
                     // the response cleanly instead of crashing the host.
-                    throw new IOException("NFS driver disposed during read");
+                    throw new IOException(message: "NFS driver disposed during read");
                 }
 
                 if (n < 0)
-                    throw new IOException($"NFS read failed: {err}");
+                    throw new IOException(message: $"NFS read failed: {err}");
                 if (n == 0)
                     break;
 
-                Marshal.Copy(pinned, buffer, offset + totalRead, n);
+                Marshal.Copy(source: pinned, destination: buffer, startIndex: offset + totalRead, length: n);
                 totalRead += n;
                 _position += n;
             }
             finally
             {
-                Marshal.FreeHGlobal(pinned);
+                Marshal.FreeHGlobal(hglobal: pinned);
             }
         }
 
@@ -133,13 +133,13 @@ internal sealed class NfsReadStream : Stream
 
     public override long Seek(long offset, SeekOrigin origin)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        ObjectDisposedException.ThrowIf(condition: _disposed, instance: this);
         long target = origin switch
         {
             SeekOrigin.Begin => offset,
             SeekOrigin.Current => _position + offset,
             SeekOrigin.End => _length + offset,
-            _ => throw new ArgumentOutOfRangeException(nameof(origin)),
+            _ => throw new ArgumentOutOfRangeException(paramName: nameof(origin)),
         };
 
         long rc;
@@ -150,15 +150,15 @@ internal sealed class NfsReadStream : Stream
             try
             {
                 rc = _libNfs.Lseek(
-                    _nfs,
-                    _fh,
-                    target,
-                    0 /* SEEK_SET */
+                    nfs: _nfs,
+                    fh: _fh,
+                    offset: target,
+                    whence: 0 /* SEEK_SET */
                     ,
-                    out _
+                    currentOffset: out _
                 );
                 if (rc < 0)
-                    err = _libNfs.GetError(_nfs);
+                    err = _libNfs.GetError(nfs: _nfs);
             }
             finally
             {
@@ -167,11 +167,11 @@ internal sealed class NfsReadStream : Stream
         }
         catch (ObjectDisposedException)
         {
-            throw new IOException("NFS driver disposed during seek");
+            throw new IOException(message: "NFS driver disposed during seek");
         }
 
         if (rc < 0)
-            throw new IOException($"NFS lseek failed: {err}");
+            throw new IOException(message: $"NFS lseek failed: {err}");
 
         _position = target;
         return _position;
@@ -195,7 +195,7 @@ internal sealed class NfsReadStream : Stream
             _lock.Wait();
             try
             {
-                _libNfs.Close(_nfs, _fh);
+                _libNfs.Close(nfs: _nfs, fh: _fh);
             }
             finally
             {
@@ -208,6 +208,6 @@ internal sealed class NfsReadStream : Stream
             // context, so the fh is already gone. Nothing to do.
         }
 
-        base.Dispose(disposing);
+        base.Dispose(disposing: disposing);
     }
 }

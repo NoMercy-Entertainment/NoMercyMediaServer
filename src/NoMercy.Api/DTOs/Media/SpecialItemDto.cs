@@ -19,64 +19,64 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record SpecialItemDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("backdrop")]
+    [JsonProperty(propertyName: "backdrop")]
     public string? Backdrop { get; set; }
 
-    [JsonProperty("favorite")]
+    [JsonProperty(propertyName: "favorite")]
     public bool Favorite { get; set; }
 
-    [JsonProperty("watched")]
+    [JsonProperty(propertyName: "watched")]
     public bool Watched { get; set; }
 
-    [JsonProperty("logo")]
+    [JsonProperty(propertyName: "logo")]
     public string? Logo { get; set; }
 
-    [JsonProperty("media_type")]
+    [JsonProperty(propertyName: "media_type")]
     public string MediaType { get; set; }
 
-    [JsonProperty("overview")]
+    [JsonProperty(propertyName: "overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty("color_palette")]
+    [JsonProperty(propertyName: "color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty("poster")]
+    [JsonProperty(propertyName: "poster")]
     public string? Poster { get; set; }
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string? Title { get; set; }
 
-    [JsonProperty("titleSort")]
+    [JsonProperty(propertyName: "titleSort")]
     public string? TitleSort { get; set; }
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; }
 
-    [JsonProperty("year")]
+    [JsonProperty(propertyName: "year")]
     public long Year { get; set; }
 
-    [JsonProperty("genres")]
+    [JsonProperty(propertyName: "genres")]
     public IEnumerable<GenreDto> Genres { get; set; }
 
-    [JsonProperty("duration")]
+    [JsonProperty(propertyName: "duration")]
     public int Duration { get; set; }
 
-    [JsonProperty("link")]
+    [JsonProperty(propertyName: "link")]
     public Uri Link { get; set; }
 
-    [JsonProperty("rating")]
+    [JsonProperty(propertyName: "rating")]
     public Certification? Rating { get; set; }
 
-    [JsonProperty("videoId")]
+    [JsonProperty(propertyName: "videoId")]
     public string? VideoId { get; set; }
 
-    [JsonProperty("number_of_items")]
+    [JsonProperty(propertyName: "number_of_items")]
     public int? NumberOfItems { get; set; }
 
-    [JsonProperty("have_items")]
+    [JsonProperty(propertyName: "have_items")]
     public int HaveItems { get; set; }
 
     public SpecialItemDto(SpecialItemsDto item)
@@ -99,6 +99,6 @@ public record SpecialItemDto
         HaveItems = item.HaveItems;
         VideoId = item.VideoId;
         Duration = item.Duration;
-        Link = new($"/{item.MediaType}/{item.Id}", UriKind.Relative);
+        Link = new(uriString: $"/{item.MediaType}/{item.Id}", uriKind: UriKind.Relative);
     }
 }

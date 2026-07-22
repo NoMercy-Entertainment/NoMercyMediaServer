@@ -28,7 +28,7 @@ namespace NoMercy.Tests.Api.Music;
 /// (every seeded test user is Allowed=true), it locks that MediaAccess reads
 /// remain reachable while an anonymous caller is still rejected.
 /// </summary>
-[Trait("Category", "Characterization")]
+[Trait(name: "Category", value: "Characterization")]
 public class MusicReadAuthTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly HttpClient _secondary;
@@ -43,48 +43,48 @@ public class MusicReadAuthTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task AlbumsIndex_SecondaryUser_PassesMediaAccess_ReturnsOk()
     {
-        HttpResponseMessage response = await _secondary.GetAsync("/api/v1/music/albums/letter/_");
+        HttpResponseMessage response = await _secondary.GetAsync(requestUri: "/api/v1/music/albums/letter/_");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
     }
 
     [Fact]
     public async Task AlbumsIndex_ReturnsUnauthorized_WhenAnonymous()
     {
-        HttpResponseMessage response = await _anonymous.GetAsync("/api/v1/music/albums/letter/_");
+        HttpResponseMessage response = await _anonymous.GetAsync(requestUri: "/api/v1/music/albums/letter/_");
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task ArtistsIndex_SecondaryUser_PassesMediaAccess_ReturnsOk()
     {
-        HttpResponseMessage response = await _secondary.GetAsync("/api/v1/music/artists/letter/_");
+        HttpResponseMessage response = await _secondary.GetAsync(requestUri: "/api/v1/music/artists/letter/_");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
     }
 
     [Fact]
     public async Task ArtistsIndex_ReturnsUnauthorized_WhenAnonymous()
     {
-        HttpResponseMessage response = await _anonymous.GetAsync("/api/v1/music/artists/letter/_");
+        HttpResponseMessage response = await _anonymous.GetAsync(requestUri: "/api/v1/music/artists/letter/_");
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task PlaylistsIndex_SecondaryUser_PassesMediaAccess_ReturnsOk()
     {
-        HttpResponseMessage response = await _secondary.GetAsync("/api/v1/music/playlists");
+        HttpResponseMessage response = await _secondary.GetAsync(requestUri: "/api/v1/music/playlists");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
     }
 
     [Fact]
     public async Task PlaylistsIndex_ReturnsUnauthorized_WhenAnonymous()
     {
-        HttpResponseMessage response = await _anonymous.GetAsync("/api/v1/music/playlists");
+        HttpResponseMessage response = await _anonymous.GetAsync(requestUri: "/api/v1/music/playlists");
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 }

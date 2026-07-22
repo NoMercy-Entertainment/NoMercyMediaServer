@@ -33,24 +33,24 @@ public partial class LrclibClient : LrclibBaseClient
     {
         Dictionary<string, string?> additionalArguments = new()
         {
-            { "artist_name", string.Join(",", artists) },
+            { "artist_name", string.Join(separator: ",", value: artists) },
             { "track_name", trackName },
         };
         if (albumName != null)
-            additionalArguments.Add("album_name", albumName);
+            additionalArguments.Add(key: "album_name", value: albumName);
         if (duration.HasValue)
             additionalArguments.Add(
-                "duration",
-                duration.Value.ToString(CultureInfo.InvariantCulture)
+                key: "duration",
+                value: duration.Value.ToString(provider: CultureInfo.InvariantCulture)
             );
 
         LrclibSongResult? result = await Get<LrclibSongResult>(
-            "get",
-            additionalArguments,
-            priority
+            url: "get",
+            query: additionalArguments,
+            priority: priority
         );
         if (
-            !string.IsNullOrEmpty(result?.Message)
+            !string.IsNullOrEmpty(value: result?.Message)
             || result?.StatusCode != 200
             || result.Name == "TrackNotFound"
         )
@@ -71,13 +71,13 @@ public partial class LrclibClient : LrclibBaseClient
     )
     {
         Dictionary<string, string?> additionalArguments = new() { { "track_name", trackName } };
-        string artistName = string.Join(",", artists);
-        if (!string.IsNullOrEmpty(artistName))
-            additionalArguments.Add("artist_name", artistName);
+        string artistName = string.Join(separator: ",", value: artists);
+        if (!string.IsNullOrEmpty(value: artistName))
+            additionalArguments.Add(key: "artist_name", value: artistName);
         if (albumName != null)
-            additionalArguments.Add("album_name", albumName);
+            additionalArguments.Add(key: "album_name", value: albumName);
 
-        return await Get<LrclibSongResult[]>("search", additionalArguments, priority);
+        return await Get<LrclibSongResult[]>(url: "search", query: additionalArguments, priority: priority);
     }
 
     /// <summary>
@@ -89,47 +89,47 @@ public partial class LrclibClient : LrclibBaseClient
         if (result.Instrumental)
             return null;
 
-        bool hasSynced = !string.IsNullOrEmpty(result.SyncedLyrics);
+        bool hasSynced = !string.IsNullOrEmpty(value: result.SyncedLyrics);
         LyricLine[]? lines = ConvertToMusixmatchLyrics(
-            hasSynced ? result.SyncedLyrics : result.PlainLyrics
+            lyrics: hasSynced ? result.SyncedLyrics : result.PlainLyrics
         );
         if (lines is null)
             return null;
 
         return new(
-            result.TrackName,
-            result.ArtistName,
-            result.Duration > 0 ? (int)Math.Round(result.Duration) : null,
-            hasSynced,
-            lines
+            Title: result.TrackName,
+            Artist: result.ArtistName,
+            DurationSeconds: result.Duration > 0 ? (int)Math.Round(a: result.Duration) : null,
+            HasSyncedLyrics: hasSynced,
+            Lines: lines
         );
     }
 
     private static LyricLine[]? ConvertToMusixmatchLyrics(string? lyrics)
     {
-        if (string.IsNullOrEmpty(lyrics))
+        if (string.IsNullOrEmpty(value: lyrics))
             return null;
-        string[] lines = lyrics.Split(['\r', '\n'], StringSplitOptions.None);
+        string[] lines = lyrics.Split(separator: ['\r', '\n'], options: StringSplitOptions.None);
 
         List<LyricLine> lyricLines = [];
         foreach (string line in lines)
         {
             string trimmedLine = line.Trim();
-            if (string.IsNullOrEmpty(trimmedLine))
+            if (string.IsNullOrEmpty(value: trimmedLine))
                 continue;
-            LyricLine? lyricLine = MakeLyricLine(trimmedLine);
+            LyricLine? lyricLine = MakeLyricLine(trimmedLine: trimmedLine);
             if (lyricLine != null)
-                lyricLines.Add(lyricLine);
+                lyricLines.Add(item: lyricLine);
         }
         return lyricLines.Count == 0 ? null : lyricLines.ToArray();
     }
 
     private static LyricLine? MakeLyricLine(string trimmedLine)
     {
-        if (string.IsNullOrEmpty(trimmedLine))
+        if (string.IsNullOrEmpty(value: trimmedLine))
             return null;
 
-        Match match = TimeStamped().Match(trimmedLine);
+        Match match = TimeStamped().Match(input: trimmedLine);
         if (!match.Success)
             return new()
             {
@@ -143,20 +143,20 @@ public partial class LrclibClient : LrclibBaseClient
                 },
             };
 
-        int minutes = int.Parse(match.Groups[1].Value);
-        int seconds = int.Parse(match.Groups[2].Value);
+        int minutes = int.Parse(s: match.Groups[groupnum: 1].Value);
+        int seconds = int.Parse(s: match.Groups[groupnum: 2].Value);
         // LRC fractions come in both hundredths ([mm:ss.xx]) and milliseconds
         // ([mm:ss.xxx]) precision. Scale by the digit count so a 3-digit tag is
         // read as milliseconds, not as an out-of-range hundredths value — and so
         // the timestamp is stripped from the text instead of being left in it.
-        string fraction = match.Groups[3].Value;
+        string fraction = match.Groups[groupnum: 3].Value;
         double fractionalSeconds = fraction.Length switch
         {
-            3 => int.Parse(fraction) / 1000.0,
-            2 => int.Parse(fraction) / 100.0,
+            3 => int.Parse(s: fraction) / 1000.0,
+            2 => int.Parse(s: fraction) / 100.0,
             _ => 0,
         };
-        string text = match.Groups[4].Value.Trim();
+        string text = match.Groups[groupnum: 4].Value.Trim();
         double total = (minutes * 60) + seconds + fractionalSeconds;
 
         return new()
@@ -167,11 +167,11 @@ public partial class LrclibClient : LrclibBaseClient
                 Total = total,
                 Minutes = minutes,
                 Seconds = seconds,
-                Hundredths = (int)Math.Round(fractionalSeconds * 100),
+                Hundredths = (int)Math.Round(a: fractionalSeconds * 100),
             },
         };
     }
 
-    [GeneratedRegex(@"^\[(\d{1,2}):(\d{2})(?:[.:](\d{2,3}))?\](.*)$")]
+    [GeneratedRegex(pattern: @"^\[(\d{1,2}):(\d{2})(?:[.:](\d{2,3}))?\](.*)$")]
     private static partial Regex TimeStamped();
 }

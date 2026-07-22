@@ -42,37 +42,37 @@ public class SignalREventHandlerTests
         List<IEvent> received = [];
 
         bus.Subscribe<PlaybackStartedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
         bus.Subscribe<PlaybackProgressUpdatedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
         bus.Subscribe<PlaybackCompletedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
 
         using SignalRPlaybackEventHandler handler = new(
-            NullLogger<SignalRPlaybackEventHandler>.Instance,
-            bus,
-            NoOpMessenger
+            logger: NullLogger<SignalRPlaybackEventHandler>.Instance,
+            eventBus: bus,
+            clientMessenger: NoOpMessenger
         );
 
         Guid userId = Guid.NewGuid();
 
         await bus.PublishAsync(
-            new PlaybackStartedEvent
+            @event: new PlaybackStartedEvent
             {
                 UserId = userId,
                 MediaId = 1,
@@ -82,17 +82,17 @@ public class SignalREventHandlerTests
         );
 
         await bus.PublishAsync(
-            new PlaybackProgressUpdatedEvent
+            @event: new PlaybackProgressUpdatedEvent
             {
                 UserId = userId,
                 MediaId = 1,
-                Position = TimeSpan.FromMinutes(10),
-                Duration = TimeSpan.FromMinutes(120),
+                Position = TimeSpan.FromMinutes(minutes: 10),
+                Duration = TimeSpan.FromMinutes(minutes: 120),
             }
         );
 
         await bus.PublishAsync(
-            new PlaybackCompletedEvent
+            @event: new PlaybackCompletedEvent
             {
                 UserId = userId,
                 MediaId = 1,
@@ -101,7 +101,7 @@ public class SignalREventHandlerTests
         );
 
         // The handler subscriptions + our test subscriptions = events delivered to both
-        received.Should().HaveCount(3);
+        received.Should().HaveCount(expected: 3);
     }
 
     [Fact]
@@ -112,21 +112,21 @@ public class SignalREventHandlerTests
 
         // Wrap the handler to track invocations via a separate subscriber
         bus.Subscribe<PlaybackStartedEvent>(
-            (_, _) =>
+            handler: (_, _) =>
             {
-                Interlocked.Increment(ref handlerCallCount);
+                Interlocked.Increment(location: ref handlerCallCount);
                 return Task.CompletedTask;
             }
         );
 
         SignalRPlaybackEventHandler handler = new(
-            NullLogger<SignalRPlaybackEventHandler>.Instance,
-            bus,
-            NoOpMessenger
+            logger: NullLogger<SignalRPlaybackEventHandler>.Instance,
+            eventBus: bus,
+            clientMessenger: NoOpMessenger
         );
 
         await bus.PublishAsync(
-            new PlaybackStartedEvent
+            @event: new PlaybackStartedEvent
             {
                 UserId = Guid.NewGuid(),
                 MediaId = 1,
@@ -138,7 +138,7 @@ public class SignalREventHandlerTests
         handler.Dispose();
 
         await bus.PublishAsync(
-            new PlaybackStartedEvent
+            @event: new PlaybackStartedEvent
             {
                 UserId = Guid.NewGuid(),
                 MediaId = 2,
@@ -148,7 +148,7 @@ public class SignalREventHandlerTests
 
         // Our own test subscriber is still active, so count increases by 1
         // but handler's internal subscriptions are gone
-        handlerCallCount.Should().Be(countBeforeDispose + 1);
+        handlerCallCount.Should().Be(expected: countBeforeDispose + 1);
     }
 
     [Fact]
@@ -158,42 +158,42 @@ public class SignalREventHandlerTests
         List<IEvent> received = [];
 
         bus.Subscribe<EncodingStartedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
         bus.Subscribe<EncodingProgressUpdatedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
         bus.Subscribe<EncodingCompletedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
         bus.Subscribe<EncodingFailedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
 
         using SignalREncodingEventHandler handler = new(
-            NullLogger<SignalREncodingEventHandler>.Instance,
-            bus,
-            NoOpMessenger
+            logger: NullLogger<SignalREncodingEventHandler>.Instance,
+            eventBus: bus,
+            clientMessenger: NoOpMessenger
         );
 
         await bus.PublishAsync(
-            new EncodingStartedEvent
+            @event: new EncodingStartedEvent
             {
                 JobId = 1,
                 InputPath = "/input.mkv",
@@ -203,25 +203,25 @@ public class SignalREventHandlerTests
         );
 
         await bus.PublishAsync(
-            new EncodingProgressUpdatedEvent
+            @event: new EncodingProgressUpdatedEvent
             {
                 JobId = 1,
                 Percentage = 50.0,
-                Elapsed = TimeSpan.FromMinutes(5),
+                Elapsed = TimeSpan.FromMinutes(minutes: 5),
             }
         );
 
         await bus.PublishAsync(
-            new EncodingCompletedEvent
+            @event: new EncodingCompletedEvent
             {
                 JobId = 1,
                 OutputPath = "/output/playlist.m3u8",
-                Duration = TimeSpan.FromMinutes(10),
+                Duration = TimeSpan.FromMinutes(minutes: 10),
             }
         );
 
         await bus.PublishAsync(
-            new EncodingFailedEvent
+            @event: new EncodingFailedEvent
             {
                 JobId = 2,
                 InputPath = "/bad.mkv",
@@ -229,11 +229,11 @@ public class SignalREventHandlerTests
             }
         );
 
-        received.Should().HaveCount(4);
-        received[0].Should().BeOfType<EncodingStartedEvent>();
-        received[1].Should().BeOfType<EncodingProgressUpdatedEvent>();
-        received[2].Should().BeOfType<EncodingCompletedEvent>();
-        received[3].Should().BeOfType<EncodingFailedEvent>();
+        received.Should().HaveCount(expected: 4);
+        received[index: 0].Should().BeOfType<EncodingStartedEvent>();
+        received[index: 1].Should().BeOfType<EncodingProgressUpdatedEvent>();
+        received[index: 2].Should().BeOfType<EncodingCompletedEvent>();
+        received[index: 3].Should().BeOfType<EncodingFailedEvent>();
     }
 
     [Fact]
@@ -241,15 +241,15 @@ public class SignalREventHandlerTests
     {
         InMemoryEventBus bus = new();
         using SignalREncodingEventHandler handler = new(
-            NullLogger<SignalREncodingEventHandler>.Instance,
-            bus,
-            NoOpMessenger
+            logger: NullLogger<SignalREncodingEventHandler>.Instance,
+            eventBus: bus,
+            clientMessenger: NoOpMessenger
         );
 
         // SendToAll will find no connected clients and silently succeed
         Func<Task> act = () =>
             bus.PublishAsync(
-                new EncodingStartedEvent
+                @event: new EncodingStartedEvent
                 {
                     JobId = 1,
                     InputPath = "/input.mkv",
@@ -268,48 +268,48 @@ public class SignalREventHandlerTests
         List<IEvent> received = [];
 
         bus.Subscribe<LibraryScanStartedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
         bus.Subscribe<LibraryScanCompletedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
         bus.Subscribe<MediaAddedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
         bus.Subscribe<MediaRemovedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
 
         using SignalRLibraryScanEventHandler handler = new(
-            NullLogger<SignalRLibraryScanEventHandler>.Instance,
-            bus,
-            NoOpMessenger
+            logger: NullLogger<SignalRLibraryScanEventHandler>.Instance,
+            eventBus: bus,
+            clientMessenger: NoOpMessenger
         );
 
         Ulid libraryId = Ulid.NewUlid();
 
         await bus.PublishAsync(
-            new LibraryScanStartedEvent { LibraryId = libraryId, LibraryName = "Movies" }
+            @event: new LibraryScanStartedEvent { LibraryId = libraryId, LibraryName = "Movies" }
         );
 
         await bus.PublishAsync(
-            new MediaAddedEvent
+            @event: new MediaAddedEvent
             {
                 MediaId = 42,
                 MediaType = "movie",
@@ -319,7 +319,7 @@ public class SignalREventHandlerTests
         );
 
         await bus.PublishAsync(
-            new MediaRemovedEvent
+            @event: new MediaRemovedEvent
             {
                 MediaId = 99,
                 MediaType = "movie",
@@ -329,20 +329,20 @@ public class SignalREventHandlerTests
         );
 
         await bus.PublishAsync(
-            new LibraryScanCompletedEvent
+            @event: new LibraryScanCompletedEvent
             {
                 LibraryId = libraryId,
                 LibraryName = "Movies",
                 ItemsFound = 42,
-                Duration = TimeSpan.FromSeconds(30),
+                Duration = TimeSpan.FromSeconds(seconds: 30),
             }
         );
 
-        received.Should().HaveCount(4);
-        received[0].Should().BeOfType<LibraryScanStartedEvent>();
-        received[1].Should().BeOfType<MediaAddedEvent>();
-        received[2].Should().BeOfType<MediaRemovedEvent>();
-        received[3].Should().BeOfType<LibraryScanCompletedEvent>();
+        received.Should().HaveCount(expected: 4);
+        received[index: 0].Should().BeOfType<LibraryScanStartedEvent>();
+        received[index: 1].Should().BeOfType<MediaAddedEvent>();
+        received[index: 2].Should().BeOfType<MediaRemovedEvent>();
+        received[index: 3].Should().BeOfType<LibraryScanCompletedEvent>();
     }
 
     [Fact]
@@ -350,14 +350,14 @@ public class SignalREventHandlerTests
     {
         InMemoryEventBus bus = new();
         using SignalRLibraryScanEventHandler handler = new(
-            NullLogger<SignalRLibraryScanEventHandler>.Instance,
-            bus,
-            NoOpMessenger
+            logger: NullLogger<SignalRLibraryScanEventHandler>.Instance,
+            eventBus: bus,
+            clientMessenger: NoOpMessenger
         );
 
         Func<Task> act = () =>
             bus.PublishAsync(
-                new LibraryScanStartedEvent { LibraryId = Ulid.NewUlid(), LibraryName = "TV Shows" }
+                @event: new LibraryScanStartedEvent { LibraryId = Ulid.NewUlid(), LibraryName = "TV Shows" }
             );
 
         await act.Should().NotThrowAsync();
@@ -370,21 +370,21 @@ public class SignalREventHandlerTests
         int externalCount = 0;
 
         bus.Subscribe<EncodingStartedEvent>(
-            (_, _) =>
+            handler: (_, _) =>
             {
-                Interlocked.Increment(ref externalCount);
+                Interlocked.Increment(location: ref externalCount);
                 return Task.CompletedTask;
             }
         );
 
         SignalREncodingEventHandler handler = new(
-            NullLogger<SignalREncodingEventHandler>.Instance,
-            bus,
-            NoOpMessenger
+            logger: NullLogger<SignalREncodingEventHandler>.Instance,
+            eventBus: bus,
+            clientMessenger: NoOpMessenger
         );
 
         await bus.PublishAsync(
-            new EncodingStartedEvent
+            @event: new EncodingStartedEvent
             {
                 JobId = 1,
                 InputPath = "/a.mkv",
@@ -397,7 +397,7 @@ public class SignalREventHandlerTests
         handler.Dispose();
 
         await bus.PublishAsync(
-            new EncodingStartedEvent
+            @event: new EncodingStartedEvent
             {
                 JobId = 2,
                 InputPath = "/b.mkv",
@@ -407,7 +407,7 @@ public class SignalREventHandlerTests
         );
 
         // External subscriber still fires
-        externalCount.Should().Be(countBefore + 1);
+        externalCount.Should().Be(expected: countBefore + 1);
     }
 
     [Fact]
@@ -416,26 +416,26 @@ public class SignalREventHandlerTests
         InMemoryEventBus bus = new();
 
         using SignalRPlaybackEventHandler playbackHandler = new(
-            NullLogger<SignalRPlaybackEventHandler>.Instance,
-            bus,
-            NoOpMessenger
+            logger: NullLogger<SignalRPlaybackEventHandler>.Instance,
+            eventBus: bus,
+            clientMessenger: NoOpMessenger
         );
         using SignalREncodingEventHandler encodingHandler = new(
-            NullLogger<SignalREncodingEventHandler>.Instance,
-            bus,
-            NoOpMessenger
+            logger: NullLogger<SignalREncodingEventHandler>.Instance,
+            eventBus: bus,
+            clientMessenger: NoOpMessenger
         );
         using SignalRLibraryScanEventHandler libraryScanHandler = new(
-            NullLogger<SignalRLibraryScanEventHandler>.Instance,
-            bus,
-            NoOpMessenger
+            logger: NullLogger<SignalRLibraryScanEventHandler>.Instance,
+            eventBus: bus,
+            clientMessenger: NoOpMessenger
         );
 
         // Publish one event of each type - no cross-talk or exceptions
         Func<Task> act = async () =>
         {
             await bus.PublishAsync(
-                new PlaybackStartedEvent
+                @event: new PlaybackStartedEvent
                 {
                     UserId = Guid.NewGuid(),
                     MediaId = 1,
@@ -444,7 +444,7 @@ public class SignalREventHandlerTests
             );
 
             await bus.PublishAsync(
-                new EncodingStartedEvent
+                @event: new EncodingStartedEvent
                 {
                     JobId = 1,
                     InputPath = "/a.mkv",
@@ -454,7 +454,7 @@ public class SignalREventHandlerTests
             );
 
             await bus.PublishAsync(
-                new LibraryScanStartedEvent { LibraryId = Ulid.NewUlid(), LibraryName = "Movies" }
+                @event: new LibraryScanStartedEvent { LibraryId = Ulid.NewUlid(), LibraryName = "Movies" }
             );
         };
 
@@ -466,21 +466,21 @@ public class SignalREventHandlerTests
     {
         InMemoryEventBus bus = new();
         using SignalRPlaybackEventHandler handler = new(
-            NullLogger<SignalRPlaybackEventHandler>.Instance,
-            bus,
-            NoOpMessenger
+            logger: NullLogger<SignalRPlaybackEventHandler>.Instance,
+            eventBus: bus,
+            clientMessenger: NoOpMessenger
         );
 
         Func<Task> act = () =>
             handler.OnPlaybackStarted(
-                new()
+                @event: new()
                 {
                     UserId = Guid.NewGuid(),
                     MediaId = 129,
                     MediaType = "movie",
                     DeviceId = "dev-1",
                 },
-                CancellationToken.None
+                ct: CancellationToken.None
             );
 
         await act.Should().NotThrowAsync();
@@ -491,20 +491,20 @@ public class SignalREventHandlerTests
     {
         InMemoryEventBus bus = new();
         using SignalRPlaybackEventHandler handler = new(
-            NullLogger<SignalRPlaybackEventHandler>.Instance,
-            bus,
-            NoOpMessenger
+            logger: NullLogger<SignalRPlaybackEventHandler>.Instance,
+            eventBus: bus,
+            clientMessenger: NoOpMessenger
         );
 
         Func<Task> act = () =>
             handler.OnPlaybackCompleted(
-                new()
+                @event: new()
                 {
                     UserId = Guid.NewGuid(),
                     MediaId = 129,
                     MediaType = "movie",
                 },
-                CancellationToken.None
+                ct: CancellationToken.None
             );
 
         await act.Should().NotThrowAsync();
@@ -515,21 +515,21 @@ public class SignalREventHandlerTests
     {
         InMemoryEventBus bus = new();
         using SignalREncodingEventHandler handler = new(
-            NullLogger<SignalREncodingEventHandler>.Instance,
-            bus,
-            NoOpMessenger
+            logger: NullLogger<SignalREncodingEventHandler>.Instance,
+            eventBus: bus,
+            clientMessenger: NoOpMessenger
         );
 
         Func<Task> act = () =>
             handler.OnEncodingProgress(
-                new()
+                @event: new()
                 {
                     JobId = 1,
                     Percentage = 75.5,
-                    Elapsed = TimeSpan.FromMinutes(3),
-                    Estimated = TimeSpan.FromMinutes(1),
+                    Elapsed = TimeSpan.FromMinutes(minutes: 3),
+                    Estimated = TimeSpan.FromMinutes(minutes: 1),
                 },
-                CancellationToken.None
+                ct: CancellationToken.None
             );
 
         await act.Should().NotThrowAsync();
@@ -542,26 +542,26 @@ public class SignalREventHandlerTests
         List<IEvent> received = [];
 
         bus.Subscribe<LibraryRefreshedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
 
-        using SignalRLibraryRefreshEventHandler handler = new(bus, NoOpMessenger);
+        using SignalRLibraryRefreshEventHandler handler = new(eventBus: bus, clientMessenger: NoOpMessenger);
 
         await bus.PublishAsync(
-            new LibraryRefreshedEvent { QueryKey = ["music", "album", Guid.NewGuid()] }
+            @event: new LibraryRefreshedEvent { QueryKey = ["music", "album", Guid.NewGuid()] }
         );
 
         await bus.PublishAsync(
-            new LibraryRefreshedEvent { QueryKey = ["libraries", Ulid.NewUlid().ToString()] }
+            @event: new LibraryRefreshedEvent { QueryKey = ["libraries", Ulid.NewUlid().ToString()] }
         );
 
-        await bus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["home"] });
+        await bus.PublishAsync(@event: new LibraryRefreshedEvent { QueryKey = ["home"] });
 
-        received.Should().HaveCount(3);
+        received.Should().HaveCount(expected: 3);
         received.Should().AllBeOfType<LibraryRefreshedEvent>();
     }
 
@@ -569,10 +569,10 @@ public class SignalREventHandlerTests
     public async Task LibraryRefreshHandler_BroadcastsToSignalR_WithoutException()
     {
         InMemoryEventBus bus = new();
-        using SignalRLibraryRefreshEventHandler handler = new(bus, NoOpMessenger);
+        using SignalRLibraryRefreshEventHandler handler = new(eventBus: bus, clientMessenger: NoOpMessenger);
 
         Func<Task> act = () =>
-            bus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["music", "tracks"] });
+            bus.PublishAsync(@event: new LibraryRefreshedEvent { QueryKey = ["music", "tracks"] });
 
         await act.Should().NotThrowAsync();
     }
@@ -584,40 +584,40 @@ public class SignalREventHandlerTests
         int externalCount = 0;
 
         bus.Subscribe<LibraryRefreshedEvent>(
-            (_, _) =>
+            handler: (_, _) =>
             {
-                Interlocked.Increment(ref externalCount);
+                Interlocked.Increment(location: ref externalCount);
                 return Task.CompletedTask;
             }
         );
 
-        SignalRLibraryRefreshEventHandler handler = new(bus, NoOpMessenger);
+        SignalRLibraryRefreshEventHandler handler = new(eventBus: bus, clientMessenger: NoOpMessenger);
 
         await bus.PublishAsync(
-            new LibraryRefreshedEvent { QueryKey = ["music", "album", Guid.NewGuid()] }
+            @event: new LibraryRefreshedEvent { QueryKey = ["music", "album", Guid.NewGuid()] }
         );
 
         int countBefore = externalCount;
         handler.Dispose();
 
         await bus.PublishAsync(
-            new LibraryRefreshedEvent { QueryKey = ["music", "artist", Guid.NewGuid()] }
+            @event: new LibraryRefreshedEvent { QueryKey = ["music", "artist", Guid.NewGuid()] }
         );
 
         // External subscriber still fires
-        externalCount.Should().Be(countBefore + 1);
+        externalCount.Should().Be(expected: countBefore + 1);
     }
 
     [Fact]
     public async Task LibraryRefreshHandler_OnLibraryRefresh_DoesNotThrow()
     {
         InMemoryEventBus bus = new();
-        using SignalRLibraryRefreshEventHandler handler = new(bus, NoOpMessenger);
+        using SignalRLibraryRefreshEventHandler handler = new(eventBus: bus, clientMessenger: NoOpMessenger);
 
         Func<Task> act = () =>
             handler.OnLibraryRefresh(
-                new() { QueryKey = ["base", "info", "123"] },
-                CancellationToken.None
+                @event: new() { QueryKey = ["base", "info", "123"] },
+                ct: CancellationToken.None
             );
 
         await act.Should().NotThrowAsync();
@@ -629,26 +629,26 @@ public class SignalREventHandlerTests
         InMemoryEventBus bus = new();
 
         using SignalRPlaybackEventHandler playbackHandler = new(
-            NullLogger<SignalRPlaybackEventHandler>.Instance,
-            bus,
-            NoOpMessenger
+            logger: NullLogger<SignalRPlaybackEventHandler>.Instance,
+            eventBus: bus,
+            clientMessenger: NoOpMessenger
         );
         using SignalREncodingEventHandler encodingHandler = new(
-            NullLogger<SignalREncodingEventHandler>.Instance,
-            bus,
-            NoOpMessenger
+            logger: NullLogger<SignalREncodingEventHandler>.Instance,
+            eventBus: bus,
+            clientMessenger: NoOpMessenger
         );
         using SignalRLibraryScanEventHandler libraryScanHandler = new(
-            NullLogger<SignalRLibraryScanEventHandler>.Instance,
-            bus,
-            NoOpMessenger
+            logger: NullLogger<SignalRLibraryScanEventHandler>.Instance,
+            eventBus: bus,
+            clientMessenger: NoOpMessenger
         );
-        using SignalRLibraryRefreshEventHandler libraryRefreshHandler = new(bus, NoOpMessenger);
+        using SignalRLibraryRefreshEventHandler libraryRefreshHandler = new(eventBus: bus, clientMessenger: NoOpMessenger);
 
         Func<Task> act = async () =>
         {
             await bus.PublishAsync(
-                new PlaybackStartedEvent
+                @event: new PlaybackStartedEvent
                 {
                     UserId = Guid.NewGuid(),
                     MediaId = 1,
@@ -657,7 +657,7 @@ public class SignalREventHandlerTests
             );
 
             await bus.PublishAsync(
-                new EncodingStartedEvent
+                @event: new EncodingStartedEvent
                 {
                     JobId = 1,
                     InputPath = "/a.mkv",
@@ -667,11 +667,11 @@ public class SignalREventHandlerTests
             );
 
             await bus.PublishAsync(
-                new LibraryScanStartedEvent { LibraryId = Ulid.NewUlid(), LibraryName = "Movies" }
+                @event: new LibraryScanStartedEvent { LibraryId = Ulid.NewUlid(), LibraryName = "Movies" }
             );
 
             await bus.PublishAsync(
-                new LibraryRefreshedEvent { QueryKey = ["music", "playlists", Guid.NewGuid()] }
+                @event: new LibraryRefreshedEvent { QueryKey = ["music", "playlists", Guid.NewGuid()] }
             );
         };
 
@@ -685,7 +685,7 @@ public class SignalREventHandlerTests
         LibraryRefreshedEvent? capturedEvent = null;
 
         bus.Subscribe<LibraryRefreshedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
                 capturedEvent = evt;
                 return Task.CompletedTask;
@@ -694,12 +694,12 @@ public class SignalREventHandlerTests
 
         dynamic?[] queryKey = ["music", "album", Guid.NewGuid()];
 
-        await bus.PublishAsync(new LibraryRefreshedEvent { QueryKey = queryKey });
+        await bus.PublishAsync(@event: new LibraryRefreshedEvent { QueryKey = queryKey });
 
         capturedEvent.Should().NotBeNull();
-        capturedEvent!.QueryKey.Should().BeEquivalentTo(queryKey);
-        capturedEvent.Source.Should().Be("LibraryRefresh");
+        capturedEvent!.QueryKey.Should().BeEquivalentTo(expectation: queryKey);
+        capturedEvent.Source.Should().Be(expected: "LibraryRefresh");
         capturedEvent.EventId.Should().NotBeEmpty();
-        capturedEvent.Timestamp.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        capturedEvent.Timestamp.Should().BeCloseTo(nearbyTime: DateTime.UtcNow, precision: TimeSpan.FromSeconds(seconds: 5));
     }
 }

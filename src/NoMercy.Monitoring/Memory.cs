@@ -15,15 +15,15 @@ namespace NoMercy.Monitoring;
 
 public class Memory
 {
-    [JsonProperty("available")]
+    [JsonProperty(propertyName: "available")]
     public double Available { get; set; }
 
-    [JsonProperty("use")]
+    [JsonProperty(propertyName: "use")]
     public double Use { get; set; }
 
-    [JsonProperty("total")]
+    [JsonProperty(propertyName: "total")]
     public double Total { get; set; }
 
-    [JsonProperty("percentage")]
+    [JsonProperty(propertyName: "percentage")]
     public double Percentage => Available + Use > 0 ? Use / (Available + Use) * 100 : 0;
 }

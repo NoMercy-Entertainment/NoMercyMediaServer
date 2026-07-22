@@ -27,7 +27,7 @@ public class ActivityLoggerTests : IDisposable
 
     public ActivityLoggerTests()
     {
-        _connection = new("Data Source=:memory:");
+        _connection = new(connectionString: "Data Source=:memory:");
         _connection.Open();
 
         using (SqliteCommand fkOff = _connection.CreateCommand())
@@ -36,9 +36,9 @@ public class ActivityLoggerTests : IDisposable
             fkOff.ExecuteNonQuery();
         }
 
-        _options = new DbContextOptionsBuilder<MediaContext>().UseSqlite(_connection).Options;
+        _options = new DbContextOptionsBuilder<MediaContext>().UseSqlite(connection: _connection).Options;
 
-        using MediaContext ctx = new(_options);
+        using MediaContext ctx = new(options: _options);
         ctx.Database.EnsureCreated();
     }
 
@@ -50,8 +50,8 @@ public class ActivityLoggerTests : IDisposable
     private IDbContextFactory<MediaContext> CreateFactory()
     {
         Mock<IDbContextFactory<MediaContext>> mock = new();
-        mock.Setup(x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => new(_options));
+        mock.Setup(expression: x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(valueFunction: () => new(options: _options));
         return mock.Object;
     }
 
@@ -60,21 +60,21 @@ public class ActivityLoggerTests : IDisposable
     {
         IDbContextFactory<MediaContext> factory = CreateFactory();
         ActivityLogger logger = new(
-            factory,
-            NullLogger<ActivityLogger>.Instance,
+            contextFactory: factory,
+            logger: NullLogger<ActivityLogger>.Instance,
             hubBroadcaster: null
         );
         Guid userId = Guid.NewGuid();
         Ulid deviceId = Ulid.NewUlid();
 
-        await logger.LogAuthAsync("auth.login", userId, deviceId, success: true);
+        await logger.LogAuthAsync(type: "auth.login", userId: userId, deviceId: deviceId, success: true);
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
         ActivityLog row = ctx.ActivityLogs.Single();
-        row.Category.Should().Be(ActivityCategory.Auth);
-        row.Type.Should().Be("auth.login");
-        row.UserId.Should().Be(userId);
-        row.DeviceId.Should().Be(deviceId);
+        row.Category.Should().Be(expected: ActivityCategory.Auth);
+        row.Type.Should().Be(expected: "auth.login");
+        row.UserId.Should().Be(expected: userId);
+        row.DeviceId.Should().Be(expected: deviceId);
         row.Success.Should().BeTrue();
         row.ErrorCode.Should().BeNull();
     }
@@ -84,15 +84,15 @@ public class ActivityLoggerTests : IDisposable
     {
         IDbContextFactory<MediaContext> factory = CreateFactory();
         ActivityLogger logger = new(
-            factory,
-            NullLogger<ActivityLogger>.Instance,
+            contextFactory: factory,
+            logger: NullLogger<ActivityLogger>.Instance,
             hubBroadcaster: null
         );
 
-        await logger.LogConnectionAsync("connection.connected", Guid.NewGuid(), Ulid.NewUlid());
+        await logger.LogConnectionAsync(type: "connection.connected", userId: Guid.NewGuid(), deviceId: Ulid.NewUlid());
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
-        ctx.ActivityLogs.Single().Category.Should().Be(ActivityCategory.Connection);
+        ctx.ActivityLogs.Single().Category.Should().Be(expected: ActivityCategory.Connection);
     }
 
     [Fact]
@@ -100,27 +100,27 @@ public class ActivityLoggerTests : IDisposable
     {
         IDbContextFactory<MediaContext> factory = CreateFactory();
         ActivityLogger logger = new(
-            factory,
-            NullLogger<ActivityLogger>.Instance,
+            contextFactory: factory,
+            logger: NullLogger<ActivityLogger>.Instance,
             hubBroadcaster: null
         );
         Ulid mediaId = Ulid.NewUlid();
         object metadata = new { title = "Heat", duration_ms = 9_900_000 };
 
         await logger.LogPlaybackAsync(
-            "playback.started",
-            Guid.NewGuid(),
-            Ulid.NewUlid(),
-            mediaId,
-            metadata
+            type: "playback.started",
+            userId: Guid.NewGuid(),
+            deviceId: Ulid.NewUlid(),
+            mediaId: mediaId,
+            metadata: metadata
         );
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
         ActivityLog row = ctx.ActivityLogs.Single();
-        row.Category.Should().Be(ActivityCategory.Playback);
-        row.MediaId.Should().Be(mediaId);
-        row.Metadata.Should().Contain("\"title\":\"Heat\"");
-        row.Metadata.Should().Contain("\"duration_ms\":9900000");
+        row.Category.Should().Be(expected: ActivityCategory.Playback);
+        row.MediaId.Should().Be(expected: mediaId);
+        row.Metadata.Should().Contain(expected: "\"title\":\"Heat\"");
+        row.Metadata.Should().Contain(expected: "\"duration_ms\":9900000");
     }
 
     [Fact]
@@ -128,15 +128,15 @@ public class ActivityLoggerTests : IDisposable
     {
         IDbContextFactory<MediaContext> factory = CreateFactory();
         ActivityLogger logger = new(
-            factory,
-            NullLogger<ActivityLogger>.Instance,
+            contextFactory: factory,
+            logger: NullLogger<ActivityLogger>.Instance,
             hubBroadcaster: null
         );
 
         await logger.LogConfigurationAsync(
-            "config.server_changed",
-            Guid.NewGuid(),
-            Ulid.NewUlid(),
+            type: "config.server_changed",
+            userId: Guid.NewGuid(),
+            deviceId: Ulid.NewUlid(),
             configKey: "encoder.default_profile",
             oldValue: "x264",
             newValue: "x265"
@@ -144,10 +144,10 @@ public class ActivityLoggerTests : IDisposable
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
         ActivityLog row = ctx.ActivityLogs.Single();
-        row.Category.Should().Be(ActivityCategory.Configuration);
-        row.Metadata.Should().Contain("\"key\":\"encoder.default_profile\"");
-        row.Metadata.Should().Contain("\"old_value\":\"x264\"");
-        row.Metadata.Should().Contain("\"new_value\":\"x265\"");
+        row.Category.Should().Be(expected: ActivityCategory.Configuration);
+        row.Metadata.Should().Contain(expected: "\"key\":\"encoder.default_profile\"");
+        row.Metadata.Should().Contain(expected: "\"old_value\":\"x264\"");
+        row.Metadata.Should().Contain(expected: "\"new_value\":\"x265\"");
     }
 
     [Fact]
@@ -155,25 +155,25 @@ public class ActivityLoggerTests : IDisposable
     {
         IDbContextFactory<MediaContext> factory = CreateFactory();
         ActivityLogger logger = new(
-            factory,
-            NullLogger<ActivityLogger>.Instance,
+            contextFactory: factory,
+            logger: NullLogger<ActivityLogger>.Instance,
             hubBroadcaster: null
         );
 
         await logger.LogFailureAsync(
-            "failure.playback_start",
-            Guid.NewGuid(),
-            Ulid.NewUlid(),
+            type: "failure.playback_start",
+            userId: Guid.NewGuid(),
+            deviceId: Ulid.NewUlid(),
             errorCode: "transcoder_unavailable",
             message: "FFmpeg returned exit code 2"
         );
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
         ActivityLog row = ctx.ActivityLogs.Single();
-        row.Category.Should().Be(ActivityCategory.Failure);
+        row.Category.Should().Be(expected: ActivityCategory.Failure);
         row.Success.Should().BeFalse();
-        row.ErrorCode.Should().Be("transcoder_unavailable");
-        row.Metadata.Should().Contain("\"message\":\"FFmpeg returned exit code 2\"");
+        row.ErrorCode.Should().Be(expected: "transcoder_unavailable");
+        row.Metadata.Should().Contain(expected: "\"message\":\"FFmpeg returned exit code 2\"");
     }
 
     [Fact]
@@ -182,23 +182,23 @@ public class ActivityLoggerTests : IDisposable
         IDbContextFactory<MediaContext> factory = CreateFactory();
         Mock<IActivityHubBroadcaster> broadcaster = new();
         broadcaster
-            .Setup(b => b.BroadcastAsync(It.IsAny<ActivityLog>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .Setup(expression: b => b.BroadcastAsync(It.IsAny<ActivityLog>(), It.IsAny<CancellationToken>()))
+            .Returns(value: Task.CompletedTask);
 
         ActivityLogger logger = new(
-            factory,
-            NullLogger<ActivityLogger>.Instance,
-            broadcaster.Object
+            contextFactory: factory,
+            logger: NullLogger<ActivityLogger>.Instance,
+            hubBroadcaster: broadcaster.Object
         );
-        await logger.LogAuthAsync("auth.login", Guid.NewGuid(), Ulid.NewUlid(), success: true);
+        await logger.LogAuthAsync(type: "auth.login", userId: Guid.NewGuid(), deviceId: Ulid.NewUlid(), success: true);
 
         broadcaster.Verify(
-            b =>
+            expression: b =>
                 b.BroadcastAsync(
                     It.Is<ActivityLog>(r => r.Type == "auth.login"),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Once
+            times: Times.Once
         );
     }
 
@@ -208,17 +208,17 @@ public class ActivityLoggerTests : IDisposable
         IDbContextFactory<MediaContext> factory = CreateFactory();
         Mock<IActivityHubBroadcaster> broadcaster = new();
         broadcaster
-            .Setup(b => b.BroadcastAsync(It.IsAny<ActivityLog>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("hub down"));
+            .Setup(expression: b => b.BroadcastAsync(It.IsAny<ActivityLog>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(exception: new InvalidOperationException(message: "hub down"));
 
         ActivityLogger logger = new(
-            factory,
-            NullLogger<ActivityLogger>.Instance,
-            broadcaster.Object
+            contextFactory: factory,
+            logger: NullLogger<ActivityLogger>.Instance,
+            hubBroadcaster: broadcaster.Object
         );
 
         Func<Task> act = () =>
-            logger.LogAuthAsync("auth.login", Guid.NewGuid(), Ulid.NewUlid(), success: true);
+            logger.LogAuthAsync(type: "auth.login", userId: Guid.NewGuid(), deviceId: Ulid.NewUlid(), success: true);
 
         await act.Should().NotThrowAsync();
     }

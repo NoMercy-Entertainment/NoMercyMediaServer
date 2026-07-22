@@ -32,8 +32,8 @@ public static class GpuAccelResolver
     {
         return vendor switch
         {
-            GpuVendor.Nvidia when hasFilter("scale_cuda") => new("cuda", "cuda", "scale_cuda"),
-            GpuVendor.Intel when hasFilter("scale_qsv") => new("qsv", "qsv", "scale_qsv"),
+            GpuVendor.Nvidia when hasFilter(arg: "scale_cuda") => new(HwAccelDevice: "cuda", HwAccelOutputFormat: "cuda", ScaleFilter: "scale_cuda"),
+            GpuVendor.Intel when hasFilter(arg: "scale_qsv") => new(HwAccelDevice: "qsv", HwAccelOutputFormat: "qsv", ScaleFilter: "scale_qsv"),
             _ => null,
         };
     }

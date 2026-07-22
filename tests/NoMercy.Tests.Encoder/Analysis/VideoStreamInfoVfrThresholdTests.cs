@@ -31,10 +31,10 @@ public class VideoStreamInfoVfrThresholdTests
     // ── Above the 1% threshold → VFR ────────────────────────────────────────
 
     [Theory]
-    [InlineData(24.0, 24.5, true)] // ~2% spread, classic VFR
-    [InlineData(30.0, 24.5, true)] // 18% spread
-    [InlineData(60.0, 59.0, true)] // 1.67% spread (just over threshold)
-    [InlineData(23.976, 25.0, true)] // 4.3% spread, common pulldown artefact
+    [InlineData(data: [24.0, 24.5, true])] // ~2% spread, classic VFR
+    [InlineData(data: [30.0, 24.5, true])] // 18% spread
+    [InlineData(data: [60.0, 59.0, true])] // 1.67% spread (just over threshold)
+    [InlineData(data: [23.976, 25.0, true])] // 4.3% spread, common pulldown artefact
     public void Crosses_one_percent_threshold_flags_as_VFR(
         double realFps,
         double avgFps,
@@ -42,16 +42,16 @@ public class VideoStreamInfoVfrThresholdTests
     )
     {
         VideoStreamInfo stream = MakeStream(real: realFps, avg: avgFps);
-        stream.IsVariableFrameRate.Should().Be(expected);
+        stream.IsVariableFrameRate.Should().Be(expected: expected);
     }
 
     // ── At or below the 1% threshold → CFR ─────────────────────────────────
 
     [Theory]
-    [InlineData(24.0, 24.0)] // identical
-    [InlineData(60.0, 60.0)] // identical 60fps
-    [InlineData(23.976, 23.97)] // sub-percent jitter
-    [InlineData(60.0, 59.94)] // 0.1% spread — broadcast NTSC jitter, NOT VFR
+    [InlineData(data: [24.0, 24.0])] // identical
+    [InlineData(data: [60.0, 60.0])] // identical 60fps
+    [InlineData(data: [23.976, 23.97])] // sub-percent jitter
+    [InlineData(data: [60.0, 59.94])] // 0.1% spread — broadcast NTSC jitter, NOT VFR
     public void At_or_below_one_percent_threshold_treated_as_CFR(double realFps, double avgFps)
     {
         VideoStreamInfo stream = MakeStream(real: realFps, avg: avgFps);
@@ -113,7 +113,7 @@ public class VideoStreamInfoVfrThresholdTests
         MediaInfo info = new(
             FilePath: "/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromHours(1),
+            Duration: TimeSpan.FromHours(hours: 1),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 0,
             VideoStreams:
@@ -135,7 +135,7 @@ public class VideoStreamInfoVfrThresholdTests
         MediaInfo info = new(
             FilePath: "/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromHours(1),
+            Duration: TimeSpan.FromHours(hours: 1),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 0,
             VideoStreams: [MakeStream(real: 24.0, avg: 24.0), MakeStream(real: 60.0, avg: 60.0)],
@@ -153,7 +153,7 @@ public class VideoStreamInfoVfrThresholdTests
         MediaInfo info = new(
             FilePath: "/audio.mp3",
             Format: "mp3",
-            Duration: TimeSpan.FromMinutes(5),
+            Duration: TimeSpan.FromMinutes(minutes: 5),
             OverallBitRateKbps: 192,
             FileSizeBytes: 0,
             VideoStreams: [],

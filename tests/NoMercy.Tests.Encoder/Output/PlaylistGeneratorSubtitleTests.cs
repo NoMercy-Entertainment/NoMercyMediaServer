@@ -25,28 +25,28 @@ public class PlaylistGeneratorSubtitleTests
         // Seed non-zero metrics so the variant rows render — GenerateMasterPlaylist
         // skips any variant whose measured bandwidth is zero (dead-variant guard).
         Dictionary<string, VariantMetrics> videoMetrics = plan
-            .VideoOutputs.Where(v => !string.IsNullOrEmpty(v.MapLabel))
+            .VideoOutputs.Where(predicate: v => !string.IsNullOrEmpty(value: v.MapLabel))
             .ToDictionary(
-                PlaylistGenerator.VideoVariantKey,
-                _ => new VariantMetrics(5_000_000, 4_500_000)
+                keySelector: PlaylistGenerator.VideoVariantKey,
+                elementSelector: _ => new VariantMetrics(PeakBandwidth: 5_000_000, AverageBandwidth: 4_500_000)
             );
         Dictionary<string, VariantMetrics> audioMetrics = plan
-            .AudioOutputs.Where(a => !string.IsNullOrEmpty(a.MapLabel))
+            .AudioOutputs.Where(predicate: a => !string.IsNullOrEmpty(value: a.MapLabel))
             .ToDictionary(
-                PlaylistGenerator.AudioVariantKey,
-                _ => new VariantMetrics(192_000, 180_000)
+                keySelector: PlaylistGenerator.AudioVariantKey,
+                elementSelector: _ => new VariantMetrics(PeakBandwidth: 192_000, AverageBandwidth: 180_000)
             );
 
         PlaylistGenerator generator = new();
-        return generator.GenerateMasterPlaylist(plan, MediaTitle, videoMetrics, audioMetrics);
+        return generator.GenerateMasterPlaylist(plan: plan, mediaTitle: MediaTitle, videoMetrics: videoMetrics, audioMetrics: audioMetrics);
     }
 
     [Fact]
     public void MasterPlaylist_WithoutSubtitles_NoSubtitleTags()
     {
-        string playlist = Generate(CreatePlanWithoutSubtitles());
+        string playlist = Generate(plan: CreatePlanWithoutSubtitles());
 
-        playlist.Should().NotContain("TYPE=SUBTITLES");
+        playlist.Should().NotContain(unexpected: "TYPE=SUBTITLES");
     }
 
     [Fact]
@@ -69,17 +69,17 @@ public class PlaylistGeneratorSubtitleTests
             Thumbnails: null
         );
 
-        string playlist = Generate(plan);
+        string playlist = Generate(plan: plan);
 
-        playlist.Should().NotContain("TYPE=SUBTITLES");
+        playlist.Should().NotContain(unexpected: "TYPE=SUBTITLES");
     }
 
     [Fact]
     public void MasterPlaylist_AudioLanguage_Correct()
     {
-        string playlist = Generate(CreatePlanWithoutSubtitles());
+        string playlist = Generate(plan: CreatePlanWithoutSubtitles());
 
-        playlist.Should().Contain("LANGUAGE=\"eng\"");
+        playlist.Should().Contain(expected: "LANGUAGE=\"eng\"");
     }
 
     private static OutputPlan CreatePlanWithoutSubtitles()

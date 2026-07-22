@@ -42,7 +42,7 @@ public class HfrStereoVrValidatorTests
         new(
             FilePath: "/media/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromHours(2),
+            Duration: TimeSpan.FromHours(hours: 2),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 7_200_000_000,
             VideoStreams:
@@ -147,12 +147,12 @@ public class HfrStereoVrValidatorTests
         MediaInfo source = BuildSourceMedia(width: 1920, height: 1080, fps: 240.0);
         EncodingProfile profile = BuildTranscodeProfile(codec: VideoCodecType.H264, level: "4.2");
 
-        ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile, source);
+        ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile: profile, source: source);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().HaveCount(1);
-        result.Errors[0].Should().Contain("Level 4.2 cap exceeded");
-        result.Errors[0].Should().Contain("Raise level to");
+        result.Errors.Should().HaveCount(expected: 1);
+        result.Errors[index: 0].Should().Contain(expected: "Level 4.2 cap exceeded");
+        result.Errors[index: 0].Should().Contain(expected: "Raise level to");
     }
 
     // ------------------------------------------------------------------
@@ -167,7 +167,7 @@ public class HfrStereoVrValidatorTests
         MediaInfo source = BuildSourceMedia(width: 1920, height: 1080, fps: 30.0);
         EncodingProfile profile = BuildTranscodeProfile(codec: VideoCodecType.H264, level: "4.2");
 
-        ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile, source);
+        ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile: profile, source: source);
 
         result.IsValid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
@@ -190,7 +190,7 @@ public class HfrStereoVrValidatorTests
             height: 2160
         );
 
-        ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile, source);
+        ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile: profile, source: source);
 
         result.IsValid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
@@ -208,10 +208,10 @@ public class HfrStereoVrValidatorTests
             height: 2160
         );
 
-        ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile, source);
+        ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile: profile, source: source);
 
         result.IsValid.Should().BeFalse();
-        result.Errors[0].Should().Contain("Level 4.0 cap exceeded");
+        result.Errors[index: 0].Should().Contain(expected: "Level 4.0 cap exceeded");
     }
 
     // ------------------------------------------------------------------
@@ -224,10 +224,10 @@ public class HfrStereoVrValidatorTests
         MediaInfo source = BuildSourceMedia(fps: 240.0);
         EncodingProfile profile = BuildCopyProfile();
 
-        ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile, source);
+        ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile: profile, source: source);
 
         // Copy policy: rule does not apply, no error about level cap
-        result.Errors.Should().NotContain(e => e.Contains("cap exceeded"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("cap exceeded"));
     }
 
     // ------------------------------------------------------------------
@@ -240,12 +240,12 @@ public class HfrStereoVrValidatorTests
         MediaInfo source = BuildSourceMedia(stereoMode: "side_by_side_left");
         EncodingProfile profile = BuildTranscodeProfile();
 
-        ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile, source);
+        ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile: profile, source: source);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().HaveCount(1);
-        result.Errors[0].Should().Contain("3D source detected");
-        result.Errors[0].Should().Contain("side_by_side_left");
+        result.Errors.Should().HaveCount(expected: 1);
+        result.Errors[index: 0].Should().Contain(expected: "3D source detected");
+        result.Errors[index: 0].Should().Contain(expected: "side_by_side_left");
     }
 
     // ------------------------------------------------------------------
@@ -258,7 +258,7 @@ public class HfrStereoVrValidatorTests
         MediaInfo source = BuildSourceMedia(stereoMode: "side_by_side_left");
         EncodingProfile profile = BuildCopyProfile();
 
-        ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile, source);
+        ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile: profile, source: source);
 
         result.IsValid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
@@ -274,9 +274,9 @@ public class HfrStereoVrValidatorTests
         MediaInfo source = BuildSourceMedia();
         EncodingProfile profile = BuildTranscodeProfile();
 
-        ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile, source);
+        ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile: profile, source: source);
 
-        result.Errors.Should().NotContain(e => e.Contains("3D source detected"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("3D source detected"));
     }
 
     // ------------------------------------------------------------------
@@ -289,13 +289,13 @@ public class HfrStereoVrValidatorTests
         MediaInfo source = BuildSourceMedia(sphericalProjection: "equirectangular");
         EncodingProfile profile = BuildTranscodeProfile();
 
-        ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile, source);
+        ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile: profile, source: source);
 
         result.IsValid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
-        result.Warnings.Should().HaveCount(1);
-        result.Warnings[0].Should().Contain("equirectangular");
-        result.Warnings[0].Should().Contain("will be stripped");
+        result.Warnings.Should().HaveCount(expected: 1);
+        result.Warnings[index: 0].Should().Contain(expected: "equirectangular");
+        result.Warnings[index: 0].Should().Contain(expected: "will be stripped");
     }
 
     // ------------------------------------------------------------------
@@ -308,7 +308,7 @@ public class HfrStereoVrValidatorTests
         MediaInfo source = BuildSourceMedia(sphericalProjection: "equirectangular");
         EncodingProfile profile = BuildCopyProfile();
 
-        ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile, source);
+        ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile: profile, source: source);
 
         result.IsValid.Should().BeTrue();
         result.Warnings.Should().BeEmpty();
@@ -324,9 +324,9 @@ public class HfrStereoVrValidatorTests
         MediaInfo source = BuildSourceMedia();
         EncodingProfile profile = BuildTranscodeProfile();
 
-        ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile, source);
+        ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile: profile, source: source);
 
-        result.Warnings.Should().NotContain(w => w.Contains("spherical") || w.Contains("VR"));
+        result.Warnings.Should().NotContain(predicate: w => w.Contains("spherical") || w.Contains("VR"));
     }
 
     // ------------------------------------------------------------------
@@ -336,16 +336,16 @@ public class HfrStereoVrValidatorTests
     [Fact]
     public void CodecLevelFpsCaps_Lookup_H264Level42_ReturnsCorrectCap()
     {
-        CodecLevelFpsCaps.LevelCap? cap = CodecLevelFpsCaps.Lookup(VideoCodecType.H264, "4.2");
+        CodecLevelFpsCaps.LevelCap? cap = CodecLevelFpsCaps.Lookup(codec: VideoCodecType.H264, level: "4.2");
 
         cap.Should().NotBeNull();
-        cap!.MaxLumaSamplesPerSec.Should().Be(133_693_440);
+        cap!.MaxLumaSamplesPerSec.Should().Be(expected: 133_693_440);
     }
 
     [Fact]
     public void CodecLevelFpsCaps_Lookup_UnknownLevel_ReturnsNull()
     {
-        CodecLevelFpsCaps.LevelCap? cap = CodecLevelFpsCaps.Lookup(VideoCodecType.H264, "9.9");
+        CodecLevelFpsCaps.LevelCap? cap = CodecLevelFpsCaps.Lookup(codec: VideoCodecType.H264, level: "9.9");
 
         cap.Should().BeNull();
     }
@@ -358,11 +358,11 @@ public class HfrStereoVrValidatorTests
         // H.264 L5.2 = 530,841,600 (fits)
         long required = 1920L * 1080 * 240;
         CodecLevelFpsCaps.LevelCap? next = CodecLevelFpsCaps.FindNextFit(
-            VideoCodecType.H264,
-            required
+            codec: VideoCodecType.H264,
+            requiredSamplesPerSec: required
         );
 
         next.Should().NotBeNull();
-        next!.Level.Should().Be("5.2");
+        next!.Level.Should().Be(expected: "5.2");
     }
 }

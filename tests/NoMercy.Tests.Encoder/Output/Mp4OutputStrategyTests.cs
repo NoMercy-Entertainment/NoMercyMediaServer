@@ -22,28 +22,28 @@ public class Mp4OutputStrategyTests
     [Fact]
     public void ConfigureOutput_HasFaststart()
     {
-        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        Mp4OutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new("/input.mkv"));
+        builder.AddInput(input: new(FilePath: "/input.mkv"));
 
-        strategy.ConfigureOutput(builder, CreatePlan(), "/output");
+        strategy.ConfigureOutput(builder: builder, plan: CreatePlan(), outputDirectory: "/output");
 
-        FfmpegCommand cmd = builder.Build("ffmpeg");
-        string args = string.Join(" ", cmd.Arguments);
-        args.Should().Contain("-movflags +faststart");
+        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
+        string args = string.Join(separator: " ", value: cmd.Arguments);
+        args.Should().Contain(expected: "-movflags +faststart");
     }
 
     [Fact]
     public void ConfigureOutput_ProducesMp4Output()
     {
-        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        Mp4OutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new("/input.mkv"));
+        builder.AddInput(input: new(FilePath: "/input.mkv"));
 
-        strategy.ConfigureOutput(builder, CreatePlan(), "/output");
+        strategy.ConfigureOutput(builder: builder, plan: CreatePlan(), outputDirectory: "/output");
 
-        FfmpegCommand cmd = builder.Build("ffmpeg");
-        cmd.Arguments.Should().Contain(a => a.Contains("output.mp4"));
+        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
+        cmd.Arguments.Should().Contain(predicate: a => a.Contains("output.mp4"));
     }
 
     [Fact]
@@ -51,31 +51,31 @@ public class Mp4OutputStrategyTests
     {
         // DV passthrough in MP4 requires the dvh1 tag — without it Apple TV /
         // QuickTime drop the DV metadata and play as plain HDR10.
-        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        Mp4OutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new("/input.mkv"));
+        builder.AddInput(input: new(FilePath: "/input.mkv"));
 
         OutputPlan plan = CreatePlan() with { PreserveDolbyVision = true };
 
-        strategy.ConfigureOutput(builder, plan, "/output");
+        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/output");
 
-        FfmpegCommand cmd = builder.Build("ffmpeg");
-        string args = string.Join(" ", cmd.Arguments);
-        args.Should().Contain("-tag:v dvh1");
+        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
+        string args = string.Join(separator: " ", value: cmd.Arguments);
+        args.Should().Contain(expected: "-tag:v dvh1");
     }
 
     [Fact]
     public void ConfigureOutput_NoDolbyVision_OmitsDvh1Tag()
     {
-        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        Mp4OutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new("/input.mkv"));
+        builder.AddInput(input: new(FilePath: "/input.mkv"));
 
-        strategy.ConfigureOutput(builder, CreatePlan(), "/output");
+        strategy.ConfigureOutput(builder: builder, plan: CreatePlan(), outputDirectory: "/output");
 
-        FfmpegCommand cmd = builder.Build("ffmpeg");
-        string args = string.Join(" ", cmd.Arguments);
-        args.Should().NotContain("-tag:v dvh1");
+        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
+        string args = string.Join(separator: " ", value: cmd.Arguments);
+        args.Should().NotContain(unexpected: "-tag:v dvh1");
     }
 
     [Fact]
@@ -83,20 +83,20 @@ public class Mp4OutputStrategyTests
     {
         // Audio copy must use literal "copy" as the codec — not the source
         // encoder name. ffmpeg interprets "copy" as stream-copy.
-        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        Mp4OutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new("/input.mkv"));
+        builder.AddInput(input: new(FilePath: "/input.mkv"));
 
         OutputPlan plan = CreatePlan() with
         {
-            AudioOutputs = [new("aac", 0, 2, 48000, StreamAction.Copy, "eng", "0:a:0")],
+            AudioOutputs = [new(EncoderName: "aac", BitrateKbps: 0, Channels: 2, SampleRate: 48000, Action: StreamAction.Copy, Language: "eng", MapLabel: "0:a:0")],
         };
 
-        strategy.ConfigureOutput(builder, plan, "/output");
+        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/output");
 
-        FfmpegCommand cmd = builder.Build("ffmpeg");
-        string args = string.Join(" ", cmd.Arguments);
-        args.Should().Contain("-c:a copy");
+        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
+        string args = string.Join(separator: " ", value: cmd.Arguments);
+        args.Should().Contain(expected: "-c:a copy");
     }
 
     [Fact]
@@ -105,89 +105,89 @@ public class Mp4OutputStrategyTests
         // When the primary audio is transcoded AND carries a filter, the
         // strategy must emit -af with that filter. Required for downmix
         // (e.g. 5.1 → stereo) and loudness normalization.
-        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        Mp4OutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new("/input.mkv"));
+        builder.AddInput(input: new(FilePath: "/input.mkv"));
 
         OutputPlan plan = CreatePlan() with
         {
             AudioOutputs =
             [
-                new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")
+                new(EncoderName: "aac", BitrateKbps: 192, Channels: 2, SampleRate: 48000, Action: StreamAction.Transcode, Language: "eng", MapLabel: "0:a:0")
                 {
                     AudioFilter = "loudnorm=I=-16:TP=-1.5",
                 },
             ],
         };
 
-        strategy.ConfigureOutput(builder, plan, "/output");
+        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/output");
 
-        FfmpegCommand cmd = builder.Build("ffmpeg");
-        string args = string.Join(" ", cmd.Arguments);
-        args.Should().Contain("loudnorm=I=-16:TP=-1.5");
+        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
+        string args = string.Join(separator: " ", value: cmd.Arguments);
+        args.Should().Contain(expected: "loudnorm=I=-16:TP=-1.5");
     }
 
     [Fact]
     public void ConfigureOutput_AudioFilter_OmittedWhenCopy()
     {
         // Stream-copy can't take filters. Strategy must NOT emit -af.
-        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        Mp4OutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new("/input.mkv"));
+        builder.AddInput(input: new(FilePath: "/input.mkv"));
 
         OutputPlan plan = CreatePlan() with
         {
             AudioOutputs =
             [
-                new("aac", 0, 2, 48000, StreamAction.Copy, "eng", "0:a:0")
+                new(EncoderName: "aac", BitrateKbps: 0, Channels: 2, SampleRate: 48000, Action: StreamAction.Copy, Language: "eng", MapLabel: "0:a:0")
                 {
                     AudioFilter = "loudnorm=I=-16",
                 },
             ],
         };
 
-        strategy.ConfigureOutput(builder, plan, "/output");
+        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/output");
 
-        FfmpegCommand cmd = builder.Build("ffmpeg");
-        string args = string.Join(" ", cmd.Arguments);
-        args.Should().NotContain("loudnorm=I=-16");
+        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
+        string args = string.Join(separator: " ", value: cmd.Arguments);
+        args.Should().NotContain(unexpected: "loudnorm=I=-16");
     }
 
     [Fact]
     public void ConfigureOutput_AudioWithDropAction_NotMapped()
     {
         // Drop = remove the stream entirely; it must not appear in -map.
-        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        Mp4OutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new("/input.mkv"));
+        builder.AddInput(input: new(FilePath: "/input.mkv"));
 
         OutputPlan plan = CreatePlan() with
         {
-            AudioOutputs = [new("aac", 0, 2, 48000, StreamAction.Drop, "eng", "0:a:0")],
+            AudioOutputs = [new(EncoderName: "aac", BitrateKbps: 0, Channels: 2, SampleRate: 48000, Action: StreamAction.Drop, Language: "eng", MapLabel: "0:a:0")],
         };
 
-        strategy.ConfigureOutput(builder, plan, "/output");
+        strategy.ConfigureOutput(builder: builder, plan: plan, outputDirectory: "/output");
 
-        FfmpegCommand cmd = builder.Build("ffmpeg");
-        string args = string.Join(" ", cmd.Arguments);
-        args.Should().NotContain("-map 0:a:0");
+        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
+        string args = string.Join(separator: " ", value: cmd.Arguments);
+        args.Should().NotContain(unexpected: "-map 0:a:0");
     }
 
     [Fact]
     public void GetOutputSubdirectories_ReturnsEmpty()
     {
         // MP4 is a single-file container — no subdirectories needed.
-        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        Mp4OutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
 
-        strategy.GetOutputSubdirectories(CreatePlan()).Should().BeEmpty();
+        strategy.GetOutputSubdirectories(plan: CreatePlan()).Should().BeEmpty();
     }
 
     [Fact]
     public void Format_IsMp4()
     {
-        new Mp4OutputStrategy(TestStorageFactory.CreateLocal())
+        new Mp4OutputStrategy(storage: TestStorageFactory.CreateLocal())
             .Format.Should()
-            .Be(OutputFormat.Mp4);
+            .Be(expected: OutputFormat.Mp4);
     }
 
     private static OutputPlan CreatePlan() =>
@@ -196,21 +196,21 @@ public class Mp4OutputStrategyTests
             VideoOutputs:
             [
                 new(
-                    1920,
-                    1080,
-                    "libx264",
-                    23,
-                    0,
-                    "medium",
-                    "high",
-                    "4.0",
-                    false,
-                    "yuv420p",
-                    "[v0]",
-                    new()
+                    Width: 1920,
+                    Height: 1080,
+                    EncoderName: "libx264",
+                    Crf: 23,
+                    BitrateKbps: 0,
+                    Preset: "medium",
+                    Profile: "high",
+                    Level: "4.0",
+                    TenBit: false,
+                    PixelFormat: "yuv420p",
+                    MapLabel: "[v0]",
+                    ExtraFlags: new()
                 ),
             ],
-            AudioOutputs: [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
+            AudioOutputs: [new(EncoderName: "aac", BitrateKbps: 192, Channels: 2, SampleRate: 48000, Action: StreamAction.Transcode, Language: "eng", MapLabel: "0:a:0")],
             SubtitleOutputs: [],
             Thumbnails: null
         );

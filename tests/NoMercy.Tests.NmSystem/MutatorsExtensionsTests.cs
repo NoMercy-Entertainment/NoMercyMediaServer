@@ -13,7 +13,7 @@ using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Tests.NmSystem;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class MutatorsExtensionsTests
 {
     [Fact]
@@ -21,15 +21,15 @@ public class MutatorsExtensionsTests
     {
         int[] input = [42];
         IEnumerable<int> result = input.Randomize();
-        result.Should().Equal(42);
+        result.Should().Equal(elements: 42);
     }
 
     [Fact]
     public void Randomize_WithMultipleItems_ReturnsAllItems()
     {
         int[] input = [1, 2, 3, 4, 5];
-        IEnumerable<int> result = input.Randomize().OrderBy(x => x).ToList();
-        result.Should().Equal(1, 2, 3, 4, 5);
+        IEnumerable<int> result = input.Randomize().OrderBy(keySelector: x => x).ToList();
+        result.Should().Equal(elements: [1, 2, 3, 4, 5]);
     }
 
     [Fact]
@@ -45,10 +45,10 @@ public class MutatorsExtensionsTests
     {
         int[] input = [1, 2, 2, 3, 3, 3];
         IEnumerable<int> result = input.Randomize();
-        result.Should().HaveCount(6);
-        result.Count(x => x == 1).Should().Be(1);
-        result.Count(x => x == 2).Should().Be(2);
-        result.Count(x => x == 3).Should().Be(3);
+        result.Should().HaveCount(expected: 6);
+        result.Count(predicate: x => x == 1).Should().Be(expected: 1);
+        result.Count(predicate: x => x == 2).Should().Be(expected: 2);
+        result.Count(predicate: x => x == 3).Should().Be(expected: 3);
     }
 
     [Fact]
@@ -56,8 +56,8 @@ public class MutatorsExtensionsTests
     {
         string[] input = ["apple", "banana", "cherry", "date", "elderberry"];
         IEnumerable<string> result = input.Randomize();
-        result.Should().HaveCount(5);
-        result.Should().Contain("apple");
-        result.Should().Contain("banana");
+        result.Should().HaveCount(expected: 5);
+        result.Should().Contain(expected: "apple");
+        result.Should().Contain(expected: "banana");
     }
 }

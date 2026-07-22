@@ -41,77 +41,77 @@ public class CropDetectorTests
             "[Parsed_cropdetect_0 @ 0x7] x1:0 x2:1919 y1:20 y2:1059 w:1920 h:1040 x:0 y:20 crop=1920:1040:0:20",
         ];
 
-        SetupStderr(stderrLines, exitCode: 0);
+        SetupStderr(lines: stderrLines, exitCode: 0);
         CropDetector detector = new(
-            _options,
-            _processRunner.Object,
-            TestStorageFactory.CreateLocal(),
-            NullLogger<CropDetector>.Instance
+            options: _options,
+            processRunner: _processRunner.Object,
+            storage: TestStorageFactory.CreateLocal(),
+            logger: NullLogger<CropDetector>.Instance
         );
 
-        CropResult result = await detector.DetectAsync("/tmp/in.mkv", CancellationToken.None);
+        CropResult result = await detector.DetectAsync(inputPath: "/tmp/in.mkv", ct: CancellationToken.None);
 
-        Assert.Equal(1920, result.Width);
-        Assert.Equal(1040, result.Height);
-        Assert.Equal(0, result.X);
-        Assert.Equal(20, result.Y);
-        Assert.True(result.ShouldCrop);
+        Assert.Equal(expected: 1920, actual: result.Width);
+        Assert.Equal(expected: 1040, actual: result.Height);
+        Assert.Equal(expected: 0, actual: result.X);
+        Assert.Equal(expected: 20, actual: result.Y);
+        Assert.True(condition: result.ShouldCrop);
     }
 
     [Fact]
     public async Task Detect_FullFrameCrop_ShouldCropFalse()
     {
-        string[] stderrLines = Enumerable.Repeat("[cropdetect] crop=1920:1080:0:0", 10).ToArray();
+        string[] stderrLines = Enumerable.Repeat(element: "[cropdetect] crop=1920:1080:0:0", count: 10).ToArray();
 
-        SetupStderr(stderrLines, exitCode: 0);
+        SetupStderr(lines: stderrLines, exitCode: 0);
         CropDetector detector = new(
-            _options,
-            _processRunner.Object,
-            TestStorageFactory.CreateLocal(),
-            NullLogger<CropDetector>.Instance
+            options: _options,
+            processRunner: _processRunner.Object,
+            storage: TestStorageFactory.CreateLocal(),
+            logger: NullLogger<CropDetector>.Instance
         );
 
-        CropResult result = await detector.DetectAsync("/tmp/in.mkv", CancellationToken.None);
+        CropResult result = await detector.DetectAsync(inputPath: "/tmp/in.mkv", ct: CancellationToken.None);
 
-        Assert.False(result.ShouldCrop);
+        Assert.False(condition: result.ShouldCrop);
     }
 
     [Fact]
     public async Task Detect_FewerThanMinObservations_ShouldCropFalse()
     {
         string[] stderrLines = Enumerable
-            .Repeat("crop=1920:1040:0:20", 3) // below threshold
+            .Repeat(element: "crop=1920:1040:0:20", count: 3) // below threshold
             .ToArray();
 
-        SetupStderr(stderrLines, exitCode: 0);
+        SetupStderr(lines: stderrLines, exitCode: 0);
         CropDetector detector = new(
-            _options,
-            _processRunner.Object,
-            TestStorageFactory.CreateLocal(),
-            NullLogger<CropDetector>.Instance
+            options: _options,
+            processRunner: _processRunner.Object,
+            storage: TestStorageFactory.CreateLocal(),
+            logger: NullLogger<CropDetector>.Instance
         );
 
-        CropResult result = await detector.DetectAsync("/tmp/in.mkv", CancellationToken.None);
+        CropResult result = await detector.DetectAsync(inputPath: "/tmp/in.mkv", ct: CancellationToken.None);
 
-        Assert.False(result.ShouldCrop);
+        Assert.False(condition: result.ShouldCrop);
     }
 
     [Fact]
     public async Task Detect_FfmpegNonZeroExit_ReturnsEmptyResult()
     {
-        SetupStderr(["crop=1920:1040:0:20"], exitCode: 1);
+        SetupStderr(lines: ["crop=1920:1040:0:20"], exitCode: 1);
         CropDetector detector = new(
-            _options,
-            _processRunner.Object,
-            TestStorageFactory.CreateLocal(),
-            NullLogger<CropDetector>.Instance
+            options: _options,
+            processRunner: _processRunner.Object,
+            storage: TestStorageFactory.CreateLocal(),
+            logger: NullLogger<CropDetector>.Instance
         );
 
-        CropResult result = await detector.DetectAsync("/tmp/in.mkv", CancellationToken.None);
+        CropResult result = await detector.DetectAsync(inputPath: "/tmp/in.mkv", ct: CancellationToken.None);
 
-        Assert.Equal(0, result.Width);
-        Assert.Equal(0, result.Height);
-        Assert.False(result.ShouldCrop);
+        Assert.Equal(expected: 0, actual: result.Width);
+        Assert.Equal(expected: 0, actual: result.Height);
+        Assert.False(condition: result.ShouldCrop);
     }
 
     [Fact]
@@ -130,19 +130,19 @@ public class CropDetectorTests
             "crop=1920:1040:0:20",
         ];
 
-        SetupStderr(stderrLines, exitCode: 0);
+        SetupStderr(lines: stderrLines, exitCode: 0);
         CropDetector detector = new(
-            _options,
-            _processRunner.Object,
-            TestStorageFactory.CreateLocal(),
-            NullLogger<CropDetector>.Instance
+            options: _options,
+            processRunner: _processRunner.Object,
+            storage: TestStorageFactory.CreateLocal(),
+            logger: NullLogger<CropDetector>.Instance
         );
 
-        CropResult result = await detector.DetectAsync("/tmp/in.mkv", CancellationToken.None);
+        CropResult result = await detector.DetectAsync(inputPath: "/tmp/in.mkv", ct: CancellationToken.None);
 
-        Assert.Equal(1040, result.Height);
-        Assert.Equal(20, result.Y);
-        Assert.True(result.ShouldCrop);
+        Assert.Equal(expected: 1040, actual: result.Height);
+        Assert.Equal(expected: 20, actual: result.Y);
+        Assert.True(condition: result.ShouldCrop);
     }
 
     [Fact]
@@ -151,7 +151,7 @@ public class CropDetectorTests
         // Phase 4.1 spec: -ss 60, -t 180, cropdetect round=4.
         string[]? capturedArgs = null;
         _processRunner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -162,7 +162,7 @@ public class CropDetectorTests
                 )
             )
             .Returns(
-                (
+                valueFunction: (
                     string _,
                     string[] args,
                     Action<string>? _,
@@ -173,31 +173,31 @@ public class CropDetectorTests
                 {
                     capturedArgs = args;
                     return Task.FromResult(
-                        new ProcessResult(0, string.Empty, string.Empty, TimeSpan.Zero)
+                        result: new ProcessResult(ExitCode: 0, StdOut: string.Empty, StdErr: string.Empty, Duration: TimeSpan.Zero)
                     );
                 }
             );
 
         CropDetector detector = new(
-            _options,
-            _processRunner.Object,
-            TestStorageFactory.CreateLocal(),
-            NullLogger<CropDetector>.Instance
+            options: _options,
+            processRunner: _processRunner.Object,
+            storage: TestStorageFactory.CreateLocal(),
+            logger: NullLogger<CropDetector>.Instance
         );
 
-        await detector.DetectAsync("/tmp/in.mkv", CancellationToken.None);
+        await detector.DetectAsync(inputPath: "/tmp/in.mkv", ct: CancellationToken.None);
 
-        Assert.NotNull(capturedArgs);
+        Assert.NotNull(@object: capturedArgs);
         // -ss 60
-        int ssIdx = Array.IndexOf(capturedArgs, "-ss");
-        Assert.True(ssIdx >= 0);
-        Assert.Equal("60", capturedArgs[ssIdx + 1]);
+        int ssIdx = Array.IndexOf(array: capturedArgs, value: "-ss");
+        Assert.True(condition: ssIdx >= 0);
+        Assert.Equal(expected: "60", actual: capturedArgs[ssIdx + 1]);
         // -t 180
-        int tIdx = Array.IndexOf(capturedArgs, "-t");
-        Assert.True(tIdx >= 0);
-        Assert.Equal("180", capturedArgs[tIdx + 1]);
+        int tIdx = Array.IndexOf(array: capturedArgs, value: "-t");
+        Assert.True(condition: tIdx >= 0);
+        Assert.Equal(expected: "180", actual: capturedArgs[tIdx + 1]);
         // cropdetect round=4
-        Assert.Contains(capturedArgs, a => a.Contains("round=4"));
+        Assert.Contains(collection: capturedArgs, filter: a => a.Contains(value: "round=4"));
     }
 
     [Fact]
@@ -216,25 +216,25 @@ public class CropDetectorTests
             "crop=1920:1040:0:20",
         ];
 
-        SetupStderr(stderrLines, exitCode: 0);
+        SetupStderr(lines: stderrLines, exitCode: 0);
         CropDetector detector = new(
-            _options,
-            _processRunner.Object,
-            TestStorageFactory.CreateLocal(),
-            NullLogger<CropDetector>.Instance
+            options: _options,
+            processRunner: _processRunner.Object,
+            storage: TestStorageFactory.CreateLocal(),
+            logger: NullLogger<CropDetector>.Instance
         );
 
         Guid videoFileId = Guid.NewGuid();
         CropResult result = await detector.DetectAsync(
-            "/tmp/in.mkv",
-            videoFileId,
-            CancellationToken.None
+            inputPath: "/tmp/in.mkv",
+            sourceVideoFileId: videoFileId,
+            ct: CancellationToken.None
         );
 
-        Assert.Equal(videoFileId, result.SourceVideoFileId);
-        Assert.Equal(6, result.SampleFramesAnalyzed);
-        Assert.Equal(6.0 / 8.0, result.Confidence, 3);
-        Assert.True(result.ShouldCrop);
+        Assert.Equal(expected: videoFileId, actual: result.SourceVideoFileId);
+        Assert.Equal(expected: 6, actual: result.SampleFramesAnalyzed);
+        Assert.Equal(expected: 6.0 / 8.0, actual: result.Confidence, precision: 3);
+        Assert.True(condition: result.ShouldCrop);
     }
 
     [Fact]
@@ -242,25 +242,25 @@ public class CropDetectorTests
     {
         // 3 observations of one crop → below the MinObservations gate but
         // SampleFramesAnalyzed + Confidence should still be filled in for UI.
-        string[] stderrLines = Enumerable.Repeat("crop=1920:1040:0:20", 3).ToArray();
+        string[] stderrLines = Enumerable.Repeat(element: "crop=1920:1040:0:20", count: 3).ToArray();
 
-        SetupStderr(stderrLines, exitCode: 0);
+        SetupStderr(lines: stderrLines, exitCode: 0);
         CropDetector detector = new(
-            _options,
-            _processRunner.Object,
-            TestStorageFactory.CreateLocal(),
-            NullLogger<CropDetector>.Instance
+            options: _options,
+            processRunner: _processRunner.Object,
+            storage: TestStorageFactory.CreateLocal(),
+            logger: NullLogger<CropDetector>.Instance
         );
 
         CropResult result = await detector.DetectAsync(
-            "/tmp/in.mkv",
+            inputPath: "/tmp/in.mkv",
             sourceVideoFileId: null,
-            CancellationToken.None
+            ct: CancellationToken.None
         );
 
-        Assert.False(result.ShouldCrop);
-        Assert.Equal(3, result.SampleFramesAnalyzed);
-        Assert.Equal(1.0, result.Confidence);
+        Assert.False(condition: result.ShouldCrop);
+        Assert.Equal(expected: 3, actual: result.SampleFramesAnalyzed);
+        Assert.Equal(expected: 1.0, actual: result.Confidence);
     }
 
     [Fact]
@@ -274,15 +274,15 @@ public class CropDetectorTests
         CropDetector detector = NewDetector();
 
         await detector.DetectAsync(
-            "/tmp/in.mkv",
+            inputPath: "/tmp/in.mkv",
             sourceVideoFileId: null,
             sourceIsHdr: true,
-            CancellationToken.None
+            ct: CancellationToken.None
         );
 
-        Assert.NotNull(args.Value);
-        Assert.Contains(args.Value!, a => a.Contains("cropdetect") && a.Contains("limit=128"));
-        Assert.DoesNotContain(args.Value!, a => a.Contains("limit=24"));
+        Assert.NotNull(@object: args.Value);
+        Assert.Contains(collection: args.Value!, filter: a => a.Contains(value: "cropdetect") && a.Contains(value: "limit=128"));
+        Assert.DoesNotContain(collection: args.Value!, filter: a => a.Contains(value: "limit=24"));
     }
 
     [Fact]
@@ -292,15 +292,15 @@ public class CropDetectorTests
         CropDetector detector = NewDetector();
 
         await detector.DetectAsync(
-            "/tmp/in.mkv",
+            inputPath: "/tmp/in.mkv",
             sourceVideoFileId: null,
             sourceIsHdr: false,
-            CancellationToken.None
+            ct: CancellationToken.None
         );
 
-        Assert.NotNull(args.Value);
-        Assert.Contains(args.Value!, a => a.Contains("cropdetect") && a.Contains("limit=24"));
-        Assert.DoesNotContain(args.Value!, a => a.Contains("limit=128"));
+        Assert.NotNull(@object: args.Value);
+        Assert.Contains(collection: args.Value!, filter: a => a.Contains(value: "cropdetect") && a.Contains(value: "limit=24"));
+        Assert.DoesNotContain(collection: args.Value!, filter: a => a.Contains(value: "limit=128"));
     }
 
     [Fact]
@@ -308,50 +308,50 @@ public class CropDetectorTests
     {
         // Caller doesn't know the transfer (content-analysis API): the detector
         // probes color_transfer itself. A PQ transfer must select the HDR limit.
-        SetupTransferProbe("smpte2084");
+        SetupTransferProbe(transfer: "smpte2084");
         StrongBox<string[]?> args = CaptureCropDetectArgs();
         CropDetector detector = NewDetector();
 
         await detector.DetectAsync(
-            "/tmp/in.mkv",
+            inputPath: "/tmp/in.mkv",
             sourceVideoFileId: null,
             sourceIsHdr: null,
-            CancellationToken.None
+            ct: CancellationToken.None
         );
 
-        Assert.NotNull(args.Value);
-        Assert.Contains(args.Value!, a => a.Contains("cropdetect") && a.Contains("limit=128"));
+        Assert.NotNull(@object: args.Value);
+        Assert.Contains(collection: args.Value!, filter: a => a.Contains(value: "cropdetect") && a.Contains(value: "limit=128"));
     }
 
     [Fact]
     public async Task Detect_NullHdrFlag_ProbesSdrTransfer_UsesSdrLimit()
     {
-        SetupTransferProbe("bt709");
+        SetupTransferProbe(transfer: "bt709");
         StrongBox<string[]?> args = CaptureCropDetectArgs();
         CropDetector detector = NewDetector();
 
         await detector.DetectAsync(
-            "/tmp/in.mkv",
+            inputPath: "/tmp/in.mkv",
             sourceVideoFileId: null,
             sourceIsHdr: null,
-            CancellationToken.None
+            ct: CancellationToken.None
         );
 
-        Assert.NotNull(args.Value);
-        Assert.Contains(args.Value!, a => a.Contains("cropdetect") && a.Contains("limit=24"));
+        Assert.NotNull(@object: args.Value);
+        Assert.Contains(collection: args.Value!, filter: a => a.Contains(value: "cropdetect") && a.Contains(value: "limit=24"));
     }
 
     private CropDetector NewDetector() =>
         new(
-            _options,
-            _processRunner.Object,
-            TestStorageFactory.CreateLocal(),
-            NullLogger<CropDetector>.Instance
+            options: _options,
+            processRunner: _processRunner.Object,
+            storage: TestStorageFactory.CreateLocal(),
+            logger: NullLogger<CropDetector>.Instance
         );
 
     private void SetupTransferProbe(string transfer) =>
         _processRunner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     "ffprobe",
                     It.IsAny<string[]>(),
@@ -359,7 +359,7 @@ public class CropDetectorTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(new ProcessResult(0, transfer + "\n", string.Empty, TimeSpan.Zero));
+            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: transfer + "\n", StdErr: string.Empty, Duration: TimeSpan.Zero));
 
     /// <summary>
     /// Wires the cropdetect (stderr) process call to capture its argument array
@@ -367,9 +367,9 @@ public class CropDetectorTests
     /// </summary>
     private StrongBox<string[]?> CaptureCropDetectArgs()
     {
-        StrongBox<string[]?> box = new(null);
+        StrongBox<string[]?> box = new(value: null);
         _processRunner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -380,7 +380,7 @@ public class CropDetectorTests
                 )
             )
             .Returns(
-                (
+                valueFunction: (
                     string _,
                     string[] args,
                     Action<string>? _,
@@ -391,7 +391,7 @@ public class CropDetectorTests
                 {
                     box.Value = args;
                     return Task.FromResult(
-                        new ProcessResult(0, string.Empty, string.Empty, TimeSpan.Zero)
+                        result: new ProcessResult(ExitCode: 0, StdOut: string.Empty, StdErr: string.Empty, Duration: TimeSpan.Zero)
                     );
                 }
             );
@@ -401,7 +401,7 @@ public class CropDetectorTests
     private void SetupStderr(string[] lines, int exitCode)
     {
         _processRunner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -412,7 +412,7 @@ public class CropDetectorTests
                 )
             )
             .Returns(
-                (
+                valueFunction: (
                     string _,
                     string[] _,
                     Action<string>? onStdOut,
@@ -422,14 +422,14 @@ public class CropDetectorTests
                 ) =>
                 {
                     foreach (string line in lines)
-                        onStdErr?.Invoke(line);
+                        onStdErr?.Invoke(obj: line);
 
                     return Task.FromResult(
-                        new ProcessResult(
-                            exitCode,
-                            string.Empty,
-                            string.Join('\n', lines),
-                            TimeSpan.FromSeconds(1)
+                        result: new ProcessResult(
+                            ExitCode: exitCode,
+                            StdOut: string.Empty,
+                            StdErr: string.Join(separator: '\n', value: lines),
+                            Duration: TimeSpan.FromSeconds(seconds: 1)
                         )
                     );
                 }

@@ -15,21 +15,21 @@ namespace NoMercy.Database.Models.Libraries;
 
 public sealed class CandidateMatch
 {
-    [JsonProperty("provider")]
+    [JsonProperty(propertyName: "provider")]
     public required string Provider { get; set; }
 
-    [JsonProperty("external_id")]
+    [JsonProperty(propertyName: "external_id")]
     public required string ExternalId { get; set; }
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public required string Title { get; set; }
 
-    [JsonProperty("year")]
+    [JsonProperty(propertyName: "year")]
     public int? Year { get; set; }
 
-    [JsonProperty("poster_path")]
+    [JsonProperty(propertyName: "poster_path")]
     public string? PosterPath { get; set; }
 
-    [JsonProperty("score")]
+    [JsonProperty(propertyName: "score")]
     public double Score { get; set; }
 }

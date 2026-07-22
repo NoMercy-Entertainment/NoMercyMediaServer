@@ -25,14 +25,14 @@ namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 
 public class ValidateStageTests
 {
-    private readonly ValidateStage _stage = new(NullLogger<ValidateStage>.Instance);
+    private readonly ValidateStage _stage = new(logger: NullLogger<ValidateStage>.Instance);
     private readonly EncodingContext _context = EncodingContext.Create();
 
     private static MediaInfo BuildMediaInfo() =>
         new(
             FilePath: "/movies/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromHours(2),
+            Duration: TimeSpan.FromHours(hours: 2),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 7_200_000_000,
             VideoStreams:
@@ -136,14 +136,14 @@ public class ValidateStageTests
     {
         EncodingProfile profile = BuildValidProfile();
         MediaInfo media = BuildMediaInfo();
-        ValidateInput input = new(media, profile);
+        ValidateInput input = new(Media: media, Profile: profile);
 
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
         result.Should().BeOfType<StageSuccess<ValidateInput>>();
         StageSuccess<ValidateInput> success = (StageSuccess<ValidateInput>)result;
-        success.Value.Profile.Should().Be(profile);
-        success.Value.Media.Should().Be(media);
+        success.Value.Profile.Should().Be(expected: profile);
+        success.Value.Media.Should().Be(expected: media);
     }
 
     // ------------------------------------------------------------------
@@ -155,15 +155,15 @@ public class ValidateStageTests
     {
         EncodingProfile profile = BuildInvalidProfile();
         MediaInfo media = BuildMediaInfo();
-        ValidateInput input = new(media, profile);
+        ValidateInput input = new(Media: media, Profile: profile);
 
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
         result.Should().BeOfType<StageFailure>();
         StageFailure failure = (StageFailure)result;
-        failure.Error.Kind.Should().Be(EncodingErrorKind.ProfileInvalid);
-        failure.Error.StageName.Should().Be("Validate");
-        failure.Error.Message.Should().Contain("BitrateKbps");
+        failure.Error.Kind.Should().Be(expected: EncodingErrorKind.ProfileInvalid);
+        failure.Error.StageName.Should().Be(expected: "Validate");
+        failure.Error.Message.Should().Contain(expected: "BitrateKbps");
     }
 
     // ------------------------------------------------------------------
@@ -182,9 +182,9 @@ public class ValidateStageTests
             Subtitles: []
         );
         MediaInfo media = BuildMediaInfo();
-        ValidateInput input = new(media, profile);
+        ValidateInput input = new(Media: media, Profile: profile);
 
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
         result.Should().BeOfType<StageSuccess<ValidateInput>>();
     }
@@ -225,12 +225,12 @@ public class ValidateStageTests
             Subtitles: []
         );
         MediaInfo media = BuildMediaInfo();
-        ValidateInput input = new(media, profile);
+        ValidateInput input = new(Media: media, Profile: profile);
 
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
         result.Should().BeOfType<StageFailure>();
         StageFailure failure = (StageFailure)result;
-        failure.Error.Kind.Should().Be(EncodingErrorKind.ProfileInvalid);
+        failure.Error.Kind.Should().Be(expected: EncodingErrorKind.ProfileInvalid);
     }
 }

@@ -24,7 +24,7 @@ public static class QueryableExtensions
     public static IQueryable<T> ForUser<T>(this IQueryable<T> query, Guid userId)
         where T : class, IHasLibrary
     {
-        return query.Where(entity => entity.Library.LibraryUsers.Any(u => u.UserId == userId));
+        return query.Where(predicate: entity => entity.Library.LibraryUsers.Any(u => u.UserId == userId));
     }
 
     /// <summary>
@@ -32,7 +32,7 @@ public static class QueryableExtensions
     /// </summary>
     public static IQueryable<Library> ForUser(this IQueryable<Library> query, Guid userId)
     {
-        return query.Where(library => library.LibraryUsers.Any(u => u.UserId == userId));
+        return query.Where(predicate: library => library.LibraryUsers.Any(u => u.UserId == userId));
     }
 
     /// <summary>
@@ -41,6 +41,6 @@ public static class QueryableExtensions
     /// </summary>
     public static IQueryable<Artist> ForUser(this IQueryable<Artist> query, Guid userId)
     {
-        return query.Where(artist => artist.Library.LibraryUsers.Any(u => u.UserId == userId));
+        return query.Where(predicate: artist => artist.Library.LibraryUsers.Any(u => u.UserId == userId));
     }
 }

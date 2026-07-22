@@ -18,180 +18,176 @@ using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Database.Models.Movies;
 
-[PrimaryKey(nameof(Id))]
-[Index(nameof(Title))]
-[Index(nameof(TitleSort))]
-[Index(nameof(LibraryId))]
-[Index(nameof(ImdbId))]
-[Index(nameof(ReleaseDate))]
-[Index(nameof(LibraryId), nameof(TitleSort))]
-[Index(nameof(CreatedAt))]
-[Index(nameof(LibraryId), nameof(CreatedAt))]
+[PrimaryKey(propertyName: nameof(Id))]
+[Index(propertyName: nameof(Title))]
+[Index(propertyName: nameof(TitleSort))]
+[Index(propertyName: nameof(LibraryId))]
+[Index(propertyName: nameof(ImdbId))]
+[Index(propertyName: nameof(ReleaseDate))]
+[Index(propertyName: nameof(LibraryId), additionalPropertyNames: nameof(TitleSort))]
+[Index(propertyName: nameof(CreatedAt))]
+[Index(propertyName: nameof(LibraryId), additionalPropertyNames: nameof(CreatedAt))]
 public class Movie : ColorPaletteTimeStamps, IHasLibrary
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.None)]
-    [JsonProperty("id")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty("title_sort")]
+    [JsonProperty(propertyName: "title_sort")]
     public string TitleSort { get; set; } = string.Empty;
 
-    [JsonProperty("duration")]
+    [JsonProperty(propertyName: "duration")]
     public int? Duration { get; set; }
 
-    [JsonProperty("show")]
+    [JsonProperty(propertyName: "show")]
     public bool Show { get; set; }
 
-    [JsonProperty("folder")]
+    [JsonProperty(propertyName: "folder")]
     public string? Folder
     {
         get;
-        set => field = PathNormalizer.NormalizeNullable(value);
+        set => field = PathNormalizer.NormalizeNullable(value: value);
     }
 
-    [JsonProperty("adult")]
+    [JsonProperty(propertyName: "adult")]
     public bool Adult { get; set; }
 
-    [JsonProperty("backdrop")]
+    [JsonProperty(propertyName: "backdrop")]
     public string? Backdrop { get; set; }
 
-    [JsonProperty("budget")]
+    [JsonProperty(propertyName: "budget")]
     public int? Budget { get; set; }
 
-    [JsonProperty("homepage")]
+    [JsonProperty(propertyName: "homepage")]
     public string? Homepage { get; set; }
 
-    [JsonProperty("imdb_id")]
+    [JsonProperty(propertyName: "imdb_id")]
     public string? ImdbId { get; set; }
 
-    [JsonProperty("original_title")]
+    [JsonProperty(propertyName: "original_title")]
     public string? OriginalTitle { get; set; }
 
-    [JsonProperty("original_language")]
+    [JsonProperty(propertyName: "original_language")]
     public string? OriginalLanguage { get; set; }
 
-    [MaxLength(4096)]
-    [JsonProperty("overview")]
+    [MaxLength(length: 4096)]
+    [JsonProperty(propertyName: "overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty("popularity")]
+    [JsonProperty(propertyName: "popularity")]
     public double? Popularity { get; set; }
 
-    [JsonProperty("poster")]
+    [JsonProperty(propertyName: "poster")]
     public string? Poster { get; set; }
 
-    [JsonProperty("release_date")]
+    [JsonProperty(propertyName: "release_date")]
     public DateTime? ReleaseDate { get; set; }
 
-    [JsonProperty("revenue")]
+    [JsonProperty(propertyName: "revenue")]
     public long? Revenue { get; set; }
 
-    [JsonProperty("runtime")]
+    [JsonProperty(propertyName: "runtime")]
     public int? Runtime { get; set; }
 
-    [JsonProperty("status")]
+    [JsonProperty(propertyName: "status")]
     public string? Status { get; set; }
 
-    [JsonProperty("tagline")]
+    [JsonProperty(propertyName: "tagline")]
     public string? Tagline { get; set; }
 
-    [JsonProperty("trailer")]
+    [JsonProperty(propertyName: "trailer")]
     public string? Trailer { get; set; }
 
-    [JsonProperty("video")]
+    [JsonProperty(propertyName: "video")]
     public string? Video { get; set; }
 
-    [JsonProperty("vote_average")]
+    [JsonProperty(propertyName: "vote_average")]
     public double? VoteAverage { get; set; }
 
-    [JsonProperty("vote_count")]
+    [JsonProperty(propertyName: "vote_count")]
     public int? VoteCount { get; set; }
 
-    [JsonProperty("library_id")]
+    [JsonProperty(propertyName: "library_id")]
     public Ulid LibraryId { get; set; }
     public Library Library { get; set; } = null!;
 
-    [JsonProperty("alternative_titles")]
+    [JsonProperty(propertyName: "alternative_titles")]
     public ICollection<AlternativeTitle> AlternativeTitles { get; set; } = [];
 
-    [JsonProperty("cast")]
+    [JsonProperty(propertyName: "cast")]
     public ICollection<Cast> Cast { get; set; } = [];
 
-    [JsonProperty("certifications")]
+    [JsonProperty(propertyName: "certifications")]
     public ICollection<CertificationMovie> CertificationMovies { get; set; } = [];
 
-    [JsonProperty("crew")]
+    [JsonProperty(propertyName: "crew")]
     public ICollection<Crew> Crew { get; set; } = [];
 
-    [JsonProperty("genre")]
+    [JsonProperty(propertyName: "genre")]
     public ICollection<GenreMovie> GenreMovies { get; set; } = [];
 
-    [JsonProperty("keywords")]
+    [JsonProperty(propertyName: "keywords")]
     public ICollection<KeywordMovie> KeywordMovies { get; set; } = [];
 
-    [JsonProperty("media")]
+    [JsonProperty(propertyName: "media")]
     public ICollection<Media.Media> Media { get; set; } = [];
 
-    [JsonProperty("images")]
+    [JsonProperty(propertyName: "images")]
     public ICollection<Image> Images { get; set; } = [];
 
-    [JsonProperty("seasons")]
+    [JsonProperty(propertyName: "seasons")]
     public ICollection<Season> Seasons { get; set; } = [];
 
-    [JsonProperty("translations")]
+    [JsonProperty(propertyName: "translations")]
     public ICollection<Translation> Translations { get; set; } = [];
 
-    [JsonProperty("user_data")]
+    [JsonProperty(propertyName: "user_data")]
     public ICollection<UserData> UserData { get; set; } = [];
 
-    [InverseProperty("MovieFrom")]
+    [InverseProperty(property: "MovieFrom")]
     public ICollection<Recommendation> RecommendationFrom { get; set; } = [];
 
-    [InverseProperty("MovieTo")]
+    [InverseProperty(property: "MovieTo")]
     public ICollection<Recommendation> RecommendationTo { get; set; } = [];
 
-    [InverseProperty("MovieFrom")]
+    [InverseProperty(property: "MovieFrom")]
     public ICollection<Similar> SimilarFrom { get; set; } = [];
 
-    [InverseProperty("MovieTo")]
+    [InverseProperty(property: "MovieTo")]
     public ICollection<Similar> SimilarTo { get; set; } = [];
 
-    [JsonProperty("movie_user")]
+    [JsonProperty(propertyName: "movie_user")]
     public ICollection<MovieUser> MovieUser { get; set; } = [];
 
-    [JsonProperty("video_files")]
+    [JsonProperty(propertyName: "video_files")]
     public ICollection<VideoFile> VideoFiles { get; set; } = [];
 
-    [JsonProperty("playback_preferences")]
+    [JsonProperty(propertyName: "playback_preferences")]
     public ICollection<PlaybackPreference> PlaybackPreferences { get; set; } = [];
 
-    [JsonProperty("watch_providers")]
+    [JsonProperty(propertyName: "watch_providers")]
     public ICollection<WatchProviderMedia> WatchProviderMedia { get; set; } = [];
 
-    [JsonProperty("companies")]
+    [JsonProperty(propertyName: "companies")]
     public ICollection<CompanyMovie> CompaniesMovies { get; set; } = [];
 
     public string CreateFolderName()
     {
-        return string.Concat(Title.CleanFileName().Shorten(), ".(", ReleaseDate.ParseYear(), ")")
+        return string.Concat(args: [Title.CleanFileName().Shorten(), ".(", ReleaseDate.ParseYear(), ")"])
             .CleanFileName();
     }
 
     public string CreateTitle()
     {
-        return string.Concat(Title, " (", ReleaseDate.ParseYear(), ") NoMercy");
+        return string.Concat(args: [Title, " (", ReleaseDate.ParseYear(), ") NoMercy"]);
     }
 
     public string CreateFileName()
     {
-        return string.Concat(
-            Title.CleanFileName().Shorten(),
-            ".(",
-            ReleaseDate.ParseYear(),
-            ").NoMercy"
+        return string.Concat(args: [Title.CleanFileName().Shorten(), ".(", ReleaseDate.ParseYear(), ").NoMercy"]
         );
     }
 }

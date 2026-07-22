@@ -18,14 +18,14 @@ namespace NoMercy.Tests.Storage;
 /// the happy-path construction in <c>WebDavStorageDriverTests</c> —
 /// specifically the "JSON parsed to a null object" case.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class WebDavDriverConfigTests
 {
     [Fact]
     public void Parse_json_null_literal_throws()
     {
-        Action act = () => WebDavDriverConfig.Parse("null", Ulid.NewUlid());
+        Action act = () => WebDavDriverConfig.Parse(json: "null", folderId: Ulid.NewUlid());
 
-        act.Should().Throw<ArgumentException>().WithMessage("*null*");
+        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*null*");
     }
 }

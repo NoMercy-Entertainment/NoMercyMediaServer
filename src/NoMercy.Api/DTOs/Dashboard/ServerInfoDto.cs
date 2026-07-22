@@ -15,30 +15,30 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record ServerInfoDto
 {
-    [JsonProperty("server")]
+    [JsonProperty(propertyName: "server")]
     public string Server { get; set; } = string.Empty;
 
-    [JsonProperty("cpu")]
+    [JsonProperty(propertyName: "cpu")]
     public List<string> Cpu { get; set; } = [];
 
-    [JsonProperty("gpu")]
+    [JsonProperty(propertyName: "gpu")]
     public List<string> Gpu { get; set; } = [];
 
-    [JsonProperty("os")]
+    [JsonProperty(propertyName: "os")]
     public string Os { get; set; } = string.Empty;
 
-    [JsonProperty("arch")]
+    [JsonProperty(propertyName: "arch")]
     public string Arch { get; set; } = string.Empty;
 
-    [JsonProperty("version")]
+    [JsonProperty(propertyName: "version")]
     public string? Version { get; set; }
 
-    [JsonProperty("bootTime")]
+    [JsonProperty(propertyName: "bootTime")]
     public DateTime BootTime { get; set; }
 
-    [JsonProperty("os_version")]
+    [JsonProperty(propertyName: "os_version")]
     public string? OsVersion { get; set; }
 
-    [JsonProperty("setup_complete")]
+    [JsonProperty(propertyName: "setup_complete")]
     public bool SetupComplete { get; set; }
 }

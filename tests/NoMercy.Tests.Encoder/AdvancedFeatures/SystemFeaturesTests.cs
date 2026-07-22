@@ -25,7 +25,7 @@ public class SystemFeaturesTests
         );
 
         result.Success.Should().BeTrue();
-        result.Message.Should().Be("Patch applied successfully.");
+        result.Message.Should().Be(expected: "Patch applied successfully.");
         result.RequiresRestart.Should().BeTrue();
     }
 
@@ -68,9 +68,9 @@ public class SystemFeaturesTests
             PassesThreshold: true
         );
 
-        result.VmafScore.Should().BeApproximately(95.0, 0.01);
-        result.Ssim.Should().BeApproximately(0.998, 0.0001);
-        result.Psnr.Should().BeApproximately(48.5, 0.01);
+        result.VmafScore.Should().BeApproximately(expectedValue: 95.0, precision: 0.01);
+        result.Ssim.Should().BeApproximately(expectedValue: 0.998, precision: 0.0001);
+        result.Psnr.Should().BeApproximately(expectedValue: 48.5, precision: 0.01);
         result.PassesThreshold.Should().BeTrue();
     }
 
@@ -86,7 +86,7 @@ public class SystemFeaturesTests
             PassesThreshold: false
         );
 
-        result.VmafScore.Should().BeLessThan(70.0);
+        result.VmafScore.Should().BeLessThan(expected: 70.0);
         result.PassesThreshold.Should().BeFalse();
     }
 
@@ -102,9 +102,9 @@ public class SystemFeaturesTests
             PassesThreshold: false
         );
 
-        result.VmafScore.Should().Be(0.0);
-        result.Ssim.Should().Be(0.0);
-        result.Psnr.Should().Be(0.0);
+        result.VmafScore.Should().Be(expected: 0.0);
+        result.Ssim.Should().Be(expected: 0.0);
+        result.Psnr.Should().Be(expected: 0.0);
         result.PassesThreshold.Should().BeFalse();
     }
 
@@ -113,10 +113,10 @@ public class SystemFeaturesTests
     {
         PipelineStagePosition[] values = Enum.GetValues<PipelineStagePosition>();
 
-        values.Should().Contain(PipelineStagePosition.Before);
-        values.Should().Contain(PipelineStagePosition.After);
-        values.Should().Contain(PipelineStagePosition.Replace);
-        values.Should().HaveCount(3);
+        values.Should().Contain(expected: PipelineStagePosition.Before);
+        values.Should().Contain(expected: PipelineStagePosition.After);
+        values.Should().Contain(expected: PipelineStagePosition.Replace);
+        values.Should().HaveCount(expected: 3);
     }
 
     [Fact]
@@ -126,7 +126,7 @@ public class SystemFeaturesTests
         // It wraps a PipelineStagePosition, a target stage name, and a stage instance.
         // Verify the record type exists and its properties are correct.
         PipelineStagePosition[] positions = Enum.GetValues<PipelineStagePosition>();
-        positions.Should().Contain(PipelineStagePosition.Before);
-        positions.Should().Contain(PipelineStagePosition.After);
+        positions.Should().Contain(expected: PipelineStagePosition.Before);
+        positions.Should().Contain(expected: PipelineStagePosition.After);
     }
 }

@@ -31,10 +31,10 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 /// notify the server of a dropped file.
 /// </summary>
 [ApiController]
-[Tags("Dashboard Intake")]
-[ApiVersion(1.0)]
+[Tags(tags: "Dashboard Intake")]
+[ApiVersion(version: 1.0)]
 [Authorize(Policy = "Moderator")]
-[Route("api/v{version:apiVersion}/dashboard/intake", Order = 10)]
+[Route(template: "api/v{version:apiVersion}/dashboard/intake", Order = 10)]
 public class IntakeController(
     IIntakeSettings intakeSettings,
     MediaContext mediaContext,
@@ -47,11 +47,11 @@ public class IntakeController(
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken ct)
     {
-        string? dropFolder = await intakeSettings.GetDropFolderAsync(ct);
-        bool hasToken = await intakeSettings.HasTokenAsync(ct);
+        string? dropFolder = await intakeSettings.GetDropFolderAsync(ct: ct);
+        bool hasToken = await intakeSettings.HasTokenAsync(ct: ct);
 
         return Ok(
-            new
+            value: new
             {
                 dropFolder,
                 hasToken,
@@ -62,7 +62,7 @@ public class IntakeController(
     }
 
     [HttpPut]
-    [Route("drop-folder")]
+    [Route(template: "drop-folder")]
     public async Task<IActionResult> SetDropFolder(
         [FromBody] SetDropFolderRequest? request,
         CancellationToken ct
@@ -70,29 +70,29 @@ public class IntakeController(
     {
         string? path = request?.Path;
 
-        if (string.IsNullOrWhiteSpace(path))
+        if (string.IsNullOrWhiteSpace(value: path))
         {
-            await intakeSettings.SetDropFolderAsync(null, ct);
-            return Ok(new { dropFolder = (string?)null });
+            await intakeSettings.SetDropFolderAsync(path: null, ct: ct);
+            return Ok(value: new { dropFolder = (string?)null });
         }
 
         List<Library> inboxLibraries = await mediaContext
             .Libraries.AsNoTracking()
-            .Include(library => library.FolderLibraries)
-                .ThenInclude(folderLibrary => folderLibrary.Folder)
-            .Where(library => library.Type == MediaTypes.InboxMediaType)
-            .ToListAsync(ct);
+            .Include(navigationPropertyPath: library => library.FolderLibraries)
+                .ThenInclude(navigationPropertyPath: folderLibrary => folderLibrary.Folder)
+            .Where(predicate: library => library.Type == MediaTypes.InboxMediaType)
+            .ToListAsync(cancellationToken: ct);
 
         bool isInboxLibraryFolder = inboxLibraries
-            .SelectMany(library => library.FolderLibraries)
-            .Any(folderLibrary => PathsMatch(folderLibrary.Folder.Path, path));
+            .SelectMany(selector: library => library.FolderLibraries)
+            .Any(predicate: folderLibrary => PathsMatch(folderPath: folderLibrary.Folder.Path, candidatePath: path));
 
         if (!isInboxLibraryFolder)
             return BadRequestResponse(
-                "The drop folder must be a folder of an Inbox-type library. Create/point an Inbox library at this folder first."
+                detail: "The drop folder must be a folder of an Inbox-type library. Create/point an Inbox library at this folder first."
             );
 
-        await intakeSettings.SetDropFolderAsync(path, ct);
+        await intakeSettings.SetDropFolderAsync(path: path, ct: ct);
 
         try
         {
@@ -103,28 +103,28 @@ public class IntakeController(
         catch (Exception exception)
         {
             logger.LogWarning(
-                exception,
-                "Failed to refresh the library watcher cache after updating the intake drop folder to {DropFolder}",
-                path
+                exception: exception,
+                message: "Failed to refresh the library watcher cache after updating the intake drop folder to {DropFolder}",
+                args: path
             );
         }
 
-        return Ok(new { dropFolder = path });
+        return Ok(value: new { dropFolder = path });
     }
 
     [HttpPost]
-    [Route("token")]
+    [Route(template: "token")]
     public async Task<IActionResult> IssueToken(CancellationToken ct)
     {
-        string token = await intakeSettings.IssueTokenAsync(ct);
+        string token = await intakeSettings.IssueTokenAsync(ct: ct);
 
-        return Ok(new { token });
+        return Ok(value: new { token });
     }
 
     private static bool PathsMatch(string folderPath, string candidatePath) =>
-        NormalizeForComparison(folderPath)
-            .Equals(NormalizeForComparison(candidatePath), StringComparison.OrdinalIgnoreCase);
+        NormalizeForComparison(path: folderPath)
+            .Equals(value: NormalizeForComparison(path: candidatePath), comparisonType: StringComparison.OrdinalIgnoreCase);
 
     private static string NormalizeForComparison(string path) =>
-        path.Replace('\\', '/').TrimEnd('/');
+        path.Replace(oldChar: '\\', newChar: '/').TrimEnd(trimChar: '/');
 }

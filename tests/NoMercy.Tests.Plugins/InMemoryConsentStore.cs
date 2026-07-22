@@ -17,9 +17,9 @@ internal sealed class InMemoryConsentStore : IPluginConsentStore
 {
     private readonly HashSet<Guid> _granted = [];
 
-    public bool Contains(Guid pluginId) => _granted.Contains(pluginId);
+    public bool Contains(Guid pluginId) => _granted.Contains(item: pluginId);
 
-    public void Add(Guid pluginId) => _granted.Add(pluginId);
+    public void Add(Guid pluginId) => _granted.Add(item: pluginId);
 
-    public void Remove(Guid pluginId) => _granted.Remove(pluginId);
+    public void Remove(Guid pluginId) => _granted.Remove(item: pluginId);
 }

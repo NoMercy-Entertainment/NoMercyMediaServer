@@ -31,25 +31,23 @@ public class ValidateStage(ILogger<ValidateStage> logger)
     )
     {
         logger.LogInformation(
-            "[{CorrelationId}] Validating profile '{ProfileName}'",
-            context.CorrelationId,
-            input.Profile.Name
+            message: "[{CorrelationId}] Validating profile '{ProfileName}'", args: [context.CorrelationId, input.Profile.Name]
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(input.Profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: input.Profile);
 
         if (!result.IsValid)
         {
-            string errors = string.Join("; ", result.Errors);
+            string errors = string.Join(separator: "; ", values: result.Errors);
 
             return Task.FromResult<StageResult>(
-                new StageFailure(
-                    new(
-                        EncodingErrorKind.ProfileInvalid,
-                        $"Profile validation failed: {errors}",
-                        null,
-                        Name,
-                        false
+                result: new StageFailure(
+                    Error: new(
+                        Kind: EncodingErrorKind.ProfileInvalid,
+                        Message: $"Profile validation failed: {errors}",
+                        FfmpegStderr: null,
+                        StageName: Name,
+                        Recoverable: false
                     )
                 )
             );
@@ -57,11 +55,9 @@ public class ValidateStage(ILogger<ValidateStage> logger)
 
         foreach (string warning in result.Warnings)
             logger.LogWarning(
-                "[{CorrelationId}] Validation warning: {Message}",
-                context.CorrelationId,
-                warning
+                message: "[{CorrelationId}] Validation warning: {Message}", args: [context.CorrelationId, warning]
             );
 
-        return Task.FromResult<StageResult>(new StageSuccess<ValidateInput>(input));
+        return Task.FromResult<StageResult>(result: new StageSuccess<ValidateInput>(Value: input));
     }
 }

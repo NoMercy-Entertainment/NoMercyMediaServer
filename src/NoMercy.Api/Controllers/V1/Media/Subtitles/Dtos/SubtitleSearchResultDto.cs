@@ -19,17 +19,17 @@ namespace NoMercy.Api.Controllers.V1.Media.Subtitles.Dtos;
 /// future download endpoint accepts either as the token to fetch this exact subtitle.
 /// </summary>
 public record SubtitleSearchResultDto(
-    [property: JsonProperty("id")] string Id,
-    [property: JsonProperty("download_url")] string DownloadUrl,
-    [property: JsonProperty("language")] string Language,
-    [property: JsonProperty("language_name")] string LanguageName,
-    [property: JsonProperty("release_name")] string? ReleaseName,
-    [property: JsonProperty("file_name")] string? FileName,
-    [property: JsonProperty("downloads")] int Downloads,
-    [property: JsonProperty("rating")] double Rating,
-    [property: JsonProperty("format")] string Format,
-    [property: JsonProperty("hearing_impaired")] bool HearingImpaired,
-    [property: JsonProperty("fps")] double? Fps,
-    [property: JsonProperty("uploader")] string? Uploader,
-    [property: JsonProperty("trusted")] bool Trusted
+    [property: JsonProperty(propertyName: "id")] string Id,
+    [property: JsonProperty(propertyName: "download_url")] string DownloadUrl,
+    [property: JsonProperty(propertyName: "language")] string Language,
+    [property: JsonProperty(propertyName: "language_name")] string LanguageName,
+    [property: JsonProperty(propertyName: "release_name")] string? ReleaseName,
+    [property: JsonProperty(propertyName: "file_name")] string? FileName,
+    [property: JsonProperty(propertyName: "downloads")] int Downloads,
+    [property: JsonProperty(propertyName: "rating")] double Rating,
+    [property: JsonProperty(propertyName: "format")] string Format,
+    [property: JsonProperty(propertyName: "hearing_impaired")] bool HearingImpaired,
+    [property: JsonProperty(propertyName: "fps")] double? Fps,
+    [property: JsonProperty(propertyName: "uploader")] string? Uploader,
+    [property: JsonProperty(propertyName: "trusted")] bool Trusted
 );

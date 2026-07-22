@@ -20,49 +20,49 @@ internal static class UpdateCommand
 {
     public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
-        Command command = new("update") { Description = "Download and stage a server update" };
+        Command command = new(name: "update") { Description = "Download and stage a server update" };
 
         command.SetAction(
-            async (parseResult, ct) =>
+            action: async (parseResult, ct) =>
             {
-                string? pipe = parseResult.GetValue(pipeOption);
-                using ICliClient client = clientFactory.Create(pipe);
+                string? pipe = parseResult.GetValue(option: pipeOption);
+                using ICliClient client = clientFactory.Create(pipeNameOrSocketPath: pipe);
 
                 // Step 1: Trigger download
-                Console.WriteLine("Downloading update...");
+                Console.WriteLine(value: "Downloading update...");
                 UpdateResponse? downloadResponse = await client.PostAsync<UpdateResponse>(
-                    ApiRoutes.Update,
-                    null,
-                    ct
+                    path: ApiRoutes.Update,
+                    content: null,
+                    cancellationToken: ct
                 );
 
                 if (downloadResponse is null || downloadResponse.Status != "ok")
                 {
                     await Console.Error.WriteLineAsync(
-                        downloadResponse?.Message ?? "Failed to download update."
+                        value: downloadResponse?.Message ?? "Failed to download update."
                     );
                     return (int)ExitCode.ServerError;
                 }
 
-                Console.WriteLine(downloadResponse.Message);
+                Console.WriteLine(value: downloadResponse.Message);
 
                 // Step 2: Stop the server
-                Console.WriteLine("Stopping server...");
-                bool stopped = await client.PostAsync(ApiRoutes.Stop, null, ct);
+                Console.WriteLine(value: "Stopping server...");
+                bool stopped = await client.PostAsync(path: ApiRoutes.Stop, content: null, cancellationToken: ct);
                 if (!stopped)
                 {
-                    await Console.Error.WriteLineAsync("Failed to send stop command.");
+                    await Console.Error.WriteLineAsync(value: "Failed to send stop command.");
                     return (int)ExitCode.ServerError;
                 }
 
                 // Step 3: Wait for exit
-                Console.WriteLine("Waiting for server to exit...");
-                bool exited = await WaitForServerExitAsync(client, TimeSpan.FromSeconds(30), ct);
+                Console.WriteLine(value: "Waiting for server to exit...");
+                bool exited = await WaitForServerExitAsync(client: client, timeout: TimeSpan.FromSeconds(seconds: 30), ct: ct);
                 if (!exited)
                 {
                     await Console.Error.WriteLineAsync(
-                        "Warning: the server did not confirm it had stopped within 30s; "
-                            + "applying the update anyway."
+                        value: "Warning: the server did not confirm it had stopped within 30s; "
+                               + "applying the update anyway."
                     );
                 }
 
@@ -70,19 +70,19 @@ internal static class UpdateCommand
                 string tempPath = AppFiles.ServerTempExePath;
                 string currentPath = AppFiles.ServerExePath;
 
-                if (!File.Exists(tempPath))
+                if (!File.Exists(path: tempPath))
                 {
-                    await Console.Error.WriteLineAsync("No staged update file found.");
+                    await Console.Error.WriteLineAsync(value: "No staged update file found.");
                     return (int)ExitCode.ServerError;
                 }
 
-                if (File.Exists(currentPath))
-                    File.Delete(currentPath);
+                if (File.Exists(path: currentPath))
+                    File.Delete(path: currentPath);
 
-                File.Move(tempPath, currentPath);
-                await FilePermissions.SetExecutionPermissions(currentPath);
+                File.Move(sourceFileName: tempPath, destFileName: currentPath);
+                await FilePermissions.SetExecutionPermissions(path: currentPath);
 
-                Console.WriteLine("Update applied. Start the server to use the new version.");
+                Console.WriteLine(value: "Update applied. Start the server to use the new version.");
                 return (int)ExitCode.Success;
             }
         );
@@ -96,19 +96,19 @@ internal static class UpdateCommand
         CancellationToken ct
     )
     {
-        using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        cts.CancelAfter(timeout);
+        using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(token: ct);
+        cts.CancelAfter(delay: timeout);
 
         while (true)
         {
-            if (await HasServerStoppedRespondingAsync(client, cts.Token))
+            if (await HasServerStoppedRespondingAsync(client: client, ct: cts.Token))
             {
                 return true;
             }
 
             try
             {
-                await Task.Delay(500, cts.Token);
+                await Task.Delay(millisecondsDelay: 500, cancellationToken: cts.Token);
             }
             catch (OperationCanceledException)
             {
@@ -132,7 +132,7 @@ internal static class UpdateCommand
     {
         try
         {
-            await client.GetRawAsync(ApiRoutes.Status, ct);
+            await client.GetRawAsync(path: ApiRoutes.Status, cancellationToken: ct);
             return false;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -147,10 +147,10 @@ internal static class UpdateCommand
 
     private class UpdateResponse
     {
-        [JsonProperty("status")]
+        [JsonProperty(propertyName: "status")]
         public string Status { get; set; } = string.Empty;
 
-        [JsonProperty("message")]
+        [JsonProperty(propertyName: "message")]
         public string Message { get; set; } = string.Empty;
     }
 }

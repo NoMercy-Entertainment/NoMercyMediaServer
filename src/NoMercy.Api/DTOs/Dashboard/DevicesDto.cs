@@ -15,45 +15,45 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record DevicesDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty("device_id")]
+    [JsonProperty(propertyName: "device_id")]
     public string DeviceId { get; set; } = string.Empty;
 
-    [JsonProperty("browser")]
+    [JsonProperty(propertyName: "browser")]
     public string Browser { get; set; } = string.Empty;
 
-    [JsonProperty("os")]
+    [JsonProperty(propertyName: "os")]
     public string Os { get; set; } = string.Empty;
 
-    [JsonProperty("device")]
+    [JsonProperty(propertyName: "device")]
     public string? Device { get; set; }
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty("online")]
+    [JsonProperty(propertyName: "online")]
     public bool Online { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("custom_name")]
+    [JsonProperty(propertyName: "custom_name")]
     public object? CustomName { get; set; }
 
-    [JsonProperty("version")]
+    [JsonProperty(propertyName: "version")]
     public string Version { get; set; } = string.Empty;
 
-    [JsonProperty("ip")]
+    [JsonProperty(propertyName: "ip")]
     public string Ip { get; set; } = string.Empty;
 
-    [JsonProperty("created_at")]
+    [JsonProperty(propertyName: "created_at")]
     public DateTime CreatedAt { get; set; }
 
-    [JsonProperty("updated_at")]
+    [JsonProperty(propertyName: "updated_at")]
     public DateTime UpdatedAt { get; set; }
 
-    [JsonProperty("activity_logs")]
+    [JsonProperty(propertyName: "activity_logs")]
     public IEnumerable<ActivityLogDto> ActivityLogs { get; set; } = [];
 }

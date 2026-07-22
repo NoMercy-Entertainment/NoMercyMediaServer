@@ -15,9 +15,9 @@ namespace NoMercy.Providers.TMDB.Models.Credits;
 
 public class TmdbPerson
 {
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 }

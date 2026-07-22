@@ -15,7 +15,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Networking;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class NetworkProbeConfigTests
 {
     [Fact]
@@ -23,7 +23,7 @@ public sealed class NetworkProbeConfigTests
     {
         NetworkProbeConfig config = new();
 
-        Assert.NotEmpty(config.ProbeTargets);
+        Assert.NotEmpty(collection: config.ProbeTargets);
     }
 
     [Fact]
@@ -31,7 +31,7 @@ public sealed class NetworkProbeConfigTests
     {
         NetworkProbeConfig config = new();
 
-        Assert.Contains("1.1.1.1", config.ProbeTargets);
+        Assert.Contains(expected: "1.1.1.1", collection: config.ProbeTargets);
     }
 
     [Fact]
@@ -39,7 +39,7 @@ public sealed class NetworkProbeConfigTests
     {
         NetworkProbeConfig config = new();
 
-        Assert.Contains("8.8.8.8", config.ProbeTargets);
+        Assert.Contains(expected: "8.8.8.8", collection: config.ProbeTargets);
     }
 
     [Fact]
@@ -47,9 +47,9 @@ public sealed class NetworkProbeConfigTests
     {
         NetworkProbeConfig config = new();
 
-        bool valid = IPAddress.TryParse(config.LocalIpDiscoveryIpv4, out _);
+        bool valid = IPAddress.TryParse(ipString: config.LocalIpDiscoveryIpv4, address: out _);
 
-        Assert.True(valid);
+        Assert.True(condition: valid);
     }
 
     [Fact]
@@ -57,10 +57,10 @@ public sealed class NetworkProbeConfigTests
     {
         NetworkProbeConfig config = new();
 
-        bool valid = IPAddress.TryParse(config.LocalIpDiscoveryIpv6, out IPAddress? addr);
+        bool valid = IPAddress.TryParse(ipString: config.LocalIpDiscoveryIpv6, address: out IPAddress? addr);
 
-        Assert.True(valid);
-        Assert.Equal(System.Net.Sockets.AddressFamily.InterNetworkV6, addr!.AddressFamily);
+        Assert.True(condition: valid);
+        Assert.Equal(expected: System.Net.Sockets.AddressFamily.InterNetworkV6, actual: addr!.AddressFamily);
     }
 
     [Fact]
@@ -68,18 +68,18 @@ public sealed class NetworkProbeConfigTests
     {
         NetworkProbeConfig config = new();
 
-        Assert.InRange(config.LocalIpDiscoveryPort, 49152, 65535);
+        Assert.InRange(actual: config.LocalIpDiscoveryPort, low: 49152, high: 65535);
     }
 
     [Theory]
-    [InlineData("api.nomercy.tv")]
-    [InlineData("1.1.1.1")]
-    [InlineData("8.8.8.8")]
+    [InlineData(data: "api.nomercy.tv")]
+    [InlineData(data: "1.1.1.1")]
+    [InlineData(data: "8.8.8.8")]
     public void DefaultProbeTargets_ContainsExpectedTarget(string target)
     {
         NetworkProbeConfig config = new();
 
-        Assert.Contains(target, config.ProbeTargets);
+        Assert.Contains(expected: target, collection: config.ProbeTargets);
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public sealed class NetworkProbeConfigTests
     {
         NetworkProbeConfig config = new() { ProbeTargets = ["custom.example.com"] };
 
-        Assert.Single(config.ProbeTargets);
-        Assert.Equal("custom.example.com", config.ProbeTargets[0]);
+        Assert.Single(collection: config.ProbeTargets);
+        Assert.Equal(expected: "custom.example.com", actual: config.ProbeTargets[0]);
     }
 }

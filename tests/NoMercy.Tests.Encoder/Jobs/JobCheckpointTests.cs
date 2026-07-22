@@ -26,18 +26,18 @@ public class JobCheckpointTests
             InputPath: "/media/source/movie.mkv",
             OutputDirectory: "/output/movie",
             CompletedGroupIndices: [0, 1, 2],
-            LastUpdated: new(2026, 1, 15, 10, 30, 0, DateTimeKind.Utc)
+            LastUpdated: new(year: 2026, month: 1, day: 15, hour: 10, minute: 30, second: 0, kind: DateTimeKind.Utc)
         );
 
-        string json = JsonConvert.SerializeObject(checkpoint);
-        JobCheckpoint? deserialized = JsonConvert.DeserializeObject<JobCheckpoint>(json);
+        string json = JsonConvert.SerializeObject(value: checkpoint);
+        JobCheckpoint? deserialized = JsonConvert.DeserializeObject<JobCheckpoint>(value: json);
 
         deserialized.Should().NotBeNull();
-        deserialized!.JobId.Should().Be("job-abc-123");
-        deserialized.InputPath.Should().Be("/media/source/movie.mkv");
-        deserialized.OutputDirectory.Should().Be("/output/movie");
-        deserialized.CompletedGroupIndices.Should().BeEquivalentTo(new[] { 0, 1, 2 });
-        deserialized.LastUpdated.Should().Be(new(2026, 1, 15, 10, 30, 0, DateTimeKind.Utc));
+        deserialized!.JobId.Should().Be(expected: "job-abc-123");
+        deserialized.InputPath.Should().Be(expected: "/media/source/movie.mkv");
+        deserialized.OutputDirectory.Should().Be(expected: "/output/movie");
+        deserialized.CompletedGroupIndices.Should().BeEquivalentTo(expectation: new[] { 0, 1, 2 });
+        deserialized.LastUpdated.Should().Be(expected: new(year: 2026, month: 1, day: 15, hour: 10, minute: 30, second: 0, kind: DateTimeKind.Utc));
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public class JobCheckpointTests
         );
 
         checkpoint.CompletedGroupIndices.Should().BeEmpty();
-        checkpoint.JobId.Should().Be("fresh-job");
+        checkpoint.JobId.Should().Be(expected: "fresh-job");
     }
 
     [Fact]
@@ -68,10 +68,10 @@ public class JobCheckpointTests
             LastUpdated: DateTime.UtcNow
         );
 
-        string json = JsonConvert.SerializeObject(checkpoint);
-        JobCheckpoint? deserialized = JsonConvert.DeserializeObject<JobCheckpoint>(json);
+        string json = JsonConvert.SerializeObject(value: checkpoint);
+        JobCheckpoint? deserialized = JsonConvert.DeserializeObject<JobCheckpoint>(value: json);
 
-        deserialized!.CompletedGroupIndices.Should().Equal(indices);
+        deserialized!.CompletedGroupIndices.Should().Equal(elements: indices);
     }
 
     [Fact]
@@ -97,14 +97,14 @@ public class JobCheckpointTests
             CreatedAtUtc: DateTime.UtcNow
         );
 
-        string json = JsonConvert.SerializeObject(job);
-        EncodingJob? deserialized = JsonConvert.DeserializeObject<EncodingJob>(json);
+        string json = JsonConvert.SerializeObject(value: job);
+        EncodingJob? deserialized = JsonConvert.DeserializeObject<EncodingJob>(value: json);
 
         deserialized.Should().NotBeNull();
-        deserialized!.JobId.Should().Be("encode-xyz-789");
-        deserialized.InputPath.Should().Be("/media/source/movie.mkv");
-        deserialized.OutputDirectory.Should().Be("/output/hls/movie");
-        deserialized.Profile.Id.Should().Be(profileId);
+        deserialized!.JobId.Should().Be(expected: "encode-xyz-789");
+        deserialized.InputPath.Should().Be(expected: "/media/source/movie.mkv");
+        deserialized.OutputDirectory.Should().Be(expected: "/output/hls/movie");
+        deserialized.Profile.Id.Should().Be(expected: profileId);
         deserialized.Checkpoint.Should().BeNull();
     }
 
@@ -116,7 +116,7 @@ public class JobCheckpointTests
             InputPath: "/media/source/movie.mkv",
             OutputDirectory: "/output/hls/movie",
             CompletedGroupIndices: [0],
-            LastUpdated: new(2026, 3, 1, 8, 0, 0, DateTimeKind.Utc)
+            LastUpdated: new(year: 2026, month: 3, day: 1, hour: 8, minute: 0, second: 0, kind: DateTimeKind.Utc)
         );
 
         EncodingProfile profile = new(
@@ -137,11 +137,11 @@ public class JobCheckpointTests
             CreatedAtUtc: DateTime.UtcNow
         );
 
-        string json = JsonConvert.SerializeObject(job);
-        EncodingJob? deserialized = JsonConvert.DeserializeObject<EncodingJob>(json);
+        string json = JsonConvert.SerializeObject(value: job);
+        EncodingJob? deserialized = JsonConvert.DeserializeObject<EncodingJob>(value: json);
 
         deserialized!.Checkpoint.Should().NotBeNull();
-        deserialized.Checkpoint!.CompletedGroupIndices.Should().Equal(0);
+        deserialized.Checkpoint!.CompletedGroupIndices.Should().Equal(elements: 0);
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -163,7 +163,7 @@ public class JobCheckpointTests
         );
 
         cp.VariantId.Should().BeEmpty();
-        cp.LastProgressMs.Should().Be(0);
+        cp.LastProgressMs.Should().Be(expected: 0);
         cp.LastFfmpegStderrTail.Should().BeEmpty();
         cp.FailedAt.Should().BeNull();
     }
@@ -171,7 +171,7 @@ public class JobCheckpointTests
     [Fact]
     public void JobCheckpoint_NewFields_RoundTripThroughJson()
     {
-        DateTime failedAt = new(2026, 4, 25, 12, 34, 56, DateTimeKind.Utc);
+        DateTime failedAt = new(year: 2026, month: 4, day: 25, hour: 12, minute: 34, second: 56, kind: DateTimeKind.Utc);
         JobCheckpoint original = new(
             JobId: "j-1",
             InputPath: "/in/source.mkv",
@@ -184,14 +184,14 @@ public class JobCheckpointTests
             FailedAt: failedAt
         );
 
-        string json = JsonConvert.SerializeObject(original);
-        JobCheckpoint? roundTripped = JsonConvert.DeserializeObject<JobCheckpoint>(json);
+        string json = JsonConvert.SerializeObject(value: original);
+        JobCheckpoint? roundTripped = JsonConvert.DeserializeObject<JobCheckpoint>(value: json);
 
         roundTripped.Should().NotBeNull();
-        roundTripped!.VariantId.Should().Be("1080p");
-        roundTripped.LastProgressMs.Should().Be(12_345);
-        roundTripped.LastFfmpegStderrTail.Should().Contain("frame=890");
-        roundTripped.FailedAt.Should().Be(failedAt);
+        roundTripped!.VariantId.Should().Be(expected: "1080p");
+        roundTripped.LastProgressMs.Should().Be(expected: 12_345);
+        roundTripped.LastFfmpegStderrTail.Should().Contain(expected: "frame=890");
+        roundTripped.FailedAt.Should().Be(expected: failedAt);
     }
 
     [Fact]
@@ -213,12 +213,12 @@ public class JobCheckpointTests
             }
             """;
 
-        JobCheckpoint? loaded = JsonConvert.DeserializeObject<JobCheckpoint>(legacyJson);
+        JobCheckpoint? loaded = JsonConvert.DeserializeObject<JobCheckpoint>(value: legacyJson);
 
         loaded.Should().NotBeNull();
-        loaded!.JobId.Should().Be("legacy-1");
-        loaded.LastCompletedSegment.Should().Be(5);
-        loaded.EncodeMode.Should().Be("two-pass");
+        loaded!.JobId.Should().Be(expected: "legacy-1");
+        loaded.LastCompletedSegment.Should().Be(expected: 5);
+        loaded.EncodeMode.Should().Be(expected: "two-pass");
         // Newtonsoft.Json populates string fields not present in the JSON
         // payload as null instead of running the record's positional
         // default. The store treats null + empty as equivalent for the
@@ -226,7 +226,7 @@ public class JobCheckpointTests
         (loaded.VariantId ?? string.Empty)
             .Should()
             .BeEmpty();
-        loaded.LastProgressMs.Should().Be(0);
+        loaded.LastProgressMs.Should().Be(expected: 0);
         (loaded.LastFfmpegStderrTail ?? string.Empty).Should().BeEmpty();
         loaded.FailedAt.Should().BeNull();
     }

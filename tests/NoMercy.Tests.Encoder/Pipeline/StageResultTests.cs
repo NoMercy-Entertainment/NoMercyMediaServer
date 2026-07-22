@@ -19,38 +19,38 @@ public class StageResultTests
     [Fact]
     public void Success_ContainsValue()
     {
-        StageResult result = new StageSuccess<string>("hello");
+        StageResult result = new StageSuccess<string>(Value: "hello");
         result.Should().BeOfType<StageSuccess<string>>();
         StageSuccess<string> success = (StageSuccess<string>)result;
-        success.Value.Should().Be("hello");
+        success.Value.Should().Be(expected: "hello");
     }
 
     [Fact]
     public void Failure_ContainsError()
     {
         EncodingError error = new(
-            EncodingErrorKind.InputNotFound,
-            "not found",
-            null,
-            "Analyze",
-            false
+            Kind: EncodingErrorKind.InputNotFound,
+            Message: "not found",
+            FfmpegStderr: null,
+            StageName: "Analyze",
+            Recoverable: false
         );
-        StageResult result = new StageFailure(error);
+        StageResult result = new StageFailure(Error: error);
         result.Should().BeOfType<StageFailure>();
         StageFailure failure = (StageFailure)result;
-        failure.Error.Kind.Should().Be(EncodingErrorKind.InputNotFound);
+        failure.Error.Kind.Should().Be(expected: EncodingErrorKind.InputNotFound);
     }
 
     [Fact]
     public void PatternMatch_Works()
     {
-        StageResult success = new StageSuccess<int>(42);
+        StageResult success = new StageSuccess<int>(Value: 42);
         string output = success switch
         {
             StageSuccess<int> s => $"got {s.Value}",
             StageFailure f => $"error: {f.Error.Message}",
             _ => "unknown",
         };
-        output.Should().Be("got 42");
+        output.Should().Be(expected: "got 42");
     }
 }

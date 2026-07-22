@@ -30,7 +30,7 @@ public class QueueWorkerTests : IDisposable
     public QueueWorkerTests()
     {
         (_context, _adapter) = TestQueueContextFactory.CreateInMemoryContextWithAdapter();
-        _jobQueue = new(_adapter);
+        _jobQueue = new(context: _adapter);
     }
 
     public void Dispose()
@@ -48,15 +48,15 @@ public class QueueWorkerTests : IDisposable
         QueueJob queueJob = new()
         {
             Queue = "test-worker",
-            Payload = SerializationHelper.Serialize(testJob),
+            Payload = SerializationHelper.Serialize(obj: testJob),
             AvailableAt = DateTime.UtcNow,
             Attempts = 0,
         };
 
-        _context.QueueJobs.Add(queueJob);
+        _context.QueueJobs.Add(entity: queueJob);
         await _context.SaveChangesAsync();
 
-        QueueWorker worker = new(_jobQueue, "test-worker");
+        QueueWorker worker = new(queue: _jobQueue, name: "test-worker");
         worker.WorkCompleted += (
             _,
             _
@@ -64,19 +64,19 @@ public class QueueWorkerTests : IDisposable
         };
 
         // Act
-        Task workerTask = Task.Run(() =>
+        Task workerTask = Task.Run(action: () =>
         {
             try
             {
                 // Let the worker process one job
-                QueueJobModel? job = _jobQueue.ReserveJob("test-worker", null);
+                QueueJobModel? job = _jobQueue.ReserveJob(name: "test-worker", currentJobId: null);
                 if (job != null)
                 {
-                    object jobWithArguments = SerializationHelper.Deserialize<object>(job.Payload);
+                    object jobWithArguments = SerializationHelper.Deserialize<object>(data: job.Payload);
                     if (jobWithArguments is IShouldQueue classInstance)
                     {
                         classInstance.Handle().Wait();
-                        _jobQueue.DeleteJob(job);
+                        _jobQueue.DeleteJob(queueJob: job);
                     }
                 }
             }
@@ -90,7 +90,7 @@ public class QueueWorkerTests : IDisposable
 
         // Assert
         int jobCount = _context.QueueJobs.Count();
-        Assert.Equal(0, jobCount); // Job should be deleted after successful execution
+        Assert.Equal(expected: 0, actual: jobCount); // Job should be deleted after successful execution
     }
 
     [Fact]
@@ -107,36 +107,36 @@ public class QueueWorkerTests : IDisposable
         QueueJob queueJob = new()
         {
             Queue = "test-worker",
-            Payload = SerializationHelper.Serialize(testJob),
+            Payload = SerializationHelper.Serialize(obj: testJob),
             AvailableAt = DateTime.UtcNow,
             Attempts = 2, // Set to max attempts - 1
         };
 
-        _context.QueueJobs.Add(queueJob);
+        _context.QueueJobs.Add(entity: queueJob);
         await _context.SaveChangesAsync();
 
         // Act
-        Task workerTask = Task.Run(() =>
+        Task workerTask = Task.Run(action: () =>
         {
             try
             {
-                QueueJobModel? job = _jobQueue.ReserveJob("test-worker", null);
+                QueueJobModel? job = _jobQueue.ReserveJob(name: "test-worker", currentJobId: null);
                 if (job != null)
                 {
                     try
                     {
                         object jobWithArguments = SerializationHelper.Deserialize<object>(
-                            job.Payload
+                            data: job.Payload
                         );
                         if (jobWithArguments is IShouldQueue classInstance)
                         {
                             classInstance.Handle().Wait();
-                            _jobQueue.DeleteJob(job);
+                            _jobQueue.DeleteJob(queueJob: job);
                         }
                     }
                     catch (Exception ex)
                     {
-                        _jobQueue.FailJob(job, ex);
+                        _jobQueue.FailJob(queueJob: job, exception: ex);
                     }
                 }
             }
@@ -150,10 +150,10 @@ public class QueueWorkerTests : IDisposable
 
         // Assert
         int queueJobCount = _context.QueueJobs.Count();
-        Assert.Equal(0, queueJobCount); // Should be moved to failed jobs
+        Assert.Equal(expected: 0, actual: queueJobCount); // Should be moved to failed jobs
 
         int failedJobCount = _context.FailedJobs.Count();
-        Assert.Equal(1, failedJobCount); // Should have one failed job
+        Assert.Equal(expected: 1, actual: failedJobCount); // Should have one failed job
     }
 
     [Fact]
@@ -164,12 +164,12 @@ public class QueueWorkerTests : IDisposable
         // so calling Stop() without a QueueRunner is safe (returns -1 for index)
 
         // Arrange
-        QueueWorker worker = new(_jobQueue, "test-worker");
+        QueueWorker worker = new(queue: _jobQueue, name: "test-worker");
 
         // Act & Assert - Should not throw
-        Exception? exception = Record.Exception(() => worker.Stop());
+        Exception? exception = Record.Exception(testCode: () => worker.Stop());
 
-        Assert.Null(exception);
+        Assert.Null(@object: exception);
     }
 
     [Fact]
@@ -182,7 +182,7 @@ public class QueueWorkerTests : IDisposable
         await testJob.Handle();
 
         // Assert
-        Assert.True(testJob.HasExecuted);
+        Assert.True(condition: testJob.HasExecuted);
     }
 
     [Fact]
@@ -205,8 +205,8 @@ public class QueueWorkerTests : IDisposable
         DateTime endTime = DateTime.UtcNow;
         TimeSpan duration = endTime - startTime;
 
-        Assert.True(testJob.HasExecuted);
-        Assert.True(duration.TotalMilliseconds >= 80); // Allow for some timing variation
+        Assert.True(condition: testJob.HasExecuted);
+        Assert.True(condition: duration.TotalMilliseconds >= 80); // Allow for some timing variation
     }
 
     [Fact]
@@ -219,8 +219,8 @@ public class QueueWorkerTests : IDisposable
         await testJob.Handle();
 
         // Assert
-        Assert.True(testJob.HasExecuted);
-        Assert.Equal(20, testJob.Value); // Value should be doubled
+        Assert.True(condition: testJob.HasExecuted);
+        Assert.Equal(expected: 20, actual: testJob.Value); // Value should be doubled
     }
 
     [Fact]
@@ -236,11 +236,11 @@ public class QueueWorkerTests : IDisposable
 
         // Act & Assert
         InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () =>
+            testCode: () =>
                 testJob.Handle()
         );
-        Assert.Contains("TestJob failed with message: This will fail", exception.Message);
-        Assert.False(testJob.HasExecuted); // Should not be marked as executed when it fails
+        Assert.Contains(expectedSubstring: "TestJob failed with message: This will fail", actualString: exception.Message);
+        Assert.False(condition: testJob.HasExecuted); // Should not be marked as executed when it fails
     }
 
     [Fact]
@@ -251,35 +251,35 @@ public class QueueWorkerTests : IDisposable
         QueueJob queueJob = new()
         {
             Queue = "test-worker",
-            Payload = SerializationHelper.Serialize(notAJob),
+            Payload = SerializationHelper.Serialize(obj: notAJob),
             AvailableAt = DateTime.UtcNow,
             Attempts = 2, // Set to maxAttempts - 1 so FailJob moves it to FailedJobs
         };
 
-        _context.QueueJobs.Add(queueJob);
+        _context.QueueJobs.Add(entity: queueJob);
         await _context.SaveChangesAsync();
 
         // Act — simulate the QueueWorker's processing loop (same logic as QueueWorker.Start)
-        await Task.Run(() =>
+        await Task.Run(action: () =>
         {
-            QueueJobModel? job = _jobQueue.ReserveJob("test-worker", null);
+            QueueJobModel? job = _jobQueue.ReserveJob(name: "test-worker", currentJobId: null);
             if (job != null)
             {
-                object jobWithArguments = SerializationHelper.Deserialize<object>(job.Payload);
+                object jobWithArguments = SerializationHelper.Deserialize<object>(data: job.Payload);
 
                 if (jobWithArguments is IShouldQueue classInstance)
                 {
                     classInstance.Handle().Wait();
-                    _jobQueue.DeleteJob(job);
+                    _jobQueue.DeleteJob(queueJob: job);
                 }
                 else
                 {
                     // This is the new rejection path
                     string typeName = jobWithArguments.GetType().FullName ?? "null";
                     _jobQueue.FailJob(
-                        job,
-                        new InvalidOperationException(
-                            $"Job payload deserialized to {typeName} which does not implement IShouldQueue"
+                        queueJob: job,
+                        exception: new InvalidOperationException(
+                            message: $"Job payload deserialized to {typeName} which does not implement IShouldQueue"
                         )
                     );
                 }
@@ -288,14 +288,14 @@ public class QueueWorkerTests : IDisposable
 
         // Assert — the invalid job should NOT be in the active queue
         int queueJobCount = _context.QueueJobs.Count();
-        Assert.Equal(0, queueJobCount);
+        Assert.Equal(expected: 0, actual: queueJobCount);
 
         // Assert — it should be in the failed jobs table
         int failedJobCount = _context.FailedJobs.Count();
-        Assert.Equal(1, failedJobCount);
+        Assert.Equal(expected: 1, actual: failedJobCount);
 
         FailedJob failedJob = _context.FailedJobs.First();
-        Assert.Contains("IShouldQueue", failedJob.Exception);
+        Assert.Contains(expectedSubstring: "IShouldQueue", actualString: failedJob.Exception);
     }
 
     [Fact]
@@ -306,36 +306,36 @@ public class QueueWorkerTests : IDisposable
         QueueJob queueJob = new()
         {
             Queue = "test-worker",
-            Payload = SerializationHelper.Serialize(testJob),
+            Payload = SerializationHelper.Serialize(obj: testJob),
             AvailableAt = DateTime.UtcNow,
             Attempts = 0,
         };
 
-        _context.QueueJobs.Add(queueJob);
+        _context.QueueJobs.Add(entity: queueJob);
         await _context.SaveChangesAsync();
 
         // Act — simulate QueueWorker processing
         bool jobExecuted = false;
-        await Task.Run(() =>
+        await Task.Run(action: () =>
         {
-            QueueJobModel? job = _jobQueue.ReserveJob("test-worker", null);
+            QueueJobModel? job = _jobQueue.ReserveJob(name: "test-worker", currentJobId: null);
             if (job != null)
             {
-                object jobWithArguments = SerializationHelper.Deserialize<object>(job.Payload);
+                object jobWithArguments = SerializationHelper.Deserialize<object>(data: job.Payload);
 
                 if (jobWithArguments is IShouldQueue classInstance)
                 {
                     classInstance.Handle().Wait();
-                    _jobQueue.DeleteJob(job);
+                    _jobQueue.DeleteJob(queueJob: job);
                     jobExecuted = true;
                 }
                 else
                 {
                     string typeName = jobWithArguments.GetType().FullName ?? "null";
                     _jobQueue.FailJob(
-                        job,
-                        new InvalidOperationException(
-                            $"Job payload deserialized to {typeName} which does not implement IShouldQueue"
+                        queueJob: job,
+                        exception: new InvalidOperationException(
+                            message: $"Job payload deserialized to {typeName} which does not implement IShouldQueue"
                         )
                     );
                 }
@@ -343,13 +343,13 @@ public class QueueWorkerTests : IDisposable
         });
 
         // Assert — valid job was executed
-        Assert.True(jobExecuted);
+        Assert.True(condition: jobExecuted);
 
         // Assert — job removed from queue, nothing in failed jobs
         int queueJobCount = _context.QueueJobs.Count();
-        Assert.Equal(0, queueJobCount);
+        Assert.Equal(expected: 0, actual: queueJobCount);
 
         int failedJobCount = _context.FailedJobs.Count();
-        Assert.Equal(0, failedJobCount);
+        Assert.Equal(expected: 0, actual: failedJobCount);
     }
 }

@@ -21,21 +21,21 @@ namespace NoMercy.Tests.OpticalMedia.Drives;
 /// must delegate verbatim to the injected <see cref="IDriveBackend"/> without
 /// altering the drive list or the event stream.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class DriveMonitorTests
 {
     [Fact]
     public void GetDrives_DelegatesToBackend()
     {
-        DiscDrive[] drives = [new("D:\\", "MOVIE", true, OpticalDiscType.Dvd)];
+        DiscDrive[] drives = [new(Path: "D:\\", Label: "MOVIE", HasDisc: true, DiscType: OpticalDiscType.Dvd)];
         Mock<IDriveBackend> backendMock = new();
-        backendMock.Setup(b => b.GetDrives()).Returns(drives);
+        backendMock.Setup(expression: b => b.GetDrives()).Returns(value: drives);
 
-        DriveMonitor monitor = new(backendMock.Object);
+        DriveMonitor monitor = new(backend: backendMock.Object);
         IReadOnlyList<DiscDrive> result = monitor.GetDrives();
 
-        result.Should().BeSameAs(drives);
-        backendMock.Verify(b => b.GetDrives(), Times.Once);
+        result.Should().BeSameAs(expected: drives);
+        backendMock.Verify(expression: b => b.GetDrives(), times: Times.Once);
     }
 
     [Fact]
@@ -43,20 +43,20 @@ public class DriveMonitorTests
     {
         DriveEvent[] events =
         [
-            new(DriveEventType.DiscInserted, new("D:\\", "MOVIE", true, OpticalDiscType.Dvd)),
+            new(Type: DriveEventType.DiscInserted, Drive: new(Path: "D:\\", Label: "MOVIE", HasDisc: true, DiscType: OpticalDiscType.Dvd)),
         ];
         Mock<IDriveBackend> backendMock = new();
         backendMock
-            .Setup(b => b.ListenAsync(It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable(events));
+            .Setup(expression: b => b.ListenAsync(It.IsAny<CancellationToken>()))
+            .Returns(value: ToAsyncEnumerable(events: events));
 
-        DriveMonitor monitor = new(backendMock.Object);
+        DriveMonitor monitor = new(backend: backendMock.Object);
 
         List<DriveEvent> observed = [];
-        await foreach (DriveEvent ev in monitor.MonitorAsync(CancellationToken.None))
-            observed.Add(ev);
+        await foreach (DriveEvent ev in monitor.MonitorAsync(ct: CancellationToken.None))
+            observed.Add(item: ev);
 
-        observed.Should().BeEquivalentTo(events);
+        observed.Should().BeEquivalentTo(expectation: events);
     }
 
     private static async IAsyncEnumerable<DriveEvent> ToAsyncEnumerable(DriveEvent[] events)

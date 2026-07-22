@@ -28,21 +28,21 @@ public sealed class TmdbMusicBrainzMetadataProbe : IInboxMetadataProbe
     )
     {
         using TmdbSearchClient client = new();
-        TmdbPaginatedResponse<TmdbMovie>? response = await client.Movie(title, year?.ToString());
+        TmdbPaginatedResponse<TmdbMovie>? response = await client.Movie(query: title, year: year?.ToString());
 
         if (response?.Results is null || response.Results.Count == 0)
             return [];
 
         return response
-            .Results.Take(5)
-            .Select(m => new CandidateMatch
+            .Results.Take(count: 5)
+            .Select(selector: m => new CandidateMatch
             {
                 Provider = "tmdb",
                 ExternalId = m.Id.ToString(),
                 Title = m.Title,
                 Year = m.ReleaseDate?.Year,
                 PosterPath = m.PosterPath,
-                Score = NormalizePopularity(m.Popularity, m.VoteAverage),
+                Score = NormalizePopularity(popularity: m.Popularity, voteAverage: m.VoteAverage),
             })
             .ToArray();
     }
@@ -50,21 +50,21 @@ public sealed class TmdbMusicBrainzMetadataProbe : IInboxMetadataProbe
     public async Task<CandidateMatch[]> SearchTvAsync(string title, int? year, CancellationToken ct)
     {
         using TmdbSearchClient client = new();
-        TmdbPaginatedResponse<TmdbTvShow>? response = await client.TvShow(title, year?.ToString());
+        TmdbPaginatedResponse<TmdbTvShow>? response = await client.TvShow(query: title, year: year?.ToString());
 
         if (response?.Results is null || response.Results.Count == 0)
             return [];
 
         return response
-            .Results.Take(5)
-            .Select(show => new CandidateMatch
+            .Results.Take(count: 5)
+            .Select(selector: show => new CandidateMatch
             {
                 Provider = "tmdb",
                 ExternalId = show.Id.ToString(),
                 Title = show.Name,
                 Year = show.FirstAirDate?.Year,
                 PosterPath = show.PosterPath,
-                Score = NormalizePopularity(show.Popularity, show.VoteAverage),
+                Score = NormalizePopularity(popularity: show.Popularity, voteAverage: show.VoteAverage),
             })
             .ToArray();
     }
@@ -72,24 +72,24 @@ public sealed class TmdbMusicBrainzMetadataProbe : IInboxMetadataProbe
     public async Task<CandidateMatch?> LookupMusicReleaseAsync(Guid releaseId, CancellationToken ct)
     {
         using MusicBrainzReleaseClient client = new();
-        MusicBrainzReleaseAppends? release = await client.WithAllAppends(releaseId);
+        MusicBrainzReleaseAppends? release = await client.WithAllAppends(id: releaseId);
 
         if (release is null)
             return null;
 
-        string artist = release.ArtistCredit.Select(ac => ac.Name).FirstOrDefault() ?? string.Empty;
+        string artist = release.ArtistCredit.Select(selector: ac => ac.Name).FirstOrDefault() ?? string.Empty;
 
         int? year = release
-            .ReleaseEvents?.Select(e => e.DateTime?.Year)
-            .Where(y => y.HasValue)
-            .Select(y => y!.Value)
+            .ReleaseEvents?.Select(selector: e => e.DateTime?.Year)
+            .Where(predicate: y => y.HasValue)
+            .Select(selector: y => y!.Value)
             .FirstOrDefault();
 
         return new()
         {
             Provider = "musicbrainz",
             ExternalId = releaseId.ToString(),
-            Title = string.IsNullOrEmpty(artist) ? release.Title : $"{artist} – {release.Title}",
+            Title = string.IsNullOrEmpty(value: artist) ? release.Title : $"{artist} – {release.Title}",
             Year = year == 0 ? null : year,
             PosterPath = null,
             Score = 1.0,
@@ -98,8 +98,8 @@ public sealed class TmdbMusicBrainzMetadataProbe : IInboxMetadataProbe
 
     private static double NormalizePopularity(double popularity, double voteAverage)
     {
-        double popScore = Math.Min(popularity / 100.0, 1.0);
+        double popScore = Math.Min(val1: popularity / 100.0, val2: 1.0);
         double voteScore = voteAverage / 10.0;
-        return Math.Round((popScore * 0.4) + (voteScore * 0.6), 4);
+        return Math.Round(value: (popScore * 0.4) + (voteScore * 0.6), digits: 4);
     }
 }

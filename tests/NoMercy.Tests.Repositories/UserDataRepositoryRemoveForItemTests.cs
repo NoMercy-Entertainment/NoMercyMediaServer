@@ -27,7 +27,7 @@ namespace NoMercy.Tests.Repositories;
 /// user's whole continue-watching list. RemoveForItemAsync must delete ONLY the
 /// requested item and must never mass-delete on a null id.
 /// </summary>
-[Trait("Category", "Characterization")]
+[Trait(name: "Category", value: "Characterization")]
 public class UserDataRepositoryRemoveForItemTests : IDisposable
 {
     private readonly IDbContextFactory<MediaContext> _factory;
@@ -42,7 +42,7 @@ public class UserDataRepositoryRemoveForItemTests : IDisposable
         // Add a second distinct movie so "remove one movie leaves the other" is testable.
         using MediaContext ctx = _factory.CreateDbContext();
         ctx.UserData.Add(
-            new UserData
+            entity: new UserData
             {
                 Id = Ulid.NewUlid(),
                 UserId = SeedConstants.UserId,
@@ -55,13 +55,13 @@ public class UserDataRepositoryRemoveForItemTests : IDisposable
         );
         ctx.SaveChanges();
 
-        _repository = new(_factory);
+        _repository = new(contextFactory: _factory);
     }
 
     public void Dispose()
     {
         _connection.Dispose();
-        GC.SuppressFinalize(this);
+        GC.SuppressFinalize(obj: this);
     }
 
     private async Task<List<UserData>> RemainingAsync()
@@ -69,7 +69,7 @@ public class UserDataRepositoryRemoveForItemTests : IDisposable
         await using MediaContext ctx = _factory.CreateDbContext();
         return await ctx
             .UserData.AsNoTracking()
-            .Where(u => u.UserId == SeedConstants.UserId)
+            .Where(predicate: u => u.UserId == SeedConstants.UserId)
             .ToListAsync();
     }
 
@@ -77,35 +77,35 @@ public class UserDataRepositoryRemoveForItemTests : IDisposable
     public async Task RemoveForItem_Movie_RemovesOnlyThatMovie_AndLeavesOtherMovieAndTv()
     {
         int deleted = await _repository.RemoveForItemAsync(
-            SeedConstants.UserId,
-            MediaTypes.MovieMediaType,
-            129,
-            null
+            userId: SeedConstants.UserId,
+            type: MediaTypes.MovieMediaType,
+            intId: 129,
+            ulidId: null
         );
 
-        Assert.Equal(2, deleted); // movie 129 had two rows
+        Assert.Equal(expected: 2, actual: deleted); // movie 129 had two rows
 
         List<UserData> remaining = await RemainingAsync();
-        Assert.DoesNotContain(remaining, u => u.MovieId == 129);
-        Assert.Contains(remaining, u => u.MovieId == 680); // other movie untouched
-        Assert.Contains(remaining, u => u.TvId == 1399); // tv untouched
+        Assert.DoesNotContain(collection: remaining, filter: u => u.MovieId == 129);
+        Assert.Contains(collection: remaining, filter: u => u.MovieId == 680); // other movie untouched
+        Assert.Contains(collection: remaining, filter: u => u.TvId == 1399); // tv untouched
     }
 
     [Fact]
     public async Task RemoveForItem_Tv_RemovesOnlyTv_AndLeavesMovies()
     {
         int deleted = await _repository.RemoveForItemAsync(
-            SeedConstants.UserId,
-            MediaTypes.TvMediaType,
-            1399,
-            null
+            userId: SeedConstants.UserId,
+            type: MediaTypes.TvMediaType,
+            intId: 1399,
+            ulidId: null
         );
 
-        Assert.Equal(1, deleted);
+        Assert.Equal(expected: 1, actual: deleted);
 
         List<UserData> remaining = await RemainingAsync();
-        Assert.DoesNotContain(remaining, u => u.TvId == 1399);
-        Assert.Equal(3, remaining.Count); // movie 129 (2) + movie 680 (1)
+        Assert.DoesNotContain(collection: remaining, filter: u => u.TvId == 1399);
+        Assert.Equal(expected: 3, actual: remaining.Count); // movie 129 (2) + movie 680 (1)
     }
 
     [Fact]
@@ -114,27 +114,27 @@ public class UserDataRepositoryRemoveForItemTests : IDisposable
         List<UserData> before = await RemainingAsync();
 
         int deleted = await _repository.RemoveForItemAsync(
-            SeedConstants.UserId,
-            MediaTypes.MovieMediaType,
-            null,
-            null
+            userId: SeedConstants.UserId,
+            type: MediaTypes.MovieMediaType,
+            intId: null,
+            ulidId: null
         );
 
-        Assert.Equal(0, deleted);
+        Assert.Equal(expected: 0, actual: deleted);
         List<UserData> after = await RemainingAsync();
-        Assert.Equal(before.Count, after.Count);
+        Assert.Equal(expected: before.Count, actual: after.Count);
     }
 
     [Fact]
     public async Task RemoveForItem_UnknownType_DeletesNothing()
     {
         int deleted = await _repository.RemoveForItemAsync(
-            SeedConstants.UserId,
-            "not-a-type",
-            129,
-            null
+            userId: SeedConstants.UserId,
+            type: "not-a-type",
+            intId: 129,
+            ulidId: null
         );
 
-        Assert.Equal(0, deleted);
+        Assert.Equal(expected: 0, actual: deleted);
     }
 }

@@ -36,8 +36,8 @@ public static class TemplateResolver
         string result = template;
         foreach (KeyValuePair<string, string> kvp in values)
         {
-            result = result.Replace($":{kvp.Key}:", kvp.Value);
-            result = result.Replace($"{{{kvp.Key}}}", kvp.Value);
+            result = result.Replace(oldValue: $":{kvp.Key}:", newValue: kvp.Value);
+            result = result.Replace(oldValue: $"{{{kvp.Key}}}", newValue: kvp.Value);
         }
 
         return result;
@@ -53,11 +53,11 @@ public static class TemplateResolver
         string label = isHdrOutput ? framesize : $"{framesize}_SDR";
         return new()
         {
-            ["type"] = "video",
-            ["framesize"] = framesize,
-            ["label"] = label,
-            ["colorspace"] = isHdrOutput ? "HDR" : "SDR",
-            ["colorrange"] = isHdrOutput ? "HDR" : "SDR",
+            [key: "type"] = "video",
+            [key: "framesize"] = framesize,
+            [key: "label"] = label,
+            [key: "colorspace"] = isHdrOutput ? "HDR" : "SDR",
+            [key: "colorrange"] = isHdrOutput ? "HDR" : "SDR",
         };
     }
 
@@ -69,12 +69,12 @@ public static class TemplateResolver
     {
         return new()
         {
-            ["type"] = "audio",
-            ["language"] = language,
+            [key: "type"] = "audio",
+            [key: "language"] = language,
             // {lang} is the brace-style alias for language.
-            ["lang"] = language,
-            ["codec"] = codecName,
-            ["channels"] = channels.ToString(),
+            [key: "lang"] = language,
+            [key: "codec"] = codecName,
+            [key: "channels"] = channels.ToString(),
         };
     }
 
@@ -86,15 +86,15 @@ public static class TemplateResolver
     {
         return new()
         {
-            ["language"] = language,
-            ["lang"] = language,
-            ["variant"] = variant,
+            [key: "language"] = language,
+            [key: "lang"] = language,
+            [key: "variant"] = variant,
             // {type} alias for subtitle templates — the spec uses
             // "subtitles/{filename}.{lang}.{type}" where {type} is the variant
             // (full / sign / song / forced). Distinct from the global "type"
             // token in video/audio contexts where it resolves to "video"/"audio".
-            ["type"] = variant,
-            ["filename"] = filename,
+            [key: "type"] = variant,
+            [key: "filename"] = filename,
         };
     }
 }

@@ -62,14 +62,14 @@ public static class ThumbnailPlanBuilder
                 int thumbHeight = (int)(
                     2
                     * Math.Round(
-                        (double)thumbConfig.Width
-                            * media.VideoStreams[0].Height
-                            / media.VideoStreams[0].Width
-                            / 2
+                        a: (double)thumbConfig.Width
+                           * media.VideoStreams[index: 0].Height
+                           / media.VideoStreams[index: 0].Width
+                           / 2
                     )
                 );
 
-                thumbPlan = new(thumbConfig.Width, thumbHeight, thumbConfig.IntervalSeconds);
+                thumbPlan = new(Width: thumbConfig.Width, Height: thumbHeight, IntervalSeconds: thumbConfig.IntervalSeconds);
             }
         }
         return thumbPlan;

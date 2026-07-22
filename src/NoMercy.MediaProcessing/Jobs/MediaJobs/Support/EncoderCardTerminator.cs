@@ -38,7 +38,7 @@ public static class EncoderCardTerminator
             return;
 
         await EventBusProvider.Current.PublishAsync(
-            new EncodingStageChangedEvent
+            @event: new EncodingStageChangedEvent
             {
                 JobId = jobId,
                 Status = "failed",
@@ -48,7 +48,7 @@ public static class EncoderCardTerminator
         );
 
         await EventBusProvider.Current.PublishAsync(
-            new EncodingFailedEvent
+            @event: new EncodingFailedEvent
             {
                 JobId = jobId,
                 InputPath = inputPath,

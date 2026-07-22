@@ -33,43 +33,43 @@ public partial class FileManager
     private async Task StoreMusic()
     {
         List<MediaFile> items = Files
-            .SelectMany(file => file.Files ?? [])
-            .Where(mediaFolder => mediaFolder.Parsed is not null)
+            .SelectMany(selector: file => file.Files ?? [])
+            .Where(predicate: mediaFolder => mediaFolder.Parsed is not null)
             .ToList();
 
         if (items.Count == 0)
             return;
 
         foreach (MediaFile item in items)
-            await StoreAudioItem(item);
+            await StoreAudioItem(item: item);
 
-        Logger.App($"Found {items.Count} music files");
+        Logger.App(message: $"Found {items.Count} music files");
     }
 
     private async Task StoreMovie()
     {
         MediaFile? item = Files
-            .SelectMany(file => file.Files ?? [])
-            .FirstOrDefault(file => file.Parsed is not null);
+            .SelectMany(selector: file => file.Files ?? [])
+            .FirstOrDefault(predicate: file => file.Parsed is not null);
 
         if (item == null)
             return;
 
-        await StoreVideoItem(item);
+        await StoreVideoItem(item: item);
 
-        Logger.App($"Found {item.Path} for {Movie?.Title}");
+        Logger.App(message: $"Found {item.Path} for {Movie?.Title}");
     }
 
     private async Task StoreTvShow()
     {
         List<MediaFile> items = Files
-            .SelectMany(file => file.Files ?? [])
-            .Where(mediaFolder => mediaFolder.Parsed is not null)
+            .SelectMany(selector: file => file.Files ?? [])
+            .Where(predicate: mediaFolder => mediaFolder.Parsed is not null)
             .ToList();
 
         Logger.App(
-            $"[StoreTvShow] {Show?.Title} ({Show?.Id}): {items.Count} candidate files across {Folders.Count} folder(s)",
-            LogEventLevel.Information
+            message: $"[StoreTvShow] {Show?.Title} ({Show?.Id}): {items.Count} candidate files across {Folders.Count} folder(s)",
+            level: LogEventLevel.Information
         );
 
         if (items.Count == 0)
@@ -80,13 +80,13 @@ public partial class FileManager
         {
             idx++;
             Logger.App(
-                $"[StoreVideoItem] {idx}/{items.Count} {Path.GetFileName(item.Path)}",
-                LogEventLevel.Information
+                message: $"[StoreVideoItem] {idx}/{items.Count} {Path.GetFileName(path: item.Path)}",
+                level: LogEventLevel.Information
             );
-            await StoreVideoItem(item);
+            await StoreVideoItem(item: item);
         }
 
-        Logger.App($"Found {items.Count} files for {Show?.Title}");
+        Logger.App(message: $"Found {items.Count} files for {Show?.Title}");
     }
 
     private async Task StoreAudioItem(MediaFile? item)
@@ -94,7 +94,7 @@ public partial class FileManager
         if (item?.Parsed is null)
             return;
 
-        Folder? folder = Folders.FirstOrDefault(folder => item.Path.Contains(folder.Path));
+        Folder? folder = Folders.FirstOrDefault(predicate: folder => item.Path.Contains(value: folder.Path));
         if (folder == null)
             return;
 
@@ -103,15 +103,15 @@ public partial class FileManager
 
     private async Task StoreVideoItem(MediaFile item)
     {
-        string itemPath = item.Path.Replace('\\', '/');
-        Folder? folder = Folders.FirstOrDefault(f =>
-            itemPath.Contains(f.Path.Replace('\\', '/'), StringComparison.OrdinalIgnoreCase)
+        string itemPath = item.Path.Replace(oldChar: '\\', newChar: '/');
+        Folder? folder = Folders.FirstOrDefault(predicate: f =>
+            itemPath.Contains(value: f.Path.Replace(oldChar: '\\', newChar: '/'), comparisonType: StringComparison.OrdinalIgnoreCase)
         );
         if (folder == null)
         {
             Logger.App(
-                $"[StoreVideoItem] no Folders match for {itemPath} — skipping (Folders={string.Join(", ", Folders.Select(f => f.Path))})",
-                LogEventLevel.Warning
+                message: $"[StoreVideoItem] no Folders match for {itemPath} — skipping (Folders={string.Join(separator: ", ", values: Folders.Select(selector: f => f.Path))})",
+                level: LogEventLevel.Warning
             );
             return;
         }
@@ -122,38 +122,38 @@ public partial class FileManager
         // keys on remote backends (StoragePathGuard). Rebase the path onto its
         // scope-relative root — the folder's stored Path — so the facade, the
         // stored HostFolder/Folder, and the served URLs are all backend-neutral.
-        itemPath = StoragePathHelpers.RebaseToFolderRoot(itemPath, folder.Path);
+        itemPath = StoragePathHelpers.RebaseToFolderRoot(absolutePath: itemPath, folderPath: folder.Path);
 
-        IStorage storage = StorageFor(folder);
-        string fileName = "/" + storage.GetName(itemPath);
-        string hostFolder = itemPath.Replace(fileName, "");
-        string showName = (Movie?.Folder ?? Show?.Folder).OrEmpty().Trim('/', '\\');
-        int showIdx = string.IsNullOrEmpty(showName)
+        IStorage storage = StorageFor(folder: folder);
+        string fileName = "/" + storage.GetName(path: itemPath);
+        string hostFolder = itemPath.Replace(oldValue: fileName, newValue: "");
+        string showName = (Movie?.Folder ?? Show?.Folder).OrEmpty().Trim(trimChars: ['/', '\\']);
+        int showIdx = string.IsNullOrEmpty(value: showName)
             ? -1
-            : itemPath.IndexOf(showName, StringComparison.OrdinalIgnoreCase);
+            : itemPath.IndexOf(value: showName, comparisonType: StringComparison.OrdinalIgnoreCase);
         string baseFolder =
-            showIdx >= 0 ? ("/" + itemPath[showIdx..]).Replace(fileName, "") : hostFolder;
+            showIdx >= 0 ? ("/" + itemPath[showIdx..]).Replace(oldValue: fileName, newValue: "") : hostFolder;
 
-        List<Subtitle> subtitles = GetSubtitles(storage, hostFolder);
+        List<Subtitle> subtitles = GetSubtitles(storage: storage, hostFolder: hostFolder);
 
-        DispatchOrphanedBitmapOcrBackfill(storage, folder, hostFolder);
+        DispatchOrphanedBitmapOcrBackfill(storage: storage, folder: folder, hostFolder: hostFolder);
 
-        List<VideoTrack> tracks = GetExtraFiles(storage, hostFolder);
+        List<VideoTrack> tracks = GetExtraFiles(storage: storage, hostFolder: hostFolder);
 
-        Episode? episode = await fileRepository.GetEpisode(Show?.Id, item);
+        Episode? episode = await fileRepository.GetEpisode(showId: Show?.Id, item: item);
 
         Metadata metadata = await MakeMetadata(
-            storage,
-            item,
-            fileName,
-            baseFolder,
-            hostFolder,
-            tracks
+            storage: storage,
+            item: item,
+            fileName: fileName,
+            baseFolder: baseFolder,
+            hostFolder: hostFolder,
+            extraFiles: tracks
         );
 
-        Ulid metadataId = await fileRepository.StoreMetadata(metadata);
+        Ulid metadataId = await fileRepository.StoreMetadata(metadata: metadata);
 
-        Logger.App($"Storing video file: {episode?.Id}, {Movie?.Id}", LogEventLevel.Verbose);
+        Logger.App(message: $"Storing video file: {episode?.Id}, {Movie?.Id}", level: LogEventLevel.Verbose);
 
         // Joined multi-episode file (e.g. S01E01-E04): record the last covered
         // episode so every episode in the range counts as present, while a single
@@ -162,9 +162,9 @@ public partial class FileManager
         if (episode is not null)
         {
             IReadOnlyList<int> covered = Parsing.EpisodeRangeParser.Expand(
-                fileName,
-                episode.SeasonNumber,
-                episode.EpisodeNumber
+                name: fileName,
+                season: episode.SeasonNumber,
+                firstEpisode: episode.EpisodeNumber
             );
             if (covered.Count > 1)
                 lastEpisodeNumber = covered[^1];
@@ -174,15 +174,15 @@ public partial class FileManager
             EpisodeId = episode?.Id,
             LastEpisodeNumber = lastEpisodeNumber,
             MovieId = Movie?.Id,
-            Folder = baseFolder.Replace("\\", "/"),
-            HostFolder = hostFolder.Replace("\\", "/"),
-            Filename = fileName.Replace("\\", "/"),
+            Folder = baseFolder.Replace(oldValue: "\\", newValue: "/"),
+            HostFolder = hostFolder.Replace(oldValue: "\\", newValue: "/"),
+            Filename = fileName.Replace(oldValue: "\\", newValue: "/"),
 
             Share = folder.Id.ToString(),
             Duration = Regex.Replace(
-                Regex.Replace((item.FFprobe?.Duration.ToString()).OrEmpty(), @"\.\d+", ""),
-                "^00:",
-                ""
+                input: Regex.Replace(input: (item.FFprobe?.Duration.ToString()).OrEmpty(), pattern: @"\.\d+", replacement: ""),
+                pattern: "^00:",
+                replacement: ""
             ),
             // Chapters = JsonConvert.SerializeObject(item.FFprobe?.Chapters ?? []),
             Chapters = "",
@@ -192,18 +192,18 @@ public partial class FileManager
             // column came out blank. The encoded tracks are the authoritative set of
             // playable languages anyway.
             Languages = JsonConvert.SerializeObject(
-                (metadata.Audio ?? [])
-                    .Select(audio => audio.Language)
-                    .Where(language => !string.IsNullOrEmpty(language) && language != "und")
+                value: (metadata.Audio ?? [])
+                    .Select(selector: audio => audio.Language)
+                    .Where(predicate: language => !string.IsNullOrEmpty(value: language) && language != "und")
                     .Distinct()
             ),
             Quality = (item.FFprobe?.VideoStreams.FirstOrDefault()?.Width.ToString()).OrEmpty(),
-            Subtitles = JsonConvert.SerializeObject(subtitles),
+            Subtitles = JsonConvert.SerializeObject(value: subtitles),
             Tracks = tracks.ToArray(),
             MetadataId = metadataId,
         };
 
-        await fileRepository.StoreVideoFile(videoFile);
+        await fileRepository.StoreVideoFile(videoFile: videoFile);
     }
 
     /// <summary>
@@ -224,8 +224,8 @@ public partial class FileManager
         string hostFolder
     )
     {
-        string subtitleFolder = storage.CombinePath(hostFolder, "subtitles");
-        if (!storage.Exists(subtitleFolder))
+        string subtitleFolder = storage.CombinePath(parent: hostFolder, child: "subtitles");
+        if (!storage.Exists(path: subtitleFolder))
             return;
 
         QueueJobDispatcher? dispatcher = QueueRunner.Current?.Dispatcher;
@@ -233,31 +233,31 @@ public partial class FileManager
             return;
 
         IReadOnlyList<OrphanedBitmapSubtitle> orphans = SelectOrphanedBitmapSubtitles(
-            storage
-                .List(subtitleFolder, null, recursive: false)
-                .Where(candidate => !candidate.IsDirectory)
-                .Select(candidate => storage.GetName(candidate.Path))
+            subtitleFileNames: storage
+                .List(path: subtitleFolder, pattern: null, recursive: false)
+                .Where(predicate: candidate => !candidate.IsDirectory)
+                .Select(selector: candidate => storage.GetName(path: candidate.Path))
         );
 
         foreach ((string supName, string mediaTitle, string language, string variant) in orphans)
         {
             dispatcher.Dispatch(
-                new SubtitleOcrBackfillJob(
-                    folder.Id.ToString(),
-                    folder.DriverId.ToString(),
-                    hostFolder,
-                    supName,
-                    mediaTitle,
-                    language,
-                    variant
+                job: new SubtitleOcrBackfillJob(
+                    folderId: folder.Id.ToString(),
+                    driverId: folder.DriverId.ToString(),
+                    hostFolder: hostFolder,
+                    supFileName: supName,
+                    mediaTitle: mediaTitle,
+                    language: language,
+                    variant: variant
                 ),
-                "encoder",
-                2
+                onQueue: "encoder",
+                priority: 2
             );
 
             Logger.App(
-                $"[SubtitleOcrBackfill] queued OCR for orphaned bitmap subtitle {supName}",
-                LogEventLevel.Information
+                message: $"[SubtitleOcrBackfill] queued OCR for orphaned bitmap subtitle {supName}",
+                level: LogEventLevel.Information
             );
         }
     }
@@ -275,26 +275,26 @@ public partial class FileManager
         IEnumerable<string> subtitleFileNames
     )
     {
-        HashSet<string> textKeys = new(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> textKeys = new(comparer: StringComparer.OrdinalIgnoreCase);
         List<OrphanedBitmapSubtitle> bitmaps = [];
 
         foreach (string name in subtitleFileNames)
         {
-            Match match = SubtitleFileRegex().Match(name);
+            Match match = SubtitleFileRegex().Match(input: name);
             if (!match.Success)
                 continue;
 
-            string language = match.Groups["lang"].Value;
-            string variant = match.Groups["type"].Value;
+            string language = match.Groups[groupname: "lang"].Value;
+            string variant = match.Groups[groupname: "type"].Value;
 
-            if (SubtitleClassifier.IsBitmapSidecarExtension(match.Groups["ext"].Value))
-                bitmaps.Add(new(name, name[..match.Index].TrimEnd('.'), language, variant));
+            if (SubtitleClassifier.IsBitmapSidecarExtension(extension: match.Groups[groupname: "ext"].Value))
+                bitmaps.Add(item: new(SupName: name, MediaTitle: name[..match.Index].TrimEnd(trimChar: '.'), Language: language, Variant: variant));
             else
-                textKeys.Add($"{language}|{variant}");
+                textKeys.Add(item: $"{language}|{variant}");
         }
 
         return bitmaps
-            .Where(bitmap => !textKeys.Contains($"{bitmap.Language}|{bitmap.Variant}"))
+            .Where(predicate: bitmap => !textKeys.Contains(item: $"{bitmap.Language}|{bitmap.Variant}"))
             .ToList();
     }
 
@@ -307,70 +307,70 @@ public partial class FileManager
         List<VideoTrack> extraFiles
     )
     {
-        List<IVideo> video = GetVideoHashList(storage, hostFolder);
-        List<IAudio> audio = GetAudioHashList(storage, hostFolder);
-        List<ISubtitle> subtitles = GetSubtitleHashList(storage, hostFolder);
-        List<IFont> fonts = GetFontHashList(storage, hostFolder);
-        List<IPreview> previews = GetPreviewHashList(storage, hostFolder, extraFiles);
+        List<IVideo> video = GetVideoHashList(storage: storage, hostFolder: hostFolder);
+        List<IAudio> audio = GetAudioHashList(storage: storage, hostFolder: hostFolder);
+        List<ISubtitle> subtitles = GetSubtitleHashList(storage: storage, hostFolder: hostFolder);
+        List<IFont> fonts = GetFontHashList(storage: storage, hostFolder: hostFolder);
+        List<IPreview> previews = GetPreviewHashList(storage: storage, hostFolder: hostFolder, extraFiles: extraFiles);
 
-        await RebuildHlsMasterFromDiskAsync(storage, hostFolder, fileName, video);
+        await RebuildHlsMasterFromDiskAsync(storage: storage, hostFolder: hostFolder, fileName: fileName, video: video);
 
-        VideoTrack? chaptersFile = extraFiles.FirstOrDefault(file => file.Kind == "chapters");
+        VideoTrack? chaptersFile = extraFiles.FirstOrDefault(predicate: file => file.Kind == "chapters");
 
         List<IChapter> chapters = chaptersFile?.File is not null
             ? await GetChapterHashListAsync(
-                storage,
-                hostFolder,
-                Path.GetFileName(chaptersFile.File)
+                storage: storage,
+                hostFolder: hostFolder,
+                file: Path.GetFileName(path: chaptersFile.File)
             )
             : [];
 
         IChapterFile? chaptersFileHashMap = chaptersFile?.File is not null
             ? new()
             {
-                FileName = "/" + Path.GetFileName(chaptersFile.File).Replace("\\", "/"),
+                FileName = "/" + Path.GetFileName(path: chaptersFile.File).Replace(oldValue: "\\", newValue: "/"),
                 FileSize = storage.SizeOrZero(
-                    storage.CombinePath(hostFolder, Path.GetFileName(chaptersFile.File))
+                    path: storage.CombinePath(parent: hostFolder, child: Path.GetFileName(path: chaptersFile.File))
                 ),
                 FileHash = ComputeFileHash(
-                    storage,
-                    storage.CombinePath(hostFolder, Path.GetFileName(chaptersFile.File))
+                    storage: storage,
+                    filePath: storage.CombinePath(parent: hostFolder, child: Path.GetFileName(path: chaptersFile.File))
                 ),
             }
             : null;
 
         IFontsFile? fontsFileHashMap = extraFiles
-            .Where(file => file.Kind == "fonts")
-            .Select(file => new IFontsFile
+            .Where(predicate: file => file.Kind == "fonts")
+            .Select(selector: file => new IFontsFile
             {
-                FileName = "/" + Path.GetFileName(file.File).Replace("\\", "/"),
+                FileName = "/" + Path.GetFileName(path: file.File).Replace(oldValue: "\\", newValue: "/"),
                 FileSize = storage.SizeOrZero(
-                    storage.CombinePath(hostFolder, Path.GetFileName(file.File).OrEmpty())
+                    path: storage.CombinePath(parent: hostFolder, child: Path.GetFileName(path: file.File).OrEmpty())
                 ),
                 FileHash = ComputeFileHash(
-                    storage,
-                    storage.CombinePath(hostFolder, Path.GetFileName(file.File).OrEmpty())
+                    storage: storage,
+                    filePath: storage.CombinePath(parent: hostFolder, child: Path.GetFileName(path: file.File).OrEmpty())
                 ),
             })
             .FirstOrDefault();
 
         Metadata metadata = new()
         {
-            Filename = fileName.Replace("\\", "/"),
+            Filename = fileName.Replace(oldValue: "\\", newValue: "/"),
             Duration = (item.FFprobe?.Duration.ToString()).OrEmpty(),
-            Folder = baseFolder.Replace("\\", "/"),
-            HostFolder = hostFolder.Replace("\\", "/"),
+            Folder = baseFolder.Replace(oldValue: "\\", newValue: "/"),
+            HostFolder = hostFolder.Replace(oldValue: "\\", newValue: "/"),
             // Sum the sizes already gathered while building the hash lists rather
             // than walking every segment again: a rescan verifies completeness and
             // must not deep-dive the whole output tree over the network just to set
             // a storage-accounting stat. Covers every catalogued asset (video and
             // audio variants, subtitles, fonts, previews, chapters).
             FolderSize =
-                video.Sum(entry => entry.FileSize ?? 0)
-                + audio.Sum(entry => entry.FileSize ?? 0)
-                + subtitles.Sum(entry => entry.FileSize ?? 0)
-                + fonts.Sum(entry => entry.FileSize ?? 0)
-                + previews.Sum(entry => entry.ImageFileSize + entry.TimeFileSize)
+                video.Sum(selector: entry => entry.FileSize ?? 0)
+                + audio.Sum(selector: entry => entry.FileSize ?? 0)
+                + subtitles.Sum(selector: entry => entry.FileSize ?? 0)
+                + fonts.Sum(selector: entry => entry.FileSize ?? 0)
+                + previews.Sum(selector: entry => entry.ImageFileSize + entry.TimeFileSize)
                 + (chaptersFileHashMap?.FileSize ?? 0)
                 + (fontsFileHashMap?.FileSize ?? 0),
 
@@ -413,8 +413,8 @@ public partial class FileManager
         if (video.Count == 0)
             return;
 
-        string masterTitle = fileName.TrimStart('/');
-        if (masterTitle.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase))
+        string masterTitle = fileName.TrimStart(trimChar: '/');
+        if (masterTitle.EndsWith(value: ".m3u8", comparisonType: StringComparison.OrdinalIgnoreCase))
             masterTitle = masterTitle[..^".m3u8".Length];
 
         // The rebuild ffprobes every video rendition over the network (a remote
@@ -425,41 +425,41 @@ public partial class FileManager
         // genuinely incomplete master — the multi-bundle ladder split this exists
         // for, where a later bundle publishes a rung the current master never
         // listed — falls through to the full reconstruction.
-        if (MasterCoversDiskOutput(storage, hostFolder, masterTitle, video))
+        if (MasterCoversDiskOutput(storage: storage, hostFolder: hostFolder, masterTitle: masterTitle, video: video))
             return;
 
         // Only logged when the rebuild actually runs (a missing or incomplete
         // master), so it stays quiet on the common already-complete rescan.
         Logger.App(
-            $"[MasterRebuild] {masterTitle}: rebuilding (master missing or incomplete)",
-            LogEventLevel.Information
+            message: $"[MasterRebuild] {masterTitle}: rebuilding (master missing or incomplete)",
+            level: LogEventLevel.Information
         );
 
         try
         {
-            HlsOnDiskPlanReconstructor reconstructor = new(mediaAnalyzer);
+            HlsOnDiskPlanReconstructor reconstructor = new(mediaAnalyzer: mediaAnalyzer);
             OutputPlan plan = await reconstructor.ReconstructAsync(
-                storage,
-                hostFolder,
-                CancellationToken.None
+                storage: storage,
+                outputDirectory: hostFolder,
+                ct: CancellationToken.None
             );
 
             if (plan.VideoOutputs.Length == 0)
                 return;
 
-            HlsOutputStrategy hlsOutputStrategy = new(storage);
+            HlsOutputStrategy hlsOutputStrategy = new(storage: storage);
             await hlsOutputStrategy.FinalizeAsync(
-                hostFolder,
-                plan,
-                masterTitle,
-                CancellationToken.None
+                outputDirectory: hostFolder,
+                plan: plan,
+                mediaTitle: masterTitle,
+                ct: CancellationToken.None
             );
         }
         catch (Exception ex)
         {
             Logger.App(
-                $"[RebuildHlsMasterFromDisk] {masterTitle}: master rebuild failed — {ex.Message}",
-                LogEventLevel.Warning
+                message: $"[RebuildHlsMasterFromDisk] {masterTitle}: master rebuild failed — {ex.Message}",
+                level: LogEventLevel.Warning
             );
         }
     }
@@ -486,15 +486,15 @@ public partial class FileManager
         List<IVideo> video
     )
     {
-        string masterPath = storage.CombinePath(hostFolder, masterTitle + ".m3u8");
-        if (!storage.Exists(masterPath))
+        string masterPath = storage.CombinePath(parent: hostFolder, child: masterTitle + ".m3u8");
+        if (!storage.Exists(path: masterPath))
             return false;
 
         string master;
         try
         {
             master = storage
-                .ReadAllTextAsync(masterPath, CancellationToken.None)
+                .ReadAllTextAsync(path: masterPath, ct: CancellationToken.None)
                 .GetAwaiter()
                 .GetResult();
         }
@@ -505,48 +505,48 @@ public partial class FileManager
 
         foreach (IVideo entry in video)
         {
-            string renditionDir = entry.FileName.TrimStart('/').Split('/')[0];
-            if (!master.Contains(renditionDir + "/", StringComparison.OrdinalIgnoreCase))
+            string renditionDir = entry.FileName.TrimStart(trimChar: '/').Split(separator: '/')[0];
+            if (!master.Contains(value: renditionDir + "/", comparisonType: StringComparison.OrdinalIgnoreCase))
                 return false;
         }
 
         foreach (
             StorageEntry dir in storage
-                .List(hostFolder, "audio_*", recursive: false)
-                .Where(entry => entry.IsDirectory)
+                .List(path: hostFolder, pattern: "audio_*", recursive: false)
+                .Where(predicate: entry => entry.IsDirectory)
         )
         {
-            string renditionDir = storage.GetName(dir.Path);
-            if (!master.Contains(renditionDir + "/", StringComparison.OrdinalIgnoreCase))
+            string renditionDir = storage.GetName(path: dir.Path);
+            if (!master.Contains(value: renditionDir + "/", comparisonType: StringComparison.OrdinalIgnoreCase))
                 return false;
         }
 
-        string subtitleFolder = storage.CombinePath(hostFolder, "subtitles");
-        if (!storage.Exists(subtitleFolder))
+        string subtitleFolder = storage.CombinePath(parent: hostFolder, child: "subtitles");
+        if (!storage.Exists(path: subtitleFolder))
             return true;
 
         foreach (
             StorageEntry languageDir in storage
-                .List(subtitleFolder, "*", recursive: false)
-                .Where(entry => entry.IsDirectory)
+                .List(path: subtitleFolder, pattern: "*", recursive: false)
+                .Where(predicate: entry => entry.IsDirectory)
         )
         {
-            string language = storage.GetName(languageDir.Path);
+            string language = storage.GetName(path: languageDir.Path);
             foreach (
                 StorageEntry track in storage
-                    .List(languageDir.Path, "*", recursive: false)
-                    .Where(entry => !entry.IsDirectory)
+                    .List(path: languageDir.Path, pattern: "*", recursive: false)
+                    .Where(predicate: entry => !entry.IsDirectory)
             )
             {
-                string trackName = storage.GetName(track.Path);
+                string trackName = storage.GetName(path: track.Path);
                 bool isAdvertised =
-                    trackName.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase)
-                    || trackName.EndsWith(".ass", StringComparison.OrdinalIgnoreCase)
-                    || trackName.EndsWith(".srt", StringComparison.OrdinalIgnoreCase);
+                    trackName.EndsWith(value: ".m3u8", comparisonType: StringComparison.OrdinalIgnoreCase)
+                    || trackName.EndsWith(value: ".ass", comparisonType: StringComparison.OrdinalIgnoreCase)
+                    || trackName.EndsWith(value: ".srt", comparisonType: StringComparison.OrdinalIgnoreCase);
                 if (!isAdvertised)
                     continue;
 
-                if (!master.Contains($"{language}/{trackName}", StringComparison.OrdinalIgnoreCase))
+                if (!master.Contains(value: $"{language}/{trackName}", comparisonType: StringComparison.OrdinalIgnoreCase))
                     return false;
             }
         }

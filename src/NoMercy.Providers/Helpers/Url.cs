@@ -15,7 +15,7 @@ public static class Url
 {
     public static Uri ToHttps(this Uri url)
     {
-        UriBuilder uriBuilder = new(url)
+        UriBuilder uriBuilder = new(uri: url)
         {
             Scheme = Uri.UriSchemeHttps,
             Port = -1, // default port for scheme

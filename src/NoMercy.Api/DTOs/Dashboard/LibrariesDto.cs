@@ -18,12 +18,12 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record LibrariesDto
 {
-    [JsonProperty("data")]
+    [JsonProperty(propertyName: "data")]
     public IEnumerable<LibrariesResponseItemDto> Data { get; set; } = [];
 
     public static readonly Func<MediaContext, Guid, IAsyncEnumerable<Library?>> GetLibraries =
         EF.CompileAsyncQuery(
-            (MediaContext mediaContext, Guid userId) =>
+            queryExpression: (MediaContext mediaContext, Guid userId) =>
                 mediaContext
                     .Libraries.AsNoTracking()
                     .Where(library =>

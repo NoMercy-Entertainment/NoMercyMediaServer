@@ -31,17 +31,17 @@ public class SignalRPlaybackEventHandler : IDisposable
     {
         _logger = logger;
         _clientMessenger = clientMessenger;
-        _subscriptions.Add(eventBus.Subscribe<PlaybackStartedEvent>(OnPlaybackStarted));
-        _subscriptions.Add(eventBus.Subscribe<PlaybackProgressUpdatedEvent>(OnPlaybackProgress));
-        _subscriptions.Add(eventBus.Subscribe<PlaybackCompletedEvent>(OnPlaybackCompleted));
+        _subscriptions.Add(item: eventBus.Subscribe<PlaybackStartedEvent>(handler: OnPlaybackStarted));
+        _subscriptions.Add(item: eventBus.Subscribe<PlaybackProgressUpdatedEvent>(handler: OnPlaybackProgress));
+        _subscriptions.Add(item: eventBus.Subscribe<PlaybackCompletedEvent>(handler: OnPlaybackCompleted));
     }
 
     internal async Task OnPlaybackStarted(PlaybackStartedEvent @event, CancellationToken ct)
     {
         await _clientMessenger.SendToAll(
-            "PlaybackStarted",
-            "dashboardHub",
-            new
+            name: "PlaybackStarted",
+            endpoint: "dashboardHub",
+            data: new
             {
                 @event.UserId,
                 @event.MediaId,
@@ -53,10 +53,7 @@ public class SignalRPlaybackEventHandler : IDisposable
         );
 
         _logger.LogInformation(
-            "Playback started: User={UserId}, Media={MediaId}, Type={MediaType}",
-            @event.UserId,
-            @event.MediaId,
-            @event.MediaType
+            message: "Playback started: User={UserId}, Media={MediaId}, Type={MediaType}", args: [@event.UserId, @event.MediaId, @event.MediaType]
         );
     }
 
@@ -67,9 +64,9 @@ public class SignalRPlaybackEventHandler : IDisposable
     {
         // Progress events are high-frequency; broadcast but don't log to avoid noise
         await _clientMessenger.SendToAll(
-            "PlaybackProgress",
-            "dashboardHub",
-            new
+            name: "PlaybackProgress",
+            endpoint: "dashboardHub",
+            data: new
             {
                 @event.UserId,
                 @event.MediaId,
@@ -83,9 +80,9 @@ public class SignalRPlaybackEventHandler : IDisposable
     internal async Task OnPlaybackCompleted(PlaybackCompletedEvent @event, CancellationToken ct)
     {
         await _clientMessenger.SendToAll(
-            "PlaybackCompleted",
-            "dashboardHub",
-            new
+            name: "PlaybackCompleted",
+            endpoint: "dashboardHub",
+            data: new
             {
                 @event.UserId,
                 @event.MediaId,
@@ -96,10 +93,7 @@ public class SignalRPlaybackEventHandler : IDisposable
         );
 
         _logger.LogInformation(
-            "Playback completed: User={UserId}, Media={MediaId}, Type={MediaType}",
-            @event.UserId,
-            @event.MediaId,
-            @event.MediaType
+            message: "Playback completed: User={UserId}, Media={MediaId}, Type={MediaType}", args: [@event.UserId, @event.MediaId, @event.MediaType]
         );
     }
 

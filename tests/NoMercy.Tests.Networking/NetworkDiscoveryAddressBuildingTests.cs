@@ -29,17 +29,17 @@ namespace NoMercy.Tests.Networking;
 /// registration and connectivity flows depend on — a regression here breaks
 /// every client's ability to resolve the server.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class NetworkDiscoveryAddressBuildingTests
 {
     private static NetworkDiscovery BuildDiscovery()
     {
         return new(
-            NullLogger<NetworkDiscovery>.Instance,
-            new LocalStorageDriver(),
-            new AuthTokenStore(),
-            new ConnectivityStatus(),
-            new()
+            logger: NullLogger<NetworkDiscovery>.Instance,
+            driver: new LocalStorageDriver(),
+            authTokenStore: new AuthTokenStore(),
+            connectivityStatus: new ConnectivityStatus(),
+            networkProbeConfig: new()
         );
     }
 
@@ -61,7 +61,7 @@ public sealed class NetworkDiscoveryAddressBuildingTests
 
         string domain = discovery.InternalDomain;
 
-        Assert.Equal($"192-168-1-50.{Info.DeviceId}.nomercy.tv", domain);
+        Assert.Equal(expected: $"192-168-1-50.{Info.DeviceId}.nomercy.tv", actual: domain);
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public sealed class NetworkDiscoveryAddressBuildingTests
 
         string domain = discovery.ExternalDomain;
 
-        Assert.Equal($"203-0-113-42.{Info.DeviceId}.nomercy.tv", domain);
+        Assert.Equal(expected: $"203-0-113-42.{Info.DeviceId}.nomercy.tv", actual: domain);
     }
 
     [Fact]
@@ -84,10 +84,10 @@ public sealed class NetworkDiscoveryAddressBuildingTests
         string domain = discovery.InternalDomain;
         // The first label is the dashed IP; only structural dots separating
         // it from DeviceId and the DNS suffix should remain.
-        string dashedIpSegment = domain.Split('.')[0];
+        string dashedIpSegment = domain.Split(separator: '.')[0];
 
-        Assert.Equal("10-0-0-5", dashedIpSegment);
-        Assert.DoesNotContain(':', dashedIpSegment);
+        Assert.Equal(expected: "10-0-0-5", actual: dashedIpSegment);
+        Assert.DoesNotContain(expected: ':', collection: dashedIpSegment);
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public sealed class NetworkDiscoveryAddressBuildingTests
 
         string address = discovery.InternalAddress;
 
-        Assert.Equal($"https://{discovery.InternalDomain}:7626", address);
+        Assert.Equal(expected: $"https://{discovery.InternalDomain}:7626", actual: address);
     }
 
     [Fact]
@@ -111,7 +111,7 @@ public sealed class NetworkDiscoveryAddressBuildingTests
 
         string address = discovery.ExternalAddress;
 
-        Assert.Equal($"https://{discovery.ExternalDomain}:8443", address);
+        Assert.Equal(expected: $"https://{discovery.ExternalDomain}:8443", actual: address);
 
         RuntimeServerSettings.Current.ExternalServerPort = 7626;
     }
@@ -128,8 +128,8 @@ public sealed class NetworkDiscoveryAddressBuildingTests
         string internalAddress = discovery.InternalAddress;
         string externalAddress = discovery.ExternalAddress;
 
-        Assert.EndsWith(":7626", internalAddress);
-        Assert.EndsWith(":9000", externalAddress);
+        Assert.EndsWith(expectedEndString: ":7626", actualString: internalAddress);
+        Assert.EndsWith(expectedEndString: ":9000", actualString: externalAddress);
 
         RuntimeServerSettings.Current.ExternalServerPort = 7626;
     }
@@ -145,7 +145,7 @@ public sealed class NetworkDiscoveryAddressBuildingTests
 
             string domain = discovery.InternalDomain;
 
-            Assert.EndsWith("srv.nomercy.tv", domain);
+            Assert.EndsWith(expectedEndString: "srv.nomercy.tv", actualString: domain);
         }
         finally
         {
@@ -162,8 +162,8 @@ public sealed class NetworkDiscoveryAddressBuildingTests
 
         string domain = discovery.ExternalDomain;
 
-        Assert.EndsWith("nomercy.tv", domain);
-        Assert.DoesNotContain("srv.nomercy.tv", domain);
+        Assert.EndsWith(expectedEndString: "nomercy.tv", actualString: domain);
+        Assert.DoesNotContain(expectedSubstring: "srv.nomercy.tv", actualString: domain);
     }
 
     [Fact]
@@ -172,10 +172,10 @@ public sealed class NetworkDiscoveryAddressBuildingTests
         NetworkDiscovery discovery = BuildDiscovery();
         discovery.InternalIp = "10.0.0.9";
 
-        Exception? ex = Record.Exception(() => discovery.InternalIp = "10.0.0.9");
+        Exception? ex = Record.Exception(testCode: () => discovery.InternalIp = "10.0.0.9");
 
-        Assert.Null(ex);
-        Assert.Equal("10.0.0.9", discovery.InternalIp);
+        Assert.Null(@object: ex);
+        Assert.Equal(expected: "10.0.0.9", actual: discovery.InternalIp);
     }
 
     [Fact]
@@ -186,6 +186,6 @@ public sealed class NetworkDiscoveryAddressBuildingTests
 
         string domain = discovery.InternalDomain;
 
-        Assert.Contains(Info.DeviceId.ToString(), domain);
+        Assert.Contains(expectedSubstring: Info.DeviceId.ToString(), actualString: domain);
     }
 }

@@ -39,7 +39,7 @@ public static class JsonHelper
         // Verbose so a silently-dropped field is diagnosable instead of vanishing.
         Error = (_, ev) =>
         {
-            Logger.App($"JSON error: {ev.ErrorContext.Error.Message}", LogEventLevel.Verbose);
+            Logger.App(message: $"JSON error: {ev.ErrorContext.Error.Message}", level: LogEventLevel.Verbose);
             ev.ErrorContext.Handled = true;
         },
 
@@ -72,12 +72,12 @@ public static class JsonHelper
     /// </summary>
     public static T? FromJson<T>(this string? json)
     {
-        if (string.IsNullOrEmpty(json))
+        if (string.IsNullOrEmpty(value: json))
             return default;
 
         try
         {
-            return JsonConvert.DeserializeObject<T>(json, Settings);
+            return JsonConvert.DeserializeObject<T>(value: json, settings: Settings);
         }
         catch (JsonException)
         {
@@ -87,6 +87,6 @@ public static class JsonHelper
 
     public static string ToJson<T>(this T self)
     {
-        return JsonConvert.SerializeObject(self, Settings);
+        return JsonConvert.SerializeObject(value: self, settings: Settings);
     }
 }

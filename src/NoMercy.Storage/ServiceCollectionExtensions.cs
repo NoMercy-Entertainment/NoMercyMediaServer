@@ -36,40 +36,40 @@ public static class ServiceCollectionExtensions
     )
     {
         StorageOptions opts = new();
-        configure?.Invoke(opts);
-        services.TryAddSingleton(opts);
+        configure?.Invoke(obj: opts);
+        services.TryAddSingleton(instance: opts);
 
         services.TryAddSingleton<IStorageDriver, LocalStorageDriver>();
 
-        services.TryAddSingleton(sp => new StoragePathGuard(
-            sp.GetRequiredService<StorageOptions>().AllowedRoots,
-            sp.GetRequiredService<IStorageDriver>()
+        services.TryAddSingleton(implementationFactory: sp => new StoragePathGuard(
+            allowedRoots: sp.GetRequiredService<StorageOptions>().AllowedRoots,
+            driver: sp.GetRequiredService<IStorageDriver>()
         ));
 
-        services.TryAddSingleton<IStorage>(sp => new LocalStorage(
-            sp.GetRequiredService<IStorageDriver>(),
-            sp.GetRequiredService<StoragePathGuard>()
+        services.TryAddSingleton<IStorage>(implementationFactory: sp => new LocalStorage(
+            driver: sp.GetRequiredService<IStorageDriver>(),
+            guard: sp.GetRequiredService<StoragePathGuard>()
         ));
 
-        services.AddSingleton<IStorageDriverBuilder>(sp => new LocalDriverBuilder(
-            sp.GetRequiredService<IStorageDriver>()
+        services.AddSingleton<IStorageDriverBuilder>(implementationFactory: sp => new LocalDriverBuilder(
+            driver: sp.GetRequiredService<IStorageDriver>()
         ));
-        services.AddSingleton<IStorageDriverBuilder>(sp => new NfsDriverBuilder(
-            sp.GetRequiredService<ILogger<NfsDriverBuilder>>()
+        services.AddSingleton<IStorageDriverBuilder>(implementationFactory: sp => new NfsDriverBuilder(
+            logger: sp.GetRequiredService<ILogger<NfsDriverBuilder>>()
         ));
-        services.AddSingleton<IStorageDriverBuilder>(sp => new S3DriverBuilder(
-            sp.GetRequiredService<ILogger<S3DriverBuilder>>(),
-            sp.GetService<ICredentialResolver>()
+        services.AddSingleton<IStorageDriverBuilder>(implementationFactory: sp => new S3DriverBuilder(
+            logger: sp.GetRequiredService<ILogger<S3DriverBuilder>>(),
+            credentialResolver: sp.GetService<ICredentialResolver>()
         ));
-        services.AddSingleton<IStorageDriverBuilder>(sp => new WebDavDriverBuilder(
-            sp.GetRequiredService<ILogger<WebDavDriverBuilder>>(),
-            sp.GetService<ICredentialResolver>()
+        services.AddSingleton<IStorageDriverBuilder>(implementationFactory: sp => new WebDavDriverBuilder(
+            logger: sp.GetRequiredService<ILogger<WebDavDriverBuilder>>(),
+            credentialResolver: sp.GetService<ICredentialResolver>()
         ));
 
-        services.TryAddSingleton<IStorageFactory>(sp => new StorageFactory(
-            sp.GetRequiredService<ILogger<StorageFactory>>(),
-            sp.GetServices<IStorageDriverBuilder>(),
-            sp.GetService<IDriverConfigResolver>()
+        services.TryAddSingleton<IStorageFactory>(implementationFactory: sp => new StorageFactory(
+            logger: sp.GetRequiredService<ILogger<StorageFactory>>(),
+            builders: sp.GetServices<IStorageDriverBuilder>(),
+            driverConfigResolver: sp.GetService<IDriverConfigResolver>()
         ));
 
         return services;

@@ -18,35 +18,35 @@ internal static class QueueCommand
 {
     public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
-        Command statusCmd = new("status") { Description = "Show queue statistics" };
+        Command statusCmd = new(name: "status") { Description = "Show queue statistics" };
 
         statusCmd.SetAction(
-            async (parseResult, ct) =>
+            action: async (parseResult, ct) =>
             {
-                string? pipe = parseResult.GetValue(pipeOption);
-                using ICliClient client = clientFactory.Create(pipe);
+                string? pipe = parseResult.GetValue(option: pipeOption);
+                using ICliClient client = clientFactory.Create(pipeNameOrSocketPath: pipe);
                 QueueStatusResponse? queue = await client.GetAsync<QueueStatusResponse>(
-                    ApiRoutes.Queue,
-                    ct
+                    path: ApiRoutes.Queue,
+                    cancellationToken: ct
                 );
 
                 if (queue is null)
                 {
-                    await Console.Error.WriteLineAsync("Could not connect to server.");
+                    await Console.Error.WriteLineAsync(value: "Could not connect to server.");
                     return (int)ExitCode.ServerError;
                 }
 
-                Console.WriteLine($"Pending Jobs:  {queue.PendingJobs}");
-                Console.WriteLine($"Failed Jobs:   {queue.FailedJobs}");
+                Console.WriteLine(value: $"Pending Jobs:  {queue.PendingJobs}");
+                Console.WriteLine(value: $"Failed Jobs:   {queue.FailedJobs}");
 
                 if (queue.Workers.Count > 0)
                 {
                     Console.WriteLine();
-                    Console.WriteLine($"{"Worker", -20} {"Active Threads"}");
-                    Console.WriteLine(new string('-', 35));
+                    Console.WriteLine(value: $"{"Worker", -20} {"Active Threads"}");
+                    Console.WriteLine(value: new string(c: '-', count: 35));
                     foreach (KeyValuePair<string, WorkerStatusResponse> w in queue.Workers)
                     {
-                        Console.WriteLine($"{w.Key, -20} {w.Value.ActiveThreads}");
+                        Console.WriteLine(value: $"{w.Key, -20} {w.Value.ActiveThreads}");
                     }
                 }
 
@@ -54,8 +54,8 @@ internal static class QueueCommand
             }
         );
 
-        Command command = new("queue") { Description = "Queue management" };
-        command.Subcommands.Add(statusCmd);
+        Command command = new(name: "queue") { Description = "Queue management" };
+        command.Subcommands.Add(item: statusCmd);
 
         return command;
     }

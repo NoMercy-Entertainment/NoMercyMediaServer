@@ -24,7 +24,7 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace NoMercy.Api.Controllers.File;
 
-[Route("images/{type}/{path}")]
+[Route(template: "images/{type}/{path}")]
 public class ImageController(
     IStorage storage,
     IImageService imageService,
@@ -40,22 +40,22 @@ public class ImageController(
     {
         try
         {
-            Response.Headers.Append("Expires", DateTime.UtcNow.AddDays(30).ToString("R"));
-            Response.Headers.Append("Cache-Control", "public, max-age=2592000");
-            Response.Headers.Append("Access-Control-Allow-Origin", "*");
+            Response.Headers.Append(key: "Expires", value: DateTime.UtcNow.AddDays(value: 30).ToString(format: "R"));
+            Response.Headers.Append(key: "Cache-Control", value: "public, max-age=2592000");
+            Response.Headers.Append(key: "Access-Control-Allow-Origin", value: "*");
 
-            string folder = Path.Join(AppFiles.ImagesPath, ImageRequestPath.SanitizeSegment(type));
-            if (!storage.Exists(folder))
-                return NotFoundResponse("Image folder not found");
+            string folder = Path.Join(path1: AppFiles.ImagesPath, path2: ImageRequestPath.SanitizeSegment(segment: type));
+            if (!storage.Exists(path: folder))
+                return NotFoundResponse(detail: "Image folder not found");
 
-            string safeSegment = ImageRequestPath.SanitizeSegment(path);
-            string filePath = Path.Join(folder, safeSegment);
+            string safeSegment = ImageRequestPath.SanitizeSegment(segment: path);
+            string filePath = Path.Join(path1: folder, path2: safeSegment);
             try
             {
-                if (!storage.Exists(filePath) && type == "original")
+                if (!storage.Exists(path: filePath) && type == "original")
                 {
                     using Image<Rgba32>? downloadedImage = await TmdbImageClient.Download(
-                        "/" + safeSegment
+                        path: "/" + safeSegment
                     )!;
                 }
             }
@@ -64,66 +64,64 @@ public class ImageController(
                 //
             }
 
-            if (!storage.Exists(filePath))
-                return NotFoundResponse("Image not found");
+            if (!storage.Exists(path: filePath))
+                return NotFoundResponse(detail: "Image not found");
 
-            long originalFileSize = storage.Size(filePath);
-            string originalMimeType = MimeUtility.GetMimeMapping(filePath);
+            long originalFileSize = storage.Size(path: filePath);
+            string originalMimeType = MimeUtility.GetMimeMapping(file: filePath);
 
             bool emptyArguments =
                 request.Width is null && request.Type is null && request.Quality is null or 100;
 
             if (
                 emptyArguments
-                || path.Contains(".svg")
+                || path.Contains(value: ".svg")
                 || (
                     originalFileSize < request.Width
-                    && originalMimeType == imageService.Parse(request.Type ?? "png").DefaultMimeType
+                    && originalMimeType == imageService.Parse(format: request.Type ?? "png").DefaultMimeType
                 )
             )
-                return PhysicalFile(filePath, originalMimeType);
+                return PhysicalFile(physicalPath: filePath, contentType: originalMimeType);
 
             string encodedUrl = Request.GetEncodedUrl();
 
             string hashedUrl =
-                CacheController.GenerateFileName(encodedUrl)
+                CacheController.GenerateFileName(url: encodedUrl)
                 + "."
-                + imageService.Parse(request.Type ?? "png").FileExtensions.First();
+                + imageService.Parse(format: request.Type ?? "png").FileExtensions.First();
 
-            string cachedImagePath = Path.Join(AppFiles.TempImagesPath, hashedUrl);
-            if (storage.Exists(cachedImagePath))
+            string cachedImagePath = Path.Join(path1: AppFiles.TempImagesPath, path2: hashedUrl);
+            if (storage.Exists(path: cachedImagePath))
                 return PhysicalFile(
-                    cachedImagePath,
-                    imageService.Parse(request.Type ?? "png").DefaultMimeType
+                    physicalPath: cachedImagePath,
+                    contentType: imageService.Parse(format: request.Type ?? "png").DefaultMimeType
                 );
 
             try
             {
                 (byte[] magickImage, string mimeType) = imageService.ResizeMagickNet(
-                    filePath,
-                    request.Width,
-                    request.AspectRatio,
-                    request.Type,
-                    request.Quality
+                    image: filePath,
+                    width: request.Width,
+                    aspectRatio: request.AspectRatio,
+                    type: request.Type,
+                    quality: request.Quality
                 );
-                await storage.WriteAsync(cachedImagePath, magickImage, CancellationToken.None);
+                await storage.WriteAsync(path: cachedImagePath, bytes: magickImage, ct: CancellationToken.None);
 
-                return File(magickImage, mimeType);
+                return File(fileContents: magickImage, contentType: mimeType);
             }
             catch (Exception e)
             {
                 logger.LogWarning(
-                    "Image conversion failed for {FilePath}: {Message}",
-                    filePath,
-                    e.Message
+                    message: "Image conversion failed for {FilePath}: {Message}", args: [filePath, e.Message]
                 );
-                return PhysicalFile(filePath, originalMimeType);
+                return PhysicalFile(physicalPath: filePath, contentType: originalMimeType);
             }
         }
         catch (Exception e)
         {
-            logger.LogError(e.Message);
-            return NotFoundResponse("Image not found");
+            logger.LogError(message: e.Message);
+            return NotFoundResponse(detail: "Image not found");
         }
     }
 
@@ -139,23 +137,23 @@ public class ImageController(
             string encodedUrl = Request.GetEncodedUrl();
 
             string hashedUrl =
-                CacheController.GenerateFileName(encodedUrl)
+                CacheController.GenerateFileName(url: encodedUrl)
                 + "."
-                + imageService.Parse(request.Type ?? "png").FileExtensions.First();
+                + imageService.Parse(format: request.Type ?? "png").FileExtensions.First();
 
-            string cachedImagePath = Path.Join(AppFiles.TempImagesPath, hashedUrl);
-            if (storage.Exists(cachedImagePath))
+            string cachedImagePath = Path.Join(path1: AppFiles.TempImagesPath, path2: hashedUrl);
+            if (storage.Exists(path: cachedImagePath))
             {
-                storage.Delete(cachedImagePath);
-                return Ok(new { status = "ok", message = "Cache deleted" });
+                storage.Delete(path: cachedImagePath);
+                return Ok(value: new { status = "ok", message = "Cache deleted" });
             }
 
-            return NotFoundResponse("Cache not found");
+            return NotFoundResponse(detail: "Cache not found");
         }
         catch (Exception e)
         {
-            logger.LogError(e.Message);
-            return InternalServerErrorResponse("Image cache operation failed");
+            logger.LogError(message: e.Message);
+            return InternalServerErrorResponse(detail: "Image cache operation failed");
         }
     }
 }

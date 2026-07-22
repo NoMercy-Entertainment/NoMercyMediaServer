@@ -18,14 +18,14 @@ public class MusicBrainzTrack
 {
     private int _number;
 
-    [JsonProperty("artist-credit")]
+    [JsonProperty(propertyName: "artist-credit")]
     public ReleaseArtistCredit[] ArtistCredit { get; set; } = [];
 
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public Guid Id { get; set; }
 
     /** Track length in milliseconds */
-    [JsonProperty("length")]
+    [JsonProperty(propertyName: "length")]
     public int? Length { get; set; }
 
     public double Duration => (Length ?? 0) / 1000.0;
@@ -36,10 +36,10 @@ public class MusicBrainzTrack
     // setter used to run Convert.ToInt32 on an already-int value — a
     // conversion that can never throw — so the fallback for non-numeric
     // input was unreachable dead code.
-    [JsonProperty("number")]
+    [JsonProperty(propertyName: "number")]
     private string? NumberToken
     {
-        set => _number = ParseNumber(value);
+        set => _number = ParseNumber(raw: value);
     }
 
     [JsonIgnore]
@@ -53,21 +53,21 @@ public class MusicBrainzTrack
     /// </summary>
     internal static int ParseNumber(string? raw)
     {
-        if (raw is not null && int.TryParse(raw, out int parsed))
+        if (raw is not null && int.TryParse(s: raw, result: out int parsed))
             return parsed;
 
-        return raw?.Replace("A", string.Empty).Split("-").LastOrDefault()?.ToInt() ?? 0;
+        return raw?.Replace(oldValue: "A", newValue: string.Empty).Split(separator: "-").LastOrDefault()?.ToInt() ?? 0;
     }
 
-    [JsonProperty("position")]
+    [JsonProperty(propertyName: "position")]
     public int Position { get; set; }
 
-    [JsonProperty("recording")]
+    [JsonProperty(propertyName: "recording")]
     public TrackRecording Recording { get; set; } = new();
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty("genres")]
+    [JsonProperty(propertyName: "genres")]
     public MusicBrainzGenreDetails[]? Genres { get; set; }
 }

@@ -31,20 +31,20 @@ public static class SpecialSeed
 {
     public static async Task Init(MediaContext context)
     {
-        Logger.Setup("Adding Special");
+        Logger.Setup(message: "Adding Special");
 
         try
         {
             Library movieLibrary = await context
-                .Libraries.Where(f => f.Type == MediaTypes.MovieMediaType)
-                .Include(l => l.FolderLibraries)
-                    .ThenInclude(fl => fl.Folder)
+                .Libraries.Where(predicate: f => f.Type == MediaTypes.MovieMediaType)
+                .Include(navigationPropertyPath: l => l.FolderLibraries)
+                    .ThenInclude(navigationPropertyPath: fl => fl.Folder)
                 .FirstAsync();
 
             Library tvLibrary = await context
-                .Libraries.Where(f => f.Type == MediaTypes.TvMediaType)
-                .Include(l => l.FolderLibraries)
-                    .ThenInclude(fl => fl.Folder)
+                .Libraries.Where(predicate: f => f.Type == MediaTypes.TvMediaType)
+                .Include(navigationPropertyPath: l => l.FolderLibraries)
+                    .ThenInclude(navigationPropertyPath: fl => fl.Folder)
                 .FirstAsync();
 
             Special special = new()
@@ -56,17 +56,18 @@ public static class SpecialSeed
                 Logo = McuSeedData.Special.Logo,
                 Overview = McuSeedData.Special.Overview,
                 Creator = McuSeedData.Special.Creator,
-                _colorPalette = await NoMercyImageManager.MultiColorPalette([
-                    new("poster", McuSeedData.Special.Poster),
-                    new("backdrop", McuSeedData.Special.Backdrop),
+                _colorPalette = await NoMercyImageManager.MultiColorPalette(items:
+                [
+                    new(key: "poster", path: McuSeedData.Special.Poster),
+                    new(key: "backdrop", path: McuSeedData.Special.Backdrop),
                 ]),
             };
 
             await context
-                .Specials.Upsert(special)
-                .On(v => new { v.Id })
+                .Specials.Upsert(entity: special)
+                .On(match: v => new { v.Id })
                 .WhenMatched(
-                    (si, su) =>
+                    updater: (si, su) =>
                         new()
                         {
                             Id = su.Id,
@@ -88,31 +89,31 @@ public static class SpecialSeed
 
             foreach (Dto.SpecialItem item in McuSeedData.McuItems)
             {
-                Logger.Setup($"Searching for {item.Title} ({item.Year})");
+                Logger.Setup(message: $"Searching for {item.Title} ({item.Year})");
                 switch (item.Type)
                 {
                     case MediaTypes.MovieMediaType:
                         await AddMovieItem(
-                            context,
-                            client,
-                            movieLibrary,
-                            item,
-                            movieIds,
-                            specialItems
+                            context: context,
+                            client: client,
+                            movieLibrary: movieLibrary,
+                            item: item,
+                            movieIds: movieIds,
+                            specialItems: specialItems
                         );
                         break;
                     case MediaTypes.TvMediaType:
                     case MediaTypes.AnimeMediaType:
-                        await AddTvItem(context, client, tvLibrary, item, tvIds, specialItems);
+                        await AddTvItem(context: context, client: client, tvLibrary: tvLibrary, item: item, tvIds: tvIds, specialItems: specialItems);
                         break;
                 }
             }
 
-            await UpsertSpecialItems(context, specialItems);
+            await UpsertSpecialItems(context: context, specialItems: specialItems);
         }
         catch (Exception e)
         {
-            Logger.Setup(e.Message, LogEventLevel.Fatal);
+            Logger.Setup(message: e.Message, level: LogEventLevel.Fatal);
             throw;
         }
     }
@@ -127,21 +128,21 @@ public static class SpecialSeed
     )
     {
         TmdbPaginatedResponse<TmdbMovie>? result = await client.Movie(
-            item.Title,
-            item.Year.ToString()
+            query: item.Title,
+            year: item.Year.ToString()
         );
-        TmdbMovie? movie = result?.Results.FirstOrDefault(r =>
-            !r.Title.ToLower().Contains("making of")
+        TmdbMovie? movie = result?.Results.FirstOrDefault(predicate: r =>
+            !r.Title.ToLower().Contains(value: "making of")
         );
 
-        if (movie is null || movieIds.Contains(movie.Id))
+        if (movie is null || movieIds.Contains(item: movie.Id))
             return;
 
-        movieIds.Add(movie.Id);
+        movieIds.Add(item: movie.Id);
 
         try
         {
-            bool exists = context.Movies.Any(x => x.Id == movie.Id);
+            bool exists = context.Movies.Any(predicate: x => x.Id == movie.Id);
             if (!exists)
             {
                 MovieImportJob j = new() { Id = movie.Id, LibraryId = movieLibrary.Id };
@@ -150,11 +151,11 @@ public static class SpecialSeed
         }
         catch (Exception e)
         {
-            Logger.Setup(e.Message, LogEventLevel.Fatal);
+            Logger.Setup(message: e.Message, level: LogEventLevel.Fatal);
         }
 
         specialItems.Add(
-            new()
+            item: new()
             {
                 SpecialId = McuSeedData.Special.Id,
                 MovieId = movie.Id,
@@ -173,21 +174,21 @@ public static class SpecialSeed
     )
     {
         TmdbPaginatedResponse<TmdbTvShow>? result = await client.TvShow(
-            item.Title,
-            item.Year.ToString()
+            query: item.Title,
+            year: item.Year.ToString()
         );
-        TmdbTvShow? tv = result?.Results.FirstOrDefault(r =>
-            !r.Name.Contains("making of", StringComparison.InvariantCultureIgnoreCase)
+        TmdbTvShow? tv = result?.Results.FirstOrDefault(predicate: r =>
+            !r.Name.Contains(value: "making of", comparisonType: StringComparison.InvariantCultureIgnoreCase)
         );
 
-        if (tv is null || tvIds.Contains(tv.Id))
+        if (tv is null || tvIds.Contains(item: tv.Id))
             return;
 
-        tvIds.Add(tv.Id);
+        tvIds.Add(item: tv.Id);
 
         try
         {
-            bool exists = await context.Tvs.AnyAsync(x => x.Id == tv.Id);
+            bool exists = await context.Tvs.AnyAsync(predicate: x => x.Id == tv.Id);
             if (!exists)
             {
                 ShowImportJob j = new() { Id = tv.Id, LibraryId = tvLibrary.Id };
@@ -196,19 +197,19 @@ public static class SpecialSeed
         }
         catch (Exception e)
         {
-            Logger.Setup(e.Message, LogEventLevel.Fatal);
+            Logger.Setup(message: e.Message, level: LogEventLevel.Fatal);
         }
 
         if (item.Episodes.Length == 0)
             item.Episodes = await context
-                .Episodes.Where(x => x.TvId == tv.Id)
-                .Where(x => x.SeasonNumber == item.Seasons.First())
-                .Select(x => x.EpisodeNumber)
+                .Episodes.Where(predicate: x => x.TvId == tv.Id)
+                .Where(predicate: x => x.SeasonNumber == item.Seasons.First())
+                .Select(selector: x => x.EpisodeNumber)
                 .ToArrayAsync();
 
         foreach (int episodeNumber in item.Episodes)
         {
-            Episode? episode = await context.Episodes.FirstOrDefaultAsync(x =>
+            Episode? episode = await context.Episodes.FirstOrDefaultAsync(predicate: x =>
                 x.TvId == tv.Id
                 && x.SeasonNumber == item.Seasons.First()
                 && x.EpisodeNumber == episodeNumber
@@ -218,7 +219,7 @@ public static class SpecialSeed
                 continue;
 
             specialItems.Add(
-                new()
+                item: new()
                 {
                     SpecialId = McuSeedData.Special.Id,
                     EpisodeId = episode.Id,
@@ -233,18 +234,18 @@ public static class SpecialSeed
         List<SpecialItem> specialItems
     )
     {
-        Logger.Setup($"Upsetting {specialItems.Count} SpecialItems");
+        Logger.Setup(message: $"Upsetting {specialItems.Count} SpecialItems");
 
-        IEnumerable<SpecialItem> movies = specialItems.Where(s => s.MovieId is not null);
+        IEnumerable<SpecialItem> movies = specialItems.Where(predicate: s => s.MovieId is not null);
 
         foreach (SpecialItem movie in movies)
             try
             {
                 await context
-                    .SpecialItems.Upsert(movie)
-                    .On(x => new { x.SpecialId, x.MovieId })
+                    .SpecialItems.Upsert(entity: movie)
+                    .On(match: x => new { x.SpecialId, x.MovieId })
                     .WhenMatched(
-                        (old, @new) =>
+                        updater: (old, @new) =>
                             new()
                             {
                                 SpecialId = @new.SpecialId,
@@ -256,19 +257,19 @@ public static class SpecialSeed
             }
             catch (Exception e)
             {
-                Logger.Error(e);
+                Logger.Error(message: e);
             }
 
-        IEnumerable<SpecialItem> episodes = specialItems.Where(s => s.EpisodeId is not null);
+        IEnumerable<SpecialItem> episodes = specialItems.Where(predicate: s => s.EpisodeId is not null);
 
         foreach (SpecialItem episode in episodes)
             try
             {
                 await context
-                    .SpecialItems.Upsert(episode)
-                    .On(x => new { x.SpecialId, x.EpisodeId })
+                    .SpecialItems.Upsert(entity: episode)
+                    .On(match: x => new { x.SpecialId, x.EpisodeId })
                     .WhenMatched(
-                        (old, @new) =>
+                        updater: (old, @new) =>
                             new()
                             {
                                 SpecialId = @new.SpecialId,
@@ -280,9 +281,9 @@ public static class SpecialSeed
             }
             catch (Exception e)
             {
-                Logger.Error(e);
+                Logger.Error(message: e);
             }
 
-        Logger.Setup("SpecialItems Upset complete");
+        Logger.Setup(message: "SpecialItems Upset complete");
     }
 }

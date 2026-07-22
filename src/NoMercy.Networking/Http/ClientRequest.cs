@@ -15,27 +15,27 @@ namespace NoMercy.Networking.Http;
 
 public class ClientRequest
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty("browser")]
+    [JsonProperty(propertyName: "browser")]
     public string Browser { get; set; } = string.Empty;
 
-    [JsonProperty("os")]
+    [JsonProperty(propertyName: "os")]
     public string Os { get; set; } = string.Empty;
 
-    [JsonProperty("device")]
+    [JsonProperty(propertyName: "device")]
     public string Device { get; set; } = string.Empty;
 
-    [JsonProperty("custom_name")]
+    [JsonProperty(propertyName: "custom_name")]
     public string CustomName { get; set; } = string.Empty;
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("version")]
+    [JsonProperty(propertyName: "version")]
     public string Version { get; set; } = string.Empty;
 }

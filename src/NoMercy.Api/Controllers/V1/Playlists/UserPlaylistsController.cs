@@ -35,10 +35,10 @@ namespace NoMercy.Api.Controllers.V1.Playlists;
 /// ownership-checked methods.
 /// </summary>
 [ApiController]
-[ApiVersion(1.0)]
-[Tags("Playlists")]
+[ApiVersion(version: 1.0)]
+[Tags(tags: "Playlists")]
 [Authorize]
-[Route("api/v{version:apiVersion}/playlists")]
+[Route(template: "api/v{version:apiVersion}/playlists")]
 public class UserPlaylistsController(IUserPlaylistRepository userPlaylistRepository)
     : BaseController
 {
@@ -46,51 +46,51 @@ public class UserPlaylistsController(IUserPlaylistRepository userPlaylistReposit
     public async Task<IActionResult> Index(CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view playlists");
+        if (!AuthPolicy.IsAllowed(principal: User))
+            return UnauthorizedResponse(detail: "You do not have permission to view playlists");
 
         List<UserPlaylistSummary> playlists = await userPlaylistRepository.GetUserPlaylistsAsync(
-            userId,
-            ct
+            userId: userId,
+            ct: ct
         );
 
         return Ok(
-            new CarouselResponseDto<UserPlaylistSummaryDto>
+            value: new CarouselResponseDto<UserPlaylistSummaryDto>
             {
-                Data = playlists.Select(p => new UserPlaylistSummaryDto(p)),
+                Data = playlists.Select(selector: p => new UserPlaylistSummaryDto(summary: p)),
             }
         );
     }
 
     [HttpGet]
-    [Route("{id:guid}")]
+    [Route(template: "{id:guid}")]
     public async Task<IActionResult> Show(Guid id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view playlists");
+        if (!AuthPolicy.IsAllowed(principal: User))
+            return UnauthorizedResponse(detail: "You do not have permission to view playlists");
 
         UserPlaylistDetail? playlist = await userPlaylistRepository.GetPlaylistAsync(
-            id,
-            userId,
-            ct
+            playlistId: id,
+            userId: userId,
+            ct: ct
         );
         if (playlist is null)
-            return NotFoundResponse("Playlist not found");
+            return NotFoundResponse(detail: "Playlist not found");
 
         string language = Language();
         string country = Country();
 
         List<PlaylistItem>? items = await userPlaylistRepository.GetPlaylistItemsAsync(
-            id,
-            userId,
-            language,
-            country,
-            ct
+            playlistId: id,
+            userId: userId,
+            language: language,
+            country: country,
+            ct: ct
         );
 
         return Ok(
-            new DataResponseDto<UserPlaylistDetailDto>
+            value: new DataResponseDto<UserPlaylistDetailDto>
             {
                 Data = new()
                 {
@@ -98,7 +98,7 @@ public class UserPlaylistsController(IUserPlaylistRepository userPlaylistReposit
                     Name = playlist.Name,
                     Description = playlist.Description,
                     Cover = playlist.Cover,
-                    Items = (items ?? []).Select(PlaylistItemCardDto.From).ToList(),
+                    Items = (items ?? []).Select(selector: PlaylistItemCardDto.From).ToList(),
                 },
             }
         );
@@ -113,19 +113,19 @@ public class UserPlaylistsController(IUserPlaylistRepository userPlaylistReposit
     {
         Guid userId = User.UserId();
 
-        if (string.IsNullOrWhiteSpace(request.Name))
-            return BadRequestResponse("Name is required");
+        if (string.IsNullOrWhiteSpace(value: request.Name))
+            return BadRequestResponse(detail: "Name is required");
 
         Guid id = await userPlaylistRepository.CreatePlaylistAsync(
-            userId,
-            request.Name,
-            request.Description,
-            request.Cover,
-            ct
+            userId: userId,
+            name: request.Name,
+            description: request.Description,
+            cover: request.Cover,
+            ct: ct
         );
 
         return Ok(
-            new StatusResponseDto<UserPlaylistSummaryDto>
+            value: new StatusResponseDto<UserPlaylistSummaryDto>
             {
                 Status = "ok",
                 Data = new()
@@ -140,7 +140,7 @@ public class UserPlaylistsController(IUserPlaylistRepository userPlaylistReposit
     }
 
     [HttpPatch]
-    [Route("{id:guid}")]
+    [Route(template: "{id:guid}")]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> Edit(
         Guid id,
@@ -151,41 +151,41 @@ public class UserPlaylistsController(IUserPlaylistRepository userPlaylistReposit
         Guid userId = User.UserId();
 
         bool updated = await userPlaylistRepository.UpdatePlaylistAsync(
-            id,
-            userId,
-            request.Name,
-            request.Description,
-            request.Cover,
-            ct
+            playlistId: id,
+            userId: userId,
+            name: request.Name,
+            description: request.Description,
+            cover: request.Cover,
+            ct: ct
         );
 
         if (!updated)
-            return NotFoundResponse("Playlist not found");
+            return NotFoundResponse(detail: "Playlist not found");
 
         return Ok(
-            new StatusResponseDto<string> { Status = "ok", Data = "Playlist updated".Localize() }
+            value: new StatusResponseDto<string> { Status = "ok", Data = "Playlist updated".Localize() }
         );
     }
 
     [HttpDelete]
-    [Route("{id:guid}")]
+    [Route(template: "{id:guid}")]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> Destroy(Guid id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
 
-        bool deleted = await userPlaylistRepository.DeletePlaylistAsync(id, userId, ct);
+        bool deleted = await userPlaylistRepository.DeletePlaylistAsync(playlistId: id, userId: userId, ct: ct);
 
         if (!deleted)
-            return NotFoundResponse("Playlist not found");
+            return NotFoundResponse(detail: "Playlist not found");
 
         return Ok(
-            new StatusResponseDto<string> { Status = "ok", Data = "Playlist deleted".Localize() }
+            value: new StatusResponseDto<string> { Status = "ok", Data = "Playlist deleted".Localize() }
         );
     }
 
     [HttpPost]
-    [Route("{id:guid}/items")]
+    [Route(template: "{id:guid}/items")]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> AddItem(
         Guid id,
@@ -195,31 +195,31 @@ public class UserPlaylistsController(IUserPlaylistRepository userPlaylistReposit
     {
         Guid userId = User.UserId();
 
-        if (!await userPlaylistRepository.OwnsPlaylistAsync(id, userId, ct))
-            return NotFoundResponse("Playlist not found");
+        if (!await userPlaylistRepository.OwnsPlaylistAsync(playlistId: id, userId: userId, ct: ct))
+            return NotFoundResponse(detail: "Playlist not found");
 
-        if (!PlaylistItemKindWire.TryParse(request.Kind, out PlaylistItemKind kind))
-            return BadRequestResponse("Invalid kind. Expected one of: movie, tv, episode, special");
+        if (!PlaylistItemKindWire.TryParse(value: request.Kind, kind: out PlaylistItemKind kind))
+            return BadRequestResponse(detail: "Invalid kind. Expected one of: movie, tv, episode, special");
 
-        PlaylistItemRef? itemRef = BuildItemRef(kind, request.MediaId);
+        PlaylistItemRef? itemRef = BuildItemRef(kind: kind, mediaId: request.MediaId);
         if (itemRef is null)
-            return BadRequestResponse("Invalid media_id for the given kind");
+            return BadRequestResponse(detail: "Invalid media_id for the given kind");
 
         PlaylistItem? created = await userPlaylistRepository.AddItemAsync(
-            id,
-            userId,
-            itemRef.Value,
-            request.Order,
-            ct
+            playlistId: id,
+            userId: userId,
+            item: itemRef.Value,
+            order: request.Order,
+            ct: ct
         );
 
         // Ownership was already confirmed above, so a null result here
         // unambiguously means the referenced media doesn't exist.
         if (created is null)
-            return NotFoundResponse("Referenced media was not found");
+            return NotFoundResponse(detail: "Referenced media was not found");
 
         return Ok(
-            new StatusResponseDto<string>
+            value: new StatusResponseDto<string>
             {
                 Status = "ok",
                 Data = "Item added to playlist".Localize(),
@@ -228,7 +228,7 @@ public class UserPlaylistsController(IUserPlaylistRepository userPlaylistReposit
     }
 
     [HttpDelete]
-    [Route("{id:guid}/items/{itemId:ulid}")]
+    [Route(template: "{id:guid}/items/{itemId:ulid}")]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> RemoveItem(
         Guid id,
@@ -238,18 +238,18 @@ public class UserPlaylistsController(IUserPlaylistRepository userPlaylistReposit
     {
         Guid userId = User.UserId();
 
-        bool removed = await userPlaylistRepository.RemoveItemAsync(id, userId, itemId, ct);
+        bool removed = await userPlaylistRepository.RemoveItemAsync(playlistId: id, userId: userId, itemId: itemId, ct: ct);
 
         if (!removed)
-            return NotFoundResponse("Item not found in playlist");
+            return NotFoundResponse(detail: "Item not found in playlist");
 
         return Ok(
-            new StatusResponseDto<string> { Status = "ok", Data = "Item removed".Localize() }
+            value: new StatusResponseDto<string> { Status = "ok", Data = "Item removed".Localize() }
         );
     }
 
     [HttpPut]
-    [Route("{id:guid}/items/order")]
+    [Route(template: "{id:guid}/items/order")]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> Reorder(
         Guid id,
@@ -259,26 +259,26 @@ public class UserPlaylistsController(IUserPlaylistRepository userPlaylistReposit
     {
         Guid userId = User.UserId();
 
-        if (!await userPlaylistRepository.OwnsPlaylistAsync(id, userId, ct))
-            return NotFoundResponse("Playlist not found");
+        if (!await userPlaylistRepository.OwnsPlaylistAsync(playlistId: id, userId: userId, ct: ct))
+            return NotFoundResponse(detail: "Playlist not found");
 
-        List<Ulid> orderedIds = new(request.OrderedItemIds.Count);
+        List<Ulid> orderedIds = new(capacity: request.OrderedItemIds.Count);
         foreach (string rawId in request.OrderedItemIds)
         {
-            if (!Ulid.TryParse(rawId, out Ulid parsed))
-                return BadRequestResponse("Invalid item id in ordered_item_ids");
-            orderedIds.Add(parsed);
+            if (!Ulid.TryParse(base32: rawId, ulid: out Ulid parsed))
+                return BadRequestResponse(detail: "Invalid item id in ordered_item_ids");
+            orderedIds.Add(item: parsed);
         }
 
-        bool reordered = await userPlaylistRepository.ReorderAsync(id, userId, orderedIds, ct);
+        bool reordered = await userPlaylistRepository.ReorderAsync(playlistId: id, userId: userId, orderedItemIds: orderedIds, ct: ct);
 
         if (!reordered)
             return BadRequestResponse(
-                "ordered_item_ids must match the playlist's current items exactly"
+                detail: "ordered_item_ids must match the playlist's current items exactly"
             );
 
         return Ok(
-            new StatusResponseDto<string> { Status = "ok", Data = "Playlist reordered".Localize() }
+            value: new StatusResponseDto<string> { Status = "ok", Data = "Playlist reordered".Localize() }
         );
     }
 
@@ -292,18 +292,18 @@ public class UserPlaylistsController(IUserPlaylistRepository userPlaylistReposit
         switch (kind)
         {
             case PlaylistItemKind.Movie:
-                return int.TryParse(mediaId, out int movieId)
-                    ? PlaylistItemRef.ForMovie(movieId)
+                return int.TryParse(s: mediaId, result: out int movieId)
+                    ? PlaylistItemRef.ForMovie(movieId: movieId)
                     : null;
             case PlaylistItemKind.Tv:
-                return int.TryParse(mediaId, out int tvId) ? PlaylistItemRef.ForTv(tvId) : null;
+                return int.TryParse(s: mediaId, result: out int tvId) ? PlaylistItemRef.ForTv(tvId: tvId) : null;
             case PlaylistItemKind.Episode:
-                return int.TryParse(mediaId, out int episodeId)
-                    ? PlaylistItemRef.ForEpisode(episodeId)
+                return int.TryParse(s: mediaId, result: out int episodeId)
+                    ? PlaylistItemRef.ForEpisode(episodeId: episodeId)
                     : null;
             case PlaylistItemKind.Special:
-                return Ulid.TryParse(mediaId, out Ulid specialId)
-                    ? PlaylistItemRef.ForSpecial(specialId)
+                return Ulid.TryParse(base32: mediaId, ulid: out Ulid specialId)
+                    ? PlaylistItemRef.ForSpecial(specialId: specialId)
                     : null;
             default:
                 return null;

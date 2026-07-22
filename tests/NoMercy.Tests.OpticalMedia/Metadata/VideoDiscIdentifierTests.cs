@@ -22,25 +22,25 @@ namespace NoMercy.Tests.OpticalMedia.Metadata;
 /// Tests for <see cref="VideoDiscIdentifier"/> internals that are accessible
 /// via InternalsVisibleTo.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class VideoDiscIdentifierTests
 {
     // ── NormalizeLabel ─────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData("Avatar_Book_1_Disc_1", "Avatar Book 1")]
-    [InlineData("THE_DARK_KNIGHT", "THE DARK KNIGHT")]
-    [InlineData("Inception", "Inception")]
-    [InlineData("Lord.Of.The.Rings", "Lord Of The Rings")]
-    [InlineData("Star-Wars-A-New-Hope", "Star Wars A New Hope")]
-    [InlineData("Breaking_Bad_Season_2_Disc_3", "Breaking Bad Season 2")]
+    [InlineData(data: ["Avatar_Book_1_Disc_1", "Avatar Book 1"])]
+    [InlineData(data: ["THE_DARK_KNIGHT", "THE DARK KNIGHT"])]
+    [InlineData(data: ["Inception", "Inception"])]
+    [InlineData(data: ["Lord.Of.The.Rings", "Lord Of The Rings"])]
+    [InlineData(data: ["Star-Wars-A-New-Hope", "Star Wars A New Hope"])]
+    [InlineData(data: ["Breaking_Bad_Season_2_Disc_3", "Breaking Bad Season 2"])]
     public void NormalizeLabel_StripsDiscSuffixAndNormalizesSeparators(
         string input,
         string expected
     )
     {
-        string result = VideoDiscIdentifier.NormalizeLabel(input);
-        result.Should().Be(expected);
+        string result = VideoDiscIdentifier.NormalizeLabel(label: input);
+        result.Should().Be(expected: expected);
     }
 
     // ── BlendConfidence ────────────────────────────────────────────────────
@@ -49,49 +49,49 @@ public class VideoDiscIdentifierTests
     public void BlendConfidence_NoRuntime_UsesStringScoreOnly()
     {
         double confidence = VideoDiscIdentifier.BlendConfidence(
-            "Avatar",
-            "Avatar",
+            query: "Avatar",
+            candidate: "Avatar",
             rank: 0,
             discDurationSec: 0,
             runtimeMin: null
         );
 
-        confidence.Should().BeApproximately(1.0, 0.001);
+        confidence.Should().BeApproximately(expectedValue: 1.0, precision: 0.001);
     }
 
     [Fact]
     public void BlendConfidence_PerfectStringAndDuration_IsHigh()
     {
         double confidence = VideoDiscIdentifier.BlendConfidence(
-            "Avatar",
-            "Avatar",
+            query: "Avatar",
+            candidate: "Avatar",
             rank: 0,
             discDurationSec: 162 * 60,
             runtimeMin: 162
         );
 
-        confidence.Should().BeGreaterThan(0.85);
+        confidence.Should().BeGreaterThan(expected: 0.85);
     }
 
     [Fact]
     public void BlendConfidence_HigherRank_LowerScore()
     {
         double rank0 = VideoDiscIdentifier.BlendConfidence(
-            "Avatar",
-            "Avatar",
+            query: "Avatar",
+            candidate: "Avatar",
             rank: 0,
             discDurationSec: 0,
             runtimeMin: null
         );
         double rank2 = VideoDiscIdentifier.BlendConfidence(
-            "Avatar",
-            "Avatar",
+            query: "Avatar",
+            candidate: "Avatar",
             rank: 2,
             discDurationSec: 0,
             runtimeMin: null
         );
 
-        rank0.Should().BeGreaterThan(rank2);
+        rank0.Should().BeGreaterThan(expected: rank2);
     }
 
     [Fact]
@@ -100,14 +100,14 @@ public class VideoDiscIdentifierTests
         // NormalizedSimilarity short-circuits to 0 when either token set is
         // empty (an all-whitespace/empty label after normalization).
         double confidence = VideoDiscIdentifier.BlendConfidence(
-            "",
-            "Avatar",
+            query: "",
+            candidate: "Avatar",
             rank: 0,
             discDurationSec: 0,
             runtimeMin: null
         );
 
-        confidence.Should().Be(0);
+        confidence.Should().Be(expected: 0);
     }
 
     // ── Episode resolution bug fix ─────────────────────────────────────────
@@ -123,10 +123,10 @@ public class VideoDiscIdentifierTests
     /// This test exercises the pure delta function directly.
     /// </summary>
     [Theory]
-    [InlineData(3600, 3600, 1)]
-    [InlineData(7200, 3600, 2)]
-    [InlineData(10800, 3600, 3)]
-    [InlineData(14400, 3600, 4)]
+    [InlineData(data: [3600, 3600, 1])]
+    [InlineData(data: [7200, 3600, 2])]
+    [InlineData(data: [10800, 3600, 3])]
+    [InlineData(data: [14400, 3600, 4])]
     public void EpisodeDeltaFunction_MultiEpisodeDisc_PicksCorrectEpisodeCount(
         int discDurationSec,
         int episodeRunSec,
@@ -143,7 +143,7 @@ public class VideoDiscIdentifierTests
         for (int epIdx = 1; epIdx <= maxEpisodes; epIdx++)
         {
             double expectedSec = epIdx * episodeRunSec;
-            double delta = Math.Abs(discDurationSec - expectedSec);
+            double delta = Math.Abs(value: discDurationSec - expectedSec);
             if (delta < bestDelta)
             {
                 bestDelta = delta;
@@ -154,8 +154,8 @@ public class VideoDiscIdentifierTests
         bestEpIdx
             .Should()
             .Be(
-                epCountOnDisc,
-                $"disc duration {discDurationSec}s should map to {epCountOnDisc} episode(s) at {episodeRunSec}s each"
+                expected: epCountOnDisc,
+                because: $"disc duration {discDurationSec}s should map to {epCountOnDisc} episode(s) at {episodeRunSec}s each"
             );
     }
 
@@ -170,17 +170,17 @@ public class VideoDiscIdentifierTests
         int episodeRunSec = 3600;
         int iterations = 4;
 
-        double constantDelta = Math.Abs(discDurationSec - (double)episodeRunSec);
+        double constantDelta = Math.Abs(value: discDurationSec - (double)episodeRunSec);
 
         HashSet<double> deltas = [];
         for (int epIdx = 1; epIdx <= iterations; epIdx++)
         {
-            double buggyDelta = Math.Abs(discDurationSec - (double)episodeRunSec);
-            deltas.Add(buggyDelta);
+            double buggyDelta = Math.Abs(value: discDurationSec - (double)episodeRunSec);
+            deltas.Add(item: buggyDelta);
         }
 
-        deltas.Should().HaveCount(1, "old code always produced the same delta regardless of epIdx");
-        deltas.First().Should().Be(constantDelta);
+        deltas.Should().HaveCount(expected: 1, because: "old code always produced the same delta regardless of epIdx");
+        deltas.First().Should().Be(expected: constantDelta);
     }
 }
 
@@ -191,12 +191,12 @@ public class VideoDiscIdentifierTests
 /// the search → runtime-fetch → confidence-blend → episode-resolution chain
 /// all runs for real.
 /// </summary>
-[Trait("Category", "Unit")]
-[Collection("HttpClientProvider")]
+[Trait(name: "Category", value: "Unit")]
+[Collection(name: "HttpClientProvider")]
 public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
 {
     public VideoDiscIdentifierHttpTests()
-        : base(NoMercy.Providers.Helpers.HttpClientNames.Tmdb) { }
+        : base(httpClientNames: NoMercy.Providers.Helpers.HttpClientNames.Tmdb) { }
 
     private static DiscInfo MakeDisc(
         string? label,
@@ -207,10 +207,10 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
             Type: OpticalDiscType.Dvd,
             DiscLabel: label,
             Titles: durationSec > 0
-                ? [new(0, "Main", TimeSpan.FromSeconds(durationSec), [], [], [], [], 0, true)]
+                ? [new(Index: 0, Name: "Main", Duration: TimeSpan.FromSeconds(seconds: durationSec), VideoStreams: [], AudioStreams: [], Subtitles: [], Chapters: [], EstimatedSizeBytes: 0, IsMainFeature: true)]
                 : [],
             AudioTracks: null,
-            TotalDuration: TimeSpan.FromSeconds(durationSec),
+            TotalDuration: TimeSpan.FromSeconds(seconds: durationSec),
             DiscTitle: embeddedTitle
         );
 
@@ -273,11 +273,11 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
     [Fact]
     public async Task IdentifyAsync_NoLabelOrEmbeddedTitle_ReturnsNeedsManualAssignment_WithoutAnyHttpCall()
     {
-        VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
+        VideoDiscIdentifier sut = new(logger: NullLogger<VideoDiscIdentifier>.Instance);
 
         DiscIdentification result = await sut.IdentifyAsync(
-            MakeDisc(label: null),
-            CancellationToken.None
+            disc: MakeDisc(label: null),
+            ct: CancellationToken.None
         );
 
         result.NeedsManualAssignment.Should().BeTrue();
@@ -286,12 +286,12 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
     [Fact]
     public async Task IdentifyAsync_LabelNormalizesToEmpty_ReturnsNeedsManualAssignment()
     {
-        VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
+        VideoDiscIdentifier sut = new(logger: NullLogger<VideoDiscIdentifier>.Instance);
 
         // "Disc 1" strips entirely via the disc-suffix regex, leaving nothing.
         DiscIdentification result = await sut.IdentifyAsync(
-            MakeDisc(label: "Disc_1"),
-            CancellationToken.None
+            disc: MakeDisc(label: "Disc_1"),
+            ct: CancellationToken.None
         );
 
         result.NeedsManualAssignment.Should().BeTrue();
@@ -302,35 +302,35 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
     {
         const int movieId = 27205; // Inception's real TMDB id — value itself unused by the harness
         Handler.WhenGet(
-            "search/movie",
-            MockResponse.Json(
-                HttpStatusCode.OK,
-                MovieSearchResults(movieId, "Inception", "2010-07-16")
+            pathContains: "search/movie",
+            responses: MockResponse.Json(
+                status: HttpStatusCode.OK,
+                body: MovieSearchResults(id: movieId, title: "Inception", releaseDate: "2010-07-16")
             )
         );
-        Handler.WhenGet("search/tv", MockResponse.Json(HttpStatusCode.OK, EmptySearchResults()));
+        Handler.WhenGet(pathContains: "search/tv", responses: MockResponse.Json(status: HttpStatusCode.OK, body: EmptySearchResults()));
         Handler.WhenGet(
-            $"movie/{movieId}",
-            MockResponse.Json(HttpStatusCode.OK, MovieDetails(148))
+            pathContains: $"movie/{movieId}",
+            responses: MockResponse.Json(status: HttpStatusCode.OK, body: MovieDetails(runtimeMinutes: 148))
         );
 
-        VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
+        VideoDiscIdentifier sut = new(logger: NullLogger<VideoDiscIdentifier>.Instance);
 
         DiscIdentification result = await sut.IdentifyAsync(
-            MakeDisc(label: "Inception", durationSec: 148 * 60),
-            CancellationToken.None
+            disc: MakeDisc(label: "Inception", durationSec: 148 * 60),
+            ct: CancellationToken.None
         );
 
         result.NeedsManualAssignment.Should().BeFalse();
         result.Candidates.Should().ContainSingle();
-        result.Candidates[0].StableId.Should().Be(movieId.ToString());
-        result.Candidates[0].Type.Should().Be(MediaType.Movie);
-        result.Candidates[0].Year.Should().Be(2010);
-        result.Candidates[0].PosterUrl.Should().Contain("/poster.jpg");
-        result.Candidates[0].BackdropUrl.Should().Contain("/backdrop.jpg");
+        result.Candidates[0].StableId.Should().Be(expected: movieId.ToString());
+        result.Candidates[0].Type.Should().Be(expected: MediaType.Movie);
+        result.Candidates[0].Year.Should().Be(expected: 2010);
+        result.Candidates[0].PosterUrl.Should().Contain(expected: "/poster.jpg");
+        result.Candidates[0].BackdropUrl.Should().Contain(expected: "/backdrop.jpg");
         result
             .AutoApply.Should()
-            .BeTrue("exact title + exact runtime match should clear the auto-apply threshold");
+            .BeTrue(because: "exact title + exact runtime match should clear the auto-apply threshold");
     }
 
     [Fact]
@@ -338,52 +338,52 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
     {
         const int movieId = 603;
         Handler.WhenGet(
-            "search/movie",
-            request =>
+            pathContains: "search/movie",
+            responses: request =>
             {
                 string query = Microsoft
-                    .AspNetCore.WebUtilities.QueryHelpers.ParseQuery(request.RequestUri!.Query)
-                    .TryGetValue("query", out Microsoft.Extensions.Primitives.StringValues qv)
+                    .AspNetCore.WebUtilities.QueryHelpers.ParseQuery(queryString: request.RequestUri!.Query)
+                    .TryGetValue(key: "query", value: out Microsoft.Extensions.Primitives.StringValues qv)
                     ? qv.ToString()
                     : "";
                 return query == "Matrix"
                     ? MockResponse.Json(
-                        HttpStatusCode.OK,
-                        MovieSearchResults(movieId, "The Matrix", "1999-03-31")
-                    )(request)
-                    : MockResponse.Json(HttpStatusCode.OK, EmptySearchResults())(request);
+                        status: HttpStatusCode.OK,
+                        body: MovieSearchResults(id: movieId, title: "The Matrix", releaseDate: "1999-03-31")
+                    )(arg: request)
+                    : MockResponse.Json(status: HttpStatusCode.OK, body: EmptySearchResults())(arg: request);
             }
         );
-        Handler.WhenGet("search/tv", MockResponse.Json(HttpStatusCode.OK, EmptySearchResults()));
+        Handler.WhenGet(pathContains: "search/tv", responses: MockResponse.Json(status: HttpStatusCode.OK, body: EmptySearchResults()));
         Handler.WhenGet(
-            $"movie/{movieId}",
-            MockResponse.Json(HttpStatusCode.OK, MovieDetails(136))
+            pathContains: $"movie/{movieId}",
+            responses: MockResponse.Json(status: HttpStatusCode.OK, body: MovieDetails(runtimeMinutes: 136))
         );
 
-        VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
+        VideoDiscIdentifier sut = new(logger: NullLogger<VideoDiscIdentifier>.Instance);
 
         // "Matrix Something" (full query) never matches; "Matrix" (first word) does.
         DiscIdentification result = await sut.IdentifyAsync(
-            MakeDisc(label: "Matrix_Something"),
-            CancellationToken.None
+            disc: MakeDisc(label: "Matrix_Something"),
+            ct: CancellationToken.None
         );
 
         result.NeedsManualAssignment.Should().BeFalse();
         result.Candidates.Should().ContainSingle();
-        result.Candidates[0].StableId.Should().Be(movieId.ToString());
+        result.Candidates[0].StableId.Should().Be(expected: movieId.ToString());
     }
 
     [Fact]
     public async Task IdentifyAsync_NoMatchesAnywhere_ReturnsNeedsManualAssignment()
     {
-        Handler.WhenGet("search/movie", MockResponse.Json(HttpStatusCode.OK, EmptySearchResults()));
-        Handler.WhenGet("search/tv", MockResponse.Json(HttpStatusCode.OK, EmptySearchResults()));
+        Handler.WhenGet(pathContains: "search/movie", responses: MockResponse.Json(status: HttpStatusCode.OK, body: EmptySearchResults()));
+        Handler.WhenGet(pathContains: "search/tv", responses: MockResponse.Json(status: HttpStatusCode.OK, body: EmptySearchResults()));
 
-        VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
+        VideoDiscIdentifier sut = new(logger: NullLogger<VideoDiscIdentifier>.Instance);
 
         DiscIdentification result = await sut.IdentifyAsync(
-            MakeDisc(label: "Completely_Unknown_Title_Xyzzy"),
-            CancellationToken.None
+            disc: MakeDisc(label: "Completely_Unknown_Title_Xyzzy"),
+            ct: CancellationToken.None
         );
 
         result.NeedsManualAssignment.Should().BeTrue();
@@ -395,49 +395,49 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
     {
         const int movieId = 155;
         Handler.WhenGet(
-            "search/movie",
-            request =>
+            pathContains: "search/movie",
+            responses: request =>
             {
                 string query = Microsoft
-                    .AspNetCore.WebUtilities.QueryHelpers.ParseQuery(request.RequestUri!.Query)
-                    .TryGetValue("query", out Microsoft.Extensions.Primitives.StringValues qv)
+                    .AspNetCore.WebUtilities.QueryHelpers.ParseQuery(queryString: request.RequestUri!.Query)
+                    .TryGetValue(key: "query", value: out Microsoft.Extensions.Primitives.StringValues qv)
                     ? qv.ToString()
                     : "";
-                return query.Contains("Dark Knight", StringComparison.OrdinalIgnoreCase)
+                return query.Contains(value: "Dark Knight", comparisonType: StringComparison.OrdinalIgnoreCase)
                     ? MockResponse.Json(
-                        HttpStatusCode.OK,
-                        MovieSearchResults(movieId, "The Dark Knight", "2008-07-16")
-                    )(request)
-                    : MockResponse.Json(HttpStatusCode.OK, EmptySearchResults())(request);
+                        status: HttpStatusCode.OK,
+                        body: MovieSearchResults(id: movieId, title: "The Dark Knight", releaseDate: "2008-07-16")
+                    )(arg: request)
+                    : MockResponse.Json(status: HttpStatusCode.OK, body: EmptySearchResults())(arg: request);
             }
         );
-        Handler.WhenGet("search/tv", MockResponse.Json(HttpStatusCode.OK, EmptySearchResults()));
+        Handler.WhenGet(pathContains: "search/tv", responses: MockResponse.Json(status: HttpStatusCode.OK, body: EmptySearchResults()));
         Handler.WhenGet(
-            $"movie/{movieId}",
-            MockResponse.Json(HttpStatusCode.OK, MovieDetails(152))
+            pathContains: $"movie/{movieId}",
+            responses: MockResponse.Json(status: HttpStatusCode.OK, body: MovieDetails(runtimeMinutes: 152))
         );
 
-        VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
+        VideoDiscIdentifier sut = new(logger: NullLogger<VideoDiscIdentifier>.Instance);
 
         DiscIdentification result = await sut.IdentifyAsync(
-            MakeDisc(label: "DISC_ONE_UNRELATED", embeddedTitle: "Dark Knight"),
-            CancellationToken.None
+            disc: MakeDisc(label: "DISC_ONE_UNRELATED", embeddedTitle: "Dark Knight"),
+            ct: CancellationToken.None
         );
 
         result.Candidates.Should().ContainSingle();
-        result.Candidates[0].StableId.Should().Be(movieId.ToString());
+        result.Candidates[0].StableId.Should().Be(expected: movieId.ToString());
     }
 
     [Fact]
     public async Task IdentifyAsync_TvShowMatch_ResolvesSeasonAndEpisodeFromDiscDuration()
     {
         const int showId = 1396; // Breaking Bad
-        Handler.WhenGet("search/movie", MockResponse.Json(HttpStatusCode.OK, EmptySearchResults()));
+        Handler.WhenGet(pathContains: "search/movie", responses: MockResponse.Json(status: HttpStatusCode.OK, body: EmptySearchResults()));
         Handler.WhenGet(
-            "search/tv",
-            MockResponse.Json(
-                HttpStatusCode.OK,
-                TvSearchResults(showId, "Breaking Bad", "2008-01-20")
+            pathContains: "search/tv",
+            responses: MockResponse.Json(
+                status: HttpStatusCode.OK,
+                body: TvSearchResults(id: showId, name: "Breaking Bad", firstAirDate: "2008-01-20")
             )
         );
         // Registered before the show-details route below: the season path
@@ -446,196 +446,196 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
         // registered route whose predicate matches — so the more specific
         // route must be scripted first or it is shadowed by the show route.
         Handler.WhenGet(
-            $"tv/{showId}/season/1",
-            MockResponse.Json(
-                HttpStatusCode.OK,
-                """
-                {
-                  "season_number": 1,
-                  "episodes": [
-                    { "id": 1, "episode_number": 1 },
-                    { "id": 2, "episode_number": 2 },
-                    { "id": 3, "episode_number": 3 }
-                  ]
-                }
-                """
+            pathContains: $"tv/{showId}/season/1",
+            responses: MockResponse.Json(
+                status: HttpStatusCode.OK,
+                body: """
+                      {
+                        "season_number": 1,
+                        "episodes": [
+                          { "id": 1, "episode_number": 1 },
+                          { "id": 2, "episode_number": 2 },
+                          { "id": 3, "episode_number": 3 }
+                        ]
+                      }
+                      """
             )
         );
         Handler.WhenGet(
-            $"tv/{showId}",
-            MockResponse.Json(
-                HttpStatusCode.OK,
-                $$"""
-                {
-                  "name": "Breaking Bad",
-                  "episode_run_time": [45],
-                  "seasons": [ { "id": 1, "season_number": 1, "name": "Season 1" } ]
-                }
-                """
+            pathContains: $"tv/{showId}",
+            responses: MockResponse.Json(
+                status: HttpStatusCode.OK,
+                body: $$"""
+                        {
+                          "name": "Breaking Bad",
+                          "episode_run_time": [45],
+                          "seasons": [ { "id": 1, "season_number": 1, "name": "Season 1" } ]
+                        }
+                        """
             )
         );
 
-        VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
+        VideoDiscIdentifier sut = new(logger: NullLogger<VideoDiscIdentifier>.Instance);
 
         // Disc holds 2 episodes worth of runtime (2 * 45min = 90min).
         DiscIdentification result = await sut.IdentifyAsync(
-            MakeDisc(label: "Breaking_Bad_Season_1_Disc_1", durationSec: 90 * 60),
-            CancellationToken.None
+            disc: MakeDisc(label: "Breaking_Bad_Season_1_Disc_1", durationSec: 90 * 60),
+            ct: CancellationToken.None
         );
 
         result.Candidates.Should().ContainSingle();
-        result.Candidates[0].SeasonNumber.Should().Be(1);
-        result.Candidates[0].EpisodeNumber.Should().Be(1);
+        result.Candidates[0].SeasonNumber.Should().Be(expected: 1);
+        result.Candidates[0].EpisodeNumber.Should().Be(expected: 1);
     }
 
     [Fact]
     public async Task IdentifyAsync_TvShowMatch_NoEpisodeRuntimeReported_LeavesCandidateUnresolved()
     {
         const int showId = 100001;
-        Handler.WhenGet("search/movie", MockResponse.Json(HttpStatusCode.OK, EmptySearchResults()));
+        Handler.WhenGet(pathContains: "search/movie", responses: MockResponse.Json(status: HttpStatusCode.OK, body: EmptySearchResults()));
         Handler.WhenGet(
-            "search/tv",
-            MockResponse.Json(
-                HttpStatusCode.OK,
-                TvSearchResults(showId, "Unknown Runtime Show", "2010-01-01")
+            pathContains: "search/tv",
+            responses: MockResponse.Json(
+                status: HttpStatusCode.OK,
+                body: TvSearchResults(id: showId, name: "Unknown Runtime Show", firstAirDate: "2010-01-01")
             )
         );
         Handler.WhenGet(
-            $"tv/{showId}",
-            MockResponse.Json(
-                HttpStatusCode.OK,
-                """
-                {
-                  "name": "Unknown Runtime Show",
-                  "episode_run_time": [],
-                  "seasons": [ { "id": 1, "season_number": 1, "name": "Season 1" } ]
-                }
-                """
+            pathContains: $"tv/{showId}",
+            responses: MockResponse.Json(
+                status: HttpStatusCode.OK,
+                body: """
+                      {
+                        "name": "Unknown Runtime Show",
+                        "episode_run_time": [],
+                        "seasons": [ { "id": 1, "season_number": 1, "name": "Season 1" } ]
+                      }
+                      """
             )
         );
 
-        VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
+        VideoDiscIdentifier sut = new(logger: NullLogger<VideoDiscIdentifier>.Instance);
 
         DiscIdentification result = await sut.IdentifyAsync(
-            MakeDisc(label: "Unknown_Runtime_Show", durationSec: 3600),
-            CancellationToken.None
+            disc: MakeDisc(label: "Unknown_Runtime_Show", durationSec: 3600),
+            ct: CancellationToken.None
         );
 
         result.Candidates.Should().ContainSingle();
         result
             .Candidates[0]
             .SeasonNumber.Should()
-            .BeNull("no episode runtime means TryResolveEpisodeAsync can't compute a hypothesis");
+            .BeNull(because: "no episode runtime means TryResolveEpisodeAsync can't compute a hypothesis");
     }
 
     [Fact]
     public async Task IdentifyAsync_TvShowMatch_FirstSeasonHasNoEpisodes_SkipsToNextSeason()
     {
         const int showId = 100002;
-        Handler.WhenGet("search/movie", MockResponse.Json(HttpStatusCode.OK, EmptySearchResults()));
+        Handler.WhenGet(pathContains: "search/movie", responses: MockResponse.Json(status: HttpStatusCode.OK, body: EmptySearchResults()));
         Handler.WhenGet(
-            "search/tv",
-            MockResponse.Json(
-                HttpStatusCode.OK,
-                TvSearchResults(showId, "Multi Season Show", "2010-01-01")
+            pathContains: "search/tv",
+            responses: MockResponse.Json(
+                status: HttpStatusCode.OK,
+                body: TvSearchResults(id: showId, name: "Multi Season Show", firstAirDate: "2010-01-01")
             )
         );
         Handler.WhenGet(
-            $"tv/{showId}/season/1",
-            MockResponse.Json(HttpStatusCode.OK, """{ "season_number": 1, "episodes": [] }""")
+            pathContains: $"tv/{showId}/season/1",
+            responses: MockResponse.Json(status: HttpStatusCode.OK, body: """{ "season_number": 1, "episodes": [] }""")
         );
         Handler.WhenGet(
-            $"tv/{showId}/season/2",
-            MockResponse.Json(
-                HttpStatusCode.OK,
-                """
-                {
-                  "season_number": 2,
-                  "episodes": [ { "id": 1, "episode_number": 1 }, { "id": 2, "episode_number": 2 } ]
-                }
-                """
+            pathContains: $"tv/{showId}/season/2",
+            responses: MockResponse.Json(
+                status: HttpStatusCode.OK,
+                body: """
+                      {
+                        "season_number": 2,
+                        "episodes": [ { "id": 1, "episode_number": 1 }, { "id": 2, "episode_number": 2 } ]
+                      }
+                      """
             )
         );
         Handler.WhenGet(
-            $"tv/{showId}",
-            MockResponse.Json(
-                HttpStatusCode.OK,
-                $$"""
-                {
-                  "name": "Multi Season Show",
-                  "episode_run_time": [30],
-                  "seasons": [
-                    { "id": 1, "season_number": 1, "name": "Season 1" },
-                    { "id": 2, "season_number": 2, "name": "Season 2" }
-                  ]
-                }
-                """
+            pathContains: $"tv/{showId}",
+            responses: MockResponse.Json(
+                status: HttpStatusCode.OK,
+                body: $$"""
+                        {
+                          "name": "Multi Season Show",
+                          "episode_run_time": [30],
+                          "seasons": [
+                            { "id": 1, "season_number": 1, "name": "Season 1" },
+                            { "id": 2, "season_number": 2, "name": "Season 2" }
+                          ]
+                        }
+                        """
             )
         );
 
-        VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
+        VideoDiscIdentifier sut = new(logger: NullLogger<VideoDiscIdentifier>.Instance);
 
         DiscIdentification result = await sut.IdentifyAsync(
-            MakeDisc(label: "Multi_Season_Show", durationSec: 30 * 60),
-            CancellationToken.None
+            disc: MakeDisc(label: "Multi_Season_Show", durationSec: 30 * 60),
+            ct: CancellationToken.None
         );
 
         result.Candidates.Should().ContainSingle();
         result
             .Candidates[0]
             .SeasonNumber.Should()
-            .Be(2, "season 1 has no episodes and must be skipped, not selected");
+            .Be(expected: 2, because: "season 1 has no episodes and must be skipped, not selected");
     }
 
     [Fact]
     public async Task IdentifyAsync_TvShowMatch_OnlySpecialsSeason_LeavesCandidateUnresolved()
     {
         const int showId = 100003;
-        Handler.WhenGet("search/movie", MockResponse.Json(HttpStatusCode.OK, EmptySearchResults()));
+        Handler.WhenGet(pathContains: "search/movie", responses: MockResponse.Json(status: HttpStatusCode.OK, body: EmptySearchResults()));
         Handler.WhenGet(
-            "search/tv",
-            MockResponse.Json(
-                HttpStatusCode.OK,
-                TvSearchResults(showId, "Specials Only Show", "2010-01-01")
+            pathContains: "search/tv",
+            responses: MockResponse.Json(
+                status: HttpStatusCode.OK,
+                body: TvSearchResults(id: showId, name: "Specials Only Show", firstAirDate: "2010-01-01")
             )
         );
         Handler.WhenGet(
-            $"tv/{showId}",
-            MockResponse.Json(
-                HttpStatusCode.OK,
-                """
-                {
-                  "name": "Specials Only Show",
-                  "episode_run_time": [30],
-                  "seasons": [ { "id": 0, "season_number": 0, "name": "Specials" } ]
-                }
-                """
+            pathContains: $"tv/{showId}",
+            responses: MockResponse.Json(
+                status: HttpStatusCode.OK,
+                body: """
+                      {
+                        "name": "Specials Only Show",
+                        "episode_run_time": [30],
+                        "seasons": [ { "id": 0, "season_number": 0, "name": "Specials" } ]
+                      }
+                      """
             )
         );
 
-        VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
+        VideoDiscIdentifier sut = new(logger: NullLogger<VideoDiscIdentifier>.Instance);
 
         DiscIdentification result = await sut.IdentifyAsync(
-            MakeDisc(label: "Specials_Only_Show", durationSec: 30 * 60),
-            CancellationToken.None
+            disc: MakeDisc(label: "Specials_Only_Show", durationSec: 30 * 60),
+            ct: CancellationToken.None
         );
 
         result.Candidates.Should().ContainSingle();
         result
             .Candidates[0]
             .SeasonNumber.Should()
-            .BeNull("season 0 (specials) is excluded from the hypothesis loop");
+            .BeNull(because: "season 0 (specials) is excluded from the hypothesis loop");
     }
 
     [Fact]
     public async Task SearchAsync_Manual_EmptyQuery_ReturnsEmptyWithoutHttpCall()
     {
-        VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
+        VideoDiscIdentifier sut = new(logger: NullLogger<VideoDiscIdentifier>.Instance);
 
         DiscCandidate[] result = await sut.SearchAsync(
-            string.Empty,
-            MediaType.Movie,
-            CancellationToken.None
+            query: string.Empty,
+            type: MediaType.Movie,
+            ct: CancellationToken.None
         );
 
         result.Should().BeEmpty();
@@ -646,28 +646,28 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
     {
         const int movieId = 680;
         Handler.WhenGet(
-            "search/movie",
-            MockResponse.Json(
-                HttpStatusCode.OK,
-                MovieSearchResultsNoImages(movieId, "Pulp Fiction", "1994-10-14")
+            pathContains: "search/movie",
+            responses: MockResponse.Json(
+                status: HttpStatusCode.OK,
+                body: MovieSearchResultsNoImages(id: movieId, title: "Pulp Fiction", releaseDate: "1994-10-14")
             )
         );
         Handler.WhenGet(
-            $"movie/{movieId}",
-            MockResponse.Json(HttpStatusCode.OK, MovieDetails(154))
+            pathContains: $"movie/{movieId}",
+            responses: MockResponse.Json(status: HttpStatusCode.OK, body: MovieDetails(runtimeMinutes: 154))
         );
 
-        VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
+        VideoDiscIdentifier sut = new(logger: NullLogger<VideoDiscIdentifier>.Instance);
 
         DiscCandidate[] result = await sut.SearchAsync(
-            "Pulp Fiction",
-            MediaType.Movie,
-            CancellationToken.None
+            query: "Pulp Fiction",
+            type: MediaType.Movie,
+            ct: CancellationToken.None
         );
 
         result.Should().ContainSingle();
-        result[0].StableId.Should().Be(movieId.ToString());
-        result[0].Type.Should().Be(MediaType.Movie);
+        result[0].StableId.Should().Be(expected: movieId.ToString());
+        result[0].Type.Should().Be(expected: MediaType.Movie);
         // No poster_path/backdrop_path in this fixture — proves PosterUrl/
         // BackdropUrl's null-input short-circuit branch.
         result[0].PosterUrl.Should().BeNull();
@@ -679,24 +679,24 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
     {
         const int showId = 2316;
         Handler.WhenGet(
-            "search/tv",
-            MockResponse.Json(
-                HttpStatusCode.OK,
-                TvSearchResults(showId, "The Office", "2005-03-24")
+            pathContains: "search/tv",
+            responses: MockResponse.Json(
+                status: HttpStatusCode.OK,
+                body: TvSearchResults(id: showId, name: "The Office", firstAirDate: "2005-03-24")
             )
         );
 
-        VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
+        VideoDiscIdentifier sut = new(logger: NullLogger<VideoDiscIdentifier>.Instance);
 
         DiscCandidate[] result = await sut.SearchAsync(
-            "The Office",
-            MediaType.TvShow,
-            CancellationToken.None
+            query: "The Office",
+            type: MediaType.TvShow,
+            ct: CancellationToken.None
         );
 
         result.Should().ContainSingle();
-        result[0].StableId.Should().Be(showId.ToString());
-        result[0].Type.Should().Be(MediaType.TvShow);
+        result[0].StableId.Should().Be(expected: showId.ToString());
+        result[0].Type.Should().Be(expected: MediaType.TvShow);
     }
 
     [Fact]
@@ -707,12 +707,12 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
         // movies/TV, so a music type must short-circuit to empty rather than
         // attempt a TMDB call. No route is scripted; any HTTP call would 404
         // against ScriptableHttpMessageHandler's unmatched-route response.
-        VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
+        VideoDiscIdentifier sut = new(logger: NullLogger<VideoDiscIdentifier>.Instance);
 
         DiscCandidate[] result = await sut.SearchAsync(
-            "Some Album",
-            MediaType.Music,
-            CancellationToken.None
+            query: "Some Album",
+            type: MediaType.Music,
+            ct: CancellationToken.None
         );
 
         result.Should().BeEmpty();
@@ -727,17 +727,17 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
         // caller through the public surface today, so this exercises it
         // directly via reflection to prove the exhaustive-switch contract
         // without leaving it silently untested.
-        VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
+        VideoDiscIdentifier sut = new(logger: NullLogger<VideoDiscIdentifier>.Instance);
 
         System.Reflection.MethodInfo method = typeof(VideoDiscIdentifier).GetMethod(
-            "SearchAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            [typeof(string), typeof(MediaType), typeof(CancellationToken), typeof(int)]
+            name: "SearchAsync",
+            bindingAttr: System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            types: [typeof(string), typeof(MediaType), typeof(CancellationToken), typeof(int)]
         )!;
 
         Task<IEnumerable<DiscCandidate>> task =
             (Task<IEnumerable<DiscCandidate>>)
-                method.Invoke(sut, ["Some Album", MediaType.Music, CancellationToken.None, 0])!;
+                method.Invoke(obj: sut, parameters: ["Some Album", MediaType.Music, CancellationToken.None, 0])!;
         IEnumerable<DiscCandidate> result = await task;
 
         result.Should().BeEmpty();
@@ -751,7 +751,7 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
         // valid int), so the int.TryParse guard's failure branch has no
         // reachable caller through the public surface today — exercised
         // directly via reflection.
-        VideoDiscIdentifier sut = new(NullLogger<VideoDiscIdentifier>.Instance);
+        VideoDiscIdentifier sut = new(logger: NullLogger<VideoDiscIdentifier>.Instance);
 
         DiscCandidate candidate = new(
             Source: "tmdb",
@@ -765,15 +765,15 @@ public sealed class VideoDiscIdentifierHttpTests : ProviderHttpHarness
         );
 
         System.Reflection.MethodInfo method = typeof(VideoDiscIdentifier).GetMethod(
-            "TryResolveEpisodeAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
+            name: "TryResolveEpisodeAsync",
+            bindingAttr: System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
         )!;
 
         Task<DiscCandidate> task =
-            (Task<DiscCandidate>)method.Invoke(sut, [candidate, 3600, CancellationToken.None])!;
+            (Task<DiscCandidate>)method.Invoke(obj: sut, parameters: [candidate, 3600, CancellationToken.None])!;
         DiscCandidate result = await task;
 
-        result.Should().Be(candidate);
+        result.Should().Be(expected: candidate);
         result.SeasonNumber.Should().BeNull();
     }
 }

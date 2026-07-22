@@ -15,78 +15,78 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class MusixMatchUser
 {
-    [JsonProperty("uaid")]
+    [JsonProperty(propertyName: "uaid")]
     public string Uaid { get; set; } = string.Empty;
 
-    [JsonProperty("is_mine")]
+    [JsonProperty(propertyName: "is_mine")]
     public int IsMine { get; set; }
 
-    [JsonProperty("user_name")]
+    [JsonProperty(propertyName: "user_name")]
     public string UserName { get; set; } = string.Empty;
 
-    [JsonProperty("user_profile_photo")]
+    [JsonProperty(propertyName: "user_profile_photo")]
     public string UserProfilePhoto { get; set; } = string.Empty;
 
-    [JsonProperty("has_private_profile")]
+    [JsonProperty(propertyName: "has_private_profile")]
     public int HasPrivateProfile { get; set; }
 
-    [JsonProperty("score")]
+    [JsonProperty(propertyName: "score")]
     public int Score { get; set; }
 
-    [JsonProperty("position")]
+    [JsonProperty(propertyName: "position")]
     public int Position { get; set; }
 
-    [JsonProperty("weekly_score")]
+    [JsonProperty(propertyName: "weekly_score")]
     public int WeeklyScore { get; set; }
 
-    [JsonProperty("level")]
+    [JsonProperty(propertyName: "level")]
     public string Level { get; set; } = string.Empty;
 
-    [JsonProperty("key")]
+    [JsonProperty(propertyName: "key")]
     public string Key { get; set; } = string.Empty;
 
-    [JsonProperty("rank_level")]
+    [JsonProperty(propertyName: "rank_level")]
     public int RankLevel { get; set; }
 
-    [JsonProperty("points_to_next_level")]
+    [JsonProperty(propertyName: "points_to_next_level")]
     public int PointsToNextLevel { get; set; }
 
-    [JsonProperty("ratio_to_next_level")]
+    [JsonProperty(propertyName: "ratio_to_next_level")]
     public double RatioToNextLevel { get; set; }
 
-    [JsonProperty("rank_name")]
+    [JsonProperty(propertyName: "rank_name")]
     public string RankName { get; set; } = string.Empty;
 
-    [JsonProperty("next_rank_name")]
+    [JsonProperty(propertyName: "next_rank_name")]
     public string NextRankName { get; set; } = string.Empty;
 
-    [JsonProperty("ratio_to_next_rank")]
+    [JsonProperty(propertyName: "ratio_to_next_rank")]
     public double RatioToNextRank { get; set; }
 
-    [JsonProperty("rank_color")]
+    [JsonProperty(propertyName: "rank_color")]
     public string RankColor { get; set; } = string.Empty;
 
-    [JsonProperty("rank_colors")]
+    [JsonProperty(propertyName: "rank_colors")]
     public MusixMatchRankColors MusixMatchRankColors { get; set; } = new();
 
-    [JsonProperty("rank_image_url")]
+    [JsonProperty(propertyName: "rank_image_url")]
     public string RankImageUrl { get; set; } = string.Empty;
 
-    [JsonProperty("next_rank_color")]
+    [JsonProperty(propertyName: "next_rank_color")]
     public string NextRankColor { get; set; } = string.Empty;
 
-    [JsonProperty("next_rank_colors")]
+    [JsonProperty(propertyName: "next_rank_colors")]
     public MusixMatchRankColors NextMusixMatchRankColors { get; set; } = new();
 
-    [JsonProperty("next_rank_image_url")]
+    [JsonProperty(propertyName: "next_rank_image_url")]
     public string NextRankImageUrl { get; set; } = string.Empty;
 
-    [JsonProperty("counters")]
+    [JsonProperty(propertyName: "counters")]
     public MusixMatchCounters MusixMatchCounters { get; set; } = new();
 
-    [JsonProperty("academy_completed")]
+    [JsonProperty(propertyName: "academy_completed")]
     public bool AcademyCompleted { get; set; }
 
-    [JsonProperty("moderator")]
+    [JsonProperty(propertyName: "moderator")]
     public bool Moderator { get; set; }
 }

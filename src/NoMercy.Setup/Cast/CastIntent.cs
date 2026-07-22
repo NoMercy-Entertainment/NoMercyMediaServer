@@ -19,35 +19,35 @@ namespace NoMercy.Setup.Cast;
 /// </summary>
 public class CastIntent
 {
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; } = "idle";
 
     /// <summary>Movie / tv — only set when <see cref="Type"/> = "play_video".</summary>
-    [JsonProperty("media_type", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty(propertyName: "media_type", NullValueHandling = NullValueHandling.Ignore)]
     public string? MediaType { get; set; }
 
     /// <summary>Movie / tv ID — only set when <see cref="Type"/> = "play_video".</summary>
-    [JsonProperty("media_id", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty(propertyName: "media_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? MediaId { get; set; }
 
     /// <summary>Music list type — only set when <see cref="Type"/> = "play_music".</summary>
-    [JsonProperty("list_type", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty(propertyName: "list_type", NullValueHandling = NullValueHandling.Ignore)]
     public string? ListType { get; set; }
 
     /// <summary>Music list ID — only set when <see cref="Type"/> = "play_music".</summary>
-    [JsonProperty("list_id", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty(propertyName: "list_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? ListId { get; set; }
 
     /// <summary>Optional starting track within a list — only set when <see cref="Type"/> = "play_music".</summary>
-    [JsonProperty("track_id", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty(propertyName: "track_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TrackId { get; set; }
 
     /// <summary>Resume position in seconds (video) or seconds (music). Optional.</summary>
-    [JsonProperty("resume_at", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty(propertyName: "resume_at", NullValueHandling = NullValueHandling.Ignore)]
     public int? ResumeAt { get; set; }
 
     /// <summary>Vue Router target — only set when <see cref="Type"/> = "navigate".</summary>
-    [JsonProperty("route", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty(propertyName: "route", NullValueHandling = NullValueHandling.Ignore)]
     public string? Route { get; set; }
 
     public static CastIntent Idle() => new() { Type = "idle" };

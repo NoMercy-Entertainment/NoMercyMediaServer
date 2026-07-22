@@ -46,11 +46,11 @@ public class DegradedModeRecovery : IDegradedModeRecovery
         INetworkDiscovery? networkDiscovery = null
     )
         : this(
-            authTokenStore,
-            apiKeyLoader,
-            apiKeyStore,
-            serverRegistrationService,
-            networkDiscovery,
+            authTokenStore: authTokenStore,
+            apiKeyLoader: apiKeyLoader,
+            apiKeyStore: apiKeyStore,
+            serverRegistrationService: serverRegistrationService,
+            networkDiscovery: networkDiscovery,
             delay: null
         ) { }
 
@@ -80,11 +80,11 @@ public class DegradedModeRecovery : IDegradedModeRecovery
 
     private static readonly TimeSpan[] BackoffSchedule =
     [
-        TimeSpan.FromSeconds(30),
-        TimeSpan.FromMinutes(1),
-        TimeSpan.FromMinutes(5),
-        TimeSpan.FromMinutes(15),
-        TimeSpan.FromMinutes(30),
+        TimeSpan.FromSeconds(seconds: 30),
+        TimeSpan.FromMinutes(minutes: 1),
+        TimeSpan.FromMinutes(minutes: 5),
+        TimeSpan.FromMinutes(minutes: 15),
+        TimeSpan.FromMinutes(minutes: 30),
     ];
 
     public async Task StartRecoveryLoop(DeferredTasks tasks)
@@ -93,24 +93,24 @@ public class DegradedModeRecovery : IDegradedModeRecovery
 
         while (!tasks.AllCompleted)
         {
-            TimeSpan delay = BackoffSchedule[Math.Min(attempt, BackoffSchedule.Length - 1)];
-            await _delay(delay);
+            TimeSpan delay = BackoffSchedule[Math.Min(val1: attempt, val2: BackoffSchedule.Length - 1)];
+            await _delay(arg: delay);
 
             bool hasNetwork = await NetworkProbe.CheckConnectivity();
             if (!hasNetwork)
             {
                 attempt++;
                 Logger.App(
-                    $"Network still unavailable. Next retry in {BackoffSchedule[Math.Min(attempt, BackoffSchedule.Length - 1)]}"
+                    message: $"Network still unavailable. Next retry in {BackoffSchedule[Math.Min(val1: attempt, val2: BackoffSchedule.Length - 1)]}"
                 );
                 continue;
             }
 
-            Logger.App("Network connectivity restored — executing deferred tasks");
+            Logger.App(message: "Network connectivity restored — executing deferred tasks");
 
             if (!tasks.BinariesReady)
             {
-                await TryProvisionBinariesAsync(tasks);
+                await TryProvisionBinariesAsync(tasks: tasks);
             }
 
             if (!tasks.ApiKeysLoaded)
@@ -122,19 +122,19 @@ public class DegradedModeRecovery : IDegradedModeRecovery
                 }
                 catch (Exception e)
                 {
-                    Logger.App($"Deferred ApiInfo failed: {e.Message}", LogEventLevel.Warning);
+                    Logger.App(message: $"Deferred ApiInfo failed: {e.Message}", level: LogEventLevel.Warning);
                 }
             }
 
             if (tasks is { Authenticated: false, ApiKeysLoaded: true })
             {
                 string? token = _authTokenStore.AccessToken;
-                if (string.IsNullOrEmpty(token))
+                if (string.IsNullOrEmpty(value: token))
                 {
                     // Auth not ready — AuthManager background refresh will handle it
                     Logger.App(
-                        "Auth not ready — waiting for AuthManager background refresh",
-                        LogEventLevel.Verbose
+                        message: "Auth not ready — waiting for AuthManager background refresh",
+                        level: LogEventLevel.Verbose
                     );
                 }
                 else
@@ -150,13 +150,13 @@ public class DegradedModeRecovery : IDegradedModeRecovery
                     if (_networkDiscovery is not null)
                         await _networkDiscovery.DiscoverExternalIpAsync();
                     tasks.NetworkDiscovered = true;
-                    ServerPhaseTracker.Current?.MarkComplete(BootStage.Network);
+                    ServerPhaseTracker.Current?.MarkComplete(stage: BootStage.Network);
                 }
                 catch (Exception e)
                 {
                     Logger.App(
-                        $"Deferred network discovery failed: {e.Message}",
-                        LogEventLevel.Warning
+                        message: $"Deferred network discovery failed: {e.Message}",
+                        level: LogEventLevel.Warning
                     );
                 }
             }
@@ -171,16 +171,16 @@ public class DegradedModeRecovery : IDegradedModeRecovery
                     bool tokenNeedsRefresh = true;
 
                     string? registrationToken = _authTokenStore.AccessToken;
-                    if (!string.IsNullOrEmpty(registrationToken))
+                    if (!string.IsNullOrEmpty(value: registrationToken))
                     {
                         try
                         {
                             JwtSecurityTokenHandler tokenHandler = new();
                             JwtSecurityToken parsedToken = tokenHandler.ReadJwtToken(
-                                registrationToken
+                                token: registrationToken
                             );
                             tokenNeedsRefresh =
-                                parsedToken.ValidTo <= DateTime.UtcNow.AddSeconds(30);
+                                parsedToken.ValidTo <= DateTime.UtcNow.AddSeconds(value: 30);
                         }
                         catch
                         {
@@ -191,8 +191,8 @@ public class DegradedModeRecovery : IDegradedModeRecovery
                     if (tokenNeedsRefresh)
                     {
                         Logger.App(
-                            "Access token missing or expired before deferred registration — waiting for AuthManager background refresh",
-                            LogEventLevel.Warning
+                            message: "Access token missing or expired before deferred registration — waiting for AuthManager background refresh",
+                            level: LogEventLevel.Warning
                         );
                         // Auth not ready — AuthManager background refresh will handle it
                         continue;
@@ -200,16 +200,16 @@ public class DegradedModeRecovery : IDegradedModeRecovery
 
                     await _serverRegistrationService.Init();
                     tasks.Registered = true;
-                    ServerPhaseTracker.Current?.MarkComplete(BootStage.Registered);
+                    ServerPhaseTracker.Current?.MarkComplete(stage: BootStage.Registered);
                 }
-                catch (InvalidOperationException e) when (e.Message.Contains("cooldown"))
+                catch (InvalidOperationException e) when (e.Message.Contains(value: "cooldown"))
                 {
                     // Cooldown active — will retry on next loop iteration
-                    Logger.App($"Deferred registration deferred: {e.Message}", LogEventLevel.Debug);
+                    Logger.App(message: $"Deferred registration deferred: {e.Message}", level: LogEventLevel.Debug);
                 }
                 catch (Exception e)
                 {
-                    Logger.App($"Deferred registration failed: {e.Message}", LogEventLevel.Warning);
+                    Logger.App(message: $"Deferred registration failed: {e.Message}", level: LogEventLevel.Warning);
                 }
             }
 
@@ -218,7 +218,7 @@ public class DegradedModeRecovery : IDegradedModeRecovery
             )
             {
                 tasks.AllCompleted = true;
-                Logger.App("Full mode restored — all deferred tasks completed");
+                Logger.App(message: "Full mode restored — all deferred tasks completed");
             }
 
             attempt++;
@@ -242,19 +242,19 @@ public class DegradedModeRecovery : IDegradedModeRecovery
         try
         {
             IStorageDriver driver = new LocalStorageDriver();
-            IStorage storage = new LocalStorage(driver, new([], driver));
+            IStorage storage = new LocalStorage(driver: driver, guard: new(allowedRoots: [], driver: driver));
 
-            if (storage.Exists(AppFiles.FfmpegPath))
+            if (storage.Exists(path: AppFiles.FfmpegPath))
             {
                 tasks.BinariesReady = true;
-                ServerPhaseTracker.Current?.MarkComplete(BootStage.Binaries);
-                Logger.App("FFmpeg found on disk — Binaries boot stage marked complete");
+                ServerPhaseTracker.Current?.MarkComplete(stage: BootStage.Binaries);
+                Logger.App(message: "FFmpeg found on disk — Binaries boot stage marked complete");
                 return;
             }
 
             Logger.App(
-                "FFmpeg still not installed — retrying binary provisioning",
-                LogEventLevel.Warning
+                message: "FFmpeg still not installed — retrying binary provisioning",
+                level: LogEventLevel.Warning
             );
 
             // Retry only ffmpeg here, not the full DownloadAll(). The recovery loop
@@ -262,22 +262,22 @@ public class DegradedModeRecovery : IDegradedModeRecovery
             // ten dependency repos' releases/latest on each tick turns one transient
             // GitHub rate-limit into a self-inflicted, permanent one. Ffmpeg is the
             // only binary this stage blocks on, so it is the only one retried.
-            await new Binaries(driver, storage).DownloadFfmpeg();
+            await new Binaries(driver: driver, storage: storage).DownloadFfmpeg();
 
-            if (storage.Exists(AppFiles.FfmpegPath))
+            if (storage.Exists(path: AppFiles.FfmpegPath))
             {
                 tasks.BinariesReady = true;
-                ServerPhaseTracker.Current?.MarkComplete(BootStage.Binaries);
+                ServerPhaseTracker.Current?.MarkComplete(stage: BootStage.Binaries);
                 Logger.App(
-                    "Deferred binary provisioning succeeded — Binaries boot stage marked complete"
+                    message: "Deferred binary provisioning succeeded — Binaries boot stage marked complete"
                 );
             }
         }
         catch (Exception e)
         {
             Logger.App(
-                $"Deferred binary provisioning failed: {e.Message} — will retry",
-                LogEventLevel.Warning
+                message: $"Deferred binary provisioning failed: {e.Message} — will retry",
+                level: LogEventLevel.Warning
             );
         }
     }

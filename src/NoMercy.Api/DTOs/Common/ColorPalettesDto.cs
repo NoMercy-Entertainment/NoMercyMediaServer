@@ -16,12 +16,12 @@ namespace NoMercy.Api.DTOs.Common;
 
 public record ColorPalettesDto
 {
-    [JsonProperty("logo")]
+    [JsonProperty(propertyName: "logo")]
     public ColorPalette Logo { get; set; } = new();
 
-    [JsonProperty("poster")]
+    [JsonProperty(propertyName: "poster")]
     public ColorPalette Poster { get; set; } = new();
 
-    [JsonProperty("backdrop")]
+    [JsonProperty(propertyName: "backdrop")]
     public ColorPalette Backdrop { get; set; } = new();
 }

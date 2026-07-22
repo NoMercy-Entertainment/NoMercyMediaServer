@@ -25,11 +25,11 @@ public class SeasonPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(entityId);
+        int id = int.Parse(s: entityId);
         return await db
-            .Seasons.Where(s => s.Id == id)
-            .Select(s => s._colorPalette)
-            .FirstOrDefaultAsync(ct);
+            .Seasons.Where(predicate: s => s.Id == id)
+            .Select(selector: s => s._colorPalette)
+            .FirstOrDefaultAsync(cancellationToken: ct);
     }
 
     public async Task<PaletteResult> GenerateAsync(
@@ -38,17 +38,17 @@ public class SeasonPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(entityId);
-        Season? season = await db.Seasons.FirstOrDefaultAsync(s => s.Id == id, ct);
+        int id = int.Parse(s: entityId);
+        Season? season = await db.Seasons.FirstOrDefaultAsync(predicate: s => s.Id == id, cancellationToken: ct);
         if (season is null)
             return PaletteResult.NoImage();
         if (season.Poster is null)
             return PaletteResult.NoImage();
 
-        string json = await MovieDbImageManager.ColorPalette("poster", season.Poster);
-        return string.IsNullOrWhiteSpace(json)
+        string json = await MovieDbImageManager.ColorPalette(type: "poster", path: season.Poster);
+        return string.IsNullOrWhiteSpace(value: json)
             ? PaletteResult.NoImage()
-            : PaletteResult.Success(json);
+            : PaletteResult.Success(json: json);
     }
 
     public async Task PersistAsync(
@@ -58,9 +58,9 @@ public class SeasonPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(entityId);
+        int id = int.Parse(s: entityId);
         await db
-            .Seasons.Where(s => s.Id == id)
-            .ExecuteUpdateAsync(s => s.SetProperty(x => x._colorPalette, json), ct);
+            .Seasons.Where(predicate: s => s.Id == id)
+            .ExecuteUpdateAsync(setPropertyCalls: s => s.SetProperty(propertyExpression: x => x._colorPalette, valueExpression: json), cancellationToken: ct);
     }
 }

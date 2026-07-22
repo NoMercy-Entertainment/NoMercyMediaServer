@@ -14,7 +14,7 @@ using System.Text.RegularExpressions;
 namespace NoMercy.Plugins.Network;
 
 public class PluginNetworkDeniedException(string host)
-    : Exception($"Plugin network access to host '{host}' is not permitted by its capabilities.");
+    : Exception(message: $"Plugin network access to host '{host}' is not permitted by its capabilities.");
 
 public class PluginNetworkAllowlistHandler : DelegatingHandler
 {
@@ -22,13 +22,13 @@ public class PluginNetworkAllowlistHandler : DelegatingHandler
 
     public PluginNetworkAllowlistHandler(IReadOnlyList<string> allowedHosts)
     {
-        _patterns = allowedHosts.Select(ToPattern).ToList();
+        _patterns = allowedHosts.Select(selector: ToPattern).ToList();
     }
 
     private static Regex ToPattern(string host)
     {
-        string escaped = Regex.Escape(host).Replace("\\*", "[^.]+");
-        return new($"^{escaped}$", RegexOptions.IgnoreCase);
+        string escaped = Regex.Escape(str: host).Replace(oldValue: "\\*", newValue: "[^.]+");
+        return new(pattern: $"^{escaped}$", options: RegexOptions.IgnoreCase);
     }
 
     protected override Task<HttpResponseMessage> SendAsync(
@@ -37,9 +37,9 @@ public class PluginNetworkAllowlistHandler : DelegatingHandler
     )
     {
         string host = request.RequestUri?.Host ?? string.Empty;
-        if (!_patterns.Any(pattern => pattern.IsMatch(host)))
-            throw new PluginNetworkDeniedException(host);
+        if (!_patterns.Any(predicate: pattern => pattern.IsMatch(input: host)))
+            throw new PluginNetworkDeniedException(host: host);
 
-        return base.SendAsync(request, cancellationToken);
+        return base.SendAsync(request: request, cancellationToken: cancellationToken);
     }
 }

@@ -15,12 +15,12 @@ namespace NoMercy.Providers.TVDB.Models.Shared;
 
 public class TvdbInfo
 {
-    [JsonProperty("image")]
+    [JsonProperty(propertyName: "image")]
     public Uri? Image { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string? Name { get; set; }
 
-    [JsonProperty("year")]
+    [JsonProperty(propertyName: "year")]
     public string? Year { get; set; }
 }

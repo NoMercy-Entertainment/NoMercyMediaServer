@@ -14,18 +14,18 @@ namespace NoMercy.Api.DTOs.Encoding;
 
 public record EncodingFailedDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("input_path")]
+    [JsonProperty(propertyName: "input_path")]
     public string InputPath { get; set; } = string.Empty;
 
-    [JsonProperty("error_message")]
+    [JsonProperty(propertyName: "error_message")]
     public string ErrorMessage { get; set; } = string.Empty;
 
-    [JsonProperty("exception_type")]
+    [JsonProperty(propertyName: "exception_type")]
     public string? ExceptionType { get; set; }
 
-    [JsonProperty("timestamp")]
+    [JsonProperty(propertyName: "timestamp")]
     public DateTime Timestamp { get; set; }
 }

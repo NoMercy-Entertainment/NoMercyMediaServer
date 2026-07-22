@@ -28,7 +28,7 @@ public static class ComponentExtensions
     /// </summary>
     public static ComponentEnvelope ToCard(this Movie movie, string country, bool watch = false)
     {
-        return Component.Card(new(movie, country, watch)).WithWatch(watch);
+        return Component.Card(data: new(movie: movie, country: country, watch: watch)).WithWatch(watch: watch);
     }
 
     /// <summary>
@@ -36,7 +36,7 @@ public static class ComponentExtensions
     /// </summary>
     public static ComponentEnvelope ToHomeCard(this Movie movie, string country)
     {
-        return Component.HomeCard(new(movie, country));
+        return Component.HomeCard(data: new(movie: movie, country: country));
     }
 
     /// <summary>
@@ -48,7 +48,7 @@ public static class ComponentExtensions
         bool watch = false
     )
     {
-        return movies.Select(m => m.ToCard(country, watch));
+        return movies.Select(selector: m => m.ToCard(country: country, watch: watch));
     }
 
     #endregion
@@ -60,7 +60,7 @@ public static class ComponentExtensions
     /// </summary>
     public static ComponentEnvelope ToCard(this Tv tv, string country, bool watch = false)
     {
-        return Component.Card(new(tv, country, watch)).WithWatch(watch);
+        return Component.Card(data: new(tv: tv, country: country, watch: watch)).WithWatch(watch: watch);
     }
 
     /// <summary>
@@ -68,7 +68,7 @@ public static class ComponentExtensions
     /// </summary>
     public static ComponentEnvelope ToHomeCard(this Tv tv, string country)
     {
-        return Component.HomeCard(new(tv, country));
+        return Component.HomeCard(data: new(tv: tv, country: country));
     }
 
     /// <summary>
@@ -80,7 +80,7 @@ public static class ComponentExtensions
         bool watch = false
     )
     {
-        return shows.Select(t => t.ToCard(country, watch));
+        return shows.Select(selector: t => t.ToCard(country: country, watch: watch));
     }
 
     #endregion
@@ -96,7 +96,7 @@ public static class ComponentExtensions
         bool watch = false
     )
     {
-        return Component.Card(new(collection, country, watch)).WithWatch(watch);
+        return Component.Card(data: new(collection: collection, country: country, watch: watch)).WithWatch(watch: watch);
     }
 
     /// <summary>
@@ -108,7 +108,7 @@ public static class ComponentExtensions
         bool watch = false
     )
     {
-        return collections.Select(c => c.ToCard(country, watch));
+        return collections.Select(selector: c => c.ToCard(country: country, watch: watch));
     }
 
     #endregion
@@ -120,7 +120,7 @@ public static class ComponentExtensions
     /// </summary>
     public static ComponentEnvelope ToCard(this Special special, string country, bool watch = false)
     {
-        return Component.Card(new(special, country, watch)).WithWatch(watch);
+        return Component.Card(data: new(special: special, country: country, watch: watch)).WithWatch(watch: watch);
     }
 
     #endregion
@@ -132,7 +132,7 @@ public static class ComponentExtensions
     /// </summary>
     public static ComponentEnvelope ToGenreCard(this Genre genre)
     {
-        return Component.GenreCard(new(genre));
+        return Component.GenreCard(data: new(genre: genre));
     }
 
     /// <summary>
@@ -140,7 +140,7 @@ public static class ComponentExtensions
     /// </summary>
     public static ComponentEnvelope ToGenreCard(this MusicGenre musicGenre)
     {
-        return Component.GenreCard(new(musicGenre));
+        return Component.GenreCard(data: new(genre: musicGenre));
     }
 
     #endregion
@@ -152,7 +152,7 @@ public static class ComponentExtensions
     /// </summary>
     public static ComponentEnvelope ToMusicCard(this Album album)
     {
-        return Component.MusicCard(new MusicCardData(album));
+        return Component.MusicCard(data: new MusicCardData(album: album));
     }
 
     /// <summary>
@@ -160,7 +160,7 @@ public static class ComponentExtensions
     /// </summary>
     public static ComponentEnvelope ToMusicCard(this Artist artist)
     {
-        return Component.MusicCard(new MusicCardData(artist));
+        return Component.MusicCard(data: new MusicCardData(artist: artist));
     }
 
     /// <summary>
@@ -168,7 +168,7 @@ public static class ComponentExtensions
     /// </summary>
     public static ComponentEnvelope ToTrackRow(this Track track, bool isFavorite = false)
     {
-        return Component.TrackRow(new(track, isFavorite));
+        return Component.TrackRow(data: new(track: track, isFavorite: isFavorite));
     }
 
     /// <summary>
@@ -179,7 +179,7 @@ public static class ComponentExtensions
         Func<Track, bool>? isFavorite = null
     )
     {
-        return tracks.Select(t => t.ToTrackRow(isFavorite?.Invoke(t) ?? false));
+        return tracks.Select(selector: t => t.ToTrackRow(isFavorite: isFavorite?.Invoke(arg: t) ?? false));
     }
 
     #endregion
@@ -198,12 +198,12 @@ public static class ComponentExtensions
     {
         ContainerComponentBuilder builder = Component
             .Carousel()
-            .WithTitle(title)
-            .WithMoreLink(moreLink)
-            .WithItems(items);
+            .WithTitle(title: title)
+            .WithMoreLink(moreLink: moreLink)
+            .WithItems(items: items);
 
         if (id != null)
-            builder.WithId(id);
+            builder.WithId(id: id);
 
         return builder;
     }
@@ -220,12 +220,12 @@ public static class ComponentExtensions
     {
         ContainerComponentBuilder builder = Component
             .Grid()
-            .WithTitle(title)
-            .WithMoreLink(moreLink)
-            .WithItems(items);
+            .WithTitle(title: title)
+            .WithMoreLink(moreLink: moreLink)
+            .WithItems(items: items);
 
         if (id != null)
-            builder.WithId(id);
+            builder.WithId(id: id);
 
         return builder;
     }
@@ -242,12 +242,12 @@ public static class ComponentExtensions
     {
         ContainerComponentBuilder builder = Component
             .List()
-            .WithTitle(title)
-            .WithMoreLink(moreLink)
-            .WithItems(items);
+            .WithTitle(title: title)
+            .WithMoreLink(moreLink: moreLink)
+            .WithItems(items: items);
 
         if (id != null)
-            builder.WithId(id);
+            builder.WithId(id: id);
 
         return builder;
     }

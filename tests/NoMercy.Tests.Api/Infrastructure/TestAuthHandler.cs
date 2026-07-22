@@ -35,9 +35,9 @@ public class TestAuthHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,
     ILoggerFactory logger,
     UrlEncoder encoder
-) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
+) : AuthenticationHandler<AuthenticationSchemeOptions>(options: options, logger: logger, encoder: encoder)
 {
-    public static Guid DefaultUserId { get; } = Guid.Parse("37d03e60-7b0a-4246-a85b-a5618966a383");
+    public static Guid DefaultUserId { get; } = Guid.Parse(input: "37d03e60-7b0a-4246-a85b-a5618966a383");
     public static string DefaultUserName { get; } = "Test User";
     public static string DefaultUserEmail { get; } = "test@nomercy.tv";
 
@@ -47,18 +47,18 @@ public class TestAuthHandler(
     // TestAuthDefaults.TestUserIdHeader instead of the single fixed identity
     // every other controller test in this fixture relies on.
     public static Guid SecondaryUserId { get; } =
-        Guid.Parse("8f2c1a90-4b3d-4e7a-9c1f-6d2e8a5b3c71");
+        Guid.Parse(input: "8f2c1a90-4b3d-4e7a-9c1f-6d2e8a5b3c71");
     public static string SecondaryUserName { get; } = "Secondary Test User";
     public static string SecondaryUserEmail { get; } = "test-secondary@nomercy.tv";
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         if (
-            Request.Headers.TryGetValue(TestAuthDefaults.TestAuthHeader, out StringValues value)
+            Request.Headers.TryGetValue(key: TestAuthDefaults.TestAuthHeader, value: out StringValues value)
             && value.ToString() == TestAuthDefaults.Deny
         )
         {
-            return Task.FromResult(AuthenticateResult.Fail("Authentication denied by test"));
+            return Task.FromResult(result: AuthenticateResult.Fail(failureMessage: "Authentication denied by test"));
         }
 
         Guid userId = DefaultUserId;
@@ -67,8 +67,8 @@ public class TestAuthHandler(
 
         if (
             Request.Headers.TryGetValue(
-                TestAuthDefaults.TestUserIdHeader,
-                out StringValues userIdHeader
+                key: TestAuthDefaults.TestUserIdHeader,
+                value: out StringValues userIdHeader
             )
             && userIdHeader.ToString() == SecondaryUserId.ToString()
         )
@@ -80,20 +80,20 @@ public class TestAuthHandler(
 
         Claim[] claims =
         [
-            new(ClaimTypes.NameIdentifier, userId.ToString()),
-            new(ClaimTypes.Name, userName),
-            new(ClaimTypes.Email, userEmail),
-            new(ClaimTypes.Role, "user"),
+            new(type: ClaimTypes.NameIdentifier, value: userId.ToString()),
+            new(type: ClaimTypes.Name, value: userName),
+            new(type: ClaimTypes.Email, value: userEmail),
+            new(type: ClaimTypes.Role, value: "user"),
             // Single space-delimited scope claim, mirroring the real Keycloak token
             // shape so tests exercise the same split-aware ApiScopePolicy path as
             // production rather than a pre-split multi-claim shape that masks it.
-            new("scope", "openid profile email"),
+            new(type: "scope", value: "openid profile email"),
         ];
 
-        ClaimsIdentity identity = new(claims, TestAuthDefaults.AuthenticationScheme);
-        ClaimsPrincipal principal = new(identity);
-        AuthenticationTicket ticket = new(principal, TestAuthDefaults.AuthenticationScheme);
+        ClaimsIdentity identity = new(claims: claims, authenticationType: TestAuthDefaults.AuthenticationScheme);
+        ClaimsPrincipal principal = new(identity: identity);
+        AuthenticationTicket ticket = new(principal: principal, authenticationScheme: TestAuthDefaults.AuthenticationScheme);
 
-        return Task.FromResult(AuthenticateResult.Success(ticket));
+        return Task.FromResult(result: AuthenticateResult.Success(ticket: ticket));
     }
 }

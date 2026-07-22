@@ -15,9 +15,9 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record SpecialsResponseDto
 {
-    [JsonProperty("nextId")]
+    [JsonProperty(propertyName: "nextId")]
     public object NextId { get; set; } = null!;
 
-    [JsonProperty("data")]
+    [JsonProperty(propertyName: "data")]
     public IEnumerable<SpecialsResponseItemDto> Data { get; set; } = [];
 }

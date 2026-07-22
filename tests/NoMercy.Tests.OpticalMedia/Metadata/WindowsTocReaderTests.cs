@@ -13,7 +13,7 @@ using NoMercy.OpticalMedia.Metadata;
 
 namespace NoMercy.Tests.OpticalMedia.Metadata;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class WindowsTocReaderTests
 {
     // ── Canonical fixture helpers ─────────────────────────────────────────────
@@ -64,7 +64,7 @@ public class WindowsTocReaderTests
 
         for (int trackIndex = 0; trackIndex < trackAbsolutes.Length; trackIndex++)
         {
-            (byte minute, byte second, byte frame) = AbsoluteToMsf(trackAbsolutes[trackIndex]);
+            (byte minute, byte second, byte frame) = AbsoluteToMsf(absolute: trackAbsolutes[trackIndex]);
             int offset = 4 + entryIndex * 8;
 
             buffer[offset + 0] = 0x00; // Reserved
@@ -81,7 +81,7 @@ public class WindowsTocReaderTests
 
         // Lead-out entry (TrackNumber = 0xAA).
         {
-            (byte minute, byte second, byte frame) = AbsoluteToMsf(leadOutAbsolute);
+            (byte minute, byte second, byte frame) = AbsoluteToMsf(absolute: leadOutAbsolute);
             int offset = 4 + entryIndex * 8;
 
             buffer[offset + 0] = 0x00;
@@ -107,17 +107,17 @@ public class WindowsTocReaderTests
     [Fact]
     public void ParseCdromToc_CanonicalFixture_RoundTripsToExpectedDiscId()
     {
-        byte[] buffer = BuildTocBuffer(1, 6, CanonicalTrackOffsets, CanonicalLeadOut);
+        byte[] buffer = BuildTocBuffer(firstTrack: 1, lastTrack: 6, trackAbsolutes: CanonicalTrackOffsets, leadOutAbsolute: CanonicalLeadOut);
 
-        DiscToc toc = WindowsTocReader.ParseCdromToc(buffer);
+        DiscToc toc = WindowsTocReader.ParseCdromToc(tocBuffer: buffer);
 
-        toc.FirstTrack.Should().Be(1);
-        toc.LastTrack.Should().Be(6);
-        toc.LeadOutOffsetSectors.Should().Be(CanonicalLeadOut);
-        toc.TrackOffsetsSectors.Should().Equal(CanonicalTrackOffsets);
+        toc.FirstTrack.Should().Be(expected: 1);
+        toc.LastTrack.Should().Be(expected: 6);
+        toc.LeadOutOffsetSectors.Should().Be(expected: CanonicalLeadOut);
+        toc.TrackOffsetsSectors.Should().Equal(elements: CanonicalTrackOffsets);
 
-        string discId = MusicBrainzDiscId.Compute(toc);
-        discId.Should().Be(CanonicalDiscId);
+        string discId = MusicBrainzDiscId.Compute(toc: toc);
+        discId.Should().Be(expected: CanonicalDiscId);
     }
 
     // ── ParseCdromToc — per-track offset assertions ───────────────────────────
@@ -125,28 +125,28 @@ public class WindowsTocReaderTests
     [Fact]
     public void ParseCdromToc_CanonicalFixture_TrackCount()
     {
-        byte[] buffer = BuildTocBuffer(1, 6, CanonicalTrackOffsets, CanonicalLeadOut);
-        DiscToc toc = WindowsTocReader.ParseCdromToc(buffer);
+        byte[] buffer = BuildTocBuffer(firstTrack: 1, lastTrack: 6, trackAbsolutes: CanonicalTrackOffsets, leadOutAbsolute: CanonicalLeadOut);
+        DiscToc toc = WindowsTocReader.ParseCdromToc(tocBuffer: buffer);
 
-        toc.TrackOffsetsSectors.Should().HaveCount(6);
+        toc.TrackOffsetsSectors.Should().HaveCount(expected: 6);
     }
 
     [Theory]
-    [InlineData(0, 150)]
-    [InlineData(1, 15363)]
-    [InlineData(2, 32314)]
-    [InlineData(3, 46592)]
-    [InlineData(4, 63414)]
-    [InlineData(5, 80489)]
+    [InlineData(data: [0, 150])]
+    [InlineData(data: [1, 15363])]
+    [InlineData(data: [2, 32314])]
+    [InlineData(data: [3, 46592])]
+    [InlineData(data: [4, 63414])]
+    [InlineData(data: [5, 80489])]
     public void ParseCdromToc_CanonicalFixture_IndividualTrackOffset(
         int trackIndex,
         int expectedOffset
     )
     {
-        byte[] buffer = BuildTocBuffer(1, 6, CanonicalTrackOffsets, CanonicalLeadOut);
-        DiscToc toc = WindowsTocReader.ParseCdromToc(buffer);
+        byte[] buffer = BuildTocBuffer(firstTrack: 1, lastTrack: 6, trackAbsolutes: CanonicalTrackOffsets, leadOutAbsolute: CanonicalLeadOut);
+        DiscToc toc = WindowsTocReader.ParseCdromToc(tocBuffer: buffer);
 
-        toc.TrackOffsetsSectors[trackIndex].Should().Be(expectedOffset);
+        toc.TrackOffsetsSectors[trackIndex].Should().Be(expected: expectedOffset);
     }
 
     // ── ParseCdromToc — error cases ───────────────────────────────────────────
@@ -156,11 +156,11 @@ public class WindowsTocReaderTests
     {
         byte[] shortBuffer = new byte[100];
 
-        Action act = () => WindowsTocReader.ParseCdromToc(shortBuffer);
+        Action act = () => WindowsTocReader.ParseCdromToc(tocBuffer: shortBuffer);
 
         act.Should()
             .Throw<ArgumentException>()
-            .WithMessage("*CDROM_TOC buffer must be at least 804 bytes*");
+            .WithMessage(expectedWildcardPattern: "*CDROM_TOC buffer must be at least 804 bytes*");
     }
 
     [Fact]
@@ -168,7 +168,7 @@ public class WindowsTocReaderTests
     {
         byte[] emptyBuffer = [];
 
-        Action act = () => WindowsTocReader.ParseCdromToc(emptyBuffer);
+        Action act = () => WindowsTocReader.ParseCdromToc(tocBuffer: emptyBuffer);
 
         act.Should().Throw<ArgumentException>();
     }
@@ -181,9 +181,9 @@ public class WindowsTocReaderTests
         buffer[2] = 1;
         buffer[3] = 2;
 
-        Action act = () => WindowsTocReader.ParseCdromToc(buffer);
+        Action act = () => WindowsTocReader.ParseCdromToc(tocBuffer: buffer);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*lead-out*");
+        act.Should().Throw<InvalidOperationException>().WithMessage(expectedWildcardPattern: "*lead-out*");
     }
 
     // ── ReadTocAsync — non-Windows returns null ───────────────────────────────
@@ -201,9 +201,9 @@ public class WindowsTocReaderTests
         }
 
         WindowsTocReader reader = new();
-        DiscToc? result = await reader.ReadTocAsync("D:\\", CancellationToken.None);
+        DiscToc? result = await reader.ReadTocAsync(drivePath: "D:\\", ct: CancellationToken.None);
 
-        result.Should().BeNull("non-Windows host must short-circuit before any I/O");
+        result.Should().BeNull(because: "non-Windows host must short-circuit before any I/O");
     }
 
     // ── ReadTocAsync — invalid drive path returns null ────────────────────────
@@ -216,9 +216,9 @@ public class WindowsTocReaderTests
 
         // A path that cannot be parsed into a drive letter must not throw.
         WindowsTocReader reader = new();
-        DiscToc? result = await reader.ReadTocAsync("/dev/sr0", CancellationToken.None);
+        DiscToc? result = await reader.ReadTocAsync(drivePath: "/dev/sr0", ct: CancellationToken.None);
 
-        result.Should().BeNull("unresolvable drive path must return null, not throw");
+        result.Should().BeNull(because: "unresolvable drive path must return null, not throw");
     }
 
     [Fact]
@@ -237,9 +237,9 @@ public class WindowsTocReaderTests
         // optical drive) — either way it proves the non-throwing null-return
         // contract end to end without needing a physical CD-ROM.
         WindowsTocReader reader = new();
-        DiscToc? result = await reader.ReadTocAsync("C:\\", CancellationToken.None);
+        DiscToc? result = await reader.ReadTocAsync(drivePath: "C:\\", ct: CancellationToken.None);
 
-        result.Should().BeNull("C: is never a CD-ROM device");
+        result.Should().BeNull(because: "C: is never a CD-ROM device");
     }
 
     [Fact]
@@ -257,7 +257,7 @@ public class WindowsTocReaderTests
         // real optical device rather than a non-CD-ROM drive letter.
         WindowsTocReader reader = new();
 
-        Func<Task<DiscToc?>> act = () => reader.ReadTocAsync("D:\\", CancellationToken.None);
+        Func<Task<DiscToc?>> act = () => reader.ReadTocAsync(drivePath: "D:\\", ct: CancellationToken.None);
 
         await act.Should().NotThrowAsync();
     }
@@ -270,7 +270,7 @@ public class WindowsTocReaderTests
 
         // ResolveDriveLetter's single-character branch (drivePath.Length == 1).
         WindowsTocReader reader = new();
-        DiscToc? result = await reader.ReadTocAsync("C", CancellationToken.None);
+        DiscToc? result = await reader.ReadTocAsync(drivePath: "C", ct: CancellationToken.None);
 
         result.Should().BeNull();
     }
@@ -278,9 +278,9 @@ public class WindowsTocReaderTests
     // ── MSF round-trip — spot checks ─────────────────────────────────────────
 
     [Theory]
-    [InlineData(150, 0, 2, 0)] // track 1 canonical: 00:02:00
-    [InlineData(15363, 3, 24, 63)] // track 2 canonical: 03:24:63
-    [InlineData(95462, 21, 12, 62)] // lead-out canonical: 21:12:62
+    [InlineData(data: [150, 0, 2, 0])] // track 1 canonical: 00:02:00
+    [InlineData(data: [15363, 3, 24, 63])] // track 2 canonical: 03:24:63
+    [InlineData(data: [95462, 21, 12, 62])] // lead-out canonical: 21:12:62
     public void AbsoluteToMsf_SpotChecks(
         int absolute,
         int expectedMinute,
@@ -288,11 +288,11 @@ public class WindowsTocReaderTests
         int expectedFrame
     )
     {
-        (byte minute, byte second, byte frame) = AbsoluteToMsf(absolute);
+        (byte minute, byte second, byte frame) = AbsoluteToMsf(absolute: absolute);
 
-        minute.Should().Be((byte)expectedMinute);
-        second.Should().Be((byte)expectedSecond);
-        frame.Should().Be((byte)expectedFrame);
+        minute.Should().Be(expected: (byte)expectedMinute);
+        second.Should().Be(expected: (byte)expectedSecond);
+        frame.Should().Be(expected: (byte)expectedFrame);
     }
 
     // ── MsfToAbsolute inverse (via ParseCdromToc) ─────────────────────────────
@@ -302,13 +302,13 @@ public class WindowsTocReaderTests
     {
         int[] singleTrack = [150];
         int leadOut = 18150;
-        byte[] buffer = BuildTocBuffer(1, 1, singleTrack, leadOut);
+        byte[] buffer = BuildTocBuffer(firstTrack: 1, lastTrack: 1, trackAbsolutes: singleTrack, leadOutAbsolute: leadOut);
 
-        DiscToc toc = WindowsTocReader.ParseCdromToc(buffer);
+        DiscToc toc = WindowsTocReader.ParseCdromToc(tocBuffer: buffer);
 
-        toc.FirstTrack.Should().Be(1);
-        toc.LastTrack.Should().Be(1);
-        toc.TrackOffsetsSectors.Should().Equal([150]);
-        toc.LeadOutOffsetSectors.Should().Be(leadOut);
+        toc.FirstTrack.Should().Be(expected: 1);
+        toc.LastTrack.Should().Be(expected: 1);
+        toc.TrackOffsetsSectors.Should().Equal(elements: [150]);
+        toc.LeadOutOffsetSectors.Should().Be(expected: leadOut);
     }
 }

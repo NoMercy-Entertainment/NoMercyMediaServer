@@ -26,10 +26,10 @@ public class EncodingErrorTests
             Recoverable: false
         );
 
-        error.Kind.Should().Be(EncodingErrorKind.CodecUnavailable);
-        error.Message.Should().Be("h264_nvenc not found");
-        error.FfmpegStderr.Should().Be("Encoder not available");
-        error.StageName.Should().Be("Validate");
+        error.Kind.Should().Be(expected: EncodingErrorKind.CodecUnavailable);
+        error.Message.Should().Be(expected: "h264_nvenc not found");
+        error.FfmpegStderr.Should().Be(expected: "Encoder not available");
+        error.StageName.Should().Be(expected: "Validate");
         error.Recoverable.Should().BeFalse();
     }
 
@@ -49,22 +49,22 @@ public class EncodingErrorTests
     }
 
     [Theory]
-    [InlineData(EncodingErrorKind.InputNotFound)]
-    [InlineData(EncodingErrorKind.InputCorrupt)]
-    [InlineData(EncodingErrorKind.InputUnsupported)]
-    [InlineData(EncodingErrorKind.CodecUnavailable)]
-    [InlineData(EncodingErrorKind.HardwareUnavailable)]
-    [InlineData(EncodingErrorKind.HardwareFailure)]
-    [InlineData(EncodingErrorKind.ProfileInvalid)]
-    [InlineData(EncodingErrorKind.DiskFull)]
-    [InlineData(EncodingErrorKind.Timeout)]
-    [InlineData(EncodingErrorKind.Cancelled)]
-    [InlineData(EncodingErrorKind.ProcessCrashed)]
-    [InlineData(EncodingErrorKind.NetworkPathUnavailable)]
-    [InlineData(EncodingErrorKind.NetworkPathTimeout)]
-    [InlineData(EncodingErrorKind.NetworkPathPermission)]
-    [InlineData(EncodingErrorKind.ResourceExhausted)]
-    [InlineData(EncodingErrorKind.Unknown)]
+    [InlineData(data: EncodingErrorKind.InputNotFound)]
+    [InlineData(data: EncodingErrorKind.InputCorrupt)]
+    [InlineData(data: EncodingErrorKind.InputUnsupported)]
+    [InlineData(data: EncodingErrorKind.CodecUnavailable)]
+    [InlineData(data: EncodingErrorKind.HardwareUnavailable)]
+    [InlineData(data: EncodingErrorKind.HardwareFailure)]
+    [InlineData(data: EncodingErrorKind.ProfileInvalid)]
+    [InlineData(data: EncodingErrorKind.DiskFull)]
+    [InlineData(data: EncodingErrorKind.Timeout)]
+    [InlineData(data: EncodingErrorKind.Cancelled)]
+    [InlineData(data: EncodingErrorKind.ProcessCrashed)]
+    [InlineData(data: EncodingErrorKind.NetworkPathUnavailable)]
+    [InlineData(data: EncodingErrorKind.NetworkPathTimeout)]
+    [InlineData(data: EncodingErrorKind.NetworkPathPermission)]
+    [InlineData(data: EncodingErrorKind.ResourceExhausted)]
+    [InlineData(data: EncodingErrorKind.Unknown)]
     public void ErrorKind_AllValues_Exist(EncodingErrorKind kind)
     {
         kind.Should().BeDefined();

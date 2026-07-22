@@ -37,35 +37,35 @@ public class PlanStageMapLabelTests
 
     public PlanStageMapLabelTests()
     {
-        _hardware.Setup(h => h.HasGpu).Returns(false);
-        _hardware.Setup(h => h.CpuCores).Returns(8);
-        _hardware.Setup(h => h.Gpus).Returns([]);
-        _hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
+        _hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
+        _hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
+        _hardware.Setup(expression: h => h.Gpus).Returns(value: []);
+        _hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
         _hardware
-            .Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
-            .Returns((GpuDevice?)null);
+            .Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
+            .Returns(value: (GpuDevice?)null);
 
         _codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<IHardwareCapabilities>(),
                     It.IsAny<EncoderPreference>()
                 )
             )
-            .Returns(BuildSoftwareH264Codec());
+            .Returns(value: BuildSoftwareH264Codec());
 
         _stage = new(
-            new(),
-            new(),
-            new(),
-            _codecResolver.Object,
-            _hardware.Object,
-            new TonemapSelector(),
-            new Mock<IFfmpegCapabilities>().Object,
-            new AbrLadderGenerator(),
-            new NoOpCropDetector(),
-            NullLogger<PlanStage>.Instance
+            graphBuilder: new(),
+            groupingStrategy: new(),
+            costEstimator: new(),
+            codecResolver: _codecResolver.Object,
+            hardware: _hardware.Object,
+            tonemapSelector: new TonemapSelector(),
+            ffmpegCapabilities: new Mock<IFfmpegCapabilities>().Object,
+            abrLadderGenerator: new AbrLadderGenerator(),
+            cropDetector: new NoOpCropDetector(),
+            logger: NullLogger<PlanStage>.Instance
         );
     }
 
@@ -78,7 +78,7 @@ public class PlanStageMapLabelTests
                 Presets: ["slow", "medium", "fast"],
                 Profiles: ["high"],
                 Levels: ["4.1"],
-                QualityRange: new(0, 51, 23),
+                QualityRange: new(Min: 0, Max: 51, Default: 23),
                 SupportedRateControl: [RateControlMode.Crf, RateControlMode.Cbr],
                 Supports10Bit: false,
                 SupportsHdr: false,
@@ -94,7 +94,7 @@ public class PlanStageMapLabelTests
         new(
             FilePath: "/movies/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromHours(2),
+            Duration: TimeSpan.FromHours(hours: 2),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 7_200_000_000,
             VideoStreams:
@@ -189,14 +189,14 @@ public class PlanStageMapLabelTests
             Subtitles: []
         );
 
-        ValidateInput input = new(media, profile);
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        ValidateInput input = new(Media: media, Profile: profile);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
         result.Should().BeOfType<StageSuccess<ExecutionPlan>>();
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)result).Value;
 
-        plan.OutputPlan.VideoOutputs.Should().HaveCount(1);
-        plan.OutputPlan.VideoOutputs[0].MapLabel.Should().Be("[v0]");
+        plan.OutputPlan.VideoOutputs.Should().HaveCount(expected: 1);
+        plan.OutputPlan.VideoOutputs[0].MapLabel.Should().Be(expected: "[v0]");
     }
 
     // ------------------------------------------------------------------
@@ -264,14 +264,14 @@ public class PlanStageMapLabelTests
             }
         );
 
-        ValidateInput input = new(media, profile);
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        ValidateInput input = new(Media: media, Profile: profile);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
         result.Should().BeOfType<StageSuccess<ExecutionPlan>>();
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)result).Value;
 
-        plan.OutputPlan.VideoOutputs.Should().HaveCount(2);
-        plan.OutputPlan.VideoOutputs[0].MapLabel.Should().Be("[v0]");
-        plan.OutputPlan.VideoOutputs[1].MapLabel.Should().Be("[v1]");
+        plan.OutputPlan.VideoOutputs.Should().HaveCount(expected: 2);
+        plan.OutputPlan.VideoOutputs[0].MapLabel.Should().Be(expected: "[v0]");
+        plan.OutputPlan.VideoOutputs[1].MapLabel.Should().Be(expected: "[v1]");
     }
 }

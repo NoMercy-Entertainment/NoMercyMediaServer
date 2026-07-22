@@ -28,11 +28,11 @@ public static partial class TrailerCommandBuilder
     // Locale tokens only: "en", "en-US", "pt-BR", "zh-Hans". No quotes, spaces,
     // shell metacharacters, path separators, or length that could break out of the
     // quoted "-o subtitle:..." argument.
-    [GeneratedRegex("^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8}){0,3}$")]
+    [GeneratedRegex(pattern: "^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8}){0,3}$")]
     private static partial Regex SafeLanguageRegex();
 
     public static bool IsSafeLanguage(string? language) =>
-        !string.IsNullOrEmpty(language) && SafeLanguageRegex().IsMatch(language);
+        !string.IsNullOrEmpty(value: language) && SafeLanguageRegex().IsMatch(input: language);
 
     /// <summary>
     /// Builds the inner command string (without the shell wrapper). A subtitle
@@ -48,20 +48,20 @@ public static partial class TrailerCommandBuilder
     {
         StringBuilder sb = new();
 
-        sb.Append(ytdlpPath);
-        sb.Append(" -f bestvideo+bestaudio  --extractor-args \"youtube:player_client=default\" ");
+        sb.Append(value: ytdlpPath);
+        sb.Append(value: " -f bestvideo+bestaudio  --extractor-args \"youtube:player_client=default\" ");
 
-        if (IsSafeLanguage(language))
-            sb.Append($" -o \"subtitle:{language}.%(ext)s\" --sub-langs all --write-subs ");
+        if (IsSafeLanguage(language: language))
+            sb.Append(handler: $" -o \"subtitle:{language}.%(ext)s\" --sub-langs all --write-subs ");
 
-        sb.Append(trailerId);
+        sb.Append(value: trailerId);
 
-        sb.Append(" -o - ");
+        sb.Append(value: " -o - ");
         sb.Append(
-            $" | {ffmpegPath} -i pipe: -map 0:0 -map 0:1 -c:v libx264 -c:a aac -ac 2 -preset ultrafast "
+            handler: $" | {ffmpegPath} -i pipe: -map 0:0 -map 0:1 -c:v libx264 -c:a aac -ac 2 -preset ultrafast "
         );
         sb.Append(
-            "-segment_list_type m3u8 -hls_playlist_type event -hls_init_time 4 -hls_time 4 -hls_segment_filename video_%05d.ts video.m3u8 "
+            value: "-segment_list_type m3u8 -hls_playlist_type event -hls_init_time 4 -hls_time 4 -hls_segment_filename video_%05d.ts video.m3u8 "
         );
 
         return sb.ToString();

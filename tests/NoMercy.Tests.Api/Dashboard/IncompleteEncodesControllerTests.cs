@@ -19,7 +19,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Dashboard;
 
-[Trait("Category", "IncompleteEncodes")]
+[Trait(name: "Category", value: "IncompleteEncodes")]
 public class IncompleteEncodesControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLifetime
 {
     private readonly HttpClient _authed;
@@ -45,8 +45,8 @@ public class IncompleteEncodesControllerTests : IClassFixture<NoMercyApiFactory>
             MissingRenditions = "video/h264/1080p\nvideo/h264/720p",
             LastError = "Finalize timed out",
             AttemptsMade = 1,
-            FirstSeenAt = DateTime.UtcNow.AddHours(-2),
-            LastSeenAt = DateTime.UtcNow.AddMinutes(-5),
+            FirstSeenAt = DateTime.UtcNow.AddHours(value: -2),
+            LastSeenAt = DateTime.UtcNow.AddMinutes(value: -5),
         };
         IncompleteEncode row2 = new()
         {
@@ -56,11 +56,11 @@ public class IncompleteEncodesControllerTests : IClassFixture<NoMercyApiFactory>
             MissingRenditions = "audio/aac/stereo",
             LastError = null,
             AttemptsMade = 0,
-            FirstSeenAt = DateTime.UtcNow.AddHours(-1),
-            LastSeenAt = DateTime.UtcNow.AddMinutes(-1),
+            FirstSeenAt = DateTime.UtcNow.AddHours(value: -1),
+            LastSeenAt = DateTime.UtcNow.AddMinutes(value: -1),
         };
 
-        ctx.IncompleteEncodes.AddRange(row1, row2);
+        ctx.IncompleteEncodes.AddRange(entities: [row1, row2]);
         await ctx.SaveChangesAsync();
 
         _rowId1 = row1.Id;
@@ -71,7 +71,7 @@ public class IncompleteEncodesControllerTests : IClassFixture<NoMercyApiFactory>
     {
         await using MediaContext ctx = new();
         await ctx
-            .IncompleteEncodes.Where(r => r.Id == _rowId1 || r.Id == _rowId2)
+            .IncompleteEncodes.Where(predicate: r => r.Id == _rowId1 || r.Id == _rowId2)
             .ExecuteDeleteAsync();
     }
 
@@ -81,34 +81,34 @@ public class IncompleteEncodesControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task List_ReturnsSeededRows()
     {
         HttpResponseMessage response = await _authed.GetAsync(
-            "/api/v1/dashboard/tasks/queue/incomplete"
+            requestUri: "/api/v1/dashboard/tasks/queue/incomplete"
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
 
         string json = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json);
-        JsonElement data = doc.RootElement.GetProperty("data");
+        using JsonDocument doc = JsonDocument.Parse(json: json);
+        JsonElement data = doc.RootElement.GetProperty(propertyName: "data");
 
-        data.GetArrayLength().Should().BeGreaterThanOrEqualTo(2);
+        data.GetArrayLength().Should().BeGreaterThanOrEqualTo(expected: 2);
 
         // Find our two rows by title.
         JsonElement[] rows = data.EnumerateArray().ToArray();
 
-        JsonElement? spirited = rows.FirstOrDefault(e =>
-            e.GetProperty("title").GetString() == "Spirited Away"
+        JsonElement? spirited = rows.FirstOrDefault(predicate: e =>
+            e.GetProperty(propertyName: "title").GetString() == "Spirited Away"
         );
-        spirited.Should().NotBeNull("Spirited Away row must appear in the list");
+        spirited.Should().NotBeNull(because: "Spirited Away row must appear in the list");
 
         string[]? renditions = spirited!
-            .Value.GetProperty("missing_renditions")
+            .Value.GetProperty(propertyName: "missing_renditions")
             .EnumerateArray()
-            .Select(e => e.GetString()!)
+            .Select(selector: e => e.GetString()!)
             .ToArray();
 
-        renditions.Should().BeEquivalentTo(["video/h264/1080p", "video/h264/720p"]);
-        spirited!.Value.GetProperty("last_error").GetString().Should().Be("Finalize timed out");
-        spirited!.Value.GetProperty("attempts_made").GetInt32().Should().Be(1);
+        renditions.Should().BeEquivalentTo(expectation: ["video/h264/1080p", "video/h264/720p"]);
+        spirited!.Value.GetProperty(propertyName: "last_error").GetString().Should().Be(expected: "Finalize timed out");
+        spirited!.Value.GetProperty(propertyName: "attempts_made").GetInt32().Should().Be(expected: 1);
     }
 
     // ── POST /api/v1/dashboard/tasks/queue/incomplete/{id}/retry ─────────
@@ -117,11 +117,11 @@ public class IncompleteEncodesControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task Retry_MissingId_Returns404()
     {
         HttpResponseMessage response = await _authed.PostAsync(
-            "/api/v1/dashboard/tasks/queue/incomplete/99999/retry",
+            requestUri: "/api/v1/dashboard/tasks/queue/incomplete/99999/retry",
             content: null
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -133,7 +133,7 @@ public class IncompleteEncodesControllerTests : IClassFixture<NoMercyApiFactory>
         // We only assert the row is gone — the 200 vs 500 depends on whether a
         // real QueueRunner is present. Either outcome removes the quarantine row.
         HttpResponseMessage response = await _authed.PostAsync(
-            $"/api/v1/dashboard/tasks/queue/incomplete/{_rowId1}/retry",
+            requestUri: $"/api/v1/dashboard/tasks/queue/incomplete/{_rowId1}/retry",
             content: null
         );
 
@@ -141,10 +141,10 @@ public class IncompleteEncodesControllerTests : IClassFixture<NoMercyApiFactory>
         // Either way the quarantine row must be deleted.
         bool rowGone;
         await using MediaContext ctx = new();
-        rowGone = !await ctx.IncompleteEncodes.AnyAsync(r => r.Id == _rowId1);
+        rowGone = !await ctx.IncompleteEncodes.AnyAsync(predicate: r => r.Id == _rowId1);
         rowGone
             .Should()
-            .BeTrue("quarantine row must be removed after retry regardless of queue state");
+            .BeTrue(because: "quarantine row must be removed after retry regardless of queue state");
     }
 
     // ── DELETE /api/v1/dashboard/tasks/queue/incomplete/{id} ──────────────
@@ -153,32 +153,32 @@ public class IncompleteEncodesControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task Delete_MissingId_Returns404()
     {
         HttpResponseMessage response = await _authed.DeleteAsync(
-            "/api/v1/dashboard/tasks/queue/incomplete/99999"
+            requestUri: "/api/v1/dashboard/tasks/queue/incomplete/99999"
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.NotFound);
     }
 
     [Fact]
     public async Task Delete_ExistingRow_RemovesOnlyThatRow()
     {
         HttpResponseMessage response = await _authed.DeleteAsync(
-            $"/api/v1/dashboard/tasks/queue/incomplete/{_rowId1}"
+            requestUri: $"/api/v1/dashboard/tasks/queue/incomplete/{_rowId1}"
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
 
         string json = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json);
-        doc.RootElement.GetProperty("status").GetString().Should().Be("success");
+        using JsonDocument doc = JsonDocument.Parse(json: json);
+        doc.RootElement.GetProperty(propertyName: "status").GetString().Should().Be(expected: "success");
 
         await using MediaContext ctx = new();
-        (await ctx.IncompleteEncodes.AnyAsync(r => r.Id == _rowId1))
+        (await ctx.IncompleteEncodes.AnyAsync(predicate: r => r.Id == _rowId1))
             .Should()
-            .BeFalse("the deleted row must no longer exist");
-        (await ctx.IncompleteEncodes.AnyAsync(r => r.Id == _rowId2))
+            .BeFalse(because: "the deleted row must no longer exist");
+        (await ctx.IncompleteEncodes.AnyAsync(predicate: r => r.Id == _rowId2))
             .Should()
-            .BeTrue("a single-row delete must not touch other quarantine rows");
+            .BeTrue(because: "a single-row delete must not touch other quarantine rows");
     }
 
     // ── DELETE /api/v1/dashboard/tasks/queue/incomplete ────────────────────
@@ -187,23 +187,23 @@ public class IncompleteEncodesControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task DeleteAll_RemovesSeededRows_AndReportsRemovedCount()
     {
         HttpResponseMessage response = await _authed.DeleteAsync(
-            "/api/v1/dashboard/tasks/queue/incomplete"
+            requestUri: "/api/v1/dashboard/tasks/queue/incomplete"
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
 
         string json = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(json);
-        doc.RootElement.GetProperty("status").GetString().Should().Be("success");
+        using JsonDocument doc = JsonDocument.Parse(json: json);
+        doc.RootElement.GetProperty(propertyName: "status").GetString().Should().Be(expected: "success");
 
         // Other tests/processes may hold unrelated quarantine rows in the shared
         // test database, so the count is only asserted as a lower bound — the
         // two rows this test seeded must be included in it.
-        doc.RootElement.GetProperty("data").GetInt32().Should().BeGreaterThanOrEqualTo(2);
+        doc.RootElement.GetProperty(propertyName: "data").GetInt32().Should().BeGreaterThanOrEqualTo(expected: 2);
 
         await using MediaContext ctx = new();
-        (await ctx.IncompleteEncodes.AnyAsync(r => r.Id == _rowId1 || r.Id == _rowId2))
+        (await ctx.IncompleteEncodes.AnyAsync(predicate: r => r.Id == _rowId1 || r.Id == _rowId2))
             .Should()
-            .BeFalse("both seeded rows must be gone after deleting all incomplete encodes");
+            .BeFalse(because: "both seeded rows must be gone after deleting all incomplete encodes");
     }
 }

@@ -22,5 +22,5 @@ public interface IEncoderPlugin : IPlugin
     // the synchronous GetProfile so existing plugins keep working unchanged;
     // plugins that perform real I/O should override this instead.
     Task<EncodingProfile?> GetProfileAsync(MediaInfo info, CancellationToken ct = default) =>
-        Task.FromResult(GetProfile(info));
+        Task.FromResult(result: GetProfile(info: info));
 }

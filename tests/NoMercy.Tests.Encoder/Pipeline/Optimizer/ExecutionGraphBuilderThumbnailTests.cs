@@ -30,17 +30,17 @@ public class ExecutionGraphBuilderThumbnailTests
         EncodingProfile profile = BuildProfileWithThumbnails();
 
         List<ExecutionNode> nodes = new ExecutionGraphBuilder().BuildGraph(
-            media,
-            profile,
-            ResolveSingle()
+            media: media,
+            profile: profile,
+            resolvedVideoCodecs: ResolveSingle()
         );
 
-        ExecutionNode tonemap = nodes.Single(n => n.Operation == OperationType.Tonemap);
-        ExecutionNode thumb = nodes.Single(n => n.Operation == OperationType.ThumbnailCapture);
+        ExecutionNode tonemap = nodes.Single(predicate: n => n.Operation == OperationType.Tonemap);
+        ExecutionNode thumb = nodes.Single(predicate: n => n.Operation == OperationType.ThumbnailCapture);
 
         thumb
             .DependsOn.Should()
-            .Contain(tonemap.Id, "HDR sprites derive from the SDR intermediate");
+            .Contain(expected: tonemap.Id, because: "HDR sprites derive from the SDR intermediate");
     }
 
     [Fact]
@@ -50,21 +50,21 @@ public class ExecutionGraphBuilderThumbnailTests
         EncodingProfile profile = BuildProfileWithThumbnails();
 
         List<ExecutionNode> nodes = new ExecutionGraphBuilder().BuildGraph(
-            media,
-            profile,
-            ResolveSingle()
+            media: media,
+            profile: profile,
+            resolvedVideoCodecs: ResolveSingle()
         );
 
-        nodes.Should().NotContain(n => n.Operation == OperationType.Tonemap);
-        ExecutionNode thumb = nodes.Single(n => n.Operation == OperationType.ThumbnailCapture);
-        thumb.DependsOn.Should().BeEmpty("SDR sprites read the decoded source directly");
+        nodes.Should().NotContain(predicate: n => n.Operation == OperationType.Tonemap);
+        ExecutionNode thumb = nodes.Single(predicate: n => n.Operation == OperationType.ThumbnailCapture);
+        thumb.DependsOn.Should().BeEmpty(because: "SDR sprites read the decoded source directly");
     }
 
     private static MediaInfo BuildMedia(string transfer, int width, int height) =>
         new(
             FilePath: "/media/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(90),
+            Duration: TimeSpan.FromMinutes(minutes: 90),
             OverallBitRateKbps: 50000,
             FileSizeBytes: 30_000_000_000,
             VideoStreams:
@@ -117,7 +117,7 @@ public class ExecutionGraphBuilderThumbnailTests
             ),
             Audio: [],
             Subtitles: [],
-            Thumbnails: new(320, 10)
+            Thumbnails: new(Width: 320, IntervalSeconds: 10)
         );
 
     private static ResolvedCodec[] ResolveSingle() =>
@@ -130,7 +130,7 @@ public class ExecutionGraphBuilderThumbnailTests
                     Presets: ["medium"],
                     Profiles: ["main"],
                     Levels: ["5.1"],
-                    QualityRange: new(0, 51, 28),
+                    QualityRange: new(Min: 0, Max: 51, Default: 28),
                     SupportedRateControl: [RateControlMode.Crf],
                     Supports10Bit: true,
                     SupportsHdr: true,

@@ -38,34 +38,34 @@ public class ChromaprintIntroDetector : IIntroDetector
     }
 
     public IntroMarker? DetectIntro(IReadOnlyList<AudioFingerprint> episodeFingerprints) =>
-        Detect(episodeFingerprints, fromTail: false);
+        Detect(prints: episodeFingerprints, fromTail: false);
 
     public IntroMarker? DetectOutro(IReadOnlyList<AudioFingerprint> episodeFingerprints) =>
-        Detect(episodeFingerprints, fromTail: true);
+        Detect(prints: episodeFingerprints, fromTail: true);
 
     private IntroMarker? Detect(IReadOnlyList<AudioFingerprint> prints, bool fromTail)
     {
         if (prints.Count < 2)
             return null;
 
-        AudioFingerprint reference = prints[0];
+        AudioFingerprint reference = prints[index: 0];
         if (reference.Hashes.Length == 0)
             return null;
 
         // Find the best-aligned match region between reference and each
         // other print. The intro region is the intersection of all
         // pairwise matches — frames that match for every other episode.
-        bool[] matchMask = InitialMask(reference.Hashes.Length);
+        bool[] matchMask = InitialMask(length: reference.Hashes.Length);
 
         for (int i = 1; i < prints.Count; i++)
         {
-            AudioFingerprint other = prints[i];
+            AudioFingerprint other = prints[index: i];
             if (other.Hashes.Length == 0)
                 return null;
 
             (int refOffset, int otherOffset, int length) = BestAlignment(
-                reference.Hashes,
-                other.Hashes
+                a: reference.Hashes,
+                b: other.Hashes
             );
 
             if (length < _minMatchFrames)
@@ -91,30 +91,30 @@ public class ChromaprintIntroDetector : IIntroDetector
                 if (!matchMask[refIdx])
                     continue;
                 int dist = BitOperations.PopCount(
-                    reference.Hashes[refIdx] ^ other.Hashes[otherIdx]
+                    value: reference.Hashes[refIdx] ^ other.Hashes[otherIdx]
                 );
                 if (dist > _bitDistanceThreshold)
                     matchMask[refIdx] = false;
             }
         }
 
-        (int runStart, int runLength) = LongestTrueRun(matchMask);
+        (int runStart, int runLength) = LongestTrueRun(mask: matchMask);
         if (runLength < _minMatchFrames)
             return null;
 
-        TimeSpan start = reference.FrameToTime(runStart);
-        TimeSpan end = reference.FrameToTime(runStart + runLength);
+        TimeSpan start = reference.FrameToTime(frameIndex: runStart);
+        TimeSpan end = reference.FrameToTime(frameIndex: runStart + runLength);
 
         // For outro detection we ran the same comparison but the caller
         // fingerprinted the tails; the resulting marker is already in
         // real-time source coordinates thanks to FingerprintWindow.Start.
-        double confidence = (double)runLength / Math.Max(1, reference.Hashes.Length);
+        double confidence = (double)runLength / Math.Max(val1: 1, val2: reference.Hashes.Length);
 
         // Suppress the "fromTail" argument — kept for API symmetry and to
         // let future refinements weight tail matches differently.
         _ = fromTail;
 
-        return new(start, end, confidence);
+        return new(Start: start, End: end, Confidence: confidence);
     }
 
     /// <summary>
@@ -138,10 +138,10 @@ public class ChromaprintIntroDetector : IIntroDetector
 
         for (int offset = minOffset; offset <= maxOffset; offset++)
         {
-            int aIdx = Math.Max(0, offset);
-            int bIdx = Math.Max(0, -offset);
+            int aIdx = Math.Max(val1: 0, val2: offset);
+            int bIdx = Math.Max(val1: 0, val2: -offset);
 
-            int overlap = Math.Min(a.Length - aIdx, b.Length - bIdx);
+            int overlap = Math.Min(val1: a.Length - aIdx, val2: b.Length - bIdx);
             if (overlap <= bestLen)
                 continue;
 
@@ -153,7 +153,7 @@ public class ChromaprintIntroDetector : IIntroDetector
             {
                 int ai = aIdx + k;
                 int bi = bIdx + k;
-                int dist = BitOperations.PopCount(a[ai] ^ b[bi]);
+                int dist = BitOperations.PopCount(value: a[ai] ^ b[bi]);
 
                 if (dist <= _bitDistanceThreshold)
                 {
@@ -183,7 +183,7 @@ public class ChromaprintIntroDetector : IIntroDetector
     private static bool[] InitialMask(int length)
     {
         bool[] mask = new bool[length];
-        Array.Fill(mask, true);
+        Array.Fill(array: mask, value: true);
         return mask;
     }
 

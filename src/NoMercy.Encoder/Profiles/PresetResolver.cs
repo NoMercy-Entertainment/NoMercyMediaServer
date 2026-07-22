@@ -26,13 +26,13 @@ public static class PresetResolver
 
     private static JObject EnsureCurrent(JObject input)
     {
-        int version = input["schemaVersion"]?.Value<int>() ?? CurrentSchemaVersion;
+        int version = input[propertyName: "schemaVersion"]?.Value<int>() ?? CurrentSchemaVersion;
         while (version < CurrentSchemaVersion)
         {
-            IProfileMigration? step = Migrations.FirstOrDefault(m => m.FromVersion == version);
+            IProfileMigration? step = Migrations.FirstOrDefault(predicate: m => m.FromVersion == version);
             if (step is null)
-                throw new InvalidOperationException($"No migration from schema v{version}.");
-            input = step.Migrate(input);
+                throw new InvalidOperationException(message: $"No migration from schema v{version}.");
+            input = step.Migrate(input: input);
             version = step.ToVersion;
         }
         return input;
@@ -46,32 +46,32 @@ public static class PresetResolver
 
         while (cursor.HasValue)
         {
-            if (!visited.Add(cursor.Value))
+            if (!visited.Add(item: cursor.Value))
                 throw new InvalidOperationException(
-                    $"Inheritance cycle detected at preset {cursor.Value}."
+                    message: $"Inheritance cycle detected at preset {cursor.Value}."
                 );
 
             if (chain.Count >= MaxDepth)
                 throw new InvalidOperationException(
-                    $"Inheritance chain exceeds max depth of {MaxDepth}."
+                    message: $"Inheritance chain exceeds max depth of {MaxDepth}."
                 );
 
-            (string ProfileJson, Ulid? ParentPresetId)? entry = lookup.Get(cursor.Value);
+            (string ProfileJson, Ulid? ParentPresetId)? entry = lookup.Get(presetId: cursor.Value);
             if (entry is null)
-                throw new InvalidOperationException($"Preset {cursor.Value} not found in lookup.");
+                throw new InvalidOperationException(message: $"Preset {cursor.Value} not found in lookup.");
 
-            chain.Add((cursor.Value, entry.Value.ProfileJson));
+            chain.Add(item: (cursor.Value, entry.Value.ProfileJson));
             cursor = entry.Value.ParentPresetId;
         }
 
         chain.Reverse();
-        JObject accumulator = EnsureCurrent(JObject.Parse(chain[0].Json));
+        JObject accumulator = EnsureCurrent(input: JObject.Parse(json: chain[index: 0].Json));
         for (int i = 1; i < chain.Count; i++)
         {
-            JObject child = EnsureCurrent(JObject.Parse(chain[i].Json));
+            JObject child = EnsureCurrent(input: JObject.Parse(json: chain[index: i].Json));
             accumulator.Merge(
-                child,
-                new()
+                content: child,
+                settings: new()
                 {
                     MergeArrayHandling = MergeArrayHandling.Replace,
                     MergeNullValueHandling = MergeNullValueHandling.Merge,
@@ -81,7 +81,7 @@ public static class PresetResolver
 
         EncodingProfile? resolved = accumulator.ToObject<EncodingProfile>();
         if (resolved is null)
-            throw new InvalidOperationException("Resolved profile failed to deserialize.");
+            throw new InvalidOperationException(message: "Resolved profile failed to deserialize.");
         return resolved;
     }
 }

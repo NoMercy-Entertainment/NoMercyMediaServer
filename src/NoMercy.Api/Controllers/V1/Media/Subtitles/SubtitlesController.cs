@@ -41,10 +41,10 @@ namespace NoMercy.Api.Controllers.V1.Media.Subtitles;
 /// chosen candidate as a permanent VTT sidecar next to the video file.
 /// </summary>
 [ApiController]
-[Tags("Media Subtitles")]
-[ApiVersion(1.0)]
+[Tags(tags: "Media Subtitles")]
+[ApiVersion(version: 1.0)]
 [Authorize]
-[Route("api/v{version:apiVersion}/subtitles")]
+[Route(template: "api/v{version:apiVersion}/subtitles")]
 public class SubtitlesController(
     VideoPlaylistManager videoPlaylistManager,
     IVideoFileRepository videoFileRepository,
@@ -55,7 +55,7 @@ public class SubtitlesController(
     ILogger<SubtitlesController> logger
 ) : BaseController
 {
-    private static readonly TimeSpan SearchTimeout = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan SearchTimeout = TimeSpan.FromSeconds(seconds: 5);
 
     // Subtitles downloaded through this endpoint are always plain (non-sign,
     // non-song) full-length tracks — the only variant the search endpoint offers.
@@ -68,7 +68,7 @@ public class SubtitlesController(
     /// Tries a moviehash match first, falls back to filename, then title/season/episode —
     /// stopping at the first strategy that returns results.
     /// </summary>
-    [HttpGet("search")]
+    [HttpGet(template: "search")]
     public async Task<IActionResult> Search(
         [FromQuery] string type,
         [FromQuery] int id,
@@ -77,17 +77,17 @@ public class SubtitlesController(
     )
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view subtitles");
+        if (!AuthPolicy.IsAllowed(principal: User))
+            return UnauthorizedResponse(detail: "You do not have permission to view subtitles");
 
         if (type != MediaTypes.MovieMediaType && type != MediaTypes.TvMediaType)
-            return BadRequestResponse($"Invalid type '{type}'. Expected 'movie' or 'tv'.");
+            return BadRequestResponse(detail: $"Invalid type '{type}'. Expected 'movie' or 'tv'.");
 
         Ulid? requestedVideoFileId = null;
-        if (!string.IsNullOrWhiteSpace(videoFileId))
+        if (!string.IsNullOrWhiteSpace(value: videoFileId))
         {
-            if (!Ulid.TryParse(videoFileId, out Ulid parsedVideoFileId))
-                return BadRequestResponse("Invalid videoFileId");
+            if (!Ulid.TryParse(base32: videoFileId, ulid: out Ulid parsedVideoFileId))
+                return BadRequestResponse(detail: "Invalid videoFileId");
             requestedVideoFileId = parsedVideoFileId;
         }
 
@@ -101,69 +101,67 @@ public class SubtitlesController(
             // must arrive as a string (the shape SignalR hands it JSON-deserialized), not
             // a raw int, or the dynamic dispatch throws RuntimeBinderException.
             resolved = await videoPlaylistManager.GetPlaylist(
-                userId,
-                type,
-                id.ToString(),
-                null,
-                language,
-                country
+                userId: userId,
+                type: type,
+                listId: id.ToString(),
+                itemId: null,
+                language: language,
+                country: country
             );
         }
         catch (ArgumentException)
         {
-            return BadRequestResponse($"Invalid type '{type}'. Expected 'movie' or 'tv'.");
+            return BadRequestResponse(detail: $"Invalid type '{type}'. Expected 'movie' or 'tv'.");
         }
 
         VideoPlaylistResponseDto? target = requestedVideoFileId is not null
-            ? resolved.Playlist.FirstOrDefault(p => p.VideoId == requestedVideoFileId.Value)
+            ? resolved.Playlist.FirstOrDefault(predicate: p => p.VideoId == requestedVideoFileId.Value)
                 ?? resolved.Item
             : resolved.Item;
 
         if (target is null)
-            return NotFoundResponse("No video found for the given media");
+            return NotFoundResponse(detail: "No video found for the given media");
 
-        VideoFile? file = await videoFileRepository.GetByIdAsync(target.VideoId, ct);
+        VideoFile? file = await videoFileRepository.GetByIdAsync(id: target.VideoId, ct: ct);
         if (file is null)
-            return NotFoundResponse("Video file not found");
+            return NotFoundResponse(detail: "Video file not found");
 
-        string[] languages = ResolveLanguages(Request.Query, language);
+        string[] languages = ResolveLanguages(query: Request.Query, fallback: language);
 
-        IStorage? storage = await ResolveStorageAsync(file);
+        IStorage? storage = await ResolveStorageAsync(file: file);
         (string? movieHash, long fileSize) = storage is null
             ? (null, 0)
-            : TryComputeHash(storage, file);
+            : TryComputeHash(storage: storage, file: file);
 
         if (storage is null)
             logger.LogWarning(
-                "No storage backend for video file {VideoFileId} (share {Share}) — "
-                    + "falling back to filename/title search",
-                file.Id,
-                file.Share
+                message: "No storage backend for video file {VideoFileId} (share {Share}) — "
+                         + "falling back to filename/title search", args: [file.Id, file.Share]
             );
 
         if (openSubtitlesAdapter.IsRateLimited)
             return TooManyRequestsResponse(
-                "OpenSubtitles is rate-limited by the upstream provider. Try again in a few minutes."
+                detail: "OpenSubtitles is rate-limited by the upstream provider. Try again in a few minutes."
             );
 
         IReadOnlyList<SubtitleCandidate> candidates = [];
 
         if (movieHash is not null)
             candidates = await openSubtitlesAdapter.SearchByHashAsync(
-                movieHash,
-                fileSize,
-                languages,
-                SearchTimeout,
-                ct,
+                movieHash: movieHash,
+                fileSize: fileSize,
+                languages: languages,
+                timeout: SearchTimeout,
+                ct: ct,
                 priority: true
             );
 
         if (candidates.Count == 0)
             candidates = await openSubtitlesAdapter.SearchByFilenameAsync(
-                file.Filename,
-                languages,
-                SearchTimeout,
-                ct,
+                filename: file.Filename,
+                languages: languages,
+                timeout: SearchTimeout,
+                ct: ct,
                 priority: true
             );
 
@@ -176,13 +174,13 @@ public class SubtitlesController(
             int? year = target.Year > 0 ? (int)target.Year : null;
 
             candidates = await openSubtitlesAdapter.SearchByTitleAsync(
-                title,
-                season,
-                episode,
-                year,
-                languages,
-                SearchTimeout,
-                ct,
+                title: title,
+                season: season,
+                episode: episode,
+                year: year,
+                languages: languages,
+                timeout: SearchTimeout,
+                ct: ct,
                 priority: true
             );
         }
@@ -192,13 +190,13 @@ public class SubtitlesController(
         // instead. Re-check the flag so a rate-limited search reports 429, not an empty 200.
         if (candidates.Count == 0 && openSubtitlesAdapter.IsRateLimited)
             return TooManyRequestsResponse(
-                "OpenSubtitles is rate-limited by the upstream provider. Try again in a few minutes."
+                detail: "OpenSubtitles is rate-limited by the upstream provider. Try again in a few minutes."
             );
 
-        List<SubtitleSearchResultDto> results = candidates.Select(MapToDto).ToList();
+        List<SubtitleSearchResultDto> results = candidates.Select(selector: MapToDto).ToList();
 
         return Ok(
-            new StatusResponseDto<List<SubtitleSearchResultDto>>
+            value: new StatusResponseDto<List<SubtitleSearchResultDto>>
             {
                 Status = "ok",
                 Data = results,
@@ -215,39 +213,39 @@ public class SubtitlesController(
     /// so it appears in every future watch response. Returns the sidecar's playable URL so the caller
     /// can also add it to the CURRENT playback session immediately, without waiting on a re-fetch.
     /// </summary>
-    [HttpPost("download")]
+    [HttpPost(template: "download")]
     public async Task<IActionResult> Download(
         [FromBody] SubtitleDownloadRequestDto request,
         CancellationToken ct = default
     )
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to download subtitles");
+        if (!AuthPolicy.IsAllowed(principal: User))
+            return UnauthorizedResponse(detail: "You do not have permission to download subtitles");
 
         if (request.Type != MediaTypes.MovieMediaType && request.Type != MediaTypes.TvMediaType)
-            return BadRequestResponse($"Invalid type '{request.Type}'. Expected 'movie' or 'tv'.");
+            return BadRequestResponse(detail: $"Invalid type '{request.Type}'. Expected 'movie' or 'tv'.");
 
-        if (string.IsNullOrWhiteSpace(request.DownloadUrl))
-            return BadRequestResponse("downloadUrl is required");
+        if (string.IsNullOrWhiteSpace(value: request.DownloadUrl))
+            return BadRequestResponse(detail: "downloadUrl is required");
 
         // download_url is the opaque token from subtitles/search, but nothing forces
         // that: it is fetched server-side, so an authenticated user could point it at
         // loopback/LAN/cloud-metadata (SSRF). Reject any URL that is not an http(s)
         // link to a publicly routable host before doing anything else.
-        if (!await ServerSideRequestGuard.IsSafePublicHttpUrlAsync(request.DownloadUrl, ct))
+        if (!await ServerSideRequestGuard.IsSafePublicHttpUrlAsync(url: request.DownloadUrl, cancellationToken: ct))
             return BadRequestResponse(
-                "download_url must be an absolute http(s) URL that resolves to a public host."
+                detail: "download_url must be an absolute http(s) URL that resolves to a public host."
             );
 
-        if (string.IsNullOrWhiteSpace(request.Language))
-            return BadRequestResponse("language is required");
+        if (string.IsNullOrWhiteSpace(value: request.Language))
+            return BadRequestResponse(detail: "language is required");
 
         Ulid? requestedVideoFileId = null;
-        if (!string.IsNullOrWhiteSpace(request.VideoFileId))
+        if (!string.IsNullOrWhiteSpace(value: request.VideoFileId))
         {
-            if (!Ulid.TryParse(request.VideoFileId, out Ulid parsedVideoFileId))
-                return BadRequestResponse("Invalid videoFileId");
+            if (!Ulid.TryParse(base32: request.VideoFileId, ulid: out Ulid parsedVideoFileId))
+                return BadRequestResponse(detail: "Invalid videoFileId");
             requestedVideoFileId = parsedVideoFileId;
         }
 
@@ -258,30 +256,30 @@ public class SubtitlesController(
         try
         {
             resolved = await videoPlaylistManager.GetPlaylist(
-                userId,
-                request.Type,
-                request.Id.ToString(),
-                null,
-                language,
-                country
+                userId: userId,
+                type: request.Type,
+                listId: request.Id.ToString(),
+                itemId: null,
+                language: language,
+                country: country
             );
         }
         catch (ArgumentException)
         {
-            return BadRequestResponse($"Invalid type '{request.Type}'. Expected 'movie' or 'tv'.");
+            return BadRequestResponse(detail: $"Invalid type '{request.Type}'. Expected 'movie' or 'tv'.");
         }
 
         VideoPlaylistResponseDto? target = requestedVideoFileId is not null
-            ? resolved.Playlist.FirstOrDefault(p => p.VideoId == requestedVideoFileId.Value)
+            ? resolved.Playlist.FirstOrDefault(predicate: p => p.VideoId == requestedVideoFileId.Value)
                 ?? resolved.Item
             : resolved.Item;
 
         if (target is null)
-            return NotFoundResponse("No video found for the given media");
+            return NotFoundResponse(detail: "No video found for the given media");
 
-        VideoFile? file = await videoFileRepository.GetByIdAsync(target.VideoId, ct);
+        VideoFile? file = await videoFileRepository.GetByIdAsync(id: target.VideoId, ct: ct);
         if (file is null)
-            return NotFoundResponse("Video file not found");
+            return NotFoundResponse(detail: "Video file not found");
 
         SubtitleCandidate candidate = new(
             Provider: "OpenSubtitles",
@@ -299,38 +297,38 @@ public class SubtitlesController(
         {
             // Someone is sat in front of the player waiting on this, so it jumps the queue ahead
             // of whatever the backlog sweep has already stacked up.
-            rawBytes = await openSubtitlesAdapter.DownloadAsync(candidate, ct, priority: true);
+            rawBytes = await openSubtitlesAdapter.DownloadAsync(candidate: candidate, ct: ct, priority: true);
         }
         catch (OpenSubtitlesRateLimitException)
         {
             return TooManyRequestsResponse(
-                "OpenSubtitles is rate-limited by the upstream provider. Try again in a few minutes."
+                detail: "OpenSubtitles is rate-limited by the upstream provider. Try again in a few minutes."
             );
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
             logger.LogError(
-                ex,
-                "Failed to download subtitle from {DownloadUrl}",
-                request.DownloadUrl
+                exception: ex,
+                message: "Failed to download subtitle from {DownloadUrl}",
+                args: request.DownloadUrl
             );
-            return InternalServerErrorResponse($"Failed to download subtitle: {ex.Message}");
+            return InternalServerErrorResponse(detail: $"Failed to download subtitle: {ex.Message}");
         }
 
         string vttContent;
         try
         {
-            vttContent = ConvertToVtt(Encoding.UTF8.GetString(rawBytes), candidate.Format);
+            vttContent = ConvertToVtt(rawText: Encoding.UTF8.GetString(bytes: rawBytes), format: candidate.Format);
         }
         catch (NotSupportedException)
         {
             logger.LogWarning(
-                "Subtitle format {Format} is not convertible to WebVTT",
-                candidate.Format
+                message: "Subtitle format {Format} is not convertible to WebVTT",
+                args: candidate.Format
             );
             return UnprocessableEntityResponse(
-                $"Subtitle format '{candidate.Format}' is not supported — only SRT and VTT can be "
-                    + "converted to the WebVTT sidecar the player expects."
+                detail: $"Subtitle format '{candidate.Format}' is not supported — only SRT and VTT can be "
+                        + "converted to the WebVTT sidecar the player expects."
             );
         }
 
@@ -339,40 +337,38 @@ public class SubtitlesController(
         // reads to build the track URL, so the sidecar must land at the exact path it expects:
         // "{baseFolder}/subtitles{filenameWithoutExt}.{language}.{type}.{ext}" with no separator
         // between "subtitles" and the filename. Any change to that helper must update this too.
-        string filenameNoExt = file.Filename.OrEmpty().Replace(".mp4", "").Replace(".m3u8", "");
+        string filenameNoExt = file.Filename.OrEmpty().Replace(oldValue: ".mp4", newValue: "").Replace(oldValue: ".m3u8", newValue: "");
         string sidecarFileName =
             $"subtitles{filenameNoExt}.{request.Language}.{DownloadedSubtitleType}.{SidecarExtension}";
-        IStorage? storage = await ResolveStorageAsync(file);
+        IStorage? storage = await ResolveStorageAsync(file: file);
         if (storage is null)
         {
             logger.LogError(
-                "Cannot write subtitle sidecar: no storage backend for video file {VideoFileId} "
-                    + "(share {Share})",
-                file.Id,
-                file.Share
+                message: "Cannot write subtitle sidecar: no storage backend for video file {VideoFileId} "
+                         + "(share {Share})", args: [file.Id, file.Share]
             );
             return InternalServerErrorResponse(
-                "Could not resolve the storage this video lives on."
+                detail: "Could not resolve the storage this video lives on."
             );
         }
 
-        string sidecarPath = storage.CombinePath(file.HostFolder, sidecarFileName);
+        string sidecarPath = storage.CombinePath(parent: file.HostFolder, child: sidecarFileName);
 
         try
         {
-            byte[] vttBytes = Encoding.UTF8.GetBytes(vttContent);
-            await using Stream writeStream = storage.OpenWrite(sidecarPath, overwrite: true);
-            await writeStream.WriteAsync(vttBytes, ct);
+            byte[] vttBytes = Encoding.UTF8.GetBytes(s: vttContent);
+            await using Stream writeStream = storage.OpenWrite(path: sidecarPath, overwrite: true);
+            await writeStream.WriteAsync(buffer: vttBytes, cancellationToken: ct);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to write subtitle sidecar to {SidecarPath}", sidecarPath);
+            logger.LogError(exception: ex, message: "Failed to write subtitle sidecar to {SidecarPath}", args: sidecarPath);
             return InternalServerErrorResponse(
-                $"Failed to write subtitle sidecar to storage: {ex.Message}"
+                detail: $"Failed to write subtitle sidecar to storage: {ex.Message}"
             );
         }
 
-        await RegisterSubtitleAsync(file, request.Language, ct);
+        await RegisterSubtitleAsync(file: file, language: request.Language, ct: ct);
 
         string baseFolder = $"/{file.Share}{file.Folder}";
         string trackUrl =
@@ -386,7 +382,7 @@ public class SubtitlesController(
         );
 
         return Ok(
-            new StatusResponseDto<SubtitleDownloadResultDto>
+            value: new StatusResponseDto<SubtitleDownloadResultDto>
             {
                 Status = "ok",
                 Data = result,
@@ -405,9 +401,9 @@ public class SubtitlesController(
     private static string ConvertToVtt(string rawText, string format) =>
         format switch
         {
-            "srt" or "subrip" => SubtitleFormatConverter.SrtToVtt(rawText),
+            "srt" or "subrip" => SubtitleFormatConverter.SrtToVtt(srtContent: rawText),
             "vtt" or "webvtt" => rawText,
-            _ => throw new NotSupportedException(format),
+            _ => throw new NotSupportedException(message: format),
         };
 
     /// <summary>
@@ -423,7 +419,7 @@ public class SubtitlesController(
         {
             subtitles =
                 JsonConvert.DeserializeObject<List<VideoPlaylistResponseDto.Subtitle>>(
-                    file.Subtitles ?? "[]"
+                    value: file.Subtitles ?? "[]"
                 ) ?? [];
         }
         catch (JsonException)
@@ -431,12 +427,12 @@ public class SubtitlesController(
             subtitles = [];
         }
 
-        subtitles.RemoveAll(s =>
-            string.Equals(s.Language, language, StringComparison.OrdinalIgnoreCase)
-            && string.Equals(s.Type, DownloadedSubtitleType, StringComparison.OrdinalIgnoreCase)
+        subtitles.RemoveAll(match: s =>
+            string.Equals(a: s.Language, b: language, comparisonType: StringComparison.OrdinalIgnoreCase)
+            && string.Equals(a: s.Type, b: DownloadedSubtitleType, comparisonType: StringComparison.OrdinalIgnoreCase)
         );
         subtitles.Add(
-            new()
+            item: new()
             {
                 Language = language,
                 Type = DownloadedSubtitleType,
@@ -445,9 +441,9 @@ public class SubtitlesController(
         );
 
         await fileRepository.UpdateVideoFileSubtitlesAsync(
-            file.Id,
-            JsonConvert.SerializeObject(subtitles),
-            ct
+            videoFileId: file.Id,
+            subtitlesJson: JsonConvert.SerializeObject(value: subtitles),
+            ct: ct
         );
     }
 
@@ -460,28 +456,28 @@ public class SubtitlesController(
     /// </summary>
     private async Task<IStorage?> ResolveStorageAsync(VideoFile file)
     {
-        if (!Ulid.TryParse(file.Share, out Ulid folderId))
+        if (!Ulid.TryParse(base32: file.Share, ulid: out Ulid folderId))
             return null;
 
-        Folder? folder = await folderRepository.GetFolderByIdAsync(folderId);
+        Folder? folder = await folderRepository.GetFolderByIdAsync(folderId: folderId);
         if (folder is null)
             return null;
 
-        return storageFactory.For(folder.Id, folder.DriverId, string.Empty);
+        return storageFactory.For(folderId: folder.Id, driverId: folder.DriverId, subPath: string.Empty);
     }
 
     private static (string? Hash, long FileSize) TryComputeHash(IStorage storage, VideoFile file)
     {
         try
         {
-            string path = storage.CombinePath(file.HostFolder, file.Filename);
-            if (!storage.Exists(path))
+            string path = storage.CombinePath(parent: file.HostFolder, child: file.Filename);
+            if (!storage.Exists(path: path))
                 return (null, 0);
 
-            long fileSize = storage.Size(path);
-            using Stream stream = storage.OpenRead(path);
-            ulong hash = MovieHashHelper.ComputeMovieHash(stream, fileSize);
-            return (MovieHashHelper.FormatHash(hash), fileSize);
+            long fileSize = storage.Size(path: path);
+            using Stream stream = storage.OpenRead(path: path);
+            ulong hash = MovieHashHelper.ComputeMovieHash(stream: stream, fileSize: fileSize);
+            return (MovieHashHelper.FormatHash(hash: hash), fileSize);
         }
         catch (Exception)
         {
@@ -492,18 +488,18 @@ public class SubtitlesController(
 
     private static string[] ResolveLanguages(IQueryCollection query, string fallback)
     {
-        if (!query.TryGetValue("language", out StringValues values) || values.Count == 0)
+        if (!query.TryGetValue(key: "language", value: out StringValues values) || values.Count == 0)
             return [fallback];
 
         string[] languages = values
-            .SelectMany(v =>
+            .SelectMany(selector: v =>
                 (v ?? string.Empty).Split(
-                    ',',
-                    StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+                    separator: ',',
+                    options: StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
                 )
             )
-            .Where(l => !string.IsNullOrWhiteSpace(l))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(predicate: l => !string.IsNullOrWhiteSpace(value: l))
+            .Distinct(comparer: StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
         return languages.Length > 0 ? languages : [fallback];
@@ -514,7 +510,7 @@ public class SubtitlesController(
             Id: candidate.DownloadUrl,
             DownloadUrl: candidate.DownloadUrl,
             Language: candidate.Language,
-            LanguageName: Culture.EnglishLanguageName(candidate.Language),
+            LanguageName: Culture.EnglishLanguageName(code: candidate.Language),
             ReleaseName: candidate.ReleaseName,
             FileName: candidate.FileName,
             Downloads: candidate.Downloads,

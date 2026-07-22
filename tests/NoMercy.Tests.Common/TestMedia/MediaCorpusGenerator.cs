@@ -32,21 +32,21 @@ public static class MediaCorpusGenerator
     {
         List<string> created = [];
         foreach (MediaCorpusEntry entry in MediaCorpus.Entries)
-            created.Add(Generate(entry, rootDir, ffmpegPath));
+            created.Add(item: Generate(entry: entry, rootDir: rootDir, ffmpegPath: ffmpegPath));
         return created;
     }
 
     public static string Generate(MediaCorpusEntry entry, string rootDir, string ffmpegPath)
     {
         string outPath = Path.Combine(
-            rootDir,
-            entry.RelativePath.Replace('/', Path.DirectorySeparatorChar)
+            path1: rootDir,
+            path2: entry.RelativePath.Replace(oldChar: '/', newChar: Path.DirectorySeparatorChar)
         );
-        Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
-        if (File.Exists(outPath))
+        Directory.CreateDirectory(path: Path.GetDirectoryName(path: outPath)!);
+        if (File.Exists(path: outPath))
             return outPath;
 
-        List<string> args = BuildFfmpegArgs(entry, outPath);
+        List<string> args = BuildFfmpegArgs(entry: entry, outPath: outPath);
 
         ProcessStartInfo psi = new()
         {
@@ -57,15 +57,15 @@ public static class MediaCorpusGenerator
             RedirectStandardError = true,
         };
         foreach (string arg in args)
-            psi.ArgumentList.Add(arg);
+            psi.ArgumentList.Add(item: arg);
 
-        using Process process = Process.Start(psi)!;
+        using Process process = Process.Start(startInfo: psi)!;
         string stderr = process.StandardError.ReadToEnd();
         process.StandardOutput.ReadToEnd();
         process.WaitForExit();
         if (process.ExitCode != 0)
             throw new InvalidOperationException(
-                $"ffmpeg failed generating '{entry.RelativePath}': {stderr}"
+                message: $"ffmpeg failed generating '{entry.RelativePath}': {stderr}"
             );
 
         return outPath;
@@ -77,7 +77,8 @@ public static class MediaCorpusGenerator
 
         // Video source — short, deterministic. HDR entries get PQ/BT.2020 tags
         // so the analyzer classifies them as HDR.
-        args.AddRange([
+        args.AddRange(collection:
+        [
             "-f",
             "lavfi",
             "-i",
@@ -87,17 +88,18 @@ public static class MediaCorpusGenerator
         // Audio source(s) — one or two tracks for dual-audio releases.
         int audioTracks = entry.DualAudio ? 2 : 1;
         for (int i = 0; i < audioTracks; i++)
-            args.AddRange(["-f", "lavfi", "-i", $"sine=frequency={220 + (i * 220)}:duration=1"]);
+            args.AddRange(collection: ["-f", "lavfi", "-i", $"sine=frequency={220 + (i * 220)}:duration=1"]);
 
         if (entry.Hdr)
-            args.AddRange([
+            args.AddRange(collection:
+            [
                 "-vf",
                 "format=yuv420p10le,setparams=color_primaries=bt2020:color_trc=smpte2084:colorspace=bt2020nc",
             ]);
 
         // Video codec.
         args.AddRange(
-            entry.VideoCodec switch
+            collection: entry.VideoCodec switch
             {
                 MediaVideoCodec.H264 =>
                 [
@@ -110,11 +112,12 @@ public static class MediaCorpusGenerator
                 ],
                 MediaVideoCodec.H265 => ["-c:v", "libx265", "-preset", "ultrafast"],
                 MediaVideoCodec.Av1 => ["-c:v", "libaom-av1", "-cpu-used", "8", "-b:v", "200k"],
-                _ => throw new ArgumentOutOfRangeException(nameof(entry)),
+                _ => throw new ArgumentOutOfRangeException(paramName: nameof(entry)),
             }
         );
         if (entry is { Hdr: true, VideoCodec: MediaVideoCodec.H265 })
-            args.AddRange([
+            args.AddRange(collection:
+            [
                 "-x265-params",
                 "hdr10=1:colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc",
                 "-color_primaries",
@@ -127,22 +130,22 @@ public static class MediaCorpusGenerator
 
         // Audio codec.
         args.AddRange(
-            entry.AudioCodec switch
+            collection: entry.AudioCodec switch
             {
                 MediaAudioCodec.Aac => ["-c:a", "aac", "-b:a", "64k"],
                 MediaAudioCodec.Ac3 => ["-c:a", "ac3", "-b:a", "128k"],
                 MediaAudioCodec.Flac => ["-c:a", "flac"],
-                _ => throw new ArgumentOutOfRangeException(nameof(entry)),
+                _ => throw new ArgumentOutOfRangeException(paramName: nameof(entry)),
             }
         );
 
         // Map every input so both audio tracks land in the output.
-        args.AddRange(["-map", "0:v:0"]);
+        args.AddRange(collection: ["-map", "0:v:0"]);
         for (int i = 0; i < audioTracks; i++)
-            args.AddRange(["-map", $"{i + 1}:a:0"]);
+            args.AddRange(collection: ["-map", $"{i + 1}:a:0"]);
 
         // Container is implied by the extension; ffmpeg picks the muxer.
-        args.Add(outPath);
+        args.Add(item: outPath);
         return args;
     }
 }

@@ -15,12 +15,12 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class RecordingArtistCredit
 {
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("artist")]
+    [JsonProperty(propertyName: "artist")]
     public PurpleArtist Artist { get; set; } = new();
 
-    [JsonProperty("joinphrase")]
+    [JsonProperty(propertyName: "joinphrase")]
     public string Joinphrase { get; set; } = string.Empty;
 }

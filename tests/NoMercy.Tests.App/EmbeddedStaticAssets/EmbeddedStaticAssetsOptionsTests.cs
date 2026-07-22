@@ -38,7 +38,7 @@ public sealed class EmbeddedStaticAssetsOptionsTests
     {
         EmbeddedStaticAssetsOptions options = new();
 
-        options.HtmlFilePatterns.Should().ContainSingle().Which.Should().Be("index.html");
+        options.HtmlFilePatterns.Should().ContainSingle().Which.Should().Be(expected: "index.html");
     }
 
     [Fact]

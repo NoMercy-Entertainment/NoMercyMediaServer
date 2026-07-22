@@ -37,13 +37,13 @@ public class DeviceHubCapabilitiesTests
             Notes = "Nokia bedroom TV",
         };
 
-        string json = JsonConvert.SerializeObject(payload);
+        string json = JsonConvert.SerializeObject(value: payload);
         json.Should().NotBeNullOrEmpty();
 
-        DeviceCapabilities? roundTripped = JsonConvert.DeserializeObject<DeviceCapabilities>(json);
+        DeviceCapabilities? roundTripped = JsonConvert.DeserializeObject<DeviceCapabilities>(value: json);
         roundTripped.Should().NotBeNull();
-        roundTripped!.MaxAudioChannels.Should().Be(2);
-        roundTripped.RamTier.Should().Be(DeviceRamTier.LowRam);
+        roundTripped!.MaxAudioChannels.Should().Be(expected: 2);
+        roundTripped.RamTier.Should().Be(expected: DeviceRamTier.LowRam);
     }
 
     [Fact]
@@ -64,16 +64,16 @@ public class DeviceHubCapabilitiesTests
         DeviceCapabilities second = new() { MaxAudioChannels = 2, AudioCodecs = ["aac"] };
 
         Device device = new() { DeviceId = "test-device", Type = "tv" };
-        device.CapabilitiesJson = JsonConvert.SerializeObject(first);
+        device.CapabilitiesJson = JsonConvert.SerializeObject(value: first);
 
         // Full replace: second declaration overwrites entirely
-        device.CapabilitiesJson = JsonConvert.SerializeObject(second);
+        device.CapabilitiesJson = JsonConvert.SerializeObject(value: second);
 
         DeviceCapabilities? parsed = JsonConvert.DeserializeObject<DeviceCapabilities>(
-            device.CapabilitiesJson
+            value: device.CapabilitiesJson
         );
         parsed.Should().NotBeNull();
-        parsed!.MaxAudioChannels.Should().Be(2);
+        parsed!.MaxAudioChannels.Should().Be(expected: 2);
         parsed.VideoCodecs.Should().BeEmpty(); // was hevc, now gone
         parsed.MaxVideoHeight.Should().BeNull(); // was 2160, now null
         parsed.HdrSupport.Should().BeFalse(); // back to default
@@ -82,14 +82,14 @@ public class DeviceHubCapabilitiesTests
     [Fact]
     public void DeclareCapabilities_Registry_CachesAfterSet()
     {
-        DeviceCapabilityRegistry registry = new(null!);
+        DeviceCapabilityRegistry registry = new(contextFactory: null!);
         DeviceCapabilities caps = new() { MaxAudioChannels = 2, RamTier = DeviceRamTier.LowRam };
 
-        registry.Set("nokia-01", caps);
+        registry.Set(deviceId: "nokia-01", capabilities: caps);
 
-        DeviceCapabilities? cached = registry.Get("nokia-01");
+        DeviceCapabilities? cached = registry.Get(deviceId: "nokia-01");
         cached.Should().NotBeNull();
-        cached!.MaxAudioChannels.Should().Be(2);
+        cached!.MaxAudioChannels.Should().Be(expected: 2);
     }
 
     [Fact]
@@ -97,8 +97,8 @@ public class DeviceHubCapabilitiesTests
     {
         // If deviceId is not in the ConnectedClients map, the method returns without
         // touching the registry. Verify the registry has nothing cached for that key.
-        DeviceCapabilityRegistry registry = new(null!);
-        DeviceCapabilities? result = registry.Get("ghost-device");
+        DeviceCapabilityRegistry registry = new(contextFactory: null!);
+        DeviceCapabilities? result = registry.Get(deviceId: "ghost-device");
         result.Should().BeNull();
     }
 }

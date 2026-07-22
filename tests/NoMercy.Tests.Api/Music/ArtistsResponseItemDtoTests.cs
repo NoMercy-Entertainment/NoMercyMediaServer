@@ -18,7 +18,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Music;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class ArtistsResponseItemDtoTests
 {
     private static Artist BuildArtist(
@@ -37,9 +37,9 @@ public class ArtistsResponseItemDtoTests
             Cover = cover,
         };
         foreach (Image image in images ?? [])
-            artist.Images.Add(image);
+            artist.Images.Add(item: image);
         foreach (ArtistTrack artistTrack in artistTracks ?? [])
-            artist.ArtistTrack.Add(artistTrack);
+            artist.ArtistTrack.Add(item: artistTrack);
         if (colorPalette is not null)
             artist.ColorPalette = colorPalette;
 
@@ -61,9 +61,9 @@ public class ArtistsResponseItemDtoTests
             Cover = cover,
         };
         foreach (Image image in images ?? [])
-            album.Images.Add(image);
+            album.Images.Add(item: image);
         foreach (AlbumTrack albumTrack in albumTracks ?? [])
-            album.AlbumTrack.Add(albumTrack);
+            album.AlbumTrack.Add(item: albumTrack);
 
         return album;
     }
@@ -85,9 +85,9 @@ public class ArtistsResponseItemDtoTests
     {
         Artist artist = BuildArtist(cover: "/artist-cover.jpg");
 
-        ArtistsResponseItemDto dto = new(artist);
+        ArtistsResponseItemDto dto = new(artist: artist);
 
-        dto.Cover.Should().Be("/images/music/artist-cover.jpg");
+        dto.Cover.Should().Be(expected: "/images/music/artist-cover.jpg");
     }
 
     [Fact]
@@ -98,9 +98,9 @@ public class ArtistsResponseItemDtoTests
             images: [new() { Type = "thumb", FilePath = "/first-image.jpg" }]
         );
 
-        ArtistsResponseItemDto dto = new(artist);
+        ArtistsResponseItemDto dto = new(artist: artist);
 
-        dto.Cover.Should().Be("/images/music/first-image.jpg");
+        dto.Cover.Should().Be(expected: "/images/music/first-image.jpg");
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public class ArtistsResponseItemDtoTests
     {
         Artist artist = BuildArtist(cover: null, images: []);
 
-        ArtistsResponseItemDto dto = new(artist);
+        ArtistsResponseItemDto dto = new(artist: artist);
 
         dto.Cover.Should().BeNull();
     }
@@ -118,12 +118,12 @@ public class ArtistsResponseItemDtoTests
     {
         Artist artist = BuildArtist();
         Guid artistId = artist.Id;
-        artist.ArtistTrack.Add(BuildArtistTrack(artistId));
-        artist.ArtistTrack.Add(BuildArtistTrack(artistId));
+        artist.ArtistTrack.Add(item: BuildArtistTrack(artistId: artistId));
+        artist.ArtistTrack.Add(item: BuildArtistTrack(artistId: artistId));
 
-        ArtistsResponseItemDto dto = new(artist);
+        ArtistsResponseItemDto dto = new(artist: artist);
 
-        dto.Tracks.Should().Be(2);
+        dto.Tracks.Should().Be(expected: 2);
     }
 
     [Fact]
@@ -133,16 +133,16 @@ public class ArtistsResponseItemDtoTests
         Artist artist = BuildArtist(colorPalette: palette);
         Guid artistId = artist.Id;
 
-        ArtistsResponseItemDto dto = new(artist);
+        ArtistsResponseItemDto dto = new(artist: artist);
 
-        dto.Id.Should().Be(artistId);
-        dto.Name.Should().Be("Test Artist");
-        dto.Disambiguation.Should().Be("The Band");
-        dto.Description.Should().Be("Artist description");
-        dto.Type.Should().Be("artist");
-        dto.Link.ToString().Should().Be($"/music/artists/{artistId}");
+        dto.Id.Should().Be(expected: artistId);
+        dto.Name.Should().Be(expected: "Test Artist");
+        dto.Disambiguation.Should().Be(expected: "The Band");
+        dto.Description.Should().Be(expected: "Artist description");
+        dto.Type.Should().Be(expected: "artist");
+        dto.Link.ToString().Should().Be(expected: $"/music/artists/{artistId}");
         dto.ColorPalette.Should().NotBeNull();
-        dto.ColorPalette!.Cover!.Dominant.Should().Be("#111111");
+        dto.ColorPalette!.Cover!.Dominant.Should().Be(expected: "#111111");
     }
 
     [Fact]
@@ -150,9 +150,9 @@ public class ArtistsResponseItemDtoTests
     {
         Album album = BuildAlbum(cover: "/album-cover.jpg");
 
-        ArtistsResponseItemDto dto = new(album);
+        ArtistsResponseItemDto dto = new(album: album);
 
-        dto.Cover.Should().Be("/images/music/album-cover.jpg");
+        dto.Cover.Should().Be(expected: "/images/music/album-cover.jpg");
     }
 
     [Fact]
@@ -163,9 +163,9 @@ public class ArtistsResponseItemDtoTests
             images: [new() { Type = "background", FilePath = "/album-first-image.jpg" }]
         );
 
-        ArtistsResponseItemDto dto = new(album);
+        ArtistsResponseItemDto dto = new(album: album);
 
-        dto.Cover.Should().Be("/images/music/album-first-image.jpg");
+        dto.Cover.Should().Be(expected: "/images/music/album-first-image.jpg");
     }
 
     [Fact]
@@ -173,13 +173,13 @@ public class ArtistsResponseItemDtoTests
     {
         Album album = BuildAlbum();
         Guid albumId = album.Id;
-        album.AlbumTrack.Add(BuildAlbumTrackForArtist(albumId));
-        album.AlbumTrack.Add(BuildAlbumTrackForArtist(albumId));
-        album.AlbumTrack.Add(BuildAlbumTrackForArtist(albumId));
+        album.AlbumTrack.Add(item: BuildAlbumTrackForArtist(albumId: albumId));
+        album.AlbumTrack.Add(item: BuildAlbumTrackForArtist(albumId: albumId));
+        album.AlbumTrack.Add(item: BuildAlbumTrackForArtist(albumId: albumId));
 
-        ArtistsResponseItemDto dto = new(album);
+        ArtistsResponseItemDto dto = new(album: album);
 
-        dto.Tracks.Should().Be(3);
+        dto.Tracks.Should().Be(expected: 3);
     }
 
     [Fact]
@@ -188,14 +188,14 @@ public class ArtistsResponseItemDtoTests
         Album album = BuildAlbum();
         Guid albumId = album.Id;
 
-        ArtistsResponseItemDto dto = new(album);
+        ArtistsResponseItemDto dto = new(album: album);
 
-        dto.Id.Should().Be(albumId);
-        dto.Name.Should().Be("Test Album");
-        dto.Disambiguation.Should().Be("Deluxe");
-        dto.Description.Should().Be("Album description");
-        dto.Type.Should().Be("artist");
-        dto.Link.ToString().Should().Be($"/music/artists/{albumId}");
+        dto.Id.Should().Be(expected: albumId);
+        dto.Name.Should().Be(expected: "Test Album");
+        dto.Disambiguation.Should().Be(expected: "Deluxe");
+        dto.Description.Should().Be(expected: "Album description");
+        dto.Type.Should().Be(expected: "artist");
+        dto.Link.ToString().Should().Be(expected: $"/music/artists/{albumId}");
     }
 
     private static ArtistCardDto BuildCard(
@@ -224,9 +224,9 @@ public class ArtistsResponseItemDtoTests
     {
         ArtistCardDto card = BuildCard(cover: "/card-cover.jpg");
 
-        ArtistsResponseItemDto dto = new(card);
+        ArtistsResponseItemDto dto = new(artist: card);
 
-        dto.Cover.Should().Be("/images/music/card-cover.jpg");
+        dto.Cover.Should().Be(expected: "/images/music/card-cover.jpg");
     }
 
     [Fact]
@@ -234,9 +234,9 @@ public class ArtistsResponseItemDtoTests
     {
         ArtistCardDto card = BuildCard(cover: null, thumbImagePath: "/thumb.jpg");
 
-        ArtistsResponseItemDto dto = new(card);
+        ArtistsResponseItemDto dto = new(artist: card);
 
-        dto.Cover.Should().Be("/images/music/thumb.jpg");
+        dto.Cover.Should().Be(expected: "/images/music/thumb.jpg");
     }
 
     [Fact]
@@ -244,7 +244,7 @@ public class ArtistsResponseItemDtoTests
     {
         ArtistCardDto card = BuildCard(cover: null, thumbImagePath: null);
 
-        ArtistsResponseItemDto dto = new(card);
+        ArtistsResponseItemDto dto = new(artist: card);
 
         dto.Cover.Should().BeNull();
     }
@@ -254,10 +254,10 @@ public class ArtistsResponseItemDtoTests
     {
         ArtistCardDto card = BuildCard(colorPaletteJson: """{"cover":{"dominant":"#222222"}}""");
 
-        ArtistsResponseItemDto dto = new(card);
+        ArtistsResponseItemDto dto = new(artist: card);
 
         dto.ColorPalette.Should().NotBeNull();
-        dto.ColorPalette!.Cover!.Dominant.Should().Be("#222222");
+        dto.ColorPalette!.Cover!.Dominant.Should().Be(expected: "#222222");
     }
 
     [Fact]
@@ -265,7 +265,7 @@ public class ArtistsResponseItemDtoTests
     {
         ArtistCardDto card = BuildCard(colorPaletteJson: "");
 
-        ArtistsResponseItemDto dto = new(card);
+        ArtistsResponseItemDto dto = new(artist: card);
 
         dto.ColorPalette.Should().BeNull();
     }
@@ -275,9 +275,9 @@ public class ArtistsResponseItemDtoTests
     {
         ArtistCardDto card = BuildCard();
 
-        ArtistsResponseItemDto dto = new(card);
+        ArtistsResponseItemDto dto = new(artist: card);
 
-        dto.Tracks.Should().Be(7);
+        dto.Tracks.Should().Be(expected: 7);
     }
 
     [Fact]
@@ -286,13 +286,13 @@ public class ArtistsResponseItemDtoTests
         ArtistCardDto card = BuildCard();
         Guid cardId = card.Id;
 
-        ArtistsResponseItemDto dto = new(card);
+        ArtistsResponseItemDto dto = new(artist: card);
 
-        dto.Id.Should().Be(cardId);
-        dto.Name.Should().Be("Card Artist");
-        dto.Disambiguation.Should().Be("Card Disambiguation");
-        dto.Description.Should().Be("Card description");
-        dto.Type.Should().Be("artist");
-        dto.Link.ToString().Should().Be($"/music/artists/{cardId}");
+        dto.Id.Should().Be(expected: cardId);
+        dto.Name.Should().Be(expected: "Card Artist");
+        dto.Disambiguation.Should().Be(expected: "Card Disambiguation");
+        dto.Description.Should().Be(expected: "Card description");
+        dto.Type.Should().Be(expected: "artist");
+        dto.Link.ToString().Should().Be(expected: $"/music/artists/{cardId}");
     }
 }

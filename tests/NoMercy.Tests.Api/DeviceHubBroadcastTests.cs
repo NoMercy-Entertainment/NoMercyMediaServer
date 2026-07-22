@@ -36,7 +36,7 @@ namespace NoMercy.Tests.Api;
 // DI-configured MediaContext (via NoMercyApiFactory) and mock only the SignalR
 // plumbing (HubCallerContext, IHubCallerClients) that a live connection would
 // normally supply.
-[Trait("Category", "Characterization")]
+[Trait(name: "Category", value: "Characterization")]
 public class DeviceHubBroadcastTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -72,7 +72,7 @@ public class DeviceHubBroadcastTests : IClassFixture<NoMercyApiFactory>
             Fingerprint = $"fp-b-{Guid.NewGuid()}",
             OwnerUserId = TestAuthHandler.DefaultUserId,
         };
-        ctx.Devices.AddRange(deviceA, deviceB);
+        ctx.Devices.AddRange(entities: [deviceA, deviceB]);
         await ctx.SaveChangesAsync();
 
         return (deviceA.Id, deviceB.Id);
@@ -87,39 +87,39 @@ public class DeviceHubBroadcastTests : IClassFixture<NoMercyApiFactory>
             IDbContextFactory<MediaContext>
         >();
         ConnectedClients connectedClients = _factory.GetConnectedClients();
-        DeviceBusRegistry busRegistry = new(contextFactory, Mock.Of<IHubContext<DeviceHub>>());
+        DeviceBusRegistry busRegistry = new(contextFactory: contextFactory, hubContext: Mock.Of<IHubContext<DeviceHub>>());
 
         DefaultHttpContext httpContext = new() { RequestServices = null! };
         httpContext.Request.Path = "/deviceHub";
 
         DeviceHub hub = new(
-            new HttpContextAccessorStub(httpContext),
-            contextFactory,
-            connectedClients,
-            busRegistry,
-            Mock.Of<Database.Activity.IActivityLogger>(),
-            Mock.Of<IDeviceCapabilityRegistry>(),
-            NullLogger<DeviceHub>.Instance
+            httpContextAccessor: new HttpContextAccessorStub(httpContext: httpContext),
+            contextFactory: contextFactory,
+            connectedClients: connectedClients,
+            busRegistry: busRegistry,
+            activityLogger: Mock.Of<Database.Activity.IActivityLogger>(),
+            capabilityRegistry: Mock.Of<IDeviceCapabilityRegistry>(),
+            logger: NullLogger<DeviceHub>.Instance
         );
 
         ClaimsPrincipal principal = new(
-            new ClaimsIdentity(
-                [new(ClaimTypes.NameIdentifier, TestAuthHandler.DefaultUserId.ToString())],
-                "TestAuth"
+            identity: new ClaimsIdentity(
+                claims: [new(type: ClaimTypes.NameIdentifier, value: TestAuthHandler.DefaultUserId.ToString())],
+                authenticationType: "TestAuth"
             )
         );
 
         Mock<HubCallerContext> context = new();
-        context.Setup(c => c.User).Returns(principal);
-        context.Setup(c => c.ConnectionId).Returns(Guid.NewGuid().ToString());
-        context.Setup(c => c.ConnectionAborted).Returns(CancellationToken.None);
+        context.Setup(expression: c => c.User).Returns(value: principal);
+        context.Setup(expression: c => c.ConnectionId).Returns(value: Guid.NewGuid().ToString());
+        context.Setup(expression: c => c.ConnectionAborted).Returns(value: CancellationToken.None);
 
         callerProxy = new();
         userProxy = new();
 
         Mock<IHubCallerClients> clients = new();
-        clients.Setup(c => c.Caller).Returns(callerProxy.Object);
-        clients.Setup(c => c.User(It.IsAny<string>())).Returns(userProxy.Object);
+        clients.Setup(expression: c => c.Caller).Returns(value: callerProxy.Object);
+        clients.Setup(expression: c => c.User(It.IsAny<string>())).Returns(value: userProxy.Object);
 
         hub.Context = context.Object;
         hub.Clients = clients.Object;
@@ -133,37 +133,37 @@ public class DeviceHubBroadcastTests : IClassFixture<NoMercyApiFactory>
         IDbContextFactory<MediaContext> contextFactory = _factory.Services.GetRequiredService<
             IDbContextFactory<MediaContext>
         >();
-        await SeedTwoOwnedDevicesAsync(contextFactory);
+        await SeedTwoOwnedDevicesAsync(contextFactory: contextFactory);
 
         DeviceHub hub = CreateHub(
-            out Mock<ISingleClientProxy> callerProxy,
-            out Mock<ISingleClientProxy> userProxy
+            callerProxy: out Mock<ISingleClientProxy> callerProxy,
+            userProxy: out Mock<ISingleClientProxy> userProxy
         );
 
         await hub.OnConnectedAsync();
 
         // The whole user group must receive the refreshed list...
         userProxy.Verify(
-            p =>
+            expression: p =>
                 p.SendCoreAsync(
                     "DeviceListChanged",
                     It.Is<object?[]>(args => args.Length == 1 && args[0] is List<DeviceListItem>),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Once
+            times: Times.Once
         );
 
         // ...never just the connecting client. This is the regression: the old
         // code sent "DeviceListChanged" only to Clients.Caller, so every other
         // already-connected device's picker stayed stale.
         callerProxy.Verify(
-            p =>
+            expression: p =>
                 p.SendCoreAsync(
                     "DeviceListChanged",
                     It.IsAny<object?[]>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Never
+            times: Times.Never
         );
     }
 
@@ -173,13 +173,13 @@ public class DeviceHubBroadcastTests : IClassFixture<NoMercyApiFactory>
         IDbContextFactory<MediaContext> contextFactory = _factory.Services.GetRequiredService<
             IDbContextFactory<MediaContext>
         >();
-        (Ulid deviceA, Ulid deviceB) = await SeedTwoOwnedDevicesAsync(contextFactory);
+        (Ulid deviceA, Ulid deviceB) = await SeedTwoOwnedDevicesAsync(contextFactory: contextFactory);
 
-        DeviceHub hub = CreateHub(out _, out Mock<ISingleClientProxy> userProxy);
+        DeviceHub hub = CreateHub(callerProxy: out _, userProxy: out Mock<ISingleClientProxy> userProxy);
 
         List<DeviceListItem>? broadcastList = null;
         userProxy
-            .Setup(p =>
+            .Setup(expression: p =>
                 p.SendCoreAsync(
                     "DeviceListChanged",
                     It.IsAny<object?[]>(),
@@ -187,14 +187,14 @@ public class DeviceHubBroadcastTests : IClassFixture<NoMercyApiFactory>
                 )
             )
             .Callback<string, object?[], CancellationToken>(
-                (_, args, _) => broadcastList = args[0] as List<DeviceListItem>
+                action: (_, args, _) => broadcastList = args[0] as List<DeviceListItem>
             )
-            .Returns(Task.CompletedTask);
+            .Returns(value: Task.CompletedTask);
 
         await hub.OnConnectedAsync();
 
         broadcastList.Should().NotBeNull();
-        broadcastList!.Select(d => d.DeviceId).Should().Contain([deviceA, deviceB]);
+        broadcastList!.Select(selector: d => d.DeviceId).Should().Contain(expected: [deviceA, deviceB]);
     }
 
     [Fact]
@@ -203,33 +203,33 @@ public class DeviceHubBroadcastTests : IClassFixture<NoMercyApiFactory>
         IDbContextFactory<MediaContext> contextFactory = _factory.Services.GetRequiredService<
             IDbContextFactory<MediaContext>
         >();
-        await SeedTwoOwnedDevicesAsync(contextFactory);
+        await SeedTwoOwnedDevicesAsync(contextFactory: contextFactory);
 
         DeviceHub hub = CreateHub(
-            out Mock<ISingleClientProxy> callerProxy,
-            out Mock<ISingleClientProxy> userProxy
+            callerProxy: out Mock<ISingleClientProxy> callerProxy,
+            userProxy: out Mock<ISingleClientProxy> userProxy
         );
 
-        await hub.OnDisconnectedAsync(null);
+        await hub.OnDisconnectedAsync(exception: null);
 
         userProxy.Verify(
-            p =>
+            expression: p =>
                 p.SendCoreAsync(
                     "DeviceListChanged",
                     It.IsAny<object?[]>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Once
+            times: Times.Once
         );
 
         callerProxy.Verify(
-            p =>
+            expression: p =>
                 p.SendCoreAsync(
                     "DeviceListChanged",
                     It.IsAny<object?[]>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Never
+            times: Times.Never
         );
     }
 

@@ -42,7 +42,7 @@ public class AudioPlanBuilderKeepAllTests
         new(
             FilePath: "/movie.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(48),
+            Duration: TimeSpan.FromMinutes(minutes: 48),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 1,
             VideoStreams: [],
@@ -79,32 +79,29 @@ public class AudioPlanBuilderKeepAllTests
     [Fact]
     public void TwoEnglishAudioTracks_ProduceTwoDistinctPlans()
     {
-        MediaInfo media = MediaWith(Audio(1, "eng", 768), Audio(2, "eng", 960));
-        EncodingProfile profile = ProfileWith(AllLanguages());
+        MediaInfo media = MediaWith(audio: [Audio(index: 1, lang: "eng", kbps: 768), Audio(index: 2, lang: "eng", kbps: 960)]);
+        EncodingProfile profile = ProfileWith(audio: AllLanguages());
 
-        AudioOutputPlan[] plans = AudioPlanBuilder.Build(profile, media);
+        AudioOutputPlan[] plans = AudioPlanBuilder.Build(profile: profile, media: media);
 
-        plans.Should().HaveCount(2, "both English audio tracks must be kept, not just the default");
+        plans.Should().HaveCount(expected: 2, because: "both English audio tracks must be kept, not just the default");
         plans
-            .Select(PlaylistGenerator.AudioVariantKey)
+            .Select(selector: PlaylistGenerator.AudioVariantKey)
             .Distinct()
             .Should()
-            .HaveCount(2, "the two kept tracks must resolve to distinct playlist paths on disk");
+            .HaveCount(expected: 2, because: "the two kept tracks must resolve to distinct playlist paths on disk");
     }
 
     [Fact]
     public void MultiLanguageAudio_KeepsEveryLanguage()
     {
-        MediaInfo media = MediaWith(
-            Audio(1, "eng", 768),
-            Audio(2, "jpn", 640),
-            Audio(3, "fra", 448)
+        MediaInfo media = MediaWith(audio: [Audio(index: 1, lang: "eng", kbps: 768), Audio(index: 2, lang: "jpn", kbps: 640), Audio(index: 3, lang: "fra", kbps: 448)]
         );
-        EncodingProfile profile = ProfileWith(AllLanguages());
+        EncodingProfile profile = ProfileWith(audio: AllLanguages());
 
-        AudioOutputPlan[] plans = AudioPlanBuilder.Build(profile, media);
+        AudioOutputPlan[] plans = AudioPlanBuilder.Build(profile: profile, media: media);
 
-        plans.Should().HaveCount(3);
-        plans.Select(p => p.Language).Should().BeEquivalentTo(["eng", "jpn", "fra"]);
+        plans.Should().HaveCount(expected: 3);
+        plans.Select(selector: p => p.Language).Should().BeEquivalentTo(expectation: ["eng", "jpn", "fra"]);
     }
 }

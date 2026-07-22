@@ -25,10 +25,10 @@ public class OcrImagePreprocessorTests
         // Fully-opaque white pixel (RGBA = 255,255,255,255)
         // BT.601 luma of white = 255; alpha=1 → output = 1*255 + 0*128 = 255
         byte[] rgba = [255, 255, 255, 255];
-        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgba, 1, 1);
+        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgbaImage: rgba, width: 1, height: 1);
 
-        result.Should().HaveCount(1);
-        result[0].Should().Be(255);
+        result.Should().HaveCount(expected: 1);
+        result[0].Should().Be(expected: 255);
     }
 
     [Fact]
@@ -36,10 +36,10 @@ public class OcrImagePreprocessorTests
     {
         // Fully-transparent pixel → output = 0*luma + 1*128 = 128
         byte[] rgba = [0, 0, 0, 0];
-        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgba, 1, 1);
+        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgbaImage: rgba, width: 1, height: 1);
 
-        result.Should().HaveCount(1);
-        result[0].Should().Be(128);
+        result.Should().HaveCount(expected: 1);
+        result[0].Should().Be(expected: 128);
     }
 
     [Fact]
@@ -48,11 +48,11 @@ public class OcrImagePreprocessorTests
         // Black pixel (luma=0) at alpha=128 (~50%)
         // out = 0.502 * 0 + 0.498 * 128 ≈ 63.7 → 64
         byte[] rgba = [0, 0, 0, 128];
-        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgba, 1, 1);
+        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgbaImage: rgba, width: 1, height: 1);
 
-        result.Should().HaveCount(1);
+        result.Should().HaveCount(expected: 1);
         // Allow ±2 for floating-point rounding
-        result[0].Should().BeInRange(62, 66);
+        result[0].Should().BeInRange(minimumValue: 62, maximumValue: 66);
     }
 
     [Fact]
@@ -61,9 +61,9 @@ public class OcrImagePreprocessorTests
         int w = 4;
         int h = 3;
         byte[] rgba = new byte[w * h * 4]; // all zeros
-        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgba, w, h);
+        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgbaImage: rgba, width: w, height: h);
 
-        result.Should().HaveCount(w * h);
+        result.Should().HaveCount(expected: w * h);
     }
 
     [Fact]
@@ -71,9 +71,9 @@ public class OcrImagePreprocessorTests
     {
         // 2x2 image needs 16 bytes; supply 12
         byte[] tooShort = new byte[12];
-        Action act = () => OcrImagePreprocessor.PreprocessForOcr(tooShort, 2, 2);
+        Action act = () => OcrImagePreprocessor.PreprocessForOcr(rgbaImage: tooShort, width: 2, height: 2);
 
-        act.Should().Throw<ArgumentException>().WithMessage("*16*");
+        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*16*");
     }
 
     [Fact]
@@ -81,9 +81,9 @@ public class OcrImagePreprocessorTests
     {
         // Black, fully opaque → luma=0, alpha=1 → out = 0
         byte[] rgba = [0, 0, 0, 255];
-        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgba, 1, 1);
+        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgbaImage: rgba, width: 1, height: 1);
 
-        result[0].Should().Be(0);
+        result[0].Should().Be(expected: 0);
     }
 
     [Fact]
@@ -92,9 +92,9 @@ public class OcrImagePreprocessorTests
         int w = 8;
         int h = 8;
         byte[] rgba = new byte[w * h * 4]; // all zeros → alpha=0
-        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgba, w, h);
+        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgbaImage: rgba, width: w, height: h);
 
-        result.Should().AllSatisfy(b => b.Should().Be(128));
+        result.Should().AllSatisfy(expected: b => b.Should().Be(expected: 128));
     }
 
     // ── BT.601 luma weights — pinning the per-channel math ─────────────────
@@ -107,9 +107,9 @@ public class OcrImagePreprocessorTests
         // PGS subs that use the red channel as a foreground marker.
         byte[] rgba = [0xFF, 0x00, 0x00, 0xFF];
 
-        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgba, 1, 1);
+        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgbaImage: rgba, width: 1, height: 1);
 
-        result[0].Should().Be(76);
+        result[0].Should().Be(expected: 76);
     }
 
     [Fact]
@@ -118,9 +118,9 @@ public class OcrImagePreprocessorTests
         // BT.601: G coefficient = 0.587 — the dominant channel for luma.
         byte[] rgba = [0x00, 0xFF, 0x00, 0xFF];
 
-        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgba, 1, 1);
+        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgbaImage: rgba, width: 1, height: 1);
 
-        result[0].Should().Be(150);
+        result[0].Should().Be(expected: 150);
     }
 
     [Fact]
@@ -129,9 +129,9 @@ public class OcrImagePreprocessorTests
         // BT.601: B coefficient = 0.114 — darkest perceived channel.
         byte[] rgba = [0x00, 0x00, 0xFF, 0xFF];
 
-        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgba, 1, 1);
+        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgbaImage: rgba, width: 1, height: 1);
 
-        result[0].Should().Be(29);
+        result[0].Should().Be(expected: 29);
     }
 
     [Fact]
@@ -142,11 +142,11 @@ public class OcrImagePreprocessorTests
         // off-by-one or row-stride confusion).
         byte[] rgba = [0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0xFF];
 
-        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgba, 2, 1);
+        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgbaImage: rgba, width: 2, height: 1);
 
-        result.Should().HaveCount(2);
-        result[0].Should().Be(255);
-        result[1].Should().Be(0);
+        result.Should().HaveCount(expected: 2);
+        result[0].Should().Be(expected: 255);
+        result[1].Should().Be(expected: 0);
     }
 
     [Fact]
@@ -156,7 +156,7 @@ public class OcrImagePreprocessorTests
         // match (0). Result is an empty array, not an exception.
         byte[] rgba = [];
 
-        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgba, 0, 0);
+        byte[] result = OcrImagePreprocessor.PreprocessForOcr(rgbaImage: rgba, width: 0, height: 0);
 
         result.Should().BeEmpty();
     }
@@ -169,8 +169,8 @@ public class OcrImagePreprocessorTests
         // ever gets renamed.
         byte[] tooShort = new byte[3];
 
-        Action act = () => OcrImagePreprocessor.PreprocessForOcr(tooShort, 1, 1);
+        Action act = () => OcrImagePreprocessor.PreprocessForOcr(rgbaImage: tooShort, width: 1, height: 1);
 
-        act.Should().Throw<ArgumentException>().And.ParamName.Should().Be("rgbaImage");
+        act.Should().Throw<ArgumentException>().And.ParamName.Should().Be(expected: "rgbaImage");
     }
 }

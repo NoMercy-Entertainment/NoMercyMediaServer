@@ -27,7 +27,7 @@ public class EncoderOptions
     public string FfmpegPath =>
         FfmpegPathOverride
         ?? throw new InvalidOperationException(
-            "FfmpegPathOverride not configured. Set it via AddNoMercyEncoder()."
+            message: "FfmpegPathOverride not configured. Set it via AddNoMercyEncoder()."
         );
 
     /// <summary>
@@ -37,7 +37,7 @@ public class EncoderOptions
     public string FfprobePath =>
         FfprobePathOverride
         ?? throw new InvalidOperationException(
-            "FfprobePathOverride not configured. Set it via AddNoMercyEncoder()."
+            message: "FfprobePathOverride not configured. Set it via AddNoMercyEncoder()."
         );
 
     /// <summary>
@@ -58,39 +58,39 @@ public class EncoderOptions
     /// </summary>
     public string GetShakaPackagerPath(IStorage storage)
     {
-        if (!string.IsNullOrWhiteSpace(ShakaPackagerPathOverride))
+        if (!string.IsNullOrWhiteSpace(value: ShakaPackagerPathOverride))
             return ShakaPackagerPathOverride;
 
         // Try sibling of ffmpeg binary
-        if (!string.IsNullOrWhiteSpace(FfmpegPathOverride))
+        if (!string.IsNullOrWhiteSpace(value: FfmpegPathOverride))
         {
-            string dir = Path.GetDirectoryName(FfmpegPathOverride) ?? string.Empty;
+            string dir = Path.GetDirectoryName(path: FfmpegPathOverride) ?? string.Empty;
             string siblingName = OperatingSystem.IsWindows() ? "packager.exe" : "packager";
-            string sibling = Path.Combine(dir, siblingName);
-            if (storage.Exists(sibling))
+            string sibling = Path.Combine(path1: dir, path2: siblingName);
+            if (storage.Exists(path: sibling))
                 return sibling;
         }
 
         // Fall back to system PATH
         string pathEnv = OperatingSystem.IsWindows() ? "packager.exe" : "packager";
-        string? onPath = FindOnPath(pathEnv, storage);
+        string? onPath = FindOnPath(binaryName: pathEnv, storage: storage);
         if (onPath is not null)
             return onPath;
 
         throw new InvalidOperationException(
-            "shaka-packager binary not found. Bundle it alongside ffmpeg or set "
-                + "ShakaPackagerPathOverride in AddNoMercyEncoder()."
+            message: "shaka-packager binary not found. Bundle it alongside ffmpeg or set "
+                     + "ShakaPackagerPathOverride in AddNoMercyEncoder()."
         );
     }
 
     private static string? FindOnPath(string binaryName, IStorage storage)
     {
-        string pathVar = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        string pathVar = Environment.GetEnvironmentVariable(variable: "PATH") ?? string.Empty;
         char sep = OperatingSystem.IsWindows() ? ';' : ':';
-        foreach (string dir in pathVar.Split(sep, StringSplitOptions.RemoveEmptyEntries))
+        foreach (string dir in pathVar.Split(separator: sep, options: StringSplitOptions.RemoveEmptyEntries))
         {
-            string full = Path.Combine(dir.Trim(), binaryName);
-            if (storage.Exists(full))
+            string full = Path.Combine(path1: dir.Trim(), path2: binaryName);
+            if (storage.Exists(path: full))
                 return full;
         }
 
@@ -152,7 +152,7 @@ public class EncoderOptions
     /// layer uses this to gate worker registration endpoints.
     /// </summary>
     public bool IsDistributedEncodingEnabled =>
-        !string.IsNullOrWhiteSpace(DistributedEncodingSigningKey);
+        !string.IsNullOrWhiteSpace(value: DistributedEncodingSigningKey);
 
     /// <summary>
     /// Absolute path to the workers.json file used by
@@ -166,10 +166,10 @@ public class EncoderOptions
     /// </summary>
     public string WorkerRegistryPath { get; set; } =
         Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "NoMercy",
-            "distribution",
-            "workers.json"
+            path1: Environment.GetFolderPath(folder: Environment.SpecialFolder.LocalApplicationData),
+            path2: "NoMercy",
+            path3: "distribution",
+            path4: "workers.json"
         );
 
     /// <summary>
@@ -180,7 +180,7 @@ public class EncoderOptions
     /// identities survive coordinator restarts.
     /// </summary>
     public bool IsCoordinatorMode =>
-        IsDistributedEncodingEnabled && string.IsNullOrWhiteSpace(CoordinatorUrl);
+        IsDistributedEncodingEnabled && string.IsNullOrWhiteSpace(value: CoordinatorUrl);
 
     // ── Background-subscriber toggles ──────────────────────────────────────
 
@@ -214,11 +214,11 @@ public class EncoderOptions
 
     public byte[] GetDistributedEncodingSigningKey()
     {
-        if (string.IsNullOrWhiteSpace(DistributedEncodingSigningKey))
+        if (string.IsNullOrWhiteSpace(value: DistributedEncodingSigningKey))
             throw new InvalidOperationException(
-                "DistributedEncodingSigningKey not configured — set it via AddNoMercyEncoder() to enable remote workers."
+                message: "DistributedEncodingSigningKey not configured — set it via AddNoMercyEncoder() to enable remote workers."
             );
-        return Encoding.UTF8.GetBytes(DistributedEncodingSigningKey);
+        return Encoding.UTF8.GetBytes(s: DistributedEncodingSigningKey);
     }
 
     /// <summary>
@@ -251,7 +251,7 @@ public class EncoderOptions
     /// Must be noticeably less than the registry's stale threshold (60s
     /// default) so transient network blips don't evict the worker.
     /// </summary>
-    public TimeSpan WorkerHeartbeatInterval { get; set; } = TimeSpan.FromSeconds(20);
+    public TimeSpan WorkerHeartbeatInterval { get; set; } = TimeSpan.FromSeconds(seconds: 20);
 }
 
 /// <summary>

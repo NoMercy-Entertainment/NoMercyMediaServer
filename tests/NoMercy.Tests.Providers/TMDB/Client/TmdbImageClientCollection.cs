@@ -19,5 +19,5 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// storage clobbers another's mid-call. Grouping them in one collection forces
 /// serial execution.
 /// </summary>
-[CollectionDefinition("TmdbImageClient")]
+[CollectionDefinition(name: "TmdbImageClient")]
 public class TmdbImageClientCollection;

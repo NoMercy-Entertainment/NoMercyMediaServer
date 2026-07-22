@@ -25,11 +25,11 @@ public class EpisodePaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(entityId);
+        int id = int.Parse(s: entityId);
         return await db
-            .Episodes.Where(e => e.Id == id)
-            .Select(e => e._colorPalette)
-            .FirstOrDefaultAsync(ct);
+            .Episodes.Where(predicate: e => e.Id == id)
+            .Select(selector: e => e._colorPalette)
+            .FirstOrDefaultAsync(cancellationToken: ct);
     }
 
     public async Task<PaletteResult> GenerateAsync(
@@ -38,17 +38,17 @@ public class EpisodePaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(entityId);
-        Episode? episode = await db.Episodes.FirstOrDefaultAsync(e => e.Id == id, ct);
+        int id = int.Parse(s: entityId);
+        Episode? episode = await db.Episodes.FirstOrDefaultAsync(predicate: e => e.Id == id, cancellationToken: ct);
         if (episode is null)
             return PaletteResult.NoImage();
         if (episode.Still is null)
             return PaletteResult.NoImage();
 
-        string json = await MovieDbImageManager.ColorPalette("still", episode.Still);
-        return string.IsNullOrWhiteSpace(json)
+        string json = await MovieDbImageManager.ColorPalette(type: "still", path: episode.Still);
+        return string.IsNullOrWhiteSpace(value: json)
             ? PaletteResult.NoImage()
-            : PaletteResult.Success(json);
+            : PaletteResult.Success(json: json);
     }
 
     public async Task PersistAsync(
@@ -58,9 +58,9 @@ public class EpisodePaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(entityId);
+        int id = int.Parse(s: entityId);
         await db
-            .Episodes.Where(e => e.Id == id)
-            .ExecuteUpdateAsync(s => s.SetProperty(e => e._colorPalette, json), ct);
+            .Episodes.Where(predicate: e => e.Id == id)
+            .ExecuteUpdateAsync(setPropertyCalls: s => s.SetProperty(propertyExpression: e => e._colorPalette, valueExpression: json), cancellationToken: ct);
     }
 }

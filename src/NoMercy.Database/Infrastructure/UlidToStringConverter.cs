@@ -15,11 +15,11 @@ namespace NoMercy.Database;
 
 public class UlidToStringConverter : ValueConverter<Ulid, string>
 {
-    private static readonly ConverterMappingHints DefaultHints = new(26);
+    private static readonly ConverterMappingHints DefaultHints = new(size: 26);
 
     public UlidToStringConverter()
-        : this(null) { }
+        : this(mappingHints: null) { }
 
     private UlidToStringConverter(ConverterMappingHints? mappingHints = null)
-        : base(x => x.ToString(), x => Ulid.Parse(x), DefaultHints.With(mappingHints)) { }
+        : base(convertToProviderExpression: x => x.ToString(), convertFromProviderExpression: x => Ulid.Parse(x), mappingHints: DefaultHints.With(hints: mappingHints)) { }
 }

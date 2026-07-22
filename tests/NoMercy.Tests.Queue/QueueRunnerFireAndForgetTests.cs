@@ -24,24 +24,24 @@ namespace NoMercy.Tests.Queue;
 /// CRIT-08: Tests verifying that fire-and-forget tasks in QueueRunner
 /// now have exception handling, lifecycle tracking, and proper thread management.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class QueueRunnerFireAndForgetTests
 {
     [Fact]
     public void QueueRunner_SourceCode_NoUnobservedGetAwaiter()
     {
         // CRIT-08: Verify QueueRunner.cs no longer calls .GetAwaiter() without await
-        string sourceFile = FindSourceFile("src/NoMercyQueue/QueueRunner.cs");
-        string source = File.ReadAllText(sourceFile);
+        string sourceFile = FindSourceFile(relativePath: "src/NoMercyQueue/QueueRunner.cs");
+        string source = File.ReadAllText(path: sourceFile);
 
-        string[] lines = source.Split('\n');
+        string[] lines = source.Split(separator: '\n');
         foreach (string line in lines)
         {
             string trimmed = line.Trim();
-            if (trimmed.StartsWith("//") || trimmed.StartsWith("*"))
+            if (trimmed.StartsWith(value: "//") || trimmed.StartsWith(value: "*"))
                 continue;
 
-            Assert.DoesNotMatch(@"\.GetAwaiter\s*\(\s*\)\s*;", trimmed);
+            Assert.DoesNotMatch(expectedRegexPattern: @"\.GetAwaiter\s*\(\s*\)\s*;", actualString: trimmed);
         }
     }
 
@@ -50,22 +50,22 @@ public class QueueRunnerFireAndForgetTests
     {
         // CRIT-08: Verify QueueRunner.cs no longer wraps Thread creation in Task.Run
         // The pattern Task.Run(() => new Thread(() => ...).Start()) is redundant
-        string sourceFile = FindSourceFile("src/NoMercyQueue/QueueRunner.cs");
-        string source = File.ReadAllText(sourceFile);
+        string sourceFile = FindSourceFile(relativePath: "src/NoMercyQueue/QueueRunner.cs");
+        string source = File.ReadAllText(path: sourceFile);
 
-        Assert.DoesNotContain("Task.Run(() => new Thread", source);
+        Assert.DoesNotContain(expectedSubstring: "Task.Run(() => new Thread", actualString: source);
     }
 
     [Fact]
     public void QueueRunner_SourceCode_WorkerThreadsHaveExceptionHandling()
     {
         // CRIT-08: Verify that worker thread spawning includes try-catch
-        string sourceFile = FindSourceFile("src/NoMercyQueue/QueueRunner.cs");
-        string source = File.ReadAllText(sourceFile);
+        string sourceFile = FindSourceFile(relativePath: "src/NoMercyQueue/QueueRunner.cs");
+        string source = File.ReadAllText(path: sourceFile);
 
         // SpawnWorkerThread should contain try-catch for exception handling
-        Assert.Contains("try", source);
-        Assert.Contains("catch (Exception", source);
+        Assert.Contains(expectedSubstring: "try", actualString: source);
+        Assert.Contains(expectedSubstring: "catch (Exception", actualString: source);
     }
 
     [Fact]
@@ -73,10 +73,10 @@ public class QueueRunnerFireAndForgetTests
     {
         // CRIT-08: Verify that spawned threads are background threads
         // so they don't prevent server shutdown
-        string sourceFile = FindSourceFile("src/NoMercyQueue/QueueRunner.cs");
-        string source = File.ReadAllText(sourceFile);
+        string sourceFile = FindSourceFile(relativePath: "src/NoMercyQueue/QueueRunner.cs");
+        string source = File.ReadAllText(path: sourceFile);
 
-        Assert.Contains("IsBackground = true", source);
+        Assert.Contains(expectedSubstring: "IsBackground = true", actualString: source);
     }
 
     [Fact]
@@ -84,10 +84,10 @@ public class QueueRunnerFireAndForgetTests
     {
         // CRIT-08: Verify that spawned threads have descriptive names
         // for debugging and diagnostics
-        string sourceFile = FindSourceFile("src/NoMercyQueue/QueueRunner.cs");
-        string source = File.ReadAllText(sourceFile);
+        string sourceFile = FindSourceFile(relativePath: "src/NoMercyQueue/QueueRunner.cs");
+        string source = File.ReadAllText(path: sourceFile);
 
-        Assert.Contains("Name = $\"QueueWorker-", source);
+        Assert.Contains(expectedSubstring: "Name = $\"QueueWorker-", actualString: source);
     }
 
     [Fact]
@@ -96,15 +96,15 @@ public class QueueRunnerFireAndForgetTests
         // CRIT-08: Verify that a ConcurrentDictionary tracks active worker threads
         // (now instance field since QueueRunner is no longer static)
         FieldInfo? field = typeof(QueueRunner).GetField(
-            "_activeWorkerThreads",
-            BindingFlags.NonPublic | BindingFlags.Instance
+            name: "_activeWorkerThreads",
+            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
         );
 
-        Assert.NotNull(field);
+        Assert.NotNull(@object: field);
         Assert.True(
-            field.FieldType.IsGenericType
-                && field.FieldType.GetGenericTypeDefinition() == typeof(ConcurrentDictionary<,>),
-            "_activeWorkerThreads should be a ConcurrentDictionary for thread-safe tracking"
+            condition: field.FieldType.IsGenericType
+                       && field.FieldType.GetGenericTypeDefinition() == typeof(ConcurrentDictionary<,>),
+            userMessage: "_activeWorkerThreads should be a ConcurrentDictionary for thread-safe tracking"
         );
     }
 
@@ -114,10 +114,10 @@ public class QueueRunnerFireAndForgetTests
         // CRIT-08: Verify active workers are queryable via public method
         TestQueueContextAdapter context = new();
         QueueConfiguration config = new();
-        QueueRunner runner = new(context, config, NullLoggerFactory.Instance);
+        QueueRunner runner = new(queueContext: context, configuration: config, loggerFactory: NullLoggerFactory.Instance);
 
         IReadOnlyDictionary<string, Thread> workers = runner.GetActiveWorkerThreads();
-        Assert.NotNull(workers);
+        Assert.NotNull(@object: workers);
     }
 
     [Fact]
@@ -127,17 +127,17 @@ public class QueueRunnerFireAndForgetTests
         // _isUpdating was moved to a per-pool flag in the _workers dictionary,
         // protected by _workersLock instead of volatile.
         FieldInfo? isInitialized = typeof(QueueRunner).GetField(
-            "_isInitialized",
-            BindingFlags.NonPublic | BindingFlags.Instance
+            name: "_isInitialized",
+            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
         );
 
-        Assert.NotNull(isInitialized);
+        Assert.NotNull(@object: isInitialized);
 
         // Check for volatile modifier via attributes
         Assert.True(
-            isInitialized.GetRequiredCustomModifiers().Any(t => t == typeof(IsVolatile))
-                || isInitialized.FieldType == typeof(bool),
-            "_isInitialized should be volatile"
+            condition: isInitialized.GetRequiredCustomModifiers().Any(predicate: t => t == typeof(IsVolatile))
+                       || isInitialized.FieldType == typeof(bool),
+            userMessage: "_isInitialized should be volatile"
         );
     }
 
@@ -145,23 +145,23 @@ public class QueueRunnerFireAndForgetTests
     public void QueueRunner_SourceCode_UpdateWorkerCountsHasErrorLogging()
     {
         // CRIT-08: Verify that UpdateRunningWorkerCounts logs errors from fire-and-forget tasks
-        string sourceFile = FindSourceFile("src/NoMercyQueue/QueueRunner.cs");
-        string source = File.ReadAllText(sourceFile);
+        string sourceFile = FindSourceFile(relativePath: "src/NoMercyQueue/QueueRunner.cs");
+        string source = File.ReadAllText(path: sourceFile);
 
         // Should use ContinueWith(OnlyOnFaulted) or similar error observation
-        Assert.Contains("OnlyOnFaulted", source);
+        Assert.Contains(expectedSubstring: "OnlyOnFaulted", actualString: source);
     }
 
     [Fact]
     public void QueueRunner_SourceCode_WorkerThreadsCleanUpOnExit()
     {
         // CRIT-08: Verify worker threads remove themselves from tracking on exit
-        string sourceFile = FindSourceFile("src/NoMercyQueue/QueueRunner.cs");
-        string source = File.ReadAllText(sourceFile);
+        string sourceFile = FindSourceFile(relativePath: "src/NoMercyQueue/QueueRunner.cs");
+        string source = File.ReadAllText(path: sourceFile);
 
         // Should have finally block that removes from ActiveWorkerThreads
-        Assert.Contains("finally", source);
-        Assert.Contains("TryRemove", source);
+        Assert.Contains(expectedSubstring: "finally", actualString: source);
+        Assert.Contains(expectedSubstring: "TryRemove", actualString: source);
     }
 
     private static string FindSourceFile(string relativePath)
@@ -169,22 +169,22 @@ public class QueueRunnerFireAndForgetTests
         string? dir = AppDomain.CurrentDomain.BaseDirectory;
         while (dir != null)
         {
-            string candidate = Path.Combine(dir, relativePath);
-            if (File.Exists(candidate))
+            string candidate = Path.Combine(path1: dir, path2: relativePath);
+            if (File.Exists(path: candidate))
                 return candidate;
 
-            string repoCandidate = Path.Combine(dir, "..", "..", "..", "..", "..", relativePath);
-            string resolved = Path.GetFullPath(repoCandidate);
-            if (File.Exists(resolved))
+            string repoCandidate = Path.Combine(paths: [dir, "..", "..", "..", "..", "..", relativePath]);
+            string resolved = Path.GetFullPath(path: repoCandidate);
+            if (File.Exists(path: resolved))
                 return resolved;
 
-            dir = Directory.GetParent(dir)?.FullName;
+            dir = Directory.GetParent(path: dir)?.FullName;
         }
 
-        string fallback = Path.Combine("/workspaces/NoMercyMediaServer", relativePath);
-        if (File.Exists(fallback))
+        string fallback = Path.Combine(path1: "/workspaces/NoMercyMediaServer", path2: relativePath);
+        if (File.Exists(path: fallback))
             return fallback;
 
-        throw new FileNotFoundException($"Could not find source file: {relativePath}");
+        throw new FileNotFoundException(message: $"Could not find source file: {relativePath}");
     }
 }

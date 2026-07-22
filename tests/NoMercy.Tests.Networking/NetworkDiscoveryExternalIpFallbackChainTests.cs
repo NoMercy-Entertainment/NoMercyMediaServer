@@ -29,19 +29,19 @@ namespace NoMercy.Tests.Networking;
 /// absent. These exercise the real method via a fake IStorageDriver so no
 /// live network call and no real filesystem write ever happens.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class NetworkDiscoveryExternalIpFallbackChainTests
 {
-    private static string CacheFilePath => Path.Combine(AppFiles.ConfigPath, "external_ip.cache");
+    private static string CacheFilePath => Path.Combine(path1: AppFiles.ConfigPath, path2: "external_ip.cache");
 
     private static NetworkDiscovery BuildDiscovery(IStorageDriver driver)
     {
         return new(
-            NullLogger<NetworkDiscovery>.Instance,
-            driver,
-            new AuthTokenStore(), // AccessToken null — the live API call is skipped
-            new ConnectivityStatus(),
-            new()
+            logger: NullLogger<NetworkDiscovery>.Instance,
+            driver: driver,
+            authTokenStore: new AuthTokenStore(), // AccessToken null — the live API call is skipped
+            connectivityStatus: new ConnectivityStatus(),
+            networkProbeConfig: new()
         );
     }
 
@@ -49,82 +49,82 @@ public sealed class NetworkDiscoveryExternalIpFallbackChainTests
     public async Task GetExternalIpAsync_NoToken_NoDevice_NoCache_ReturnsEmptyString()
     {
         InMemoryStorageDriverStub driver = new();
-        NetworkDiscovery discovery = BuildDiscovery(driver);
+        NetworkDiscovery discovery = BuildDiscovery(driver: driver);
 
         string result = await discovery.GetExternalIpAsync();
 
-        Assert.Equal(string.Empty, result);
+        Assert.Equal(expected: string.Empty, actual: result);
     }
 
     [Fact]
     public async Task GetExternalIpAsync_NoToken_NoDevice_CachePresent_ReturnsCachedValue()
     {
         InMemoryStorageDriverStub driver = new();
-        using (Stream write = driver.OpenWrite(CacheFilePath, overwrite: true))
-        await using (StreamWriter writer = new(write, leaveOpen: true))
-            writer.Write("198.51.100.7");
+        using (Stream write = driver.OpenWrite(path: CacheFilePath, overwrite: true))
+        await using (StreamWriter writer = new(stream: write, leaveOpen: true))
+            writer.Write(value: "198.51.100.7");
 
-        NetworkDiscovery discovery = BuildDiscovery(driver);
+        NetworkDiscovery discovery = BuildDiscovery(driver: driver);
 
         string result = await discovery.GetExternalIpAsync();
 
-        Assert.Equal("198.51.100.7", result);
+        Assert.Equal(expected: "198.51.100.7", actual: result);
     }
 
     [Fact]
     public async Task GetExternalIpAsync_CacheContainsOnlyWhitespace_TreatedAsMiss()
     {
         InMemoryStorageDriverStub driver = new();
-        using (Stream write = driver.OpenWrite(CacheFilePath, overwrite: true))
-        await using (StreamWriter writer = new(write, leaveOpen: true))
-            writer.Write("   ");
+        using (Stream write = driver.OpenWrite(path: CacheFilePath, overwrite: true))
+        await using (StreamWriter writer = new(stream: write, leaveOpen: true))
+            writer.Write(value: "   ");
 
-        NetworkDiscovery discovery = BuildDiscovery(driver);
+        NetworkDiscovery discovery = BuildDiscovery(driver: driver);
 
         string result = await discovery.GetExternalIpAsync();
 
-        Assert.Equal(string.Empty, result);
+        Assert.Equal(expected: string.Empty, actual: result);
     }
 
     [Fact]
     public async Task GetExternalIpAsync_CacheValueIsTrimmed()
     {
         InMemoryStorageDriverStub driver = new();
-        using (Stream write = driver.OpenWrite(CacheFilePath, overwrite: true))
-        await using (StreamWriter writer = new(write, leaveOpen: true))
-            writer.Write("  203.0.113.9  \n");
+        using (Stream write = driver.OpenWrite(path: CacheFilePath, overwrite: true))
+        await using (StreamWriter writer = new(stream: write, leaveOpen: true))
+            writer.Write(value: "  203.0.113.9  \n");
 
-        NetworkDiscovery discovery = BuildDiscovery(driver);
+        NetworkDiscovery discovery = BuildDiscovery(driver: driver);
 
         string result = await discovery.GetExternalIpAsync();
 
-        Assert.Equal("203.0.113.9", result);
+        Assert.Equal(expected: "203.0.113.9", actual: result);
     }
 
     [Fact]
     public async Task CacheExternalIp_ThenGetExternalIpAsync_RoundTripsThroughLoadCachedExternalIp()
     {
         InMemoryStorageDriverStub driver = new();
-        NetworkDiscovery discovery = BuildDiscovery(driver);
+        NetworkDiscovery discovery = BuildDiscovery(driver: driver);
 
-        discovery.CacheExternalIp("203.0.113.200");
+        discovery.CacheExternalIp(ip: "203.0.113.200");
         string result = await discovery.GetExternalIpAsync();
 
-        Assert.Equal("203.0.113.200", result);
+        Assert.Equal(expected: "203.0.113.200", actual: result);
     }
 
     [Fact]
     public void CacheExternalIp_Overwrite_ReplacesPreviousValue()
     {
         InMemoryStorageDriverStub driver = new();
-        NetworkDiscovery discovery = BuildDiscovery(driver);
+        NetworkDiscovery discovery = BuildDiscovery(driver: driver);
 
-        discovery.CacheExternalIp("1.1.1.1");
-        discovery.CacheExternalIp("2.2.2.2");
+        discovery.CacheExternalIp(ip: "1.1.1.1");
+        discovery.CacheExternalIp(ip: "2.2.2.2");
 
-        Assert.True(driver.FileExists(CacheFilePath));
-        using StreamReader reader = new(driver.OpenRead(CacheFilePath));
-        Assert.Equal("2.2.2.2", reader.ReadToEnd());
+        Assert.True(condition: driver.FileExists(path: CacheFilePath));
+        using StreamReader reader = new(stream: driver.OpenRead(path: CacheFilePath));
+        Assert.Equal(expected: "2.2.2.2", actual: reader.ReadToEnd());
     }
 
     /// <summary>
@@ -136,7 +136,7 @@ public sealed class NetworkDiscoveryExternalIpFallbackChainTests
     {
         public bool FileExists(string path) => true;
 
-        public Stream OpenRead(string path) => throw new IOException("disk error");
+        public Stream OpenRead(string path) => throw new IOException(message: "disk error");
 
         public bool DirectoryExists(string path) => throw new NotSupportedException();
 
@@ -182,33 +182,33 @@ public sealed class NetworkDiscoveryExternalIpFallbackChainTests
     [Fact]
     public async Task GetExternalIpAsync_CacheReadThrows_IsSwallowed_ReturnsEmptyString()
     {
-        NetworkDiscovery discovery = BuildDiscovery(new ThrowsOnReadStorageDriverStub());
+        NetworkDiscovery discovery = BuildDiscovery(driver: new ThrowsOnReadStorageDriverStub());
 
         string result = await discovery.GetExternalIpAsync();
 
-        Assert.Equal(string.Empty, result);
+        Assert.Equal(expected: string.Empty, actual: result);
     }
 
     [Fact]
     public async Task GetExternalIpAsync_EmptyAccessToken_AlsoSkipsApiCall_FallsBackToCache()
     {
         InMemoryStorageDriverStub driver = new();
-        using (Stream write = driver.OpenWrite(CacheFilePath, overwrite: true))
-        await using (StreamWriter writer = new(write, leaveOpen: true))
-            writer.Write("192.0.2.55");
+        using (Stream write = driver.OpenWrite(path: CacheFilePath, overwrite: true))
+        await using (StreamWriter writer = new(stream: write, leaveOpen: true))
+            writer.Write(value: "192.0.2.55");
 
         AuthTokenStore tokenStore = new();
-        tokenStore.SetAccessToken(string.Empty);
+        tokenStore.SetAccessToken(token: string.Empty);
         NetworkDiscovery discovery = new(
-            NullLogger<NetworkDiscovery>.Instance,
-            driver,
-            tokenStore,
-            new ConnectivityStatus(),
-            new()
+            logger: NullLogger<NetworkDiscovery>.Instance,
+            driver: driver,
+            authTokenStore: tokenStore,
+            connectivityStatus: new ConnectivityStatus(),
+            networkProbeConfig: new()
         );
 
         string result = await discovery.GetExternalIpAsync();
 
-        Assert.Equal("192.0.2.55", result);
+        Assert.Equal(expected: "192.0.2.55", actual: result);
     }
 }

@@ -27,7 +27,7 @@ namespace NoMercy.Tests.MediaProcessing.Jobs;
 // show.SxxExx / movie.(year) token. These pin that the anchor matches the
 // on-disk path where the drift-prone full name does not.
 // ---------------------------------------------------------------------------
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class DeriveScanFilterTests
 {
     [Fact]
@@ -38,7 +38,7 @@ public sealed class DeriveScanFilterTests
             fallbackFileName: "Helstrom.S01E01.Mother.s.Little.Helpers.NoMercy"
         );
 
-        filter.Should().Be("Helstrom.S01E01");
+        filter.Should().Be(expected: "Helstrom.S01E01");
     }
 
     [Fact]
@@ -49,22 +49,22 @@ public sealed class DeriveScanFilterTests
             fallbackFileName: "Jolt.(2021).NoMercy"
         );
 
-        filter.Should().Be("Jolt.(2021)");
+        filter.Should().Be(expected: "Jolt.(2021)");
     }
 
     [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    [InlineData("/")]
+    [InlineData(data: null)]
+    [InlineData(data: "")]
+    [InlineData(data: "   ")]
+    [InlineData(data: "/")]
     public void EmptyOutputPath_FallsBackToFileName(string? outputPath)
     {
         string filter = VideoEncodeJob.DeriveScanFilter(
-            outputPath,
+            outputPath: outputPath,
             fallbackFileName: "Some.Movie.(2021).NoMercy"
         );
 
-        filter.Should().Be("Some.Movie.(2021).NoMercy");
+        filter.Should().Be(expected: "Some.Movie.(2021).NoMercy");
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public sealed class DeriveScanFilterTests
             fallbackFileName: "ignored"
         );
 
-        filter.Should().Be("Helstrom.S01E01");
+        filter.Should().Be(expected: "Helstrom.S01E01");
     }
 
     // The regression itself: the encoder wrote the file with the apostrophe
@@ -94,11 +94,11 @@ public sealed class DeriveScanFilterTests
 
         // Old behaviour: MediaScan filtered by the reconstructed file name and
         // dropped the real file, so nothing registered.
-        onDiskFile.Contains(driftedFileNameFilter).Should().BeFalse();
+        onDiskFile.Contains(value: driftedFileNameFilter).Should().BeFalse();
 
         // New behaviour: the folder-anchored filter is a substring of the real
         // path, so MediaScan keeps the file and registration succeeds.
-        string anchor = VideoEncodeJob.DeriveScanFilter(outputPath, driftedFileNameFilter);
-        onDiskFile.Contains(anchor).Should().BeTrue();
+        string anchor = VideoEncodeJob.DeriveScanFilter(outputPath: outputPath, fallbackFileName: driftedFileNameFilter);
+        onDiskFile.Contains(value: anchor).Should().BeTrue();
     }
 }

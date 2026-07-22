@@ -22,11 +22,11 @@ public static class ImageRequestPath
 {
     public static string SanitizeSegment(string? segment)
     {
-        if (string.IsNullOrEmpty(segment))
+        if (string.IsNullOrEmpty(value: segment))
             return string.Empty;
 
-        string normalised = segment.Replace('\\', '/');
-        int lastSlash = normalised.LastIndexOf('/');
+        string normalised = segment.Replace(oldChar: '\\', newChar: '/');
+        int lastSlash = normalised.LastIndexOf(value: '/');
         string name = lastSlash >= 0 ? normalised[(lastSlash + 1)..] : normalised;
 
         // A bare "." / ".." (no separator) would still escape via Path.Join.

@@ -45,7 +45,7 @@ public sealed class DeviceHub : ConnectionHub
         IDeviceCapabilityRegistry capabilityRegistry,
         ILogger<DeviceHub> logger
     )
-        : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
+        : base(httpContextAccessor: httpContextAccessor, contextFactory: contextFactory, connectedClients: connectedClients, activityLogger: activityLogger)
     {
         _contextFactory = contextFactory;
         _busRegistry = busRegistry;
@@ -55,9 +55,9 @@ public sealed class DeviceHub : ConnectionHub
 
     private string? ResolveDeviceIdFromContext()
     {
-        if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
+        if (!ConnectedClients.Clients.TryGetValue(key: Context.ConnectionId, value: out Client? client))
             return null;
-        return string.IsNullOrEmpty(client.DeviceId) ? null : client.DeviceId;
+        return string.IsNullOrEmpty(value: client.DeviceId) ? null : client.DeviceId;
     }
 
     public async Task DeclareCapabilities(DeviceCapabilities payload)
@@ -67,45 +67,41 @@ public sealed class DeviceHub : ConnectionHub
             return; // unauthenticated or unknown — silently drop, never throw
 
         await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
-        Device? device = await ctx.Devices.FirstOrDefaultAsync(d => d.DeviceId == deviceId);
+        Device? device = await ctx.Devices.FirstOrDefaultAsync(predicate: d => d.DeviceId == deviceId);
         if (device is null)
             return;
 
-        device.CapabilitiesJson = JsonConvert.SerializeObject(payload);
+        device.CapabilitiesJson = JsonConvert.SerializeObject(value: payload);
         await ctx.SaveChangesAsync();
 
-        _capabilityRegistry.Set(deviceId, payload);
+        _capabilityRegistry.Set(deviceId: deviceId, capabilities: payload);
 
         _logger.LogInformation(
-            "Device {DeviceId} declared capabilities: channels={Channels} codecs=[{Codecs}] ramTier={Tier}",
-            deviceId,
-            payload.MaxAudioChannels,
-            string.Join(",", payload.AudioCodecs),
-            payload.RamTier
+            message: "Device {DeviceId} declared capabilities: channels={Channels} codecs=[{Codecs}] ramTier={Tier}", args: [deviceId, payload.MaxAudioChannels, string.Join(separator: ",", value: payload.AudioCodecs), payload.RamTier]
         );
     }
 
     public async Task<List<DeviceListItem>> GetDevices()
     {
-        User? user = UserCacheService.GetUser(Context.User.UserId());
+        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
         if (user is null)
             return [];
 
         await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
         List<Device> rows = await ctx
-            .Devices.Where(d => d.OwnerUserId == user.Id && d.Fingerprint != null)
+            .Devices.Where(predicate: d => d.OwnerUserId == user.Id && d.Fingerprint != null)
             .ToListAsync();
 
-        return rows.Select(d =>
+        return rows.Select(selector: d =>
             {
-                (bool Foreground, bool ScreenOn) s = _busRegistry.GetStatus(d.Id);
+                (bool Foreground, bool ScreenOn) s = _busRegistry.GetStatus(deviceId: d.Id);
                 return new DeviceListItem
                 {
                     DeviceId = d.Id,
                     Fingerprint = d.Fingerprint!,
                     Name = d.CustomName ?? d.Name,
                     Type = d.Type,
-                    Online = _busRegistry.IsOnline(d.Id),
+                    Online = _busRegistry.IsOnline(deviceId: d.Id),
                     LanIp = d.LanIp,
                     LastSeenAt = d.WsConnectedAt > d.MdnsSeenAt ? d.WsConnectedAt : d.MdnsSeenAt,
                     Foreground = s.Foreground,
@@ -117,79 +113,79 @@ public sealed class DeviceHub : ConnectionHub
 
     public async Task<WakeResult> WakeForMusic(string deviceId)
     {
-        User? user = UserCacheService.GetUser(Context.User.UserId());
+        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
         if (user is null)
-            return new("not_owned");
+            return new(Status: "not_owned");
 
-        if (!Ulid.TryParse(deviceId, out Ulid id))
-            return new("not_owned");
+        if (!Ulid.TryParse(base32: deviceId, ulid: out Ulid id))
+            return new(Status: "not_owned");
 
         await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
-        Device? device = await ctx.Devices.FindAsync(id);
+        Device? device = await ctx.Devices.FindAsync(keyValues: id);
         if (device is null || device.OwnerUserId != user.Id)
-            return new("not_owned");
+            return new(Status: "not_owned");
 
-        if (_busRegistry.IsOnline(device.Id))
+        if (_busRegistry.IsOnline(deviceId: device.Id))
         {
             bool sent = await _busRegistry.SendAsync(
-                device.Id,
-                new { type = "wake_for_music", session_id = Guid.NewGuid().ToString() }
+                deviceId: device.Id,
+                payload: new { type = "wake_for_music", session_id = Guid.NewGuid().ToString() }
             );
-            return new(sent ? "wake_sent" : "no_route");
+            return new(Status: sent ? "wake_sent" : "no_route");
         }
 
-        return new("cast_fallback");
+        return new(Status: "cast_fallback");
     }
 
     public async Task<WakeResult> WakeForVideo(string deviceId)
     {
-        User? user = UserCacheService.GetUser(Context.User.UserId());
+        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
         if (user is null)
-            return new("not_owned");
+            return new(Status: "not_owned");
 
-        if (!Ulid.TryParse(deviceId, out Ulid id))
-            return new("not_owned");
+        if (!Ulid.TryParse(base32: deviceId, ulid: out Ulid id))
+            return new(Status: "not_owned");
 
         await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
-        Device? device = await ctx.Devices.FindAsync(id);
+        Device? device = await ctx.Devices.FindAsync(keyValues: id);
         if (device is null || device.OwnerUserId != user.Id)
-            return new("not_owned");
+            return new(Status: "not_owned");
 
-        if (_busRegistry.IsOnline(device.Id))
+        if (_busRegistry.IsOnline(deviceId: device.Id))
         {
             bool sent = await _busRegistry.SendAsync(
-                device.Id,
-                new { type = "wake_for_video", session_id = Guid.NewGuid().ToString() }
+                deviceId: device.Id,
+                payload: new { type = "wake_for_video", session_id = Guid.NewGuid().ToString() }
             );
-            return new(sent ? "wake_sent" : "no_route");
+            return new(Status: sent ? "wake_sent" : "no_route");
         }
 
-        return new("cast_fallback");
+        return new(Status: "cast_fallback");
     }
 
     public async Task<List<DeviceDropNoticeDto>> PendingNotices()
     {
-        User? user = UserCacheService.GetUser(Context.User.UserId());
+        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
         if (user is null)
             return [];
 
         await using MediaContext ctx = await _contextFactory.CreateDbContextAsync();
         List<DeviceDropNotice> notices = await ctx
-            .DeviceDropNotices.Where(n => n.UserId == user.Id && !n.Acknowledged)
+            .DeviceDropNotices.Where(predicate: n => n.UserId == user.Id && !n.Acknowledged)
             .ToListAsync();
 
         foreach (DeviceDropNotice n in notices)
             n.Acknowledged = true;
         await ctx.SaveChangesAsync();
 
-        return notices.Select(n => new DeviceDropNoticeDto(n.DeviceName, n.Reason)).ToList();
+        return notices.Select(selector: n => new DeviceDropNoticeDto(DeviceName: n.DeviceName, Reason: n.Reason)).ToList();
     }
 
     public override async Task OnConnectedAsync()
     {
         await base.OnConnectedAsync();
 
-        User? user = UserCacheService.GetUser(Context.User.UserId());
+        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
         if (user is null)
             return;
 
@@ -199,7 +195,7 @@ public sealed class DeviceHub : ConnectionHub
         // handler registration happens after the connection's Started callback.
         try
         {
-            await Task.Delay(500, Context.ConnectionAborted);
+            await Task.Delay(millisecondsDelay: 500, cancellationToken: Context.ConnectionAborted);
         }
         catch (OperationCanceledException)
         {
@@ -212,26 +208,26 @@ public sealed class DeviceHub : ConnectionHub
         // Clients.Caller only refreshed the newly-connected device's own picker;
         // every other already-connected device (e.g. a second TV, a phone) never
         // learned about the new device until it happened to reconnect itself.
-        await Clients.User(user.Id.ToString()).SendAsync("DeviceListChanged", list);
+        await Clients.User(userId: user.Id.ToString()).SendAsync(method: "DeviceListChanged", arg1: list);
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        User? user = UserCacheService.GetUser(Context.User.UserId());
+        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
 
-        await base.OnDisconnectedAsync(exception);
+        await base.OnDisconnectedAsync(exception: exception);
 
         if (user is null)
             return;
 
         List<DeviceListItem> list = await GetDevices();
-        await Clients.User(user.Id.ToString()).SendAsync("DeviceListChanged", list);
+        await Clients.User(userId: user.Id.ToString()).SendAsync(method: "DeviceListChanged", arg1: list);
     }
 }
 
-public sealed record WakeResult([property: JsonProperty("status")] string Status);
+public sealed record WakeResult([property: JsonProperty(propertyName: "status")] string Status);
 
 public sealed record DeviceDropNoticeDto(
-    [property: JsonProperty("device_name")] string DeviceName,
-    [property: JsonProperty("reason")] string Reason
+    [property: JsonProperty(propertyName: "device_name")] string DeviceName,
+    [property: JsonProperty(propertyName: "reason")] string Reason
 );

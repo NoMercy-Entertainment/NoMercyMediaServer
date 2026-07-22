@@ -48,9 +48,9 @@ public sealed class SignalRAnalysisProgressObserver(IClientMessenger clientMesse
         // that cannot await. Failures are non-fatal: the job continues
         // even if SignalR delivery drops.
         _ = clientMessenger.SendToAll(
-            "AnalysisProgress",
-            "dashboardHub",
-            new
+            name: "AnalysisProgress",
+            endpoint: "dashboardHub",
+            data: new
             {
                 job_id = jobId,
                 type,

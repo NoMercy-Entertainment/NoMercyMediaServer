@@ -26,8 +26,8 @@ public static class NetworkProbe
             try
             {
                 using TcpClient client = new();
-                using CancellationTokenSource cts = new(timeoutMs);
-                await client.ConnectAsync(target, 443, cts.Token);
+                using CancellationTokenSource cts = new(millisecondsDelay: timeoutMs);
+                await client.ConnectAsync(host: target, port: 443, cancellationToken: cts.Token);
                 return true;
             }
             catch
@@ -36,7 +36,7 @@ public static class NetworkProbe
             }
         }
 
-        Logger.Setup("No network connectivity detected", LogEventLevel.Warning);
+        Logger.Setup(message: "No network connectivity detected", level: LogEventLevel.Warning);
         return false;
     }
 }

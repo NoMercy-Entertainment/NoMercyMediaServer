@@ -15,26 +15,26 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Libraries;
 
-[Index(nameof(Iso6391), IsUnique = true)]
-[Index(nameof(EnglishName))]
-[Index(nameof(Name))]
-[PrimaryKey(nameof(Id))]
+[Index(propertyName: nameof(Iso6391), IsUnique = true)]
+[Index(propertyName: nameof(EnglishName))]
+[Index(propertyName: nameof(Name))]
+[PrimaryKey(propertyName: nameof(Id))]
 public class Language
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    [JsonProperty("id")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.Identity)]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("iso_639_1")]
+    [JsonProperty(propertyName: "iso_639_1")]
     public string Iso6391 { get; set; } = string.Empty;
 
-    [JsonProperty("english_name")]
+    [JsonProperty(propertyName: "english_name")]
     public string EnglishName { get; set; } = string.Empty;
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string? Name { get; set; }
 
-    [JsonProperty("language_library")]
+    [JsonProperty(propertyName: "language_library")]
     public ICollection<LanguageLibrary> LanguageLibrary { get; set; } = [];
 
     // public Language(Providers.TMDB.Models.Configuration.TmdbLanguage tmdbLanguage)

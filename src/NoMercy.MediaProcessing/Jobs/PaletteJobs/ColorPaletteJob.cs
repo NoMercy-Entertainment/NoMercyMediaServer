@@ -19,7 +19,7 @@ namespace NoMercy.MediaProcessing.Jobs.PaletteJobs;
 public class ColorPaletteJob : IShouldQueue
 {
     public string QueueName => "palette";
-    public int Priority => PalettePriority.ForImport(EntityType);
+    public int Priority => PalettePriority.ForImport(entityType: EntityType);
 
     public string EntityType { get; set; } = string.Empty;
     public string EntityId { get; set; } = string.Empty;
@@ -32,7 +32,7 @@ public class ColorPaletteJob : IShouldQueue
         EntityId = entityId;
     }
 
-    public Task Handle() => HandleCore(null, null);
+    public Task Handle() => HandleCore(dbOverride: null, registryOverride: null);
 
     /// <summary>
     /// Executes palette generation using the provided context and registry.
@@ -50,7 +50,7 @@ public class ColorPaletteJob : IShouldQueue
             PaletteSourceRegistry registry =
                 registryOverride ?? DefaultPaletteSourceRegistry.Instance;
 
-            IPaletteSource? source = registry.Resolve(EntityType);
+            IPaletteSource? source = registry.Resolve(entityType: EntityType);
             if (source is null)
                 return;
 
@@ -63,18 +63,18 @@ public class ColorPaletteJob : IShouldQueue
             // failures throw before they can persist (see below), so a stored
             // value only ever means "answered".
             string? current = await source.CurrentPaletteAsync(
-                db,
-                EntityId,
-                CancellationToken.None
+                db: db,
+                entityId: EntityId,
+                ct: CancellationToken.None
             );
-            if (!string.IsNullOrEmpty(current))
+            if (!string.IsNullOrEmpty(value: current))
                 return;
 
             // Transient failures (network, IO, timeout) propagate as exceptions so the
             // queue worker retries with backoff. Only a returned PaletteResult triggers a
             // persist — a thrown exception never writes "{}".
-            PaletteResult result = await source.GenerateAsync(db, EntityId, CancellationToken.None);
-            await source.PersistAsync(db, EntityId, result.Json, CancellationToken.None);
+            PaletteResult result = await source.GenerateAsync(db: db, entityId: EntityId, ct: CancellationToken.None);
+            await source.PersistAsync(db: db, entityId: EntityId, json: result.Json, ct: CancellationToken.None);
         }
         finally
         {

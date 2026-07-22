@@ -22,7 +22,7 @@ namespace NoMercy.Tests.OpticalMedia.Metadata;
 /// any drive, on any machine, yields the identical fingerprint. Two discs
 /// that differ in even one title's duration must fingerprint differently.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class DiscFingerprintTests
 {
     private static DiscTitle MakeTitle(int index, TimeSpan duration) =>
@@ -42,9 +42,9 @@ public class DiscFingerprintTests
         new(
             Type: OpticalDiscType.Dvd,
             DiscLabel: "TEST",
-            Titles: titles.Select(t => MakeTitle(t.Index, t.Duration)).ToArray(),
+            Titles: titles.Select(selector: t => MakeTitle(index: t.Index, duration: t.Duration)).ToArray(),
             AudioTracks: null,
-            TotalDuration: TimeSpan.FromSeconds(titles.Sum(t => t.Duration.TotalSeconds))
+            TotalDuration: TimeSpan.FromSeconds(value: titles.Sum(selector: t => t.Duration.TotalSeconds))
         );
 
     [Fact]
@@ -52,7 +52,7 @@ public class DiscFingerprintTests
     {
         DiscInfo disc = MakeDisc();
 
-        string fingerprint = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(disc);
+        string fingerprint = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(info: disc);
 
         fingerprint.Should().BeEmpty();
     }
@@ -60,13 +60,13 @@ public class DiscFingerprintTests
     [Fact]
     public void Compute_SameDiscTwice_ProducesIdenticalFingerprint()
     {
-        DiscInfo discA = MakeDisc((0, TimeSpan.FromMinutes(120)), (1, TimeSpan.FromMinutes(5)));
-        DiscInfo discB = MakeDisc((0, TimeSpan.FromMinutes(120)), (1, TimeSpan.FromMinutes(5)));
+        DiscInfo discA = MakeDisc(titles: [(0, TimeSpan.FromMinutes(minutes: 120)), (1, TimeSpan.FromMinutes(minutes: 5))]);
+        DiscInfo discB = MakeDisc(titles: [(0, TimeSpan.FromMinutes(minutes: 120)), (1, TimeSpan.FromMinutes(minutes: 5))]);
 
-        string fingerprintA = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(discA);
-        string fingerprintB = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(discB);
+        string fingerprintA = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(info: discA);
+        string fingerprintB = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(info: discB);
 
-        fingerprintA.Should().Be(fingerprintB);
+        fingerprintA.Should().Be(expected: fingerprintB);
     }
 
     [Fact]
@@ -74,40 +74,40 @@ public class DiscFingerprintTests
     {
         // Two discs with identical titles but different labels must
         // fingerprint identically — the label is not physical disc content.
-        DiscInfo discA = MakeDisc((0, TimeSpan.FromMinutes(90))) with
+        DiscInfo discA = MakeDisc(titles: (0, TimeSpan.FromMinutes(minutes: 90))) with
         {
             DiscLabel = "COPY_A",
         };
-        DiscInfo discB = MakeDisc((0, TimeSpan.FromMinutes(90))) with { DiscLabel = "COPY_B" };
+        DiscInfo discB = MakeDisc(titles: (0, TimeSpan.FromMinutes(minutes: 90))) with { DiscLabel = "COPY_B" };
 
-        string fingerprintA = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(discA);
-        string fingerprintB = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(discB);
+        string fingerprintA = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(info: discA);
+        string fingerprintB = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(info: discB);
 
-        fingerprintA.Should().Be(fingerprintB);
+        fingerprintA.Should().Be(expected: fingerprintB);
     }
 
     [Fact]
     public void Compute_DifferentTitleDuration_ProducesDifferentFingerprint()
     {
-        DiscInfo discA = MakeDisc((0, TimeSpan.FromMinutes(90)));
-        DiscInfo discB = MakeDisc((0, TimeSpan.FromMinutes(91)));
+        DiscInfo discA = MakeDisc(titles: (0, TimeSpan.FromMinutes(minutes: 90)));
+        DiscInfo discB = MakeDisc(titles: (0, TimeSpan.FromMinutes(minutes: 91)));
 
-        string fingerprintA = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(discA);
-        string fingerprintB = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(discB);
+        string fingerprintA = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(info: discA);
+        string fingerprintB = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(info: discB);
 
-        fingerprintA.Should().NotBe(fingerprintB);
+        fingerprintA.Should().NotBe(unexpected: fingerprintB);
     }
 
     [Fact]
     public void Compute_DifferentTitleCount_ProducesDifferentFingerprint()
     {
-        DiscInfo discA = MakeDisc((0, TimeSpan.FromMinutes(90)));
-        DiscInfo discB = MakeDisc((0, TimeSpan.FromMinutes(90)), (1, TimeSpan.FromMinutes(5)));
+        DiscInfo discA = MakeDisc(titles: (0, TimeSpan.FromMinutes(minutes: 90)));
+        DiscInfo discB = MakeDisc(titles: [(0, TimeSpan.FromMinutes(minutes: 90)), (1, TimeSpan.FromMinutes(minutes: 5))]);
 
-        string fingerprintA = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(discA);
-        string fingerprintB = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(discB);
+        string fingerprintA = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(info: discA);
+        string fingerprintB = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(info: discB);
 
-        fingerprintA.Should().NotBe(fingerprintB);
+        fingerprintA.Should().NotBe(unexpected: fingerprintB);
     }
 
     [Fact]
@@ -115,24 +115,24 @@ public class DiscFingerprintTests
     {
         // Compute() sorts by Index before hashing — array insertion order
         // must not matter, only the logical title index does.
-        DiscInfo discA = MakeDisc((0, TimeSpan.FromMinutes(90)), (1, TimeSpan.FromMinutes(5)));
-        DiscInfo discB = MakeDisc((1, TimeSpan.FromMinutes(5)), (0, TimeSpan.FromMinutes(90)));
+        DiscInfo discA = MakeDisc(titles: [(0, TimeSpan.FromMinutes(minutes: 90)), (1, TimeSpan.FromMinutes(minutes: 5))]);
+        DiscInfo discB = MakeDisc(titles: [(1, TimeSpan.FromMinutes(minutes: 5)), (0, TimeSpan.FromMinutes(minutes: 90))]);
 
-        string fingerprintA = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(discA);
-        string fingerprintB = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(discB);
+        string fingerprintA = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(info: discA);
+        string fingerprintB = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(info: discB);
 
-        fingerprintA.Should().Be(fingerprintB);
+        fingerprintA.Should().Be(expected: fingerprintB);
     }
 
     [Fact]
     public void Compute_ReturnsUppercaseHex()
     {
-        DiscInfo disc = MakeDisc((0, TimeSpan.FromMinutes(90)));
+        DiscInfo disc = MakeDisc(titles: (0, TimeSpan.FromMinutes(minutes: 90)));
 
-        string fingerprint = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(disc);
+        string fingerprint = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(info: disc);
 
-        fingerprint.Should().MatchRegex("^[0-9A-F]+$");
-        fingerprint.Should().HaveLength(40, "SHA1 hex-encoded is 40 characters");
+        fingerprint.Should().MatchRegex(regularExpression: "^[0-9A-F]+$");
+        fingerprint.Should().HaveLength(expected: 40, because: "SHA1 hex-encoded is 40 characters");
     }
 
     [Fact]
@@ -140,12 +140,12 @@ public class DiscFingerprintTests
     {
         // Compute() truncates to whole seconds via (long)TotalSeconds —
         // sub-second jitter across re-inserts/re-reads must not change it.
-        DiscInfo discA = MakeDisc((0, TimeSpan.FromSeconds(5400.1)));
-        DiscInfo discB = MakeDisc((0, TimeSpan.FromSeconds(5400.9)));
+        DiscInfo discA = MakeDisc(titles: (0, TimeSpan.FromSeconds(value: 5400.1)));
+        DiscInfo discB = MakeDisc(titles: (0, TimeSpan.FromSeconds(value: 5400.9)));
 
-        string fingerprintA = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(discA);
-        string fingerprintB = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(discB);
+        string fingerprintA = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(info: discA);
+        string fingerprintB = NoMercy.OpticalMedia.Metadata.DiscFingerprint.Compute(info: discB);
 
-        fingerprintA.Should().Be(fingerprintB);
+        fingerprintA.Should().Be(expected: fingerprintB);
     }
 }

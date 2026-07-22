@@ -21,7 +21,7 @@ using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;
 
-[Trait("Category", "Characterization")]
+[Trait(name: "Category", value: "Characterization")]
 public class TestMediaContextFactoryTests : IDisposable
 {
     private readonly MediaContext _context;
@@ -35,81 +35,81 @@ public class TestMediaContextFactoryTests : IDisposable
     public void CreateContext_CreatesEmptyDatabase()
     {
         using MediaContext emptyContext = TestMediaContextFactory.CreateContext();
-        Assert.Empty(emptyContext.Users);
+        Assert.Empty(collection: emptyContext.Users);
     }
 
     [Fact]
     public void CreateSeededContext_SeedsUser()
     {
-        User? user = _context.Users.FirstOrDefault(u => u.Id == SeedConstants.UserId);
-        Assert.NotNull(user);
-        Assert.Equal("Test User", user.Name);
-        Assert.True(user.Owner);
+        User? user = _context.Users.FirstOrDefault(predicate: u => u.Id == SeedConstants.UserId);
+        Assert.NotNull(@object: user);
+        Assert.Equal(expected: "Test User", actual: user.Name);
+        Assert.True(condition: user.Owner);
     }
 
     [Fact]
     public void CreateSeededContext_SeedsLibraries()
     {
         List<Library> libraries = _context.Libraries.ToList();
-        Assert.Equal(2, libraries.Count);
+        Assert.Equal(expected: 2, actual: libraries.Count);
     }
 
     [Fact]
     public void CreateSeededContext_SeedsLibraryUserAccess()
     {
         List<LibraryUser> libraryUsers = _context
-            .LibraryUser.Where(lu => lu.UserId == SeedConstants.UserId)
+            .LibraryUser.Where(predicate: lu => lu.UserId == SeedConstants.UserId)
             .ToList();
-        Assert.Equal(2, libraryUsers.Count);
+        Assert.Equal(expected: 2, actual: libraryUsers.Count);
     }
 
     [Fact]
     public void CreateSeededContext_SeedsMovies()
     {
         List<Movie> movies = _context.Movies.ToList();
-        Assert.Equal(2, movies.Count);
+        Assert.Equal(expected: 2, actual: movies.Count);
     }
 
     [Fact]
     public void CreateSeededContext_SeedsTvShows()
     {
         List<Tv> shows = _context.Tvs.ToList();
-        Assert.Single(shows);
+        Assert.Single(collection: shows);
     }
 
     [Fact]
     public void CreateSeededContext_SeedsVideoFiles()
     {
         List<VideoFile> videoFiles = _context.VideoFiles.ToList();
-        Assert.Equal(4, videoFiles.Count);
+        Assert.Equal(expected: 4, actual: videoFiles.Count);
     }
 
     [Fact]
     public void CreateSeededContext_SeedsEpisodes()
     {
         List<Episode> episodes = _context.Episodes.ToList();
-        Assert.Equal(2, episodes.Count);
+        Assert.Equal(expected: 2, actual: episodes.Count);
     }
 
     [Fact]
     public void CreateSeededContext_SeedsGenres()
     {
         List<Genre> genres = _context.Genres.ToList();
-        Assert.Equal(2, genres.Count);
+        Assert.Equal(expected: 2, actual: genres.Count);
     }
 
     [Fact]
     public async Task CreateSeededContext_MovieLibraryJoinWorks()
     {
         List<LibraryMovie> libraryMovies = await _context.LibraryMovie.ToListAsync();
-        Assert.Equal(2, libraryMovies.Count);
+        Assert.Equal(expected: 2, actual: libraryMovies.Count);
     }
 
     [Fact]
     public async Task CreateSeededContext_TvLibraryJoinWorks()
     {
         List<LibraryTv> libraryTvs = await _context.LibraryTv.ToListAsync();
-        Assert.Single(libraryTvs);
+        Assert.Single(collection: libraryTvs);
     }
 
     [Fact]
@@ -118,8 +118,8 @@ public class TestMediaContextFactoryTests : IDisposable
         using MediaContext context1 = TestMediaContextFactory.CreateSeededContext();
         using MediaContext context2 = TestMediaContextFactory.CreateContext();
 
-        Assert.NotEmpty(context1.Users);
-        Assert.Empty(context2.Users);
+        Assert.NotEmpty(collection: context1.Users);
+        Assert.Empty(collection: context2.Users);
     }
 
     public void Dispose()

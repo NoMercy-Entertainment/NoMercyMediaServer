@@ -65,9 +65,9 @@ public class GenreRepository(MediaContext context) : IGenreRepository
     {
         return await context
             .Genres.AsNoTracking()
-            .Where(genre => genre.Id == id)
-            .Include(genre => genre.Translations.Where(t => t.Iso6391 == language))
-            .Include(genre =>
+            .Where(predicate: genre => genre.Id == id)
+            .Include(navigationPropertyPath: genre => genre.Translations.Where(t => t.Iso6391 == language))
+            .Include(navigationPropertyPath: genre =>
                 genre
                     .GenreMovies.Where(gm =>
                         gm.Movie.Library.LibraryUsers.Any(u => u.UserId == userId)
@@ -76,22 +76,22 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                     .OrderBy(gm => gm.MovieId)
                     .Take(take)
             )
-                .ThenInclude(gm => gm.Movie)
-                    .ThenInclude(m => m.Translations.Where(t => t.Iso6391 == language))
-            .Include(genre => genre.GenreMovies)
-                .ThenInclude(gm => gm.Movie)
-                    .ThenInclude(m => m.VideoFiles.Where(v => v.Folder != null))
-            .Include(genre => genre.GenreMovies)
-                .ThenInclude(gm => gm.Movie)
-                    .ThenInclude(m =>
+                .ThenInclude(navigationPropertyPath: gm => gm.Movie)
+                    .ThenInclude(navigationPropertyPath: m => m.Translations.Where(t => t.Iso6391 == language))
+            .Include(navigationPropertyPath: genre => genre.GenreMovies)
+                .ThenInclude(navigationPropertyPath: gm => gm.Movie)
+                    .ThenInclude(navigationPropertyPath: m => m.VideoFiles.Where(v => v.Folder != null))
+            .Include(navigationPropertyPath: genre => genre.GenreMovies)
+                .ThenInclude(navigationPropertyPath: gm => gm.Movie)
+                    .ThenInclude(navigationPropertyPath: m =>
                         m.Images.Where(i => i.Type == "logo")
                             .OrderByDescending(i => i.VoteAverage)
                             .ThenBy(i => i.Id)
                             .Take(1)
                     )
-            .Include(genre => genre.GenreMovies)
-                .ThenInclude(gm => gm.Movie)
-                    .ThenInclude(m =>
+            .Include(navigationPropertyPath: genre => genre.GenreMovies)
+                .ThenInclude(navigationPropertyPath: gm => gm.Movie)
+                    .ThenInclude(navigationPropertyPath: m =>
                         m.CertificationMovies.Where(c =>
                                 c.Certification.Iso31661 == "US"
                                 || c.Certification.Iso31661 == country
@@ -99,8 +99,8 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                             .OrderBy(c => c.CertificationId)
                             .Take(1)
                     )
-                        .ThenInclude(c => c.Certification)
-            .Include(genre =>
+                        .ThenInclude(navigationPropertyPath: c => c.Certification)
+            .Include(navigationPropertyPath: genre =>
                 genre
                     .GenreTvShows.Where(gt =>
                         gt.Tv.Library.LibraryUsers.Any(u => u.UserId == userId)
@@ -124,11 +124,11 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                     .OrderBy(gt => gt.TvId)
                     .Take(take)
             )
-                .ThenInclude(gt => gt.Tv)
-                    .ThenInclude(tv => tv.Translations.Where(t => t.Iso6391 == language))
-            .Include(genre => genre.GenreTvShows)
-                .ThenInclude(gt => gt.Tv)
-                    .ThenInclude(tv =>
+                .ThenInclude(navigationPropertyPath: gt => gt.Tv)
+                    .ThenInclude(navigationPropertyPath: tv => tv.Translations.Where(t => t.Iso6391 == language))
+            .Include(navigationPropertyPath: genre => genre.GenreTvShows)
+                .ThenInclude(navigationPropertyPath: gt => gt.Tv)
+                    .ThenInclude(navigationPropertyPath: tv =>
                         tv.Episodes.Where(e =>
                             e.SeasonNumber > 0
                             && (
@@ -145,18 +145,18 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                             )
                         )
                     )
-                        .ThenInclude(e => e.VideoFiles.Where(v => v.Folder != null))
-            .Include(genre => genre.GenreTvShows)
-                .ThenInclude(gt => gt.Tv)
-                    .ThenInclude(tv =>
+                        .ThenInclude(navigationPropertyPath: e => e.VideoFiles.Where(v => v.Folder != null))
+            .Include(navigationPropertyPath: genre => genre.GenreTvShows)
+                .ThenInclude(navigationPropertyPath: gt => gt.Tv)
+                    .ThenInclude(navigationPropertyPath: tv =>
                         tv.Images.Where(i => i.Type == "logo")
                             .OrderByDescending(i => i.VoteAverage)
                             .ThenBy(i => i.Id)
                             .Take(1)
                     )
-            .Include(genre => genre.GenreTvShows)
-                .ThenInclude(gt => gt.Tv)
-                    .ThenInclude(tv =>
+            .Include(navigationPropertyPath: genre => genre.GenreTvShows)
+                .ThenInclude(navigationPropertyPath: gt => gt.Tv)
+                    .ThenInclude(navigationPropertyPath: tv =>
                         tv.CertificationTvs.Where(c =>
                                 c.Certification.Iso31661 == "US"
                                 || c.Certification.Iso31661 == country
@@ -164,8 +164,8 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                             .OrderBy(c => c.CertificationId)
                             .Take(1)
                     )
-                        .ThenInclude(c => c.Certification)
-            .FirstOrDefaultAsync(ct);
+                        .ThenInclude(navigationPropertyPath: c => c.Certification)
+            .FirstOrDefaultAsync(cancellationToken: ct);
     }
 
     public async Task<(
@@ -184,8 +184,8 @@ public class GenreRepository(MediaContext context) : IGenreRepository
     {
         GenreDetailDto? genreDetail = await context
             .Genres.AsNoTracking()
-            .Where(genre => genre.Id == id)
-            .Select(genre => new GenreDetailDto
+            .Where(predicate: genre => genre.Id == id)
+            .Select(selector: genre => new GenreDetailDto
             {
                 Id = genre.Id,
                 Name = genre.Name,
@@ -194,21 +194,21 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                     .Select(t => t.Name)
                     .FirstOrDefault(),
             })
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultAsync(cancellationToken: ct);
 
         if (genreDetail is null)
             return (null, [], []);
 
         List<HomeMovieCardDto> movies = await context
             .GenreMovie.AsNoTracking()
-            .Where(gm => gm.GenreId == id)
-            .Where(gm => gm.Movie.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(gm => gm.Movie.VideoFiles.Any(v => v.Folder != null))
-            .OrderBy(gm => gm.Movie.TitleSort)
-            .ThenBy(gm => gm.MovieId)
-            .Skip(page * take)
-            .Take(take)
-            .Select(gm => new HomeMovieCardDto
+            .Where(predicate: gm => gm.GenreId == id)
+            .Where(predicate: gm => gm.Movie.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(predicate: gm => gm.Movie.VideoFiles.Any(v => v.Folder != null))
+            .OrderBy(keySelector: gm => gm.Movie.TitleSort)
+            .ThenBy(keySelector: gm => gm.MovieId)
+            .Skip(count: page * take)
+            .Take(count: take)
+            .Select(selector: gm => new HomeMovieCardDto
             {
                 Id = gm.Movie.Id,
                 Title = gm.Movie.Title,
@@ -245,13 +245,13 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                     .Select(c => c.Certification.Iso31661)
                     .FirstOrDefault(),
             })
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken: ct);
 
         List<HomeTvCardDto> tvShows = await context
             .GenreTv.AsNoTracking()
-            .Where(gt => gt.GenreId == id)
-            .Where(gt => gt.Tv.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(gt =>
+            .Where(predicate: gt => gt.GenreId == id)
+            .Where(predicate: gt => gt.Tv.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(predicate: gt =>
                 gt.Tv.Episodes.Any(e =>
                     (
                         e.VideoFiles.Any(v => v.Folder != null)
@@ -267,11 +267,11 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                     )
                 )
             )
-            .OrderBy(gt => gt.Tv.TitleSort)
-            .ThenBy(gt => gt.TvId)
-            .Skip(page * take)
-            .Take(take)
-            .Select(gt => new HomeTvCardDto
+            .OrderBy(keySelector: gt => gt.Tv.TitleSort)
+            .ThenBy(keySelector: gt => gt.TvId)
+            .Skip(count: page * take)
+            .Take(count: take)
+            .Select(selector: gt => new HomeTvCardDto
             {
                 Id = gt.Tv.Id,
                 Title = gt.Tv.Title,
@@ -324,7 +324,7 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                     .Select(c => c.Certification.Iso31661)
                     .FirstOrDefault(),
             })
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken: ct);
 
         return (genreDetail, movies, tvShows);
     }
@@ -339,7 +339,7 @@ public class GenreRepository(MediaContext context) : IGenreRepository
     {
         return context
             .Genres.AsNoTracking()
-            .Where(genre =>
+            .Where(predicate: genre =>
                 genre.GenreMovies.Any(g =>
                     g.Movie.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
@@ -347,22 +347,22 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                     g.Tv.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
             )
-            .Include(genre => genre.Translations.Where(t => t.Iso6391 == language))
-            .Include(genre =>
+            .Include(navigationPropertyPath: genre => genre.Translations.Where(t => t.Iso6391 == language))
+            .Include(navigationPropertyPath: genre =>
                 genre.GenreMovies.Where(gm =>
                     gm.Movie.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
             )
-            .Include(genre =>
+            .Include(navigationPropertyPath: genre =>
                 genre.GenreTvShows.Where(gt =>
                     gt.Tv.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
             )
-            .OrderBy(genre => genre.Name)
-            .ThenBy(genre => genre.Id)
-            .Skip(page * take)
-            .Take(take)
-            .ToListAsync(ct);
+            .OrderBy(keySelector: genre => genre.Name)
+            .ThenBy(keySelector: genre => genre.Id)
+            .Skip(count: page * take)
+            .Take(count: take)
+            .ToListAsync(cancellationToken: ct);
     }
 
     public async Task<List<GenreWithCountsDto>> GetGenresWithCountsAsync(
@@ -379,7 +379,7 @@ public class GenreRepository(MediaContext context) : IGenreRepository
         // queries. Do not fold this back into a single projection.
         var genres = await context
             .Genres.AsNoTracking()
-            .Where(genre =>
+            .Where(predicate: genre =>
                 genre.GenreMovies.Any(g =>
                     g.Movie.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
@@ -387,11 +387,11 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                     g.Tv.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
             )
-            .OrderBy(genre => genre.Name)
-            .ThenBy(genre => genre.Id)
-            .Skip(page * take)
-            .Take(take)
-            .Select(genre => new
+            .OrderBy(keySelector: genre => genre.Name)
+            .ThenBy(keySelector: genre => genre.Id)
+            .Skip(count: page * take)
+            .Take(count: take)
+            .Select(selector: genre => new
             {
                 genre.Id,
                 genre.Name,
@@ -400,66 +400,66 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                     .Select(t => t.Name)
                     .FirstOrDefault(),
             })
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken: ct);
 
         if (genres.Count == 0)
             return [];
 
-        List<int> ids = genres.Select(genre => genre.Id).ToList();
+        List<int> ids = genres.Select(selector: genre => genre.Id).ToList();
 
         Dictionary<int, int> movieTotals = await context
             .GenreMovie.AsNoTracking()
-            .Where(gm =>
+            .Where(predicate: gm =>
                 ids.Contains(gm.GenreId)
                 && gm.Movie.Library.LibraryUsers.Any(u => u.UserId == userId)
             )
-            .GroupBy(gm => gm.GenreId)
-            .Select(group => new { group.Key, Count = group.Count() })
-            .ToDictionaryAsync(x => x.Key, x => x.Count, ct);
+            .GroupBy(keySelector: gm => gm.GenreId)
+            .Select(selector: group => new { group.Key, Count = group.Count() })
+            .ToDictionaryAsync(keySelector: x => x.Key, elementSelector: x => x.Count, cancellationToken: ct);
 
         Dictionary<int, int> movieWithVideo = await context
             .GenreMovie.AsNoTracking()
-            .Where(gm =>
+            .Where(predicate: gm =>
                 ids.Contains(gm.GenreId)
                 && gm.Movie.Library.LibraryUsers.Any(u => u.UserId == userId)
                 && gm.Movie.VideoFiles.Any(v => v.Folder != null)
             )
-            .GroupBy(gm => gm.GenreId)
-            .Select(group => new { group.Key, Count = group.Count() })
-            .ToDictionaryAsync(x => x.Key, x => x.Count, ct);
+            .GroupBy(keySelector: gm => gm.GenreId)
+            .Select(selector: group => new { group.Key, Count = group.Count() })
+            .ToDictionaryAsync(keySelector: x => x.Key, elementSelector: x => x.Count, cancellationToken: ct);
 
         Dictionary<int, int> tvTotals = await context
             .GenreTv.AsNoTracking()
-            .Where(gt =>
+            .Where(predicate: gt =>
                 ids.Contains(gt.GenreId) && gt.Tv.Library.LibraryUsers.Any(u => u.UserId == userId)
             )
-            .GroupBy(gt => gt.GenreId)
-            .Select(group => new { group.Key, Count = group.Count() })
-            .ToDictionaryAsync(x => x.Key, x => x.Count, ct);
+            .GroupBy(keySelector: gt => gt.GenreId)
+            .Select(selector: group => new { group.Key, Count = group.Count() })
+            .ToDictionaryAsync(keySelector: x => x.Key, elementSelector: x => x.Count, cancellationToken: ct);
 
         // A multi-episode video file lives on its own episode, which therefore already
         // passes the direct "has a video file" test. The old nested self-join over
         // LastEpisodeNumber never changed this TV-level count, so it is dropped.
         Dictionary<int, int> tvWithVideo = await context
             .GenreTv.AsNoTracking()
-            .Where(gt =>
+            .Where(predicate: gt =>
                 ids.Contains(gt.GenreId)
                 && gt.Tv.Library.LibraryUsers.Any(u => u.UserId == userId)
                 && gt.Tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null))
             )
-            .GroupBy(gt => gt.GenreId)
-            .Select(group => new { group.Key, Count = group.Count() })
-            .ToDictionaryAsync(x => x.Key, x => x.Count, ct);
+            .GroupBy(keySelector: gt => gt.GenreId)
+            .Select(selector: group => new { group.Key, Count = group.Count() })
+            .ToDictionaryAsync(keySelector: x => x.Key, elementSelector: x => x.Count, cancellationToken: ct);
 
         return genres
-            .Select(genre => new GenreWithCountsDto
+            .Select(selector: genre => new GenreWithCountsDto
             {
                 Id = genre.Id,
                 Name = genre.TranslatedName ?? genre.Name,
-                TotalMovies = movieTotals.GetValueOrDefault(genre.Id),
-                TotalTvShows = tvTotals.GetValueOrDefault(genre.Id),
-                MoviesWithVideo = movieWithVideo.GetValueOrDefault(genre.Id),
-                TvShowsWithVideo = tvWithVideo.GetValueOrDefault(genre.Id),
+                TotalMovies = movieTotals.GetValueOrDefault(key: genre.Id),
+                TotalTvShows = tvTotals.GetValueOrDefault(key: genre.Id),
+                MoviesWithVideo = movieWithVideo.GetValueOrDefault(key: genre.Id),
+                TvShowsWithVideo = tvWithVideo.GetValueOrDefault(key: genre.Id),
             })
             .ToList();
     }
@@ -468,7 +468,7 @@ public class GenreRepository(MediaContext context) : IGenreRepository
     {
         return context
             .MusicGenres.AsNoTracking()
-            .Where(genre =>
+            .Where(predicate: genre =>
                 genre.AlbumMusicGenres.Any(g =>
                     g.Album.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
@@ -476,11 +476,11 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                     g.Artist.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
             )
-            .Where(genre => genre.MusicGenreTracks.Any())
-            .Include(genre => genre.MusicGenreTracks)
-            .OrderBy(genre => genre.Name)
-            .ThenBy(genre => genre.Id)
-            .ToListAsync(ct);
+            .Where(predicate: genre => genre.MusicGenreTracks.Any())
+            .Include(navigationPropertyPath: genre => genre.MusicGenreTracks)
+            .OrderBy(keySelector: genre => genre.Name)
+            .ThenBy(keySelector: genre => genre.Id)
+            .ToListAsync(cancellationToken: ct);
     }
 
     public Task<List<MusicGenreCardDto>> GetMusicGenreCardsAsync(
@@ -490,7 +490,7 @@ public class GenreRepository(MediaContext context) : IGenreRepository
     {
         return context
             .MusicGenres.AsNoTracking()
-            .Where(genre =>
+            .Where(predicate: genre =>
                 genre.AlbumMusicGenres.Any(g =>
                     g.Album.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
@@ -498,16 +498,16 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                     g.Artist.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
             )
-            .Where(genre => genre.MusicGenreTracks.Any())
-            .OrderBy(genre => genre.Name)
-            .ThenBy(genre => genre.Id)
-            .Select(genre => new MusicGenreCardDto
+            .Where(predicate: genre => genre.MusicGenreTracks.Any())
+            .OrderBy(keySelector: genre => genre.Name)
+            .ThenBy(keySelector: genre => genre.Id)
+            .Select(selector: genre => new MusicGenreCardDto
             {
                 Id = genre.Id,
                 Name = genre.Name,
                 TrackCount = genre.MusicGenreTracks.Count(),
             })
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken: ct);
     }
 
     public Task<List<MusicGenre>> GetPaginatedMusicGenresAsync(
@@ -520,7 +520,7 @@ public class GenreRepository(MediaContext context) : IGenreRepository
     {
         return context
             .MusicGenres.AsNoTracking()
-            .Where(genre =>
+            .Where(predicate: genre =>
                 genre.AlbumMusicGenres.Any(g =>
                     g.Album.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
@@ -528,18 +528,18 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                     g.Artist.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
             )
-            .Where(genre => genre.MusicGenreTracks.Any())
-            .Where(genre =>
+            .Where(predicate: genre => genre.MusicGenreTracks.Any())
+            .Where(predicate: genre =>
                 (letter == "_" || letter == "#")
                     ? Letters.Any(p => genre.Name.StartsWith(p.ToLower()))
                     : genre.Name.StartsWith(letter.ToLower())
             )
-            .Include(genre => genre.MusicGenreTracks)
-            .OrderBy(genre => genre.Name)
-            .ThenBy(genre => genre.Id)
-            .Skip(page * take)
-            .Take(take)
-            .ToListAsync(ct);
+            .Include(navigationPropertyPath: genre => genre.MusicGenreTracks)
+            .OrderBy(keySelector: genre => genre.Name)
+            .ThenBy(keySelector: genre => genre.Id)
+            .Skip(count: page * take)
+            .Take(count: take)
+            .ToListAsync(cancellationToken: ct);
     }
 
     public Task<List<MusicGenreCardDto>> GetPaginatedMusicGenreCardsAsync(
@@ -552,7 +552,7 @@ public class GenreRepository(MediaContext context) : IGenreRepository
     {
         return context
             .MusicGenres.AsNoTracking()
-            .Where(genre =>
+            .Where(predicate: genre =>
                 genre.AlbumMusicGenres.Any(g =>
                     g.Album.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
@@ -560,23 +560,23 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                     g.Artist.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
             )
-            .Where(genre => genre.MusicGenreTracks.Any())
-            .Where(genre =>
+            .Where(predicate: genre => genre.MusicGenreTracks.Any())
+            .Where(predicate: genre =>
                 (letter == "_" || letter == "#")
                     ? Letters.Any(p => genre.Name.StartsWith(p.ToLower()))
                     : genre.Name.StartsWith(letter.ToLower())
             )
-            .OrderBy(genre => genre.Name)
-            .ThenBy(genre => genre.Id)
-            .Skip(page * take)
-            .Take(take)
-            .Select(genre => new MusicGenreCardDto
+            .OrderBy(keySelector: genre => genre.Name)
+            .ThenBy(keySelector: genre => genre.Id)
+            .Skip(count: page * take)
+            .Take(count: take)
+            .Select(selector: genre => new MusicGenreCardDto
             {
                 Id = genre.Id,
                 Name = genre.Name,
                 TrackCount = genre.MusicGenreTracks.Count(),
             })
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken: ct);
     }
 
     public Task<MusicGenre?> GetMusicGenreAsync(
@@ -587,7 +587,7 @@ public class GenreRepository(MediaContext context) : IGenreRepository
     {
         return context
             .MusicGenres.AsNoTracking()
-            .Where(genre =>
+            .Where(predicate: genre =>
                 genre.AlbumMusicGenres.Any(g =>
                     g.Album.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
@@ -595,33 +595,33 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                     g.Artist.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
             )
-            .Where(genre => genre.Id == genreId)
-            .Where(genre => genre.MusicGenreTracks.Any())
-            .Include(genre => genre.MusicGenreTracks)
-                .ThenInclude(mgt => mgt.Track)
-                    .ThenInclude(track => track.TrackUser.Where(tu => tu.UserId == userId))
-            .Include(genre => genre.MusicGenreTracks)
-                .ThenInclude(mgt => mgt.Track)
-                    .ThenInclude(track => track.ArtistTrack)
-                        .ThenInclude(at => at.Artist)
-                            .ThenInclude(artist => artist.Translations)
-            .Include(genre => genre.MusicGenreTracks)
-                .ThenInclude(mgt => mgt.Track)
-                    .ThenInclude(track => track.ArtistTrack)
-                        .ThenInclude(at => at.Artist)
-                            .ThenInclude(artist => artist.Images)
-            .Include(genre => genre.MusicGenreTracks)
-                .ThenInclude(mgt => mgt.Track)
-                    .ThenInclude(track => track.AlbumTrack)
-                        .ThenInclude(at => at.Album)
-                            .ThenInclude(album => album.Translations)
-            .Include(genre => genre.MusicGenreTracks)
-                .ThenInclude(mgt => mgt.Track)
-                    .ThenInclude(track => track.AlbumTrack)
-                        .ThenInclude(at => at.Album)
-                            .ThenInclude(album => album.AlbumArtist)
-                                .ThenInclude(aa => aa.Artist)
-                                    .ThenInclude(artist => artist.Images)
-            .FirstOrDefaultAsync(ct);
+            .Where(predicate: genre => genre.Id == genreId)
+            .Where(predicate: genre => genre.MusicGenreTracks.Any())
+            .Include(navigationPropertyPath: genre => genre.MusicGenreTracks)
+                .ThenInclude(navigationPropertyPath: mgt => mgt.Track)
+                    .ThenInclude(navigationPropertyPath: track => track.TrackUser.Where(tu => tu.UserId == userId))
+            .Include(navigationPropertyPath: genre => genre.MusicGenreTracks)
+                .ThenInclude(navigationPropertyPath: mgt => mgt.Track)
+                    .ThenInclude(navigationPropertyPath: track => track.ArtistTrack)
+                        .ThenInclude(navigationPropertyPath: at => at.Artist)
+                            .ThenInclude(navigationPropertyPath: artist => artist.Translations)
+            .Include(navigationPropertyPath: genre => genre.MusicGenreTracks)
+                .ThenInclude(navigationPropertyPath: mgt => mgt.Track)
+                    .ThenInclude(navigationPropertyPath: track => track.ArtistTrack)
+                        .ThenInclude(navigationPropertyPath: at => at.Artist)
+                            .ThenInclude(navigationPropertyPath: artist => artist.Images)
+            .Include(navigationPropertyPath: genre => genre.MusicGenreTracks)
+                .ThenInclude(navigationPropertyPath: mgt => mgt.Track)
+                    .ThenInclude(navigationPropertyPath: track => track.AlbumTrack)
+                        .ThenInclude(navigationPropertyPath: at => at.Album)
+                            .ThenInclude(navigationPropertyPath: album => album.Translations)
+            .Include(navigationPropertyPath: genre => genre.MusicGenreTracks)
+                .ThenInclude(navigationPropertyPath: mgt => mgt.Track)
+                    .ThenInclude(navigationPropertyPath: track => track.AlbumTrack)
+                        .ThenInclude(navigationPropertyPath: at => at.Album)
+                            .ThenInclude(navigationPropertyPath: album => album.AlbumArtist)
+                                .ThenInclude(navigationPropertyPath: aa => aa.Artist)
+                                    .ThenInclude(navigationPropertyPath: artist => artist.Images)
+            .FirstOrDefaultAsync(cancellationToken: ct);
     }
 }

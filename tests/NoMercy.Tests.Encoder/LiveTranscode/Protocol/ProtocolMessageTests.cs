@@ -24,14 +24,14 @@ public class ProtocolMessageTests
     // ──────────────────────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(LiveSessionState.Starting)]
-    [InlineData(LiveSessionState.Transcoding)]
-    [InlineData(LiveSessionState.Buffering)]
-    [InlineData(LiveSessionState.Buffered)]
-    [InlineData(LiveSessionState.Seeking)]
-    [InlineData(LiveSessionState.ChangingQuality)]
-    [InlineData(LiveSessionState.Error)]
-    [InlineData(LiveSessionState.Ended)]
+    [InlineData(data: LiveSessionState.Starting)]
+    [InlineData(data: LiveSessionState.Transcoding)]
+    [InlineData(data: LiveSessionState.Buffering)]
+    [InlineData(data: LiveSessionState.Buffered)]
+    [InlineData(data: LiveSessionState.Seeking)]
+    [InlineData(data: LiveSessionState.ChangingQuality)]
+    [InlineData(data: LiveSessionState.Error)]
+    [InlineData(data: LiveSessionState.Ended)]
     public void LiveSessionState_AllEightValues_Exist(LiveSessionState state)
     {
         state.Should().BeDefined();
@@ -40,7 +40,7 @@ public class ProtocolMessageTests
     [Fact]
     public void LiveSessionState_HasExactlyEightValues()
     {
-        Enum.GetValues<LiveSessionState>().Length.Should().Be(8);
+        Enum.GetValues<LiveSessionState>().Length.Should().Be(expected: 8);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -63,24 +63,24 @@ public class ProtocolMessageTests
             CanRealtime: true
         );
 
-        quality.Id.Should().Be("1080p");
-        quality.Label.Should().Be("1080p HD");
-        quality.Width.Should().Be(1920);
-        quality.Height.Should().Be(1080);
-        quality.Codec.Should().Be(VideoCodecType.H264);
-        quality.BitrateKbps.Should().Be(4000);
-        quality.Encoder.Should().Be("h264_nvenc");
+        quality.Id.Should().Be(expected: "1080p");
+        quality.Label.Should().Be(expected: "1080p HD");
+        quality.Width.Should().Be(expected: 1920);
+        quality.Height.Should().Be(expected: 1080);
+        quality.Codec.Should().Be(expected: VideoCodecType.H264);
+        quality.BitrateKbps.Should().Be(expected: 4000);
+        quality.Encoder.Should().Be(expected: "h264_nvenc");
         quality.IsHardwareAccelerated.Should().BeTrue();
-        quality.ExpectedSpeed.Should().Be(1.8);
+        quality.ExpectedSpeed.Should().Be(expected: 1.8);
         quality.CanRealtime.Should().BeTrue();
 
-        string json = JsonConvert.SerializeObject(quality);
-        LiveQuality? deserialized = JsonConvert.DeserializeObject<LiveQuality>(json);
+        string json = JsonConvert.SerializeObject(value: quality);
+        LiveQuality? deserialized = JsonConvert.DeserializeObject<LiveQuality>(value: json);
 
         deserialized.Should().NotBeNull();
-        deserialized!.Id.Should().Be(quality.Id);
-        deserialized.Codec.Should().Be(quality.Codec);
-        deserialized.IsHardwareAccelerated.Should().Be(quality.IsHardwareAccelerated);
+        deserialized!.Id.Should().Be(expected: quality.Id);
+        deserialized.Codec.Should().Be(expected: quality.Codec);
+        deserialized.IsHardwareAccelerated.Should().Be(expected: quality.IsHardwareAccelerated);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -113,23 +113,23 @@ public class ProtocolMessageTests
             FirstSegmentUrl: "/segments/0.ts"
         );
 
-        message.SessionId.Should().Be("sess-abc123");
-        message.DurationSeconds.Should().Be(5400.0);
-        message.AvailableQualities.Should().HaveCount(1);
-        message.SelectedQuality.Id.Should().Be("720p");
-        message.FirstSegmentUrl.Should().Be("/segments/0.ts");
+        message.SessionId.Should().Be(expected: "sess-abc123");
+        message.DurationSeconds.Should().Be(expected: 5400.0);
+        message.AvailableQualities.Should().HaveCount(expected: 1);
+        message.SelectedQuality.Id.Should().Be(expected: "720p");
+        message.FirstSegmentUrl.Should().Be(expected: "/segments/0.ts");
 
-        string json = JsonConvert.SerializeObject(message);
+        string json = JsonConvert.SerializeObject(value: message);
         SessionCreatedMessage? deserialized = JsonConvert.DeserializeObject<SessionCreatedMessage>(
-            json
+            value: json
         );
 
         deserialized.Should().NotBeNull();
-        deserialized!.SessionId.Should().Be("sess-abc123");
-        deserialized.DurationSeconds.Should().Be(5400.0);
-        deserialized.AvailableQualities.Should().HaveCount(1);
-        deserialized.SelectedQuality.Id.Should().Be("720p");
-        deserialized.FirstSegmentUrl.Should().Be("/segments/0.ts");
+        deserialized!.SessionId.Should().Be(expected: "sess-abc123");
+        deserialized.DurationSeconds.Should().Be(expected: 5400.0);
+        deserialized.AvailableQualities.Should().HaveCount(expected: 1);
+        deserialized.SelectedQuality.Id.Should().Be(expected: "720p");
+        deserialized.FirstSegmentUrl.Should().Be(expected: "/segments/0.ts");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -147,23 +147,23 @@ public class ProtocolMessageTests
             SizeBytes: 204800L
         );
 
-        message.Index.Should().Be(3);
-        message.StartTimeSeconds.Should().Be(18.0);
-        message.DurationSeconds.Should().Be(6.0);
-        message.RelativeUrl.Should().Be("/segments/3.ts");
-        message.SizeBytes.Should().Be(204800L);
+        message.Index.Should().Be(expected: 3);
+        message.StartTimeSeconds.Should().Be(expected: 18.0);
+        message.DurationSeconds.Should().Be(expected: 6.0);
+        message.RelativeUrl.Should().Be(expected: "/segments/3.ts");
+        message.SizeBytes.Should().Be(expected: 204800L);
 
-        string json = JsonConvert.SerializeObject(message);
+        string json = JsonConvert.SerializeObject(value: message);
         SegmentReadyMessage? deserialized = JsonConvert.DeserializeObject<SegmentReadyMessage>(
-            json
+            value: json
         );
 
         deserialized.Should().NotBeNull();
-        deserialized!.Index.Should().Be(3);
-        deserialized.StartTimeSeconds.Should().Be(18.0);
-        deserialized.DurationSeconds.Should().Be(6.0);
-        deserialized.RelativeUrl.Should().Be("/segments/3.ts");
-        deserialized.SizeBytes.Should().Be(204800L);
+        deserialized!.Index.Should().Be(expected: 3);
+        deserialized.StartTimeSeconds.Should().Be(expected: 18.0);
+        deserialized.DurationSeconds.Should().Be(expected: 6.0);
+        deserialized.RelativeUrl.Should().Be(expected: "/segments/3.ts");
+        deserialized.SizeBytes.Should().Be(expected: 204800L);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -175,17 +175,17 @@ public class ProtocolMessageTests
     {
         SeekCompletedMessage message = new(NewPositionSeconds: 120.5, FirstSegmentIndex: 20);
 
-        message.NewPositionSeconds.Should().Be(120.5);
-        message.FirstSegmentIndex.Should().Be(20);
+        message.NewPositionSeconds.Should().Be(expected: 120.5);
+        message.FirstSegmentIndex.Should().Be(expected: 20);
 
-        string json = JsonConvert.SerializeObject(message);
+        string json = JsonConvert.SerializeObject(value: message);
         SeekCompletedMessage? deserialized = JsonConvert.DeserializeObject<SeekCompletedMessage>(
-            json
+            value: json
         );
 
         deserialized.Should().NotBeNull();
-        deserialized!.NewPositionSeconds.Should().Be(120.5);
-        deserialized.FirstSegmentIndex.Should().Be(20);
+        deserialized!.NewPositionSeconds.Should().Be(expected: 120.5);
+        deserialized.FirstSegmentIndex.Should().Be(expected: 20);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -193,10 +193,10 @@ public class ProtocolMessageTests
     // ──────────────────────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(QualityChangeReason.UserRequested)]
-    [InlineData(QualityChangeReason.AutoAdaptive)]
-    [InlineData(QualityChangeReason.HardwareLimited)]
-    [InlineData(QualityChangeReason.GpuFallbackToCpu)]
+    [InlineData(data: QualityChangeReason.UserRequested)]
+    [InlineData(data: QualityChangeReason.AutoAdaptive)]
+    [InlineData(data: QualityChangeReason.HardwareLimited)]
+    [InlineData(data: QualityChangeReason.GpuFallbackToCpu)]
     public void QualityChangeReason_AllValues_Exist(QualityChangeReason reason)
     {
         reason.Should().BeDefined();
@@ -223,17 +223,17 @@ public class ProtocolMessageTests
             Reason: QualityChangeReason.AutoAdaptive
         );
 
-        message.NewQuality.Id.Should().Be("480p");
-        message.Reason.Should().Be(QualityChangeReason.AutoAdaptive);
+        message.NewQuality.Id.Should().Be(expected: "480p");
+        message.Reason.Should().Be(expected: QualityChangeReason.AutoAdaptive);
 
-        string json = JsonConvert.SerializeObject(message);
+        string json = JsonConvert.SerializeObject(value: message);
         QualityChangedMessage? deserialized = JsonConvert.DeserializeObject<QualityChangedMessage>(
-            json
+            value: json
         );
 
         deserialized.Should().NotBeNull();
-        deserialized!.NewQuality.Id.Should().Be("480p");
-        deserialized.Reason.Should().Be(QualityChangeReason.AutoAdaptive);
+        deserialized!.NewQuality.Id.Should().Be(expected: "480p");
+        deserialized.Reason.Should().Be(expected: QualityChangeReason.AutoAdaptive);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -249,19 +249,19 @@ public class ProtocolMessageTests
             State: LiveSessionState.Transcoding
         );
 
-        message.Speed.Should().Be(1.4);
-        message.BufferAheadSeconds.Should().Be(30.0);
-        message.State.Should().Be(LiveSessionState.Transcoding);
+        message.Speed.Should().Be(expected: 1.4);
+        message.BufferAheadSeconds.Should().Be(expected: 30.0);
+        message.State.Should().Be(expected: LiveSessionState.Transcoding);
 
-        string json = JsonConvert.SerializeObject(message);
+        string json = JsonConvert.SerializeObject(value: message);
         TranscodeStateMessage? deserialized = JsonConvert.DeserializeObject<TranscodeStateMessage>(
-            json
+            value: json
         );
 
         deserialized.Should().NotBeNull();
-        deserialized!.Speed.Should().Be(1.4);
-        deserialized.BufferAheadSeconds.Should().Be(30.0);
-        deserialized.State.Should().Be(LiveSessionState.Transcoding);
+        deserialized!.Speed.Should().Be(expected: 1.4);
+        deserialized.BufferAheadSeconds.Should().Be(expected: 30.0);
+        deserialized.State.Should().Be(expected: LiveSessionState.Transcoding);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -277,18 +277,18 @@ public class ProtocolMessageTests
             Recoverable: true
         );
 
-        message.Kind.Should().Be(EncodingErrorKind.HardwareFailure);
-        message.Message.Should().Be("NVENC session failed");
+        message.Kind.Should().Be(expected: EncodingErrorKind.HardwareFailure);
+        message.Message.Should().Be(expected: "NVENC session failed");
         message.Recoverable.Should().BeTrue();
 
-        string json = JsonConvert.SerializeObject(message);
+        string json = JsonConvert.SerializeObject(value: message);
         TranscodeErrorMessage? deserialized = JsonConvert.DeserializeObject<TranscodeErrorMessage>(
-            json
+            value: json
         );
 
         deserialized.Should().NotBeNull();
-        deserialized!.Kind.Should().Be(EncodingErrorKind.HardwareFailure);
-        deserialized.Message.Should().Be("NVENC session failed");
+        deserialized!.Kind.Should().Be(expected: EncodingErrorKind.HardwareFailure);
+        deserialized.Message.Should().Be(expected: "NVENC session failed");
         deserialized.Recoverable.Should().BeTrue();
     }
 
@@ -297,10 +297,10 @@ public class ProtocolMessageTests
     // ──────────────────────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(SessionEndReason.ClientDisconnected)]
-    [InlineData(SessionEndReason.Completed)]
-    [InlineData(SessionEndReason.Error)]
-    [InlineData(SessionEndReason.ServerShutdown)]
+    [InlineData(data: SessionEndReason.ClientDisconnected)]
+    [InlineData(data: SessionEndReason.Completed)]
+    [InlineData(data: SessionEndReason.Error)]
+    [InlineData(data: SessionEndReason.ServerShutdown)]
     public void SessionEndReason_AllValues_Exist(SessionEndReason reason)
     {
         reason.Should().BeDefined();
@@ -311,15 +311,15 @@ public class ProtocolMessageTests
     {
         SessionEndedMessage message = new(Reason: SessionEndReason.Completed);
 
-        message.Reason.Should().Be(SessionEndReason.Completed);
+        message.Reason.Should().Be(expected: SessionEndReason.Completed);
 
-        string json = JsonConvert.SerializeObject(message);
+        string json = JsonConvert.SerializeObject(value: message);
         SessionEndedMessage? deserialized = JsonConvert.DeserializeObject<SessionEndedMessage>(
-            json
+            value: json
         );
 
         deserialized.Should().NotBeNull();
-        deserialized!.Reason.Should().Be(SessionEndReason.Completed);
+        deserialized!.Reason.Should().Be(expected: SessionEndReason.Completed);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -331,13 +331,13 @@ public class ProtocolMessageTests
     {
         RequestSeekMessage message = new(PositionSeconds: 247.5);
 
-        message.PositionSeconds.Should().Be(247.5);
+        message.PositionSeconds.Should().Be(expected: 247.5);
 
-        string json = JsonConvert.SerializeObject(message);
-        RequestSeekMessage? deserialized = JsonConvert.DeserializeObject<RequestSeekMessage>(json);
+        string json = JsonConvert.SerializeObject(value: message);
+        RequestSeekMessage? deserialized = JsonConvert.DeserializeObject<RequestSeekMessage>(value: json);
 
         deserialized.Should().NotBeNull();
-        deserialized!.PositionSeconds.Should().Be(247.5);
+        deserialized!.PositionSeconds.Should().Be(expected: 247.5);
     }
 
     [Fact]
@@ -345,15 +345,15 @@ public class ProtocolMessageTests
     {
         RequestQualityMessage message = new(QualityId: "1080p");
 
-        message.QualityId.Should().Be("1080p");
+        message.QualityId.Should().Be(expected: "1080p");
 
-        string json = JsonConvert.SerializeObject(message);
+        string json = JsonConvert.SerializeObject(value: message);
         RequestQualityMessage? deserialized = JsonConvert.DeserializeObject<RequestQualityMessage>(
-            json
+            value: json
         );
 
         deserialized.Should().NotBeNull();
-        deserialized!.QualityId.Should().Be("1080p");
+        deserialized!.QualityId.Should().Be(expected: "1080p");
     }
 
     [Fact]
@@ -363,9 +363,9 @@ public class ProtocolMessageTests
 
         message.QualityId.Should().BeNull();
 
-        string json = JsonConvert.SerializeObject(message);
+        string json = JsonConvert.SerializeObject(value: message);
         RequestQualityMessage? deserialized = JsonConvert.DeserializeObject<RequestQualityMessage>(
-            json
+            value: json
         );
 
         deserialized.Should().NotBeNull();
@@ -377,14 +377,14 @@ public class ProtocolMessageTests
     {
         ReportPositionMessage message = new(CurrentTimeSeconds: 83.25);
 
-        message.CurrentTimeSeconds.Should().Be(83.25);
+        message.CurrentTimeSeconds.Should().Be(expected: 83.25);
 
-        string json = JsonConvert.SerializeObject(message);
+        string json = JsonConvert.SerializeObject(value: message);
         ReportPositionMessage? deserialized = JsonConvert.DeserializeObject<ReportPositionMessage>(
-            json
+            value: json
         );
 
         deserialized.Should().NotBeNull();
-        deserialized!.CurrentTimeSeconds.Should().Be(83.25);
+        deserialized!.CurrentTimeSeconds.Should().Be(expected: 83.25);
     }
 }

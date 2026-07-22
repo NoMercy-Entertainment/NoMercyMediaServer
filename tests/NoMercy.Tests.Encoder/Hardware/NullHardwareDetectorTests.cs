@@ -35,7 +35,7 @@ public class NullHardwareDetectorTests
     {
         int cores = await _detector.DetectCpuCoreCountAsync();
 
-        cores.Should().Be(Environment.ProcessorCount);
+        cores.Should().Be(expected: Environment.ProcessorCount);
     }
 
     [Fact]
@@ -43,7 +43,7 @@ public class NullHardwareDetectorTests
     {
         int cores = await _detector.DetectCpuCoreCountAsync();
 
-        cores.Should().BeGreaterThan(0);
+        cores.Should().BeGreaterThan(expected: 0);
     }
 
     [Fact]
@@ -55,7 +55,7 @@ public class NullHardwareDetectorTests
         using CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
-        Func<Task> act = () => _detector.DetectGpusAsync(cts.Token);
+        Func<Task> act = () => _detector.DetectGpusAsync(ct: cts.Token);
         await act.Should().NotThrowAsync();
     }
 

@@ -15,24 +15,24 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record AddFilesRequest
 {
-    [JsonProperty("library_id")]
+    [JsonProperty(propertyName: "library_id")]
     public Ulid LibraryId { get; set; }
 
-    [JsonProperty("folder_id")]
+    [JsonProperty(propertyName: "folder_id")]
     public Ulid FolderId { get; set; }
 
-    [JsonProperty("source_driver_id")]
+    [JsonProperty(propertyName: "source_driver_id")]
     public string? SourceDriverId { get; set; }
 
-    [JsonProperty("files")]
+    [JsonProperty(propertyName: "files")]
     public AddFile[] Files { get; set; } = [];
 }
 
 public record AddFile
 {
-    [JsonProperty("path")]
+    [JsonProperty(propertyName: "path")]
     public string Path { get; set; } = string.Empty;
 
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public string Id { get; set; } = null!;
 }

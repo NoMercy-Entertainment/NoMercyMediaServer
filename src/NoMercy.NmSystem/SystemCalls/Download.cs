@@ -24,8 +24,8 @@ public static class Download
     static Download()
     {
         HttpClient.DefaultRequestHeaders.Add(
-            "User-Agent",
-            ExternalServicesConfig.Current.UserAgent
+            name: "User-Agent",
+            value: ExternalServicesConfig.Current.UserAgent
         );
     }
 
@@ -36,59 +36,59 @@ public static class Download
         string? outputPath = null
     )
     {
-        Logger.System($"Downloading {name}", LogEventLevel.Verbose);
+        Logger.System(message: $"Downloading {name}", level: LogEventLevel.Verbose);
 
         string filePath;
-        if (outputPath is not null && Path.IsPathRooted(outputPath))
+        if (outputPath is not null && Path.IsPathRooted(path: outputPath))
         {
             filePath = outputPath;
         }
         else
         {
-            string baseName = outputPath ?? Path.GetFileName(url.ToString());
-            filePath = Path.Combine(AppFiles.DependenciesPath, baseName);
+            string baseName = outputPath ?? Path.GetFileName(path: url.ToString());
+            filePath = Path.Combine(path1: AppFiles.DependenciesPath, path2: baseName);
         }
 
-        string? directory = Path.GetDirectoryName(filePath);
-        if (directory is not null && !storage.Exists(directory))
-            storage.CreateDirectory(directory);
+        string? directory = Path.GetDirectoryName(path: filePath);
+        if (directory is not null && !storage.Exists(path: directory))
+            storage.CreateDirectory(path: directory);
 
         using HttpResponseMessage result = await HttpClient.GetAsync(
-            url,
-            HttpCompletionOption.ResponseHeadersRead
+            requestUri: url,
+            completionOption: HttpCompletionOption.ResponseHeadersRead
         );
         result.EnsureSuccessStatusCode();
 
         long? expectedLength = result.Content.Headers.ContentLength;
 
         await using (Stream contentStream = await result.Content.ReadAsStreamAsync())
-        await using (Stream fileStream = storage.OpenWrite(filePath, overwrite: true))
+        await using (Stream fileStream = storage.OpenWrite(path: filePath, overwrite: true))
         {
-            await contentStream.CopyToAsync(fileStream);
+            await contentStream.CopyToAsync(destination: fileStream);
             await fileStream.FlushAsync();
         }
 
-        if (!storage.Exists(filePath))
-            throw new IOException($"Download of {name} completed but file not found at {filePath}");
+        if (!storage.Exists(path: filePath))
+            throw new IOException(message: $"Download of {name} completed but file not found at {filePath}");
 
-        long actualLength = storage.SizeOrZero(filePath);
+        long actualLength = storage.SizeOrZero(path: filePath);
         if (actualLength == 0)
         {
-            storage.Delete(filePath);
-            throw new IOException($"Download of {name} produced an empty file at {filePath}");
+            storage.Delete(path: filePath);
+            throw new IOException(message: $"Download of {name} produced an empty file at {filePath}");
         }
 
         if (expectedLength.HasValue && actualLength != expectedLength.Value)
         {
             Logger.System(
-                $"Download of {name}: size mismatch (expected {expectedLength.Value} bytes, got {actualLength} bytes)",
-                LogEventLevel.Warning
+                message: $"Download of {name}: size mismatch (expected {expectedLength.Value} bytes, got {actualLength} bytes)",
+                level: LogEventLevel.Warning
             );
         }
 
         Logger.System(
-            $"Downloaded {name} to {filePath} ({actualLength} bytes)",
-            LogEventLevel.Verbose
+            message: $"Downloaded {name} to {filePath} ({actualLength} bytes)",
+            level: LogEventLevel.Verbose
         );
 
         return filePath;
@@ -98,21 +98,21 @@ public static class Download
     {
         try
         {
-            if (!storage.Exists(filePath))
+            if (!storage.Exists(path: filePath))
                 return Task.CompletedTask;
 
-            if (Locking.IsFileLocked(filePath))
-                Locking.CloseApplicationLockingFile(filePath);
+            if (Locking.IsFileLocked(filePath: filePath))
+                Locking.CloseApplicationLockingFile(filePath: filePath);
 
-            storage.Delete(filePath);
+            storage.Delete(path: filePath);
 
-            Logger.System($"Deleted source download {filePath}", LogEventLevel.Verbose);
+            Logger.System(message: $"Deleted source download {filePath}", level: LogEventLevel.Verbose);
         }
         catch (Exception ex)
         {
             Logger.System(
-                $"Failed to delete source download {filePath}: {ex.Message}",
-                LogEventLevel.Warning
+                message: $"Failed to delete source download {filePath}: {ex.Message}",
+                level: LogEventLevel.Warning
             );
         }
 

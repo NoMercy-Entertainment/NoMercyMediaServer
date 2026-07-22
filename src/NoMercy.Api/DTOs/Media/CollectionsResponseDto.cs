@@ -15,6 +15,6 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record CollectionsResponseDto
 {
-    [JsonProperty("data")]
+    [JsonProperty(propertyName: "data")]
     public IOrderedEnumerable<CollectionsResponseItemDto>? Data { get; set; }
 }

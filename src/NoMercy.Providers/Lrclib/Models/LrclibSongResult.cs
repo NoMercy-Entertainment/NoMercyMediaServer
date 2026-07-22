@@ -16,37 +16,37 @@ namespace NoMercy.Providers.Lrclib.Models;
 [Serializable]
 public class LrclibSongResult
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("trackName")]
+    [JsonProperty(propertyName: "trackName")]
     public string TrackName { get; set; } = string.Empty;
 
-    [JsonProperty("artistName")]
+    [JsonProperty(propertyName: "artistName")]
     public string ArtistName { get; set; } = string.Empty;
 
-    [JsonProperty("albumName")]
+    [JsonProperty(propertyName: "albumName")]
     public string AlbumName { get; set; } = string.Empty;
 
-    [JsonProperty("duration")]
+    [JsonProperty(propertyName: "duration")]
     public double Duration { get; set; }
 
-    [JsonProperty("instrumental")]
+    [JsonProperty(propertyName: "instrumental")]
     public bool Instrumental { get; set; }
 
-    [JsonProperty("plainLyrics")]
+    [JsonProperty(propertyName: "plainLyrics")]
     public string PlainLyrics { get; set; } = string.Empty;
 
-    [JsonProperty("syncedLyrics")]
+    [JsonProperty(propertyName: "syncedLyrics")]
     public string SyncedLyrics { get; set; } = string.Empty;
 
     // Error handling
-    [JsonProperty("message")]
+    [JsonProperty(propertyName: "message")]
     public string Message { get; set; } = string.Empty;
 
-    [JsonProperty("statusCode")]
+    [JsonProperty(propertyName: "statusCode")]
     public int StatusCode { get; set; } = 200;
 }

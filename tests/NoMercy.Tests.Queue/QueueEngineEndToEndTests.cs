@@ -34,7 +34,7 @@ namespace NoMercy.Tests.Queue;
 ///   3. Asserts the recovery/state-machine outcome in the DB — not that the
 ///      machinery "ran".
 /// </summary>
-[Collection("QueueEngine")]
+[Collection(name: "QueueEngine")]
 public class QueueEngineEndToEndTests : IDisposable
 {
     private readonly QueueContext _context;
@@ -44,7 +44,7 @@ public class QueueEngineEndToEndTests : IDisposable
     public QueueEngineEndToEndTests()
     {
         (_context, _adapter) = TestQueueContextFactory.CreateInMemoryContextWithAdapter();
-        _jobQueue = new(_adapter, maxAttempts: 3);
+        _jobQueue = new(context: _adapter, maxAttempts: 3);
     }
 
     public void Dispose()
@@ -58,41 +58,41 @@ public class QueueEngineEndToEndTests : IDisposable
     [Fact]
     public void Dispatch_EnqueuesJobOntoExactlyTheNamedQueue()
     {
-        JobDispatcher dispatcher = new(_jobQueue, NullLogger<JobDispatcher>.Instance);
+        JobDispatcher dispatcher = new(queue: _jobQueue, logger: NullLogger<JobDispatcher>.Instance);
         NamedQueueStubJob job = new() { TargetQueue = QueueNames.Library };
 
-        dispatcher.Dispatch(job, QueueNames.Library, priority: 5);
+        dispatcher.Dispatch(job: job, onQueue: QueueNames.Library, priority: 5);
 
         QueueJob? stored = _context.QueueJobs.SingleOrDefault();
-        stored.Should().NotBeNull("the job must be persisted");
-        stored!.Queue.Should().Be(QueueNames.Library, "queue name must match the dispatch target");
-        stored.Priority.Should().Be(5);
-        stored.Attempts.Should().Be(0, "a freshly dispatched job has zero attempts");
-        stored.ReservedAt.Should().BeNull("a freshly dispatched job is unreserved");
+        stored.Should().NotBeNull(because: "the job must be persisted");
+        stored!.Queue.Should().Be(expected: QueueNames.Library, because: "queue name must match the dispatch target");
+        stored.Priority.Should().Be(expected: 5);
+        stored.Attempts.Should().Be(expected: 0, because: "a freshly dispatched job has zero attempts");
+        stored.ReservedAt.Should().BeNull(because: "a freshly dispatched job is unreserved");
     }
 
     [Fact]
     public void Dispatch_ToTwoDistinctQueues_EachQueueReceivesExactlyItsOwnJob()
     {
-        JobDispatcher dispatcher = new(_jobQueue, NullLogger<JobDispatcher>.Instance);
+        JobDispatcher dispatcher = new(queue: _jobQueue, logger: NullLogger<JobDispatcher>.Instance);
         NamedQueueStubJob libraryJob = new() { TargetQueue = QueueNames.Library };
         NamedQueueStubJob imageJob = new() { TargetQueue = QueueNames.Image };
 
-        dispatcher.Dispatch(libraryJob, QueueNames.Library, priority: 1);
-        dispatcher.Dispatch(imageJob, QueueNames.Image, priority: 1);
+        dispatcher.Dispatch(job: libraryJob, onQueue: QueueNames.Library, priority: 1);
+        dispatcher.Dispatch(job: imageJob, onQueue: QueueNames.Image, priority: 1);
 
-        _context.QueueJobs.Count().Should().Be(2);
+        _context.QueueJobs.Count().Should().Be(expected: 2);
 
-        QueueJobModel? fromLibrary = _jobQueue.ReserveJob(QueueNames.Library, null);
+        QueueJobModel? fromLibrary = _jobQueue.ReserveJob(name: QueueNames.Library, currentJobId: null);
         fromLibrary.Should().NotBeNull();
-        fromLibrary!.Queue.Should().Be(QueueNames.Library);
+        fromLibrary!.Queue.Should().Be(expected: QueueNames.Library);
 
-        QueueJobModel? fromImage = _jobQueue.ReserveJob(QueueNames.Image, null);
+        QueueJobModel? fromImage = _jobQueue.ReserveJob(name: QueueNames.Image, currentJobId: null);
         fromImage.Should().NotBeNull();
-        fromImage!.Queue.Should().Be(QueueNames.Image);
+        fromImage!.Queue.Should().Be(expected: QueueNames.Image);
 
-        QueueJobModel? wrongQueue = _jobQueue.ReserveJob(QueueNames.Music, null);
-        wrongQueue.Should().BeNull("no jobs were dispatched to the music queue");
+        QueueJobModel? wrongQueue = _jobQueue.ReserveJob(name: QueueNames.Music, currentJobId: null);
+        wrongQueue.Should().BeNull(because: "no jobs were dispatched to the music queue");
     }
 
     // ── Real worker: successful execution removes the job ─────────────────
@@ -100,36 +100,36 @@ public class QueueEngineEndToEndTests : IDisposable
     [Fact]
     public async Task Worker_SuccessfulJob_DeletesJobFromQueueAfterHandle()
     {
-        SemaphoreSlim done = new(0, 1);
-        string jobKey = Guid.NewGuid().ToString("N");
-        CompletionSignalJob.RegisterCompletion(jobKey, () => done.Release());
+        SemaphoreSlim done = new(initialCount: 0, maxCount: 1);
+        string jobKey = Guid.NewGuid().ToString(format: "N");
+        CompletionSignalJob.RegisterCompletion(key: jobKey, onComplete: () => done.Release());
 
         CompletionSignalJob stub = new() { JobKey = jobKey };
         _jobQueue.Enqueue(
-            new()
+            queueJob: new()
             {
                 Queue = "worker-success",
-                Payload = SerializationHelper.Serialize(stub),
+                Payload = SerializationHelper.Serialize(obj: stub),
                 AvailableAt = DateTime.UtcNow,
             }
         );
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
-        QueueWorker worker = new(_jobQueue, "worker-success");
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 10));
+        QueueWorker worker = new(queue: _jobQueue, name: "worker-success");
 
-        Task workerTask = worker.StartAsync(cts.Token);
+        Task workerTask = worker.StartAsync(stopToken: cts.Token);
 
-        bool signalled = await done.WaitAsync(TimeSpan.FromSeconds(8));
+        bool signalled = await done.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 8));
         worker.Stop();
         cts.Cancel();
         await workerTask;
 
-        signalled.Should().BeTrue("the job must execute before the timeout");
-        _context.QueueJobs.Count().Should().Be(0, "completed job must be deleted from the queue");
+        signalled.Should().BeTrue(because: "the job must execute before the timeout");
+        _context.QueueJobs.Count().Should().Be(expected: 0, because: "completed job must be deleted from the queue");
         _context
             .FailedJobs.Count()
             .Should()
-            .Be(0, "a successful job produces no failed-job record");
+            .Be(expected: 0, because: "a successful job produces no failed-job record");
     }
 
     // ── Real worker: retry on transient failure ────────────────────────────
@@ -143,42 +143,42 @@ public class QueueEngineEndToEndTests : IDisposable
     [Fact]
     public async Task Worker_JobThrowsOnFirstAttempt_RetrySucceedsAndJobIsDeleted()
     {
-        SemaphoreSlim done = new(0, 1);
-        string jobKey = Guid.NewGuid().ToString("N");
-        FailOnceThenSucceedJob.Configure(jobKey, failCount: 1, onSuccess: () => done.Release());
+        SemaphoreSlim done = new(initialCount: 0, maxCount: 1);
+        string jobKey = Guid.NewGuid().ToString(format: "N");
+        FailOnceThenSucceedJob.Configure(key: jobKey, failCount: 1, onSuccess: () => done.Release());
 
         FailOnceThenSucceedJob stub = new() { JobKey = jobKey };
         _jobQueue.Enqueue(
-            new()
+            queueJob: new()
             {
                 Queue = "retry-e2e",
-                Payload = SerializationHelper.Serialize(stub),
+                Payload = SerializationHelper.Serialize(obj: stub),
                 AvailableAt = DateTime.UtcNow,
             }
         );
 
-        _context.QueueJobs.Count().Should().Be(1, "job must be in queue before worker starts");
+        _context.QueueJobs.Count().Should().Be(expected: 1, because: "job must be in queue before worker starts");
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(15));
-        QueueWorker worker = new(_jobQueue, "retry-e2e");
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 15));
+        QueueWorker worker = new(queue: _jobQueue, name: "retry-e2e");
 
-        Task workerTask = worker.StartAsync(cts.Token);
+        Task workerTask = worker.StartAsync(stopToken: cts.Token);
 
-        bool signalled = await done.WaitAsync(TimeSpan.FromSeconds(12));
+        bool signalled = await done.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 12));
         worker.Stop();
         cts.Cancel();
         await workerTask;
 
-        signalled.Should().BeTrue("job must succeed on retry before timeout");
+        signalled.Should().BeTrue(because: "job must succeed on retry before timeout");
 
         _context
             .QueueJobs.Count()
             .Should()
-            .Be(0, "job that succeeded after retry must be deleted from queue");
+            .Be(expected: 0, because: "job that succeeded after retry must be deleted from queue");
         _context
             .FailedJobs.Count()
             .Should()
-            .Be(0, "a job that succeeded within maxAttempts produces no failed-job record");
+            .Be(expected: 0, because: "a job that succeeded within maxAttempts produces no failed-job record");
     }
 
     // ── Real worker: exhausted retries → terminal FailedJobs ─────────────
@@ -186,29 +186,29 @@ public class QueueEngineEndToEndTests : IDisposable
     [Fact]
     public async Task Worker_JobExhaustsRetries_TransitionsToTerminalFailedState()
     {
-        string jobKey = Guid.NewGuid().ToString("N");
-        FailOnceThenSucceedJob.Configure(jobKey, failCount: 99);
+        string jobKey = Guid.NewGuid().ToString(format: "N");
+        FailOnceThenSucceedJob.Configure(key: jobKey, failCount: 99);
 
         FailOnceThenSucceedJob stub = new() { JobKey = jobKey };
         _jobQueue.Enqueue(
-            new()
+            queueJob: new()
             {
                 Queue = "exhaust-retries",
-                Payload = SerializationHelper.Serialize(stub),
+                Payload = SerializationHelper.Serialize(obj: stub),
                 AvailableAt = DateTime.UtcNow,
             }
         );
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(20));
-        QueueWorker worker = new(_jobQueue, "exhaust-retries");
-        Task workerTask = worker.StartAsync(cts.Token);
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 20));
+        QueueWorker worker = new(queue: _jobQueue, name: "exhaust-retries");
+        Task workerTask = worker.StartAsync(stopToken: cts.Token);
 
-        DateTime deadline = DateTime.UtcNow.AddSeconds(15);
+        DateTime deadline = DateTime.UtcNow.AddSeconds(value: 15);
         while (DateTime.UtcNow < deadline)
         {
             if (_context.FailedJobs.Count() > 0)
                 break;
-            await Task.Delay(50, CancellationToken.None);
+            await Task.Delay(millisecondsDelay: 50, cancellationToken: CancellationToken.None);
         }
 
         worker.Stop();
@@ -218,21 +218,21 @@ public class QueueEngineEndToEndTests : IDisposable
         _context
             .QueueJobs.Count()
             .Should()
-            .Be(0, "a job at max-attempts must be removed from QueueJobs");
+            .Be(expected: 0, because: "a job at max-attempts must be removed from QueueJobs");
         _context
             .FailedJobs.Count()
             .Should()
-            .Be(1, "exhausted job must appear in FailedJobs exactly once");
+            .Be(expected: 1, because: "exhausted job must appear in FailedJobs exactly once");
 
         FailedJob terminal = _context.FailedJobs.Single();
-        terminal.Queue.Should().Be("exhaust-retries", "queue name preserved in FailedJob record");
-        terminal.Exception.Should().NotBeNullOrEmpty("exception content must be serialized");
+        terminal.Queue.Should().Be(expected: "exhaust-retries", because: "queue name preserved in FailedJob record");
+        terminal.Exception.Should().NotBeNullOrEmpty(because: "exception content must be serialized");
         terminal
             .FailedAt.Should()
-            .BeBefore(DateTime.UtcNow.AddSeconds(1), "FailedAt must not be in the future");
+            .BeBefore(expected: DateTime.UtcNow.AddSeconds(value: 1), because: "FailedAt must not be in the future");
         terminal
             .FailedAt.Should()
-            .BeAfter(DateTime.UtcNow.AddSeconds(-60), "FailedAt must be within this test run");
+            .BeAfter(expected: DateTime.UtcNow.AddSeconds(value: -60), because: "FailedAt must be within this test run");
     }
 
     // ── Orphan recovery on real EfQueueContextAdapter ─────────────────────
@@ -251,45 +251,45 @@ public class QueueEngineEndToEndTests : IDisposable
         QueueJob orphan = new()
         {
             Queue = QueueNames.Library,
-            Payload = SerializationHelper.Serialize(new TestJob { Message = "orphan" }),
-            AvailableAt = DateTime.UtcNow.AddHours(-2),
-            ReservedAt = DateTime.UtcNow.AddMinutes(-10),
+            Payload = SerializationHelper.Serialize(obj: new TestJob { Message = "orphan" }),
+            AvailableAt = DateTime.UtcNow.AddHours(value: -2),
+            ReservedAt = DateTime.UtcNow.AddMinutes(value: -10),
             Attempts = 2,
         };
-        _context.QueueJobs.Add(orphan);
+        _context.QueueJobs.Add(entity: orphan);
         await _context.SaveChangesAsync();
 
         ServiceCollection services = new();
-        services.AddSingleton<IQueueContext>(_adapter);
+        services.AddSingleton<IQueueContext>(implementationInstance: _adapter);
         ServiceProvider provider = services.BuildServiceProvider();
 
         OrphanJobRecoveryHostedService recovery = new(
-            provider.GetRequiredService<IServiceScopeFactory>(),
-            NullLogger<OrphanJobRecoveryHostedService>.Instance
+            scopeFactory: provider.GetRequiredService<IServiceScopeFactory>(),
+            logger: NullLogger<OrphanJobRecoveryHostedService>.Instance
         );
 
-        await recovery.StartAsync(CancellationToken.None);
+        await recovery.StartAsync(cancellationToken: CancellationToken.None);
         if (recovery.ExecuteTask is not null)
             await recovery.ExecuteTask;
 
         _context
             .QueueJobs.Count()
             .Should()
-            .Be(0, "orphaned job with prior attempts must be removed from QueueJobs");
+            .Be(expected: 0, because: "orphaned job with prior attempts must be removed from QueueJobs");
         _context
             .FailedJobs.Count()
             .Should()
-            .Be(1, "orphaned job with prior attempts must be moved to FailedJobs");
+            .Be(expected: 1, because: "orphaned job with prior attempts must be moved to FailedJobs");
 
         FailedJob failed = _context.FailedJobs.Single();
-        failed.Queue.Should().Be(QueueNames.Library);
+        failed.Queue.Should().Be(expected: QueueNames.Library);
         failed
             .Exception.Should()
             .Be(
-                "job.interrupted_no_checkpoint",
-                "orphan failure reason must be the sentinel string"
+                expected: "job.interrupted_no_checkpoint",
+                because: "orphan failure reason must be the sentinel string"
             );
-        failed.Uuid.Should().NotBe(Guid.Empty, "orphan FailedJob must get a fresh UUID");
+        failed.Uuid.Should().NotBe(unexpected: Guid.Empty, because: "orphan FailedJob must get a fresh UUID");
     }
 
     [Fact]
@@ -298,36 +298,36 @@ public class QueueEngineEndToEndTests : IDisposable
         QueueJob firstTimeOrphan = new()
         {
             Queue = QueueNames.Library,
-            Payload = SerializationHelper.Serialize(new TestJob { Message = "first-time" }),
-            AvailableAt = DateTime.UtcNow.AddHours(-1),
-            ReservedAt = DateTime.UtcNow.AddMinutes(-5),
+            Payload = SerializationHelper.Serialize(obj: new TestJob { Message = "first-time" }),
+            AvailableAt = DateTime.UtcNow.AddHours(value: -1),
+            ReservedAt = DateTime.UtcNow.AddMinutes(value: -5),
             Attempts = 1,
         };
-        _context.QueueJobs.Add(firstTimeOrphan);
+        _context.QueueJobs.Add(entity: firstTimeOrphan);
         await _context.SaveChangesAsync();
 
         ServiceCollection services = new();
-        services.AddSingleton<IQueueContext>(_adapter);
+        services.AddSingleton<IQueueContext>(implementationInstance: _adapter);
         ServiceProvider provider = services.BuildServiceProvider();
 
         OrphanJobRecoveryHostedService recovery = new(
-            provider.GetRequiredService<IServiceScopeFactory>(),
-            NullLogger<OrphanJobRecoveryHostedService>.Instance
+            scopeFactory: provider.GetRequiredService<IServiceScopeFactory>(),
+            logger: NullLogger<OrphanJobRecoveryHostedService>.Instance
         );
 
-        await recovery.StartAsync(CancellationToken.None);
+        await recovery.StartAsync(cancellationToken: CancellationToken.None);
         if (recovery.ExecuteTask is not null)
             await recovery.ExecuteTask;
 
         _context
             .QueueJobs.Count()
             .Should()
-            .Be(1, "a first-attempt orphan must remain in queue for one retry");
-        _context.FailedJobs.Count().Should().Be(0, "first-attempt orphan must not be failed");
+            .Be(expected: 1, because: "a first-attempt orphan must remain in queue for one retry");
+        _context.FailedJobs.Count().Should().Be(expected: 0, because: "first-attempt orphan must not be failed");
 
         QueueJob survivor = _context.QueueJobs.Single();
-        survivor.ReservedAt.Should().BeNull("the clean-retry reset must release the reservation");
-        survivor.Attempts.Should().Be(0, "the clean-retry reset must refund the attempt budget");
+        survivor.ReservedAt.Should().BeNull(because: "the clean-retry reset must release the reservation");
+        survivor.Attempts.Should().Be(expected: 0, because: "the clean-retry reset must refund the attempt budget");
     }
 
     [Fact]
@@ -336,24 +336,24 @@ public class QueueEngineEndToEndTests : IDisposable
         QueueJob activeJob = new()
         {
             Queue = QueueNames.Encoder,
-            Payload = SerializationHelper.Serialize(new TestJob { Message = "active" }),
-            AvailableAt = DateTime.UtcNow.AddMinutes(-1),
-            ReservedAt = DateTime.UtcNow.AddSeconds(-10),
+            Payload = SerializationHelper.Serialize(obj: new TestJob { Message = "active" }),
+            AvailableAt = DateTime.UtcNow.AddMinutes(value: -1),
+            ReservedAt = DateTime.UtcNow.AddSeconds(value: -10),
             Attempts = 2,
         };
-        _context.QueueJobs.Add(activeJob);
+        _context.QueueJobs.Add(entity: activeJob);
         await _context.SaveChangesAsync();
 
         ServiceCollection services = new();
-        services.AddSingleton<IQueueContext>(_adapter);
+        services.AddSingleton<IQueueContext>(implementationInstance: _adapter);
         ServiceProvider provider = services.BuildServiceProvider();
 
         OrphanJobRecoveryHostedService recovery = new(
-            provider.GetRequiredService<IServiceScopeFactory>(),
-            NullLogger<OrphanJobRecoveryHostedService>.Instance
+            scopeFactory: provider.GetRequiredService<IServiceScopeFactory>(),
+            logger: NullLogger<OrphanJobRecoveryHostedService>.Instance
         );
 
-        await recovery.StartAsync(CancellationToken.None);
+        await recovery.StartAsync(cancellationToken: CancellationToken.None);
         if (recovery.ExecuteTask is not null)
             await recovery.ExecuteTask;
 
@@ -361,10 +361,10 @@ public class QueueEngineEndToEndTests : IDisposable
             .QueueJobs.Count()
             .Should()
             .Be(
-                1,
-                "a job reserved less than 30 seconds ago is still running and must not be reclaimed"
+                expected: 1,
+                because: "a job reserved less than 30 seconds ago is still running and must not be reclaimed"
             );
-        _context.FailedJobs.Count().Should().Be(0);
+        _context.FailedJobs.Count().Should().Be(expected: 0);
     }
 
     /// <summary>
@@ -378,43 +378,43 @@ public class QueueEngineEndToEndTests : IDisposable
     [Fact]
     public async Task OrphanRecovery_RequeuedJob_IsThenPickedUpByARealWorkerAndCompletes()
     {
-        SemaphoreSlim done = new(0, 1);
-        string jobKey = Guid.NewGuid().ToString("N");
-        CompletionSignalJob.RegisterCompletion(jobKey, () => done.Release());
+        SemaphoreSlim done = new(initialCount: 0, maxCount: 1);
+        string jobKey = Guid.NewGuid().ToString(format: "N");
+        CompletionSignalJob.RegisterCompletion(key: jobKey, onComplete: () => done.Release());
 
         QueueJob interruptedByRestart = new()
         {
             Queue = "worker-success",
-            Payload = SerializationHelper.Serialize(new CompletionSignalJob { JobKey = jobKey }),
-            AvailableAt = DateTime.UtcNow.AddHours(-1),
-            ReservedAt = DateTime.UtcNow.AddMinutes(-5),
+            Payload = SerializationHelper.Serialize(obj: new CompletionSignalJob { JobKey = jobKey }),
+            AvailableAt = DateTime.UtcNow.AddHours(value: -1),
+            ReservedAt = DateTime.UtcNow.AddMinutes(value: -5),
             Attempts = 1,
         };
-        _context.QueueJobs.Add(interruptedByRestart);
+        _context.QueueJobs.Add(entity: interruptedByRestart);
         await _context.SaveChangesAsync();
 
         ServiceCollection services = new();
-        services.AddSingleton<IQueueContext>(_adapter);
+        services.AddSingleton<IQueueContext>(implementationInstance: _adapter);
         ServiceProvider provider = services.BuildServiceProvider();
         OrphanJobRecoveryHostedService recovery = new(
-            provider.GetRequiredService<IServiceScopeFactory>(),
-            NullLogger<OrphanJobRecoveryHostedService>.Instance
+            scopeFactory: provider.GetRequiredService<IServiceScopeFactory>(),
+            logger: NullLogger<OrphanJobRecoveryHostedService>.Instance
         );
-        await recovery.StartAsync(CancellationToken.None);
+        await recovery.StartAsync(cancellationToken: CancellationToken.None);
         if (recovery.ExecuteTask is not null)
             await recovery.ExecuteTask;
 
         _context
             .QueueJobs.Count()
             .Should()
-            .Be(1, "the boot pass grants a first-time orphan one clean retry, not a dead-letter");
+            .Be(expected: 1, because: "the boot pass grants a first-time orphan one clean retry, not a dead-letter");
         _context.QueueJobs.Single().ReservedAt.Should().BeNull();
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
-        QueueWorker worker = new(_jobQueue, "worker-success");
-        Task workerTask = worker.StartAsync(cts.Token);
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 10));
+        QueueWorker worker = new(queue: _jobQueue, name: "worker-success");
+        Task workerTask = worker.StartAsync(stopToken: cts.Token);
 
-        bool completed = await done.WaitAsync(TimeSpan.FromSeconds(8));
+        bool completed = await done.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 8));
         worker.Stop();
         cts.Cancel();
         await workerTask;
@@ -422,13 +422,13 @@ public class QueueEngineEndToEndTests : IDisposable
         completed
             .Should()
             .BeTrue(
-                "the job orphan recovery released for retry must actually resume and run to completion"
+                because: "the job orphan recovery released for retry must actually resume and run to completion"
             );
         _context
             .QueueJobs.Count()
             .Should()
-            .Be(0, "the resumed job must be deleted from the queue once it completes");
-        _context.FailedJobs.Count().Should().Be(0);
+            .Be(expected: 0, because: "the resumed job must be deleted from the queue once it completes");
+        _context.FailedJobs.Count().Should().Be(expected: 0);
     }
 
     // ── Orphan recovery: ResetAllReservedJobs on Initialize ───────────────
@@ -441,7 +441,7 @@ public class QueueEngineEndToEndTests : IDisposable
             Queue = QueueNames.Library,
             Payload = "reserved-1",
             AvailableAt = DateTime.UtcNow,
-            ReservedAt = DateTime.UtcNow.AddMinutes(-5),
+            ReservedAt = DateTime.UtcNow.AddMinutes(value: -5),
             Attempts = 1,
         };
         QueueJob job2 = new()
@@ -449,7 +449,7 @@ public class QueueEngineEndToEndTests : IDisposable
             Queue = QueueNames.Image,
             Payload = "reserved-2",
             AvailableAt = DateTime.UtcNow,
-            ReservedAt = DateTime.UtcNow.AddMinutes(-3),
+            ReservedAt = DateTime.UtcNow.AddMinutes(value: -3),
             Attempts = 0,
         };
         QueueJob job3 = new()
@@ -460,20 +460,20 @@ public class QueueEngineEndToEndTests : IDisposable
             ReservedAt = null,
             Attempts = 0,
         };
-        _context.QueueJobs.AddRange(job1, job2, job3);
+        _context.QueueJobs.AddRange(entities: [job1, job2, job3]);
         _context.SaveChanges();
 
         _jobQueue.ResetAllReservedJobs();
 
         List<QueueJob> all = _context.QueueJobs.ToList();
         all.Should()
-            .AllSatisfy(j =>
+            .AllSatisfy(expected: j =>
                 j.ReservedAt.Should()
                     .BeNull(
-                        "ResetAllReservedJobs must clear ReservedAt on every job so they re-enter the pool"
+                        because: "ResetAllReservedJobs must clear ReservedAt on every job so they re-enter the pool"
                     )
             );
-        all.Count.Should().Be(3, "ResetAllReservedJobs must not delete any jobs");
+        all.Count.Should().Be(expected: 3, because: "ResetAllReservedJobs must not delete any jobs");
     }
 }
 
@@ -506,12 +506,12 @@ public class CompletionSignalJob : IShouldQueue
 
     public static void RegisterCompletion(string key, Action onComplete)
     {
-        Completions[key] = onComplete;
+        Completions[key: key] = onComplete;
     }
 
     public Task Handle()
     {
-        if (Completions.TryGetValue(JobKey, out Action? cb))
+        if (Completions.TryGetValue(key: JobKey, value: out Action? cb))
             cb();
         return Task.CompletedTask;
     }
@@ -534,25 +534,25 @@ public class FailOnceThenSucceedJob : IShouldQueue
 
     public static void Configure(string key, int failCount, Action? onSuccess = null)
     {
-        AttemptCounts[key] = 0;
-        FailCounts[key] = failCount;
+        AttemptCounts[key: key] = 0;
+        FailCounts[key: key] = failCount;
         if (onSuccess is not null)
-            SuccessCallbacks[key] = onSuccess;
+            SuccessCallbacks[key: key] = onSuccess;
     }
 
     public Task Handle()
     {
-        int attempt = AttemptCounts.AddOrUpdate(JobKey, 1, (_, v) => v + 1);
-        int failUntil = FailCounts.GetValueOrDefault(JobKey, 1);
+        int attempt = AttemptCounts.AddOrUpdate(key: JobKey, addValue: 1, updateValueFactory: (_, v) => v + 1);
+        int failUntil = FailCounts.GetValueOrDefault(key: JobKey, defaultValue: 1);
 
         if (attempt <= failUntil)
         {
             throw new InvalidOperationException(
-                $"FailOnceThenSucceedJob: injected failure on attempt {attempt} of {failUntil}"
+                message: $"FailOnceThenSucceedJob: injected failure on attempt {attempt} of {failUntil}"
             );
         }
 
-        if (SuccessCallbacks.TryGetValue(JobKey, out Action? successCb))
+        if (SuccessCallbacks.TryGetValue(key: JobKey, value: out Action? successCb))
             successCb();
 
         return Task.CompletedTask;

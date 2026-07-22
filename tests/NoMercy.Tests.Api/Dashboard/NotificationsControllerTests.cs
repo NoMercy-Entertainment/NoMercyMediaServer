@@ -20,7 +20,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Dashboard;
 
-[Trait("Category", "DashboardNotifications")]
+[Trait(name: "Category", value: "DashboardNotifications")]
 public class NotificationsControllerTests : IClassFixture<NoMercyApiFactory>
 {
     private const string BroadcastUrl = "/api/v1/dashboard/notifications/broadcast";
@@ -40,23 +40,23 @@ public class NotificationsControllerTests : IClassFixture<NoMercyApiFactory>
     }
 
     private static StringContent JsonBody(object obj) =>
-        new(JsonSerializer.Serialize(obj), Encoding.UTF8, "application/json");
+        new(content: JsonSerializer.Serialize(value: obj), encoding: Encoding.UTF8, mediaType: "application/json");
 
     private static Task<HttpResponseMessage> PostAsync(HttpClient client, object body) =>
-        client.PostAsync(BroadcastUrl, JsonBody(body));
+        client.PostAsync(requestUri: BroadcastUrl, content: JsonBody(obj: body));
 
     private static Task<HttpResponseMessage> PostSendAsync(HttpClient client, object body) =>
-        client.PostAsync(SendUrl, JsonBody(body));
+        client.PostAsync(requestUri: SendUrl, content: JsonBody(obj: body));
 
     [Fact]
     public async Task Broadcast_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await PostAsync(
-            _unauthed,
-            new { title = "Maintenance", body = "Server restarting soon" }
+            client: _unauthed,
+            body: new { title = "Maintenance", body = "Server restarting soon" }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -65,30 +65,30 @@ public class NotificationsControllerTests : IClassFixture<NoMercyApiFactory>
         // TestAuthHandler.SecondaryUserId is seeded Allowed=true, Owner=false,
         // Manage=false — a real, allowed-but-non-moderator identity.
         HttpResponseMessage response = await PostAsync(
-            _secondaryUser,
-            new { title = "Maintenance", body = "Server restarting soon" }
+            client: _secondaryUser,
+            body: new { title = "Maintenance", body = "Server restarting soon" }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task Broadcast_ReturnsOk_WhenOwner()
     {
         HttpResponseMessage response = await PostAsync(
-            _authed,
-            new { title = "Maintenance", body = "Server restarting soon" }
+            client: _authed,
+            body: new { title = "Maintenance", body = "Server restarting soon" }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
     }
 
     [Fact]
     public async Task Broadcast_ReturnsEnvelopeWithNotifiedUserCountAndEchoedFields()
     {
         HttpResponseMessage response = await PostAsync(
-            _authed,
-            new
+            client: _authed,
+            body: new
             {
                 title = "Maintenance",
                 body = "Server restarting soon",
@@ -97,64 +97,64 @@ public class NotificationsControllerTests : IClassFixture<NoMercyApiFactory>
         );
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
 
-        doc.RootElement.TryGetProperty("data", out JsonElement data)
+        doc.RootElement.TryGetProperty(propertyName: "data", value: out JsonElement data)
             .Should()
-            .BeTrue("broadcast response must have a 'data' property");
+            .BeTrue(because: "broadcast response must have a 'data' property");
 
-        data.TryGetProperty("notified_users", out JsonElement notifiedUsers)
+        data.TryGetProperty(propertyName: "notified_users", value: out JsonElement notifiedUsers)
             .Should()
-            .BeTrue("broadcast response must expose 'notified_users'");
+            .BeTrue(because: "broadcast response must expose 'notified_users'");
         // Two allowed users are seeded (owner + secondary) — both count as
         // targets of the broadcast regardless of live connection state.
-        notifiedUsers.GetInt32().Should().BeGreaterThanOrEqualTo(2);
+        notifiedUsers.GetInt32().Should().BeGreaterThanOrEqualTo(expected: 2);
 
-        data.TryGetProperty("title", out JsonElement title).Should().BeTrue();
-        title.GetString().Should().Be("Maintenance");
+        data.TryGetProperty(propertyName: "title", value: out JsonElement title).Should().BeTrue();
+        title.GetString().Should().Be(expected: "Maintenance");
 
-        data.TryGetProperty("body", out JsonElement bodyField).Should().BeTrue();
-        bodyField.GetString().Should().Be("Server restarting soon");
+        data.TryGetProperty(propertyName: "body", value: out JsonElement bodyField).Should().BeTrue();
+        bodyField.GetString().Should().Be(expected: "Server restarting soon");
 
-        data.TryGetProperty("type", out JsonElement type).Should().BeTrue();
-        type.GetString().Should().Be("warning");
+        data.TryGetProperty(propertyName: "type", value: out JsonElement type).Should().BeTrue();
+        type.GetString().Should().Be(expected: "warning");
     }
 
     [Fact]
     public async Task Broadcast_DefaultsTypeToInfo_WhenTypeOmitted()
     {
         HttpResponseMessage response = await PostAsync(
-            _authed,
-            new { title = "Maintenance", body = "Server restarting soon" }
+            client: _authed,
+            body: new { title = "Maintenance", body = "Server restarting soon" }
         );
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
 
-        JsonElement data = doc.RootElement.GetProperty("data");
-        data.GetProperty("type").GetString().Should().Be("info");
+        JsonElement data = doc.RootElement.GetProperty(propertyName: "data");
+        data.GetProperty(propertyName: "type").GetString().Should().Be(expected: "info");
     }
 
     [Fact]
     public async Task Broadcast_ReturnsBadRequest_WhenTitleMissing()
     {
         HttpResponseMessage response = await PostAsync(
-            _authed,
-            new { title = "", body = "Server restarting soon" }
+            client: _authed,
+            body: new { title = "", body = "Server restarting soon" }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task Broadcast_ReturnsBadRequest_WhenBodyMissing()
     {
         HttpResponseMessage response = await PostAsync(
-            _authed,
-            new { title = "Maintenance", body = "" }
+            client: _authed,
+            body: new { title = "Maintenance", body = "" }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
     }
 
     // =========================================================================
@@ -165,8 +165,8 @@ public class NotificationsControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task Send_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await PostSendAsync(
-            _unauthed,
-            new
+            client: _unauthed,
+            body: new
             {
                 user_id = TestAuthHandler.SecondaryUserId,
                 title = "Heads up",
@@ -174,7 +174,7 @@ public class NotificationsControllerTests : IClassFixture<NoMercyApiFactory>
             }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -183,8 +183,8 @@ public class NotificationsControllerTests : IClassFixture<NoMercyApiFactory>
         // TestAuthHandler.SecondaryUserId is seeded Allowed=true, Owner=false,
         // Manage=false — a real, allowed-but-non-moderator identity.
         HttpResponseMessage response = await PostSendAsync(
-            _secondaryUser,
-            new
+            client: _secondaryUser,
+            body: new
             {
                 user_id = TestAuthHandler.DefaultUserId,
                 title = "Heads up",
@@ -192,26 +192,26 @@ public class NotificationsControllerTests : IClassFixture<NoMercyApiFactory>
             }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task Send_ReturnsBadRequest_WhenUserIdMissing()
     {
         HttpResponseMessage response = await PostSendAsync(
-            _authed,
-            new { title = "Heads up", body = "Your download finished" }
+            client: _authed,
+            body: new { title = "Heads up", body = "Your download finished" }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task Send_ReturnsBadRequest_WhenTitleMissing()
     {
         HttpResponseMessage response = await PostSendAsync(
-            _authed,
-            new
+            client: _authed,
+            body: new
             {
                 user_id = TestAuthHandler.SecondaryUserId,
                 title = "",
@@ -219,15 +219,15 @@ public class NotificationsControllerTests : IClassFixture<NoMercyApiFactory>
             }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task Send_ReturnsBadRequest_WhenBodyMissing()
     {
         HttpResponseMessage response = await PostSendAsync(
-            _authed,
-            new
+            client: _authed,
+            body: new
             {
                 user_id = TestAuthHandler.SecondaryUserId,
                 title = "Heads up",
@@ -235,15 +235,15 @@ public class NotificationsControllerTests : IClassFixture<NoMercyApiFactory>
             }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task Send_ReturnsNotFound_WhenUserDoesNotExist()
     {
         HttpResponseMessage response = await PostSendAsync(
-            _authed,
-            new
+            client: _authed,
+            body: new
             {
                 user_id = Guid.NewGuid(),
                 title = "Heads up",
@@ -251,15 +251,15 @@ public class NotificationsControllerTests : IClassFixture<NoMercyApiFactory>
             }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.NotFound);
     }
 
     [Fact]
     public async Task Send_ReturnsEnvelopeWithTargetUserAndEchoedFields()
     {
         HttpResponseMessage response = await PostSendAsync(
-            _authed,
-            new
+            client: _authed,
+            body: new
             {
                 user_id = TestAuthHandler.SecondaryUserId,
                 title = "Heads up",
@@ -269,26 +269,26 @@ public class NotificationsControllerTests : IClassFixture<NoMercyApiFactory>
         );
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK, because: body);
 
-        doc.RootElement.TryGetProperty("data", out JsonElement data)
+        doc.RootElement.TryGetProperty(propertyName: "data", value: out JsonElement data)
             .Should()
-            .BeTrue("send response must have a 'data' property");
+            .BeTrue(because: "send response must have a 'data' property");
 
-        data.GetProperty("user_id").GetGuid().Should().Be(TestAuthHandler.SecondaryUserId);
-        data.GetProperty("title").GetString().Should().Be("Heads up");
-        data.GetProperty("body").GetString().Should().Be("Your download finished");
-        data.GetProperty("type").GetString().Should().Be("success");
+        data.GetProperty(propertyName: "user_id").GetGuid().Should().Be(expected: TestAuthHandler.SecondaryUserId);
+        data.GetProperty(propertyName: "title").GetString().Should().Be(expected: "Heads up");
+        data.GetProperty(propertyName: "body").GetString().Should().Be(expected: "Your download finished");
+        data.GetProperty(propertyName: "type").GetString().Should().Be(expected: "success");
     }
 
     [Fact]
     public async Task Send_DefaultsTypeToInfo_WhenTypeOmitted()
     {
         HttpResponseMessage response = await PostSendAsync(
-            _authed,
-            new
+            client: _authed,
+            body: new
             {
                 user_id = TestAuthHandler.SecondaryUserId,
                 title = "Heads up",
@@ -297,18 +297,18 @@ public class NotificationsControllerTests : IClassFixture<NoMercyApiFactory>
         );
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
 
-        JsonElement data = doc.RootElement.GetProperty("data");
-        data.GetProperty("type").GetString().Should().Be("info");
+        JsonElement data = doc.RootElement.GetProperty(propertyName: "data");
+        data.GetProperty(propertyName: "type").GetString().Should().Be(expected: "info");
     }
 
     [Fact]
     public async Task Send_ReportsConnectedFalse_WhenTargetHasNoLiveConnection()
     {
         HttpResponseMessage response = await PostSendAsync(
-            _authed,
-            new
+            client: _authed,
+            body: new
             {
                 user_id = TestAuthHandler.SecondaryUserId,
                 title = "Heads up",
@@ -317,10 +317,10 @@ public class NotificationsControllerTests : IClassFixture<NoMercyApiFactory>
         );
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
 
-        JsonElement data = doc.RootElement.GetProperty("data");
-        data.GetProperty("connected").GetBoolean().Should().BeFalse();
+        JsonElement data = doc.RootElement.GetProperty(propertyName: "data");
+        data.GetProperty(propertyName: "connected").GetBoolean().Should().BeFalse();
     }
 
     [Fact]
@@ -331,7 +331,7 @@ public class NotificationsControllerTests : IClassFixture<NoMercyApiFactory>
         // "connected" flag reports on, not a fake stand-in for it.
         ConnectedClients connectedClients = _factory.GetConnectedClients();
         string connectionKey = $"test-live-{Guid.NewGuid()}";
-        connectedClients.Clients[connectionKey] = new()
+        connectedClients.Clients[key: connectionKey] = new()
         {
             Sub = TestAuthHandler.SecondaryUserId,
             Endpoint = "/videoHub",
@@ -340,8 +340,8 @@ public class NotificationsControllerTests : IClassFixture<NoMercyApiFactory>
         try
         {
             HttpResponseMessage response = await PostSendAsync(
-                _authed,
-                new
+                client: _authed,
+                body: new
                 {
                     user_id = TestAuthHandler.SecondaryUserId,
                     title = "Heads up",
@@ -350,14 +350,14 @@ public class NotificationsControllerTests : IClassFixture<NoMercyApiFactory>
             );
 
             string body = await response.Content.ReadAsStringAsync();
-            using JsonDocument doc = JsonDocument.Parse(body);
+            using JsonDocument doc = JsonDocument.Parse(json: body);
 
-            JsonElement data = doc.RootElement.GetProperty("data");
-            data.GetProperty("connected").GetBoolean().Should().BeTrue(body);
+            JsonElement data = doc.RootElement.GetProperty(propertyName: "data");
+            data.GetProperty(propertyName: "connected").GetBoolean().Should().BeTrue(because: body);
         }
         finally
         {
-            connectedClients.Clients.TryRemove(connectionKey, out Client? _);
+            connectedClients.Clients.TryRemove(key: connectionKey, value: out Client? _);
         }
     }
 }

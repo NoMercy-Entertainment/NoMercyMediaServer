@@ -19,64 +19,64 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record SpecialsResponseItemDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty("backdrop")]
+    [JsonProperty(propertyName: "backdrop")]
     public string? Backdrop { get; set; }
 
-    [JsonProperty("favorite")]
+    [JsonProperty(propertyName: "favorite")]
     public bool Favorite { get; set; }
 
-    [JsonProperty("watched")]
+    [JsonProperty(propertyName: "watched")]
     public bool Watched { get; set; }
 
-    [JsonProperty("logo")]
+    [JsonProperty(propertyName: "logo")]
     public string? Logo { get; set; }
 
-    [JsonProperty("media_type")]
+    [JsonProperty(propertyName: "media_type")]
     public string MediaType { get; set; } = string.Empty;
 
-    [JsonProperty("number_of_items")]
+    [JsonProperty(propertyName: "number_of_items")]
     public int? NumberOfItems { get; set; }
 
-    [JsonProperty("have_items")]
+    [JsonProperty(propertyName: "have_items")]
     public int? HaveItems { get; set; }
 
-    [JsonProperty("overview")]
+    [JsonProperty(propertyName: "overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty("link")]
+    [JsonProperty(propertyName: "link")]
     public Uri Link { get; set; } = null!;
 
-    [JsonProperty("color_palette")]
+    [JsonProperty(propertyName: "color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty("poster")]
+    [JsonProperty(propertyName: "poster")]
     public string? Poster { get; set; }
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty("titleSort")]
+    [JsonProperty(propertyName: "titleSort")]
     public string TitleSort { get; set; } = string.Empty;
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty("year")]
+    [JsonProperty(propertyName: "year")]
     public int? Year { get; set; }
 
-    [JsonProperty("genres")]
+    [JsonProperty(propertyName: "genres")]
     public GenreDto[]? Genres { get; set; } = [];
 
-    [JsonProperty("videoId")]
+    [JsonProperty(propertyName: "videoId")]
     public string? VideoId { get; set; }
 
-    [JsonProperty("videos")]
+    [JsonProperty(propertyName: "videos")]
     public VideoDto[]? Videos { get; set; } = [];
 
-    [JsonProperty("total_duration")]
+    [JsonProperty(propertyName: "total_duration")]
     public int TotalDuration { get; set; }
 
     public SpecialsResponseItemDto(SpecialItem item)
@@ -88,23 +88,23 @@ public record SpecialsResponseItemDto
         string? overview = item.Movie.Translations.FirstOrDefault()?.Overview;
 
         Id = item.Movie.Id.ToString();
-        Title = !string.IsNullOrEmpty(title) ? title : item.Movie.Title;
-        Overview = !string.IsNullOrEmpty(overview) ? overview : item.Movie.Overview;
+        Title = !string.IsNullOrEmpty(value: title) ? title : item.Movie.Title;
+        Overview = !string.IsNullOrEmpty(value: overview) ? overview : item.Movie.Overview;
 
         Backdrop = item.Movie.Backdrop;
-        Logo = item.Movie.Images.FirstOrDefault(media => media.Type == "logo")?.FilePath;
+        Logo = item.Movie.Images.FirstOrDefault(predicate: media => media.Type == "logo")?.FilePath;
         MediaType = "item";
         Year = item.Movie.ReleaseDate.ParseYear();
         ColorPalette = item.Movie.ColorPalette;
         Poster = item.Movie.Poster;
-        TitleSort = item.Movie.Title.TitleSort(item.Movie.ReleaseDate);
+        TitleSort = item.Movie.Title.TitleSort(date: item.Movie.ReleaseDate);
         Type = "item";
-        Link = new($"/movie/{Id}", UriKind.Relative);
-        Genres = item.Movie.GenreMovies.Select(genreMovie => new GenreDto(genreMovie)).ToArray();
+        Link = new(uriString: $"/movie/{Id}", uriKind: UriKind.Relative);
+        Genres = item.Movie.GenreMovies.Select(selector: genreMovie => new GenreDto(genreMovie: genreMovie)).ToArray();
         VideoId = item.Movie.Video;
         Videos = item
-            .Movie.Media.Where(media => media.Site == "YouTube")
-            .Select(media => new VideoDto(media))
+            .Movie.Media.Where(predicate: media => media.Site == "YouTube")
+            .Select(selector: media => new VideoDto(media: media))
             .ToArray();
     }
 
@@ -117,7 +117,7 @@ public record SpecialsResponseItemDto
         Logo = special.Logo;
 
         MediaType = "specials";
-        Link = new($"/specials/{Id}", UriKind.Relative);
+        Link = new(uriString: $"/specials/{Id}", uriKind: UriKind.Relative);
         Year = special.CreatedAt.ParseYear();
 
         ColorPalette = special.ColorPalette;
@@ -129,23 +129,23 @@ public record SpecialsResponseItemDto
         NumberOfItems = special.Items.Count;
 
         int haveMovies = special
-            .Items.Select(item => item.Movie)
-            .Count(movie => movie is not null && movie.VideoFiles.Count != 0);
+            .Items.Select(selector: item => item.Movie)
+            .Count(predicate: movie => movie is not null && movie.VideoFiles.Count != 0);
 
         int haveEpisodes = special
-            .Items.Select(item => item.Episode)
-            .Count(movie => movie is not null && movie.VideoFiles.Count != 0);
+            .Items.Select(selector: item => item.Episode)
+            .Count(predicate: movie => movie is not null && movie.VideoFiles.Count != 0);
 
         HaveItems = haveMovies + haveEpisodes;
 
         int[] movies = special
-            .Items.Where(item => item.MovieId is not null)
-            .Select(item => item.Movie?.VideoFiles.FirstOrDefault()?.Duration?.ToSeconds() ?? 0)
+            .Items.Where(predicate: item => item.MovieId is not null)
+            .Select(selector: item => item.Movie?.VideoFiles.FirstOrDefault()?.Duration?.ToSeconds() ?? 0)
             .ToArray();
 
         int[] episodes = special
-            .Items.Where(item => item.EpisodeId is not null)
-            .Select(item => item.Episode?.VideoFiles.FirstOrDefault()?.Duration?.ToSeconds() ?? 0)
+            .Items.Where(predicate: item => item.EpisodeId is not null)
+            .Select(selector: item => item.Episode?.VideoFiles.FirstOrDefault()?.Duration?.ToSeconds() ?? 0)
             .ToArray();
 
         TotalDuration = movies.Sum() + episodes.Sum();

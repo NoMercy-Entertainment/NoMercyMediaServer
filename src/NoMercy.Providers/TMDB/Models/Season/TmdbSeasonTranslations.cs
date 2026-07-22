@@ -16,6 +16,6 @@ namespace NoMercy.Providers.TMDB.Models.Season;
 
 public class TmdbSeasonTranslations : TmdbSharedTranslations
 {
-    [JsonProperty("translations")]
+    [JsonProperty(propertyName: "translations")]
     public new TmdbSeasonTranslation[] Translations { get; set; } = [];
 }

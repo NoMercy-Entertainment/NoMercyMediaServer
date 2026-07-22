@@ -31,44 +31,44 @@ public class BuildStageTwoPassTests
     {
         EncoderOptions options = new() { FfmpegPathOverride = "ffmpeg" };
         _stage = new(
-            options,
-            new FontExtractor(TestStorageFactory.CreateLocal()),
-            new SubtitleExtractor(),
-            OutputStrategyFactoryTestHelper.Create(),
-            [],
-            NullLogger<BuildStage>.Instance,
-            TestStorageFactory.CreateLocal()
+            options: options,
+            fontExtractor: new FontExtractor(storage: TestStorageFactory.CreateLocal()),
+            subtitleExtractor: new SubtitleExtractor(),
+            outputStrategyFactory: OutputStrategyFactoryTestHelper.Create(),
+            drmProcessors: [],
+            logger: NullLogger<BuildStage>.Instance,
+            storage: TestStorageFactory.CreateLocal()
         );
     }
 
     [Fact]
     public async Task Pass1_EmitsSingleCommandWithPassFlag()
     {
-        OutputPlan plan = PlanWith(BuildVideo(1920, 1080, "[v0]"));
+        OutputPlan plan = PlanWith(video: BuildVideo(width: 1920, height: 1080, mapLabel: "[v0]"));
         string statsPath = $"/tmp/stats-{Guid.NewGuid():N}";
 
-        FfmpegCommand[] commands = await RunBuild(plan, EncodingPass.One, statsPath);
+        FfmpegCommand[] commands = await RunBuild(plan: plan, pass: EncodingPass.One, statsFilePath: statsPath);
 
-        Assert.Single(commands);
+        Assert.Single(collection: commands);
         string[] args = commands[0].Arguments;
-        AssertContainsPair(args, "-pass", "1");
+        AssertContainsPair(args: args, key: "-pass", value: "1");
         // BuildStage appends variant index to the stats base path so each
         // variant writes its own stats file.
-        AssertContainsPair(args, "-passlogfile", $"{statsPath}_v0");
-        AssertContains(args, "-an");
-        AssertContains(args, "-sn");
-        AssertContainsPair(args, "-f", "null");
+        AssertContainsPair(args: args, key: "-passlogfile", value: $"{statsPath}_v0");
+        AssertContains(args: args, flag: "-an");
+        AssertContains(args: args, flag: "-sn");
+        AssertContainsPair(args: args, key: "-f", value: "null");
     }
 
     [Fact]
     public async Task Pass1_WithoutStatsFilePath_ReturnsFailure()
     {
-        OutputPlan plan = PlanWith(BuildVideo(1920, 1080, "[v0]"));
+        OutputPlan plan = PlanWith(video: BuildVideo(width: 1920, height: 1080, mapLabel: "[v0]"));
 
-        StageResult result = await ExecuteBuild(plan, EncodingPass.One, statsFilePath: null);
+        StageResult result = await ExecuteBuild(plan: plan, pass: EncodingPass.One, statsFilePath: null);
 
-        Assert.IsType<StageFailure>(result);
-        Assert.Contains("StatsFilePath", ((StageFailure)result).Error.Message);
+        Assert.IsType<StageFailure>(@object: result);
+        Assert.Contains(expectedSubstring: "StatsFilePath", actualString: ((StageFailure)result).Error.Message);
     }
 
     [Fact]
@@ -76,13 +76,13 @@ public class BuildStageTwoPassTests
     {
         // Multi-variant profiles are now supported — pass 1 picks the variant
         // by Pass1VariantIndex (default 0) and produces that variant's stats.
-        OutputPlan plan = PlanWith(BuildVideo(1920, 1080, "[v0]"), BuildVideo(1280, 720, "[v1]"));
+        OutputPlan plan = PlanWith(video: [BuildVideo(width: 1920, height: 1080, mapLabel: "[v0]"), BuildVideo(width: 1280, height: 720, mapLabel: "[v1]")]);
 
-        FfmpegCommand[] commands = await RunBuild(plan, EncodingPass.One, "/tmp/stats");
+        FfmpegCommand[] commands = await RunBuild(plan: plan, pass: EncodingPass.One, statsFilePath: "/tmp/stats");
 
-        Assert.Single(commands);
-        string joined = string.Join(" ", commands[0].Arguments);
-        Assert.Contains("-passlogfile /tmp/stats_v0", joined);
+        Assert.Single(collection: commands);
+        string joined = string.Join(separator: " ", value: commands[0].Arguments);
+        Assert.Contains(expectedSubstring: "-passlogfile /tmp/stats_v0", actualString: joined);
     }
 
     [Fact]
@@ -90,27 +90,27 @@ public class BuildStageTwoPassTests
     {
         OutputPlan plan = PlanWith();
 
-        StageResult result = await ExecuteBuild(plan, EncodingPass.One, "/tmp/stats");
+        StageResult result = await ExecuteBuild(plan: plan, pass: EncodingPass.One, statsFilePath: "/tmp/stats");
 
-        Assert.IsType<StageFailure>(result);
-        Assert.Contains("at least one video output", ((StageFailure)result).Error.Message);
+        Assert.IsType<StageFailure>(@object: result);
+        Assert.Contains(expectedSubstring: "at least one video output", actualString: ((StageFailure)result).Error.Message);
     }
 
     [Fact]
     public async Task Pass2_InjectsPass2FlagsIntoVideoOutput()
     {
-        OutputPlan plan = PlanWith(BuildVideo(1920, 1080, "[v0]"));
+        OutputPlan plan = PlanWith(video: BuildVideo(width: 1920, height: 1080, mapLabel: "[v0]"));
         string statsPath = $"/tmp/stats-{Guid.NewGuid():N}";
 
-        FfmpegCommand[] commands = await RunBuild(plan, EncodingPass.Two, statsPath);
+        FfmpegCommand[] commands = await RunBuild(plan: plan, pass: EncodingPass.Two, statsFilePath: statsPath);
 
         // The main command should have -pass 2 + -passlogfile somewhere.
-        Assert.NotEmpty(commands);
-        string joined = string.Join(" ", commands[0].Arguments);
-        Assert.Contains("-pass 2", joined);
-        Assert.Contains($"-passlogfile {statsPath}", joined);
+        Assert.NotEmpty(collection: commands);
+        string joined = string.Join(separator: " ", value: commands[0].Arguments);
+        Assert.Contains(expectedSubstring: "-pass 2", actualString: joined);
+        Assert.Contains(expectedSubstring: $"-passlogfile {statsPath}", actualString: joined);
         // Pass 2 keeps HLS output (unlike pass 1)
-        Assert.Contains("-f hls", joined);
+        Assert.Contains(expectedSubstring: "-f hls", actualString: joined);
     }
 
     [Fact]
@@ -119,34 +119,32 @@ public class BuildStageTwoPassTests
         // A mixed-codec 2-pass ladder must give each rung its OWN indexed stats
         // file (-passlogfile _v0 / _v1) and its OWN -c:v — sharing one stats file
         // across different codecs corrupts the second rung's rate-control data.
-        OutputPlan plan = PlanWith(
-            BuildVideo(1920, 1080, "[v0]", "libx264"),
-            BuildVideo(1280, 720, "[v1]", "libx265")
+        OutputPlan plan = PlanWith(video: [BuildVideo(width: 1920, height: 1080, mapLabel: "[v0]", encoder: "libx264"), BuildVideo(width: 1280, height: 720, mapLabel: "[v1]", encoder: "libx265")]
         );
         string statsPath = $"/tmp/stats-{Guid.NewGuid():N}";
 
-        FfmpegCommand[] commands = await RunBuild(plan, EncodingPass.Two, statsPath);
+        FfmpegCommand[] commands = await RunBuild(plan: plan, pass: EncodingPass.Two, statsFilePath: statsPath);
 
-        string joined = string.Join(" ", commands[0].Arguments);
-        joined.Should().Contain("-c:v libx264");
-        joined.Should().Contain("-c:v libx265");
-        joined.Should().Contain($"-passlogfile {statsPath}_v0");
-        joined.Should().Contain($"-passlogfile {statsPath}_v1");
+        string joined = string.Join(separator: " ", value: commands[0].Arguments);
+        joined.Should().Contain(expected: "-c:v libx264");
+        joined.Should().Contain(expected: "-c:v libx265");
+        joined.Should().Contain(expected: $"-passlogfile {statsPath}_v0");
+        joined.Should().Contain(expected: $"-passlogfile {statsPath}_v1");
         // -pass 2 applied to both rungs (one -pass per video output).
-        commands[0].Arguments.Count(a => a == "-pass").Should().Be(2);
+        commands[0].Arguments.Count(predicate: a => a == "-pass").Should().Be(expected: 2);
     }
 
     [Fact]
     public async Task SinglePass_DoesNotEmitPassFlags()
     {
-        OutputPlan plan = PlanWith(BuildVideo(1920, 1080, "[v0]"));
+        OutputPlan plan = PlanWith(video: BuildVideo(width: 1920, height: 1080, mapLabel: "[v0]"));
 
-        FfmpegCommand[] commands = await RunBuild(plan, EncodingPass.Single, statsFilePath: null);
+        FfmpegCommand[] commands = await RunBuild(plan: plan, pass: EncodingPass.Single, statsFilePath: null);
 
-        string joined = string.Join(" ", commands[0].Arguments);
-        Assert.DoesNotContain("-pass 1", joined);
-        Assert.DoesNotContain("-pass 2", joined);
-        Assert.DoesNotContain("-passlogfile", joined);
+        string joined = string.Join(separator: " ", value: commands[0].Arguments);
+        Assert.DoesNotContain(expectedSubstring: "-pass 1", actualString: joined);
+        Assert.DoesNotContain(expectedSubstring: "-pass 2", actualString: joined);
+        Assert.DoesNotContain(expectedSubstring: "-passlogfile", actualString: joined);
     }
 
     private async Task<FfmpegCommand[]> RunBuild(
@@ -155,9 +153,9 @@ public class BuildStageTwoPassTests
         string? statsFilePath
     )
     {
-        StageResult result = await ExecuteBuild(plan, pass, statsFilePath);
+        StageResult result = await ExecuteBuild(plan: plan, pass: pass, statsFilePath: statsFilePath);
         StageSuccess<FfmpegCommand[]> success = Assert.IsType<StageSuccess<FfmpegCommand[]>>(
-            result
+            @object: result
         );
         return success.Value;
     }
@@ -169,22 +167,22 @@ public class BuildStageTwoPassTests
     )
     {
         BuildInput input = new(
-            BuildPlan(plan),
+            Plan: BuildPlan(outputPlan: plan),
             InputPath: "/media/test.mkv",
-            OutputDirectory: Path.Combine(Path.GetTempPath(), $"bs-{Guid.NewGuid():N}"),
+            OutputDirectory: Path.Combine(path1: Path.GetTempPath(), path2: $"bs-{Guid.NewGuid():N}"),
             MediaTitle: "Test.NoMercy",
             DurationLimit: null,
             Pass: pass,
             StatsFilePath: statsFilePath
         );
-        Directory.CreateDirectory(input.OutputDirectory);
+        Directory.CreateDirectory(path: input.OutputDirectory);
 
         EncodingContext context = new(
-            EncodingContext.Create().CorrelationId,
-            BuildMediaInfo(1920, 1080)
+            CorrelationId: EncodingContext.Create().CorrelationId,
+            MediaInfo: BuildMediaInfo(width: 1920, height: 1080)
         );
 
-        return await _stage.ExecuteAsync(input, context, default);
+        return await _stage.ExecuteAsync(input: input, context: context, ct: default);
     }
 
     private static ExecutionPlan BuildPlan(OutputPlan outputPlan) =>
@@ -193,7 +191,7 @@ public class BuildStageTwoPassTests
             [
                 new(
                     GroupId: "group_0",
-                    Nodes: [new("decode_0", OperationType.Decode, [], new())],
+                    Nodes: [new(Id: "decode_0", Operation: OperationType.Decode, DependsOn: [], Parameters: new())],
                     DeviceId: null,
                     GpuSlotsRequired: 0,
                     CpuThreadsRequired: 4,
@@ -201,7 +199,7 @@ public class BuildStageTwoPassTests
                     Priority: 1
                 ),
             ],
-            EstimatedTotalDuration: TimeSpan.FromMinutes(90),
+            EstimatedTotalDuration: TimeSpan.FromMinutes(minutes: 90),
             OutputPlan: outputPlan
         );
 
@@ -239,7 +237,7 @@ public class BuildStageTwoPassTests
         new(
             FilePath: "/media/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromHours(2),
+            Duration: TimeSpan.FromHours(hours: 2),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 7_200_000_000,
             VideoStreams:
@@ -266,14 +264,14 @@ public class BuildStageTwoPassTests
 
     private static void AssertContainsPair(string[] args, string key, string value)
     {
-        int idx = Array.IndexOf(args, key);
-        Assert.True(idx >= 0, $"Expected '{key}' in args: {string.Join(' ', args)}");
-        Assert.True(idx + 1 < args.Length, $"'{key}' is at end of args");
-        Assert.Equal(value, args[idx + 1]);
+        int idx = Array.IndexOf(array: args, value: key);
+        Assert.True(condition: idx >= 0, userMessage: $"Expected '{key}' in args: {string.Join(separator: ' ', value: args)}");
+        Assert.True(condition: idx + 1 < args.Length, userMessage: $"'{key}' is at end of args");
+        Assert.Equal(expected: value, actual: args[idx + 1]);
     }
 
     private static void AssertContains(string[] args, string flag)
     {
-        Assert.Contains(flag, args);
+        Assert.Contains(expected: flag, collection: args);
     }
 }

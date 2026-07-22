@@ -43,36 +43,36 @@ public class PlanStageTests
     public PlanStageTests()
     {
         // Default hardware: no GPU
-        _hardware.Setup(h => h.HasGpu).Returns(false);
-        _hardware.Setup(h => h.CpuCores).Returns(8);
-        _hardware.Setup(h => h.Gpus).Returns([]);
-        _hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
+        _hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
+        _hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
+        _hardware.Setup(expression: h => h.Gpus).Returns(value: []);
+        _hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
         _hardware
-            .Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
-            .Returns((GpuDevice?)null);
+            .Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
+            .Returns(value: (GpuDevice?)null);
 
         // Default codec resolver — return software H264 encoder
         _codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<IHardwareCapabilities>(),
                     It.IsAny<EncoderPreference>()
                 )
             )
-            .Returns(BuildSoftwareH264Codec());
+            .Returns(value: BuildSoftwareH264Codec());
 
         _stage = new(
-            _graphBuilder,
-            _groupingStrategy,
-            _costEstimator,
-            _codecResolver.Object,
-            _hardware.Object,
-            new TonemapSelector(),
-            new Mock<IFfmpegCapabilities>().Object,
-            new AbrLadderGenerator(),
-            new NoOpCropDetector(),
-            NullLogger<PlanStage>.Instance
+            graphBuilder: _graphBuilder,
+            groupingStrategy: _groupingStrategy,
+            costEstimator: _costEstimator,
+            codecResolver: _codecResolver.Object,
+            hardware: _hardware.Object,
+            tonemapSelector: new TonemapSelector(),
+            ffmpegCapabilities: new Mock<IFfmpegCapabilities>().Object,
+            abrLadderGenerator: new AbrLadderGenerator(),
+            cropDetector: new NoOpCropDetector(),
+            logger: NullLogger<PlanStage>.Instance
         );
     }
 
@@ -85,7 +85,7 @@ public class PlanStageTests
                 Presets: ["slow", "medium", "fast"],
                 Profiles: ["high"],
                 Levels: ["4.1"],
-                QualityRange: new(0, 51, 23),
+                QualityRange: new(Min: 0, Max: 51, Default: 23),
                 SupportedRateControl: [RateControlMode.Crf, RateControlMode.Cbr],
                 Supports10Bit: false,
                 SupportsHdr: false,
@@ -101,7 +101,7 @@ public class PlanStageTests
         new(
             FilePath: "/movies/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromHours(2),
+            Duration: TimeSpan.FromHours(hours: 2),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 7_200_000_000,
             VideoStreams:
@@ -192,9 +192,9 @@ public class PlanStageTests
     {
         MediaInfo media = BuildMediaInfo();
         EncodingProfile profile = BuildSimpleProfile();
-        ValidateInput input = new(media, profile);
+        ValidateInput input = new(Media: media, Profile: profile);
 
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
         result.Should().BeOfType<StageSuccess<ExecutionPlan>>();
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)result).Value;
@@ -210,12 +210,12 @@ public class PlanStageTests
     {
         MediaInfo media = BuildMediaInfo();
         EncodingProfile profile = BuildSimpleProfile();
-        ValidateInput input = new(media, profile);
+        ValidateInput input = new(Media: media, Profile: profile);
 
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)result).Value;
-        plan.EstimatedTotalDuration.Should().BeGreaterThan(TimeSpan.Zero);
+        plan.EstimatedTotalDuration.Should().BeGreaterThan(expected: TimeSpan.Zero);
     }
 
     // ------------------------------------------------------------------
@@ -227,13 +227,13 @@ public class PlanStageTests
     {
         MediaInfo media = BuildMediaInfo();
         EncodingProfile profile = BuildSimpleProfile();
-        ValidateInput input = new(media, profile);
+        ValidateInput input = new(Media: media, Profile: profile);
 
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)result).Value;
         plan.OutputPlan.Should().NotBeNull();
-        plan.OutputPlan.Format.Should().Be(OutputFormat.Hls);
+        plan.OutputPlan.Format.Should().Be(expected: OutputFormat.Hls);
     }
 
     // ------------------------------------------------------------------
@@ -245,14 +245,14 @@ public class PlanStageTests
     {
         MediaInfo media = BuildMediaInfo();
         EncodingProfile profile = BuildSimpleProfile();
-        ValidateInput input = new(media, profile);
+        ValidateInput input = new(Media: media, Profile: profile);
 
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)result).Value;
-        plan.OutputPlan.VideoOutputs.Should().HaveCount(1);
-        plan.OutputPlan.VideoOutputs[0].EncoderName.Should().Be("libx264");
-        plan.OutputPlan.AudioOutputs.Should().HaveCount(1);
+        plan.OutputPlan.VideoOutputs.Should().HaveCount(expected: 1);
+        plan.OutputPlan.VideoOutputs[0].EncoderName.Should().Be(expected: "libx264");
+        plan.OutputPlan.AudioOutputs.Should().HaveCount(expected: 1);
     }
 
     // ------------------------------------------------------------------
@@ -316,11 +316,11 @@ public class PlanStageTests
             Subtitles: []
         );
 
-        StageResult result = await _stage.ExecuteAsync(new(media, profile), _context, default);
+        StageResult result = await _stage.ExecuteAsync(input: new(Media: media, Profile: profile), context: _context, ct: default);
 
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)result).Value;
-        plan.OutputPlan.VideoOutputs[0].TenBit.Should().BeFalse("encoder doesn't support 10-bit");
-        plan.OutputPlan.VideoOutputs[0].PixelFormat.Should().Be("yuv420p");
+        plan.OutputPlan.VideoOutputs[0].TenBit.Should().BeFalse(because: "encoder doesn't support 10-bit");
+        plan.OutputPlan.VideoOutputs[0].PixelFormat.Should().Be(expected: "yuv420p");
     }
 
     [Fact]
@@ -328,7 +328,7 @@ public class PlanStageTests
     {
         // Override resolver to return an encoder that DOES support 10-bit.
         _codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<IHardwareCapabilities>(),
@@ -336,7 +336,7 @@ public class PlanStageTests
                 )
             )
             .Returns(
-                new ResolvedCodec(
+                value: new ResolvedCodec(
                     FfmpegEncoderName: "libx265",
                     EncoderInfo: new(
                         FfmpegName: "libx265",
@@ -344,7 +344,7 @@ public class PlanStageTests
                         Presets: ["slow", "medium", "fast"],
                         Profiles: ["main", "main10"],
                         Levels: ["4.1"],
-                        QualityRange: new(0, 51, 28),
+                        QualityRange: new(Min: 0, Max: 51, Default: 28),
                         SupportedRateControl: [RateControlMode.Crf],
                         Supports10Bit: true,
                         SupportsHdr: true,
@@ -402,11 +402,11 @@ public class PlanStageTests
             Subtitles: []
         );
 
-        StageResult result = await _stage.ExecuteAsync(new(media, profile), _context, default);
+        StageResult result = await _stage.ExecuteAsync(input: new(Media: media, Profile: profile), context: _context, ct: default);
 
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)result).Value;
         plan.OutputPlan.VideoOutputs[0].TenBit.Should().BeTrue();
-        plan.OutputPlan.VideoOutputs[0].PixelFormat.Should().Be("yuv420p10le");
+        plan.OutputPlan.VideoOutputs[0].PixelFormat.Should().Be(expected: "yuv420p10le");
     }
 
     [Fact]
@@ -470,13 +470,13 @@ public class PlanStageTests
             }
         );
 
-        ValidateInput input = new(media, profile);
+        ValidateInput input = new(Media: media, Profile: profile);
 
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
         result.Should().BeOfType<StageSuccess<ExecutionPlan>>();
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)result).Value;
-        plan.OutputPlan.VideoOutputs.Should().HaveCount(2);
+        plan.OutputPlan.VideoOutputs.Should().HaveCount(expected: 2);
     }
 
     // ------------------------------------------------------------------
@@ -501,43 +501,43 @@ public class PlanStageTests
         );
 
         namingResolver
-            .Setup(r => r.Resolve(It.IsAny<MediaItemRef>(), It.IsAny<EncodingProfile>()))
-            .Returns(fakeLayout);
+            .Setup(expression: r => r.Resolve(It.IsAny<MediaItemRef>(), It.IsAny<EncodingProfile>()))
+            .Returns(value: fakeLayout);
 
         PlanStage stage = new(
-            _graphBuilder,
-            _groupingStrategy,
-            _costEstimator,
-            _codecResolver.Object,
-            _hardware.Object,
-            new TonemapSelector(),
-            new Mock<IFfmpegCapabilities>().Object,
-            new AbrLadderGenerator(),
-            new NoOpCropDetector(),
-            NullLogger<PlanStage>.Instance,
+            graphBuilder: _graphBuilder,
+            groupingStrategy: _groupingStrategy,
+            costEstimator: _costEstimator,
+            codecResolver: _codecResolver.Object,
+            hardware: _hardware.Object,
+            tonemapSelector: new TonemapSelector(),
+            ffmpegCapabilities: new Mock<IFfmpegCapabilities>().Object,
+            abrLadderGenerator: new AbrLadderGenerator(),
+            cropDetector: new NoOpCropDetector(),
+            logger: NullLogger<PlanStage>.Instance,
             outputNamingResolver: namingResolver.Object
         );
 
-        MediaItemRef mediaItem = new(MediaType.Movie, 550, "Fight Club", 1999);
+        MediaItemRef mediaItem = new(Type: MediaType.Movie, Id: 550, Title: "Fight Club", Year: 1999);
         EncodingContext contextWithItem = _context with { MediaItem = mediaItem };
 
         MediaInfo media = BuildMediaInfo();
         EncodingProfile profile = BuildSimpleProfile();
 
         StageResult result = await stage.ExecuteAsync(
-            new(media, profile),
-            contextWithItem,
-            default
+            input: new(Media: media, Profile: profile),
+            context: contextWithItem,
+            ct: default
         );
 
         result.Should().BeOfType<StageSuccess<ExecutionPlan>>();
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)result).Value;
         plan.OutputPlan.Layout.Should().NotBeNull();
-        plan.OutputPlan.Layout.Should().Be(fakeLayout);
+        plan.OutputPlan.Layout.Should().Be(expected: fakeLayout);
 
         namingResolver.Verify(
-            r => r.Resolve(It.Is<MediaItemRef>(m => m.Id == 550), It.IsAny<EncodingProfile>()),
-            Times.Once
+            expression: r => r.Resolve(It.Is<MediaItemRef>(m => m.Id == 550), It.IsAny<EncodingProfile>()),
+            times: Times.Once
         );
     }
 
@@ -547,16 +547,16 @@ public class PlanStageTests
         Mock<IOutputNamingResolver> namingResolver = new();
 
         PlanStage stage = new(
-            _graphBuilder,
-            _groupingStrategy,
-            _costEstimator,
-            _codecResolver.Object,
-            _hardware.Object,
-            new TonemapSelector(),
-            new Mock<IFfmpegCapabilities>().Object,
-            new AbrLadderGenerator(),
-            new NoOpCropDetector(),
-            NullLogger<PlanStage>.Instance,
+            graphBuilder: _graphBuilder,
+            groupingStrategy: _groupingStrategy,
+            costEstimator: _costEstimator,
+            codecResolver: _codecResolver.Object,
+            hardware: _hardware.Object,
+            tonemapSelector: new TonemapSelector(),
+            ffmpegCapabilities: new Mock<IFfmpegCapabilities>().Object,
+            abrLadderGenerator: new AbrLadderGenerator(),
+            cropDetector: new NoOpCropDetector(),
+            logger: NullLogger<PlanStage>.Instance,
             outputNamingResolver: namingResolver.Object
         );
 
@@ -564,9 +564,9 @@ public class PlanStageTests
         EncodingProfile profile = BuildSimpleProfile();
 
         StageResult result = await stage.ExecuteAsync(
-            new(media, profile),
-            _context, // no MediaItem
-            default
+            input: new(Media: media, Profile: profile),
+            context: _context, // no MediaItem
+            ct: default
         );
 
         result.Should().BeOfType<StageSuccess<ExecutionPlan>>();
@@ -574,8 +574,8 @@ public class PlanStageTests
         plan.OutputPlan.Layout.Should().BeNull();
 
         namingResolver.Verify(
-            r => r.Resolve(It.IsAny<MediaItemRef>(), It.IsAny<EncodingProfile>()),
-            Times.Never
+            expression: r => r.Resolve(It.IsAny<MediaItemRef>(), It.IsAny<EncodingProfile>()),
+            times: Times.Never
         );
     }
 }

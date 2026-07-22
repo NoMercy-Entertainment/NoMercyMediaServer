@@ -30,7 +30,7 @@ public class ExtendedDomainEventTests
         CastDeviceStatusChangedEvent? captured = null;
 
         bus.Subscribe<CastDeviceStatusChangedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
                 captured = evt;
                 return Task.CompletedTask;
@@ -39,9 +39,9 @@ public class ExtendedDomainEventTests
 
         Dictionary<string, object?> statusData = new()
         {
-            ["volume"] = 0.75,
-            ["muted"] = false,
-            ["state"] = "PLAYING",
+            [key: "volume"] = 0.75,
+            [key: "muted"] = false,
+            [key: "state"] = "PLAYING",
         };
 
         CastDeviceStatusChangedEvent published = new()
@@ -50,14 +50,14 @@ public class ExtendedDomainEventTests
             StatusData = statusData,
         };
 
-        await bus.PublishAsync(published);
+        await bus.PublishAsync(@event: published);
 
         captured.Should().NotBeNull();
-        captured!.EventType.Should().Be("mediaStatus");
-        captured.StatusData.Should().ContainKey("volume").WhoseValue.Should().Be(0.75);
-        captured.StatusData.Should().ContainKey("state").WhoseValue.Should().Be("PLAYING");
-        captured.Source.Should().Be("ChromeCast");
-        captured.EventId.Should().Be(published.EventId);
+        captured!.EventType.Should().Be(expected: "mediaStatus");
+        captured.StatusData.Should().ContainKey(expected: "volume").WhoseValue.Should().Be(expected: 0.75);
+        captured.StatusData.Should().ContainKey(expected: "state").WhoseValue.Should().Be(expected: "PLAYING");
+        captured.Source.Should().Be(expected: "ChromeCast");
+        captured.EventId.Should().Be(expected: published.EventId);
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class ExtendedDomainEventTests
         DriveStateChangedEvent? captured = null;
 
         bus.Subscribe<DriveStateChangedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
                 captured = evt;
                 return Task.CompletedTask;
@@ -83,15 +83,15 @@ public class ExtendedDomainEventTests
             Timestamp: DateTime.UtcNow
         );
 
-        await bus.PublishAsync(new DriveStateChangedEvent { DriveStateData = payload });
+        await bus.PublishAsync(@event: new DriveStateChangedEvent { DriveStateData = payload });
 
         captured.Should().NotBeNull();
-        captured!.DriveStateData.Method.Should().Be("disc_inserted");
-        captured.DriveStateData.Drive.Should().Be("D:\\");
-        captured.DriveStateData.VolumeLabel.Should().Be("MOVIE_TITLE");
+        captured!.DriveStateData.Method.Should().Be(expected: "disc_inserted");
+        captured.DriveStateData.Drive.Should().Be(expected: "D:\\");
+        captured.DriveStateData.VolumeLabel.Should().Be(expected: "MOVIE_TITLE");
         captured.DriveStateData.HasDisc.Should().BeTrue();
-        captured.DriveStateData.DiscType.Should().Be("bluray");
-        captured.Source.Should().Be("DriveMonitor");
+        captured.DriveStateData.DiscType.Should().Be(expected: "bluray");
+        captured.Source.Should().Be(expected: "DriveMonitor");
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public class ExtendedDomainEventTests
         DriveStateChangedEvent? captured = null;
 
         bus.Subscribe<DriveStateChangedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
                 captured = evt;
                 return Task.CompletedTask;
@@ -119,10 +119,10 @@ public class ExtendedDomainEventTests
             Message: "Ripping track 3 of 12"
         );
 
-        await bus.PublishAsync(new DriveStateChangedEvent { DriveStateData = payload });
+        await bus.PublishAsync(@event: new DriveStateChangedEvent { DriveStateData = payload });
 
-        captured!.DriveStateData.JobId.Should().Be("job-abc-123");
-        captured.DriveStateData.Message.Should().Be("Ripping track 3 of 12");
+        captured!.DriveStateData.JobId.Should().Be(expected: "job-abc-123");
+        captured.DriveStateData.Message.Should().Be(expected: "Ripping track 3 of 12");
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public class ExtendedDomainEventTests
         InboxItemDetectedEvent? captured = null;
 
         bus.Subscribe<InboxItemDetectedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
                 captured = evt;
                 return Task.CompletedTask;
@@ -140,7 +140,7 @@ public class ExtendedDomainEventTests
         );
 
         await bus.PublishAsync(
-            new InboxItemDetectedEvent
+            @event: new InboxItemDetectedEvent
             {
                 Id = "inbox-item-001",
                 DetectedType = "movie",
@@ -150,11 +150,11 @@ public class ExtendedDomainEventTests
         );
 
         captured.Should().NotBeNull();
-        captured!.Id.Should().Be("inbox-item-001");
-        captured.DetectedType.Should().Be("movie");
-        captured.Confidence.Should().Be("high");
-        captured.Status.Should().Be("pending");
-        captured.Source.Should().Be("Inbox");
+        captured!.Id.Should().Be(expected: "inbox-item-001");
+        captured.DetectedType.Should().Be(expected: "movie");
+        captured.Confidence.Should().Be(expected: "high");
+        captured.Status.Should().Be(expected: "pending");
+        captured.Source.Should().Be(expected: "Inbox");
     }
 
     [Fact]
@@ -164,26 +164,26 @@ public class ExtendedDomainEventTests
         List<InboxItemUpdatedEvent> received = [];
 
         bus.Subscribe<InboxItemUpdatedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
 
         await bus.PublishAsync(
-            new InboxItemUpdatedEvent { Id = "inbox-item-001", Status = "processing" }
+            @event: new InboxItemUpdatedEvent { Id = "inbox-item-001", Status = "processing" }
         );
         await bus.PublishAsync(
-            new InboxItemUpdatedEvent { Id = "inbox-item-001", Status = "completed" }
+            @event: new InboxItemUpdatedEvent { Id = "inbox-item-001", Status = "completed" }
         );
 
-        received.Should().HaveCount(2);
-        received[0].Status.Should().Be("processing");
-        received[1].Status.Should().Be("completed");
-        received[0].Id.Should().Be("inbox-item-001");
-        received[1].Id.Should().Be("inbox-item-001");
-        received[0].Source.Should().Be("Inbox");
+        received.Should().HaveCount(expected: 2);
+        received[index: 0].Status.Should().Be(expected: "processing");
+        received[index: 1].Status.Should().Be(expected: "completed");
+        received[index: 0].Id.Should().Be(expected: "inbox-item-001");
+        received[index: 1].Id.Should().Be(expected: "inbox-item-001");
+        received[index: 0].Source.Should().Be(expected: "Inbox");
     }
 
     [Fact]
@@ -193,7 +193,7 @@ public class ExtendedDomainEventTests
         UserPermissionsChangedEvent? captured = null;
 
         bus.Subscribe<UserPermissionsChangedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
                 captured = evt;
                 return Task.CompletedTask;
@@ -204,13 +204,13 @@ public class ExtendedDomainEventTests
         Guid adminUser = Guid.NewGuid();
 
         await bus.PublishAsync(
-            new UserPermissionsChangedEvent { UserId = targetUser, ChangedBy = adminUser }
+            @event: new UserPermissionsChangedEvent { UserId = targetUser, ChangedBy = adminUser }
         );
 
         captured.Should().NotBeNull();
-        captured!.UserId.Should().Be(targetUser);
-        captured.ChangedBy.Should().Be(adminUser);
-        captured.Source.Should().Be("Users");
+        captured!.UserId.Should().Be(expected: targetUser);
+        captured.ChangedBy.Should().Be(expected: adminUser);
+        captured.Source.Should().Be(expected: "Users");
     }
 
     [Fact]
@@ -220,7 +220,7 @@ public class ExtendedDomainEventTests
         UserDisconnectedEvent? captured = null;
 
         bus.Subscribe<UserDisconnectedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
                 captured = evt;
                 return Task.CompletedTask;
@@ -230,13 +230,13 @@ public class ExtendedDomainEventTests
         Guid userId = Guid.NewGuid();
 
         await bus.PublishAsync(
-            new UserDisconnectedEvent { UserId = userId, ConnectionId = "conn-xyz-789" }
+            @event: new UserDisconnectedEvent { UserId = userId, ConnectionId = "conn-xyz-789" }
         );
 
         captured.Should().NotBeNull();
-        captured!.UserId.Should().Be(userId);
-        captured.ConnectionId.Should().Be("conn-xyz-789");
-        captured.Source.Should().Be("SignalR");
+        captured!.UserId.Should().Be(expected: userId);
+        captured.ConnectionId.Should().Be(expected: "conn-xyz-789");
+        captured.Source.Should().Be(expected: "SignalR");
     }
 
     [Fact]
@@ -246,7 +246,7 @@ public class ExtendedDomainEventTests
         LibraryDeletedEvent? captured = null;
 
         bus.Subscribe<LibraryDeletedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
                 captured = evt;
                 return Task.CompletedTask;
@@ -256,13 +256,13 @@ public class ExtendedDomainEventTests
         Ulid libraryId = Ulid.NewUlid();
 
         await bus.PublishAsync(
-            new LibraryDeletedEvent { LibraryId = libraryId, LibraryName = "Old Movies" }
+            @event: new LibraryDeletedEvent { LibraryId = libraryId, LibraryName = "Old Movies" }
         );
 
         captured.Should().NotBeNull();
-        captured!.LibraryId.Should().Be(libraryId);
-        captured.LibraryName.Should().Be("Old Movies");
-        captured.Source.Should().Be("Library");
+        captured!.LibraryId.Should().Be(expected: libraryId);
+        captured.LibraryName.Should().Be(expected: "Old Movies");
+        captured.Source.Should().Be(expected: "Library");
     }
 
     [Fact]
@@ -272,7 +272,7 @@ public class ExtendedDomainEventTests
         FolderPathAddedEvent? captured = null;
 
         bus.Subscribe<FolderPathAddedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
                 captured = evt;
                 return Task.CompletedTask;
@@ -283,7 +283,7 @@ public class ExtendedDomainEventTests
         Ulid driverId = Ulid.NewUlid();
 
         await bus.PublishAsync(
-            new FolderPathAddedEvent
+            @event: new FolderPathAddedEvent
             {
                 RequestPath = requestPath,
                 DriverId = driverId,
@@ -292,10 +292,10 @@ public class ExtendedDomainEventTests
         );
 
         captured.Should().NotBeNull();
-        captured!.RequestPath.Should().Be(requestPath);
-        captured.DriverId.Should().Be(driverId);
-        captured.SubPath.Should().Be("Movies/Action");
-        captured.Source.Should().Be("Library");
+        captured!.RequestPath.Should().Be(expected: requestPath);
+        captured.DriverId.Should().Be(expected: driverId);
+        captured.SubPath.Should().Be(expected: "Movies/Action");
+        captured.Source.Should().Be(expected: "Library");
     }
 
     [Fact]
@@ -305,7 +305,7 @@ public class ExtendedDomainEventTests
         FolderPathRemovedEvent? captured = null;
 
         bus.Subscribe<FolderPathRemovedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
                 captured = evt;
                 return Task.CompletedTask;
@@ -314,11 +314,11 @@ public class ExtendedDomainEventTests
 
         Ulid requestPath = Ulid.NewUlid();
 
-        await bus.PublishAsync(new FolderPathRemovedEvent { RequestPath = requestPath });
+        await bus.PublishAsync(@event: new FolderPathRemovedEvent { RequestPath = requestPath });
 
         captured.Should().NotBeNull();
-        captured!.RequestPath.Should().Be(requestPath);
-        captured.Source.Should().Be("Library");
+        captured!.RequestPath.Should().Be(expected: requestPath);
+        captured.Source.Should().Be(expected: "Library");
     }
 
     [Fact]
@@ -328,7 +328,7 @@ public class ExtendedDomainEventTests
         MediaFilesScannedEvent? captured = null;
 
         bus.Subscribe<MediaFilesScannedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
                 captured = evt;
                 return Task.CompletedTask;
@@ -338,13 +338,13 @@ public class ExtendedDomainEventTests
         Ulid libraryId = Ulid.NewUlid();
 
         await bus.PublishAsync(
-            new MediaFilesScannedEvent { MediaId = 4217, LibraryId = libraryId }
+            @event: new MediaFilesScannedEvent { MediaId = 4217, LibraryId = libraryId }
         );
 
         captured.Should().NotBeNull();
-        captured!.MediaId.Should().Be(4217);
-        captured.LibraryId.Should().Be(libraryId);
-        captured.Source.Should().Be("FileRescan");
+        captured!.MediaId.Should().Be(expected: 4217);
+        captured.LibraryId.Should().Be(expected: libraryId);
+        captured.Source.Should().Be(expected: "FileRescan");
     }
 
     [Fact]
@@ -354,9 +354,9 @@ public class ExtendedDomainEventTests
         List<MusicItemLikedEvent> received = [];
 
         bus.Subscribe<MusicItemLikedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
@@ -365,7 +365,7 @@ public class ExtendedDomainEventTests
         Guid itemId = Guid.NewGuid();
 
         await bus.PublishAsync(
-            new MusicItemLikedEvent
+            @event: new MusicItemLikedEvent
             {
                 UserId = userId,
                 ItemId = itemId,
@@ -374,7 +374,7 @@ public class ExtendedDomainEventTests
             }
         );
         await bus.PublishAsync(
-            new MusicItemLikedEvent
+            @event: new MusicItemLikedEvent
             {
                 UserId = userId,
                 ItemId = itemId,
@@ -383,13 +383,13 @@ public class ExtendedDomainEventTests
             }
         );
 
-        received.Should().HaveCount(2);
-        received[0].Liked.Should().BeTrue();
-        received[1].Liked.Should().BeFalse();
-        received[0].ItemType.Should().Be("track");
-        received[0].UserId.Should().Be(userId);
-        received[0].ItemId.Should().Be(itemId);
-        received[0].Source.Should().Be("Music");
+        received.Should().HaveCount(expected: 2);
+        received[index: 0].Liked.Should().BeTrue();
+        received[index: 1].Liked.Should().BeFalse();
+        received[index: 0].ItemType.Should().Be(expected: "track");
+        received[index: 0].UserId.Should().Be(expected: userId);
+        received[index: 0].ItemId.Should().Be(expected: itemId);
+        received[index: 0].Source.Should().Be(expected: "Music");
     }
 
     [Fact]
@@ -399,45 +399,45 @@ public class ExtendedDomainEventTests
         List<IEvent> received = [];
 
         bus.Subscribe<CastDeviceStatusChangedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
         bus.Subscribe<DriveStateChangedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
         bus.Subscribe<InboxItemDetectedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
         bus.Subscribe<UserPermissionsChangedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
 
         await bus.PublishAsync(
-            new CastDeviceStatusChangedEvent { EventType = "status", StatusData = new() }
+            @event: new CastDeviceStatusChangedEvent { EventType = "status", StatusData = new() }
         );
         await bus.PublishAsync(
-            new DriveStateChangedEvent
+            @event: new DriveStateChangedEvent
             {
-                DriveStateData = new("drive_added", "E:\\", null, false, "none", DateTime.UtcNow),
+                DriveStateData = new(Method: "drive_added", Drive: "E:\\", VolumeLabel: null, HasDisc: false, DiscType: "none", Timestamp: DateTime.UtcNow),
             }
         );
         await bus.PublishAsync(
-            new InboxItemDetectedEvent
+            @event: new InboxItemDetectedEvent
             {
                 Id = "item-1",
                 DetectedType = "tv",
@@ -446,13 +446,13 @@ public class ExtendedDomainEventTests
             }
         );
         await bus.PublishAsync(
-            new UserPermissionsChangedEvent { UserId = Guid.NewGuid(), ChangedBy = Guid.NewGuid() }
+            @event: new UserPermissionsChangedEvent { UserId = Guid.NewGuid(), ChangedBy = Guid.NewGuid() }
         );
 
-        received.Should().HaveCount(4);
-        received[0].Should().BeOfType<CastDeviceStatusChangedEvent>();
-        received[1].Should().BeOfType<DriveStateChangedEvent>();
-        received[2].Should().BeOfType<InboxItemDetectedEvent>();
-        received[3].Should().BeOfType<UserPermissionsChangedEvent>();
+        received.Should().HaveCount(expected: 4);
+        received[index: 0].Should().BeOfType<CastDeviceStatusChangedEvent>();
+        received[index: 1].Should().BeOfType<DriveStateChangedEvent>();
+        received[index: 2].Should().BeOfType<InboxItemDetectedEvent>();
+        received[index: 3].Should().BeOfType<UserPermissionsChangedEvent>();
     }
 }

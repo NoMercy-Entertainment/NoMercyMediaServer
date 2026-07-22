@@ -68,12 +68,12 @@ public class SubtitleAcquisitionValidatorTests
             acquisition: new() { Enabled = true }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result.IsValid.Should().BeFalse();
         result
             .Errors.Should()
-            .Contain(e =>
+            .Contain(predicate: e =>
                 e.Contains("SubtitleAcquisition requires at least one declared subtitle output")
             );
     }
@@ -87,35 +87,35 @@ public class SubtitleAcquisitionValidatorTests
             acquisition: new() { Enabled = true }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result
             .Errors.Should()
-            .NotContain(e =>
+            .NotContain(predicate: e =>
                 e.Contains("SubtitleAcquisition requires at least one declared subtitle output")
             );
     }
 
     // Rule 2: Enabled=true + audio-only container → reject
     [Theory]
-    [InlineData(Container.Mp3)]
-    [InlineData(Container.Aac)]
-    [InlineData(Container.Flac)]
-    [InlineData(Container.Ogg)]
-    [InlineData(Container.Mka)]
+    [InlineData(data: Container.Mp3)]
+    [InlineData(data: Container.Aac)]
+    [InlineData(data: Container.Flac)]
+    [InlineData(data: Container.Ogg)]
+    [InlineData(data: Container.Mka)]
     public void EnabledOnAudioOnlyContainer_IsRejected(Container container)
     {
         EncodingProfile profile = AudioOnlyProfile(
-            container,
+            container: container,
             acquisition: new() { Enabled = true }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result.IsValid.Should().BeFalse();
         result
             .Errors.Should()
-            .Contain(e =>
+            .Contain(predicate: e =>
                 e.Contains("SubtitleAcquisition is incompatible with audio-only containers")
             );
     }
@@ -129,12 +129,12 @@ public class SubtitleAcquisitionValidatorTests
             acquisition: new() { Enabled = true, MinRating = -0.1 }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result.IsValid.Should().BeFalse();
         result
             .Errors.Should()
-            .Contain(e => e.Contains("SubtitleAcquisition.MinRating must be in [0, 10]"));
+            .Contain(predicate: e => e.Contains("SubtitleAcquisition.MinRating must be in [0, 10]"));
     }
 
     // Rule 3: MinRating > 10 → reject
@@ -146,12 +146,12 @@ public class SubtitleAcquisitionValidatorTests
             acquisition: new() { Enabled = true, MinRating = 10.1 }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result.IsValid.Should().BeFalse();
         result
             .Errors.Should()
-            .Contain(e => e.Contains("SubtitleAcquisition.MinRating must be in [0, 10]"));
+            .Contain(predicate: e => e.Contains("SubtitleAcquisition.MinRating must be in [0, 10]"));
     }
 
     // Rule 3: MinRating = 0 → no error from this rule
@@ -163,11 +163,11 @@ public class SubtitleAcquisitionValidatorTests
             acquisition: new() { Enabled = true, MinRating = 0.0 }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result
             .Errors.Should()
-            .NotContain(e => e.Contains("SubtitleAcquisition.MinRating must be in [0, 10]"));
+            .NotContain(predicate: e => e.Contains("SubtitleAcquisition.MinRating must be in [0, 10]"));
     }
 
     // Rule 4: MaxPerLanguage = 0 → reject
@@ -179,12 +179,12 @@ public class SubtitleAcquisitionValidatorTests
             acquisition: new() { Enabled = true, MaxPerLanguage = 0 }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result.IsValid.Should().BeFalse();
         result
             .Errors.Should()
-            .Contain(e => e.Contains("SubtitleAcquisition.MaxPerLanguage must be at least 1"));
+            .Contain(predicate: e => e.Contains("SubtitleAcquisition.MaxPerLanguage must be at least 1"));
     }
 
     // Rule 4: MaxPerLanguage < 0 → reject
@@ -196,12 +196,12 @@ public class SubtitleAcquisitionValidatorTests
             acquisition: new() { Enabled = true, MaxPerLanguage = -1 }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result.IsValid.Should().BeFalse();
         result
             .Errors.Should()
-            .Contain(e => e.Contains("SubtitleAcquisition.MaxPerLanguage must be at least 1"));
+            .Contain(predicate: e => e.Contains("SubtitleAcquisition.MaxPerLanguage must be at least 1"));
     }
 
     // Rule 5: EmbedPolicy=ExactMatchOnly + TitleOnly → warn, not error
@@ -218,12 +218,12 @@ public class SubtitleAcquisitionValidatorTests
             }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Errors.Should().NotContain(e => e.Contains("TitleOnly"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("TitleOnly"));
         result
             .Warnings.Should()
-            .Contain(w => w.Contains("TitleOnly") && w.Contains("ExactMatchOnly"));
+            .Contain(predicate: w => w.Contains("TitleOnly") && w.Contains("ExactMatchOnly"));
     }
 
     // Null acquisition → no acquisition errors at all
@@ -232,10 +232,10 @@ public class SubtitleAcquisitionValidatorTests
     {
         EncodingProfile profile = VideoProfile(subtitles: [], acquisition: null);
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Errors.Should().NotContain(e => e.Contains("SubtitleAcquisition"));
-        result.Warnings.Should().NotContain(w => w.Contains("SubtitleAcquisition"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("SubtitleAcquisition"));
+        result.Warnings.Should().NotContain(predicate: w => w.Contains("SubtitleAcquisition"));
     }
 
     // Enabled=false → no acquisition validation at all
@@ -252,8 +252,8 @@ public class SubtitleAcquisitionValidatorTests
             }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Errors.Should().NotContain(e => e.Contains("SubtitleAcquisition"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("SubtitleAcquisition"));
     }
 }

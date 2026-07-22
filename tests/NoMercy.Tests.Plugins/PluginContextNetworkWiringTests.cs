@@ -39,33 +39,33 @@ public class PluginContextNetworkWiringTests
         ILogger logger = NullLogger.Instance;
 
         return new(
-            eventBus,
-            services,
-            logger,
-            tempDir,
-            TestStorageHelper.CreateStorage(tempDir),
-            capabilities
+            eventBus: eventBus,
+            services: services,
+            logger: logger,
+            dataFolderPath: tempDir,
+            storage: TestStorageHelper.CreateStorage(rootPath: tempDir),
+            capabilities: capabilities
         );
     }
 
     [Fact]
     public async Task DeclaredNetworkCapability_DeniesHostOutsideAllowlist()
     {
-        string tempDir = Directory.CreateTempSubdirectory("plugin-ctx-net-").FullName;
+        string tempDir = Directory.CreateTempSubdirectory(prefix: "plugin-ctx-net-").FullName;
         PluginCapabilities capabilities = new() { Network = new() { Hosts = ["*.somafm.com"] } };
-        PluginContext context = BuildContext(tempDir, capabilities);
+        PluginContext context = BuildContext(tempDir: tempDir, capabilities: capabilities);
 
-        await Assert.ThrowsAsync<PluginNetworkDeniedException>(() =>
-            context.HttpClient.GetAsync("https://evil.example.com/x")
+        await Assert.ThrowsAsync<PluginNetworkDeniedException>(testCode: () =>
+            context.HttpClient.GetAsync(requestUri: "https://evil.example.com/x")
         );
     }
 
     [Fact]
     public async Task DeclaredNetworkCapability_ClearsAllowlistGuard_ForMatchingHost()
     {
-        string tempDir = Directory.CreateTempSubdirectory("plugin-ctx-net-").FullName;
+        string tempDir = Directory.CreateTempSubdirectory(prefix: "plugin-ctx-net-").FullName;
         PluginCapabilities capabilities = new() { Network = new() { Hosts = ["*.somafm.com"] } };
-        PluginContext context = BuildContext(tempDir, capabilities);
+        PluginContext context = BuildContext(tempDir: tempDir, capabilities: capabilities);
 
         using CancellationTokenSource alreadyCanceled = new();
         alreadyCanceled.Cancel();
@@ -73,19 +73,19 @@ public class PluginContextNetworkWiringTests
         // An allowed host must not throw PluginNetworkDeniedException — it must clear our
         // guard and reach the real SocketsHttpHandler, which then fails on the pre-canceled
         // token instead. That different failure is the proof the host pattern was honored.
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            context.HttpClient.GetAsync("https://ice1.somafm.com/x", alreadyCanceled.Token)
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(testCode: () =>
+            context.HttpClient.GetAsync(requestUri: "https://ice1.somafm.com/x", cancellationToken: alreadyCanceled.Token)
         );
     }
 
     [Fact]
     public async Task NullCapabilities_DenyAllHosts()
     {
-        string tempDir = Directory.CreateTempSubdirectory("plugin-ctx-net-").FullName;
-        PluginContext context = BuildContext(tempDir, null);
+        string tempDir = Directory.CreateTempSubdirectory(prefix: "plugin-ctx-net-").FullName;
+        PluginContext context = BuildContext(tempDir: tempDir, capabilities: null);
 
-        await Assert.ThrowsAsync<PluginNetworkDeniedException>(() =>
-            context.HttpClient.GetAsync("https://ice1.somafm.com/x")
+        await Assert.ThrowsAsync<PluginNetworkDeniedException>(testCode: () =>
+            context.HttpClient.GetAsync(requestUri: "https://ice1.somafm.com/x")
         );
     }
 
@@ -97,11 +97,11 @@ public class PluginContextNetworkWiringTests
         // PluginHttpClientFactory.Create's `capabilities?.Network?.Hosts` chain
         // must fall back to an empty allowlist for this combination too, not
         // just when capabilities itself is null.
-        string tempDir = Directory.CreateTempSubdirectory("plugin-ctx-net-").FullName;
-        PluginContext context = BuildContext(tempDir, new PluginCapabilities());
+        string tempDir = Directory.CreateTempSubdirectory(prefix: "plugin-ctx-net-").FullName;
+        PluginContext context = BuildContext(tempDir: tempDir, capabilities: new PluginCapabilities());
 
-        await Assert.ThrowsAsync<PluginNetworkDeniedException>(() =>
-            context.HttpClient.GetAsync("https://ice1.somafm.com/x")
+        await Assert.ThrowsAsync<PluginNetworkDeniedException>(testCode: () =>
+            context.HttpClient.GetAsync(requestUri: "https://ice1.somafm.com/x")
         );
     }
 

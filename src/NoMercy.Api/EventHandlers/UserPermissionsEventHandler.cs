@@ -32,7 +32,7 @@ public class UserPermissionsEventHandler : IDisposable
         _logger = logger;
         _clientMessenger = clientMessenger;
         _subscriptions.Add(
-            eventBus.Subscribe<UserPermissionsChangedEvent>(OnUserPermissionsChanged)
+            item: eventBus.Subscribe<UserPermissionsChangedEvent>(handler: OnUserPermissionsChanged)
         );
     }
 
@@ -42,15 +42,13 @@ public class UserPermissionsEventHandler : IDisposable
     )
     {
         await _clientMessenger.SendToAll(
-            "RefreshPermissions",
-            "dashboardHub",
-            new { userId = @event.UserId, changedBy = @event.ChangedBy }
+            name: "RefreshPermissions",
+            endpoint: "dashboardHub",
+            data: new { userId = @event.UserId, changedBy = @event.ChangedBy }
         );
 
         _logger.LogInformation(
-            "User permissions changed: UserId={UserId}, ChangedBy={ChangedBy}",
-            @event.UserId,
-            @event.ChangedBy
+            message: "User permissions changed: UserId={UserId}, ChangedBy={ChangedBy}", args: [@event.UserId, @event.ChangedBy]
         );
     }
 

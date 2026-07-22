@@ -15,6 +15,6 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbTmdbAggregatedCast : TmdbAggregatedCredit
 {
-    [JsonProperty("roles")]
+    [JsonProperty(propertyName: "roles")]
     public TmdbAggregatedCreditRole[] Roles { get; set; } = [];
 }

@@ -23,7 +23,7 @@ namespace NoMercy.Tests.Service;
 /// is the deliberate no-op: always reports a policy exists, and that policy is
 /// the default (no sunset date, no link).
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class DefaultSunsetPolicyManagerTests
 {
     [Fact]
@@ -31,7 +31,7 @@ public class DefaultSunsetPolicyManagerTests
     {
         DefaultSunsetPolicyManager manager = new();
 
-        bool found = manager.TryGetPolicy("v1", new ApiVersion(1, 0), out SunsetPolicy? policy);
+        bool found = manager.TryGetPolicy(name: "v1", apiVersion: new ApiVersion(majorVersion: 1, minorVersion: 0), sunsetPolicy: out SunsetPolicy? policy);
 
         found.Should().BeTrue();
         policy.Should().NotBeNull();
@@ -45,7 +45,7 @@ public class DefaultSunsetPolicyManagerTests
     {
         DefaultSunsetPolicyManager manager = new();
 
-        bool found = manager.TryGetPolicy(null, null, out SunsetPolicy? policy);
+        bool found = manager.TryGetPolicy(name: null, apiVersion: null, sunsetPolicy: out SunsetPolicy? policy);
 
         found.Should().BeTrue();
         policy.Should().NotBeNull();

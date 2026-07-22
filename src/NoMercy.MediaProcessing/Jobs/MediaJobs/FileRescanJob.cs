@@ -39,7 +39,7 @@ public class FileRescanJob : AbstractMediaJob
         ILoggerFactory loggerFactory,
         IMediaAnalyzer mediaAnalyzer
     )
-        : base(storageFactory, storageDriver, loggerFactory)
+        : base(storageFactory: storageFactory, storageDriver: storageDriver, loggerFactory: loggerFactory)
     {
         _mediaAnalyzer = mediaAnalyzer;
     }
@@ -55,26 +55,24 @@ public class FileRescanJob : AbstractMediaJob
     public override async Task Handle()
     {
         Log.LogInformation(
-            "[FileRescanJob] Handle() entered for id={Id}, libraryId={LibraryId}",
-            Id,
-            LibraryId
+            message: "[FileRescanJob] Handle() entered for id={Id}, libraryId={LibraryId}", args: [Id, LibraryId]
         );
 
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
-        LibraryRepository libraryRepository = new(context, StorageDriver);
+        LibraryRepository libraryRepository = new(context: context, storageDriver: StorageDriver);
         LibraryManager libraryManager = new(
-            libraryRepository,
-            jobDispatcher,
-            context,
-            StorageDriver,
-            StorageFactory,
-            _mediaAnalyzer,
-            LoggerFactory.CreateLogger<LibraryManager>()
+            libraryRepository: libraryRepository,
+            jobDispatcher: jobDispatcher,
+            mediaContext: context,
+            storageDriver: StorageDriver,
+            storageFactory: StorageFactory,
+            mediaAnalyzer: _mediaAnalyzer,
+            logger: LoggerFactory.CreateLogger<LibraryManager>()
         );
 
-        Library? library = await libraryManager.RescanFiles(LibraryId, Id);
+        Library? library = await libraryManager.RescanFiles(libraryId: LibraryId, id: Id);
 
         string type = library?.Type switch
         {
@@ -86,19 +84,19 @@ public class FileRescanJob : AbstractMediaJob
         if (EventBusProvider.IsConfigured)
         {
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshedEvent { QueryKey = [type, Id.ToString()] }
+                @event: new LibraryRefreshedEvent { QueryKey = [type, Id.ToString()] }
             );
 
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshedEvent { QueryKey = ["libraries", LibraryId.ToString()] }
+                @event: new LibraryRefreshedEvent { QueryKey = ["libraries", LibraryId.ToString()] }
             );
 
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshedEvent { QueryKey = ["home"] }
+                @event: new LibraryRefreshedEvent { QueryKey = ["home"] }
             );
 
             await EventBusProvider.Current.PublishAsync(
-                new MediaFilesScannedEvent { MediaId = Id, LibraryId = LibraryId }
+                @event: new MediaFilesScannedEvent { MediaId = Id, LibraryId = LibraryId }
             );
         }
     }

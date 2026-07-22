@@ -15,73 +15,73 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Users;
 
-[PrimaryKey(nameof(Id))]
-[Index(nameof(DeviceId), IsUnique = true)]
+[PrimaryKey(propertyName: nameof(Id))]
+[Index(propertyName: nameof(DeviceId), IsUnique = true)]
 public class Device : Timestamps
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.None)]
-    [JsonProperty("id")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
+    [JsonProperty(propertyName: "id")]
     public Ulid Id { get; set; } = Ulid.NewUlid();
 
-    [JsonProperty("device_id")]
+    [JsonProperty(propertyName: "device_id")]
     public string DeviceId { get; set; } = string.Empty;
 
-    [JsonProperty("browser")]
+    [JsonProperty(propertyName: "browser")]
     public string Browser { get; set; } = string.Empty;
 
-    [JsonProperty("os")]
+    [JsonProperty(propertyName: "os")]
     public string Os { get; set; } = string.Empty;
 
-    [Column("Device")]
-    [JsonProperty("model")]
+    [Column(name: "Device")]
+    [JsonProperty(propertyName: "model")]
     public string Model { get; set; } = string.Empty;
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; } = null!;
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("custom_name")]
+    [JsonProperty(propertyName: "custom_name")]
     public string? CustomName { get; set; }
 
-    [JsonProperty("version")]
+    [JsonProperty(propertyName: "version")]
     public string Version { get; set; } = string.Empty;
 
-    [JsonProperty("ip")]
+    [JsonProperty(propertyName: "ip")]
     public string Ip { get; set; } = string.Empty;
 
-    [JsonProperty("activity_logs")]
+    [JsonProperty(propertyName: "activity_logs")]
     public virtual ICollection<ActivityLog> ActivityLogs { get; set; } = [];
 
-    [JsonProperty("is_active")]
+    [JsonProperty(propertyName: "is_active")]
     public bool IsActive { get; set; }
 
     public const int DefaultVolumePercent = 50;
 
-    [JsonProperty("volume_percent")]
+    [JsonProperty(propertyName: "volume_percent")]
     public int? VolumePercent { get; set; }
 
-    [JsonProperty("fingerprint")]
+    [JsonProperty(propertyName: "fingerprint")]
     public string? Fingerprint { get; set; }
 
-    [JsonProperty("owner_user_id")]
+    [JsonProperty(propertyName: "owner_user_id")]
     public Guid? OwnerUserId { get; set; }
 
-    [JsonProperty("lan_ip")]
+    [JsonProperty(propertyName: "lan_ip")]
     public string? LanIp { get; set; }
 
-    [JsonProperty("lan_port")]
+    [JsonProperty(propertyName: "lan_port")]
     public int? LanPort { get; set; }
 
-    [JsonProperty("ws_connected_at")]
+    [JsonProperty(propertyName: "ws_connected_at")]
     public DateTime? WsConnectedAt { get; set; }
 
-    [JsonProperty("mdns_seen_at")]
+    [JsonProperty(propertyName: "mdns_seen_at")]
     public DateTime? MdnsSeenAt { get; set; }
 
     [Column(TypeName = "TEXT")]
-    [JsonProperty("capabilities_json")]
+    [JsonProperty(propertyName: "capabilities_json")]
     public string? CapabilitiesJson { get; set; }
 
     public virtual User? OwnerUser { get; set; }

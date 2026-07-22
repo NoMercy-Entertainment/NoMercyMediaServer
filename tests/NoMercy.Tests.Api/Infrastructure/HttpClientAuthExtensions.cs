@@ -15,14 +15,14 @@ public static class HttpClientAuthExtensions
 {
     public static HttpClient AsAuthenticated(this HttpClient client)
     {
-        client.DefaultRequestHeaders.Remove(TestAuthDefaults.TestAuthHeader);
+        client.DefaultRequestHeaders.Remove(name: TestAuthDefaults.TestAuthHeader);
         return client;
     }
 
     public static HttpClient AsUnauthenticated(this HttpClient client)
     {
-        client.DefaultRequestHeaders.Remove(TestAuthDefaults.TestAuthHeader);
-        client.DefaultRequestHeaders.Add(TestAuthDefaults.TestAuthHeader, TestAuthDefaults.Deny);
+        client.DefaultRequestHeaders.Remove(name: TestAuthDefaults.TestAuthHeader);
+        client.DefaultRequestHeaders.Add(name: TestAuthDefaults.TestAuthHeader, value: TestAuthDefaults.Deny);
         client.DefaultRequestHeaders.CacheControl = new() { NoCache = true };
         return client;
     }
@@ -34,11 +34,11 @@ public static class HttpClientAuthExtensions
     /// </summary>
     public static HttpClient AsSecondaryUser(this HttpClient client)
     {
-        client.DefaultRequestHeaders.Remove(TestAuthDefaults.TestAuthHeader);
-        client.DefaultRequestHeaders.Remove(TestAuthDefaults.TestUserIdHeader);
+        client.DefaultRequestHeaders.Remove(name: TestAuthDefaults.TestAuthHeader);
+        client.DefaultRequestHeaders.Remove(name: TestAuthDefaults.TestUserIdHeader);
         client.DefaultRequestHeaders.Add(
-            TestAuthDefaults.TestUserIdHeader,
-            TestAuthHandler.SecondaryUserId.ToString()
+            name: TestAuthDefaults.TestUserIdHeader,
+            value: TestAuthHandler.SecondaryUserId.ToString()
         );
         return client;
     }

@@ -26,12 +26,12 @@ public class InterfaceTests
         TestJob testJob = new();
 
         // Act & Assert
-        Assert.IsAssignableFrom<IShouldQueue>(testJob);
+        Assert.IsAssignableFrom<IShouldQueue>(@object: testJob);
 
         // Verify the Handle method exists and has correct signature
-        MethodInfo? handleMethod = typeof(TestJob).GetMethod("Handle");
-        Assert.NotNull(handleMethod);
-        Assert.Equal(typeof(Task), handleMethod.ReturnType);
+        MethodInfo? handleMethod = typeof(TestJob).GetMethod(name: "Handle");
+        Assert.NotNull(@object: handleMethod);
+        Assert.Equal(expected: typeof(Task), actual: handleMethod.ReturnType);
     }
 
     [Fact]
@@ -41,12 +41,12 @@ public class InterfaceTests
         AnotherTestJob testJob = new();
 
         // Act & Assert
-        Assert.IsAssignableFrom<IShouldQueue>(testJob);
+        Assert.IsAssignableFrom<IShouldQueue>(@object: testJob);
 
         // Verify the Handle method exists and has correct signature
-        MethodInfo? handleMethod = typeof(AnotherTestJob).GetMethod("Handle");
-        Assert.NotNull(handleMethod);
-        Assert.Equal(typeof(Task), handleMethod.ReturnType);
+        MethodInfo? handleMethod = typeof(AnotherTestJob).GetMethod(name: "Handle");
+        Assert.NotNull(@object: handleMethod);
+        Assert.Equal(expected: typeof(Task), actual: handleMethod.ReturnType);
     }
 
     [Fact]
@@ -69,10 +69,10 @@ public class InterfaceTests
         TestJob testJob = (TestJob)jobs[0];
         AnotherTestJob anotherJob = (AnotherTestJob)jobs[1];
 
-        Assert.True(testJob.HasExecuted);
-        Assert.Equal("Polymorphic test 1", testJob.Message);
-        Assert.True(anotherJob.HasExecuted);
-        Assert.Equal(84, anotherJob.Value); // Should be doubled
+        Assert.True(condition: testJob.HasExecuted);
+        Assert.Equal(expected: "Polymorphic test 1", actual: testJob.Message);
+        Assert.True(condition: anotherJob.HasExecuted);
+        Assert.Equal(expected: 84, actual: anotherJob.Value); // Should be doubled
     }
 }
 
@@ -85,29 +85,29 @@ public class EdgeCaseTests
         TestJob emptyJob = new(); // Default values
 
         // Act
-        string serialized = SerializationHelper.Serialize(emptyJob);
-        TestJob deserialized = SerializationHelper.Deserialize<TestJob>(serialized);
+        string serialized = SerializationHelper.Serialize(obj: emptyJob);
+        TestJob deserialized = SerializationHelper.Deserialize<TestJob>(data: serialized);
 
         // Assert
-        Assert.NotNull(deserialized);
-        Assert.Equal(emptyJob.HasExecuted, deserialized.HasExecuted);
-        Assert.Equal(emptyJob.ShouldFail, deserialized.ShouldFail);
+        Assert.NotNull(@object: deserialized);
+        Assert.Equal(expected: emptyJob.HasExecuted, actual: deserialized.HasExecuted);
+        Assert.Equal(expected: emptyJob.ShouldFail, actual: deserialized.ShouldFail);
     }
 
     [Fact]
     public void SerializationHelper_LargeString_HandlesCorrectly()
     {
         // Arrange
-        string largeMessage = new('A', 10000); // 10KB string
+        string largeMessage = new(c: 'A', count: 10000); // 10KB string
         TestJob testJob = new() { Message = largeMessage };
 
         // Act
-        string serialized = SerializationHelper.Serialize(testJob);
-        TestJob deserialized = SerializationHelper.Deserialize<TestJob>(serialized);
+        string serialized = SerializationHelper.Serialize(obj: testJob);
+        TestJob deserialized = SerializationHelper.Deserialize<TestJob>(data: serialized);
 
         // Assert
-        Assert.NotNull(deserialized);
-        Assert.Equal(largeMessage, deserialized.Message);
+        Assert.NotNull(@object: deserialized);
+        Assert.Equal(expected: largeMessage, actual: deserialized.Message);
     }
 
     [Fact]
@@ -118,12 +118,12 @@ public class EdgeCaseTests
         TestJob testJob = new() { Message = specialMessage };
 
         // Act
-        string serialized = SerializationHelper.Serialize(testJob);
-        TestJob deserialized = SerializationHelper.Deserialize<TestJob>(serialized);
+        string serialized = SerializationHelper.Serialize(obj: testJob);
+        TestJob deserialized = SerializationHelper.Deserialize<TestJob>(data: serialized);
 
         // Assert
-        Assert.NotNull(deserialized);
-        Assert.Equal(specialMessage, deserialized.Message);
+        Assert.NotNull(@object: deserialized);
+        Assert.Equal(expected: specialMessage, actual: deserialized.Message);
     }
 
     [Fact]
@@ -134,12 +134,12 @@ public class EdgeCaseTests
         TestJob testJob = new() { Message = unicodeMessage };
 
         // Act
-        string serialized = SerializationHelper.Serialize(testJob);
-        TestJob deserialized = SerializationHelper.Deserialize<TestJob>(serialized);
+        string serialized = SerializationHelper.Serialize(obj: testJob);
+        TestJob deserialized = SerializationHelper.Deserialize<TestJob>(data: serialized);
 
         // Assert
-        Assert.NotNull(deserialized);
-        Assert.Equal(unicodeMessage, deserialized.Message);
+        Assert.NotNull(@object: deserialized);
+        Assert.Equal(expected: unicodeMessage, actual: deserialized.Message);
     }
 }
 
@@ -155,14 +155,14 @@ public class StressTests
         object currentJob = originalJob;
         for (int i = 0; i < 100; i++)
         {
-            string serialized = SerializationHelper.Serialize(currentJob);
-            currentJob = SerializationHelper.Deserialize<TestJob>(serialized);
+            string serialized = SerializationHelper.Serialize(obj: currentJob);
+            currentJob = SerializationHelper.Deserialize<TestJob>(data: serialized);
         }
 
         // Assert
         TestJob finalJob = (TestJob)currentJob;
-        Assert.Equal(originalJob.Message, finalJob.Message);
-        Assert.Equal(originalJob.HasExecuted, finalJob.HasExecuted);
-        Assert.Equal(originalJob.ShouldFail, finalJob.ShouldFail);
+        Assert.Equal(expected: originalJob.Message, actual: finalJob.Message);
+        Assert.Equal(expected: originalJob.HasExecuted, actual: finalJob.HasExecuted);
+        Assert.Equal(expected: originalJob.ShouldFail, actual: finalJob.ShouldFail);
     }
 }

@@ -22,72 +22,72 @@ public class TvdbCompanyTypesResponse : TvdbResponse<TvdbCompanyType[]> { }
 
 public class TvdbCompany
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("slug")]
+    [JsonProperty(propertyName: "slug")]
     public string Slug { get; set; } = string.Empty;
 
-    [JsonProperty("country")]
+    [JsonProperty(propertyName: "country")]
     public string Country { get; set; } = string.Empty;
 
-    [JsonProperty("activeDate")]
+    [JsonProperty(propertyName: "activeDate")]
     public string? ActiveDate { get; set; }
 
-    [JsonProperty("inactiveDate")]
+    [JsonProperty(propertyName: "inactiveDate")]
     public string? InactiveDate { get; set; }
 
-    [JsonProperty("primaryCompanyType")]
+    [JsonProperty(propertyName: "primaryCompanyType")]
     public int PrimaryCompanyType { get; set; }
 
-    [JsonProperty("aliases")]
+    [JsonProperty(propertyName: "aliases")]
     public TvdbAlias[] Aliases { get; set; } = [];
 
-    [JsonProperty("nameTranslations")]
+    [JsonProperty(propertyName: "nameTranslations")]
     public string[] NameTranslations { get; set; } = [];
 
-    [JsonProperty("overviewTranslations")]
+    [JsonProperty(propertyName: "overviewTranslations")]
     public string[] OverviewTranslations { get; set; } = [];
 
-    [JsonProperty("parentCompany")]
+    [JsonProperty(propertyName: "parentCompany")]
     public TvdbParentCompany? ParentCompany { get; set; }
 
-    [JsonProperty("tagOptions")]
+    [JsonProperty(propertyName: "tagOptions")]
     public TvdbTagOption[] TagOptions { get; set; } = [];
 
-    [JsonProperty("status")]
+    [JsonProperty(propertyName: "status")]
     public string? Status { get; set; }
 }
 
 public class TvdbParentCompany
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("relation")]
+    [JsonProperty(propertyName: "relation")]
     public TvdbCompanyRelation? Relation { get; set; }
 }
 
 public class TvdbCompanyRelation
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("typeName")]
+    [JsonProperty(propertyName: "typeName")]
     public string TypeName { get; set; } = string.Empty;
 }
 
 public class TvdbCompanyType
 {
-    [JsonProperty("companyTypeId")]
+    [JsonProperty(propertyName: "companyTypeId")]
     public int CompanyTypeId { get; set; }
 
-    [JsonProperty("companyTypeName")]
+    [JsonProperty(propertyName: "companyTypeName")]
     public string CompanyTypeName { get; set; } = string.Empty;
 }

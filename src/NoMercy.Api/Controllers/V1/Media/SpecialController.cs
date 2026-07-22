@@ -26,10 +26,10 @@ using NoMercy.NmSystem.Extensions;
 namespace NoMercy.Api.Controllers.V1.Media;
 
 [ApiController]
-[Tags("Media Specials")]
-[ApiVersion(1.0)]
+[Tags(tags: "Media Specials")]
+[ApiVersion(version: 1.0)]
 [Authorize(Policy = "MediaAccess")]
-[Route("api/v{version:apiVersion}/specials")]
+[Route(template: "api/v{version:apiVersion}/specials")]
 public class SpecialController(ISpecialRepository specialRepository) : BaseController
 {
     [HttpGet]
@@ -44,107 +44,107 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
         string country = Country();
 
         List<SpecialCardDto> specials = await specialRepository.GetSpecialCardsAsync(
-            userId,
-            language,
-            request.Take,
-            request.Page,
-            ct
+            userId: userId,
+            language: language,
+            take: request.Take,
+            page: request.Page,
+            ct: ct
         );
 
         if (request.Version != "lolomo")
         {
             List<CardData> cardItems = specials
-                .Select(special => new CardData(special, country))
+                .Select(selector: special => new CardData(dto: special, country: country))
                 .ToList();
 
             ComponentEnvelope response = Component
                 .Grid()
-                .WithItems(cardItems.Select(item => Component.Card().WithData(item)));
+                .WithItems(builders: cardItems.Select(selector: item => Component.Card().WithData(data: item)));
 
-            return Ok(ComponentResponse.From(response));
+            return Ok(value: ComponentResponse.From(component: response));
         }
 
         List<ComponentEnvelope> carousels = Letters
-            .Select(letter =>
+            .Select(selector: letter =>
             {
                 List<CardData> letterItems = specials
-                    .Select(special => new CardData(special, country))
-                    .Where(item => AlphaBucket.Matches(item.TitleSort, letter))
+                    .Select(selector: special => new CardData(dto: special, country: country))
+                    .Where(predicate: item => AlphaBucket.Matches(titleSort: item.TitleSort, bucket: letter))
                     .ToList();
 
                 return Component
                     .Carousel()
-                    .WithId(letter)
-                    .WithTitle(letter)
-                    .WithItems(letterItems.Select(item => Component.Card().WithData(item)))
+                    .WithId(id: letter)
+                    .WithTitle(title: letter)
+                    .WithItems(builders: letterItems.Select(selector: item => Component.Card().WithData(data: item)))
                     .Build();
             })
             .ToList();
 
-        ComponentEnvelope containerResponse = Component.Container().WithItems(carousels);
+        ComponentEnvelope containerResponse = Component.Container().WithItems(items: carousels);
 
-        return Ok(containerResponse);
+        return Ok(value: containerResponse);
     }
 
     [HttpGet]
-    [Route("{id:ulid}")]
+    [Route(template: "{id:ulid}")]
     public async Task<IActionResult> Show(Ulid id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
 
         string country = Country();
 
-        SpecialDetailDto? detail = await specialRepository.GetSpecialDetailAsync(userId, id, ct);
+        SpecialDetailDto? detail = await specialRepository.GetSpecialDetailAsync(userId: userId, id: id, ct: ct);
 
         if (detail is null)
-            return NotFoundResponse("Special not found");
+            return NotFoundResponse(detail: "Special not found");
 
         IEnumerable<int> movieIds = detail
-            .Items.Where(item => item.MovieId is not null)
-            .Select(item => item.MovieId ?? 0);
+            .Items.Where(predicate: item => item.MovieId is not null)
+            .Select(selector: item => item.MovieId ?? 0);
 
         IEnumerable<int> tvIds = detail
-            .Items.Where(item => item.EpisodeId is not null)
-            .Select(item => item.TvId)
+            .Items.Where(predicate: item => item.EpisodeId is not null)
+            .Select(selector: item => item.TvId)
             .Distinct();
 
         SpecialItemProjections projections = await specialRepository.GetSpecialItemProjectionsAsync(
-            userId,
-            movieIds,
-            tvIds,
-            country,
-            ct
+            userId: userId,
+            movieIds: movieIds,
+            tvIds: tvIds,
+            country: country,
+            ct: ct
         );
 
         List<SpecialItemsDto> items =
         [
-            .. projections.Movies.Select(projection => new SpecialItemsDto(projection)),
-            .. projections.Tvs.Select(projection => new SpecialItemsDto(projection)),
+            .. projections.Movies.Select(selector: projection => new SpecialItemsDto(movie: projection)),
+            .. projections.Tvs.Select(selector: projection => new SpecialItemsDto(tv: projection)),
         ];
 
-        return Ok(new DataResponseDto<SpecialResponseItemDto> { Data = new(detail, items) });
+        return Ok(value: new DataResponseDto<SpecialResponseItemDto> { Data = new(detail: detail, items: items) });
     }
 
     [HttpGet]
-    [Route("{id:ulid}/available")]
+    [Route(template: "{id:ulid}/available")]
     public async Task<IActionResult> Available(Ulid id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
 
-        Special? special = await specialRepository.GetSpecialAvailableAsync(userId, id);
+        Special? special = await specialRepository.GetSpecialAvailableAsync(userId: userId, id: id);
 
         bool hasFiles =
             special is not null
             && (
-                special.Items.Select(movie => movie.Movie?.VideoFiles).Any()
-                || special.Items.Select(movie => movie.Episode?.VideoFiles).Any()
+                special.Items.Select(selector: movie => movie.Movie?.VideoFiles).Any()
+                || special.Items.Select(selector: movie => movie.Episode?.VideoFiles).Any()
             );
 
         if (!hasFiles)
-            return NotFoundResponse("Special not found");
+            return NotFoundResponse(detail: "Special not found");
 
         return Ok(
-            new StatusResponseDto<AvailableResponseDto>
+            value: new StatusResponseDto<AvailableResponseDto>
             {
                 Data = new() { Available = true },
                 Status = "ok",
@@ -154,7 +154,7 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
     }
 
     [HttpGet]
-    [Route("{id:ulid}/watch")]
+    [Route(template: "{id:ulid}/watch")]
     public async Task<IActionResult> Watch(Ulid id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
@@ -163,40 +163,40 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
         string country = Country();
 
         Special? special = await specialRepository.GetSpecialPlaylistAsync(
-            userId,
-            id,
-            language,
-            country,
-            ct
+            userId: userId,
+            id: id,
+            language: language,
+            country: country,
+            ct: ct
         );
 
         if (special is null)
-            return NotFoundResponse("Special not found");
+            return NotFoundResponse(detail: "Special not found");
 
         VideoPlaylistResponseDto[] items = special
-            .Items.OrderBy(item => item.Order)
+            .Items.OrderBy(keySelector: item => item.Order)
             .Select(
-                (item, index) =>
+                selector: (item, index) =>
                     item.EpisodeId is not null
-                        ? new(item.Episode ?? new Episode(), "specials", id, country, index)
+                        ? new(episode: item.Episode ?? new Episode(), playlistType: "specials", playlistId: id, country: country, index: index)
                         : new VideoPlaylistResponseDto(
-                            item.Movie ?? new Movie(),
-                            "specials",
-                            id,
-                            country,
-                            index
+                            movie: item.Movie ?? new Movie(),
+                            playlistType: "specials",
+                            playlistId: id,
+                            country: country,
+                            index: index
                         )
             )
             .ToArray();
 
         if (items.Length == 0)
-            return NotFoundResponse("Special not found");
+            return NotFoundResponse(detail: "Special not found");
 
-        return Ok(items);
+        return Ok(value: items);
     }
 
     [HttpPost]
-    [Route("{id:ulid}/like")]
+    [Route(template: "{id:ulid}/like")]
     public async Task<IActionResult> Like(
         Ulid id,
         [FromBody] LikeRequestDto request,
@@ -205,13 +205,13 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
     {
         Guid userId = User.UserId();
 
-        Special? special = await specialRepository.LikeSpecialAsync(id, userId, request.Value, ct);
+        Special? special = await specialRepository.LikeSpecialAsync(id: id, userId: userId, like: request.Value, ct: ct);
 
         if (special is null)
-            return NotFoundResponse("Special not found");
+            return NotFoundResponse(detail: "Special not found");
 
         return Ok(
-            new StatusResponseDto<string>
+            value: new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = "{0} {1}",
@@ -225,7 +225,7 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
     }
 
     [HttpPost]
-    [Route("{id:ulid}/watch-list")]
+    [Route(template: "{id:ulid}/watch-list")]
     public async Task<IActionResult> AddToWatchList(
         Ulid id,
         [FromBody] WatchListRequestDto request,
@@ -234,13 +234,13 @@ public class SpecialController(ISpecialRepository specialRepository) : BaseContr
     {
         Guid userId = User.UserId();
 
-        bool success = await specialRepository.AddToWatchListAsync(id, userId, request.Add, ct);
+        bool success = await specialRepository.AddToWatchListAsync(specialId: id, userId: userId, add: request.Add, ct: ct);
 
         if (!success)
-            return UnprocessableEntityResponse("Special not found");
+            return UnprocessableEntityResponse(detail: "Special not found");
 
         return Ok(
-            new StatusResponseDto<string>
+            value: new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = request.Add

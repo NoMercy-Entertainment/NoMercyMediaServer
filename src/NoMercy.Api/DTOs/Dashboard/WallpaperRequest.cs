@@ -16,12 +16,12 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record WallpaperRequest
 {
-    [JsonProperty("path")]
+    [JsonProperty(propertyName: "path")]
     public string Path { get; set; } = string.Empty;
 
-    [JsonProperty("color")]
+    [JsonProperty(propertyName: "color")]
     public string? Color { get; set; } = string.Empty;
 
-    [JsonProperty("style")]
+    [JsonProperty(propertyName: "style")]
     public WallpaperStyle Style { get; set; } = WallpaperStyle.Fill;
 }

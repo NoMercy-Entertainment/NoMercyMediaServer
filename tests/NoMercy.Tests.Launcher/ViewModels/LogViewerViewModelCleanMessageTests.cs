@@ -33,35 +33,35 @@ namespace NoMercy.Tests.Launcher.ViewModels;
 public sealed class LogViewerViewModelCleanMessageTests
 {
     private static readonly MethodInfo CleanMessageMethod = typeof(LogViewerViewModel).GetMethod(
-        "CleanMessage",
-        BindingFlags.NonPublic | BindingFlags.Static
+        name: "CleanMessage",
+        bindingAttr: BindingFlags.NonPublic | BindingFlags.Static
     )!;
 
     private static readonly MethodInfo MatchesFilterMethod = typeof(LogViewerViewModel).GetMethod(
-        "MatchesFilter",
-        BindingFlags.NonPublic | BindingFlags.Instance
+        name: "MatchesFilter",
+        bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
     )!;
 
     /// <summary>ASCII ESC control code, built numerically so no literal escape
     /// byte lives in this source file.</summary>
-    private static readonly char EscByte = Convert.ToChar(27);
+    private static readonly char EscByte = Convert.ToChar(value: 27);
 
     private static LogEntryResponse CleanMessage(string rawMessage)
     {
         LogEntryResponse entry = new() { Message = rawMessage };
-        CleanMessageMethod.Invoke(null, [entry]);
+        CleanMessageMethod.Invoke(obj: null, parameters: [entry]);
         return entry;
     }
 
     private static bool MatchesFilter(LogViewerViewModel viewModel, LogEntryResponse entry) =>
-        (bool)MatchesFilterMethod.Invoke(viewModel, [entry])!;
+        (bool)MatchesFilterMethod.Invoke(obj: viewModel, parameters: [entry])!;
 
     [Fact]
     public void CleanMessage_SurroundingDoubleQuotes_AreStripped()
     {
-        LogEntryResponse entry = CleanMessage("\"hello world\"");
+        LogEntryResponse entry = CleanMessage(rawMessage: "\"hello world\"");
 
-        entry.Message.Should().Be("hello world");
+        entry.Message.Should().Be(expected: "hello world");
     }
 
     [Fact]
@@ -71,9 +71,9 @@ public sealed class LogViewerViewModelCleanMessageTests
         // console sink would emit it.
         string ansiGreen = EscByte + "[32mgreen text" + EscByte + "[0m";
 
-        LogEntryResponse entry = CleanMessage(ansiGreen);
+        LogEntryResponse entry = CleanMessage(rawMessage: ansiGreen);
 
-        entry.Message.Should().Be("green text");
+        entry.Message.Should().Be(expected: "green text");
     }
 
     [Fact]
@@ -84,9 +84,9 @@ public sealed class LogViewerViewModelCleanMessageTests
         // regex's second alternative exists specifically for this shape.
         string literalAnsiRed = "\\u001b[31mred\\u001b[0m";
 
-        LogEntryResponse entry = CleanMessage(literalAnsiRed);
+        LogEntryResponse entry = CleanMessage(rawMessage: literalAnsiRed);
 
-        entry.Message.Should().Be("red");
+        entry.Message.Should().Be(expected: "red");
     }
 
     [Fact]
@@ -94,9 +94,9 @@ public sealed class LogViewerViewModelCleanMessageTests
     {
         string doubleEscaped = "line1\\nline2\\tindented\\rreturn";
 
-        LogEntryResponse entry = CleanMessage(doubleEscaped);
+        LogEntryResponse entry = CleanMessage(rawMessage: doubleEscaped);
 
-        entry.Message.Should().Be("line1\nline2\tindented\rreturn");
+        entry.Message.Should().Be(expected: "line1\nline2\tindented\rreturn");
     }
 
     [Fact]
@@ -104,9 +104,9 @@ public sealed class LogViewerViewModelCleanMessageTests
     {
         string doubleEscaped = "say \\\"hi\\\"";
 
-        LogEntryResponse entry = CleanMessage(doubleEscaped);
+        LogEntryResponse entry = CleanMessage(rawMessage: doubleEscaped);
 
-        entry.Message.Should().Be("say \"hi\"");
+        entry.Message.Should().Be(expected: "say \"hi\"");
     }
 
     [Fact]
@@ -114,17 +114,17 @@ public sealed class LogViewerViewModelCleanMessageTests
     {
         string doubleEscaped = "path C:\\\\Games\\\\NoMercy";
 
-        LogEntryResponse entry = CleanMessage(doubleEscaped);
+        LogEntryResponse entry = CleanMessage(rawMessage: doubleEscaped);
 
-        entry.Message.Should().Be("path C:\\Games\\NoMercy");
+        entry.Message.Should().Be(expected: "path C:\\Games\\NoMercy");
     }
 
     [Fact]
     public void CleanMessage_PlainMessage_IsUnchanged()
     {
-        LogEntryResponse entry = CleanMessage("server listening on port 7626");
+        LogEntryResponse entry = CleanMessage(rawMessage: "server listening on port 7626");
 
-        entry.Message.Should().Be("server listening on port 7626");
+        entry.Message.Should().Be(expected: "server listening on port 7626");
     }
 
     [Fact]
@@ -133,44 +133,44 @@ public sealed class LogViewerViewModelCleanMessageTests
         // message.Length >= 2 guards the quote-stripping branch - a
         // single-character message must survive unchanged rather than being
         // treated as an (impossible) matching open+close quote pair.
-        LogEntryResponse entry = CleanMessage("\"");
+        LogEntryResponse entry = CleanMessage(rawMessage: "\"");
 
-        entry.Message.Should().Be("\"");
+        entry.Message.Should().Be(expected: "\"");
     }
 
     [Fact]
     public void MatchesFilter_EmptySearchText_MatchesEverything()
     {
-        LogViewerViewModel viewModel = new(new ServerConnection());
+        LogViewerViewModel viewModel = new(serverConnection: new ServerConnection());
         LogEntryResponse entry = new() { Type = "Server", Message = "anything" };
 
-        MatchesFilter(viewModel, entry).Should().BeTrue();
+        MatchesFilter(viewModel: viewModel, entry: entry).Should().BeTrue();
     }
 
     [Fact]
     public void MatchesFilter_SearchTextInMessage_CaseInsensitiveMatch()
     {
-        LogViewerViewModel viewModel = new(new ServerConnection()) { SearchText = "LISTENING" };
+        LogViewerViewModel viewModel = new(serverConnection: new ServerConnection()) { SearchText = "LISTENING" };
         LogEntryResponse entry = new() { Type = "Server", Message = "now listening on 7626" };
 
-        MatchesFilter(viewModel, entry).Should().BeTrue();
+        MatchesFilter(viewModel: viewModel, entry: entry).Should().BeTrue();
     }
 
     [Fact]
     public void MatchesFilter_SearchTextInTypeOnly_StillMatches()
     {
-        LogViewerViewModel viewModel = new(new ServerConnection()) { SearchText = "encoder" };
+        LogViewerViewModel viewModel = new(serverConnection: new ServerConnection()) { SearchText = "encoder" };
         LogEntryResponse entry = new() { Type = "Encoder", Message = "totally unrelated" };
 
-        MatchesFilter(viewModel, entry).Should().BeTrue();
+        MatchesFilter(viewModel: viewModel, entry: entry).Should().BeTrue();
     }
 
     [Fact]
     public void MatchesFilter_SearchTextInNeither_DoesNotMatch()
     {
-        LogViewerViewModel viewModel = new(new ServerConnection()) { SearchText = "database" };
+        LogViewerViewModel viewModel = new(serverConnection: new ServerConnection()) { SearchText = "database" };
         LogEntryResponse entry = new() { Type = "Encoder", Message = "totally unrelated" };
 
-        MatchesFilter(viewModel, entry).Should().BeFalse();
+        MatchesFilter(viewModel: viewModel, entry: entry).Should().BeFalse();
     }
 }

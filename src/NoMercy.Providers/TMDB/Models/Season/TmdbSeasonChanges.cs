@@ -15,6 +15,6 @@ namespace NoMercy.Providers.TMDB.Models.Season;
 
 public class TmdbSeasonChanges
 {
-    [JsonProperty("changes")]
+    [JsonProperty(propertyName: "changes")]
     public TmdbSeasonChange[] Changes { get; set; } = [];
 }

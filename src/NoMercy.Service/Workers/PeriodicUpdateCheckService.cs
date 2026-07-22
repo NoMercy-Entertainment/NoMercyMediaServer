@@ -17,22 +17,22 @@ namespace NoMercy.Service.Workers;
 // update check on a fixed cadence so IUpdateStatus stays fresh for the dashboard.
 public sealed class PeriodicUpdateCheckService(IUpdateChecker updateChecker) : BackgroundService
 {
-    private static readonly TimeSpan InitialDelay = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan InitialDelay = TimeSpan.FromSeconds(seconds: 10);
 
-    private static readonly TimeSpan CheckInterval = TimeSpan.FromHours(6);
+    private static readonly TimeSpan CheckInterval = TimeSpan.FromHours(hours: 6);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try
         {
             // Let the host settle before the first network call.
-            await Task.Delay(InitialDelay, stoppingToken);
+            await Task.Delay(delay: InitialDelay, cancellationToken: stoppingToken);
 
             while (!stoppingToken.IsCancellationRequested)
             {
                 await updateChecker.IsUpdateAvailableAsync();
 
-                await Task.Delay(CheckInterval, stoppingToken);
+                await Task.Delay(delay: CheckInterval, cancellationToken: stoppingToken);
             }
         }
         catch (OperationCanceledException)

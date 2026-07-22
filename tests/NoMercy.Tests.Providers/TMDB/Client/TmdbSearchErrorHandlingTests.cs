@@ -22,8 +22,8 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// Error handling and edge case tests for TmdbSearchClient
 /// Tests client behavior under various failure conditions
 /// </summary>
-[Trait("Category", "ErrorHandling")]
-[Collection("TmdbApi")]
+[Trait(name: "Category", value: "ErrorHandling")]
+[Collection(name: "TmdbApi")]
 public class TmdbSearchErrorHandlingTests : TmdbTestBase
 {
     #region Invalid Query Tests
@@ -35,11 +35,11 @@ public class TmdbSearchErrorHandlingTests : TmdbTestBase
         using TmdbSearchClient client = new();
 
         // Act
-        Func<Task<TmdbPaginatedResponse<TmdbMovie>?>> act = async () => await client.Movie(null!);
+        Func<Task<TmdbPaginatedResponse<TmdbMovie>?>> act = async () => await client.Movie(query: null!);
 
         // Assert
         await act.Should()
-            .NotThrowAsync("because the client should handle null queries gracefully");
+            .NotThrowAsync(because: "because the client should handle null queries gracefully");
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public class TmdbSearchErrorHandlingTests : TmdbTestBase
         using TmdbSearchClient client = new();
 
         // Act
-        TmdbPaginatedResponse<TmdbTvShow>? result = await client.TvShow("");
+        TmdbPaginatedResponse<TmdbTvShow>? result = await client.TvShow(query: "");
 
         // Assert
         result.Should().NotBeNull();
@@ -63,7 +63,7 @@ public class TmdbSearchErrorHandlingTests : TmdbTestBase
         using TmdbSearchClient client = new();
 
         // Act
-        TmdbPaginatedResponse<TmdbPerson>? result = await client.Person("   ");
+        TmdbPaginatedResponse<TmdbPerson>? result = await client.Person(query: "   ");
 
         // Assert
         result.Should().NotBeNull();
@@ -75,18 +75,18 @@ public class TmdbSearchErrorHandlingTests : TmdbTestBase
     #region Special Character Tests
 
     [Theory]
-    [InlineData("C++ Programming")]
-    [InlineData("AT&T")]
-    [InlineData("100% Pure")]
-    [InlineData("3:10 to Yuma")]
-    [InlineData("Spider-Man")]
+    [InlineData(data: "C++ Programming")]
+    [InlineData(data: "AT&T")]
+    [InlineData(data: "100% Pure")]
+    [InlineData(data: "3:10 to Yuma")]
+    [InlineData(data: "Spider-Man")]
     public async Task Movie_WithSpecialCharacters_HandlesCorrectly(string query)
     {
         // Arrange
         using TmdbSearchClient client = new();
 
         // Act
-        TmdbPaginatedResponse<TmdbMovie>? result = await client.Movie(query);
+        TmdbPaginatedResponse<TmdbMovie>? result = await client.Movie(query: query);
 
         // Assert
         result.Should().NotBeNull();
@@ -101,10 +101,10 @@ public class TmdbSearchErrorHandlingTests : TmdbTestBase
     {
         // Arrange
         using TmdbSearchClient client = new();
-        string longQuery = new('a', 1000);
+        string longQuery = new(c: 'a', count: 1000);
 
         // Act
-        TmdbPaginatedResponse<TmdbMultiSearch>? result = await client.Multi(longQuery);
+        TmdbPaginatedResponse<TmdbMultiSearch>? result = await client.Multi(query: longQuery);
 
         // Assert
         // Very long queries may be rejected by TMDB API (400 Bad Request), returning null
@@ -120,17 +120,17 @@ public class TmdbSearchErrorHandlingTests : TmdbTestBase
     #region Invalid Year Tests
 
     [Theory]
-    [InlineData("invalid")]
-    [InlineData("1800")]
-    [InlineData("3000")]
-    [InlineData("-1")]
+    [InlineData(data: "invalid")]
+    [InlineData(data: "1800")]
+    [InlineData(data: "3000")]
+    [InlineData(data: "-1")]
     public async Task Movie_WithInvalidYear_HandlesGracefully(string invalidYear)
     {
         // Arrange
         using TmdbSearchClient client = new();
 
         // Act
-        TmdbPaginatedResponse<TmdbMovie>? result = await client.Movie("Test Movie", invalidYear);
+        TmdbPaginatedResponse<TmdbMovie>? result = await client.Movie(query: "Test Movie", year: invalidYear);
 
         // Assert
         result.Should().NotBeNull();
@@ -147,12 +147,12 @@ public class TmdbSearchErrorHandlingTests : TmdbTestBase
         using TmdbSearchClient client = new();
 
         // Act
-        Task<TmdbPaginatedResponse<TmdbMovie>?> movieTask = client.Movie("Inception");
-        Task<TmdbPaginatedResponse<TmdbTvShow>?> tvTask = client.TvShow("Breaking Bad");
-        Task<TmdbPaginatedResponse<TmdbPerson>?> personTask = client.Person("Leonardo DiCaprio");
-        Task<TmdbPaginatedResponse<TmdbMultiSearch>?> multiTask = client.Multi("Marvel");
+        Task<TmdbPaginatedResponse<TmdbMovie>?> movieTask = client.Movie(query: "Inception");
+        Task<TmdbPaginatedResponse<TmdbTvShow>?> tvTask = client.TvShow(query: "Breaking Bad");
+        Task<TmdbPaginatedResponse<TmdbPerson>?> personTask = client.Person(query: "Leonardo DiCaprio");
+        Task<TmdbPaginatedResponse<TmdbMultiSearch>?> multiTask = client.Multi(query: "Marvel");
 
-        await Task.WhenAll(movieTask, tvTask, personTask, multiTask);
+        await Task.WhenAll(tasks: [movieTask, tvTask, personTask, multiTask]);
 
         // Assert
         (await movieTask)
@@ -168,14 +168,14 @@ public class TmdbSearchErrorHandlingTests : TmdbTestBase
     {
         // Arrange
         TmdbSearchClient client = new();
-        Task<TmdbPaginatedResponse<TmdbMovie>?> searchTask = client.Movie("Test");
+        Task<TmdbPaginatedResponse<TmdbMovie>?> searchTask = client.Movie(query: "Test");
 
         // Act
         client.Dispose();
 
         // Assert - The task should complete or handle disposal gracefully
         Func<Task<TmdbPaginatedResponse<TmdbMovie>?>> act = async () => await searchTask;
-        await act.Should().NotThrowAsync("because ongoing operations should complete gracefully");
+        await act.Should().NotThrowAsync(because: "because ongoing operations should complete gracefully");
     }
 
     #endregion
@@ -187,18 +187,18 @@ public class TmdbSearchErrorHandlingTests : TmdbTestBase
     {
         // Arrange
         using TmdbSearchClient client = new();
-        string[] queries = Enumerable.Range(1, 10).Select(i => $"query{i}").ToArray();
+        string[] queries = Enumerable.Range(start: 1, count: 10).Select(selector: i => $"query{i}").ToArray();
 
         // Act
         Task<TmdbPaginatedResponse<TmdbMovie>?>[] tasks = queries
-            .Select(q => client.Movie(q))
+            .Select(selector: q => client.Movie(query: q))
             .ToArray();
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks: tasks);
 
         // Assert
         tasks
             .Should()
-            .AllSatisfy(task =>
+            .AllSatisfy(expected: task =>
             {
                 task.Result.Should().NotBeNull();
             });
@@ -216,8 +216,8 @@ public class TmdbSearchErrorHandlingTests : TmdbTestBase
 
         // Act & Assert
         Func<Task<TmdbPaginatedResponse<TmdbMovie>?>> act = async () =>
-            await client.Movie("Network Test");
-        await act.Should().NotThrowAsync("because network errors should be handled gracefully");
+            await client.Movie(query: "Network Test");
+        await act.Should().NotThrowAsync(because: "because network errors should be handled gracefully");
     }
 
     #endregion
@@ -228,13 +228,13 @@ public class TmdbSearchErrorHandlingTests : TmdbTestBase
     public async Task Movie_WithLargeNumberOfSearches_ShouldNotLeakMemory()
     {
         // Arrange
-        long initialMemory = GC.GetTotalMemory(true);
+        long initialMemory = GC.GetTotalMemory(forceFullCollection: true);
         using TmdbSearchClient client = new();
 
         // Act
         for (int i = 0; i < 50; i++)
         {
-            await client.Movie($"test query {i}");
+            await client.Movie(query: $"test query {i}");
         }
 
         // Assert
@@ -242,15 +242,15 @@ public class TmdbSearchErrorHandlingTests : TmdbTestBase
         GC.WaitForPendingFinalizers();
         GC.Collect();
 
-        long finalMemory = GC.GetTotalMemory(true);
+        long finalMemory = GC.GetTotalMemory(forceFullCollection: true);
         long memoryIncrease = finalMemory - initialMemory;
 
         // Allow reasonable memory increase but not excessive
         memoryIncrease
             .Should()
             .BeLessThan(
-                50 * 1024 * 1024, // 50MB
-                "because memory usage should remain reasonable"
+                expected: 50 * 1024 * 1024, // 50MB
+                because: "because memory usage should remain reasonable"
             );
     }
 
@@ -259,18 +259,18 @@ public class TmdbSearchErrorHandlingTests : TmdbTestBase
     #region Unicode and Internationalization Tests
 
     [Theory]
-    [InlineData("アニメ")] // Japanese
-    [InlineData("电影")] // Chinese
-    [InlineData("фильм")] // Russian
-    [InlineData("película")] // Spanish
-    [InlineData("🎬🎭🎪")] // Emojis
+    [InlineData(data: "アニメ")] // Japanese
+    [InlineData(data: "电影")] // Chinese
+    [InlineData(data: "фильм")] // Russian
+    [InlineData(data: "película")] // Spanish
+    [InlineData(data: "🎬🎭🎪")] // Emojis
     public async Task Search_WithUnicodeQueries_HandlesCorrectly(string unicodeQuery)
     {
         // Arrange
         using TmdbSearchClient client = new();
 
         // Act
-        TmdbPaginatedResponse<TmdbMultiSearch>? result = await client.Multi(unicodeQuery);
+        TmdbPaginatedResponse<TmdbMultiSearch>? result = await client.Multi(query: unicodeQuery);
 
         // Assert
         result.Should().NotBeNull();

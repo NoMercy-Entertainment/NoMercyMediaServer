@@ -39,7 +39,7 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
 
         BlueprintSource blueprintSource = new(
             Path: sourcePath,
-            Filename: Path.GetFileName(sourcePath),
+            Filename: Path.GetFileName(path: sourcePath),
             Container: source.Format,
             SizeBytes: source.FileSizeBytes,
             DurationSeconds: source.Duration.TotalSeconds,
@@ -74,17 +74,17 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
     {
         List<BlueprintTrack> tracks =
         [
-            .. BuildVideoTracks(source.VideoStreams, plan.VideoOutputs, layout, outputFiles),
-            .. BuildAudioTracks(source.AudioStreams, plan.AudioOutputs, layout, outputFiles),
+            .. BuildVideoTracks(streams: source.VideoStreams, outputs: plan.VideoOutputs, layout: layout, outputFiles: outputFiles),
+            .. BuildAudioTracks(streams: source.AudioStreams, outputs: plan.AudioOutputs, layout: layout, outputFiles: outputFiles),
             .. BuildSubtitleTracks(
-                source.SubtitleStreams,
-                plan.SubtitleOutputs,
-                layout,
-                outputFiles
+                streams: source.SubtitleStreams,
+                outputs: plan.SubtitleOutputs,
+                layout: layout,
+                outputFiles: outputFiles
             ),
         ];
 
-        string targetContainer = SourceContainerMapper.Map(source.Format);
+        string targetContainer = SourceContainerMapper.Map(formatName: source.Format);
 
         return new(
             PresetSlug: layout.PresetSlug,
@@ -96,8 +96,8 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
             CreatedAt: createdAt,
             CompletedAt: completedAt,
             Tracks: tracks,
-            ReconstructionCommandTemplate: BuildCommandTemplate(targetContainer, tracks),
-            LossyWarnings: BuildWarnings(tracks)
+            ReconstructionCommandTemplate: BuildCommandTemplate(targetContainer: targetContainer, tracks: tracks),
+            LossyWarnings: BuildWarnings(tracks: tracks)
         );
     }
 
@@ -116,9 +116,9 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
         foreach (VideoStreamInfo stream in streams)
         {
             List<VideoOutputPlan> matched = outputs
-                .Where(o => o.SourceStreamIndex == stream.Index)
+                .Where(predicate: o => o.SourceStreamIndex == stream.Index)
                 .ToList();
-            tracks.Add(BuildVideoTrack(stream, matched, layout, outputFiles));
+            tracks.Add(item: BuildVideoTrack(stream: stream, matched: matched, layout: layout, outputFiles: outputFiles));
         }
         return tracks;
     }
@@ -132,8 +132,8 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
     {
         // Highest fidelity wins: a stream-copied rendition beats every
         // transcoded rung the same ladder also produced for this stream.
-        VideoOutputPlan? copyOutput = matched.FirstOrDefault(o =>
-            string.Equals(o.EncoderName, "copy", StringComparison.OrdinalIgnoreCase)
+        VideoOutputPlan? copyOutput = matched.FirstOrDefault(predicate: o =>
+            string.Equals(a: o.EncoderName, b: "copy", comparisonType: StringComparison.OrdinalIgnoreCase)
         );
 
         if (copyOutput is not null)
@@ -147,7 +147,7 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
                 Reconstructable: true,
                 OriginalParams: null,
                 Container: layout.ContainerString,
-                Files: ResolveVideoFiles(copyOutput, layout, outputFiles),
+                Files: ResolveVideoFiles(output: copyOutput, layout: layout, outputFiles: outputFiles),
                 Sha256: null
             );
 
@@ -164,24 +164,24 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
                 Policy: "transcode",
                 Fidelity: "lossy",
                 Reconstructable: false,
-                OriginalParams: BuildVideoOriginalParams(stream),
+                OriginalParams: BuildVideoOriginalParams(stream: stream),
                 Container: layout.ContainerString,
-                Files: ResolveVideoFiles(transcodeOutput, layout, outputFiles),
+                Files: ResolveVideoFiles(output: transcodeOutput, layout: layout, outputFiles: outputFiles),
                 Sha256: null
             );
 
-        return DroppedTrack(stream.Index, "video", stream.Codec, null);
+        return DroppedTrack(sourceStreamIndex: stream.Index, kind: "video", codec: stream.Codec, language: null);
     }
 
     private static JObject BuildVideoOriginalParams(VideoStreamInfo stream) =>
         new()
         {
-            ["codec"] = stream.Codec,
-            ["width"] = stream.Width,
-            ["height"] = stream.Height,
-            ["bit_depth"] = stream.BitDepth,
-            ["pixel_format"] = stream.PixelFormat,
-            ["bit_rate"] = stream.BitRateKbps > 0 ? stream.BitRateKbps * 1000 : null,
+            [propertyName: "codec"] = stream.Codec,
+            [propertyName: "width"] = stream.Width,
+            [propertyName: "height"] = stream.Height,
+            [propertyName: "bit_depth"] = stream.BitDepth,
+            [propertyName: "pixel_format"] = stream.PixelFormat,
+            [propertyName: "bit_rate"] = stream.BitRateKbps > 0 ? stream.BitRateKbps * 1000 : null,
         };
 
     private static IReadOnlyList<string> ResolveVideoFiles(
@@ -194,12 +194,12 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
             return [layout.SingleFileName];
 
         Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
-            output.Width,
-            output.Height,
-            output.IsHdrOutput
+            width: output.Width,
+            height: output.Height,
+            isHdrOutput: output.IsHdrOutput
         );
-        string resolved = TemplateResolver.Resolve(output.SegmentNameTemplate, tokens);
-        return FilesUnder(outputFiles, FolderOf(resolved));
+        string resolved = TemplateResolver.Resolve(template: output.SegmentNameTemplate, values: tokens);
+        return FilesUnder(outputFiles: outputFiles, folder: FolderOf(resolvedTemplate: resolved));
     }
 
     // -----------------------------------------------------------------------
@@ -217,9 +217,9 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
         foreach (AudioStreamInfo stream in streams)
         {
             List<AudioOutputPlan> matched = outputs
-                .Where(o => o.SourceStreamIndex == stream.Index)
+                .Where(predicate: o => o.SourceStreamIndex == stream.Index)
                 .ToList();
-            tracks.Add(BuildAudioTrack(stream, matched, layout, outputFiles));
+            tracks.Add(item: BuildAudioTrack(stream: stream, matched: matched, layout: layout, outputFiles: outputFiles));
         }
         return tracks;
     }
@@ -231,7 +231,7 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
         IReadOnlyList<string> outputFiles
     )
     {
-        AudioOutputPlan? copyOutput = matched.FirstOrDefault(o => o.Action == StreamAction.Copy);
+        AudioOutputPlan? copyOutput = matched.FirstOrDefault(predicate: o => o.Action == StreamAction.Copy);
         if (copyOutput is not null)
             return new(
                 SourceStreamIndex: stream.Index,
@@ -243,7 +243,7 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
                 Reconstructable: true,
                 OriginalParams: null,
                 Container: layout.ContainerString,
-                Files: ResolveAudioFiles(copyOutput, layout, outputFiles),
+                Files: ResolveAudioFiles(output: copyOutput, layout: layout, outputFiles: outputFiles),
                 Sha256: null
             );
 
@@ -257,22 +257,22 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
                 Policy: "transcode",
                 Fidelity: "lossy",
                 Reconstructable: false,
-                OriginalParams: BuildAudioOriginalParams(stream),
+                OriginalParams: BuildAudioOriginalParams(stream: stream),
                 Container: layout.ContainerString,
-                Files: ResolveAudioFiles(transcodeOutput, layout, outputFiles),
+                Files: ResolveAudioFiles(output: transcodeOutput, layout: layout, outputFiles: outputFiles),
                 Sha256: null
             );
 
-        return DroppedTrack(stream.Index, "audio", stream.Codec, stream.Language);
+        return DroppedTrack(sourceStreamIndex: stream.Index, kind: "audio", codec: stream.Codec, language: stream.Language);
     }
 
     private static JObject BuildAudioOriginalParams(AudioStreamInfo stream) =>
         new()
         {
-            ["codec"] = stream.Codec,
-            ["channels"] = stream.Channels,
-            ["sample_rate"] = stream.SampleRate,
-            ["bit_rate"] = stream.BitRateKbps > 0 ? stream.BitRateKbps * 1000 : null,
+            [propertyName: "codec"] = stream.Codec,
+            [propertyName: "channels"] = stream.Channels,
+            [propertyName: "sample_rate"] = stream.SampleRate,
+            [propertyName: "bit_rate"] = stream.BitRateKbps > 0 ? stream.BitRateKbps * 1000 : null,
         };
 
     private static IReadOnlyList<string> ResolveAudioFiles(
@@ -285,12 +285,12 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
             return [layout.SingleFileName];
 
         Dictionary<string, string> tokens = TemplateResolver.AudioTokens(
-            output.Language ?? "und",
-            output.CodecToken,
-            output.Channels
+            language: output.Language ?? "und",
+            codecName: output.CodecToken,
+            channels: output.Channels
         );
-        string resolved = TemplateResolver.Resolve(output.SegmentNameTemplate, tokens);
-        return FilesUnder(outputFiles, FolderOf(resolved));
+        string resolved = TemplateResolver.Resolve(template: output.SegmentNameTemplate, values: tokens);
+        return FilesUnder(outputFiles: outputFiles, folder: FolderOf(resolvedTemplate: resolved));
     }
 
     // -----------------------------------------------------------------------
@@ -310,10 +310,10 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
         List<BlueprintTrack> tracks = [];
         foreach (SubtitleStreamInfo stream in streams)
         {
-            SubtitleOutputPlan? matched = outputs.FirstOrDefault(o =>
+            SubtitleOutputPlan? matched = outputs.FirstOrDefault(predicate: o =>
                 o.SourceIndex == stream.Index
             );
-            tracks.Add(BuildSubtitleTrack(stream, matched, layout, outputFiles));
+            tracks.Add(item: BuildSubtitleTrack(stream: stream, matched: matched, layout: layout, outputFiles: outputFiles));
         }
         return tracks;
     }
@@ -326,7 +326,7 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
     )
     {
         if (matched is null)
-            return DroppedTrack(stream.Index, "subtitle", stream.Codec, stream.Language);
+            return DroppedTrack(sourceStreamIndex: stream.Index, kind: "subtitle", codec: stream.Codec, language: stream.Language);
 
         if (matched.Policy == SubtitlePolicy.BurnIn)
             return new(
@@ -347,11 +347,11 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
         // of its own — the whole output file IS the artifact.
         SubtitleArtifact artifact =
             layout.IsSingleFile && matched.Policy == SubtitlePolicy.Copy
-                ? new([layout.SingleFileName], layout.ContainerString)
-                : ResolveSubtitleArtifact(stream, matched, outputFiles);
+                ? new(Files: [layout.SingleFileName], Container: layout.ContainerString)
+                : ResolveSubtitleArtifact(stream: stream, matched: matched, outputFiles: outputFiles);
 
         if (artifact.Files.Count == 0)
-            return DroppedTrack(stream.Index, "subtitle", stream.Codec, stream.Language);
+            return DroppedTrack(sourceStreamIndex: stream.Index, kind: "subtitle", codec: stream.Codec, language: stream.Language);
 
         return new(
             SourceStreamIndex: stream.Index,
@@ -384,11 +384,11 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
         IReadOnlyList<string> outputFiles
     )
     {
-        bool isBitmap = SubtitleClassifier.IsBitmapBased(stream.Codec);
-        bool isVobSub = stream.Codec.Equals("dvd_subtitle", StringComparison.OrdinalIgnoreCase);
+        bool isBitmap = SubtitleClassifier.IsBitmapBased(codec: stream.Codec);
+        bool isVobSub = stream.Codec.Equals(value: "dvd_subtitle", comparisonType: StringComparison.OrdinalIgnoreCase);
         bool isAss =
-            stream.Codec.Equals("ass", StringComparison.OrdinalIgnoreCase)
-            || stream.Codec.Equals("ssa", StringComparison.OrdinalIgnoreCase);
+            stream.Codec.Equals(value: "ass", comparisonType: StringComparison.OrdinalIgnoreCase)
+            || stream.Codec.Equals(value: "ssa", comparisonType: StringComparison.OrdinalIgnoreCase);
 
         string[] candidateExtensions =
             isBitmap ? (isVobSub ? ["idx", "sub"] : ["mks"])
@@ -397,10 +397,10 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
 
         string language = stream.Language ?? matched.Language ?? "und";
         List<string> files = FindSubtitleSidecars(
-            outputFiles,
-            language,
-            matched.Variant,
-            candidateExtensions
+            outputFiles: outputFiles,
+            language: language,
+            variant: matched.Variant,
+            candidateExtensions: candidateExtensions
         );
 
         if (files.Count == 0)
@@ -410,7 +410,7 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
             isBitmap ? (isVobSub ? "idx" : "mks")
             : isAss ? "ass"
             : "srt";
-        return new(files, container);
+        return new(Files: files, Container: container);
     }
 
     private static List<string> FindSubtitleSidecars(
@@ -421,21 +421,21 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
     )
     {
         string infix = $".{language}.{variant}.";
-        HashSet<string> extensions = new(candidateExtensions, StringComparer.OrdinalIgnoreCase);
+        HashSet<string> extensions = new(collection: candidateExtensions, comparer: StringComparer.OrdinalIgnoreCase);
 
         return outputFiles
-            .Where(f =>
-                f.StartsWith("subtitles/", StringComparison.OrdinalIgnoreCase)
-                && f.Contains(infix, StringComparison.OrdinalIgnoreCase)
-                && extensions.Contains(Path.GetExtension(f).TrimStart('.'))
+            .Where(predicate: f =>
+                f.StartsWith(value: "subtitles/", comparisonType: StringComparison.OrdinalIgnoreCase)
+                && f.Contains(value: infix, comparisonType: StringComparison.OrdinalIgnoreCase)
+                && extensions.Contains(item: Path.GetExtension(path: f).TrimStart(trimChar: '.'))
             )
-            .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(keySelector: f => f, comparer: StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 
     private readonly record struct SubtitleArtifact(IReadOnlyList<string> Files, string? Container)
     {
-        public static readonly SubtitleArtifact None = new([], null);
+        public static readonly SubtitleArtifact None = new(Files: [], Container: null);
     }
 
     // -----------------------------------------------------------------------
@@ -464,7 +464,7 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
 
     private static string FolderOf(string resolvedTemplate)
     {
-        int slash = resolvedTemplate.LastIndexOf('/');
+        int slash = resolvedTemplate.LastIndexOf(value: '/');
         return slash < 0 ? resolvedTemplate : resolvedTemplate[..slash];
     }
 
@@ -475,8 +475,8 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
     {
         string prefix = folder + "/";
         return outputFiles
-            .Where(f => f.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
+            .Where(predicate: f => f.StartsWith(value: prefix, comparisonType: StringComparison.OrdinalIgnoreCase))
+            .OrderBy(keySelector: f => f, comparer: StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 
@@ -499,13 +499,13 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
             if (track.Files.Count == 0)
                 continue; // dropped / burn_in — nothing survives to map back in.
 
-            inputs.Add($"-i \"{track.Files[0]}\"");
-            maps.Add($"-map {inputIndex}:0");
+            inputs.Add(item: $"-i \"{track.Files[index: 0]}\"");
+            maps.Add(item: $"-map {inputIndex}:0");
             inputIndex++;
         }
 
         string extension = targetContainer == "matroska" ? "mkv" : targetContainer;
-        return $"ffmpeg {string.Join(' ', inputs)} {string.Join(' ', maps)} -c copy \"reconstructed.{extension}\"".Trim();
+        return $"ffmpeg {string.Join(separator: ' ', values: inputs)} {string.Join(separator: ' ', values: maps)} -c copy \"reconstructed.{extension}\"".Trim();
     }
 
     private static List<string> BuildWarnings(IReadOnlyList<BlueprintTrack> tracks)
@@ -515,7 +515,7 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
         {
             if (track.Fidelity is "lossy" or "irreversible" or "lost")
                 warnings.Add(
-                    $"{track.Kind}[{track.SourceStreamIndex}]: {track.Policy} ({track.Fidelity}) — {DescribeLoss(track)}"
+                    item: $"{track.Kind}[{track.SourceStreamIndex}]: {track.Policy} ({track.Fidelity}) — {DescribeLoss(track: track)}"
                 );
         }
         return warnings;

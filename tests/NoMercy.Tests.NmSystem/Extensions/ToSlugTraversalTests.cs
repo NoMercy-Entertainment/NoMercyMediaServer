@@ -20,32 +20,32 @@ namespace NoMercy.Tests.NmSystem.Extensions;
 /// writes safe from a path-traversal filename (CVE-2026-35031 class). Lock that:
 /// no separator, drive-colon, dot-dot, or null byte may survive slugging.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class ToSlugTraversalTests
 {
     [Theory]
-    [InlineData("../../evil")]
-    [InlineData("..\\..\\evil.exe")]
-    [InlineData("a/b/c")]
-    [InlineData("....//....//etc/passwd")]
-    [InlineData("con:$te/xt")]
-    [InlineData("/absolute/path")]
-    [InlineData("C:\\Windows\\System32")]
+    [InlineData(data: "../../evil")]
+    [InlineData(data: "..\\..\\evil.exe")]
+    [InlineData(data: "a/b/c")]
+    [InlineData(data: "....//....//etc/passwd")]
+    [InlineData(data: "con:$te/xt")]
+    [InlineData(data: "/absolute/path")]
+    [InlineData(data: "C:\\Windows\\System32")]
     public void ToSlug_StripsSeparatorsAndTraversal(string input)
     {
         string slug = input.ToSlug();
 
-        Assert.DoesNotContain('/', slug);
-        Assert.DoesNotContain('\\', slug);
-        Assert.DoesNotContain(':', slug);
-        Assert.DoesNotContain("..", slug);
+        Assert.DoesNotContain(expected: '/', collection: slug);
+        Assert.DoesNotContain(expected: '\\', collection: slug);
+        Assert.DoesNotContain(expected: ':', collection: slug);
+        Assert.DoesNotContain(expectedSubstring: "..", actualString: slug);
         // Only slug-safe characters remain (lowercase alphanumerics, dash, underscore).
-        Assert.Matches("^[a-z0-9_-]*$", slug);
+        Assert.Matches(expectedRegexPattern: "^[a-z0-9_-]*$", actualString: slug);
     }
 
     [Fact]
     public void ToSlug_RemovesNullBytes()
     {
-        Assert.DoesNotContain('\0', "movie\0title".ToSlug());
+        Assert.DoesNotContain(expected: '\0', collection: "movie\0title".ToSlug());
     }
 }

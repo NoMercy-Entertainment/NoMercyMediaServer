@@ -28,24 +28,24 @@ namespace NoMercy.Database;
 public class SqliteRetryingExecutionStrategy : ExecutionStrategy
 {
     public SqliteRetryingExecutionStrategy(DbContext context)
-        : base(context, DefaultMaxRetryCount, DefaultMaxDelay) { }
+        : base(context: context, maxRetryCount: DefaultMaxRetryCount, maxRetryDelay: DefaultMaxDelay) { }
 
     public SqliteRetryingExecutionStrategy(
         DbContext context,
         int maxRetryCount,
         TimeSpan maxRetryDelay
     )
-        : base(context, maxRetryCount, maxRetryDelay) { }
+        : base(context: context, maxRetryCount: maxRetryCount, maxRetryDelay: maxRetryDelay) { }
 
     public SqliteRetryingExecutionStrategy(ExecutionStrategyDependencies dependencies)
-        : base(dependencies, DefaultMaxRetryCount, DefaultMaxDelay) { }
+        : base(dependencies: dependencies, maxRetryCount: DefaultMaxRetryCount, maxRetryDelay: DefaultMaxDelay) { }
 
     public SqliteRetryingExecutionStrategy(
         ExecutionStrategyDependencies dependencies,
         int maxRetryCount,
         TimeSpan maxRetryDelay
     )
-        : base(dependencies, maxRetryCount, maxRetryDelay) { }
+        : base(dependencies: dependencies, maxRetryCount: maxRetryCount, maxRetryDelay: maxRetryDelay) { }
 
     // Bounded deliberately low: this is one of TWO independent wait layers a
     // contended query passes through — Microsoft.Data.Sqlite's own busy_timeout
@@ -60,7 +60,7 @@ public class SqliteRetryingExecutionStrategy : ExecutionStrategy
     // contention that WAL-mode SQLite should clear in low single digits of
     // seconds under normal load.
     private new const int DefaultMaxRetryCount = 4;
-    private static new readonly TimeSpan DefaultMaxDelay = TimeSpan.FromSeconds(5);
+    private static new readonly TimeSpan DefaultMaxDelay = TimeSpan.FromSeconds(seconds: 5);
 
     /// <summary>
     /// The base <see cref="ExecutionStrategy"/> rejects any ambient transaction on first
@@ -84,7 +84,7 @@ public class SqliteRetryingExecutionStrategy : ExecutionStrategy
             // Check by type name to avoid a hard reference to Microsoft.Data.Sqlite
             if (
                 current.GetType().Name == "SqliteException"
-                && current.Message.Contains("is locked", StringComparison.OrdinalIgnoreCase)
+                && current.Message.Contains(value: "is locked", comparisonType: StringComparison.OrdinalIgnoreCase)
             )
             {
                 // Contention was previously invisible end to end — a stalled query
@@ -92,8 +92,8 @@ public class SqliteRetryingExecutionStrategy : ExecutionStrategy
                 // query is slow" from "the query is retrying behind another
                 // writer". This makes the next incident provable at a glance.
                 Logger.System(
-                    $"SQLite lock contention — retry {ExceptionsEncountered.Count} of {DefaultMaxRetryCount}: {current.Message}",
-                    LogEventLevel.Warning
+                    message: $"SQLite lock contention — retry {ExceptionsEncountered.Count} of {DefaultMaxRetryCount}: {current.Message}",
+                    level: LogEventLevel.Warning
                 );
                 return true;
             }
@@ -112,7 +112,7 @@ public class SqliteRetryingExecutionStrategy : ExecutionStrategy
         {
             if (
                 current.GetType().Name == "SqliteException"
-                && current.Message.Contains("is locked", StringComparison.OrdinalIgnoreCase)
+                && current.Message.Contains(value: "is locked", comparisonType: StringComparison.OrdinalIgnoreCase)
             )
             {
                 return true;
@@ -140,14 +140,14 @@ public class SqliteRetryingExecutionStrategy : ExecutionStrategy
                 await operation();
                 return;
             }
-            catch (Exception ex) when (IsTransientSqliteError(ex) && attempt < maxRetries)
+            catch (Exception ex) when (IsTransientSqliteError(exception: ex) && attempt < maxRetries)
             {
                 int delay = Math.Min(
-                    (int)(Math.Pow(2, attempt) * 1000 * (1.0 + Random.Shared.NextDouble() * 0.1)),
-                    (int)DefaultMaxDelay.TotalMilliseconds
+                    val1: (int)(Math.Pow(x: 2, y: attempt) * 1000 * (1.0 + Random.Shared.NextDouble() * 0.1)),
+                    val2: (int)DefaultMaxDelay.TotalMilliseconds
                 );
 
-                await Task.Delay(delay, cancellationToken);
+                await Task.Delay(millisecondsDelay: delay, cancellationToken: cancellationToken);
             }
         }
     }
@@ -165,14 +165,14 @@ public class SqliteRetryingExecutionStrategy : ExecutionStrategy
             {
                 return await operation();
             }
-            catch (Exception ex) when (IsTransientSqliteError(ex) && attempt < maxRetries)
+            catch (Exception ex) when (IsTransientSqliteError(exception: ex) && attempt < maxRetries)
             {
                 int delay = Math.Min(
-                    (int)(Math.Pow(2, attempt) * 1000 * (1.0 + Random.Shared.NextDouble() * 0.1)),
-                    (int)DefaultMaxDelay.TotalMilliseconds
+                    val1: (int)(Math.Pow(x: 2, y: attempt) * 1000 * (1.0 + Random.Shared.NextDouble() * 0.1)),
+                    val2: (int)DefaultMaxDelay.TotalMilliseconds
                 );
 
-                await Task.Delay(delay, cancellationToken);
+                await Task.Delay(millisecondsDelay: delay, cancellationToken: cancellationToken);
             }
         }
     }

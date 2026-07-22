@@ -40,7 +40,7 @@ public static class BitmapSubtitleSelector
         IReadOnlyList<SubtitleStreamInfo> subtitleStreams
     ) =>
         subtitleStreams
-            .Select((stream, subtitleIndex) => new BitmapSubtitleRef(subtitleIndex, stream))
-            .Where(entry => SubtitleClassifier.IsBitmapBased(entry.Stream.Codec))
+            .Select(selector: (stream, subtitleIndex) => new BitmapSubtitleRef(SubtitleIndex: subtitleIndex, Stream: stream))
+            .Where(predicate: entry => SubtitleClassifier.IsBitmapBased(codec: entry.Stream.Codec))
             .ToList();
 }

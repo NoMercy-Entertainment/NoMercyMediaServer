@@ -33,17 +33,17 @@ public class SignalRLibraryScanEventHandlerJourneyTests
     {
         InMemoryEventBus bus = new();
         List<Capture> calls = [];
-        Mock<IClientMessenger> messengerMock = new(MockBehavior.Loose);
+        Mock<IClientMessenger> messengerMock = new(behavior: MockBehavior.Loose);
         messengerMock
-            .Setup(m => m.SendToAll(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>()))
+            .Setup(expression: m => m.SendToAll(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>()))
             .Callback<string, string, object>(
-                (method, hub, payload) => calls.Add(new(method, hub, payload))
+                action: (method, hub, payload) => calls.Add(item: new(Method: method, Hub: hub, Payload: payload))
             )
-            .Returns(Task.CompletedTask);
+            .Returns(value: Task.CompletedTask);
         SignalRLibraryScanEventHandler handler = new(
-            NullLogger<SignalRLibraryScanEventHandler>.Instance,
-            bus,
-            messengerMock.Object
+            logger: NullLogger<SignalRLibraryScanEventHandler>.Instance,
+            eventBus: bus,
+            clientMessenger: messengerMock.Object
         );
         return (bus, calls, handler);
     }
@@ -52,7 +52,7 @@ public class SignalRLibraryScanEventHandlerJourneyTests
     {
         if (obj is null)
             return default;
-        object? val = obj.GetType().GetProperty(name)?.GetValue(obj);
+        object? val = obj.GetType().GetProperty(name: name)?.GetValue(obj: obj);
         if (val is T typed)
             return typed;
         return default;
@@ -67,14 +67,14 @@ public class SignalRLibraryScanEventHandlerJourneyTests
 
         Ulid libraryId = Ulid.NewUlid();
         await bus.PublishAsync(
-            new LibraryScanStartedEvent { LibraryId = libraryId, LibraryName = "Movies" }
+            @event: new LibraryScanStartedEvent { LibraryId = libraryId, LibraryName = "Movies" }
         );
 
         Capture call = calls.Should().ContainSingle().Which;
-        call.Method.Should().Be("LibraryScanStarted");
-        call.Hub.Should().Be("dashboardHub");
-        GetProp<string>(call.Payload, "LibraryId").Should().Be(libraryId.ToString());
-        GetProp<string>(call.Payload, "LibraryName").Should().Be("Movies");
+        call.Method.Should().Be(expected: "LibraryScanStarted");
+        call.Hub.Should().Be(expected: "dashboardHub");
+        GetProp<string>(obj: call.Payload, name: "LibraryId").Should().Be(expected: libraryId.ToString());
+        GetProp<string>(obj: call.Payload, name: "LibraryName").Should().Be(expected: "Movies");
     }
 
     [Fact]
@@ -86,22 +86,22 @@ public class SignalRLibraryScanEventHandlerJourneyTests
 
         Ulid libraryId = Ulid.NewUlid();
         await bus.PublishAsync(
-            new LibraryScanCompletedEvent
+            @event: new LibraryScanCompletedEvent
             {
                 LibraryId = libraryId,
                 LibraryName = "TV Shows",
                 ItemsFound = 42,
-                Duration = TimeSpan.FromSeconds(15),
+                Duration = TimeSpan.FromSeconds(seconds: 15),
             }
         );
 
         Capture call = calls.Should().ContainSingle().Which;
-        call.Method.Should().Be("LibraryScanCompleted");
-        call.Hub.Should().Be("dashboardHub");
-        GetProp<string>(call.Payload, "LibraryId").Should().Be(libraryId.ToString());
-        GetProp<string>(call.Payload, "LibraryName").Should().Be("TV Shows");
-        GetProp<int>(call.Payload, "ItemsFound").Should().Be(42);
-        GetProp<double>(call.Payload, "Duration").Should().BeApproximately(15.0, 0.001);
+        call.Method.Should().Be(expected: "LibraryScanCompleted");
+        call.Hub.Should().Be(expected: "dashboardHub");
+        GetProp<string>(obj: call.Payload, name: "LibraryId").Should().Be(expected: libraryId.ToString());
+        GetProp<string>(obj: call.Payload, name: "LibraryName").Should().Be(expected: "TV Shows");
+        GetProp<int>(obj: call.Payload, name: "ItemsFound").Should().Be(expected: 42);
+        GetProp<double>(obj: call.Payload, name: "Duration").Should().BeApproximately(expectedValue: 15.0, precision: 0.001);
     }
 
     [Fact]
@@ -113,7 +113,7 @@ public class SignalRLibraryScanEventHandlerJourneyTests
 
         Ulid libraryId = Ulid.NewUlid();
         await bus.PublishAsync(
-            new MediaAddedEvent
+            @event: new MediaAddedEvent
             {
                 MediaId = 999,
                 MediaType = "movie",
@@ -123,12 +123,12 @@ public class SignalRLibraryScanEventHandlerJourneyTests
         );
 
         Capture call = calls.Should().ContainSingle().Which;
-        call.Method.Should().Be("MediaAdded");
-        call.Hub.Should().Be("dashboardHub");
-        GetProp<int>(call.Payload, "MediaId").Should().Be(999);
-        GetProp<string>(call.Payload, "MediaType").Should().Be("movie");
-        GetProp<string>(call.Payload, "Title").Should().Be("Inception");
-        GetProp<string>(call.Payload, "LibraryId").Should().Be(libraryId.ToString());
+        call.Method.Should().Be(expected: "MediaAdded");
+        call.Hub.Should().Be(expected: "dashboardHub");
+        GetProp<int>(obj: call.Payload, name: "MediaId").Should().Be(expected: 999);
+        GetProp<string>(obj: call.Payload, name: "MediaType").Should().Be(expected: "movie");
+        GetProp<string>(obj: call.Payload, name: "Title").Should().Be(expected: "Inception");
+        GetProp<string>(obj: call.Payload, name: "LibraryId").Should().Be(expected: libraryId.ToString());
     }
 
     [Fact]
@@ -140,7 +140,7 @@ public class SignalRLibraryScanEventHandlerJourneyTests
 
         Ulid libraryId = Ulid.NewUlid();
         await bus.PublishAsync(
-            new MediaRemovedEvent
+            @event: new MediaRemovedEvent
             {
                 MediaId = 7,
                 MediaType = "tv",
@@ -150,12 +150,12 @@ public class SignalRLibraryScanEventHandlerJourneyTests
         );
 
         Capture call = calls.Should().ContainSingle().Which;
-        call.Method.Should().Be("MediaRemoved");
-        call.Hub.Should().Be("dashboardHub");
-        GetProp<int>(call.Payload, "MediaId").Should().Be(7);
-        GetProp<string>(call.Payload, "MediaType").Should().Be("tv");
-        GetProp<string>(call.Payload, "Title").Should().Be("Breaking Bad");
-        GetProp<string>(call.Payload, "LibraryId").Should().Be(libraryId.ToString());
+        call.Method.Should().Be(expected: "MediaRemoved");
+        call.Hub.Should().Be(expected: "dashboardHub");
+        GetProp<int>(obj: call.Payload, name: "MediaId").Should().Be(expected: 7);
+        GetProp<string>(obj: call.Payload, name: "MediaType").Should().Be(expected: "tv");
+        GetProp<string>(obj: call.Payload, name: "Title").Should().Be(expected: "Breaking Bad");
+        GetProp<string>(obj: call.Payload, name: "LibraryId").Should().Be(expected: libraryId.ToString());
     }
 
     [Fact]
@@ -167,9 +167,9 @@ public class SignalRLibraryScanEventHandlerJourneyTests
 
         Ulid id = Ulid.NewUlid();
 
-        await bus.PublishAsync(new LibraryScanStartedEvent { LibraryId = id, LibraryName = "L1" });
+        await bus.PublishAsync(@event: new LibraryScanStartedEvent { LibraryId = id, LibraryName = "L1" });
         await bus.PublishAsync(
-            new LibraryScanCompletedEvent
+            @event: new LibraryScanCompletedEvent
             {
                 LibraryId = id,
                 LibraryName = "L1",
@@ -178,7 +178,7 @@ public class SignalRLibraryScanEventHandlerJourneyTests
             }
         );
         await bus.PublishAsync(
-            new MediaAddedEvent
+            @event: new MediaAddedEvent
             {
                 MediaId = 1,
                 MediaType = "movie",
@@ -187,7 +187,7 @@ public class SignalRLibraryScanEventHandlerJourneyTests
             }
         );
         await bus.PublishAsync(
-            new MediaRemovedEvent
+            @event: new MediaRemovedEvent
             {
                 MediaId = 2,
                 MediaType = "tv",
@@ -196,16 +196,12 @@ public class SignalRLibraryScanEventHandlerJourneyTests
             }
         );
 
-        calls.Should().HaveCount(4);
-        calls.Should().OnlyContain(c => c.Hub == "dashboardHub");
+        calls.Should().HaveCount(expected: 4);
+        calls.Should().OnlyContain(predicate: c => c.Hub == "dashboardHub");
         calls
-            .Select(c => c.Method)
+            .Select(selector: c => c.Method)
             .Should()
-            .ContainInOrder(
-                "LibraryScanStarted",
-                "LibraryScanCompleted",
-                "MediaAdded",
-                "MediaRemoved"
+            .ContainInOrder(expected: ["LibraryScanStarted", "LibraryScanCompleted", "MediaAdded", "MediaRemoved"]
             );
     }
 
@@ -216,15 +212,15 @@ public class SignalRLibraryScanEventHandlerJourneyTests
             BuildScanChain();
 
         Ulid id = Ulid.NewUlid();
-        await bus.PublishAsync(new LibraryScanStartedEvent { LibraryId = id, LibraryName = "L" });
+        await bus.PublishAsync(@event: new LibraryScanStartedEvent { LibraryId = id, LibraryName = "L" });
 
-        calls.Should().HaveCount(1);
+        calls.Should().HaveCount(expected: 1);
 
         handler.Dispose();
 
-        await bus.PublishAsync(new LibraryScanStartedEvent { LibraryId = id, LibraryName = "L2" });
+        await bus.PublishAsync(@event: new LibraryScanStartedEvent { LibraryId = id, LibraryName = "L2" });
         await bus.PublishAsync(
-            new LibraryScanCompletedEvent
+            @event: new LibraryScanCompletedEvent
             {
                 LibraryId = id,
                 LibraryName = "L",
@@ -233,7 +229,7 @@ public class SignalRLibraryScanEventHandlerJourneyTests
             }
         );
 
-        calls.Should().HaveCount(1, "dispose removed all subscriptions");
+        calls.Should().HaveCount(expected: 1, because: "dispose removed all subscriptions");
     }
 }
 
@@ -249,14 +245,14 @@ public class SignalRLibraryRefreshEventHandlerJourneyTests
     {
         InMemoryEventBus bus = new();
         List<Capture> calls = [];
-        Mock<IClientMessenger> messengerMock = new(MockBehavior.Loose);
+        Mock<IClientMessenger> messengerMock = new(behavior: MockBehavior.Loose);
         messengerMock
-            .Setup(m => m.SendToAll(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>()))
+            .Setup(expression: m => m.SendToAll(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>()))
             .Callback<string, string, object>(
-                (method, hub, payload) => calls.Add(new(method, hub, payload))
+                action: (method, hub, payload) => calls.Add(item: new(Method: method, Hub: hub, Payload: payload))
             )
-            .Returns(Task.CompletedTask);
-        SignalRLibraryRefreshEventHandler handler = new(bus, messengerMock.Object);
+            .Returns(value: Task.CompletedTask);
+        SignalRLibraryRefreshEventHandler handler = new(eventBus: bus, clientMessenger: messengerMock.Object);
         return (bus, calls, handler);
     }
 
@@ -268,11 +264,11 @@ public class SignalRLibraryRefreshEventHandlerJourneyTests
         using SignalRLibraryRefreshEventHandler _ = handler;
 
         object?[] queryKey = ["movies", 1, null];
-        await bus.PublishAsync(new LibraryRefreshedEvent { QueryKey = queryKey });
+        await bus.PublishAsync(@event: new LibraryRefreshedEvent { QueryKey = queryKey });
 
         Capture call = calls.Should().ContainSingle().Which;
-        call.Method.Should().Be("RefreshLibrary");
-        call.Hub.Should().Be("videoHub");
+        call.Method.Should().Be(expected: "RefreshLibrary");
+        call.Hub.Should().Be(expected: "videoHub");
     }
 
     [Fact]
@@ -282,9 +278,9 @@ public class SignalRLibraryRefreshEventHandlerJourneyTests
             BuildRefreshChain();
         using SignalRLibraryRefreshEventHandler _ = handler;
 
-        await bus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["key"] });
+        await bus.PublishAsync(@event: new LibraryRefreshedEvent { QueryKey = ["key"] });
 
-        calls.Should().OnlyContain(c => c.Hub != "dashboardHub");
+        calls.Should().OnlyContain(predicate: c => c.Hub != "dashboardHub");
     }
 
     [Fact]
@@ -293,15 +289,15 @@ public class SignalRLibraryRefreshEventHandlerJourneyTests
         (InMemoryEventBus bus, List<Capture> calls, SignalRLibraryRefreshEventHandler handler) =
             BuildRefreshChain();
 
-        await bus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["a"] });
+        await bus.PublishAsync(@event: new LibraryRefreshedEvent { QueryKey = ["a"] });
 
-        calls.Should().HaveCount(1);
+        calls.Should().HaveCount(expected: 1);
 
         handler.Dispose();
 
-        await bus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["b"] });
+        await bus.PublishAsync(@event: new LibraryRefreshedEvent { QueryKey = ["b"] });
 
-        calls.Should().HaveCount(1, "dispose removed the subscription");
+        calls.Should().HaveCount(expected: 1, because: "dispose removed the subscription");
     }
 }
 
@@ -312,23 +308,23 @@ public class LibraryScanCompletedFanOutJourneyTests
     {
         InMemoryEventBus bus = new();
         List<string> signalRCalls = [];
-        Mock<IClientMessenger> messengerMock = new(MockBehavior.Loose);
+        Mock<IClientMessenger> messengerMock = new(behavior: MockBehavior.Loose);
         messengerMock
-            .Setup(m => m.SendToAll(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>()))
-            .Callback<string, string, object>((method, _, _) => signalRCalls.Add(method))
-            .Returns(Task.CompletedTask);
+            .Setup(expression: m => m.SendToAll(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<object>()))
+            .Callback<string, string, object>(action: (method, _, _) => signalRCalls.Add(item: method))
+            .Returns(value: Task.CompletedTask);
 
         using SignalRLibraryScanEventHandler scanHandler = new(
-            NullLogger<SignalRLibraryScanEventHandler>.Instance,
-            bus,
-            messengerMock.Object
+            logger: NullLogger<SignalRLibraryScanEventHandler>.Instance,
+            eventBus: bus,
+            clientMessenger: messengerMock.Object
         );
 
         List<LibraryScanCompletedEvent> receivedByTestListener = [];
         using IDisposable testSubscription = bus.Subscribe<LibraryScanCompletedEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                receivedByTestListener.Add(evt);
+                receivedByTestListener.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
@@ -339,13 +335,13 @@ public class LibraryScanCompletedFanOutJourneyTests
             LibraryId = libraryId,
             LibraryName = "Fan-Out Library",
             ItemsFound = 5,
-            Duration = TimeSpan.FromSeconds(3),
+            Duration = TimeSpan.FromSeconds(seconds: 3),
         };
 
-        await bus.PublishAsync(published);
+        await bus.PublishAsync(@event: published);
 
-        signalRCalls.Should().Contain("LibraryScanCompleted");
+        signalRCalls.Should().Contain(expected: "LibraryScanCompleted");
         receivedByTestListener.Should().ContainSingle();
-        receivedByTestListener[0].LibraryId.Should().Be(libraryId);
+        receivedByTestListener[index: 0].LibraryId.Should().Be(expected: libraryId);
     }
 }

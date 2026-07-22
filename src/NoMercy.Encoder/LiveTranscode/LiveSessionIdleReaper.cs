@@ -29,20 +29,20 @@ public class LiveSessionIdleReaper(
     ILiveSessionTransport? transport = null
 ) : BackgroundService
 {
-    private static readonly TimeSpan SweepInterval = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan SweepInterval = TimeSpan.FromSeconds(seconds: 30);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         logger.LogDebug(
-            "LiveSessionIdleReaper started (idle timeout = {Min} min)",
-            limits.IdleTimeoutMinutes
+            message: "LiveSessionIdleReaper started (idle timeout = {Min} min)",
+            args: limits.IdleTimeoutMinutes
         );
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await Task.Delay(SweepInterval, stoppingToken).ConfigureAwait(false);
+                await Task.Delay(delay: SweepInterval, cancellationToken: stoppingToken).ConfigureAwait(continueOnCapturedContext: false);
             }
             catch (OperationCanceledException)
             {
@@ -51,25 +51,25 @@ public class LiveSessionIdleReaper(
 
             try
             {
-                await SweepAsync().ConfigureAwait(false);
+                await SweepAsync().ConfigureAwait(continueOnCapturedContext: false);
             }
             catch (Exception ex)
             {
                 // Don't let a sweep failure crash the host. Idle eviction is
                 // best-effort — log and try again next interval.
-                logger.LogWarning(ex, "LiveSessionIdleReaper sweep failed; will retry");
+                logger.LogWarning(exception: ex, message: "LiveSessionIdleReaper sweep failed; will retry");
             }
         }
     }
 
     internal async Task SweepAsync()
     {
-        DateTime cutoff = DateTime.UtcNow.AddMinutes(-limits.IdleTimeoutMinutes);
+        DateTime cutoff = DateTime.UtcNow.AddMinutes(value: -limits.IdleTimeoutMinutes);
 
         List<string> toEvict = [];
         foreach (string sessionId in streamingService.ActiveSessionIds)
         {
-            if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
+            if (!streamingService.TryGetRuntime(sessionId: sessionId, runtime: out LiveRuntimeSession runtime))
                 continue;
 
             // A per-language audio child gets no segment hits while another
@@ -83,30 +83,30 @@ public class LiveSessionIdleReaper(
 
             if (runtime.LastAccess < cutoff)
             {
-                toEvict.Add(sessionId);
+                toEvict.Add(item: sessionId);
             }
         }
 
         foreach (string sessionId in toEvict)
         {
             logger.LogInformation(
-                "LiveSessionIdleReaper evicting idle session {SessionId}",
-                sessionId
+                message: "LiveSessionIdleReaper evicting idle session {SessionId}",
+                args: sessionId
             );
 
             try
             {
-                await PushSessionEndedAsync(sessionId, SessionEndReason.ClientDisconnected)
-                    .ConfigureAwait(false);
-                await streamingService.RemoveAsync(sessionId).ConfigureAwait(false);
-                sessionManager.RemoveSession(sessionId);
+                await PushSessionEndedAsync(sessionId: sessionId, reason: SessionEndReason.ClientDisconnected)
+                    .ConfigureAwait(continueOnCapturedContext: false);
+                await streamingService.RemoveAsync(sessionId: sessionId).ConfigureAwait(continueOnCapturedContext: false);
+                sessionManager.RemoveSession(sessionId: sessionId);
             }
             catch (Exception ex)
             {
                 logger.LogWarning(
-                    ex,
-                    "LiveSessionIdleReaper failed to evict session {SessionId}",
-                    sessionId
+                    exception: ex,
+                    message: "LiveSessionIdleReaper failed to evict session {SessionId}",
+                    args: sessionId
                 );
             }
         }
@@ -122,15 +122,15 @@ public class LiveSessionIdleReaper(
         try
         {
             await transport
-                .SendToClientAsync(sessionId, message, CancellationToken.None)
-                .ConfigureAwait(false);
+                .SendToClientAsync(sessionId: sessionId, message: message, ct: CancellationToken.None)
+                .ConfigureAwait(continueOnCapturedContext: false);
         }
         catch (Exception ex)
         {
             logger.LogDebug(
-                ex,
-                "Transport push failed for SessionEnded on session {SessionId}",
-                sessionId
+                exception: ex,
+                message: "Transport push failed for SessionEnded on session {SessionId}",
+                args: sessionId
             );
         }
     }

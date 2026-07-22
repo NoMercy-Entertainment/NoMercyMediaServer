@@ -24,152 +24,150 @@ public class WebhookNotificationDispatcherTests
     {
         EncoderOptions options = new() { FfmpegPathOverride = "ffmpeg" };
         CapturingHandler handler = new() { StatusCode = HttpStatusCode.OK };
-        WebhookNotificationDispatcher dispatcher = BuildDispatcher(options, handler);
+        WebhookNotificationDispatcher dispatcher = BuildDispatcher(options: options, handler: handler);
 
-        await dispatcher.NotifyStartedAsync(new(1, "/in", "/out", "HLS"), CancellationToken.None);
+        await dispatcher.NotifyStartedAsync(notification: new(JobId: 1, InputPath: "/in", OutputPath: "/out", ProfileName: "HLS"), ct: CancellationToken.None);
 
-        Assert.Empty(handler.Requests);
+        Assert.Empty(collection: handler.Requests);
     }
 
     [Fact]
     public async Task Notify_SingleUrl_Success_PostsOnce()
     {
-        EncoderOptions options = BuildOptions("https://example.com/hook");
+        EncoderOptions options = BuildOptions(urls: "https://example.com/hook");
         CapturingHandler handler = new() { StatusCode = HttpStatusCode.OK };
-        WebhookNotificationDispatcher dispatcher = BuildDispatcher(options, handler);
+        WebhookNotificationDispatcher dispatcher = BuildDispatcher(options: options, handler: handler);
 
         await dispatcher.NotifyStartedAsync(
-            new(42, "/in.mkv", "/out", "HLS 1080p"),
-            CancellationToken.None
+            notification: new(JobId: 42, InputPath: "/in.mkv", OutputPath: "/out", ProfileName: "HLS 1080p"),
+            ct: CancellationToken.None
         );
 
-        Assert.Single(handler.Requests);
-        Assert.Equal("https://example.com/hook", handler.Requests[0].url);
-        Assert.Contains("encoding.started", handler.Requests[0].body);
-        Assert.Contains("\"job_id\":42", handler.Requests[0].body);
+        Assert.Single(collection: handler.Requests);
+        Assert.Equal(expected: "https://example.com/hook", actual: handler.Requests[index: 0].url);
+        Assert.Contains(expectedSubstring: "encoding.started", actualString: handler.Requests[index: 0].body);
+        Assert.Contains(expectedSubstring: "\"job_id\":42", actualString: handler.Requests[index: 0].body);
     }
 
     [Fact]
     public async Task Notify_MultipleUrls_PostsToEach()
     {
-        EncoderOptions options = BuildOptions("https://a.example/hook", "https://b.example/hook");
+        EncoderOptions options = BuildOptions(urls: ["https://a.example/hook", "https://b.example/hook"]);
         CapturingHandler handler = new() { StatusCode = HttpStatusCode.OK };
-        WebhookNotificationDispatcher dispatcher = BuildDispatcher(options, handler);
+        WebhookNotificationDispatcher dispatcher = BuildDispatcher(options: options, handler: handler);
 
         await dispatcher.NotifyCompletedAsync(
-            new(7, "/out.mp4", TimeSpan.FromSeconds(120)),
-            CancellationToken.None
+            notification: new(JobId: 7, OutputPath: "/out.mp4", Duration: TimeSpan.FromSeconds(seconds: 120)),
+            ct: CancellationToken.None
         );
 
-        Assert.Equal(2, handler.Requests.Count);
-        Assert.Contains(handler.Requests, r => r.url == "https://a.example/hook");
-        Assert.Contains(handler.Requests, r => r.url == "https://b.example/hook");
+        Assert.Equal(expected: 2, actual: handler.Requests.Count);
+        Assert.Contains(collection: handler.Requests, filter: r => r.url == "https://a.example/hook");
+        Assert.Contains(collection: handler.Requests, filter: r => r.url == "https://b.example/hook");
     }
 
     [Fact]
     public async Task Notify_Completed_PayloadShapeMatchesSpec()
     {
-        EncoderOptions options = BuildOptions("https://example.com/hook");
+        EncoderOptions options = BuildOptions(urls: "https://example.com/hook");
         CapturingHandler handler = new() { StatusCode = HttpStatusCode.OK };
-        WebhookNotificationDispatcher dispatcher = BuildDispatcher(options, handler);
+        WebhookNotificationDispatcher dispatcher = BuildDispatcher(options: options, handler: handler);
 
         await dispatcher.NotifyCompletedAsync(
-            new(99, "/out.m3u8", TimeSpan.FromSeconds(180)),
-            CancellationToken.None
+            notification: new(JobId: 99, OutputPath: "/out.m3u8", Duration: TimeSpan.FromSeconds(seconds: 180)),
+            ct: CancellationToken.None
         );
 
-        JsonDocument doc = JsonDocument.Parse(handler.Requests[0].body);
-        Assert.Equal("encoding.completed", doc.RootElement.GetProperty("event").GetString());
-        Assert.True(doc.RootElement.TryGetProperty("timestamp", out _));
-        JsonElement payload = doc.RootElement.GetProperty("payload");
-        Assert.Equal(99, payload.GetProperty("job_id").GetInt32());
-        Assert.Equal("/out.m3u8", payload.GetProperty("output_path").GetString());
-        Assert.Equal(180.0, payload.GetProperty("duration_seconds").GetDouble());
+        JsonDocument doc = JsonDocument.Parse(json: handler.Requests[index: 0].body);
+        Assert.Equal(expected: "encoding.completed", actual: doc.RootElement.GetProperty(propertyName: "event").GetString());
+        Assert.True(condition: doc.RootElement.TryGetProperty(propertyName: "timestamp", value: out _));
+        JsonElement payload = doc.RootElement.GetProperty(propertyName: "payload");
+        Assert.Equal(expected: 99, actual: payload.GetProperty(propertyName: "job_id").GetInt32());
+        Assert.Equal(expected: "/out.m3u8", actual: payload.GetProperty(propertyName: "output_path").GetString());
+        Assert.Equal(expected: 180.0, actual: payload.GetProperty(propertyName: "duration_seconds").GetDouble());
     }
 
     [Fact]
     public async Task Notify_Failed_PayloadIncludesErrorAndExceptionType()
     {
-        EncoderOptions options = BuildOptions("https://example.com/hook");
+        EncoderOptions options = BuildOptions(urls: "https://example.com/hook");
         CapturingHandler handler = new() { StatusCode = HttpStatusCode.OK };
-        WebhookNotificationDispatcher dispatcher = BuildDispatcher(options, handler);
+        WebhookNotificationDispatcher dispatcher = BuildDispatcher(options: options, handler: handler);
 
         await dispatcher.NotifyFailedAsync(
-            new(5, "/src.mkv", "ffmpeg crashed", "ProcessCrashedException"),
-            CancellationToken.None
+            notification: new(JobId: 5, InputPath: "/src.mkv", ErrorMessage: "ffmpeg crashed", ExceptionType: "ProcessCrashedException"),
+            ct: CancellationToken.None
         );
 
-        JsonDocument doc = JsonDocument.Parse(handler.Requests[0].body);
-        Assert.Equal("encoding.failed", doc.RootElement.GetProperty("event").GetString());
-        JsonElement payload = doc.RootElement.GetProperty("payload");
-        Assert.Equal("ffmpeg crashed", payload.GetProperty("error_message").GetString());
-        Assert.Equal("ProcessCrashedException", payload.GetProperty("exception_type").GetString());
+        JsonDocument doc = JsonDocument.Parse(json: handler.Requests[index: 0].body);
+        Assert.Equal(expected: "encoding.failed", actual: doc.RootElement.GetProperty(propertyName: "event").GetString());
+        JsonElement payload = doc.RootElement.GetProperty(propertyName: "payload");
+        Assert.Equal(expected: "ffmpeg crashed", actual: payload.GetProperty(propertyName: "error_message").GetString());
+        Assert.Equal(expected: "ProcessCrashedException", actual: payload.GetProperty(propertyName: "exception_type").GetString());
     }
 
     [Fact]
     public async Task Notify_TransientFailure_RetriesUpToThreeTimes()
     {
-        EncoderOptions options = BuildOptions("https://example.com/hook");
+        EncoderOptions options = BuildOptions(urls: "https://example.com/hook");
         CapturingHandler handler = new() { StatusCode = HttpStatusCode.InternalServerError };
-        WebhookNotificationDispatcher dispatcher = BuildDispatcher(options, handler);
+        WebhookNotificationDispatcher dispatcher = BuildDispatcher(options: options, handler: handler);
 
         using CancellationTokenSource cts = new();
         // Give retries enough time but cancel before the third backoff (4s) completes
         // so the test runs fast — we still see 3 request attempts.
-        cts.CancelAfter(TimeSpan.FromSeconds(4));
+        cts.CancelAfter(delay: TimeSpan.FromSeconds(seconds: 4));
 
-        await dispatcher.NotifyStartedAsync(new(1, "/in", "/out", "HLS"), cts.Token);
+        await dispatcher.NotifyStartedAsync(notification: new(JobId: 1, InputPath: "/in", OutputPath: "/out", ProfileName: "HLS"), ct: cts.Token);
 
-        Assert.InRange(handler.Requests.Count, 2, 3);
+        Assert.InRange(actual: handler.Requests.Count, low: 2, high: 3);
     }
 
     [Fact]
     public async Task Notify_OneUrlFails_OtherStillGetsNotified()
     {
-        EncoderOptions options = BuildOptions(
-            "https://bad.example/hook",
-            "https://good.example/hook"
+        EncoderOptions options = BuildOptions(urls: ["https://bad.example/hook", "https://good.example/hook"]
         );
         PerUrlHandler handler = new(
-            new Dictionary<string, HttpStatusCode>
+            urlToStatus: new Dictionary<string, HttpStatusCode>
             {
-                ["https://bad.example/hook"] = HttpStatusCode.InternalServerError,
-                ["https://good.example/hook"] = HttpStatusCode.OK,
+                [key: "https://bad.example/hook"] = HttpStatusCode.InternalServerError,
+                [key: "https://good.example/hook"] = HttpStatusCode.OK,
             }
         );
-        WebhookNotificationDispatcher dispatcher = BuildDispatcher(options, handler);
+        WebhookNotificationDispatcher dispatcher = BuildDispatcher(options: options, handler: handler);
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(6));
-        await dispatcher.NotifyStartedAsync(new(1, "/in", "/out", "HLS"), cts.Token);
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 6));
+        await dispatcher.NotifyStartedAsync(notification: new(JobId: 1, InputPath: "/in", OutputPath: "/out", ProfileName: "HLS"), ct: cts.Token);
 
         // Good URL gets at least one request even though bad URL is failing.
         Assert.Contains(
-            handler.Requests,
-            r => r is { url: "https://good.example/hook", statusCode: HttpStatusCode.OK }
+            collection: handler.Requests,
+            filter: r => r is { url: "https://good.example/hook", statusCode: HttpStatusCode.OK }
         );
     }
 
     [Fact]
     public async Task Notify_OperationCancelled_StopsImmediately()
     {
-        EncoderOptions options = BuildOptions("https://example.com/hook");
+        EncoderOptions options = BuildOptions(urls: "https://example.com/hook");
         CapturingHandler handler = new() { StatusCode = HttpStatusCode.OK };
-        WebhookNotificationDispatcher dispatcher = BuildDispatcher(options, handler);
+        WebhookNotificationDispatcher dispatcher = BuildDispatcher(options: options, handler: handler);
 
         using CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
-        await dispatcher.NotifyStartedAsync(new(1, "/in", "/out", "HLS"), cts.Token);
+        await dispatcher.NotifyStartedAsync(notification: new(JobId: 1, InputPath: "/in", OutputPath: "/out", ProfileName: "HLS"), ct: cts.Token);
 
         // First attempt short-circuits before the request starts.
-        Assert.Empty(handler.Requests);
+        Assert.Empty(collection: handler.Requests);
     }
 
     private static EncoderOptions BuildOptions(params string[] urls)
     {
         EncoderOptions options = new() { FfmpegPathOverride = "ffmpeg" };
         foreach (string url in urls)
-            options.NotificationWebhookUrls.Add(url);
+            options.NotificationWebhookUrls.Add(item: url);
         return options;
     }
 
@@ -178,8 +176,8 @@ public class WebhookNotificationDispatcherTests
         HttpMessageHandler handler
     )
     {
-        HttpClient client = new(handler);
-        return new(options, client, NullLogger<WebhookNotificationDispatcher>.Instance);
+        HttpClient client = new(handler: handler);
+        return new(options: options, httpClient: client, logger: NullLogger<WebhookNotificationDispatcher>.Instance);
     }
 
     private sealed class CapturingHandler : HttpMessageHandler
@@ -194,9 +192,9 @@ public class WebhookNotificationDispatcherTests
         {
             string body = request.Content is null
                 ? string.Empty
-                : await request.Content.ReadAsStringAsync(cancellationToken);
-            Requests.Add((request.RequestUri!.ToString(), body));
-            return new(StatusCode);
+                : await request.Content.ReadAsStringAsync(cancellationToken: cancellationToken);
+            Requests.Add(item: (request.RequestUri!.ToString(), body));
+            return new(statusCode: StatusCode);
         }
     }
 
@@ -211,11 +209,11 @@ public class WebhookNotificationDispatcherTests
         )
         {
             string url = request.RequestUri!.ToString();
-            HttpStatusCode status = urlToStatus.TryGetValue(url, out HttpStatusCode s)
+            HttpStatusCode status = urlToStatus.TryGetValue(key: url, value: out HttpStatusCode s)
                 ? s
                 : HttpStatusCode.OK;
-            Requests.Add((url, status));
-            return Task.FromResult(new HttpResponseMessage(status));
+            Requests.Add(item: (url, status));
+            return Task.FromResult(result: new HttpResponseMessage(statusCode: status));
         }
     }
 }

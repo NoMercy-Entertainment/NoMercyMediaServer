@@ -15,21 +15,21 @@ namespace NoMercy.Cli.Models;
 
 internal class LogEntryResponse
 {
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty("message")]
+    [JsonProperty(propertyName: "message")]
     public string Message { get; set; } = string.Empty;
 
-    [JsonProperty("color")]
+    [JsonProperty(propertyName: "color")]
     public string Color { get; set; } = string.Empty;
 
-    [JsonProperty("threadId")]
+    [JsonProperty(propertyName: "threadId")]
     public int ThreadId { get; set; }
 
-    [JsonProperty("time")]
+    [JsonProperty(propertyName: "time")]
     public DateTime Time { get; set; }
 
-    [JsonProperty("level")]
+    [JsonProperty(propertyName: "level")]
     public string Level { get; set; } = string.Empty;
 }

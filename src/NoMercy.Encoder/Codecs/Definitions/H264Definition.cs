@@ -102,7 +102,7 @@ public class H264Definition : ICodecDefinition
                 SupportsHdr: false,
                 MaxConcurrentSessions: int.MaxValue,
                 PixelFormat10Bit: "",
-                VendorSpecificFlags: new() { ["-usage"] = "transcoding" }
+                VendorSpecificFlags: new() { [key: "-usage"] = "transcoding" }
             ),
             // Intel Quick Sync Video — h264_qsv
             // 7 presets (veryfast→veryslow, no ultrafast/placebo). Profiles baseline/main/high.

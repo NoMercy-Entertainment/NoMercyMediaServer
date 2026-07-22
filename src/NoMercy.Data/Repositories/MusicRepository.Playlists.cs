@@ -25,17 +25,17 @@ public partial class MusicRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
         return await mediaContext
             .Playlists.AsNoTracking()
-            .Where(playlist => playlist.UserId == userId)
-            .Include(playlist => playlist.Tracks)
-                .ThenInclude(trackUser => trackUser.Track)
-            .OrderBy(playlist => playlist.Name)
-            .ThenBy(playlist => playlist.Id)
-            .Select(playlist => new CarouselResponseItemDto(playlist))
-            .Take(36)
-            .ToListAsync(ct);
+            .Where(predicate: playlist => playlist.UserId == userId)
+            .Include(navigationPropertyPath: playlist => playlist.Tracks)
+                .ThenInclude(navigationPropertyPath: trackUser => trackUser.Track)
+            .OrderBy(keySelector: playlist => playlist.Name)
+            .ThenBy(keySelector: playlist => playlist.Id)
+            .Select(selector: playlist => new CarouselResponseItemDto(playlist))
+            .Take(count: 36)
+            .ToListAsync(cancellationToken: ct);
     }
 
     public async Task<Playlist?> GetPlaylistAsync(
@@ -44,20 +44,20 @@ public partial class MusicRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
         return await mediaContext
             .Playlists.AsNoTracking()
-            .Where(playlist => playlist.Id == id)
-            .Where(playlist => playlist.UserId == userId)
-            .Include(playlist => playlist.Tracks)
-                .ThenInclude(trackUser => trackUser.Track)
-                    .ThenInclude(track => track.AlbumTrack)
-                        .ThenInclude(albumTrack => albumTrack.Album)
-            .Include(playlist => playlist.Tracks)
-                .ThenInclude(trackUser => trackUser.Track)
-                    .ThenInclude(track => track.ArtistTrack)
-                        .ThenInclude(artistTrack => artistTrack.Artist)
-            .FirstOrDefaultAsync(ct);
+            .Where(predicate: playlist => playlist.Id == id)
+            .Where(predicate: playlist => playlist.UserId == userId)
+            .Include(navigationPropertyPath: playlist => playlist.Tracks)
+                .ThenInclude(navigationPropertyPath: trackUser => trackUser.Track)
+                    .ThenInclude(navigationPropertyPath: track => track.AlbumTrack)
+                        .ThenInclude(navigationPropertyPath: albumTrack => albumTrack.Album)
+            .Include(navigationPropertyPath: playlist => playlist.Tracks)
+                .ThenInclude(navigationPropertyPath: trackUser => trackUser.Track)
+                    .ThenInclude(navigationPropertyPath: track => track.ArtistTrack)
+                        .ThenInclude(navigationPropertyPath: artistTrack => artistTrack.Artist)
+            .FirstOrDefaultAsync(cancellationToken: ct);
     }
 
     #endregion
@@ -76,22 +76,22 @@ public partial class MusicRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
         return await mediaContext
             .PlaylistTrack.AsNoTracking()
-            .Where(pt => pt.PlaylistId == playlistId && pt.Playlist.UserId == userId)
-            .Include(pt => pt.Track)
-                .ThenInclude(track => track.AlbumTrack)
-                    .ThenInclude(albumTrack => albumTrack.Album)
-                        .ThenInclude(album => album.AlbumArtist)
-                            .ThenInclude(albumArtist => albumArtist.Artist)
-                                .ThenInclude(artist => artist.Images)
-            .Include(pt => pt.Track)
-                .ThenInclude(track => track.ArtistTrack)
-                    .ThenInclude(artistTrack => artistTrack.Artist)
-            .Include(pt => pt.Track)
-                .ThenInclude(track => track.TrackUser)
-            .ToListAsync(ct);
+            .Where(predicate: pt => pt.PlaylistId == playlistId && pt.Playlist.UserId == userId)
+            .Include(navigationPropertyPath: pt => pt.Track)
+                .ThenInclude(navigationPropertyPath: track => track.AlbumTrack)
+                    .ThenInclude(navigationPropertyPath: albumTrack => albumTrack.Album)
+                        .ThenInclude(navigationPropertyPath: album => album.AlbumArtist)
+                            .ThenInclude(navigationPropertyPath: albumArtist => albumArtist.Artist)
+                                .ThenInclude(navigationPropertyPath: artist => artist.Images)
+            .Include(navigationPropertyPath: pt => pt.Track)
+                .ThenInclude(navigationPropertyPath: track => track.ArtistTrack)
+                    .ThenInclude(navigationPropertyPath: artistTrack => artistTrack.Artist)
+            .Include(navigationPropertyPath: pt => pt.Track)
+                .ThenInclude(navigationPropertyPath: track => track.TrackUser)
+            .ToListAsync(cancellationToken: ct);
     }
 
     // Three flat queries, never one rooted through Album.AlbumTrack (that revisits this same
@@ -126,54 +126,54 @@ public partial class MusicRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
 
         List<AlbumTrack> albumTracks = await mediaContext
             .AlbumTrack.AsNoTracking()
-            .Where(at => at.AlbumId == albumId)
-            .Include(at => at.Track)
-                .ThenInclude(track => track.ArtistTrack)
-                    .ThenInclude(artistTrack => artistTrack.Artist)
-            .Include(at => at.Track)
-                .ThenInclude(track => track.TrackUser)
-            .ToListAsync(ct);
+            .Where(predicate: at => at.AlbumId == albumId)
+            .Include(navigationPropertyPath: at => at.Track)
+                .ThenInclude(navigationPropertyPath: track => track.ArtistTrack)
+                    .ThenInclude(navigationPropertyPath: artistTrack => artistTrack.Artist)
+            .Include(navigationPropertyPath: at => at.Track)
+                .ThenInclude(navigationPropertyPath: track => track.TrackUser)
+            .ToListAsync(cancellationToken: ct);
 
         if (albumTracks.Count == 0)
             return albumTracks;
 
-        List<Guid> trackIds = albumTracks.Select(at => at.TrackId).Distinct().ToList();
+        List<Guid> trackIds = albumTracks.Select(selector: at => at.TrackId).Distinct().ToList();
         List<Track> tracksWithAlbumLinks = await mediaContext
             .Tracks.AsNoTracking()
-            .Where(track => trackIds.Contains(track.Id))
-            .Include(track => track.AlbumTrack)
-            .ToListAsync(ct);
+            .Where(predicate: track => trackIds.Contains(track.Id))
+            .Include(navigationPropertyPath: track => track.AlbumTrack)
+            .ToListAsync(cancellationToken: ct);
 
         List<Guid> distinctAlbumIds = tracksWithAlbumLinks
-            .SelectMany(track => track.AlbumTrack)
-            .Select(at => at.AlbumId)
+            .SelectMany(selector: track => track.AlbumTrack)
+            .Select(selector: at => at.AlbumId)
             .Distinct()
             .ToList();
 
         List<Album> albumsWithDetails = await mediaContext
             .Albums.AsNoTracking()
-            .Where(album => distinctAlbumIds.Contains(album.Id))
-            .Include(album => album.Images)
-            .Include(album => album.Translations)
-            .ToListAsync(ct);
+            .Where(predicate: album => distinctAlbumIds.Contains(album.Id))
+            .Include(navigationPropertyPath: album => album.Images)
+            .Include(navigationPropertyPath: album => album.Translations)
+            .ToListAsync(cancellationToken: ct);
 
-        Dictionary<Guid, Album> albumById = albumsWithDetails.ToDictionary(album => album.Id);
+        Dictionary<Guid, Album> albumById = albumsWithDetails.ToDictionary(keySelector: album => album.Id);
 
         foreach (Track track in tracksWithAlbumLinks)
         foreach (AlbumTrack albumTrack in track.AlbumTrack)
-            if (albumById.TryGetValue(albumTrack.AlbumId, out Album? album))
+            if (albumById.TryGetValue(key: albumTrack.AlbumId, value: out Album? album))
                 albumTrack.Album = album;
 
         Dictionary<Guid, ICollection<AlbumTrack>> albumsByTrackId =
-            tracksWithAlbumLinks.ToDictionary(track => track.Id, track => track.AlbumTrack);
+            tracksWithAlbumLinks.ToDictionary(keySelector: track => track.Id, elementSelector: track => track.AlbumTrack);
 
         foreach (AlbumTrack albumTrack in albumTracks)
             if (
-                albumsByTrackId.TryGetValue(albumTrack.TrackId, out ICollection<AlbumTrack>? albums)
+                albumsByTrackId.TryGetValue(key: albumTrack.TrackId, value: out ICollection<AlbumTrack>? albums)
             )
                 albumTrack.Track.AlbumTrack = albums;
 
@@ -211,59 +211,59 @@ public partial class MusicRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
 
         List<ArtistTrack> artistTracks = await mediaContext
             .ArtistTrack.AsNoTracking()
-            .Where(at => at.ArtistId == artistId)
-            .Include(at => at.Artist)
-                .ThenInclude(artist => artist.Images)
-            .Include(at => at.Track)
-                .ThenInclude(track => track.AlbumTrack)
-            .Include(at => at.Track)
-                .ThenInclude(track => track.TrackUser)
-            .ToListAsync(ct);
+            .Where(predicate: at => at.ArtistId == artistId)
+            .Include(navigationPropertyPath: at => at.Artist)
+                .ThenInclude(navigationPropertyPath: artist => artist.Images)
+            .Include(navigationPropertyPath: at => at.Track)
+                .ThenInclude(navigationPropertyPath: track => track.AlbumTrack)
+            .Include(navigationPropertyPath: at => at.Track)
+                .ThenInclude(navigationPropertyPath: track => track.TrackUser)
+            .ToListAsync(cancellationToken: ct);
 
         if (artistTracks.Count == 0)
             return artistTracks;
 
-        List<Guid> trackIds = artistTracks.Select(at => at.TrackId).Distinct().ToList();
+        List<Guid> trackIds = artistTracks.Select(selector: at => at.TrackId).Distinct().ToList();
         List<Track> tracksWithCredits = await mediaContext
             .Tracks.AsNoTracking()
-            .Where(track => trackIds.Contains(track.Id))
-            .Include(track => track.ArtistTrack)
-                .ThenInclude(artistTrack => artistTrack.Artist)
-            .ToListAsync(ct);
+            .Where(predicate: track => trackIds.Contains(track.Id))
+            .Include(navigationPropertyPath: track => track.ArtistTrack)
+                .ThenInclude(navigationPropertyPath: artistTrack => artistTrack.Artist)
+            .ToListAsync(cancellationToken: ct);
 
         Dictionary<Guid, ICollection<ArtistTrack>> creditsByTrackId =
-            tracksWithCredits.ToDictionary(track => track.Id, track => track.ArtistTrack);
+            tracksWithCredits.ToDictionary(keySelector: track => track.Id, elementSelector: track => track.ArtistTrack);
 
         foreach (ArtistTrack artistTrack in artistTracks)
             if (
                 creditsByTrackId.TryGetValue(
-                    artistTrack.TrackId,
-                    out ICollection<ArtistTrack>? credits
+                    key: artistTrack.TrackId,
+                    value: out ICollection<ArtistTrack>? credits
                 )
             )
                 artistTrack.Track.ArtistTrack = credits;
 
         List<Guid> distinctAlbumIds = artistTracks
-            .SelectMany(at => at.Track.AlbumTrack)
-            .Select(albumTrack => albumTrack.AlbumId)
+            .SelectMany(selector: at => at.Track.AlbumTrack)
+            .Select(selector: albumTrack => albumTrack.AlbumId)
             .Distinct()
             .ToList();
 
         List<Album> albumsWithTranslations = await mediaContext
             .Albums.AsNoTracking()
-            .Where(album => distinctAlbumIds.Contains(album.Id))
-            .Include(album => album.Translations)
-            .ToListAsync(ct);
+            .Where(predicate: album => distinctAlbumIds.Contains(album.Id))
+            .Include(navigationPropertyPath: album => album.Translations)
+            .ToListAsync(cancellationToken: ct);
 
-        Dictionary<Guid, Album> albumById = albumsWithTranslations.ToDictionary(album => album.Id);
+        Dictionary<Guid, Album> albumById = albumsWithTranslations.ToDictionary(keySelector: album => album.Id);
 
         foreach (ArtistTrack artistTrack in artistTracks)
         foreach (AlbumTrack albumTrack in artistTrack.Track.AlbumTrack)
-            if (albumById.TryGetValue(albumTrack.AlbumId, out Album? album))
+            if (albumById.TryGetValue(key: albumTrack.AlbumId, value: out Album? album))
                 albumTrack.Album = album;
 
         return artistTracks;
@@ -295,11 +295,11 @@ public partial class MusicRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
 
         List<MusicGenreTrack> genreTracks = await mediaContext
             .MusicGenreTrack.AsNoTracking()
-            .Where(mgt =>
+            .Where(predicate: mgt =>
                 mgt.Genre.AlbumMusicGenres.Any(g =>
                     g.Album.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
@@ -307,39 +307,39 @@ public partial class MusicRepository
                     g.Artist.Library.LibraryUsers.Any(u => u.UserId == userId)
                 )
             )
-            .Where(mgt => mgt.GenreId == genreId)
-            .Include(mgt => mgt.Track)
-                .ThenInclude(track => track.AlbumTrack)
-            .Include(mgt => mgt.Track)
-                .ThenInclude(track => track.ArtistTrack)
-                    .ThenInclude(artistTrack => artistTrack.Artist)
-            .Include(mgt => mgt.Track)
-                .ThenInclude(track => track.TrackUser)
-            .ToListAsync(ct);
+            .Where(predicate: mgt => mgt.GenreId == genreId)
+            .Include(navigationPropertyPath: mgt => mgt.Track)
+                .ThenInclude(navigationPropertyPath: track => track.AlbumTrack)
+            .Include(navigationPropertyPath: mgt => mgt.Track)
+                .ThenInclude(navigationPropertyPath: track => track.ArtistTrack)
+                    .ThenInclude(navigationPropertyPath: artistTrack => artistTrack.Artist)
+            .Include(navigationPropertyPath: mgt => mgt.Track)
+                .ThenInclude(navigationPropertyPath: track => track.TrackUser)
+            .ToListAsync(cancellationToken: ct);
 
         if (genreTracks.Count == 0)
             return genreTracks;
 
         List<Guid> distinctAlbumIds = genreTracks
-            .SelectMany(mgt => mgt.Track.AlbumTrack)
-            .Select(albumTrack => albumTrack.AlbumId)
+            .SelectMany(selector: mgt => mgt.Track.AlbumTrack)
+            .Select(selector: albumTrack => albumTrack.AlbumId)
             .Distinct()
             .ToList();
 
         List<Album> albumsWithDetails = await mediaContext
             .Albums.AsNoTracking()
-            .Where(album => distinctAlbumIds.Contains(album.Id))
-            .Include(album => album.AlbumArtist)
-                .ThenInclude(albumArtist => albumArtist.Artist)
-                    .ThenInclude(artist => artist.Images)
-            .Include(album => album.Translations)
-            .ToListAsync(ct);
+            .Where(predicate: album => distinctAlbumIds.Contains(album.Id))
+            .Include(navigationPropertyPath: album => album.AlbumArtist)
+                .ThenInclude(navigationPropertyPath: albumArtist => albumArtist.Artist)
+                    .ThenInclude(navigationPropertyPath: artist => artist.Images)
+            .Include(navigationPropertyPath: album => album.Translations)
+            .ToListAsync(cancellationToken: ct);
 
-        Dictionary<Guid, Album> albumById = albumsWithDetails.ToDictionary(album => album.Id);
+        Dictionary<Guid, Album> albumById = albumsWithDetails.ToDictionary(keySelector: album => album.Id);
 
         foreach (MusicGenreTrack genreTrack in genreTracks)
         foreach (AlbumTrack albumTrack in genreTrack.Track.AlbumTrack)
-            if (albumById.TryGetValue(albumTrack.AlbumId, out Album? album))
+            if (albumById.TryGetValue(key: albumTrack.AlbumId, value: out Album? album))
                 albumTrack.Album = album;
 
         return genreTracks;
@@ -355,13 +355,13 @@ public partial class MusicRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
         return await mediaContext
             .Playlists.AsNoTracking()
-            .Where(playlist => playlist.UserId == userId)
-            .OrderBy(playlist => playlist.Name)
-            .ThenBy(playlist => playlist.Id)
-            .Select(playlist => new PlaylistCardDto
+            .Where(predicate: playlist => playlist.UserId == userId)
+            .OrderBy(keySelector: playlist => playlist.Name)
+            .ThenBy(keySelector: playlist => playlist.Id)
+            .Select(selector: playlist => new PlaylistCardDto
             {
                 Id = playlist.Id,
                 Name = playlist.Name,
@@ -370,8 +370,8 @@ public partial class MusicRepository
                 ColorPalette = playlist._colorPalette ?? string.Empty,
                 TrackCount = playlist.Tracks.Count(),
             })
-            .Take(take)
-            .ToListAsync(ct);
+            .Take(count: take)
+            .ToListAsync(cancellationToken: ct);
     }
 
     public async Task<List<PlaylistCardDto>> GetPlaylistCardsByIdsAsync(
@@ -379,11 +379,11 @@ public partial class MusicRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
         return await mediaContext
             .Playlists.AsNoTracking()
-            .Where(playlist => playlistIds.Contains(playlist.Id))
-            .Select(playlist => new PlaylistCardDto
+            .Where(predicate: playlist => playlistIds.Contains(playlist.Id))
+            .Select(selector: playlist => new PlaylistCardDto
             {
                 Id = playlist.Id,
                 Name = playlist.Name,
@@ -392,7 +392,7 @@ public partial class MusicRepository
                 ColorPalette = playlist._colorPalette ?? string.Empty,
                 TrackCount = playlist.Tracks.Count(),
             })
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken: ct);
     }
 
     #endregion

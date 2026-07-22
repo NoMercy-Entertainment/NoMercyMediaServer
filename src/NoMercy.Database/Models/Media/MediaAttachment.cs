@@ -15,10 +15,10 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Media;
 
-[PrimaryKey(nameof(Id))]
+[PrimaryKey(propertyName: nameof(Id))]
 public class MediaAttachment
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    [JsonProperty("id")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.Identity)]
+    [JsonProperty(propertyName: "id")]
     public required Ulid Id { get; set; } = Ulid.NewUlid();
 }

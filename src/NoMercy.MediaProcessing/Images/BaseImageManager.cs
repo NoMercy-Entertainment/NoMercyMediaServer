@@ -53,15 +53,15 @@ public class BaseImageManager : IBaseImageManager, IDisposable
         Dictionary<string, PaletteColors?> palette = new();
 
         foreach (ColorPaletteArgument item in items)
-            palette.Add(item.Key, ColorPaletteFromImage(item.ImageData));
+            palette.Add(key: item.Key, value: ColorPaletteFromImage(image: item.ImageData));
 
-        IEnumerable<KeyValuePair<string, PaletteColors?>> palettes = palette.Where(x =>
+        IEnumerable<KeyValuePair<string, PaletteColors?>> palettes = palette.Where(predicate: x =>
             x.Value != null
         );
 
-        Dictionary<string, PaletteColors?> dict = palettes.ToDictionary(x => x.Key, x => x.Value);
+        Dictionary<string, PaletteColors?> dict = palettes.ToDictionary(keySelector: x => x.Key, elementSelector: x => x.Value);
 
-        return JsonConvert.SerializeObject(dict);
+        return JsonConvert.SerializeObject(value: dict);
     }
 
     public static PaletteColors ColorPaletteFromImage(Image<Rgba32>? image)
@@ -79,7 +79,7 @@ public class BaseImageManager : IBaseImageManager, IDisposable
 #pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
             };
 
-        return GetColorPaletteColors(image);
+        return GetColorPaletteColors(image: image);
     }
 
     public static async Task<string> ColorPalette(
@@ -90,12 +90,12 @@ public class BaseImageManager : IBaseImageManager, IDisposable
         Size? maxDecodeSize = null
     )
     {
-        Image<Rgba32>? imageData = await client.Invoke(path, download, maxDecodeSize);
+        Image<Rgba32>? imageData = await client.Invoke(path: path, download: download, maxDecodeSize: maxDecodeSize);
         if (imageData == null)
             return "";
 
         return GenerateColorPalette(
-            new List<ColorPaletteArgument>
+            items: new List<ColorPaletteArgument>
             {
                 new() { Key = type, ImageData = imageData },
             }
@@ -112,11 +112,11 @@ public class BaseImageManager : IBaseImageManager, IDisposable
         List<ColorPaletteArgument> list = new();
         foreach (MultiUriType item in items)
         {
-            Image<Rgba32>? imageData = await client.Invoke(item.Url, download, maxDecodeSize);
-            list.Add(new() { Key = item.Key, ImageData = imageData });
+            Image<Rgba32>? imageData = await client.Invoke(path: item.Url, download: download, maxDecodeSize: maxDecodeSize);
+            list.Add(item: new() { Key = item.Key, ImageData = imageData });
         }
 
-        return GenerateColorPalette(list);
+        return GenerateColorPalette(items: list);
     }
 
     public static async Task<string> ColorPalette(
@@ -128,11 +128,11 @@ public class BaseImageManager : IBaseImageManager, IDisposable
     )
     {
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
-        Image<Rgba32>? imageData = await client.Invoke(path, download, maxDecodeSize);
+        Image<Rgba32>? imageData = await client.Invoke(path: path, download: download, maxDecodeSize: maxDecodeSize);
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
 
         return GenerateColorPalette(
-            new List<ColorPaletteArgument>
+            items: new List<ColorPaletteArgument>
             {
                 new() { Key = type, ImageData = imageData },
             }
@@ -150,18 +150,18 @@ public class BaseImageManager : IBaseImageManager, IDisposable
         foreach (MultiStringType item in items)
         {
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
-            Image<Rgba32>? imageData = await client.Invoke(item.Path, download, maxDecodeSize);
+            Image<Rgba32>? imageData = await client.Invoke(path: item.Path, download: download, maxDecodeSize: maxDecodeSize);
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
-            list.Add(new() { Key = item.Key, ImageData = imageData });
+            list.Add(item: new() { Key = item.Key, ImageData = imageData });
         }
 
-        return GenerateColorPalette(list);
+        return GenerateColorPalette(items: list);
     }
 
     public void Dispose() { }
 
     public static PaletteColors GetColorPaletteColors(Image<Rgba32> image)
     {
-        return ColorQuantizer.ExtractPalette(image);
+        return ColorQuantizer.ExtractPalette(image: image);
     }
 }

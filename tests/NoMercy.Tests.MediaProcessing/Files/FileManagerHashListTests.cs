@@ -31,7 +31,7 @@ namespace NoMercy.Tests.MediaProcessing.Files;
 //
 // Both modes must produce exactly "/" + variantDir + "/" + playlistFile.
 // ---------------------------------------------------------------------------
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class FileManagerHashListTests : IDisposable
 {
     // -----------------------------------------------------------------------
@@ -45,10 +45,10 @@ public sealed class FileManagerHashListTests : IDisposable
         Mock<IStorageDriver> driverMock = new();
         Mock<IMediaAnalyzer> mediaAnalyzerMock = new();
         return new(
-            repoMock.Object,
-            factoryMock.Object,
-            driverMock.Object,
-            mediaAnalyzerMock.Object
+            fileRepository: repoMock.Object,
+            storageFactory: factoryMock.Object,
+            storageDriver: driverMock.Object,
+            mediaAnalyzer: mediaAnalyzerMock.Object
         );
     }
 
@@ -60,11 +60,11 @@ public sealed class FileManagerHashListTests : IDisposable
     {
         MethodInfo method =
             typeof(FileManager).GetMethod(
-                "GetVideoHashList",
-                BindingFlags.NonPublic | BindingFlags.Instance
-            ) ?? throw new InvalidOperationException("GetVideoHashList not found");
+                name: "GetVideoHashList",
+                bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
+            ) ?? throw new InvalidOperationException(message: "GetVideoHashList not found");
 
-        return (List<IVideo>)method.Invoke(manager, [storage, hostFolder])!;
+        return (List<IVideo>)method.Invoke(obj: manager, parameters: [storage, hostFolder])!;
     }
 
     private static List<IAudio> InvokeGetAudioHashList(
@@ -75,11 +75,11 @@ public sealed class FileManagerHashListTests : IDisposable
     {
         MethodInfo method =
             typeof(FileManager).GetMethod(
-                "GetAudioHashList",
-                BindingFlags.NonPublic | BindingFlags.Instance
-            ) ?? throw new InvalidOperationException("GetAudioHashList not found");
+                name: "GetAudioHashList",
+                bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
+            ) ?? throw new InvalidOperationException(message: "GetAudioHashList not found");
 
-        return (List<IAudio>)method.Invoke(manager, [storage, hostFolder])!;
+        return (List<IAudio>)method.Invoke(obj: manager, parameters: [storage, hostFolder])!;
     }
 
     // -----------------------------------------------------------------------
@@ -90,14 +90,14 @@ public sealed class FileManagerHashListTests : IDisposable
 
     public FileManagerHashListTests()
     {
-        _tempRoot = Path.Combine(Path.GetTempPath(), $"nm-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempRoot);
+        _tempRoot = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: _tempRoot);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempRoot))
-            Directory.Delete(_tempRoot, recursive: true);
+        if (Directory.Exists(path: _tempRoot))
+            Directory.Delete(path: _tempRoot, recursive: true);
     }
 
     /// <summary>
@@ -107,14 +107,14 @@ public sealed class FileManagerHashListTests : IDisposable
     /// </summary>
     private static void CreateScannerLayout(string hostDir)
     {
-        string videoDir = Path.Combine(hostDir, "video_1920x1080_SDR");
-        Directory.CreateDirectory(videoDir);
-        File.WriteAllText(Path.Combine(videoDir, "video_1920x1080_SDR.m3u8"), "#EXTM3U");
-        File.WriteAllText(Path.Combine(videoDir, "segment0.ts"), "data");
+        string videoDir = Path.Combine(path1: hostDir, path2: "video_1920x1080_SDR");
+        Directory.CreateDirectory(path: videoDir);
+        File.WriteAllText(path: Path.Combine(path1: videoDir, path2: "video_1920x1080_SDR.m3u8"), contents: "#EXTM3U");
+        File.WriteAllText(path: Path.Combine(path1: videoDir, path2: "segment0.ts"), contents: "data");
 
-        string audioDir = Path.Combine(hostDir, "audio_eng_aac");
-        Directory.CreateDirectory(audioDir);
-        File.WriteAllText(Path.Combine(audioDir, "audio_eng_aac.m3u8"), "#EXTM3U");
+        string audioDir = Path.Combine(path1: hostDir, path2: "audio_eng_aac");
+        Directory.CreateDirectory(path: audioDir);
+        File.WriteAllText(path: Path.Combine(path1: audioDir, path2: "audio_eng_aac.m3u8"), contents: "#EXTM3U");
     }
 
     // -----------------------------------------------------------------------
@@ -124,39 +124,39 @@ public sealed class FileManagerHashListTests : IDisposable
     [Fact]
     public void GetVideoHashList_EnforcedFalse_ReturnsCorrectHostRelativeFileName()
     {
-        string hostDir = Path.Combine(_tempRoot, "Movie.(2020).NoMercy");
-        CreateScannerLayout(hostDir);
+        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.(2020).NoMercy");
+        CreateScannerLayout(hostDir: hostDir);
 
         LocalStorageDriver driver = new();
-        StoragePathGuard guard = new([], driver);
-        LocalStorage storage = new(driver, guard);
+        StoragePathGuard guard = new(allowedRoots: [], driver: driver);
+        LocalStorage storage = new(driver: driver, guard: guard);
 
         FileManager manager = BuildFileManager();
 
-        List<IVideo> results = InvokeGetVideoHashList(manager, storage, hostDir);
+        List<IVideo> results = InvokeGetVideoHashList(manager: manager, storage: storage, hostFolder: hostDir);
 
-        results.Should().HaveCount(1);
-        results[0].FileName.Should().Be("/video_1920x1080_SDR/video_1920x1080_SDR.m3u8");
-        results[0].FileName.Should().NotContain("..");
+        results.Should().HaveCount(expected: 1);
+        results[index: 0].FileName.Should().Be(expected: "/video_1920x1080_SDR/video_1920x1080_SDR.m3u8");
+        results[index: 0].FileName.Should().NotContain(unexpected: "..");
     }
 
     [Fact]
     public void GetAudioHashList_EnforcedFalse_ReturnsCorrectHostRelativeFileName()
     {
-        string hostDir = Path.Combine(_tempRoot, "Movie.(2020).NoMercy");
-        CreateScannerLayout(hostDir);
+        string hostDir = Path.Combine(path1: _tempRoot, path2: "Movie.(2020).NoMercy");
+        CreateScannerLayout(hostDir: hostDir);
 
         LocalStorageDriver driver = new();
-        StoragePathGuard guard = new([], driver);
-        LocalStorage storage = new(driver, guard);
+        StoragePathGuard guard = new(allowedRoots: [], driver: driver);
+        LocalStorage storage = new(driver: driver, guard: guard);
 
         FileManager manager = BuildFileManager();
 
-        List<IAudio> results = InvokeGetAudioHashList(manager, storage, hostDir);
+        List<IAudio> results = InvokeGetAudioHashList(manager: manager, storage: storage, hostFolder: hostDir);
 
-        results.Should().HaveCount(1);
-        results[0].FileName.Should().Be("/audio_eng_aac/audio_eng_aac.m3u8");
-        results[0].FileName.Should().NotContain("..");
+        results.Should().HaveCount(expected: 1);
+        results[index: 0].FileName.Should().Be(expected: "/audio_eng_aac/audio_eng_aac.m3u8");
+        results[index: 0].FileName.Should().NotContain(unexpected: "..");
     }
 
     // -----------------------------------------------------------------------
@@ -167,42 +167,42 @@ public sealed class FileManagerHashListTests : IDisposable
     public void GetVideoHashList_EnforcedTrue_ReturnsCorrectHostRelativeFileName()
     {
         string root = _tempRoot;
-        string hostDir = Path.Combine(root, "Movie.(2020).NoMercy");
-        CreateScannerLayout(hostDir);
+        string hostDir = Path.Combine(path1: root, path2: "Movie.(2020).NoMercy");
+        CreateScannerLayout(hostDir: hostDir);
 
         LocalStorageDriver driver = new();
-        StoragePathGuard guard = new([root], driver);
-        LocalStorage storage = new(driver, guard);
+        StoragePathGuard guard = new(allowedRoots: [root], driver: driver);
+        LocalStorage storage = new(driver: driver, guard: guard);
 
         // hostFolder is still the absolute OS path — this is how callers supply it.
         // storage.List() will return scope-relative paths under Enforced=true.
         FileManager manager = BuildFileManager();
 
-        List<IVideo> results = InvokeGetVideoHashList(manager, storage, hostDir);
+        List<IVideo> results = InvokeGetVideoHashList(manager: manager, storage: storage, hostFolder: hostDir);
 
-        results.Should().HaveCount(1);
-        results[0].FileName.Should().Be("/video_1920x1080_SDR/video_1920x1080_SDR.m3u8");
-        results[0].FileName.Should().NotContain("..");
+        results.Should().HaveCount(expected: 1);
+        results[index: 0].FileName.Should().Be(expected: "/video_1920x1080_SDR/video_1920x1080_SDR.m3u8");
+        results[index: 0].FileName.Should().NotContain(unexpected: "..");
     }
 
     [Fact]
     public void GetAudioHashList_EnforcedTrue_ReturnsCorrectHostRelativeFileName()
     {
         string root = _tempRoot;
-        string hostDir = Path.Combine(root, "Movie.(2020).NoMercy");
-        CreateScannerLayout(hostDir);
+        string hostDir = Path.Combine(path1: root, path2: "Movie.(2020).NoMercy");
+        CreateScannerLayout(hostDir: hostDir);
 
         LocalStorageDriver driver = new();
-        StoragePathGuard guard = new([root], driver);
-        LocalStorage storage = new(driver, guard);
+        StoragePathGuard guard = new(allowedRoots: [root], driver: driver);
+        LocalStorage storage = new(driver: driver, guard: guard);
 
         FileManager manager = BuildFileManager();
 
-        List<IAudio> results = InvokeGetAudioHashList(manager, storage, hostDir);
+        List<IAudio> results = InvokeGetAudioHashList(manager: manager, storage: storage, hostFolder: hostDir);
 
-        results.Should().HaveCount(1);
-        results[0].FileName.Should().Be("/audio_eng_aac/audio_eng_aac.m3u8");
-        results[0].FileName.Should().NotContain("..");
+        results.Should().HaveCount(expected: 1);
+        results[index: 0].FileName.Should().Be(expected: "/audio_eng_aac/audio_eng_aac.m3u8");
+        results[index: 0].FileName.Should().NotContain(unexpected: "..");
     }
 
     // -----------------------------------------------------------------------
@@ -213,43 +213,43 @@ public sealed class FileManagerHashListTests : IDisposable
     public void GetVideoHashList_BothModes_ProduceSameFileName()
     {
         string root = _tempRoot;
-        string hostDir = Path.Combine(root, "Movie.(2020).NoMercy");
-        CreateScannerLayout(hostDir);
+        string hostDir = Path.Combine(path1: root, path2: "Movie.(2020).NoMercy");
+        CreateScannerLayout(hostDir: hostDir);
 
         LocalStorageDriver driver = new();
 
-        LocalStorage openStorage = new(driver, new([], driver));
-        LocalStorage enforcedStorage = new(driver, new([root], driver));
+        LocalStorage openStorage = new(driver: driver, guard: new(allowedRoots: [], driver: driver));
+        LocalStorage enforcedStorage = new(driver: driver, guard: new(allowedRoots: [root], driver: driver));
 
         FileManager manager = BuildFileManager();
 
-        List<IVideo> openResults = InvokeGetVideoHashList(manager, openStorage, hostDir);
-        List<IVideo> enforcedResults = InvokeGetVideoHashList(manager, enforcedStorage, hostDir);
+        List<IVideo> openResults = InvokeGetVideoHashList(manager: manager, storage: openStorage, hostFolder: hostDir);
+        List<IVideo> enforcedResults = InvokeGetVideoHashList(manager: manager, storage: enforcedStorage, hostFolder: hostDir);
 
-        openResults.Should().HaveCount(1);
-        enforcedResults.Should().HaveCount(1);
-        openResults[0].FileName.Should().Be(enforcedResults[0].FileName);
+        openResults.Should().HaveCount(expected: 1);
+        enforcedResults.Should().HaveCount(expected: 1);
+        openResults[index: 0].FileName.Should().Be(expected: enforcedResults[index: 0].FileName);
     }
 
     [Fact]
     public void GetAudioHashList_BothModes_ProduceSameFileName()
     {
         string root = _tempRoot;
-        string hostDir = Path.Combine(root, "Movie.(2020).NoMercy");
-        CreateScannerLayout(hostDir);
+        string hostDir = Path.Combine(path1: root, path2: "Movie.(2020).NoMercy");
+        CreateScannerLayout(hostDir: hostDir);
 
         LocalStorageDriver driver = new();
 
-        LocalStorage openStorage = new(driver, new([], driver));
-        LocalStorage enforcedStorage = new(driver, new([root], driver));
+        LocalStorage openStorage = new(driver: driver, guard: new(allowedRoots: [], driver: driver));
+        LocalStorage enforcedStorage = new(driver: driver, guard: new(allowedRoots: [root], driver: driver));
 
         FileManager manager = BuildFileManager();
 
-        List<IAudio> openResults = InvokeGetAudioHashList(manager, openStorage, hostDir);
-        List<IAudio> enforcedResults = InvokeGetAudioHashList(manager, enforcedStorage, hostDir);
+        List<IAudio> openResults = InvokeGetAudioHashList(manager: manager, storage: openStorage, hostFolder: hostDir);
+        List<IAudio> enforcedResults = InvokeGetAudioHashList(manager: manager, storage: enforcedStorage, hostFolder: hostDir);
 
-        openResults.Should().HaveCount(1);
-        enforcedResults.Should().HaveCount(1);
-        openResults[0].FileName.Should().Be(enforcedResults[0].FileName);
+        openResults.Should().HaveCount(expected: 1);
+        enforcedResults.Should().HaveCount(expected: 1);
+        openResults[index: 0].FileName.Should().Be(expected: enforcedResults[index: 0].FileName);
     }
 }

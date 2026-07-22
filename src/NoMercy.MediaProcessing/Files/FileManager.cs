@@ -35,7 +35,7 @@ public partial class FileManager(
 ) : IFileManager
 {
     private IStorage StorageFor(Folder folder) =>
-        storageFactory.For(folder.Id, folder.DriverId, string.Empty);
+        storageFactory.For(folderId: folder.Id, driverId: folder.DriverId, subPath: string.Empty);
 
     private int Id { get; set; }
     private Movie? Movie { get; set; }
@@ -51,9 +51,9 @@ public partial class FileManager(
     {
         Id = id;
 
-        await MediaType(id, library);
+        await MediaType(id: id, library: library);
 
-        Folders = Paths(library, Movie, Show);
+        Folders = Paths(library: library, movie: Movie, show: Show);
 
         foreach (Folder folder in Folders)
         {
@@ -61,24 +61,24 @@ public partial class FileManager(
             // (local / NFS / S3) for it. Hardcoding _storageDriver was
             // scanning every library against the local disk regardless of
             // its actual backend — NFS NAS and S3 buckets returned 0 files.
-            ConcurrentBag<MediaFolderExtend> files = await GetFiles(library, folder);
+            ConcurrentBag<MediaFolderExtend> files = await GetFiles(library: library, folder: folder);
 
             if (!files.IsEmpty)
-                Files.AddRange(files);
+                Files.AddRange(collection: files);
         }
 
         // How many playable files the scan actually resolved. Logged next to the
         // per-type candidate count so an empty result is distinguishable from a
         // scan that found files but failed to parse them.
-        int rawFileCount = Files.Sum(folder => folder.Files?.Count ?? 0);
+        int rawFileCount = Files.Sum(selector: folder => folder.Files?.Count ?? 0);
         bool hasCandidates = Files
-            .SelectMany(folder => folder.Files ?? [])
-            .Any(file => file.Parsed is not null);
+            .SelectMany(selector: folder => folder.Files ?? [])
+            .Any(predicate: file => file.Parsed is not null);
 
         Logger.App(
-            $"[FindFiles] {Type} id={id}: scan resolved {rawFileCount} file(s), "
-                + $"{(hasCandidates ? "has" : "no")} parseable candidates across {Folders.Count} folder(s)",
-            LogEventLevel.Information
+            message: $"[FindFiles] {Type} id={id}: scan resolved {rawFileCount} file(s), "
+                     + $"{(hasCandidates ? "has" : "no")} parseable candidates across {Folders.Count} folder(s)",
+            level: LogEventLevel.Information
         );
 
         // Delete old records first as a single committed step, then insert each
@@ -98,20 +98,20 @@ public partial class FileManager(
             switch (library.Type)
             {
                 case MediaTypes.MovieMediaType:
-                    await fileRepository.DeleteVideoFilesAndMetadataByMovieIdAsync(id);
+                    await fileRepository.DeleteVideoFilesAndMetadataByMovieIdAsync(movieId: id);
                     break;
                 case MediaTypes.TvMediaType:
                 case MediaTypes.AnimeMediaType:
-                    await fileRepository.DeleteVideoFilesAndMetadataByTvIdAsync(Show?.Id ?? id);
+                    await fileRepository.DeleteVideoFilesAndMetadataByTvIdAsync(tvId: Show?.Id ?? id);
                     break;
             }
         }
         else if (Filter is null && !hasCandidates)
         {
             Logger.App(
-                $"[FindFiles] {Type} id={id}: scan found no parseable files — preserving existing "
-                    + "records instead of deleting (rescan is non-destructive on an empty result)",
-                LogEventLevel.Warning
+                message: $"[FindFiles] {Type} id={id}: scan found no parseable files — preserving existing "
+                         + "records instead of deleting (rescan is non-destructive on an empty result)",
+                level: LogEventLevel.Warning
             );
         }
 
@@ -128,7 +128,7 @@ public partial class FileManager(
                 await StoreMusic();
                 break;
             default:
-                Logger.App("Unknown library type");
+                Logger.App(message: "Unknown library type");
                 break;
         }
 
@@ -139,7 +139,7 @@ public partial class FileManager(
                 if (EventBusProvider.IsConfigured)
                 {
                     await EventBusProvider.Current.PublishAsync(
-                        new LibraryRefreshedEvent
+                        @event: new LibraryRefreshedEvent
                         {
                             QueryKey = ["libraries", library.Id.ToString()],
                         }
@@ -149,7 +149,7 @@ public partial class FileManager(
                     // import) runs through, so publishing here covers them all
                     // instead of duplicating the publish at each call site.
                     await EventBusProvider.Current.PublishAsync(
-                        new LibraryRefreshedEvent { QueryKey = ["movie", id.ToString()] }
+                        @event: new LibraryRefreshedEvent { QueryKey = ["movie", id.ToString()] }
                     );
                 }
                 break;
@@ -158,7 +158,7 @@ public partial class FileManager(
                 if (EventBusProvider.IsConfigured)
                 {
                     await EventBusProvider.Current.PublishAsync(
-                        new LibraryRefreshedEvent
+                        @event: new LibraryRefreshedEvent
                         {
                             QueryKey = ["libraries", library.Id.ToString()],
                         }
@@ -167,14 +167,14 @@ public partial class FileManager(
                     // render at /tv/:id, so an anime-type library's info-page
                     // key is "tv", never "anime".
                     await EventBusProvider.Current.PublishAsync(
-                        new LibraryRefreshedEvent { QueryKey = ["tv", (Show?.Id ?? id).ToString()] }
+                        @event: new LibraryRefreshedEvent { QueryKey = ["tv", (Show?.Id ?? id).ToString()] }
                     );
                 }
                 break;
             case MediaTypes.MusicMediaType:
                 if (EventBusProvider.IsConfigured)
                     await EventBusProvider.Current.PublishAsync(
-                        new LibraryRefreshedEvent { QueryKey = ["music"] }
+                        @event: new LibraryRefreshedEvent { QueryKey = ["music"] }
                     );
                 break;
         }
@@ -192,19 +192,19 @@ public partial class FileManager(
         await using MediaContext context = new();
 
         Tv? tv = await context
-            .Tvs.Include(tv => tv.Library)
-                .ThenInclude(lib => lib.FolderLibraries)
-                    .ThenInclude(folderLibrary => folderLibrary.Folder)
-            .Include(tv => tv.Episodes)
-                .ThenInclude(e => e.VideoFiles)
-            .FirstOrDefaultAsync(t => t.Id == id);
+            .Tvs.Include(navigationPropertyPath: tv => tv.Library)
+                .ThenInclude(navigationPropertyPath: lib => lib.FolderLibraries)
+                    .ThenInclude(navigationPropertyPath: folderLibrary => folderLibrary.Folder)
+            .Include(navigationPropertyPath: tv => tv.Episodes)
+                .ThenInclude(navigationPropertyPath: e => e.VideoFiles)
+            .FirstOrDefaultAsync(predicate: t => t.Id == id);
 
         Movie? movie = await context
-            .Movies.Include(movie => movie.Library)
-                .ThenInclude(lib => lib.FolderLibraries)
-                    .ThenInclude(folderLibrary => folderLibrary.Folder)
-            .Include(movie => movie.VideoFiles)
-            .FirstOrDefaultAsync(movie => movie.Id == id);
+            .Movies.Include(navigationPropertyPath: movie => movie.Library)
+                .ThenInclude(navigationPropertyPath: lib => lib.FolderLibraries)
+                    .ThenInclude(navigationPropertyPath: folderLibrary => folderLibrary.Folder)
+            .Include(navigationPropertyPath: movie => movie.VideoFiles)
+            .FirstOrDefaultAsync(predicate: movie => movie.Id == id);
 
         string folderName = "";
         string sourceFolder = "";
@@ -213,21 +213,21 @@ public partial class FileManager(
         if (tv?.Folder is not null)
             foreach (FolderLibrary libraryFolder in tv.Library.FolderLibraries)
             {
-                IStorage folderStorage = StorageFor(libraryFolder.Folder);
-                string folderRoot = ResolveBackendPath(folderStorage, libraryFolder.Folder.Path);
-                string path = folderStorage.CombinePath(folderRoot, tv.Folder);
-                if (!folderStorage.Exists(path))
+                IStorage folderStorage = StorageFor(folder: libraryFolder.Folder);
+                string folderRoot = ResolveBackendPath(storage: folderStorage, scopeRelativePath: libraryFolder.Folder.Path);
+                string path = folderStorage.CombinePath(parent: folderRoot, child: tv.Folder);
+                if (!folderStorage.Exists(path: path))
                 {
                     string? match = FileNameSanitizer.FindMatchingDirectory(
-                        storageDriver,
-                        folderRoot,
-                        tv.Folder.Replace("/", "")
+                        driver: storageDriver,
+                        rootPath: folderRoot,
+                        expectedFolderName: tv.Folder.Replace(oldValue: "/", newValue: "")
                     );
                     if (match != null)
                         path = match;
                 }
 
-                if (!folderStorage.Exists(path))
+                if (!folderStorage.Exists(path: path))
                     continue;
 
                 folderName = tv.Folder;
@@ -239,21 +239,21 @@ public partial class FileManager(
         else if (movie?.Folder is not null)
             foreach (FolderLibrary libraryFolder in movie.Library.FolderLibraries)
             {
-                IStorage folderStorage = StorageFor(libraryFolder.Folder);
-                string folderRoot = ResolveBackendPath(folderStorage, libraryFolder.Folder.Path);
-                string path = folderStorage.CombinePath(folderRoot, movie.Folder);
-                if (!folderStorage.Exists(path))
+                IStorage folderStorage = StorageFor(folder: libraryFolder.Folder);
+                string folderRoot = ResolveBackendPath(storage: folderStorage, scopeRelativePath: libraryFolder.Folder.Path);
+                string path = folderStorage.CombinePath(parent: folderRoot, child: movie.Folder);
+                if (!folderStorage.Exists(path: path))
                 {
                     string? match = FileNameSanitizer.FindMatchingDirectory(
-                        storageDriver,
-                        folderRoot,
-                        movie.Folder.Replace("/", "")
+                        driver: storageDriver,
+                        rootPath: folderRoot,
+                        expectedFolderName: movie.Folder.Replace(oldValue: "/", newValue: "")
                     );
                     if (match != null)
                         path = match;
                 }
 
-                if (!folderStorage.Exists(path))
+                if (!folderStorage.Exists(path: path))
                     continue;
 
                 folderName = movie.Folder;
@@ -264,27 +264,27 @@ public partial class FileManager(
             }
 
         if (
-            string.IsNullOrEmpty(folderName)
-            || string.IsNullOrEmpty(sourceFolder)
+            string.IsNullOrEmpty(value: folderName)
+            || string.IsNullOrEmpty(value: sourceFolder)
             || sourceStorage is null
         )
         {
-            Logger.App("Folder not found");
+            Logger.App(message: "Folder not found");
             return;
         }
 
-        IStorage destinationStorage = StorageFor(folder);
-        string destinationRoot = ResolveBackendPath(destinationStorage, folder.Path);
-        string destinationFolder = destinationStorage.CombinePath(destinationRoot, folderName);
+        IStorage destinationStorage = StorageFor(folder: folder);
+        string destinationRoot = ResolveBackendPath(storage: destinationStorage, scopeRelativePath: folder.Path);
+        string destinationFolder = destinationStorage.CombinePath(parent: destinationRoot, child: folderName);
 
-        Logger.App($"Moving {sourceFolder} to {destinationFolder}");
+        Logger.App(message: $"Moving {sourceFolder} to {destinationFolder}");
 
-        await MoveFolderAsync(sourceFolder, destinationFolder, sourceStorage, destinationStorage);
+        await MoveFolderAsync(sourceFolder: sourceFolder, destinationFolder: destinationFolder, sourceStorage: sourceStorage, destinationStorage: destinationStorage);
 
         FolderLibrary? newFolderLibrary = await context
-            .FolderLibrary.Include(fl => fl.Library)
-            .Include(fl => fl.Folder)
-            .FirstOrDefaultAsync(fl => fl.FolderId == folder.Id);
+            .FolderLibrary.Include(navigationPropertyPath: fl => fl.Library)
+            .Include(navigationPropertyPath: fl => fl.Folder)
+            .FirstOrDefaultAsync(predicate: fl => fl.FolderId == folder.Id);
 
         if (newFolderLibrary is null)
             return;
@@ -299,14 +299,14 @@ public partial class FileManager(
             // tracked entity ("part of a key and so cannot be modified").
             // Repointing to the new library is a delete of the old link row
             // plus an insert of the new one, never an in-place update.
-            LibraryTv? libraryTv = await context.LibraryTv.FirstOrDefaultAsync(lt =>
+            LibraryTv? libraryTv = await context.LibraryTv.FirstOrDefaultAsync(predicate: lt =>
                 lt.TvId == tv.Id
             );
 
             if (libraryTv is not null)
             {
-                context.LibraryTv.Remove(libraryTv);
-                context.LibraryTv.Add(new(newFolderLibrary.LibraryId, tv.Id));
+                context.LibraryTv.Remove(entity: libraryTv);
+                context.LibraryTv.Add(entity: new(libraryId: newFolderLibrary.LibraryId, tvId: tv.Id));
             }
 
             await context.SaveChangesAsync();
@@ -318,19 +318,19 @@ public partial class FileManager(
 
             // See the LibraryTv comment above — LibraryMovie.LibraryId is
             // equally part of its composite primary key.
-            LibraryMovie? libraryMovie = await context.LibraryMovie.FirstOrDefaultAsync(lm =>
+            LibraryMovie? libraryMovie = await context.LibraryMovie.FirstOrDefaultAsync(predicate: lm =>
                 lm.MovieId == movie.Id
             );
 
             if (libraryMovie is not null)
             {
-                context.LibraryMovie.Remove(libraryMovie);
-                context.LibraryMovie.Add(new(newFolderLibrary.LibraryId, movie.Id));
+                context.LibraryMovie.Remove(entity: libraryMovie);
+                context.LibraryMovie.Add(entity: new(libraryId: newFolderLibrary.LibraryId, movieId: movie.Id));
             }
 
             await context.SaveChangesAsync();
         }
 
-        _ = await FindFiles(id, newFolderLibrary.Library);
+        _ = await FindFiles(id: id, library: newFolderLibrary.Library);
     }
 }

@@ -27,14 +27,14 @@ public sealed class LauncherSettingsTests : IDisposable
 {
     public LauncherSettingsTests()
     {
-        if (File.Exists(AppFiles.TraySettingsFile))
-            File.Delete(AppFiles.TraySettingsFile);
+        if (File.Exists(path: AppFiles.TraySettingsFile))
+            File.Delete(path: AppFiles.TraySettingsFile);
     }
 
     public void Dispose()
     {
-        if (File.Exists(AppFiles.TraySettingsFile))
-            File.Delete(AppFiles.TraySettingsFile);
+        if (File.Exists(path: AppFiles.TraySettingsFile))
+            File.Delete(path: AppFiles.TraySettingsFile);
     }
 
     [Fact]
@@ -43,7 +43,7 @@ public sealed class LauncherSettingsTests : IDisposable
         TraySettings settings = LauncherSettings.Load();
 
         settings.ShowOnStartup.Should().BeFalse();
-        settings.StartupArguments.Should().Be(string.Empty);
+        settings.StartupArguments.Should().Be(expected: string.Empty);
         settings.AutoStart.Should().BeFalse();
     }
 
@@ -57,44 +57,44 @@ public sealed class LauncherSettingsTests : IDisposable
             AutoStart = true,
         };
 
-        LauncherSettings.Save(original);
+        LauncherSettings.Save(settings: original);
         TraySettings loaded = LauncherSettings.Load();
 
         loaded.ShowOnStartup.Should().BeTrue();
-        loaded.StartupArguments.Should().Be("--dev --port 7626");
+        loaded.StartupArguments.Should().Be(expected: "--dev --port 7626");
         loaded.AutoStart.Should().BeTrue();
     }
 
     [Fact]
     public void Save_CreatesConfigDirectoryWhenMissing()
     {
-        string? directory = Path.GetDirectoryName(AppFiles.TraySettingsFile);
+        string? directory = Path.GetDirectoryName(path: AppFiles.TraySettingsFile);
         directory.Should().NotBeNull();
 
-        if (Directory.Exists(directory) && directory != AppFiles.AppPath)
+        if (Directory.Exists(path: directory) && directory != AppFiles.AppPath)
         {
             // Only remove the leaf config directory itself, never AppPath.
-            foreach (string file in Directory.GetFiles(directory!))
-                File.Delete(file);
+            foreach (string file in Directory.GetFiles(path: directory!))
+                File.Delete(path: file);
         }
 
-        LauncherSettings.Save(new() { AutoStart = true });
+        LauncherSettings.Save(settings: new() { AutoStart = true });
 
-        File.Exists(AppFiles.TraySettingsFile).Should().BeTrue();
+        File.Exists(path: AppFiles.TraySettingsFile).Should().BeTrue();
     }
 
     [Fact]
     public void Load_CorruptJson_ReturnsDefaultsInsteadOfThrowing()
     {
-        string? directory = Path.GetDirectoryName(AppFiles.TraySettingsFile);
-        if (directory is not null && !Directory.Exists(directory))
-            Directory.CreateDirectory(directory);
+        string? directory = Path.GetDirectoryName(path: AppFiles.TraySettingsFile);
+        if (directory is not null && !Directory.Exists(path: directory))
+            Directory.CreateDirectory(path: directory);
 
-        File.WriteAllText(AppFiles.TraySettingsFile, "{ not valid json ");
+        File.WriteAllText(path: AppFiles.TraySettingsFile, contents: "{ not valid json ");
 
         TraySettings settings = LauncherSettings.Load();
 
         settings.ShowOnStartup.Should().BeFalse();
-        settings.StartupArguments.Should().Be(string.Empty);
+        settings.StartupArguments.Should().Be(expected: string.Empty);
     }
 }

@@ -14,106 +14,106 @@ using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Tests.NmSystem;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class CultureExtensionsAdvancedTests
 {
     [Fact]
     public void EnglishLanguageTag_WithEnglish_ReturnsEng()
     {
-        CultureInfo culture = new("en-US");
+        CultureInfo culture = new(name: "en-US");
         string result = culture.EnglishLanguageTag();
-        result.Should().Be("eng");
+        result.Should().Be(expected: "eng");
     }
 
     [Fact]
     public void EnglishLanguageTag_WithGerman_ReturnsMappedLegacyCode()
     {
-        CultureInfo culture = new("de-DE");
+        CultureInfo culture = new(name: "de-DE");
         string result = culture.EnglishLanguageTag();
-        result.Should().Be("ger");
+        result.Should().Be(expected: "ger");
     }
 
     [Fact]
     public void EnglishLanguageTag_WithFrench_ReturnsMappedLegacyCode()
     {
-        CultureInfo culture = new("fr-FR");
+        CultureInfo culture = new(name: "fr-FR");
         string result = culture.EnglishLanguageTag();
-        result.Should().Be("fre");
+        result.Should().Be(expected: "fre");
     }
 
     [Fact]
     public void EnglishLanguageTag_WithDutch_ReturnsMappedLegacyCode()
     {
-        CultureInfo culture = new("nl-NL");
+        CultureInfo culture = new(name: "nl-NL");
         string result = culture.EnglishLanguageTag();
-        result.Should().Be("dut");
+        result.Should().Be(expected: "dut");
     }
 
     [Fact]
     public void EnglishLanguageTag_WithSpanish_ReturnsCurrentCode()
     {
-        CultureInfo culture = new("es-ES");
+        CultureInfo culture = new(name: "es-ES");
         string result = culture.EnglishLanguageTag();
-        result.Should().Be("spa");
+        result.Should().Be(expected: "spa");
     }
 
     [Theory]
-    [InlineData("en", "English")]
-    [InlineData("eng", "English")]
-    [InlineData("de", "German")]
-    [InlineData("deu", "German")]
-    [InlineData("fr", "French")]
-    [InlineData("fra", "French")]
+    [InlineData(data: ["en", "English"])]
+    [InlineData(data: ["eng", "English"])]
+    [InlineData(data: ["de", "German"])]
+    [InlineData(data: ["deu", "German"])]
+    [InlineData(data: ["fr", "French"])]
+    [InlineData(data: ["fra", "French"])]
     public void EnglishLanguageName_ReturnsNameForCode(string code, string expected)
     {
-        string result = Culture.EnglishLanguageName(code);
-        result.Should().Be(expected);
+        string result = Culture.EnglishLanguageName(code: code);
+        result.Should().Be(expected: expected);
     }
 
     [Theory]
-    [InlineData("und", "Unknown")]
-    [InlineData("mul", "Multiple Languages")]
-    [InlineData("zxx", "No Language")]
+    [InlineData(data: ["und", "Unknown"])]
+    [InlineData(data: ["mul", "Multiple Languages"])]
+    [InlineData(data: ["zxx", "No Language"])]
     public void EnglishLanguageName_WithSpecialCodes_ReturnsLabel(string code, string expected)
     {
-        string result = Culture.EnglishLanguageName(code);
-        result.Should().Be(expected);
+        string result = Culture.EnglishLanguageName(code: code);
+        result.Should().Be(expected: expected);
     }
 
     [Fact]
     public void EnglishLanguageName_WithNull_ReturnsUnknown()
     {
-        string result = Culture.EnglishLanguageName(null!);
-        result.Should().Be("Unknown");
+        string result = Culture.EnglishLanguageName(code: null!);
+        result.Should().Be(expected: "Unknown");
     }
 
     [Fact]
     public void EnglishLanguageName_WithEmpty_ReturnsUnknown()
     {
-        string result = Culture.EnglishLanguageName("");
-        result.Should().Be("Unknown");
+        string result = Culture.EnglishLanguageName(code: "");
+        result.Should().Be(expected: "Unknown");
     }
 
     [Fact]
     public void EnglishLanguageName_WithWhitespace_ReturnsUnknown()
     {
-        string result = Culture.EnglishLanguageName("   ");
-        result.Should().Be("Unknown");
+        string result = Culture.EnglishLanguageName(code: "   ");
+        result.Should().Be(expected: "Unknown");
     }
 
     [Fact]
     public void EnglishLanguageName_WithUnknownCode_ReturnsUppercasedCode()
     {
-        string result = Culture.EnglishLanguageName("xyz");
-        result.Should().Be("XYZ");
+        string result = Culture.EnglishLanguageName(code: "xyz");
+        result.Should().Be(expected: "XYZ");
     }
 
     [Fact]
     public void EnglishLanguageName_CaseInsensitive()
     {
-        string resultLower = Culture.EnglishLanguageName("eng");
-        string resultUpper = Culture.EnglishLanguageName("ENG");
-        resultLower.Should().Be(resultUpper);
-        resultLower.Should().Be("English");
+        string resultLower = Culture.EnglishLanguageName(code: "eng");
+        string resultUpper = Culture.EnglishLanguageName(code: "ENG");
+        resultLower.Should().Be(expected: resultUpper);
+        resultLower.Should().Be(expected: "English");
     }
 }

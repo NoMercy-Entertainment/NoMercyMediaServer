@@ -27,8 +27,8 @@ namespace NoMercy.Tests.OpticalMedia.Rip;
 /// branch that needs a live <c>MediaContext</c>). EventBusProvider is
 /// configured with a mock bus for each test that needs event verification.
 /// </summary>
-[Collection("EventBusProvider")]
-[Trait("Category", "Unit")]
+[Collection(name: "EventBusProvider")]
+[Trait(name: "Category", value: "Unit")]
 public class DiscRipJobTests
 {
     private static RipRequest MakeRequest(string drivePath = "D:\\") =>
@@ -51,7 +51,7 @@ public class DiscRipJobTests
         );
 
     private static DiscIdentificationService MakeIdentificationService() =>
-        new([], NullLogger<DiscIdentificationService>.Instance);
+        new(identifiers: [], logger: NullLogger<DiscIdentificationService>.Instance);
 
     private static DiscRipJob MakeJob(
         RipRequest request,
@@ -87,36 +87,36 @@ public class DiscRipJobTests
     {
         Mock<IDiscRipper> ripperMock = new();
         ripperMock
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RipAsync(
                     It.IsAny<RipRequest>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ThrowsAsync(new DiscDriveBusyException("D:\\"));
+            .ThrowsAsync(exception: new DiscDriveBusyException(driveKey: "D:\\"));
 
         List<DriveStateChangedEvent> published = [];
         Mock<IEventBus> busMock = new();
         busMock
-            .Setup(b =>
+            .Setup(expression: b =>
                 b.PublishAsync(It.IsAny<DriveStateChangedEvent>(), It.IsAny<CancellationToken>())
             )
-            .Callback<DriveStateChangedEvent, CancellationToken>((evt, _) => published.Add(evt))
-            .Returns(Task.CompletedTask);
+            .Callback<DriveStateChangedEvent, CancellationToken>(action: (evt, _) => published.Add(item: evt))
+            .Returns(value: Task.CompletedTask);
 
-        EventBusProvider.Configure(busMock.Object);
+        EventBusProvider.Configure(eventBus: busMock.Object);
 
-        DiscRipJob job = MakeJob(MakeRequest(), ripperMock.Object);
+        DiscRipJob job = MakeJob(request: MakeRequest(), ripper: ripperMock.Object);
         await job.Handle();
 
-        DriveStateChangedEvent? errorEvent = published.FirstOrDefault(e =>
+        DriveStateChangedEvent? errorEvent = published.FirstOrDefault(predicate: e =>
             e.DriveStateData.Method == "rip_error"
         );
 
-        errorEvent.Should().NotBeNull("a rip_error event must be published when the drive is busy");
-        errorEvent!.DriveStateData.Drive.Should().Be("D:\\");
-        errorEvent.DriveStateData.Message.Should().Contain("already in use");
+        errorEvent.Should().NotBeNull(because: "a rip_error event must be published when the drive is busy");
+        errorEvent!.DriveStateData.Drive.Should().Be(expected: "D:\\");
+        errorEvent.DriveStateData.Message.Should().Contain(expected: "already in use");
     }
 
     [Fact]
@@ -124,30 +124,30 @@ public class DiscRipJobTests
     {
         Mock<IDiscRipper> ripperMock = new();
         ripperMock
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RipAsync(
                     It.IsAny<RipRequest>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ThrowsAsync(new DiscDriveBusyException("D:\\"));
+            .ThrowsAsync(exception: new DiscDriveBusyException(driveKey: "D:\\"));
 
         List<DriveStateChangedEvent> published = [];
         Mock<IEventBus> busMock = new();
         busMock
-            .Setup(b =>
+            .Setup(expression: b =>
                 b.PublishAsync(It.IsAny<DriveStateChangedEvent>(), It.IsAny<CancellationToken>())
             )
-            .Callback<DriveStateChangedEvent, CancellationToken>((evt, _) => published.Add(evt))
-            .Returns(Task.CompletedTask);
+            .Callback<DriveStateChangedEvent, CancellationToken>(action: (evt, _) => published.Add(item: evt))
+            .Returns(value: Task.CompletedTask);
 
-        EventBusProvider.Configure(busMock.Object);
+        EventBusProvider.Configure(eventBus: busMock.Object);
 
-        DiscRipJob job = MakeJob(MakeRequest(), ripperMock.Object);
+        DiscRipJob job = MakeJob(request: MakeRequest(), ripper: ripperMock.Object);
         await job.Handle();
 
-        published.Should().NotContain(e => e.DriveStateData.Method == "rip_complete");
+        published.Should().NotContain(predicate: e => e.DriveStateData.Method == "rip_complete");
     }
 
     // ── General rip failure ───────────────────────────────────────────────
@@ -157,35 +157,35 @@ public class DiscRipJobTests
     {
         Mock<IDiscRipper> ripperMock = new();
         ripperMock
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RipAsync(
                     It.IsAny<RipRequest>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ThrowsAsync(new InvalidOperationException("FFmpeg crashed"));
+            .ThrowsAsync(exception: new InvalidOperationException(message: "FFmpeg crashed"));
 
         List<DriveStateChangedEvent> published = [];
         Mock<IEventBus> busMock = new();
         busMock
-            .Setup(b =>
+            .Setup(expression: b =>
                 b.PublishAsync(It.IsAny<DriveStateChangedEvent>(), It.IsAny<CancellationToken>())
             )
-            .Callback<DriveStateChangedEvent, CancellationToken>((evt, _) => published.Add(evt))
-            .Returns(Task.CompletedTask);
+            .Callback<DriveStateChangedEvent, CancellationToken>(action: (evt, _) => published.Add(item: evt))
+            .Returns(value: Task.CompletedTask);
 
-        EventBusProvider.Configure(busMock.Object);
+        EventBusProvider.Configure(eventBus: busMock.Object);
 
-        DiscRipJob job = MakeJob(MakeRequest(), ripperMock.Object);
+        DiscRipJob job = MakeJob(request: MakeRequest(), ripper: ripperMock.Object);
         await job.Handle();
 
-        DriveStateChangedEvent? errorEvent = published.FirstOrDefault(e =>
+        DriveStateChangedEvent? errorEvent = published.FirstOrDefault(predicate: e =>
             e.DriveStateData.Method == "rip_error"
         );
 
         errorEvent.Should().NotBeNull();
-        errorEvent!.DriveStateData.Message.Should().Contain("FFmpeg crashed");
+        errorEvent!.DriveStateData.Message.Should().Contain(expected: "FFmpeg crashed");
     }
 
     // ── Happy path (RipToRaw — no move, no DB needed) ─────────────────────
@@ -195,19 +195,20 @@ public class DiscRipJobTests
     {
         Mock<IDiscRipper> ripperMock = new();
         ripperMock
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RipAsync(
                     It.IsAny<RipRequest>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync([
+            .ReturnsAsync(value:
+            [
                 new(
                     TitleIndex: 1,
-                    OutputPath: Path.Combine(Path.GetTempPath(), "title_01.mkv"),
+                    OutputPath: Path.Combine(path1: Path.GetTempPath(), path2: "title_01.mkv"),
                     Success: true,
-                    Duration: TimeSpan.FromMinutes(90),
+                    Duration: TimeSpan.FromMinutes(minutes: 90),
                     OutputSizeBytes: 1_000_000,
                     Error: null
                 ),
@@ -216,23 +217,23 @@ public class DiscRipJobTests
         List<DriveStateChangedEvent> published = [];
         Mock<IEventBus> busMock = new();
         busMock
-            .Setup(b =>
+            .Setup(expression: b =>
                 b.PublishAsync(It.IsAny<DriveStateChangedEvent>(), It.IsAny<CancellationToken>())
             )
-            .Callback<DriveStateChangedEvent, CancellationToken>((evt, _) => published.Add(evt))
-            .Returns(Task.CompletedTask);
+            .Callback<DriveStateChangedEvent, CancellationToken>(action: (evt, _) => published.Add(item: evt))
+            .Returns(value: Task.CompletedTask);
 
-        EventBusProvider.Configure(busMock.Object);
+        EventBusProvider.Configure(eventBus: busMock.Object);
 
-        DiscRipJob job = MakeJob(MakeRequest(), ripperMock.Object);
+        DiscRipJob job = MakeJob(request: MakeRequest(), ripper: ripperMock.Object);
         await job.Handle();
 
-        string[] methods = published.Select(e => e.DriveStateData.Method).ToArray();
+        string[] methods = published.Select(selector: e => e.DriveStateData.Method).ToArray();
 
-        methods.Should().Contain("rip_started");
-        methods.Should().Contain("rip_complete");
-        methods.Should().NotContain("rip_error");
-        methods[0].Should().Be("rip_started", "started must be the first event");
+        methods.Should().Contain(expected: "rip_started");
+        methods.Should().Contain(expected: "rip_complete");
+        methods.Should().NotContain(unexpected: "rip_error");
+        methods[0].Should().Be(expected: "rip_started", because: "started must be the first event");
     }
 
     [Fact]
@@ -240,40 +241,41 @@ public class DiscRipJobTests
     {
         Mock<IDiscRipper> ripperMock = new();
         ripperMock
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RipAsync(
                     It.IsAny<RipRequest>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync([
+            .ReturnsAsync(value:
+            [
                 new(
-                    1,
-                    Path.Combine(Path.GetTempPath(), "t.mkv"),
-                    true,
-                    TimeSpan.Zero,
-                    0,
-                    null
+                    TitleIndex: 1,
+                    OutputPath: Path.Combine(path1: Path.GetTempPath(), path2: "t.mkv"),
+                    Success: true,
+                    Duration: TimeSpan.Zero,
+                    OutputSizeBytes: 0,
+                    Error: null
                 ),
             ]);
 
         List<DriveStateChangedEvent> published = [];
         Mock<IEventBus> busMock = new();
         busMock
-            .Setup(b =>
+            .Setup(expression: b =>
                 b.PublishAsync(It.IsAny<DriveStateChangedEvent>(), It.IsAny<CancellationToken>())
             )
-            .Callback<DriveStateChangedEvent, CancellationToken>((evt, _) => published.Add(evt))
-            .Returns(Task.CompletedTask);
+            .Callback<DriveStateChangedEvent, CancellationToken>(action: (evt, _) => published.Add(item: evt))
+            .Returns(value: Task.CompletedTask);
 
-        EventBusProvider.Configure(busMock.Object);
+        EventBusProvider.Configure(eventBus: busMock.Object);
 
-        DiscRipJob job = MakeJob(MakeRequest(), ripperMock.Object);
+        DiscRipJob job = MakeJob(request: MakeRequest(), ripper: ripperMock.Object);
         await job.Handle();
 
         string? expectedJobId = job.JobId;
-        published.Should().AllSatisfy(e => e.DriveStateData.JobId.Should().Be(expectedJobId));
+        published.Should().AllSatisfy(expected: e => e.DriveStateData.JobId.Should().Be(expected: expectedJobId));
     }
 
     // ── EventBusProvider not configured ───────────────────────────────────
@@ -283,25 +285,25 @@ public class DiscRipJobTests
     {
         typeof(EventBusProvider)
             .GetField(
-                "_instance",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static
+                name: "_instance",
+                bindingAttr: System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static
             )!
-            .SetValue(null, null);
+            .SetValue(obj: null, value: null);
 
         Mock<IDiscRipper> ripperMock = new();
         ripperMock
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RipAsync(
                     It.IsAny<RipRequest>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync([]);
+            .ReturnsAsync(value: []);
 
-        DiscRipJob job = MakeJob(MakeRequest(), ripperMock.Object);
+        DiscRipJob job = MakeJob(request: MakeRequest(), ripper: ripperMock.Object);
 
-        Exception? ex = await Record.ExceptionAsync(() => job.Handle());
+        Exception? ex = await Record.ExceptionAsync(testCode: () => job.Handle());
         ex.Should().BeNull();
     }
 }

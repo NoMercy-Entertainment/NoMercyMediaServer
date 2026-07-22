@@ -15,9 +15,9 @@ namespace NoMercy.Providers.TMDB.Models.Movies;
 
 public class TmdbUpcomingMovieDates
 {
-    [JsonProperty("maximum")]
+    [JsonProperty(propertyName: "maximum")]
     public DateTime? Maximum { get; set; }
 
-    [JsonProperty("minimum")]
+    [JsonProperty(propertyName: "minimum")]
     public DateTime? Minimum { get; set; }
 }

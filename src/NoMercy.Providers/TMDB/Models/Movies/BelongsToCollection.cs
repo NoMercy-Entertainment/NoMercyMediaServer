@@ -15,15 +15,15 @@ namespace NoMercy.Providers.TMDB.Models.Movies;
 
 public class BelongsToCollection
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("poster_path")]
+    [JsonProperty(propertyName: "poster_path")]
     public string? PosterPath { get; set; }
 
-    [JsonProperty("backdrop_path")]
+    [JsonProperty(propertyName: "backdrop_path")]
     public string? BackdropPath { get; set; }
 }

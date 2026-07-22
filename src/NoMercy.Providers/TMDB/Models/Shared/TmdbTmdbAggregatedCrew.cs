@@ -15,6 +15,6 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbTmdbAggregatedCrew : TmdbAggregatedCredit
 {
-    [JsonProperty("jobs")]
+    [JsonProperty(propertyName: "jobs")]
     public TmdbAggregatedCrewJob[] Jobs { get; set; } = [];
 }

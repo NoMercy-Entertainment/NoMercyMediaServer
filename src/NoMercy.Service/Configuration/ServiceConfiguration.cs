@@ -21,24 +21,24 @@ public static partial class ServiceConfiguration
         // provider and resolves it, so it must exist before any sub-config runs. The
         // production Program.cs path registers it early too; this keeps the Startup
         // path (used by the API test host) consistent.
-        services.Configure<ServerConfiguration>(configuration.GetSection("Server"));
+        services.Configure<ServerConfiguration>(config: configuration.GetSection(key: "Server"));
         services.AddSingleton<IServerConfiguration, ServerConfigurationWrapper>();
 
-        ConfigureKestrel(services);
-        ConfigureHttpClients(services);
-        ConfigureCoreServices(services, configuration);
-        ConfigureLogging(services);
-        ConfigureAuth(services);
-        ConfigureApi(services);
-        ConfigureCors(services);
-        ConfigureCronJobs(services);
+        ConfigureKestrel(services: services);
+        ConfigureHttpClients(services: services);
+        ConfigureCoreServices(services: services, configuration: configuration);
+        ConfigureLogging(services: services);
+        ConfigureAuth(services: services);
+        ConfigureApi(services: services);
+        ConfigureCors(services: services);
+        ConfigureCronJobs(services: services);
     }
 
     private static void ConfigureKestrel(IServiceCollection services) { }
 
     private static void ConfigureLogging(IServiceCollection services)
     {
-        services.AddLogging(logging =>
+        services.AddLogging(configure: logging =>
         {
             // Logging filters are handled by CustomLogger's message filtering
             // since it replaces ILogger<T> and bypasses the built-in filter pipeline
@@ -48,11 +48,11 @@ public static partial class ServiceConfiguration
     private static void ConfigureCors(IServiceCollection services)
     {
         // Configure CORS
-        services.AddCors(options =>
+        services.AddCors(setupAction: options =>
         {
             options.AddPolicy(
-                "AllowNoMercyOrigins",
-                builder =>
+                name: "AllowNoMercyOrigins",
+                configurePolicy: builder =>
                 {
                     List<string> origins =
                     [
@@ -65,15 +65,15 @@ public static partial class ServiceConfiguration
 
                     if (Config.IsDev)
                     {
-                        origins.Add("http://192.168.2.201:5501");
-                        origins.Add("http://192.168.2.201:5502");
-                        origins.Add("http://192.168.2.201:5503");
-                        origins.Add("http://localhost");
-                        origins.Add("https://localhost");
+                        origins.Add(item: "http://192.168.2.201:5501");
+                        origins.Add(item: "http://192.168.2.201:5502");
+                        origins.Add(item: "http://192.168.2.201:5503");
+                        origins.Add(item: "http://localhost");
+                        origins.Add(item: "https://localhost");
                     }
 
                     builder
-                        .WithOrigins(origins.ToArray())
+                        .WithOrigins(origins: origins.ToArray())
                         .AllowAnyMethod()
                         .AllowCredentials()
                         .SetIsOriginAllowedToAllowWildcardSubdomains()
@@ -85,10 +85,10 @@ public static partial class ServiceConfiguration
 
     private static Ulid? TryGetDeviceId(HttpContext httpContext)
     {
-        string? raw = httpContext.Request.Query["client_id"].FirstOrDefault();
-        if (string.IsNullOrEmpty(raw))
+        string? raw = httpContext.Request.Query[key: "client_id"].FirstOrDefault();
+        if (string.IsNullOrEmpty(value: raw))
             return null;
 
-        return Ulid.TryParse(raw, out Ulid id) ? id : null;
+        return Ulid.TryParse(base32: raw, ulid: out Ulid id) ? id : null;
     }
 }

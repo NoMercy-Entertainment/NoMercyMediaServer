@@ -47,17 +47,17 @@ public class InboxRoutingService
     {
         List<Folder> folders = await context
             .Folders.AsNoTracking()
-            .Include(f => f.EncodingPresetFolders)
-            .Include(f => f.FolderLibraries)
-                .ThenInclude(fl => fl.Library)
-            .Where(f => f.FolderLibraries.Any(fl => fl.Library.Type == detectedType))
-            .ToListAsync(ct);
+            .Include(navigationPropertyPath: f => f.EncodingPresetFolders)
+            .Include(navigationPropertyPath: f => f.FolderLibraries)
+                .ThenInclude(navigationPropertyPath: fl => fl.Library)
+            .Where(predicate: f => f.FolderLibraries.Any(fl => fl.Library.Type == detectedType))
+            .ToListAsync(cancellationToken: ct);
 
         List<InboxDestination> destinations = [];
 
         foreach (Folder folder in folders)
         {
-            FolderLibrary? folderLibrary = folder.FolderLibraries.FirstOrDefault(fl =>
+            FolderLibrary? folderLibrary = folder.FolderLibraries.FirstOrDefault(predicate: fl =>
                 fl.Library.Type == detectedType
             );
 
@@ -65,11 +65,11 @@ public class InboxRoutingService
                 continue;
 
             EncodingPresetFolder? presetFolder = folder
-                .EncodingPresetFolders.OrderByDescending(link => link.IsDefault)
+                .EncodingPresetFolders.OrderByDescending(keySelector: link => link.IsDefault)
                 .FirstOrDefault();
 
             destinations.Add(
-                new()
+                item: new()
                 {
                     LibraryId = folderLibrary.LibraryId,
                     FolderId = folder.Id,
@@ -97,9 +97,9 @@ public class InboxRoutingService
     )
     {
         List<InboxDestination> destinations = await ResolveDestinations(
-            classification.DetectedType,
-            context,
-            ct
+            detectedType: classification.DetectedType,
+            context: context,
+            ct: ct
         );
 
         InboxItem item = new()
@@ -122,7 +122,7 @@ public class InboxRoutingService
             return new()
             {
                 Mode = "auto",
-                Destination = destinations[0],
+                Destination = destinations[index: 0],
                 Item = item,
             };
         }
@@ -151,12 +151,12 @@ public class InboxRoutingService
     )
     {
         if (outcome.Mode != "auto" || outcome.Destination is null)
-            throw new InvalidOperationException("ExecuteAuto called on a non-auto RouteOutcome");
+            throw new InvalidOperationException(message: "ExecuteAuto called on a non-auto RouteOutcome");
 
         InboxItem item = outcome.Item;
         CandidateMatch topCandidate = item.Candidates[0];
 
-        await ExecuteMoveAndImport(item, topCandidate, outcome.Destination, context, ct);
+        await ExecuteMoveAndImport(item: item, match: topCandidate, destination: outcome.Destination, context: context, ct: ct);
     }
 
     /// <summary>
@@ -173,7 +173,7 @@ public class InboxRoutingService
         CancellationToken ct = default
     )
     {
-        await ExecuteMoveAndImport(item, match, destination, context, ct);
+        await ExecuteMoveAndImport(item: item, match: match, destination: destination, context: context, ct: ct);
     }
 
     private async Task ExecuteMoveAndImport(
@@ -186,14 +186,14 @@ public class InboxRoutingService
     {
         item.Status = "Routing";
 
-        string fileName = GetFileName(item.SourcePath);
+        string fileName = GetFileName(path: item.SourcePath);
 
         // Scope the destination storage to the folder path so relative file names
         // resolve under the destination folder, not the process working directory.
         IStorage destStorage = _storageFactory.For(
-            destination.FolderId,
-            destination.DriverId,
-            destination.FolderPath
+            folderId: destination.FolderId,
+            driverId: destination.DriverId,
+            subPath: destination.FolderPath
         );
 
         if (item.DriverId == destination.DriverId)
@@ -202,33 +202,33 @@ public class InboxRoutingService
             // obtain the absolute destination path, then move via the driver directly.
             // item.SourcePath is already an absolute OS path; fileName is the leaf name
             // that ResolveAgainstScopedRoot will join to the scoped root.
-            string destAbsolute = destStorage.GetFullPath(fileName);
-            string? destParent = Path.GetDirectoryName(destAbsolute);
-            if (!string.IsNullOrEmpty(destParent))
-                destStorage.Driver.CreateDirectory(destParent);
-            destStorage.Driver.MoveFile(item.SourcePath, destAbsolute);
+            string destAbsolute = destStorage.GetFullPath(path: fileName);
+            string? destParent = Path.GetDirectoryName(path: destAbsolute);
+            if (!string.IsNullOrEmpty(value: destParent))
+                destStorage.Driver.CreateDirectory(path: destParent);
+            destStorage.Driver.MoveFile(source: item.SourcePath, destination: destAbsolute);
         }
         else
         {
-            IStorage sourceStorage = _storageFactory.For(Ulid.Empty, item.DriverId, string.Empty);
+            IStorage sourceStorage = _storageFactory.For(folderId: Ulid.Empty, driverId: item.DriverId, subPath: string.Empty);
 
-            byte[] bytes = await sourceStorage.ReadAsync(item.SourcePath, ct);
-            await destStorage.WriteAsync(fileName, bytes, ct);
+            byte[] bytes = await sourceStorage.ReadAsync(path: item.SourcePath, ct: ct);
+            await destStorage.WriteAsync(path: fileName, bytes: bytes, ct: ct);
 
-            long writtenSize = await destStorage.SizeAsync(fileName, ct);
-            long sourceSize = await sourceStorage.SizeAsync(item.SourcePath, ct);
+            long writtenSize = await destStorage.SizeAsync(path: fileName, ct: ct);
+            long sourceSize = await sourceStorage.SizeAsync(path: item.SourcePath, ct: ct);
 
             if (writtenSize != sourceSize)
                 throw new InvalidOperationException(
-                    $"Cross-driver copy size mismatch: source={sourceSize} destination={writtenSize}"
+                    message: $"Cross-driver copy size mismatch: source={sourceSize} destination={writtenSize}"
                 );
 
-            await sourceStorage.DeleteAsync(item.SourcePath, ct);
+            await sourceStorage.DeleteAsync(path: item.SourcePath, ct: ct);
         }
 
-        string movedPath = destination.FolderPath.TrimEnd('/') + "/" + fileName;
+        string movedPath = destination.FolderPath.TrimEnd(trimChar: '/') + "/" + fileName;
 
-        DispatchImportJob(item.DetectedType, match, destination, movedPath);
+        DispatchImportJob(detectedType: item.DetectedType, topCandidate: match, destination: destination, movedPath: movedPath);
 
         item.Status = "Imported";
         item.TargetLibraryId = destination.LibraryId;
@@ -236,10 +236,10 @@ public class InboxRoutingService
         item.TargetProfileId = destination.ProfileId == Ulid.Empty ? null : destination.ProfileId;
         item.SelectedMatch = match;
 
-        if (context.Entry(item).State == EntityState.Detached)
-            context.InboxItems.Add(item);
+        if (context.Entry(entity: item).State == EntityState.Detached)
+            context.InboxItems.Add(entity: item);
 
-        await context.SaveChangesAsync(ct);
+        await context.SaveChangesAsync(cancellationToken: ct);
     }
 
     private void DispatchImportJob(
@@ -253,40 +253,40 @@ public class InboxRoutingService
         {
             case "movie":
                 _jobDispatcher.DispatchJob<MovieImportJob>(
-                    int.Parse(topCandidate.ExternalId),
-                    destination.LibraryId
+                    id: int.Parse(s: topCandidate.ExternalId),
+                    libraryId: destination.LibraryId
                 );
                 break;
 
             case "tv":
             case "anime":
                 _jobDispatcher.DispatchJob<ShowImportJob>(
-                    int.Parse(topCandidate.ExternalId),
-                    destination.LibraryId
+                    id: int.Parse(s: topCandidate.ExternalId),
+                    libraryId: destination.LibraryId
                 );
                 break;
 
             case "music":
                 _jobDispatcher.DispatchJob<AudioImportJob>(
-                    destination.LibraryId,
-                    destination.FolderId,
-                    movedPath
+                    libraryId: destination.LibraryId,
+                    folderId: destination.FolderId,
+                    filePath: movedPath
                 );
                 break;
 
             default:
                 throw new InvalidOperationException(
-                    $"No import job defined for detected type '{detectedType}'"
+                    message: $"No import job defined for detected type '{detectedType}'"
                 );
         }
     }
 
     private static string GetFileName(string path)
     {
-        string trimmed = path.TrimEnd('/', '\\');
-        int slashIdx = trimmed.LastIndexOf('/');
-        int backslashIdx = trimmed.LastIndexOf('\\');
-        int idx = Math.Max(slashIdx, backslashIdx);
+        string trimmed = path.TrimEnd(trimChars: ['/', '\\']);
+        int slashIdx = trimmed.LastIndexOf(value: '/');
+        int backslashIdx = trimmed.LastIndexOf(value: '\\');
+        int idx = Math.Max(val1: slashIdx, val2: backslashIdx);
         return idx < 0 ? trimmed : trimmed[(idx + 1)..];
     }
 }

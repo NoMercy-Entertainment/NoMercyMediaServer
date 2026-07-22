@@ -17,18 +17,18 @@ internal static class StopCommand
 {
     public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
-        Command command = new("stop") { Description = "Stop the server" };
+        Command command = new(name: "stop") { Description = "Stop the server" };
 
         command.SetAction(
-            async (parseResult, ct) =>
+            action: async (parseResult, ct) =>
             {
-                string? pipe = parseResult.GetValue(pipeOption);
-                using ICliClient client = clientFactory.Create(pipe);
-                bool ok = await client.PostAsync(ApiRoutes.Stop, null, ct);
+                string? pipe = parseResult.GetValue(option: pipeOption);
+                using ICliClient client = clientFactory.Create(pipeNameOrSocketPath: pipe);
+                bool ok = await client.PostAsync(path: ApiRoutes.Stop, content: null, cancellationToken: ct);
 
                 if (ok)
                 {
-                    Console.WriteLine("Server is shutting down.");
+                    Console.WriteLine(value: "Server is shutting down.");
                     return (int)ExitCode.Success;
                 }
 

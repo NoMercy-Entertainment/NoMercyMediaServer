@@ -27,7 +27,7 @@ namespace NoMercy.Database.Migrations.App
                 {
                     Id = table
                         .Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
+                        .Annotation(name: "Sqlite:Autoincrement", value: true),
                     Key = table.Column<string>(type: "TEXT", nullable: false),
                     Value = table.Column<string>(type: "TEXT", nullable: false),
                     ModifiedBy = table.Column<Guid>(type: "TEXT", nullable: true),
@@ -47,7 +47,7 @@ namespace NoMercy.Database.Migrations.App
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Configuration", x => x.Id);
+                    table.PrimaryKey(name: "PK_Configuration", columns: x => x.Id);
                 }
             );
 

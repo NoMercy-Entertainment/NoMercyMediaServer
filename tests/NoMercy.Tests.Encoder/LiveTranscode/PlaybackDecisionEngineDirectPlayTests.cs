@@ -63,7 +63,7 @@ public class PlaybackDecisionEngineDirectPlayTests
         return new(
             FilePath: "/media/movie.mkv",
             Format: format,
-            Duration: TimeSpan.FromMinutes(120),
+            Duration: TimeSpan.FromMinutes(minutes: 120),
             OverallBitRateKbps: 5200,
             FileSizeBytes: 4_000_000_000L,
             VideoStreams: videos,
@@ -80,7 +80,7 @@ public class PlaybackDecisionEngineDirectPlayTests
     [Fact]
     public void CompatibleH264MkvToMkvClient_IsDirectPlay()
     {
-        MediaInfo media = MakeMedia("matroska,webm", MakeCompatibleVideo(), MakeCompatibleAudio());
+        MediaInfo media = MakeMedia(format: "matroska,webm", video: MakeCompatibleVideo(), audio: MakeCompatibleAudio());
 
         ClientCapabilities client = new(
             SupportedVideoCodecs: [VideoCodecType.H264],
@@ -93,9 +93,9 @@ public class PlaybackDecisionEngineDirectPlayTests
             MaxBitrateKbps: 0
         );
 
-        PlaybackDecision decision = _engine.Decide(media, client);
+        PlaybackDecision decision = _engine.Decide(media: media, client: client);
 
-        decision.Action.Should().Be(PlaybackAction.DirectPlay);
+        decision.Action.Should().Be(expected: PlaybackAction.DirectPlay);
         decision.Reason.Should().BeNull();
     }
 
@@ -105,7 +105,7 @@ public class PlaybackDecisionEngineDirectPlayTests
         // The engine itself never produces a URL — that is the controller's job.
         // This test documents the contract: engine returns null, controller builds
         // the URL from VideoFile.HostFolder / VideoFile.Filename.
-        MediaInfo media = MakeMedia("matroska,webm", MakeCompatibleVideo(), MakeCompatibleAudio());
+        MediaInfo media = MakeMedia(format: "matroska,webm", video: MakeCompatibleVideo(), audio: MakeCompatibleAudio());
 
         ClientCapabilities client = new(
             SupportedVideoCodecs: [VideoCodecType.H264],
@@ -118,7 +118,7 @@ public class PlaybackDecisionEngineDirectPlayTests
             MaxBitrateKbps: 0
         );
 
-        PlaybackDecision decision = _engine.Decide(media, client);
+        PlaybackDecision decision = _engine.Decide(media: media, client: client);
 
         decision.DirectStreamUrl.Should().BeNull();
     }
@@ -145,7 +145,7 @@ public class PlaybackDecisionEngineDirectPlayTests
             BitRateKbps: 5000
         );
 
-        MediaInfo media = MakeMedia("matroska,webm", hevc, MakeCompatibleAudio());
+        MediaInfo media = MakeMedia(format: "matroska,webm", video: hevc, audio: MakeCompatibleAudio());
 
         ClientCapabilities client = new(
             SupportedVideoCodecs: [VideoCodecType.H264],
@@ -158,15 +158,15 @@ public class PlaybackDecisionEngineDirectPlayTests
             MaxBitrateKbps: 0
         );
 
-        PlaybackDecision decision = _engine.Decide(media, client);
+        PlaybackDecision decision = _engine.Decide(media: media, client: client);
 
-        decision.Action.Should().Be(PlaybackAction.TranscodeVideo);
+        decision.Action.Should().Be(expected: PlaybackAction.TranscodeVideo);
     }
 
     [Fact]
     public void WrongContainer_IsRemux_NotDirectPlay()
     {
-        MediaInfo media = MakeMedia("matroska,webm", MakeCompatibleVideo(), MakeCompatibleAudio());
+        MediaInfo media = MakeMedia(format: "matroska,webm", video: MakeCompatibleVideo(), audio: MakeCompatibleAudio());
 
         ClientCapabilities client = new(
             SupportedVideoCodecs: [VideoCodecType.H264],
@@ -179,9 +179,9 @@ public class PlaybackDecisionEngineDirectPlayTests
             MaxBitrateKbps: 0
         );
 
-        PlaybackDecision decision = _engine.Decide(media, client);
+        PlaybackDecision decision = _engine.Decide(media: media, client: client);
 
-        decision.Action.Should().Be(PlaybackAction.Remux);
+        decision.Action.Should().Be(expected: PlaybackAction.Remux);
     }
 
     [Fact]
@@ -198,7 +198,7 @@ public class PlaybackDecisionEngineDirectPlayTests
             IsForced: false
         );
 
-        MediaInfo media = MakeMedia("matroska,webm", MakeCompatibleVideo(), ac3);
+        MediaInfo media = MakeMedia(format: "matroska,webm", video: MakeCompatibleVideo(), audio: ac3);
 
         ClientCapabilities client = new(
             SupportedVideoCodecs: [VideoCodecType.H264],
@@ -211,9 +211,9 @@ public class PlaybackDecisionEngineDirectPlayTests
             MaxBitrateKbps: 0
         );
 
-        PlaybackDecision decision = _engine.Decide(media, client);
+        PlaybackDecision decision = _engine.Decide(media: media, client: client);
 
-        decision.Action.Should().Be(PlaybackAction.TranscodeAudio);
+        decision.Action.Should().Be(expected: PlaybackAction.TranscodeAudio);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -232,7 +232,7 @@ public class PlaybackDecisionEngineDirectPlayTests
 
         // The actual assembly is in the controller — this test documents the contract.
         string builtUrl = $"/{hostFolder}/{filename}";
-        builtUrl.Should().Be(expectedUrl);
+        builtUrl.Should().Be(expected: expectedUrl);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -243,7 +243,7 @@ public class PlaybackDecisionEngineDirectPlayTests
     [Fact]
     public void DecideBatch_AllDirectPlay_ReturnsSameCountAsInput()
     {
-        MediaInfo media = MakeMedia("matroska,webm", MakeCompatibleVideo(), MakeCompatibleAudio());
+        MediaInfo media = MakeMedia(format: "matroska,webm", video: MakeCompatibleVideo(), audio: MakeCompatibleAudio());
 
         ClientCapabilities client = new(
             SupportedVideoCodecs: [VideoCodecType.H264],
@@ -257,9 +257,9 @@ public class PlaybackDecisionEngineDirectPlayTests
         );
 
         MediaInfo[] library = [media, media, media];
-        PlaybackDecision[] decisions = _engine.DecideBatch(library, client);
+        PlaybackDecision[] decisions = _engine.DecideBatch(library: library, client: client);
 
-        decisions.Should().HaveCount(3);
-        decisions.Should().AllSatisfy(d => d.Action.Should().Be(PlaybackAction.DirectPlay));
+        decisions.Should().HaveCount(expected: 3);
+        decisions.Should().AllSatisfy(expected: d => d.Action.Should().Be(expected: PlaybackAction.DirectPlay));
     }
 }

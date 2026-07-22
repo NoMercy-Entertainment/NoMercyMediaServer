@@ -47,7 +47,7 @@ namespace NoMercy.Tests.Setup.Server;
 /// false so these tests exercise the (production-common) non-interactive/service-mode
 /// branch rather than constructing a real console resize-watcher thread.
 /// </remarks>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class SetupEndpointsTests : IDisposable
 {
     private readonly AppDbContext _appContext;
@@ -61,34 +61,34 @@ public sealed class SetupEndpointsTests : IDisposable
     {
         SetupTerminalUi.ForceInteractiveForTests = false;
 
-        _originalAppPath = Environment.GetEnvironmentVariable("NOMERCY_APP_PATH");
-        _tempAppPath = Path.Combine(Path.GetTempPath(), $"nm-setupep-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempAppPath);
-        Environment.SetEnvironmentVariable("NOMERCY_APP_PATH", _tempAppPath);
+        _originalAppPath = Environment.GetEnvironmentVariable(variable: "NOMERCY_APP_PATH");
+        _tempAppPath = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-setupep-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: _tempAppPath);
+        Environment.SetEnvironmentVariable(variable: "NOMERCY_APP_PATH", value: _tempAppPath);
         NoMercy.NmSystem.Information.AppFiles.CreateAppFolders();
 
         ServiceCollection services = new();
         services.AddDataProtection().UseEphemeralDataProtectionProvider();
         ServiceProvider provider = services.BuildServiceProvider();
-        TokenStore.Initialize(provider);
+        TokenStore.Initialize(serviceProvider: provider);
 
         DbContextOptionsBuilder<AppDbContext> optionsBuilder = new();
-        optionsBuilder.UseSqlite("Data Source=:memory:");
-        _appContext = new(optionsBuilder.Options);
+        optionsBuilder.UseSqlite(connectionString: "Data Source=:memory:");
+        _appContext = new(options: optionsBuilder.Options);
         _appContext.Database.OpenConnection();
         _appContext.Database.EnsureCreated();
 
-        _authManager = new(_appContext, new LocalStorageDriver(), new AuthTokenStore());
+        _authManager = new(appContext: _appContext, driver: new LocalStorageDriver(), authTokenStore: new AuthTokenStore());
         _setupState = new();
 
         using AppDbContext onDisk = new();
         onDisk.Database.EnsureCreated();
-        Start.Certificate = new CertificateService(NullLogger<CertificateService>.Instance, null!);
+        Start.Certificate = new CertificateService(logger: NullLogger<CertificateService>.Instance, httpClientFactory: null!);
 
         _originalTokenClientId = ExternalServicesConfig.Current.TokenClientId;
         ExternalServicesConfig.Current.TokenClientId = "nomercy-server";
 
-        CronWorker.SignalDatabaseReady(true);
+        CronWorker.SignalDatabaseReady(success: true);
     }
 
     public void Dispose()
@@ -98,18 +98,18 @@ public sealed class SetupEndpointsTests : IDisposable
         _appContext.Dispose();
         Start.Certificate = null;
         ExternalServicesConfig.Current.TokenClientId = _originalTokenClientId ?? "nomercy-server";
-        Environment.SetEnvironmentVariable("NOMERCY_APP_PATH", _originalAppPath);
+        Environment.SetEnvironmentVariable(variable: "NOMERCY_APP_PATH", value: _originalAppPath);
         try
         {
-            if (Directory.Exists(_tempAppPath))
-                Directory.Delete(_tempAppPath, recursive: true);
+            if (Directory.Exists(path: _tempAppPath))
+                Directory.Delete(path: _tempAppPath, recursive: true);
         }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
     }
 
     private SetupEndpoints BuildEndpoints(IServerRegistrationService? registrationService = null) =>
-        new(_setupState, _authManager, registrationService ?? new FakeRegistrationService());
+        new(state: _setupState, authManager: _authManager, serverRegistrationService: registrationService ?? new FakeRegistrationService());
 
     private static DefaultHttpContext BuildContext(
         string method,
@@ -123,11 +123,11 @@ public sealed class SetupEndpointsTests : IDisposable
         context.Request.Method = method;
         context.Request.Path = path;
         if (queryString is not null)
-            context.Request.QueryString = new(queryString);
+            context.Request.QueryString = new(value: queryString);
         if (accept is not null)
             context.Request.Headers.Accept = accept;
         if (body is not null)
-            context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));
+            context.Request.Body = new MemoryStream(buffer: Encoding.UTF8.GetBytes(s: body));
         context.Response.Body = new MemoryStream();
         return context;
     }
@@ -135,7 +135,7 @@ public sealed class SetupEndpointsTests : IDisposable
     private static string ReadBody(HttpContext context)
     {
         context.Response.Body.Position = 0;
-        using StreamReader reader = new(context.Response.Body, Encoding.UTF8, leaveOpen: true);
+        using StreamReader reader = new(stream: context.Response.Body, encoding: Encoding.UTF8, leaveOpen: true);
         return reader.ReadToEnd();
     }
 
@@ -158,94 +158,94 @@ public sealed class SetupEndpointsTests : IDisposable
     public async Task HandleRequestAsync_UnknownPath_Returns503()
     {
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("GET", "/nonexistent");
+        DefaultHttpContext context = BuildContext(method: "GET", path: "/nonexistent");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
-        Assert.Contains("setup_required", ReadBody(context));
+        Assert.Equal(expected: StatusCodes.Status503ServiceUnavailable, actual: context.Response.StatusCode);
+        Assert.Contains(expectedSubstring: "setup_required", actualString: ReadBody(context: context));
     }
 
     [Fact]
     public async Task HandleRequestAsync_TrailingSlash_IsNormalized()
     {
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("GET", "/setup/");
+        DefaultHttpContext context = BuildContext(method: "GET", path: "/setup/");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+        Assert.Equal(expected: StatusCodes.Status200OK, actual: context.Response.StatusCode);
     }
 
     [Fact]
     public async Task HandleSetupPage_Get_ReturnsHtml()
     {
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("GET", "/setup");
+        DefaultHttpContext context = BuildContext(method: "GET", path: "/setup");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-        Assert.StartsWith("text/html", context.Response.ContentType);
-        Assert.NotEmpty(ReadBody(context));
+        Assert.Equal(expected: StatusCodes.Status200OK, actual: context.Response.StatusCode);
+        Assert.StartsWith(expectedStartString: "text/html", actualString: context.Response.ContentType);
+        Assert.NotEmpty(collection: ReadBody(context: context));
     }
 
     [Fact]
     public async Task HandleSetupPage_Post_Returns405()
     {
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("POST", "/setup");
+        DefaultHttpContext context = BuildContext(method: "POST", path: "/setup");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status405MethodNotAllowed, context.Response.StatusCode);
+        Assert.Equal(expected: StatusCodes.Status405MethodNotAllowed, actual: context.Response.StatusCode);
     }
 
     [Fact]
     public async Task HandleEmbeddedResource_SetupCss_Get_ReturnsCss()
     {
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("GET", "/setup/setup.css");
+        DefaultHttpContext context = BuildContext(method: "GET", path: "/setup/setup.css");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-        Assert.StartsWith("text/css", context.Response.ContentType);
+        Assert.Equal(expected: StatusCodes.Status200OK, actual: context.Response.StatusCode);
+        Assert.StartsWith(expectedStartString: "text/css", actualString: context.Response.ContentType);
     }
 
     [Fact]
     public async Task HandleEmbeddedResource_SetupJs_Get_ReturnsJs()
     {
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("GET", "/setup/setup.js");
+        DefaultHttpContext context = BuildContext(method: "GET", path: "/setup/setup.js");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-        Assert.StartsWith("application/javascript", context.Response.ContentType);
+        Assert.Equal(expected: StatusCodes.Status200OK, actual: context.Response.StatusCode);
+        Assert.StartsWith(expectedStartString: "application/javascript", actualString: context.Response.ContentType);
     }
 
     [Fact]
     public async Task HandleEmbeddedResource_WrongMethod_Returns405()
     {
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("POST", "/setup/setup.css");
+        DefaultHttpContext context = BuildContext(method: "POST", path: "/setup/setup.css");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status405MethodNotAllowed, context.Response.StatusCode);
+        Assert.Equal(expected: StatusCodes.Status405MethodNotAllowed, actual: context.Response.StatusCode);
     }
 
     [Fact]
     public async Task HandleEmbeddedBinary_Favicon_ReturnsIcon()
     {
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("GET", "/favicon.ico");
+        DefaultHttpContext context = BuildContext(method: "GET", path: "/favicon.ico");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-        Assert.Equal("image/x-icon", context.Response.ContentType);
+        Assert.Equal(expected: StatusCodes.Status200OK, actual: context.Response.StatusCode);
+        Assert.Equal(expected: "image/x-icon", actual: context.Response.ContentType);
     }
 
     // ── /setup/config ────────────────────────────────────────────────────────
@@ -254,26 +254,26 @@ public sealed class SetupEndpointsTests : IDisposable
     public async Task HandleSetupConfig_Get_ReturnsPhaseAndPkceChallenge()
     {
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("GET", "/setup/config");
+        DefaultHttpContext context = BuildContext(method: "GET", path: "/setup/config");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-        string body = ReadBody(context);
-        Assert.Contains("code_challenge", body);
-        Assert.Contains("pkce_state", body);
-        Assert.Contains("Unauthenticated", body);
+        Assert.Equal(expected: StatusCodes.Status200OK, actual: context.Response.StatusCode);
+        string body = ReadBody(context: context);
+        Assert.Contains(expectedSubstring: "code_challenge", actualString: body);
+        Assert.Contains(expectedSubstring: "pkce_state", actualString: body);
+        Assert.Contains(expectedSubstring: "Unauthenticated", actualString: body);
     }
 
     [Fact]
     public async Task HandleSetupConfig_Post_Returns405()
     {
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("POST", "/setup/config");
+        DefaultHttpContext context = BuildContext(method: "POST", path: "/setup/config");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status405MethodNotAllowed, context.Response.StatusCode);
+        Assert.Equal(expected: StatusCodes.Status405MethodNotAllowed, actual: context.Response.StatusCode);
     }
 
     // ── /setup/status ────────────────────────────────────────────────────────
@@ -282,25 +282,25 @@ public sealed class SetupEndpointsTests : IDisposable
     public async Task HandleSetupStatus_Json_ReturnsSnapshot()
     {
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("GET", "/setup/status");
+        DefaultHttpContext context = BuildContext(method: "GET", path: "/setup/status");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-        string body = ReadBody(context);
-        Assert.Contains("is_setup_required", body);
-        Assert.Contains("phase", body);
+        Assert.Equal(expected: StatusCodes.Status200OK, actual: context.Response.StatusCode);
+        string body = ReadBody(context: context);
+        Assert.Contains(expectedSubstring: "is_setup_required", actualString: body);
+        Assert.Contains(expectedSubstring: "phase", actualString: body);
     }
 
     [Fact]
     public async Task HandleSetupStatus_Post_Returns405()
     {
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("POST", "/setup/status");
+        DefaultHttpContext context = BuildContext(method: "POST", path: "/setup/status");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status405MethodNotAllowed, context.Response.StatusCode);
+        Assert.Equal(expected: StatusCodes.Status405MethodNotAllowed, actual: context.Response.StatusCode);
     }
 
     [Fact]
@@ -308,22 +308,22 @@ public sealed class SetupEndpointsTests : IDisposable
     {
         SetupEndpoints endpoints = BuildEndpoints();
         DefaultHttpContext context = BuildContext(
-            "GET",
-            "/setup/status",
+            method: "GET",
+            path: "/setup/status",
             accept: "text/event-stream"
         );
         using CancellationTokenSource cts = new();
         context.RequestAborted = cts.Token;
 
-        Task handling = endpoints.HandleRequestAsync(context);
+        Task handling = endpoints.HandleRequestAsync(context: context);
 
-        await Task.Delay(100);
+        await Task.Delay(millisecondsDelay: 100);
         cts.Cancel();
-        await handling.WaitAsync(TimeSpan.FromSeconds(5));
+        await handling.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 5));
 
-        Assert.Equal("text/event-stream", context.Response.ContentType);
-        string body = ReadBody(context);
-        Assert.Contains("data: ", body);
+        Assert.Equal(expected: "text/event-stream", actual: context.Response.ContentType);
+        string body = ReadBody(context: context);
+        Assert.Contains(expectedSubstring: "data: ", actualString: body);
     }
 
     // ── /setup/silent-sso ────────────────────────────────────────────────────
@@ -332,23 +332,23 @@ public sealed class SetupEndpointsTests : IDisposable
     public async Task HandleSilentSso_Get_ReturnsPostMessageHtml()
     {
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("GET", "/setup/silent-sso");
+        DefaultHttpContext context = BuildContext(method: "GET", path: "/setup/silent-sso");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-        Assert.Contains("postMessage", ReadBody(context));
+        Assert.Equal(expected: StatusCodes.Status200OK, actual: context.Response.StatusCode);
+        Assert.Contains(expectedSubstring: "postMessage", actualString: ReadBody(context: context));
     }
 
     [Fact]
     public async Task HandleSilentSso_Post_Returns405()
     {
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("POST", "/setup/silent-sso");
+        DefaultHttpContext context = BuildContext(method: "POST", path: "/setup/silent-sso");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status405MethodNotAllowed, context.Response.StatusCode);
+        Assert.Equal(expected: StatusCodes.Status405MethodNotAllowed, actual: context.Response.StatusCode);
     }
 
     // ── POST /setup/exchange ─────────────────────────────────────────────────
@@ -357,11 +357,11 @@ public sealed class SetupEndpointsTests : IDisposable
     public async Task HandleExchange_Get_Returns405()
     {
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("GET", "/setup/exchange");
+        DefaultHttpContext context = BuildContext(method: "GET", path: "/setup/exchange");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status405MethodNotAllowed, context.Response.StatusCode);
+        Assert.Equal(expected: StatusCodes.Status405MethodNotAllowed, actual: context.Response.StatusCode);
     }
 
     [Fact]
@@ -373,12 +373,12 @@ public sealed class SetupEndpointsTests : IDisposable
         // body" branch; it falls through to the null-body "Missing code" check
         // instead. That branch is covered by HandleExchange_MissingCode_Returns400.
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("POST", "/setup/exchange", body: "{not-json");
+        DefaultHttpContext context = BuildContext(method: "POST", path: "/setup/exchange", body: "{not-json");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
-        Assert.Contains("Missing code", ReadBody(context));
+        Assert.Equal(expected: StatusCodes.Status400BadRequest, actual: context.Response.StatusCode);
+        Assert.Contains(expectedSubstring: "Missing code", actualString: ReadBody(context: context));
     }
 
     [Fact]
@@ -388,40 +388,40 @@ public sealed class SetupEndpointsTests : IDisposable
         // forgiving parse failure above) — an already-disposed body stream makes
         // ReadToEndAsync itself throw ObjectDisposedException.
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("POST", "/setup/exchange");
+        DefaultHttpContext context = BuildContext(method: "POST", path: "/setup/exchange");
         MemoryStream disposedBody = new();
         await disposedBody.DisposeAsync();
         context.Request.Body = disposedBody;
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
-        Assert.Contains("Invalid request body", ReadBody(context));
+        Assert.Equal(expected: StatusCodes.Status400BadRequest, actual: context.Response.StatusCode);
+        Assert.Contains(expectedSubstring: "Invalid request body", actualString: ReadBody(context: context));
     }
 
     [Fact]
     public async Task HandleExchange_MissingCode_Returns400()
     {
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("POST", "/setup/exchange", body: "{}");
+        DefaultHttpContext context = BuildContext(method: "POST", path: "/setup/exchange", body: "{}");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
-        Assert.Contains("Missing code", ReadBody(context));
+        Assert.Equal(expected: StatusCodes.Status400BadRequest, actual: context.Response.StatusCode);
+        Assert.Contains(expectedSubstring: "Missing code", actualString: ReadBody(context: context));
     }
 
     [Fact]
     public async Task HandleExchange_StateMismatch_Returns400()
     {
         SetupEndpoints endpoints = BuildEndpoints();
-        string body = JsonConvert.SerializeObject(new { code = "abc", state = "wrong-state" });
-        DefaultHttpContext context = BuildContext("POST", "/setup/exchange", body: body);
+        string body = JsonConvert.SerializeObject(value: new { code = "abc", state = "wrong-state" });
+        DefaultHttpContext context = BuildContext(method: "POST", path: "/setup/exchange", body: body);
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
-        Assert.Contains("Invalid state parameter", ReadBody(context));
+        Assert.Equal(expected: StatusCodes.Status400BadRequest, actual: context.Response.StatusCode);
+        Assert.Contains(expectedSubstring: "Invalid state parameter", actualString: ReadBody(context: context));
     }
 
     [Fact]
@@ -429,29 +429,29 @@ public sealed class SetupEndpointsTests : IDisposable
     {
         ExternalServicesConfig.Current.TokenClientId = string.Empty;
         SetupEndpoints endpoints = BuildEndpoints();
-        string body = JsonConvert.SerializeObject(new { code = "abc" });
-        DefaultHttpContext context = BuildContext("POST", "/setup/exchange", body: body);
+        string body = JsonConvert.SerializeObject(value: new { code = "abc" });
+        DefaultHttpContext context = BuildContext(method: "POST", path: "/setup/exchange", body: body);
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+        Assert.Equal(expected: StatusCodes.Status400BadRequest, actual: context.Response.StatusCode);
     }
 
     [Fact]
     public async Task HandleExchange_TokenEndpointFails_Returns400()
     {
         using LoopbackHttpServer server = new();
-        server.Handler = _ => new(400, "{\"error\":\"invalid_grant\"}");
+        server.Handler = _ => new(StatusCode: 400, Body: "{\"error\":\"invalid_grant\"}");
         using ExternalServicesConfigScope scope = new(authBaseUrl: server.BaseUrl);
 
         SetupEndpoints endpoints = BuildEndpoints();
-        string body = JsonConvert.SerializeObject(new { code = "abc" });
-        DefaultHttpContext context = BuildContext("POST", "/setup/exchange", body: body);
+        string body = JsonConvert.SerializeObject(value: new { code = "abc" });
+        DefaultHttpContext context = BuildContext(method: "POST", path: "/setup/exchange", body: body);
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
-        Assert.Contains("error", ReadBody(context));
+        Assert.Equal(expected: StatusCodes.Status400BadRequest, actual: context.Response.StatusCode);
+        Assert.Contains(expectedSubstring: "error", actualString: ReadBody(context: context));
     }
 
     [Fact]
@@ -459,18 +459,18 @@ public sealed class SetupEndpointsTests : IDisposable
     {
         string jwt = CreateJwt();
         using LoopbackHttpServer server = new();
-        server.Handler = _ => new(200, AuthResponseJson(jwt));
+        server.Handler = _ => new(StatusCode: 200, Body: AuthResponseJson(accessToken: jwt));
         using ExternalServicesConfigScope scope = new(authBaseUrl: server.BaseUrl);
 
         SetupEndpoints endpoints = BuildEndpoints();
-        string body = JsonConvert.SerializeObject(new { code = "abc" });
-        DefaultHttpContext context = BuildContext("POST", "/setup/exchange", body: body);
+        string body = JsonConvert.SerializeObject(value: new { code = "abc" });
+        DefaultHttpContext context = BuildContext(method: "POST", path: "/setup/exchange", body: body);
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-        Assert.Contains("\"status\": \"ok\"", ReadBody(context));
-        Assert.Equal(SetupPhase.Authenticated, _setupState.CurrentPhase);
+        Assert.Equal(expected: StatusCodes.Status200OK, actual: context.Response.StatusCode);
+        Assert.Contains(expectedSubstring: "\"status\": \"ok\"", actualString: ReadBody(context: context));
+        Assert.Equal(expected: SetupPhase.Authenticated, actual: _setupState.CurrentPhase);
     }
 
     // NOTE: HandleExchange's `if (alreadyCompleted) return 409;` branch is not covered
@@ -490,11 +490,11 @@ public sealed class SetupEndpointsTests : IDisposable
     public async Task HandleDeviceCode_Get_Returns405()
     {
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("GET", "/setup/device-code");
+        DefaultHttpContext context = BuildContext(method: "GET", path: "/setup/device-code");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status405MethodNotAllowed, context.Response.StatusCode);
+        Assert.Equal(expected: StatusCodes.Status405MethodNotAllowed, actual: context.Response.StatusCode);
     }
 
     [Fact]
@@ -502,11 +502,11 @@ public sealed class SetupEndpointsTests : IDisposable
     {
         ExternalServicesConfig.Current.TokenClientId = string.Empty;
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("POST", "/setup/device-code");
+        DefaultHttpContext context = BuildContext(method: "POST", path: "/setup/device-code");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
+        Assert.Equal(expected: StatusCodes.Status503ServiceUnavailable, actual: context.Response.StatusCode);
     }
 
     [Fact]
@@ -515,9 +515,9 @@ public sealed class SetupEndpointsTests : IDisposable
         using LoopbackHttpServer server = new();
         server.Handler = _ =>
             new(
-                200,
-                JsonConvert.SerializeObject(
-                    new DeviceAuthResponse
+                StatusCode: 200,
+                Body: JsonConvert.SerializeObject(
+                    value: new DeviceAuthResponse
                     {
                         UserCode = "ABCD-1234",
                         VerificationUri = "https://auth.nomercy.tv/device",
@@ -531,27 +531,27 @@ public sealed class SetupEndpointsTests : IDisposable
         using ExternalServicesConfigScope scope = new(authBaseUrl: server.BaseUrl);
 
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("POST", "/setup/device-code");
+        DefaultHttpContext context = BuildContext(method: "POST", path: "/setup/device-code");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-        Assert.Contains("ABCD-1234", ReadBody(context));
+        Assert.Equal(expected: StatusCodes.Status200OK, actual: context.Response.StatusCode);
+        Assert.Contains(expectedSubstring: "ABCD-1234", actualString: ReadBody(context: context));
     }
 
     [Fact]
     public async Task HandleDeviceCode_RequestFails_Returns500()
     {
         using LoopbackHttpServer server = new();
-        server.Handler = _ => new(400, "{\"error\":\"invalid_client\"}");
+        server.Handler = _ => new(StatusCode: 400, Body: "{\"error\":\"invalid_client\"}");
         using ExternalServicesConfigScope scope = new(authBaseUrl: server.BaseUrl);
 
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("POST", "/setup/device-code");
+        DefaultHttpContext context = BuildContext(method: "POST", path: "/setup/device-code");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status500InternalServerError, context.Response.StatusCode);
+        Assert.Equal(expected: StatusCodes.Status500InternalServerError, actual: context.Response.StatusCode);
     }
 
     // ── POST /setup/retry ─────────────────────────────────────────────────────
@@ -560,39 +560,39 @@ public sealed class SetupEndpointsTests : IDisposable
     public async Task HandleRetry_Get_Returns405()
     {
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("GET", "/setup/retry");
+        DefaultHttpContext context = BuildContext(method: "GET", path: "/setup/retry");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status405MethodNotAllowed, context.Response.StatusCode);
+        Assert.Equal(expected: StatusCodes.Status405MethodNotAllowed, actual: context.Response.StatusCode);
     }
 
     [Fact]
     public async Task HandleRetry_Unauthenticated_ReturnsUnauthenticatedStatus()
     {
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("POST", "/setup/retry");
+        DefaultHttpContext context = BuildContext(method: "POST", path: "/setup/retry");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-        Assert.Contains("unauthenticated", ReadBody(context));
+        Assert.Equal(expected: StatusCodes.Status200OK, actual: context.Response.StatusCode);
+        Assert.Contains(expectedSubstring: "unauthenticated", actualString: ReadBody(context: context));
     }
 
     [Fact]
     public async Task HandleRetry_Authenticated_ReturnsRetrying()
     {
-        _setupState.TransitionTo(SetupPhase.Authenticating);
-        _setupState.TransitionTo(SetupPhase.Authenticated);
+        _setupState.TransitionTo(targetPhase: SetupPhase.Authenticating);
+        _setupState.TransitionTo(targetPhase: SetupPhase.Authenticated);
 
         FakeRegistrationService registration = new();
-        SetupEndpoints endpoints = BuildEndpoints(registration);
-        DefaultHttpContext context = BuildContext("POST", "/setup/retry");
+        SetupEndpoints endpoints = BuildEndpoints(registrationService: registration);
+        DefaultHttpContext context = BuildContext(method: "POST", path: "/setup/retry");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-        Assert.Contains("retrying", ReadBody(context));
+        Assert.Equal(expected: StatusCodes.Status200OK, actual: context.Response.StatusCode);
+        Assert.Contains(expectedSubstring: "retrying", actualString: ReadBody(context: context));
     }
 
     // ── /setup/qr ─────────────────────────────────────────────────────────────
@@ -601,22 +601,22 @@ public sealed class SetupEndpointsTests : IDisposable
     public async Task HandleQrCode_Post_Returns405()
     {
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("POST", "/setup/qr");
+        DefaultHttpContext context = BuildContext(method: "POST", path: "/setup/qr");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status405MethodNotAllowed, context.Response.StatusCode);
+        Assert.Equal(expected: StatusCodes.Status405MethodNotAllowed, actual: context.Response.StatusCode);
     }
 
     [Fact]
     public async Task HandleQrCode_MissingDataAndUrl_Returns400()
     {
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("GET", "/setup/qr");
+        DefaultHttpContext context = BuildContext(method: "GET", path: "/setup/qr");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+        Assert.Equal(expected: StatusCodes.Status400BadRequest, actual: context.Response.StatusCode);
     }
 
     [Fact]
@@ -624,16 +624,16 @@ public sealed class SetupEndpointsTests : IDisposable
     {
         SetupEndpoints endpoints = BuildEndpoints();
         DefaultHttpContext context = BuildContext(
-            "GET",
-            "/setup/qr",
+            method: "GET",
+            path: "/setup/qr",
             queryString: "?data=https://example.com"
         );
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-        Assert.Equal("image/png", context.Response.ContentType);
-        Assert.True(context.Response.ContentLength > 0);
+        Assert.Equal(expected: StatusCodes.Status200OK, actual: context.Response.StatusCode);
+        Assert.Equal(expected: "image/png", actual: context.Response.ContentType);
+        Assert.True(condition: context.Response.ContentLength > 0);
     }
 
     [Fact]
@@ -641,14 +641,14 @@ public sealed class SetupEndpointsTests : IDisposable
     {
         SetupEndpoints endpoints = BuildEndpoints();
         DefaultHttpContext context = BuildContext(
-            "GET",
-            "/setup/qr",
+            method: "GET",
+            path: "/setup/qr",
             queryString: "?url=https://example.com"
         );
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+        Assert.Equal(expected: StatusCodes.Status200OK, actual: context.Response.StatusCode);
     }
 
     // ── /sso-callback ─────────────────────────────────────────────────────────
@@ -657,11 +657,11 @@ public sealed class SetupEndpointsTests : IDisposable
     public async Task HandleSsoCallback_Post_Returns405()
     {
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("POST", "/sso-callback");
+        DefaultHttpContext context = BuildContext(method: "POST", path: "/sso-callback");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status405MethodNotAllowed, context.Response.StatusCode);
+        Assert.Equal(expected: StatusCodes.Status405MethodNotAllowed, actual: context.Response.StatusCode);
     }
 
     [Fact]
@@ -669,28 +669,28 @@ public sealed class SetupEndpointsTests : IDisposable
     {
         SetupEndpoints endpoints = BuildEndpoints();
         DefaultHttpContext context = BuildContext(
-            "GET",
-            "/sso-callback",
+            method: "GET",
+            path: "/sso-callback",
             queryString: "?error=access_denied&error_description=User+cancelled"
         );
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-        Assert.Contains("Authorization Failed", ReadBody(context));
-        Assert.NotNull(_setupState.ErrorMessage);
+        Assert.Equal(expected: StatusCodes.Status200OK, actual: context.Response.StatusCode);
+        Assert.Contains(expectedSubstring: "Authorization Failed", actualString: ReadBody(context: context));
+        Assert.NotNull(@object: _setupState.ErrorMessage);
     }
 
     [Fact]
     public async Task HandleSsoCallback_MissingCode_Returns400Json()
     {
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("GET", "/sso-callback");
+        DefaultHttpContext context = BuildContext(method: "GET", path: "/sso-callback");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
-        Assert.Contains("Missing authorization code", ReadBody(context));
+        Assert.Equal(expected: StatusCodes.Status400BadRequest, actual: context.Response.StatusCode);
+        Assert.Contains(expectedSubstring: "Missing authorization code", actualString: ReadBody(context: context));
     }
 
     [Fact]
@@ -698,32 +698,32 @@ public sealed class SetupEndpointsTests : IDisposable
     {
         SetupEndpoints endpoints = BuildEndpoints();
         DefaultHttpContext context = BuildContext(
-            "GET",
-            "/sso-callback",
+            method: "GET",
+            path: "/sso-callback",
             queryString: "?code=abc&state=totally-wrong"
         );
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
-        Assert.NotNull(_setupState.ErrorMessage);
+        Assert.Equal(expected: StatusCodes.Status400BadRequest, actual: context.Response.StatusCode);
+        Assert.NotNull(@object: _setupState.ErrorMessage);
     }
 
     [Fact]
     public async Task HandleSsoCallback_TokenExchangeFails_ReturnsHtmlErrorAndSetsUnauthenticated()
     {
         using LoopbackHttpServer server = new();
-        server.Handler = _ => new(400, "{\"error\":\"invalid_grant\"}");
+        server.Handler = _ => new(StatusCode: 400, Body: "{\"error\":\"invalid_grant\"}");
         using ExternalServicesConfigScope scope = new(authBaseUrl: server.BaseUrl);
 
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("GET", "/sso-callback", queryString: "?code=abc");
+        DefaultHttpContext context = BuildContext(method: "GET", path: "/sso-callback", queryString: "?code=abc");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-        Assert.Contains("Authentication Failed", ReadBody(context));
-        Assert.Equal(SetupPhase.Unauthenticated, _setupState.CurrentPhase);
+        Assert.Equal(expected: StatusCodes.Status200OK, actual: context.Response.StatusCode);
+        Assert.Contains(expectedSubstring: "Authentication Failed", actualString: ReadBody(context: context));
+        Assert.Equal(expected: SetupPhase.Unauthenticated, actual: _setupState.CurrentPhase);
     }
 
     [Fact]
@@ -731,30 +731,30 @@ public sealed class SetupEndpointsTests : IDisposable
     {
         string jwt = CreateJwt();
         using LoopbackHttpServer server = new();
-        server.Handler = _ => new(200, AuthResponseJson(jwt));
+        server.Handler = _ => new(StatusCode: 200, Body: AuthResponseJson(accessToken: jwt));
         using ExternalServicesConfigScope scope = new(authBaseUrl: server.BaseUrl);
 
         SetupEndpoints endpoints = BuildEndpoints();
-        DefaultHttpContext context = BuildContext("GET", "/sso-callback", queryString: "?code=abc");
+        DefaultHttpContext context = BuildContext(method: "GET", path: "/sso-callback", queryString: "?code=abc");
 
-        await endpoints.HandleRequestAsync(context);
+        await endpoints.HandleRequestAsync(context: context);
 
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-        Assert.Contains("Authentication Successful", ReadBody(context));
+        Assert.Equal(expected: StatusCodes.Status200OK, actual: context.Response.StatusCode);
+        Assert.Contains(expectedSubstring: "Authentication Successful", actualString: ReadBody(context: context));
         // RunPostAuthRegistration fires fire-and-forget (`_ = Task.Run(...)`) the moment
         // the response is written — it may have already advanced the phase past
         // Authenticated by the time this assertion runs, so assert "at least
         // Authenticated" rather than an exact phase to avoid a race with that
         // background task instead of a real assertion of HandleSsoCallback's own effect.
         Assert.True(
-            _setupState.CurrentPhase >= SetupPhase.Authenticated,
-            $"expected at least Authenticated, was {_setupState.CurrentPhase}"
+            condition: _setupState.CurrentPhase >= SetupPhase.Authenticated,
+            userMessage: $"expected at least Authenticated, was {_setupState.CurrentPhase}"
         );
 
         // RunPostAuthRegistration fires in the background (Task.Run) — give it a brief
         // window to run against the FakeRegistrationService before disposal tears down
         // NOMERCY_APP_PATH out from under it.
-        await Task.Delay(300);
+        await Task.Delay(millisecondsDelay: 300);
     }
 
     // ── Static helper methods (pure) ─────────────────────────────────────────
@@ -762,71 +762,71 @@ public sealed class SetupEndpointsTests : IDisposable
     [Fact]
     public void BuildCallbackHtml_Error_UsesErrorColorAndTitle()
     {
-        string html = SetupEndpoints.BuildCallbackHtml("Oops", "Something failed", isError: true);
+        string html = SetupEndpoints.BuildCallbackHtml(title: "Oops", message: "Something failed", isError: true);
 
-        Assert.Contains("Oops", html);
-        Assert.Contains("Something failed", html);
-        Assert.Contains("#f08080", html);
+        Assert.Contains(expectedSubstring: "Oops", actualString: html);
+        Assert.Contains(expectedSubstring: "Something failed", actualString: html);
+        Assert.Contains(expectedSubstring: "#f08080", actualString: html);
     }
 
     [Fact]
     public void BuildCallbackHtml_Success_UsesSuccessColor()
     {
-        string html = SetupEndpoints.BuildCallbackHtml("Great", "All good", isError: false);
+        string html = SetupEndpoints.BuildCallbackHtml(title: "Great", message: "All good", isError: false);
 
-        Assert.Contains("Great", html);
-        Assert.Contains("#CBAFFF", html);
+        Assert.Contains(expectedSubstring: "Great", actualString: html);
+        Assert.Contains(expectedSubstring: "#CBAFFF", actualString: html);
     }
 
     [Fact]
     public void BuildCallbackHtml_EncodesHtmlInTitleAndMessage()
     {
         string html = SetupEndpoints.BuildCallbackHtml(
-            "<script>alert(1)</script>",
-            "<b>bold</b>",
+            title: "<script>alert(1)</script>",
+            message: "<b>bold</b>",
             isError: false
         );
 
         // The template's OWN redirect <script> tag is legitimate and expected — only
         // the caller-supplied title/message must never appear as raw, unencoded HTML.
-        Assert.DoesNotContain("<script>alert(1)</script>", html);
-        Assert.Contains("&lt;script&gt;alert(1)&lt;/script&gt;", html);
-        Assert.Contains("&lt;b&gt;bold&lt;/b&gt;", html);
+        Assert.DoesNotContain(expectedSubstring: "<script>alert(1)</script>", actualString: html);
+        Assert.Contains(expectedSubstring: "&lt;script&gt;alert(1)&lt;/script&gt;", actualString: html);
+        Assert.Contains(expectedSubstring: "&lt;b&gt;bold&lt;/b&gt;", actualString: html);
     }
 
     [Fact]
     public void BuildRedirectUri_UsesRequestHostPort()
     {
         DefaultHttpContext context = new();
-        context.Request.Host = new("example.local", 8443);
+        context.Request.Host = new(host: "example.local", port: 8443);
 
-        string uri = SetupEndpoints.BuildRedirectUri(context.Request);
+        string uri = SetupEndpoints.BuildRedirectUri(request: context.Request);
 
-        Assert.Equal("http://localhost:8443/sso-callback", uri);
+        Assert.Equal(expected: "http://localhost:8443/sso-callback", actual: uri);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static string CreateJwt() =>
         new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().WriteToken(
-            new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
+            token: new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
                 issuer: "https://auth.nomercy.tv/realms/NoMercyTV",
                 audience: "nomercy-server",
                 claims:
                 [
                     new(
-                        System.Security.Claims.ClaimTypes.NameIdentifier,
-                        Guid.NewGuid().ToString()
+                        type: System.Security.Claims.ClaimTypes.NameIdentifier,
+                        value: Guid.NewGuid().ToString()
                     ),
                 ],
-                notBefore: DateTime.UtcNow.AddMinutes(-5),
-                expires: DateTime.UtcNow.AddHours(1)
+                notBefore: DateTime.UtcNow.AddMinutes(value: -5),
+                expires: DateTime.UtcNow.AddHours(value: 1)
             )
         );
 
     private static string AuthResponseJson(string accessToken) =>
         JsonConvert.SerializeObject(
-            new AuthResponse
+            value: new AuthResponse
             {
                 AccessToken = accessToken,
                 RefreshToken = "refresh-1",

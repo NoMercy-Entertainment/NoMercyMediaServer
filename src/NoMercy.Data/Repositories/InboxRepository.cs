@@ -23,28 +23,28 @@ public class InboxRepository(MediaContext context, InboxRoutingService routingSe
     {
         IQueryable<InboxItem> query = context.InboxItems.AsNoTracking();
 
-        if (!string.IsNullOrWhiteSpace(status))
-            query = query.Where(item => item.Status == status);
+        if (!string.IsNullOrWhiteSpace(value: status))
+            query = query.Where(predicate: item => item.Status == status);
 
         return query
-            .OrderByDescending(item => item.CreatedAt)
-            .ThenByDescending(item => item.Id)
-            .ToListAsync(ct);
+            .OrderByDescending(keySelector: item => item.CreatedAt)
+            .ThenByDescending(keySelector: item => item.Id)
+            .ToListAsync(cancellationToken: ct);
     }
 
     public Task<InboxItem?> GetByIdAsync(Ulid id, CancellationToken ct = default)
     {
-        return context.InboxItems.AsNoTracking().FirstOrDefaultAsync(item => item.Id == id, ct);
+        return context.InboxItems.AsNoTracking().FirstOrDefaultAsync(predicate: item => item.Id == id, cancellationToken: ct);
     }
 
     public Task<InboxItem?> GetTrackedByIdAsync(Ulid id, CancellationToken ct = default)
     {
-        return context.InboxItems.FirstOrDefaultAsync(item => item.Id == id, ct);
+        return context.InboxItems.FirstOrDefaultAsync(predicate: item => item.Id == id, cancellationToken: ct);
     }
 
     public Task<Folder?> GetFolderByIdAsync(Ulid folderId, CancellationToken ct = default)
     {
-        return context.Folders.AsNoTracking().FirstOrDefaultAsync(f => f.Id == folderId, ct);
+        return context.Folders.AsNoTracking().FirstOrDefaultAsync(predicate: f => f.Id == folderId, cancellationToken: ct);
     }
 
     public Task ExecuteAssignmentAsync(
@@ -54,18 +54,18 @@ public class InboxRepository(MediaContext context, InboxRoutingService routingSe
         CancellationToken ct = default
     )
     {
-        return routingService.ExecuteAssignment(item, match, destination, context, ct);
+        return routingService.ExecuteAssignment(item: item, match: match, destination: destination, context: context, ct: ct);
     }
 
     public async Task DismissAsync(InboxItem item, CancellationToken ct = default)
     {
         item.Status = "Dismissed";
-        await context.SaveChangesAsync(ct);
+        await context.SaveChangesAsync(cancellationToken: ct);
     }
 
     public async Task DeleteAsync(InboxItem item, CancellationToken ct = default)
     {
-        context.InboxItems.Remove(item);
-        await context.SaveChangesAsync(ct);
+        context.InboxItems.Remove(entity: item);
+        await context.SaveChangesAsync(cancellationToken: ct);
     }
 }

@@ -15,33 +15,33 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record UserRequest
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public Guid Id { get; set; }
 
-    [JsonProperty("email")]
+    [JsonProperty(propertyName: "email")]
     public string Email { get; set; } = string.Empty;
 
-    [JsonProperty("manage")]
+    [JsonProperty(propertyName: "manage")]
     public bool Manage { get; set; }
 
-    [JsonProperty("owner")]
+    [JsonProperty(propertyName: "owner")]
     public bool Owner { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("allowed")]
+    [JsonProperty(propertyName: "allowed")]
     public bool Allowed { get; set; }
 
-    [JsonProperty("audio_transcoding")]
+    [JsonProperty(propertyName: "audio_transcoding")]
     public bool AudioTranscoding { get; set; }
 
-    [JsonProperty("video_transcoding")]
+    [JsonProperty(propertyName: "video_transcoding")]
     public bool VideoTranscoding { get; set; }
 
-    [JsonProperty("no_transcoding")]
+    [JsonProperty(propertyName: "no_transcoding")]
     public bool NoTranscoding { get; set; }
 
-    [JsonProperty("libraries")]
+    [JsonProperty(propertyName: "libraries")]
     public Ulid[]? Libraries { get; set; }
 }

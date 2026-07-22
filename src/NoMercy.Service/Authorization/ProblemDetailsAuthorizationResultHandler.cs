@@ -45,10 +45,10 @@ public class ProblemDetailsAuthorizationResultHandler : IAuthorizationMiddleware
                 Extensions = { { "traceId", context.TraceIdentifier } },
             };
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            await context.Response.WriteAsJsonAsync(problem);
+            await context.Response.WriteAsJsonAsync(value: problem);
             return;
         }
 
-        await _default.HandleAsync(next, context, policy, authorizeResult);
+        await _default.HandleAsync(next: next, context: context, policy: policy, authorizeResult: authorizeResult);
     }
 }

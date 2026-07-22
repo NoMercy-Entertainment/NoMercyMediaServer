@@ -23,78 +23,78 @@ public class HlsOutputStrategyMasterGuardTests : IDisposable
     public HlsOutputStrategyMasterGuardTests()
     {
         _outputDirectory = Path.Combine(
-            Path.GetTempPath(),
-            $"nomercy-master-guard-{Guid.NewGuid():N}"
+            path1: Path.GetTempPath(),
+            path2: $"nomercy-master-guard-{Guid.NewGuid():N}"
         );
-        Directory.CreateDirectory(_outputDirectory);
+        Directory.CreateDirectory(path: _outputDirectory);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(_outputDirectory))
-            Directory.Delete(_outputDirectory, true);
+        if (Directory.Exists(path: _outputDirectory))
+            Directory.Delete(path: _outputDirectory, recursive: true);
     }
 
     [Fact]
     public async Task FinalizeAsync_NoVariantProducedSegments_ThrowsAndPreservesExistingMaster()
     {
-        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
         OutputPlan plan = CreateSimplePlan();
 
-        string masterPath = Path.Combine(_outputDirectory, "Title.m3u8");
+        string masterPath = Path.Combine(path1: _outputDirectory, path2: "Title.m3u8");
         string existingMaster = "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1\nold/old.m3u8\n";
-        await File.WriteAllTextAsync(masterPath, existingMaster);
+        await File.WriteAllTextAsync(path: masterPath, contents: existingMaster);
 
         Func<Task> act = () =>
-            strategy.FinalizeAsync(_outputDirectory, plan, "Title", CancellationToken.None);
+            strategy.FinalizeAsync(outputDirectory: _outputDirectory, plan: plan, mediaTitle: "Title", ct: CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*zero variants*");
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage(expectedWildcardPattern: "*zero variants*");
 
-        string preserved = await File.ReadAllTextAsync(masterPath);
-        preserved.Should().Be(existingMaster);
+        string preserved = await File.ReadAllTextAsync(path: masterPath);
+        preserved.Should().Be(expected: existingMaster);
     }
 
     [Fact]
     public async Task FinalizeAsync_NoVariantsAndNoExistingMaster_WritesNothing()
     {
-        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
         OutputPlan plan = CreateSimplePlan();
 
         Func<Task> act = () =>
-            strategy.FinalizeAsync(_outputDirectory, plan, "Title", CancellationToken.None);
+            strategy.FinalizeAsync(outputDirectory: _outputDirectory, plan: plan, mediaTitle: "Title", ct: CancellationToken.None);
 
         await act.Should().ThrowAsync<InvalidOperationException>();
 
-        File.Exists(Path.Combine(_outputDirectory, "Title.m3u8")).Should().BeFalse();
+        File.Exists(path: Path.Combine(path1: _outputDirectory, path2: "Title.m3u8")).Should().BeFalse();
     }
 
     [Fact]
     public async Task FinalizeAsync_VariantsWithSegments_WritesPopulatedMaster()
     {
-        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
         OutputPlan plan = CreateSimplePlan();
 
-        WriteVariant("video_1920x1080_SDR", "video_1920x1080_SDR");
-        WriteVariant("audio_eng_aac", "audio_eng_aac");
+        WriteVariant(subDirectory: "video_1920x1080_SDR", name: "video_1920x1080_SDR");
+        WriteVariant(subDirectory: "audio_eng_aac", name: "audio_eng_aac");
 
-        await strategy.FinalizeAsync(_outputDirectory, plan, "Title", CancellationToken.None);
+        await strategy.FinalizeAsync(outputDirectory: _outputDirectory, plan: plan, mediaTitle: "Title", ct: CancellationToken.None);
 
-        string master = await File.ReadAllTextAsync(Path.Combine(_outputDirectory, "Title.m3u8"));
-        master.Should().Contain("#EXT-X-STREAM-INF");
-        master.Should().Contain("video_1920x1080_SDR/video_1920x1080_SDR.m3u8");
-        master.Should().Contain("audio_eng_aac/audio_eng_aac.m3u8");
+        string master = await File.ReadAllTextAsync(path: Path.Combine(path1: _outputDirectory, path2: "Title.m3u8"));
+        master.Should().Contain(expected: "#EXT-X-STREAM-INF");
+        master.Should().Contain(expected: "video_1920x1080_SDR/video_1920x1080_SDR.m3u8");
+        master.Should().Contain(expected: "audio_eng_aac/audio_eng_aac.m3u8");
     }
 
     private void WriteVariant(string subDirectory, string name)
     {
-        string variantDirectory = Path.Combine(_outputDirectory, subDirectory);
-        Directory.CreateDirectory(variantDirectory);
+        string variantDirectory = Path.Combine(path1: _outputDirectory, path2: subDirectory);
+        Directory.CreateDirectory(path: variantDirectory);
 
         byte[] segmentBytes = new byte[120_000];
-        File.WriteAllBytes(Path.Combine(variantDirectory, $"{name}_00000.ts"), segmentBytes);
+        File.WriteAllBytes(path: Path.Combine(path1: variantDirectory, path2: $"{name}_00000.ts"), bytes: segmentBytes);
 
         string playlist = $"#EXTM3U\n#EXTINF:6.000000,\n{name}_00000.ts\n#EXT-X-ENDLIST\n";
-        File.WriteAllText(Path.Combine(variantDirectory, $"{name}.m3u8"), playlist);
+        File.WriteAllText(path: Path.Combine(path1: variantDirectory, path2: $"{name}.m3u8"), contents: playlist);
     }
 
     private static OutputPlan CreateSimplePlan()

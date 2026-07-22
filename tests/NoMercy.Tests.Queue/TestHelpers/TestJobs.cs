@@ -28,12 +28,12 @@ public class TestJob : IShouldQueue
     {
         if (ExecutionDelay > 0)
         {
-            await Task.Delay(ExecutionDelay);
+            await Task.Delay(millisecondsDelay: ExecutionDelay);
         }
 
         if (ShouldFail)
         {
-            throw new InvalidOperationException($"TestJob failed with message: {Message}");
+            throw new InvalidOperationException(message: $"TestJob failed with message: {Message}");
         }
 
         HasExecuted = true;
@@ -50,7 +50,7 @@ public class AnotherTestJob : IShouldQueue
 
     public async Task Handle()
     {
-        await Task.Delay(1); // Minimal delay to simulate work
+        await Task.Delay(millisecondsDelay: 1); // Minimal delay to simulate work
         HasExecuted = true;
         Value *= 2;
     }
@@ -92,16 +92,16 @@ public class GatedThrowingJob : IShouldQueue
     public async Task Handle()
     {
         TaskCompletionSource gate = Gates.GetOrAdd(
-            GateKey,
-            _ => new(TaskCreationOptions.RunContinuationsAsynchronously)
+            key: GateKey,
+            valueFactory: _ => new(creationOptions: TaskCreationOptions.RunContinuationsAsynchronously)
         );
         await gate.Task;
 
         throw ExceptionMode switch
         {
-            "cancelled" => new OperationCanceledException("test-cancelled-by-shutdown"),
-            "disposed" => new ObjectDisposedException("test-scope-disposed-by-shutdown"),
-            _ => new InvalidOperationException("test-generic-failure"),
+            "cancelled" => new OperationCanceledException(message: "test-cancelled-by-shutdown"),
+            "disposed" => new ObjectDisposedException(objectName: "test-scope-disposed-by-shutdown"),
+            _ => new InvalidOperationException(message: "test-generic-failure"),
         };
     }
 }
@@ -136,9 +136,9 @@ public class ConcurrencyProbeJob : IShouldQueue
 
     public Task Handle()
     {
-        (CountdownEvent started, ManualResetEventSlim release) = Probes[ProbeKey];
+        (CountdownEvent started, ManualResetEventSlim release) = Probes[key: ProbeKey];
         started.Signal();
-        release.Wait(TimeSpan.FromSeconds(10));
+        release.Wait(timeout: TimeSpan.FromSeconds(seconds: 10));
         return Task.CompletedTask;
     }
 }

@@ -16,6 +16,6 @@ namespace NoMercy.Providers.TMDB.Models.TV;
 
 public class TmdbTvReviews : TmdbPaginatedResponse<TmdbReviewsResult>
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 }

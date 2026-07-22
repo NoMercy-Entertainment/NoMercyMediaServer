@@ -40,27 +40,27 @@ public class ReleaseManager(
         CoverArtImageManagerManager.CoverPalette? coverPalette
     )> Add(Guid id, Library albumLibrary, Folder libraryFolder, MediaFolder mediaFolder)
     {
-        logger.LogTrace("Adding Release: {Id} to Library: {Title}", id, albumLibrary.Title);
+        logger.LogTrace(message: "Adding Release: {Id} to Library: {Title}", args: [id, albumLibrary.Title]);
 
         MusicBrainzReleaseClient musicBrainzReleaseClient = new();
         MusicBrainzReleaseAppends? releaseAppends = await musicBrainzReleaseClient.WithAllAppends(
-            id
+            id: id
         );
 
         if (releaseAppends == null)
             return (null, null);
 
         CoverArtImageManagerManager.CoverPalette? coverPalette =
-            await CoverArtImageManagerManager.Add(releaseAppends.MusicBrainzReleaseGroup.Id);
+            await CoverArtImageManagerManager.Add(id: releaseAppends.MusicBrainzReleaseGroup.Id);
 
         if (coverPalette is not null)
         {
             using Image<Rgba32>? downloadedImage = await CoverArtCoverArtClient.Download(
-                coverPalette.Url
+                url: coverPalette.Url
             );
         }
 
-        await Store(releaseAppends, albumLibrary, libraryFolder, mediaFolder, coverPalette);
+        await Store(releaseAppends: releaseAppends, library: albumLibrary, libraryFolder: libraryFolder, mediaFolder: mediaFolder, coverPalette: coverPalette);
 
         return (releaseAppends, coverPalette);
     }
@@ -75,63 +75,63 @@ public class ReleaseManager(
     {
         try
         {
-            logger.LogTrace("Storing Release: {Title}", releaseAppends.Title);
+            logger.LogTrace(message: "Storing Release: {Title}", args: releaseAppends.Title);
 
-            string libraryRoot = ResolveLibraryRoot(libraryFolder);
-            string folder = mediaFolder.Path.Replace(libraryRoot, "");
+            string libraryRoot = ResolveLibraryRoot(libraryFolder: libraryFolder);
+            string folder = mediaFolder.Path.Replace(oldValue: libraryRoot, newValue: "");
 
             Album release = new()
             {
                 Id = releaseAppends.Id,
                 Name = releaseAppends.Title,
                 Country = releaseAppends.Country,
-                Disambiguation = string.IsNullOrEmpty(releaseAppends.Disambiguation)
+                Disambiguation = string.IsNullOrEmpty(value: releaseAppends.Disambiguation)
                     ? null
                     : releaseAppends.Disambiguation,
                 Year = releaseAppends.DateTime?.Year ?? 0,
-                Tracks = releaseAppends.Media.Sum(m => m.TrackCount),
+                Tracks = releaseAppends.Media.Sum(selector: m => m.TrackCount),
 
                 LibraryId = library.Id,
                 FolderId = libraryFolder.Id,
                 HostFolder = folder.PathName(),
 
-                Folder = folder.Replace("\\", "/"),
+                Folder = folder.Replace(oldValue: "\\", newValue: "/"),
 
                 Cover = coverPalette?.Url is not null ? $"/{coverPalette.Url.FileName()}" : null,
 
                 _colorPalette = (coverPalette?.Palette).OrEmpty(),
             };
 
-            await releaseRepository.Store(release);
-            jobDispatcher.DispatchColorPaletteJob("album", release.Id.ToString());
+            await releaseRepository.Store(release: release);
+            jobDispatcher.DispatchColorPaletteJob(entityType: "album", entityId: release.Id.ToString());
 
-            await LinkToLibrary(releaseAppends, library);
+            await LinkToLibrary(releaseAppends: releaseAppends, library: library);
 
             List<AlbumMusicGenre> genres = releaseAppends
-                .Genres.Select(genre => new AlbumMusicGenre
+                .Genres.Select(selector: genre => new AlbumMusicGenre
                 {
                     AlbumId = releaseAppends.Id,
                     MusicGenreId = genre.Id,
                 })
                 .ToList();
 
-            await musicGenreRepository.LinkToRelease(genres);
+            await musicGenreRepository.LinkToRelease(genreReleases: genres);
 
-            logger.LogTrace("Release {Title} stored", releaseAppends.Title);
+            logger.LogTrace(message: "Release {Title} stored", args: releaseAppends.Title);
         }
         catch (Exception e)
         {
-            logger.LogError(e.Message);
+            logger.LogError(message: e.Message);
         }
     }
 
     private async Task LinkToLibrary(MusicBrainzReleaseAppends releaseAppends, Library library)
     {
-        logger.LogTrace("Linking Release to Library: {Title}", releaseAppends.Title);
+        logger.LogTrace(message: "Linking Release to Library: {Title}", args: releaseAppends.Title);
 
         AlbumLibrary insert = new() { AlbumId = releaseAppends.Id, LibraryId = library.Id };
 
-        await releaseRepository.LinkToLibrary(insert);
+        await releaseRepository.LinkToLibrary(albumLibrary: insert);
     }
 
     public async Task Store(
@@ -144,11 +144,11 @@ public class ReleaseManager(
     {
         try
         {
-            logger.LogTrace("Storing Release: {Title}", releaseAppends.Title);
+            logger.LogTrace(message: "Storing Release: {Title}", args: releaseAppends.Title);
 
-            string libraryRoot = ResolveLibraryRoot(libraryFolder);
+            string libraryRoot = ResolveLibraryRoot(libraryFolder: libraryFolder);
             string folder = StoragePathHelpers
-                .GetParent(mediaFile.Path.Replace(libraryRoot, ""))
+                .GetParent(path: mediaFile.Path.Replace(oldValue: libraryRoot, newValue: ""))
                 .OrEmpty();
 
             Album release = new()
@@ -156,54 +156,54 @@ public class ReleaseManager(
                 Id = releaseAppends.Id,
                 Name = releaseAppends.Title,
                 Country = releaseAppends.Country,
-                Disambiguation = string.IsNullOrEmpty(releaseAppends.Disambiguation)
+                Disambiguation = string.IsNullOrEmpty(value: releaseAppends.Disambiguation)
                     ? null
                     : releaseAppends.Disambiguation,
                 Year = releaseAppends.DateTime?.Year ?? 0,
-                Tracks = releaseAppends.Media.Sum(m => m.TrackCount),
+                Tracks = releaseAppends.Media.Sum(selector: m => m.TrackCount),
 
                 LibraryId = library.Id,
                 FolderId = libraryFolder.Id,
                 HostFolder = folder.PathName(),
 
-                Folder = folder.Replace("\\", "/"),
+                Folder = folder.Replace(oldValue: "\\", newValue: "/"),
 
                 Cover = coverPalette?.Url is not null ? $"/{coverPalette.Url.FileName()}" : null,
 
                 _colorPalette = (coverPalette?.Palette).OrEmpty(),
             };
 
-            await releaseRepository.Store(release);
-            jobDispatcher.DispatchColorPaletteJob("album", release.Id.ToString());
+            await releaseRepository.Store(release: release);
+            jobDispatcher.DispatchColorPaletteJob(entityType: "album", entityId: release.Id.ToString());
 
-            await LinkToLibrary(releaseAppends, library);
-            await LinkToReleaseGroup(releaseAppends);
-            await LinkToGenre(releaseAppends);
+            await LinkToLibrary(releaseAppends: releaseAppends, library: library);
+            await LinkToReleaseGroup(releaseAppends: releaseAppends);
+            await LinkToGenre(releaseAppends: releaseAppends);
 
-            logger.LogTrace("Release {Title} stored", releaseAppends.Title);
+            logger.LogTrace(message: "Release {Title} stored", args: releaseAppends.Title);
         }
         catch (Exception e)
         {
-            logger.LogError(e.Message);
+            logger.LogError(message: e.Message);
         }
     }
 
     private async Task LinkToGenre(MusicBrainzReleaseAppends releaseAppends)
     {
         List<AlbumMusicGenre> genres = releaseAppends
-            .Genres.Select(genre => new AlbumMusicGenre
+            .Genres.Select(selector: genre => new AlbumMusicGenre
             {
                 AlbumId = releaseAppends.Id,
                 MusicGenreId = genre.Id,
             })
             .ToList();
 
-        await musicGenreRepository.LinkToRelease(genres);
+        await musicGenreRepository.LinkToRelease(genreReleases: genres);
     }
 
     private async Task LinkToReleaseGroup(MusicBrainzReleaseAppends releaseAppends)
     {
-        logger.LogTrace("Linking Release to Release Group: {Title}", releaseAppends.Title);
+        logger.LogTrace(message: "Linking Release to Release Group: {Title}", args: releaseAppends.Title);
 
         AlbumReleaseGroup insert = new()
         {
@@ -211,16 +211,16 @@ public class ReleaseManager(
             ReleaseGroupId = releaseAppends.MusicBrainzReleaseGroup.Id,
         };
 
-        await releaseRepository.LinkToReleaseGroup(insert);
+        await releaseRepository.LinkToReleaseGroup(albumReleaseGroup: insert);
     }
 
     private string ResolveLibraryRoot(Folder libraryFolder)
     {
         IStorage folderStorage = storageFactory.For(
-            libraryFolder.Id,
-            libraryFolder.DriverId,
-            string.Empty
+            folderId: libraryFolder.Id,
+            driverId: libraryFolder.DriverId,
+            subPath: string.Empty
         );
-        return FolderRootPath(folderStorage, libraryFolder.Path);
+        return FolderRootPath(storage: folderStorage, path: libraryFolder.Path);
     }
 }

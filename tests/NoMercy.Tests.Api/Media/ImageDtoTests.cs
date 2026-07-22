@@ -27,7 +27,7 @@ namespace NoMercy.Tests.Api.Media;
 /// they can only pass against a pure function of the input bytes; against
 /// randomized string.GetHashCode() they fail intermittently across runs.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class ImageDtoTests
 {
     private static TmdbImage MakeTmdbImage(string filePath, int width = 1920, int height = 1080) =>
@@ -44,22 +44,22 @@ public class ImageDtoTests
     [Fact]
     public void Ctor_TmdbImage_SameFilePath_MintsSameId_WithinProcess()
     {
-        TmdbImage first = MakeTmdbImage("/abc123.jpg");
-        TmdbImage second = MakeTmdbImage("/abc123.jpg");
+        TmdbImage first = MakeTmdbImage(filePath: "/abc123.jpg");
+        TmdbImage second = MakeTmdbImage(filePath: "/abc123.jpg");
 
-        ImageDto firstDto = new(first);
-        ImageDto secondDto = new(second);
+        ImageDto firstDto = new(media: first);
+        ImageDto secondDto = new(media: second);
 
-        firstDto.Id.Should().Be(secondDto.Id);
+        firstDto.Id.Should().Be(expected: secondDto.Id);
     }
 
     [Fact]
     public void Ctor_TmdbImage_DifferentFilePaths_MintDifferentIds()
     {
-        ImageDto dtoA = new(MakeTmdbImage("/path-a.jpg"));
-        ImageDto dtoB = new(MakeTmdbImage("/path-b.jpg"));
+        ImageDto dtoA = new(media: MakeTmdbImage(filePath: "/path-a.jpg"));
+        ImageDto dtoB = new(media: MakeTmdbImage(filePath: "/path-b.jpg"));
 
-        dtoA.Id.Should().NotBe(dtoB.Id);
+        dtoA.Id.Should().NotBe(unexpected: dtoB.Id);
     }
 
     [Fact]
@@ -69,17 +69,17 @@ public class ImageDtoTests
         // most likely to regress if the hash algorithm changes again.
         for (int i = 0; i < 200; i++)
         {
-            ImageDto dto = new(MakeTmdbImage($"/sweep-{i}-{new string('x', i % 7)}.jpg"));
-            dto.Id.Should().BeGreaterThanOrEqualTo(0);
+            ImageDto dto = new(media: MakeTmdbImage(filePath: $"/sweep-{i}-{new string(c: 'x', count: i % 7)}.jpg"));
+            dto.Id.Should().BeGreaterThanOrEqualTo(expected: 0);
         }
     }
 
     [Theory]
-    [InlineData("/abc123.jpg", 922_006_951L)]
-    [InlineData("/path-a.jpg", 1_781_138_878L)]
-    [InlineData("/path-b.jpg", 2_746_522_937L)]
-    [InlineData("", 3_128_831_035L)]
-    [InlineData("/determinism-check-9f3ac1.jpg", 2_410_689_069L)]
+    [InlineData(data: ["/abc123.jpg", 922_006_951L])]
+    [InlineData(data: ["/path-a.jpg", 1_781_138_878L])]
+    [InlineData(data: ["/path-b.jpg", 2_746_522_937L])]
+    [InlineData(data: ["", 3_128_831_035L])]
+    [InlineData(data: ["/determinism-check-9f3ac1.jpg", 2_410_689_069L])]
     public void Ctor_TmdbImage_MintsThePreComputedFnv1AId_NotARandomizedHash(
         string filePath,
         long expectedId
@@ -90,9 +90,9 @@ public class ImageDtoTests
         // randomized per process and would only match one of these values by
         // 1-in-2^32 chance, so this pins the algorithm rather than merely
         // re-deriving whatever the implementation currently does.
-        ImageDto dto = new(MakeTmdbImage(filePath));
+        ImageDto dto = new(media: MakeTmdbImage(filePath: filePath));
 
-        dto.Id.Should().Be(expectedId);
+        dto.Id.Should().Be(expected: expectedId);
     }
 
     [Fact]
@@ -105,41 +105,41 @@ public class ImageDtoTests
             Height = 200,
         };
 
-        ImageDto first = new(image);
-        ImageDto second = new(image);
+        ImageDto first = new(media: image);
+        ImageDto second = new(media: image);
 
-        first.Id.Should().Be(second.Id);
+        first.Id.Should().Be(expected: second.Id);
     }
 
     [Fact]
     public void Ctor_TmdbImage_WidthGreaterThanOrEqualHeight_TypeIsBackdrop()
     {
-        ImageDto dto = new(MakeTmdbImage("/landscape.jpg", width: 1920, height: 1080));
+        ImageDto dto = new(media: MakeTmdbImage(filePath: "/landscape.jpg", width: 1920, height: 1080));
 
-        dto.Type.Should().Be("backdrop");
+        dto.Type.Should().Be(expected: "backdrop");
     }
 
     [Fact]
     public void Ctor_TmdbImage_HeightGreaterThanWidth_TypeIsPoster()
     {
-        ImageDto dto = new(MakeTmdbImage("/portrait.jpg", width: 500, height: 750));
+        ImageDto dto = new(media: MakeTmdbImage(filePath: "/portrait.jpg", width: 500, height: 750));
 
-        dto.Type.Should().Be("poster");
+        dto.Type.Should().Be(expected: "poster");
     }
 
     [Fact]
     public void Ctor_TmdbImage_SetsSrcAndMetadataFromSource()
     {
-        TmdbImage source = MakeTmdbImage("/src-path.jpg");
+        TmdbImage source = MakeTmdbImage(filePath: "/src-path.jpg");
 
-        ImageDto dto = new(source);
+        ImageDto dto = new(media: source);
 
-        dto.Src.Should().Be("/src-path.jpg");
-        dto.Width.Should().Be(1920);
-        dto.Height.Should().Be(1080);
-        dto.Iso6391.Should().Be("en");
-        dto.VoteAverage.Should().Be(7.5f);
-        dto.VoteCount.Should().Be(10);
+        dto.Src.Should().Be(expected: "/src-path.jpg");
+        dto.Width.Should().Be(expected: 1920);
+        dto.Height.Should().Be(expected: 1080);
+        dto.Iso6391.Should().Be(expected: "en");
+        dto.VoteAverage.Should().Be(expected: 7.5f);
+        dto.VoteCount.Should().Be(expected: 10);
         dto.ColorPalette.Should().NotBeNull();
     }
 
@@ -159,11 +159,11 @@ public class ImageDtoTests
             Height = 450,
         };
 
-        ImageDto firstDto = new(first);
-        ImageDto secondDto = new(second);
+        ImageDto firstDto = new(image: first);
+        ImageDto secondDto = new(image: second);
 
-        firstDto.Id.Should().Be(secondDto.Id);
-        firstDto.Type.Should().Be("poster");
+        firstDto.Id.Should().Be(expected: secondDto.Id);
+        firstDto.Type.Should().Be(expected: "poster");
     }
 
     [Fact]
@@ -176,9 +176,9 @@ public class ImageDtoTests
             Height = 200,
         };
 
-        ImageDto dto = new(profile);
+        ImageDto dto = new(image: profile);
 
-        dto.Id.Should().BeGreaterThanOrEqualTo(0);
+        dto.Id.Should().BeGreaterThanOrEqualTo(expected: 0);
     }
 
     [Fact]
@@ -197,11 +197,11 @@ public class ImageDtoTests
             VoteCount = 4,
         };
 
-        ImageDto dto = new(media);
+        ImageDto dto = new(media: media);
 
-        dto.Id.Should().Be(42);
-        dto.Src.Should().Be("/tmdb-poster.jpg");
-        dto.Type.Should().Be("poster");
+        dto.Id.Should().Be(expected: 42);
+        dto.Src.Should().Be(expected: "/tmdb-poster.jpg");
+        dto.Type.Should().Be(expected: "poster");
     }
 
     [Fact]
@@ -217,8 +217,8 @@ public class ImageDtoTests
             Height = 500,
         };
 
-        ImageDto dto = new(media);
+        ImageDto dto = new(media: media);
 
-        dto.Src.Should().Be("/images/music/artist-cover.jpg");
+        dto.Src.Should().Be(expected: "/images/music/artist-cover.jpg");
     }
 }

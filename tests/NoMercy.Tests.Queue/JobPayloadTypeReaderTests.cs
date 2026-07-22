@@ -24,7 +24,7 @@ namespace NoMercy.Tests.Queue;
 /// without deserializing, falling back to "unknown" on anything else.
 /// (Accessible here via <c>InternalsVisibleTo</c>.)
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class JobPayloadTypeReaderTests
 {
     [Fact]
@@ -33,31 +33,31 @@ public class JobPayloadTypeReaderTests
         string payload =
             "{\"$type\":\"NoMercy.MediaProcessing.Jobs.MediaJobs.ShowExtrasJob, NoMercy.MediaProcessing\"}";
 
-        JobPayloadTypeReader.ReadShortTypeName(payload).Should().Be("ShowExtrasJob");
+        JobPayloadTypeReader.ReadShortTypeName(payload: payload).Should().Be(expected: "ShowExtrasJob");
     }
 
     [Fact]
     public void ReadShortTypeName_MalformedJson_ReturnsUnknown_DoesNotThrow()
     {
-        JobPayloadTypeReader.ReadShortTypeName("{not valid json").Should().Be("unknown");
+        JobPayloadTypeReader.ReadShortTypeName(payload: "{not valid json").Should().Be(expected: "unknown");
     }
 
     [Fact]
     public void ReadShortTypeName_MissingTypeProperty_ReturnsUnknown()
     {
-        JobPayloadTypeReader.ReadShortTypeName("{\"someOtherField\":1}").Should().Be("unknown");
+        JobPayloadTypeReader.ReadShortTypeName(payload: "{\"someOtherField\":1}").Should().Be(expected: "unknown");
     }
 
     [Fact]
     public void ReadShortTypeName_TypePropertyIsEmptyString_ReturnsUnknown()
     {
-        JobPayloadTypeReader.ReadShortTypeName("{\"$type\":\"\"}").Should().Be("unknown");
+        JobPayloadTypeReader.ReadShortTypeName(payload: "{\"$type\":\"\"}").Should().Be(expected: "unknown");
     }
 
     [Fact]
     public void ReadShortTypeName_TypePropertyIsNotAString_ReturnsUnknown()
     {
-        JobPayloadTypeReader.ReadShortTypeName("{\"$type\":42}").Should().Be("unknown");
+        JobPayloadTypeReader.ReadShortTypeName(payload: "{\"$type\":42}").Should().Be(expected: "unknown");
     }
 
     [Fact]
@@ -65,6 +65,6 @@ public class JobPayloadTypeReaderTests
     {
         string payload = "{\"$type\":\"BareTypeName, SomeAssembly\"}";
 
-        JobPayloadTypeReader.ReadShortTypeName(payload).Should().Be("BareTypeName");
+        JobPayloadTypeReader.ReadShortTypeName(payload: payload).Should().Be(expected: "BareTypeName");
     }
 }

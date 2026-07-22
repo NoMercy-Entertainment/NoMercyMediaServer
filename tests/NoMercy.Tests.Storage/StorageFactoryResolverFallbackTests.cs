@@ -23,14 +23,14 @@ namespace NoMercy.Tests.Storage;
 /// deletion race) must still serve local files instead of taking the whole
 /// request down.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class StorageFactoryResolverFallbackTests
 {
     private static Mock<IStorageDriver> BackendMock()
     {
-        Mock<IStorageDriver> driver = new(MockBehavior.Loose);
-        driver.Setup(b => b.GetFullPath(It.IsAny<string>())).Returns<string>(Path.GetFullPath);
-        driver.Setup(b => b.ResolveLinkTarget(It.IsAny<string>())).Returns((string?)null);
+        Mock<IStorageDriver> driver = new(behavior: MockBehavior.Loose);
+        driver.Setup(expression: b => b.GetFullPath(It.IsAny<string>())).Returns<string>(valueFunction: Path.GetFullPath);
+        driver.Setup(expression: b => b.ResolveLinkTarget(It.IsAny<string>())).Returns(value: (string?)null);
         return driver;
     }
 
@@ -39,17 +39,17 @@ public sealed class StorageFactoryResolverFallbackTests
     {
         Mock<IStorageDriver> driver = BackendMock();
         StorageFactory factory = new(
-            driver.Object,
-            NullLogger<StorageFactory>.Instance,
+            driver: driver.Object,
+            logger: NullLogger<StorageFactory>.Instance,
             driverConfigResolver: null
         );
 
-        IStorage storage = factory.For(Ulid.NewUlid(), Ulid.NewUlid(), string.Empty);
+        IStorage storage = factory.For(folderId: Ulid.NewUlid(), driverId: Ulid.NewUlid(), subPath: string.Empty);
 
         storage
             .Should()
             .NotBeNull(
-                "with no resolver wired up, the factory must still produce a usable local-backed storage"
+                because: "with no resolver wired up, the factory must still produce a usable local-backed storage"
             );
     }
 
@@ -58,32 +58,32 @@ public sealed class StorageFactoryResolverFallbackTests
     {
         Mock<IStorageDriver> driver = BackendMock();
         Mock<IDriverConfigResolver> resolver = new();
-        resolver.Setup(r => r.Resolve(It.IsAny<Ulid>())).Returns(((string, string?)?)null);
+        resolver.Setup(expression: r => r.Resolve(It.IsAny<Ulid>())).Returns(value: ((string, string?)?)null);
         StorageFactory factory = new(
-            driver.Object,
-            NullLogger<StorageFactory>.Instance,
-            resolver.Object
+            driver: driver.Object,
+            logger: NullLogger<StorageFactory>.Instance,
+            driverConfigResolver: resolver.Object
         );
 
-        IStorage storage = factory.For(Ulid.NewUlid(), Ulid.NewUlid(), string.Empty);
+        IStorage storage = factory.For(folderId: Ulid.NewUlid(), driverId: Ulid.NewUlid(), subPath: string.Empty);
 
         storage
             .Should()
-            .NotBeNull("a dangling/unknown DriverId must fall back to local, not throw");
+            .NotBeNull(because: "a dangling/unknown DriverId must fall back to local, not throw");
     }
 
     [Fact]
     public void JoinRoot_unrecognized_driver_type_falls_back_to_OS_path_combine()
     {
-        string root = Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar);
+        string root = Path.GetTempPath().TrimEnd(trimChar: Path.DirectorySeparatorChar);
 
-        string result = StorageFactory.JoinRoot(root, "sub", "some-future-driver-type");
+        string result = StorageFactory.JoinRoot(root: root, subPath: "sub", driverType: "some-future-driver-type");
 
         result
             .Should()
             .Be(
-                Path.Combine(root, "sub"),
-                "an unrecognized driver type must not crash JoinRoot — it degrades to the OS join"
+                expected: Path.Combine(path1: root, path2: "sub"),
+                because: "an unrecognized driver type must not crash JoinRoot — it degrades to the OS join"
             );
     }
 }

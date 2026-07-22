@@ -15,33 +15,33 @@ namespace NoMercy.Providers.TMDB.Models.People;
 
 public class TmdbPersonExternalIds
 {
-    [JsonProperty("imdb_id")]
+    [JsonProperty(propertyName: "imdb_id")]
     public string? ImdbId { get; set; }
 
-    [JsonProperty("facebook_id")]
+    [JsonProperty(propertyName: "facebook_id")]
     public string? FacebookId { get; set; }
 
-    [JsonProperty("freebase_mid")]
+    [JsonProperty(propertyName: "freebase_mid")]
     public string? FreebaseMid { get; set; }
 
-    [JsonProperty("freebase_id")]
+    [JsonProperty(propertyName: "freebase_id")]
     public string? FreebaseId { get; set; }
 
-    [JsonProperty("twitter_id")]
+    [JsonProperty(propertyName: "twitter_id")]
     public string? TwitterId { get; set; }
 
-    [JsonProperty("tvrage_id")]
+    [JsonProperty(propertyName: "tvrage_id")]
     public string? TvRageId { get; set; }
 
-    [JsonProperty("wikidata_id")]
+    [JsonProperty(propertyName: "wikidata_id")]
     public string? WikipediaId { get; set; }
 
-    [JsonProperty("instagram_id")]
+    [JsonProperty(propertyName: "instagram_id")]
     public string? InstagramId { get; set; }
 
-    [JsonProperty("tiktok_id")]
+    [JsonProperty(propertyName: "tiktok_id")]
     public string? TikTokId { get; set; }
 
-    [JsonProperty("youtube_id")]
+    [JsonProperty(propertyName: "youtube_id")]
     public string? YoutubeId { get; set; }
 }

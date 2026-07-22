@@ -23,69 +23,69 @@ public class PluginClaimsAugmentorTests
     [Fact]
     public async Task CollectsAdditionalClaims_FromDeclaredAuthPlugin()
     {
-        FakeAuthPlugin plugin = new("plan", "pro");
-        FakePluginManager manager = FakePluginManager.WithAuth(plugin);
-        PluginClaimsAugmentor augmentor = new(manager, NullLogger<PluginClaimsAugmentor>.Instance);
+        FakeAuthPlugin plugin = new(claimType: "plan", claimValue: "pro");
+        FakePluginManager manager = FakePluginManager.WithAuth(plugin: plugin);
+        PluginClaimsAugmentor augmentor = new(pluginManager: manager, logger: NullLogger<PluginClaimsAugmentor>.Instance);
 
-        IReadOnlyList<Claim> claims = await augmentor.CollectAdditionalClaimsAsync("tok", default);
+        IReadOnlyList<Claim> claims = await augmentor.CollectAdditionalClaimsAsync(token: "tok", ct: default);
 
-        Assert.Contains(claims, c => c is { Type: "plan", Value: "pro" });
+        Assert.Contains(collection: claims, filter: c => c is { Type: "plan", Value: "pro" });
     }
 
     [Fact]
     public async Task UndeclaredAuthPlugin_IsIgnored()
     {
-        FakeAuthPlugin plugin = new("plan", "pro");
-        FakePluginManager manager = FakePluginManager.WithBaselineOnly(plugin);
-        PluginClaimsAugmentor augmentor = new(manager, NullLogger<PluginClaimsAugmentor>.Instance);
+        FakeAuthPlugin plugin = new(claimType: "plan", claimValue: "pro");
+        FakePluginManager manager = FakePluginManager.WithBaselineOnly(plugin: plugin);
+        PluginClaimsAugmentor augmentor = new(pluginManager: manager, logger: NullLogger<PluginClaimsAugmentor>.Instance);
 
-        IReadOnlyList<Claim> claims = await augmentor.CollectAdditionalClaimsAsync("tok", default);
+        IReadOnlyList<Claim> claims = await augmentor.CollectAdditionalClaimsAsync(token: "tok", ct: default);
 
-        Assert.Empty(claims);
+        Assert.Empty(collection: claims);
     }
 
     [Fact]
     public async Task ThrowingAuthPlugin_IsIgnored_AuthIsNeverWeakened()
     {
         ThrowingAuthPlugin plugin = new();
-        FakePluginManager manager = FakePluginManager.WithAuth(plugin);
-        PluginClaimsAugmentor augmentor = new(manager, NullLogger<PluginClaimsAugmentor>.Instance);
+        FakePluginManager manager = FakePluginManager.WithAuth(plugin: plugin);
+        PluginClaimsAugmentor augmentor = new(pluginManager: manager, logger: NullLogger<PluginClaimsAugmentor>.Instance);
 
-        IReadOnlyList<Claim> claims = await augmentor.CollectAdditionalClaimsAsync("tok", default);
+        IReadOnlyList<Claim> claims = await augmentor.CollectAdditionalClaimsAsync(token: "tok", ct: default);
 
-        Assert.Empty(claims);
+        Assert.Empty(collection: claims);
     }
 
     [Fact]
     public async Task UnauthenticatedPluginResult_ContributesNoClaims()
     {
-        FakeAuthPlugin plugin = new("plan", "pro", isAuthenticated: false);
-        FakePluginManager manager = FakePluginManager.WithAuth(plugin);
-        PluginClaimsAugmentor augmentor = new(manager, NullLogger<PluginClaimsAugmentor>.Instance);
+        FakeAuthPlugin plugin = new(claimType: "plan", claimValue: "pro", isAuthenticated: false);
+        FakePluginManager manager = FakePluginManager.WithAuth(plugin: plugin);
+        PluginClaimsAugmentor augmentor = new(pluginManager: manager, logger: NullLogger<PluginClaimsAugmentor>.Instance);
 
-        IReadOnlyList<Claim> claims = await augmentor.CollectAdditionalClaimsAsync("tok", default);
+        IReadOnlyList<Claim> claims = await augmentor.CollectAdditionalClaimsAsync(token: "tok", ct: default);
 
-        Assert.Empty(claims);
+        Assert.Empty(collection: claims);
     }
 
     [Fact]
     public async Task HangingAuthPlugin_IsSkippedWithinTimeout_AuthNotBlocked()
     {
         HangingAuthPlugin plugin = new();
-        FakePluginManager manager = FakePluginManager.WithAuth(plugin);
-        PluginClaimsAugmentor augmentor = new(manager, NullLogger<PluginClaimsAugmentor>.Instance)
+        FakePluginManager manager = FakePluginManager.WithAuth(plugin: plugin);
+        PluginClaimsAugmentor augmentor = new(pluginManager: manager, logger: NullLogger<PluginClaimsAugmentor>.Instance)
         {
-            PerPluginTimeout = TimeSpan.FromMilliseconds(50),
+            PerPluginTimeout = TimeSpan.FromMilliseconds(milliseconds: 50),
         };
 
         Stopwatch stopwatch = Stopwatch.StartNew();
-        IReadOnlyList<Claim> claims = await augmentor.CollectAdditionalClaimsAsync("tok", default);
+        IReadOnlyList<Claim> claims = await augmentor.CollectAdditionalClaimsAsync(token: "tok", ct: default);
         stopwatch.Stop();
 
-        Assert.Empty(claims);
+        Assert.Empty(collection: claims);
         Assert.True(
-            stopwatch.Elapsed < TimeSpan.FromSeconds(5),
-            $"expected the hang to be cut short by PerPluginTimeout, took {stopwatch.Elapsed}"
+            condition: stopwatch.Elapsed < TimeSpan.FromSeconds(seconds: 5),
+            userMessage: $"expected the hang to be cut short by PerPluginTimeout, took {stopwatch.Elapsed}"
         );
     }
 
@@ -97,28 +97,28 @@ public class PluginClaimsAugmentorTests
         // no matching entry in the latter, `installed.FirstOrDefault(...)`
         // returns null and the null-conditional `?.Capabilities` must fall back
         // to null capabilities (denies by default) rather than throw.
-        FakeAuthPlugin plugin = new("plan", "pro");
-        FakePluginManager manager = FakePluginManager.WithAuthPluginNotInInstalledList(plugin);
-        PluginClaimsAugmentor augmentor = new(manager, NullLogger<PluginClaimsAugmentor>.Instance);
+        FakeAuthPlugin plugin = new(claimType: "plan", claimValue: "pro");
+        FakePluginManager manager = FakePluginManager.WithAuthPluginNotInInstalledList(plugin: plugin);
+        PluginClaimsAugmentor augmentor = new(pluginManager: manager, logger: NullLogger<PluginClaimsAugmentor>.Instance);
 
-        IReadOnlyList<Claim> claims = await augmentor.CollectAdditionalClaimsAsync("tok", default);
+        IReadOnlyList<Claim> claims = await augmentor.CollectAdditionalClaimsAsync(token: "tok", ct: default);
 
-        Assert.Empty(claims);
+        Assert.Empty(collection: claims);
     }
 
     [Fact]
     public async Task ReservedClaimTypes_AreStrippedFromPluginOutput()
     {
         MultiClaimAuthPlugin plugin = new();
-        FakePluginManager manager = FakePluginManager.WithAuth(plugin);
-        PluginClaimsAugmentor augmentor = new(manager, NullLogger<PluginClaimsAugmentor>.Instance);
+        FakePluginManager manager = FakePluginManager.WithAuth(plugin: plugin);
+        PluginClaimsAugmentor augmentor = new(pluginManager: manager, logger: NullLogger<PluginClaimsAugmentor>.Instance);
 
-        IReadOnlyList<Claim> claims = await augmentor.CollectAdditionalClaimsAsync("tok", default);
+        IReadOnlyList<Claim> claims = await augmentor.CollectAdditionalClaimsAsync(token: "tok", ct: default);
 
-        Assert.Single(claims);
-        Assert.Contains(claims, c => c is { Type: "plan", Value: "pro" });
-        Assert.DoesNotContain(claims, c => c.Type == ClaimTypes.Role);
-        Assert.DoesNotContain(claims, c => c.Type == "sub");
+        Assert.Single(collection: claims);
+        Assert.Contains(collection: claims, filter: c => c is { Type: "plan", Value: "pro" });
+        Assert.DoesNotContain(collection: claims, filter: c => c.Type == ClaimTypes.Role);
+        Assert.DoesNotContain(collection: claims, filter: c => c.Type == "sub");
     }
 
     private sealed class HangingAuthPlugin : IAuthPlugin
@@ -126,7 +126,7 @@ public class PluginClaimsAugmentorTests
         public string Name => "hanging-auth";
         public string Description => "d";
         public Guid Id { get; } = Guid.NewGuid();
-        public Version Version { get; } = new(1, 0);
+        public Version Version { get; } = new(major: 1, minor: 0);
 
         public void Initialize(IPluginContext context) { }
 
@@ -137,11 +137,11 @@ public class PluginClaimsAugmentorTests
             CancellationToken ct = default
         )
         {
-            await Task.Delay(TimeSpan.FromSeconds(30), ct);
+            await Task.Delay(delay: TimeSpan.FromSeconds(seconds: 30), cancellationToken: ct);
             return new AuthResult
             {
                 IsAuthenticated = true,
-                Claims = new() { ["never"] = "reached" },
+                Claims = new() { [key: "never"] = "reached" },
             };
         }
     }
@@ -151,7 +151,7 @@ public class PluginClaimsAugmentorTests
         public string Name => "multi-claim-auth";
         public string Description => "d";
         public Guid Id { get; } = Guid.NewGuid();
-        public Version Version { get; } = new(1, 0);
+        public Version Version { get; } = new(major: 1, minor: 0);
 
         public void Initialize(IPluginContext context) { }
 
@@ -159,14 +159,14 @@ public class PluginClaimsAugmentorTests
 
         public Task<AuthResult> AuthenticateAsync(string token, CancellationToken ct = default) =>
             Task.FromResult(
-                new AuthResult
+                result: new AuthResult
                 {
                     IsAuthenticated = true,
                     Claims = new()
                     {
-                        [ClaimTypes.Role] = "super-admin",
-                        ["sub"] = "attacker",
-                        ["plan"] = "pro",
+                        [key: ClaimTypes.Role] = "super-admin",
+                        [key: "sub"] = "attacker",
+                        [key: "plan"] = "pro",
                     },
                 }
             );
@@ -181,7 +181,7 @@ public class PluginClaimsAugmentorTests
         public string Name => "fake-auth";
         public string Description => "d";
         public Guid Id { get; } = Guid.NewGuid();
-        public Version Version { get; } = new(1, 0);
+        public Version Version { get; } = new(major: 1, minor: 0);
 
         public void Initialize(IPluginContext context) { }
 
@@ -189,10 +189,10 @@ public class PluginClaimsAugmentorTests
 
         public Task<AuthResult> AuthenticateAsync(string token, CancellationToken ct = default) =>
             Task.FromResult(
-                new AuthResult
+                result: new AuthResult
                 {
                     IsAuthenticated = isAuthenticated,
-                    Claims = new() { [claimType] = claimValue },
+                    Claims = new() { [key: claimType] = claimValue },
                 }
             );
     }
@@ -202,14 +202,14 @@ public class PluginClaimsAugmentorTests
         public string Name => "throwing-auth";
         public string Description => "d";
         public Guid Id { get; } = Guid.NewGuid();
-        public Version Version { get; } = new(1, 0);
+        public Version Version { get; } = new(major: 1, minor: 0);
 
         public void Initialize(IPluginContext context) { }
 
         public void Dispose() { }
 
         public Task<AuthResult> AuthenticateAsync(string token, CancellationToken ct = default) =>
-            throw new InvalidOperationException("plugin blew up");
+            throw new InvalidOperationException(message: "plugin blew up");
     }
 
     /// <summary>
@@ -225,16 +225,16 @@ public class PluginClaimsAugmentorTests
         public static FakePluginManager WithAuth(IAuthPlugin plugin)
         {
             FakePluginManager manager = new();
-            manager._plugins.Add(plugin);
-            manager._capabilities[plugin.Id] = new() { Hooks = [PluginHookCapability.Auth] };
+            manager._plugins.Add(item: plugin);
+            manager._capabilities[key: plugin.Id] = new() { Hooks = [PluginHookCapability.Auth] };
             return manager;
         }
 
         public static FakePluginManager WithBaselineOnly(IAuthPlugin plugin)
         {
             FakePluginManager manager = new();
-            manager._plugins.Add(plugin);
-            manager._capabilities[plugin.Id] = null;
+            manager._plugins.Add(item: plugin);
+            manager._capabilities[key: plugin.Id] = null;
             return manager;
         }
 
@@ -245,21 +245,21 @@ public class PluginClaimsAugmentorTests
         public static FakePluginManager WithAuthPluginNotInInstalledList(IAuthPlugin plugin)
         {
             FakePluginManager manager = new();
-            manager._plugins.Add(plugin);
+            manager._plugins.Add(item: plugin);
             return manager;
         }
 
         public IReadOnlyList<PluginInfo> GetInstalledPlugins() =>
             _plugins
-                .Where(plugin => _capabilities.ContainsKey(plugin.Id))
-                .Select(plugin => new PluginInfo
+                .Where(predicate: plugin => _capabilities.ContainsKey(key: plugin.Id))
+                .Select(selector: plugin => new PluginInfo
                 {
                     Id = plugin.Id,
                     Name = plugin.Name,
                     Description = plugin.Description,
                     Version = plugin.Version,
                     Status = PluginStatus.Active,
-                    Capabilities = _capabilities[plugin.Id],
+                    Capabilities = _capabilities[key: plugin.Id],
                 })
                 .ToList();
 
@@ -279,6 +279,6 @@ public class PluginClaimsAugmentorTests
             Task.CompletedTask;
 
         public Task<IReadOnlyList<PluginLoadResult>> LoadAllAsync(CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<PluginLoadResult>>([]);
+            Task.FromResult<IReadOnlyList<PluginLoadResult>>(result: []);
     }
 }

@@ -181,17 +181,17 @@ public static class AudioCodecDefinitions
 
     private static readonly Dictionary<AudioCodecType, AudioEncoderInfo> EncoderMap = new()
     {
-        [AudioCodecType.Aac] = AacEncoder,
-        [AudioCodecType.Flac] = FlacEncoder,
-        [AudioCodecType.Opus] = OpusEncoder,
-        [AudioCodecType.Ac3] = Ac3Encoder,
-        [AudioCodecType.Eac3] = Eac3Encoder,
-        [AudioCodecType.Mp3] = Mp3Encoder,
-        [AudioCodecType.Vorbis] = VorbisEncoder,
-        [AudioCodecType.TrueHd] = TrueHdEncoder,
-        [AudioCodecType.Dts] = DtsEncoder,
-        [AudioCodecType.Copy] = CopyEncoder,
+        [key: AudioCodecType.Aac] = AacEncoder,
+        [key: AudioCodecType.Flac] = FlacEncoder,
+        [key: AudioCodecType.Opus] = OpusEncoder,
+        [key: AudioCodecType.Ac3] = Ac3Encoder,
+        [key: AudioCodecType.Eac3] = Eac3Encoder,
+        [key: AudioCodecType.Mp3] = Mp3Encoder,
+        [key: AudioCodecType.Vorbis] = VorbisEncoder,
+        [key: AudioCodecType.TrueHd] = TrueHdEncoder,
+        [key: AudioCodecType.Dts] = DtsEncoder,
+        [key: AudioCodecType.Copy] = CopyEncoder,
     };
 
-    public static AudioEncoderInfo GetEncoder(AudioCodecType codecType) => EncoderMap[codecType];
+    public static AudioEncoderInfo GetEncoder(AudioCodecType codecType) => EncoderMap[key: codecType];
 }

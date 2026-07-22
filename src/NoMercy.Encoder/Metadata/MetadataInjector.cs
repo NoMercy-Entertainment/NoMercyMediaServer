@@ -24,9 +24,9 @@ public class MetadataInjector : IMetadataInjector
     {
         List<string> args = [];
 
-        EmitGlobalMetadata(args, ctx.Media);
-        EmitTrackMetadata(args, ctx.Tracks);
-        EmitAttachments(args, ctx.AttachmentPaths);
+        EmitGlobalMetadata(args: args, media: ctx.Media);
+        EmitTrackMetadata(args: args, tracks: ctx.Tracks);
+        EmitAttachments(args: args, attachmentPaths: ctx.AttachmentPaths);
 
         return args;
     }
@@ -37,22 +37,22 @@ public class MetadataInjector : IMetadataInjector
 
     private static void EmitGlobalMetadata(List<string> args, MediaItemRef media)
     {
-        AddMeta(args, "title", media.Title);
+        AddMeta(args: args, key: "title", value: media.Title);
 
         if (media.Year.HasValue)
-            AddMeta(args, "year", media.Year.Value.ToString());
+            AddMeta(args: args, key: "year", value: media.Year.Value.ToString());
 
         if (media is MovieMediaRef { Description: not null } movie)
-            AddMeta(args, "description", movie.Description);
+            AddMeta(args: args, key: "description", value: movie.Description);
 
         if (media is EpisodeMediaRef episode)
         {
-            AddMeta(args, "show", episode.ShowTitle);
-            AddMeta(args, "season_number", episode.SeasonNumber.ToString());
-            AddMeta(args, "episode_id", episode.EpisodeNumber.ToString());
+            AddMeta(args: args, key: "show", value: episode.ShowTitle);
+            AddMeta(args: args, key: "season_number", value: episode.SeasonNumber.ToString());
+            AddMeta(args: args, key: "episode_id", value: episode.EpisodeNumber.ToString());
 
             if (episode.Description is not null)
-                AddMeta(args, "description", episode.Description);
+                AddMeta(args: args, key: "description", value: episode.Description);
         }
     }
 
@@ -64,15 +64,15 @@ public class MetadataInjector : IMetadataInjector
     {
         foreach (TrackMetadata track in tracks)
         {
-            string spec = StreamSpec(track.Kind, track.OutputIndex);
+            string spec = StreamSpec(kind: track.Kind, index: track.OutputIndex);
 
             if (track.Language is not null)
-                AddStreamMeta(args, spec, "language", track.Language);
+                AddStreamMeta(args: args, streamSpec: spec, key: "language", value: track.Language);
 
             if (track.Title is not null)
-                AddStreamMeta(args, spec, "title", track.Title);
+                AddStreamMeta(args: args, streamSpec: spec, key: "title", value: track.Title);
 
-            EmitDisposition(args, track);
+            EmitDisposition(args: args, track: track);
         }
     }
 
@@ -81,7 +81,7 @@ public class MetadataInjector : IMetadataInjector
         if (track is { IsDefault: false, IsForced: false })
             return;
 
-        string dispSpec = DispositionSpec(track.Kind, track.OutputIndex);
+        string dispSpec = DispositionSpec(kind: track.Kind, index: track.OutputIndex);
         string value = (track.IsDefault, track.IsForced) switch
         {
             (true, true) => "default+forced",
@@ -90,8 +90,8 @@ public class MetadataInjector : IMetadataInjector
             _ => string.Empty,
         };
 
-        args.Add(dispSpec);
-        args.Add(value);
+        args.Add(item: dispSpec);
+        args.Add(item: value);
     }
 
     // -----------------------------------------------------------------------
@@ -108,17 +108,17 @@ public class MetadataInjector : IMetadataInjector
 
         foreach (string path in attachmentPaths)
         {
-            args.Add("-attach");
-            args.Add(path);
+            args.Add(item: "-attach");
+            args.Add(item: path);
 
             string tagSpec = $"-metadata:s:t:{attachIndex}";
-            string mime = MimeTypeForExtension(Path.GetExtension(path));
-            args.Add(tagSpec);
-            args.Add($"mimetype={mime}");
+            string mime = MimeTypeForExtension(extension: Path.GetExtension(path: path));
+            args.Add(item: tagSpec);
+            args.Add(item: $"mimetype={mime}");
 
-            string filename = Path.GetFileName(path);
-            args.Add(tagSpec);
-            args.Add($"filename={filename}");
+            string filename = Path.GetFileName(path: path);
+            args.Add(item: tagSpec);
+            args.Add(item: $"filename={filename}");
 
             attachIndex++;
         }
@@ -130,8 +130,8 @@ public class MetadataInjector : IMetadataInjector
 
     private static void AddMeta(List<string> args, string key, string value)
     {
-        args.Add("-metadata");
-        args.Add($"{key}={value}");
+        args.Add(item: "-metadata");
+        args.Add(item: $"{key}={value}");
     }
 
     private static void AddStreamMeta(
@@ -141,8 +141,8 @@ public class MetadataInjector : IMetadataInjector
         string value
     )
     {
-        args.Add($"-metadata:{streamSpec}");
-        args.Add($"{key}={value}");
+        args.Add(item: $"-metadata:{streamSpec}");
+        args.Add(item: $"{key}={value}");
     }
 
     /// <summary>Returns the FFmpeg stream specifier segment for -metadata:s:* and -disposition:*.</summary>

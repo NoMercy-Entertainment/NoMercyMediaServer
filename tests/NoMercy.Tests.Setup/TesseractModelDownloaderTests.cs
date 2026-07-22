@@ -39,7 +39,7 @@ namespace NoMercy.Tests.Setup;
 /// <c>TesseractModelManagerTests</c> layer against a fake
 /// <see cref="NoMercy.Encoder.Subtitles.ITesseractModelDownloader"/>.
 /// </remarks>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class TesseractModelDownloaderTests
 {
     private const string TesseractApiUrl =
@@ -52,16 +52,16 @@ public class TesseractModelDownloaderTests
         // ReleaseCacheFallbackTests). TesseractReleaseApiUrl is a fixed production
         // constant every test in this file shares, so a cache entry written by one test
         // (or a prior run) would otherwise leak into the next. Clear it before every test.
-        ClearCachedReleaseInfo(TesseractApiUrl);
+        ClearCachedReleaseInfo(apiUrl: TesseractApiUrl);
     }
 
     private static void ClearCachedReleaseInfo(string apiUrl)
     {
-        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(apiUrl));
-        string fileName = Convert.ToHexString(hash).ToLowerInvariant() + ".json";
-        string path = Path.Combine(AppFiles.CachePath, "releases-cache", fileName);
-        if (File.Exists(path))
-            File.Delete(path);
+        byte[] hash = SHA256.HashData(source: Encoding.UTF8.GetBytes(s: apiUrl));
+        string fileName = Convert.ToHexString(inArray: hash).ToLowerInvariant() + ".json";
+        string path = Path.Combine(path1: AppFiles.CachePath, path2: "releases-cache", path3: fileName);
+        if (File.Exists(path: path))
+            File.Delete(path: path);
     }
 
     [Fact]
@@ -70,13 +70,13 @@ public class TesseractModelDownloaderTests
         CountingFakeHandler handler = new();
         // No release JSON registered at all -> FromJson returns an empty response with
         // Assets.Length == 0, mirroring GetLatestReleaseInfo's own empty-fallback path.
-        TesseractModelDownloader downloader = BuildDownloader(handler);
+        TesseractModelDownloader downloader = BuildDownloader(handler: handler);
 
-        Func<Task> act = () => downloader.DownloadVerifiedAsync("eng", CancellationToken.None);
+        Func<Task> act = () => downloader.DownloadVerifiedAsync(language: "eng", ct: CancellationToken.None);
 
         await act.Should()
             .ThrowAsync<InvalidOperationException>()
-            .WithMessage("*Could not reach the nomercy-tesseract release*");
+            .WithMessage(expectedWildcardPattern: "*Could not reach the nomercy-tesseract release*");
     }
 
     [Fact]
@@ -90,15 +90,15 @@ public class TesseractModelDownloaderTests
         );
 
         CountingFakeHandler handler = new();
-        handler.Register(TesseractApiUrl, JsonBytes(release));
+        handler.Register(url: TesseractApiUrl, body: JsonBytes(value: release));
 
-        TesseractModelDownloader downloader = BuildDownloader(handler);
+        TesseractModelDownloader downloader = BuildDownloader(handler: handler);
 
-        Func<Task> act = () => downloader.DownloadVerifiedAsync("eng", CancellationToken.None);
+        Func<Task> act = () => downloader.DownloadVerifiedAsync(language: "eng", ct: CancellationToken.None);
 
         await act.Should()
             .ThrowAsync<InvalidOperationException>()
-            .WithMessage("*No signed release manifest is available*");
+            .WithMessage(expectedWildcardPattern: "*No signed release manifest is available*");
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public class TesseractModelDownloaderTests
                 new()
                 {
                     Name = "eng.traineddata",
-                    Sha256 = new('a', 64),
+                    Sha256 = new(c: 'a', count: 64),
                     Size = 10,
                 },
             ],
@@ -130,16 +130,16 @@ public class TesseractModelDownloaderTests
         );
 
         CountingFakeHandler handler = new();
-        handler.Register(TesseractApiUrl, JsonBytes(release));
-        handler.Register(manifestUrl, JsonBytes(manifest));
+        handler.Register(url: TesseractApiUrl, body: JsonBytes(value: release));
+        handler.Register(url: manifestUrl, body: JsonBytes(value: manifest));
 
-        TesseractModelDownloader downloader = BuildDownloader(handler);
+        TesseractModelDownloader downloader = BuildDownloader(handler: handler);
 
-        Func<Task> act = () => downloader.DownloadVerifiedAsync("eng", CancellationToken.None);
+        Func<Task> act = () => downloader.DownloadVerifiedAsync(language: "eng", ct: CancellationToken.None);
 
         await act.Should()
             .ThrowAsync<InvalidOperationException>()
-            .WithMessage("*signature could not be verified*");
+            .WithMessage(expectedWildcardPattern: "*signature could not be verified*");
     }
 
     [Fact]
@@ -158,7 +158,7 @@ public class TesseractModelDownloaderTests
                 new()
                 {
                     Name = "eng.traineddata",
-                    Sha256 = new('a', 64),
+                    Sha256 = new(c: 'a', count: 64),
                     Size = 10,
                 },
             ],
@@ -171,22 +171,22 @@ public class TesseractModelDownloaderTests
         );
 
         CountingFakeHandler handler = new();
-        handler.Register(TesseractApiUrl, JsonBytes(release));
-        handler.Register(manifestUrl, JsonBytes(manifest));
+        handler.Register(url: TesseractApiUrl, body: JsonBytes(value: release));
+        handler.Register(url: manifestUrl, body: JsonBytes(value: manifest));
         handler.Register(
-            sigUrl,
-            System.Text.Encoding.ASCII.GetBytes(
-                "-----BEGIN PGP SIGNATURE-----\nnot-a-real-signature\n-----END PGP SIGNATURE-----"
+            url: sigUrl,
+            body: System.Text.Encoding.ASCII.GetBytes(
+                s: "-----BEGIN PGP SIGNATURE-----\nnot-a-real-signature\n-----END PGP SIGNATURE-----"
             )
         );
 
-        TesseractModelDownloader downloader = BuildDownloader(handler);
+        TesseractModelDownloader downloader = BuildDownloader(handler: handler);
 
-        Func<Task> act = () => downloader.DownloadVerifiedAsync("eng", CancellationToken.None);
+        Func<Task> act = () => downloader.DownloadVerifiedAsync(language: "eng", ct: CancellationToken.None);
 
         await act.Should()
             .ThrowAsync<InvalidOperationException>()
-            .WithMessage("*signature could not be verified*");
+            .WithMessage(expectedWildcardPattern: "*signature could not be verified*");
     }
 
     [Fact]
@@ -209,13 +209,13 @@ public class TesseractModelDownloaderTests
                 new()
                 {
                     Name = "eng.traineddata",
-                    Sha256 = new('a', 64),
+                    Sha256 = new(c: 'a', count: 64),
                     Size = 10,
                 },
                 new()
                 {
                     Name = "jpn.traineddata",
-                    Sha256 = new('b', 64),
+                    Sha256 = new(c: 'b', count: 64),
                     Size = 10,
                 },
             ],
@@ -230,43 +230,43 @@ public class TesseractModelDownloaderTests
         );
 
         CountingFakeHandler handler = new();
-        handler.Register(TesseractApiUrl, JsonBytes(release));
-        handler.Register(manifestUrl, JsonBytes(manifest));
+        handler.Register(url: TesseractApiUrl, body: JsonBytes(value: release));
+        handler.Register(url: manifestUrl, body: JsonBytes(value: manifest));
         handler.Register(
-            sigUrl,
-            System.Text.Encoding.ASCII.GetBytes(
-                "-----BEGIN PGP SIGNATURE-----\nnot-a-real-signature\n-----END PGP SIGNATURE-----"
+            url: sigUrl,
+            body: System.Text.Encoding.ASCII.GetBytes(
+                s: "-----BEGIN PGP SIGNATURE-----\nnot-a-real-signature\n-----END PGP SIGNATURE-----"
             )
         );
 
-        TesseractModelDownloader downloader = BuildDownloader(handler);
+        TesseractModelDownloader downloader = BuildDownloader(handler: handler);
 
         // Both calls fail (the signature never verifies against the real embedded key in
         // this test environment) — what matters here is how many times the release and
         // manifest endpoints were actually hit.
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            downloader.DownloadVerifiedAsync("eng", CancellationToken.None)
+        await Assert.ThrowsAsync<InvalidOperationException>(testCode: () =>
+            downloader.DownloadVerifiedAsync(language: "eng", ct: CancellationToken.None)
         );
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            downloader.DownloadVerifiedAsync("jpn", CancellationToken.None)
+        await Assert.ThrowsAsync<InvalidOperationException>(testCode: () =>
+            downloader.DownloadVerifiedAsync(language: "jpn", ct: CancellationToken.None)
         );
 
         // The release metadata GET runs once per call (Binaries does not in-memory-cache
         // it); the manifest + signature verification is the part that must not repeat.
-        handler.CallCount(TesseractApiUrl).Should().Be(2);
-        handler.CallCount(manifestUrl).Should().Be(1);
-        handler.CallCount(sigUrl).Should().Be(1);
+        handler.CallCount(url: TesseractApiUrl).Should().Be(expected: 2);
+        handler.CallCount(url: manifestUrl).Should().Be(expected: 1);
+        handler.CallCount(url: sigUrl).Should().Be(expected: 1);
     }
 
     private static TesseractModelDownloader BuildDownloader(HttpMessageHandler handler)
     {
         LocalStorageDriver driver = new();
-        LocalStorage storage = new(driver, new([], driver));
-        return new(driver, storage, new(handler));
+        LocalStorage storage = new(driver: driver, guard: new(allowedRoots: [], driver: driver));
+        return new(driver: driver, storage: storage, httpClient: new(handler: handler));
     }
 
     private static byte[] JsonBytes(object value) =>
-        System.Text.Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(value));
+        System.Text.Encoding.UTF8.GetBytes(s: JsonConvert.SerializeObject(value: value));
 
     private static GithubReleaseResponse BuildRelease(
         string assetUrl,
@@ -281,7 +281,7 @@ public class TesseractModelDownloaderTests
             new()
             {
                 Name = "eng.traineddata",
-                BrowserDownloadUrl = new(assetUrl),
+                BrowserDownloadUrl = new(uriString: assetUrl),
                 Size = 10,
             },
         ];
@@ -289,10 +289,10 @@ public class TesseractModelDownloaderTests
         if (extraAssetName is not null && extraAssetUrl is not null)
         {
             assets.Add(
-                new()
+                item: new()
                 {
                     Name = extraAssetName,
-                    BrowserDownloadUrl = new(extraAssetUrl),
+                    BrowserDownloadUrl = new(uriString: extraAssetUrl),
                     Size = 10,
                 }
             );
@@ -301,10 +301,10 @@ public class TesseractModelDownloaderTests
         if (manifestUrl is not null)
         {
             assets.Add(
-                new()
+                item: new()
                 {
                     Name = "manifest.json",
-                    BrowserDownloadUrl = new(manifestUrl),
+                    BrowserDownloadUrl = new(uriString: manifestUrl),
                     Size = 100,
                 }
             );
@@ -313,10 +313,10 @@ public class TesseractModelDownloaderTests
         if (manifestSigUrl is not null)
         {
             assets.Add(
-                new()
+                item: new()
                 {
                     Name = "manifest.json.sig",
-                    BrowserDownloadUrl = new(manifestSigUrl),
+                    BrowserDownloadUrl = new(uriString: manifestSigUrl),
                     Size = 100,
                 }
             );
@@ -325,7 +325,7 @@ public class TesseractModelDownloaderTests
         return new()
         {
             TagName = "v1.0.1",
-            PublishedAt = DateTimeOffset.UtcNow.AddDays(-1),
+            PublishedAt = DateTimeOffset.UtcNow.AddDays(days: -1),
             Assets = assets.ToArray(),
         };
     }
@@ -340,15 +340,15 @@ public class TesseractModelDownloaderTests
     private sealed class CountingFakeHandler : HttpMessageHandler
     {
         private readonly Dictionary<string, byte[]> _responses = new(
-            StringComparer.OrdinalIgnoreCase
+            comparer: StringComparer.OrdinalIgnoreCase
         );
         private readonly Dictionary<string, int> _callCounts = new(
-            StringComparer.OrdinalIgnoreCase
+            comparer: StringComparer.OrdinalIgnoreCase
         );
 
-        public void Register(string url, byte[] body) => _responses[url] = body;
+        public void Register(string url, byte[] body) => _responses[key: url] = body;
 
-        public int CallCount(string url) => _callCounts.GetValueOrDefault(url);
+        public int CallCount(string url) => _callCounts.GetValueOrDefault(key: url);
 
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
@@ -356,18 +356,18 @@ public class TesseractModelDownloaderTests
         )
         {
             string url = request.RequestUri?.ToString() ?? string.Empty;
-            _callCounts[url] = _callCounts.GetValueOrDefault(url) + 1;
+            _callCounts[key: url] = _callCounts.GetValueOrDefault(key: url) + 1;
 
-            if (_responses.TryGetValue(url, out byte[]? body))
+            if (_responses.TryGetValue(key: url, value: out byte[]? body))
             {
-                HttpResponseMessage ok = new(HttpStatusCode.OK)
+                HttpResponseMessage ok = new(statusCode: HttpStatusCode.OK)
                 {
-                    Content = new ByteArrayContent(body),
+                    Content = new ByteArrayContent(content: body),
                 };
-                return Task.FromResult(ok);
+                return Task.FromResult(result: ok);
             }
 
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+            return Task.FromResult(result: new HttpResponseMessage(statusCode: HttpStatusCode.NotFound));
         }
     }
 }

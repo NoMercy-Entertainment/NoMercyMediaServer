@@ -33,13 +33,13 @@ public class EncodeFidelityOracleTests
     ) =>
         new()
         {
-            ["codec_type"] = "video",
-            ["codec_name"] = codecName,
-            ["codec_tag_string"] = codecTag,
-            ["color_transfer"] = transfer,
-            ["color_primaries"] = primaries,
-            ["color_space"] = space,
-            ["pix_fmt"] = pixFmt,
+            [propertyName: "codec_type"] = "video",
+            [propertyName: "codec_name"] = codecName,
+            [propertyName: "codec_tag_string"] = codecTag,
+            [propertyName: "color_transfer"] = transfer,
+            [propertyName: "color_primaries"] = primaries,
+            [propertyName: "color_space"] = space,
+            [propertyName: "pix_fmt"] = pixFmt,
         };
 
     private static JObject AudioStream(
@@ -50,26 +50,26 @@ public class EncodeFidelityOracleTests
     ) =>
         new()
         {
-            ["codec_type"] = "audio",
-            ["codec_name"] = codecName,
-            ["channel_layout"] = layout,
-            ["disposition"] = new JObject { ["default"] = isDefault },
-            ["tags"] = new JObject { ["language"] = language },
+            [propertyName: "codec_type"] = "audio",
+            [propertyName: "codec_name"] = codecName,
+            [propertyName: "channel_layout"] = layout,
+            [propertyName: "disposition"] = new JObject { [propertyName: "default"] = isDefault },
+            [propertyName: "tags"] = new JObject { [propertyName: "language"] = language },
         };
 
     private static JObject SubStream(string codecName = "mov_text", string language = "eng") =>
         new()
         {
-            ["codec_type"] = "subtitle",
-            ["codec_name"] = codecName,
-            ["tags"] = new JObject { ["language"] = language },
+            [propertyName: "codec_type"] = "subtitle",
+            [propertyName: "codec_name"] = codecName,
+            [propertyName: "tags"] = new JObject { [propertyName: "language"] = language },
         };
 
     private static JObject MasteringDisplay() =>
-        new() { ["side_data_type"] = "Mastering display metadata" };
+        new() { [propertyName: "side_data_type"] = "Mastering display metadata" };
 
     private static JObject DoviRecord() =>
-        new() { ["side_data_type"] = "DOVI configuration record", ["rpu_present_flag"] = 1 };
+        new() { [propertyName: "side_data_type"] = "DOVI configuration record", [propertyName: "rpu_present_flag"] = 1 };
 
     private static ProbedMedia Media(
         IEnumerable<JObject>? streams = null,
@@ -97,9 +97,9 @@ public class EncodeFidelityOracleTests
         );
 
         List<string> violations = [];
-        EncodeFidelityOracle.CheckDolbyVisionTagCoherence(output, violations);
+        EncodeFidelityOracle.CheckDolbyVisionTagCoherence(output: output, violations: violations);
 
-        violations.Should().ContainSingle().Which.Should().Contain("DV-tag-without-RPU");
+        violations.Should().ContainSingle().Which.Should().Contain(expected: "DV-tag-without-RPU");
     }
 
     [Fact]
@@ -111,7 +111,7 @@ public class EncodeFidelityOracleTests
         );
 
         List<string> violations = [];
-        EncodeFidelityOracle.CheckDolbyVisionTagCoherence(output, violations);
+        EncodeFidelityOracle.CheckDolbyVisionTagCoherence(output: output, violations: violations);
 
         violations.Should().BeEmpty();
     }
@@ -126,7 +126,7 @@ public class EncodeFidelityOracleTests
         );
 
         List<string> violations = [];
-        EncodeFidelityOracle.CheckDolbyVisionTagCoherence(output, violations);
+        EncodeFidelityOracle.CheckDolbyVisionTagCoherence(output: output, violations: violations);
 
         violations.Should().BeEmpty();
     }
@@ -139,9 +139,9 @@ public class EncodeFidelityOracleTests
         ProbedMedia output = Media(streams: [VideoStream()], sideData: []); // PQ but no MDCV
 
         List<string> violations = [];
-        EncodeFidelityOracle.CheckHdr10Signaling(output, violations);
+        EncodeFidelityOracle.CheckHdr10Signaling(output: output, violations: violations);
 
-        violations.Should().ContainSingle().Which.Should().Contain("HDR10-mastering-display");
+        violations.Should().ContainSingle().Which.Should().Contain(expected: "HDR10-mastering-display");
     }
 
     [Fact]
@@ -153,16 +153,16 @@ public class EncodeFidelityOracleTests
         );
 
         List<string> violations = [];
-        EncodeFidelityOracle.CheckHdr10Signaling(output, violations);
+        EncodeFidelityOracle.CheckHdr10Signaling(output: output, violations: violations);
 
-        violations.Should().Contain(v => v.Contains("HDR10-primaries"));
+        violations.Should().Contain(predicate: v => v.Contains("HDR10-primaries"));
     }
 
     [Fact]
     public void Hdr10_Complete_IsClean()
     {
         List<string> violations = [];
-        EncodeFidelityOracle.CheckHdr10Signaling(Media(), violations);
+        EncodeFidelityOracle.CheckHdr10Signaling(output: Media(), violations: violations);
         violations.Should().BeEmpty();
     }
 
@@ -173,8 +173,8 @@ public class EncodeFidelityOracleTests
     {
         ProbedMedia output = Media(streams: [VideoStream(codecTag: "hev1")]);
         List<string> violations = [];
-        EncodeFidelityOracle.CheckHevcFmp4Tag(output, violations);
-        violations.Should().ContainSingle().Which.Should().Contain("HEVC-tag-hev1");
+        EncodeFidelityOracle.CheckHevcFmp4Tag(output: output, violations: violations);
+        violations.Should().ContainSingle().Which.Should().Contain(expected: "HEVC-tag-hev1");
     }
 
     // ── HLS master playlist ────────────────────────────────────────────────────
@@ -189,9 +189,9 @@ public class EncodeFidelityOracleTests
             + "#EXT-X-STREAM-INF:BANDWIDTH=11084402,RESOLUTION=1920x1080,CODECS=\"hvc1.2.4.L120.B0\",VIDEO-RANGE=SDR\nv1080.m3u8\n";
 
         List<string> violations = [];
-        EncodeFidelityOracle.CheckMasterPlaylist(master, violations);
+        EncodeFidelityOracle.CheckMasterPlaylist(masterPlaylistText: master, violations: violations);
 
-        violations.Should().Contain(v => v.Contains("HLS-identical-bandwidth"));
+        violations.Should().Contain(predicate: v => v.Contains("HLS-identical-bandwidth"));
     }
 
     [Fact]
@@ -203,7 +203,7 @@ public class EncodeFidelityOracleTests
             + "#EXT-X-STREAM-INF:BANDWIDTH=4192000,RESOLUTION=1920x1080,CODECS=\"hvc1.2.4.L120.B0\",VIDEO-RANGE=SDR\nv1080.m3u8\n";
 
         List<string> violations = [];
-        EncodeFidelityOracle.CheckMasterPlaylist(master, violations);
+        EncodeFidelityOracle.CheckMasterPlaylist(masterPlaylistText: master, violations: violations);
 
         violations.Should().BeEmpty();
     }
@@ -218,9 +218,9 @@ public class EncodeFidelityOracleTests
             + "#EXT-X-STREAM-INF:BANDWIDTH=11084402,RESOLUTION=3840x2160,CODECS=\"hvc1.2.4.L120.B0\",VIDEO-RANGE=PQ\nv4k.m3u8\n";
 
         List<string> violations = [];
-        EncodeFidelityOracle.CheckMasterPlaylist(master, violations);
+        EncodeFidelityOracle.CheckMasterPlaylist(masterPlaylistText: master, violations: violations);
 
-        violations.Should().Contain(v => v.Contains("HLS-codecs-level-too-low"));
+        violations.Should().Contain(predicate: v => v.Contains("HLS-codecs-level-too-low"));
     }
 
     [Fact]
@@ -233,9 +233,9 @@ public class EncodeFidelityOracleTests
             + "#EXT-X-STREAM-INF:BANDWIDTH=4192000,RESOLUTION=1920x1080,CODECS=\"hvc1.2.4.L120.B0\",VIDEO-RANGE=SDR\nv1080.m3u8\n";
 
         List<string> violations = [];
-        EncodeFidelityOracle.CheckMasterPlaylist(master, violations);
+        EncodeFidelityOracle.CheckMasterPlaylist(masterPlaylistText: master, violations: violations);
 
-        violations.Should().NotContain(v => v.Contains("HLS-codecs-level-too-low"));
+        violations.Should().NotContain(predicate: v => v.Contains("HLS-codecs-level-too-low"));
     }
 
     [Fact]
@@ -244,9 +244,9 @@ public class EncodeFidelityOracleTests
         string master =
             "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=5000000,RESOLUTION=1920x1080\nv.m3u8\n";
         List<string> violations = [];
-        EncodeFidelityOracle.CheckMasterPlaylist(master, violations);
-        violations.Should().Contain(v => v.Contains("HLS-missing-codecs"));
-        violations.Should().Contain(v => v.Contains("HLS-missing-video-range"));
+        EncodeFidelityOracle.CheckMasterPlaylist(masterPlaylistText: master, violations: violations);
+        violations.Should().Contain(predicate: v => v.Contains("HLS-missing-codecs"));
+        violations.Should().Contain(predicate: v => v.Contains("HLS-missing-video-range"));
     }
 
     // ── audio fidelity ─────────────────────────────────────────────────────────
@@ -266,9 +266,9 @@ public class EncodeFidelityOracleTests
         ProbedMedia output = Media(streams: [VideoStream(), AudioStream(language: "eng")]);
 
         List<string> violations = [];
-        EncodeFidelityOracle.CheckAudioFidelity(source, output, violations);
+        EncodeFidelityOracle.CheckAudioFidelity(source: source, output: output, violations: violations);
 
-        violations.Should().Contain(v => v.Contains("audio-tracks-dropped"));
+        violations.Should().Contain(predicate: v => v.Contains("audio-tracks-dropped"));
     }
 
     [Fact]
@@ -278,9 +278,9 @@ public class EncodeFidelityOracleTests
         ProbedMedia output = Media(streams: [VideoStream(), AudioStream(language: "und")]);
 
         List<string> violations = [];
-        EncodeFidelityOracle.CheckAudioFidelity(source, output, violations);
+        EncodeFidelityOracle.CheckAudioFidelity(source: source, output: output, violations: violations);
 
-        violations.Should().Contain(v => v.Contains("audio-language-stripped"));
+        violations.Should().Contain(predicate: v => v.Contains("audio-language-stripped"));
     }
 
     [Fact]
@@ -290,9 +290,9 @@ public class EncodeFidelityOracleTests
         ProbedMedia output = Media(streams: [VideoStream(), AudioStream(layout: "5.1")]);
 
         List<string> violations = [];
-        EncodeFidelityOracle.CheckAudioFidelity(source, output, violations);
+        EncodeFidelityOracle.CheckAudioFidelity(source: source, output: output, violations: violations);
 
-        violations.Should().Contain(v => v.Contains("audio-channel-layout"));
+        violations.Should().Contain(predicate: v => v.Contains("audio-channel-layout"));
     }
 
     [Fact]
@@ -302,7 +302,7 @@ public class EncodeFidelityOracleTests
         ProbedMedia output = Media(streams: [VideoStream(), AudioStream()]);
 
         List<string> violations = [];
-        EncodeFidelityOracle.CheckAudioFidelity(source, output, violations);
+        EncodeFidelityOracle.CheckAudioFidelity(source: source, output: output, violations: violations);
 
         violations.Should().BeEmpty();
     }
@@ -316,21 +316,21 @@ public class EncodeFidelityOracleTests
         ProbedMedia output = Media(streams: [VideoStream(), SubStream(language: "und")]);
 
         List<string> violations = [];
-        EncodeFidelityOracle.CheckSubtitleFidelity(source, output, violations);
+        EncodeFidelityOracle.CheckSubtitleFidelity(source: source, output: output, violations: violations);
 
-        violations.Should().Contain(v => v.Contains("subtitle-language-stripped"));
+        violations.Should().Contain(predicate: v => v.Contains("subtitle-language-stripped"));
     }
 
     [Fact]
     public void Chapters_Dropped_IsFlagged()
     {
-        ProbedMedia source = Media(chapters: [new JObject { ["id"] = 1 }]);
+        ProbedMedia source = Media(chapters: [new JObject { [propertyName: "id"] = 1 }]);
         ProbedMedia output = Media(chapters: []);
 
         List<string> violations = [];
-        EncodeFidelityOracle.CheckChaptersPreserved(source, output, violations);
+        EncodeFidelityOracle.CheckChaptersPreserved(source: source, output: output, violations: violations);
 
-        violations.Should().ContainSingle().Which.Should().Contain("chapters-dropped");
+        violations.Should().ContainSingle().Which.Should().Contain(expected: "chapters-dropped");
     }
 
     // ── SDR colour consistency ─────────────────────────────────────────────────
@@ -346,9 +346,9 @@ public class EncodeFidelityOracleTests
         );
 
         List<string> violations = [];
-        EncodeFidelityOracle.CheckSdrColorConsistency(output, violations);
+        EncodeFidelityOracle.CheckSdrColorConsistency(output: output, violations: violations);
 
-        violations.Should().Contain(v => v.Contains("SDR-residual-hdr-transfer"));
+        violations.Should().Contain(predicate: v => v.Contains("SDR-residual-hdr-transfer"));
     }
 
     [Fact]
@@ -368,7 +368,7 @@ public class EncodeFidelityOracleTests
         );
 
         List<string> violations = [];
-        EncodeFidelityOracle.CheckSdrColorConsistency(output, violations);
+        EncodeFidelityOracle.CheckSdrColorConsistency(output: output, violations: violations);
 
         violations.Should().BeEmpty();
     }
@@ -379,30 +379,30 @@ public class EncodeFidelityOracleTests
     public void AvSync_LargeStartDelta_IsFlagged()
     {
         JObject video = VideoStream();
-        video["start_time"] = "0.000";
+        video[propertyName: "start_time"] = "0.000";
         JObject audio = AudioStream();
-        audio["start_time"] = "0.400"; // 400ms ahead → lip-sync drift
+        audio[propertyName: "start_time"] = "0.400"; // 400ms ahead → lip-sync drift
 
         ProbedMedia output = Media(streams: [video, audio]);
 
         List<string> violations = [];
-        EncodeFidelityOracle.CheckAvStartAlignment(output, violations);
+        EncodeFidelityOracle.CheckAvStartAlignment(output: output, violations: violations);
 
-        violations.Should().Contain(v => v.Contains("av-sync-drift"));
+        violations.Should().Contain(predicate: v => v.Contains("av-sync-drift"));
     }
 
     [Fact]
     public void AvSync_Aligned_IsClean()
     {
         JObject video = VideoStream();
-        video["start_time"] = "0.000";
+        video[propertyName: "start_time"] = "0.000";
         JObject audio = AudioStream();
-        audio["start_time"] = "0.010";
+        audio[propertyName: "start_time"] = "0.010";
 
         ProbedMedia output = Media(streams: [video, audio]);
 
         List<string> violations = [];
-        EncodeFidelityOracle.CheckAvStartAlignment(output, violations);
+        EncodeFidelityOracle.CheckAvStartAlignment(output: output, violations: violations);
 
         violations.Should().BeEmpty();
     }
@@ -413,26 +413,26 @@ public class EncodeFidelityOracleTests
     public void Anamorphic_DarCollapsed_IsFlagged()
     {
         JObject src = VideoStream();
-        src["display_aspect_ratio"] = "16:9";
+        src[propertyName: "display_aspect_ratio"] = "16:9";
         JObject outp = VideoStream();
-        outp["display_aspect_ratio"] = "4:3"; // squished
+        outp[propertyName: "display_aspect_ratio"] = "4:3"; // squished
 
         List<string> violations = [];
         EncodeFidelityOracle.CheckAnamorphicPreserved(
-            Media(streams: [src]),
-            Media(streams: [outp]),
-            violations
+            source: Media(streams: [src]),
+            output: Media(streams: [outp]),
+            violations: violations
         );
 
-        violations.Should().Contain(v => v.Contains("anamorphic-dar-lost"));
+        violations.Should().Contain(predicate: v => v.Contains("anamorphic-dar-lost"));
     }
 
     [Fact]
     public void Rotation_Lost_IsFlagged()
     {
         JObject srcV = VideoStream();
-        srcV["width"] = 1080;
-        srcV["height"] = 1920;
+        srcV[propertyName: "width"] = 1080;
+        srcV[propertyName: "height"] = 1920;
         ProbedMedia source = new()
         {
             Path = "s",
@@ -441,14 +441,14 @@ public class EncodeFidelityOracleTests
             Chapters = [],
             FirstFrameSideData =
             [
-                new JObject { ["side_data_type"] = "Display Matrix", ["rotation"] = "90" },
+                new JObject { [propertyName: "side_data_type"] = "Display Matrix", [propertyName: "rotation"] = "90" },
             ],
         };
 
         // Output: same dims, no rotation matrix, dims NOT swapped → rotation lost.
         JObject outV = VideoStream();
-        outV["width"] = 1080;
-        outV["height"] = 1920;
+        outV[propertyName: "width"] = 1080;
+        outV[propertyName: "height"] = 1920;
         ProbedMedia output = new()
         {
             Path = "o",
@@ -459,9 +459,9 @@ public class EncodeFidelityOracleTests
         };
 
         List<string> violations = [];
-        EncodeFidelityOracle.CheckRotationPreserved(source, output, violations);
+        EncodeFidelityOracle.CheckRotationPreserved(source: source, output: output, violations: violations);
 
-        violations.Should().Contain(v => v.Contains("rotation-lost-or-doubled"));
+        violations.Should().Contain(predicate: v => v.Contains("rotation-lost-or-doubled"));
     }
 
     // ── the full suite on a clean vs corrupt output ────────────────────────────
@@ -472,7 +472,7 @@ public class EncodeFidelityOracleTests
         ProbedMedia source = Media(streams: [VideoStream(), AudioStream(), SubStream()]);
         ProbedMedia output = Media(streams: [VideoStream(), AudioStream(), SubStream()]);
 
-        EncodeFidelityOracle.Validate(source, output).Should().BeEmpty();
+        EncodeFidelityOracle.Validate(source: source, output: output).Should().BeEmpty();
     }
 
     [Fact]
@@ -492,9 +492,9 @@ public class EncodeFidelityOracleTests
             sideData: [MasteringDisplay()]
         );
 
-        List<string> violations = EncodeFidelityOracle.Validate(source, output);
+        List<string> violations = EncodeFidelityOracle.Validate(source: source, output: output);
 
-        violations.Should().Contain(v => v.Contains("DV-tag-without-RPU"));
-        violations.Should().Contain(v => v.Contains("audio-tracks-dropped"));
+        violations.Should().Contain(predicate: v => v.Contains("DV-tag-without-RPU"));
+        violations.Should().Contain(predicate: v => v.Contains("audio-tracks-dropped"));
     }
 }

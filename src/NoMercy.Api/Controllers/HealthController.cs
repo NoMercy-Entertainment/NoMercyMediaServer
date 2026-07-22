@@ -25,7 +25,7 @@ namespace NoMercy.Api.Controllers;
 /// Health check endpoint for container orchestration and load balancers
 /// </summary>
 [ApiController]
-[Route("[controller]")]
+[Route(template: "[controller]")]
 [AllowAnonymous]
 public class HealthController(MediaContext mediaContext, IBootStatus bootStatus) : ControllerBase
 {
@@ -33,18 +33,18 @@ public class HealthController(MediaContext mediaContext, IBootStatus bootStatus)
     /// Basic liveness probe — returns 200 if the server process is running
     /// </summary>
     [HttpGet]
-    [ProducesResponseType(typeof(HealthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(type: typeof(HealthResponse), statusCode: StatusCodes.Status200OK)]
     public IActionResult GetLiveness()
     {
-        return Ok(new HealthResponse { Status = "healthy", Timestamp = DateTime.UtcNow });
+        return Ok(value: new HealthResponse { Status = "healthy", Timestamp = DateTime.UtcNow });
     }
 
     /// <summary>
     /// Readiness probe — returns 200 when the server can handle requests, 503 if not ready
     /// </summary>
-    [HttpGet("ready")]
-    [ProducesResponseType(typeof(ReadinessResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ReadinessResponse), StatusCodes.Status503ServiceUnavailable)]
+    [HttpGet(template: "ready")]
+    [ProducesResponseType(type: typeof(ReadinessResponse), statusCode: StatusCodes.Status200OK)]
+    [ProducesResponseType(type: typeof(ReadinessResponse), statusCode: StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> GetReadiness()
     {
         bool databaseHealthy = await CheckDatabase();
@@ -61,22 +61,22 @@ public class HealthController(MediaContext mediaContext, IBootStatus bootStatus)
         };
 
         return isReady
-            ? Ok(response)
-            : StatusCode(StatusCodes.Status503ServiceUnavailable, response);
+            ? Ok(value: response)
+            : StatusCode(statusCode: StatusCodes.Status503ServiceUnavailable, value: response);
     }
 
     /// <summary>
     /// Detailed health check with component status and degraded mode info
     /// </summary>
-    [HttpGet("detailed")]
-    [ProducesResponseType(typeof(DetailedHealthResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(DetailedHealthResponse), StatusCodes.Status503ServiceUnavailable)]
+    [HttpGet(template: "detailed")]
+    [ProducesResponseType(type: typeof(DetailedHealthResponse), statusCode: StatusCodes.Status200OK)]
+    [ProducesResponseType(type: typeof(DetailedHealthResponse), statusCode: StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> GetDetailed()
     {
         bool databaseHealthy = await CheckDatabase();
         bool isDegraded = Start.IsDegradedMode;
 
-        string status = DetermineStatus(bootStatus.IsStarted, databaseHealthy, isDegraded);
+        string status = DetermineStatus(serverStarted: bootStatus.IsStarted, databaseHealthy: databaseHealthy, isDegraded: isDegraded);
 
         DetailedHealthResponse response = new()
         {
@@ -84,7 +84,7 @@ public class HealthController(MediaContext mediaContext, IBootStatus bootStatus)
             Timestamp = DateTime.UtcNow,
             Version = Software.GetReleaseVersion(),
             Environment =
-                Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production",
+                Environment.GetEnvironmentVariable(variable: "ASPNETCORE_ENVIRONMENT") ?? "Production",
             UptimeSeconds = (long)(DateTime.UtcNow - Info.StartTime).TotalSeconds,
             Components = new()
             {
@@ -97,8 +97,8 @@ public class HealthController(MediaContext mediaContext, IBootStatus bootStatus)
         };
 
         return databaseHealthy
-            ? Ok(response)
-            : StatusCode(StatusCodes.Status503ServiceUnavailable, response);
+            ? Ok(value: response)
+            : StatusCode(statusCode: StatusCodes.Status503ServiceUnavailable, value: response);
     }
 
     private static string DetermineStatus(bool serverStarted, bool databaseHealthy, bool isDegraded)
@@ -116,7 +116,7 @@ public class HealthController(MediaContext mediaContext, IBootStatus bootStatus)
     {
         try
         {
-            await mediaContext.Database.ExecuteSqlRawAsync("SELECT 1");
+            await mediaContext.Database.ExecuteSqlRawAsync(sql: "SELECT 1");
             return true;
         }
         catch
@@ -128,51 +128,51 @@ public class HealthController(MediaContext mediaContext, IBootStatus bootStatus)
 
 public record HealthResponse
 {
-    [JsonProperty("status")]
+    [JsonProperty(propertyName: "status")]
     public required string Status { get; init; }
 
-    [JsonProperty("timestamp")]
+    [JsonProperty(propertyName: "timestamp")]
     public required DateTime Timestamp { get; init; }
 }
 
 public record ReadinessResponse : HealthResponse
 {
-    [JsonProperty("database")]
+    [JsonProperty(propertyName: "database")]
     public required string Database { get; init; }
 
-    [JsonProperty("server_started")]
+    [JsonProperty(propertyName: "server_started")]
     public required bool ServerStarted { get; init; }
 }
 
 public record DetailedHealthResponse : HealthResponse
 {
-    [JsonProperty("version")]
+    [JsonProperty(propertyName: "version")]
     public required string Version { get; init; }
 
-    [JsonProperty("environment")]
+    [JsonProperty(propertyName: "environment")]
     public required string Environment { get; init; }
 
-    [JsonProperty("uptime_seconds")]
+    [JsonProperty(propertyName: "uptime_seconds")]
     public required long UptimeSeconds { get; init; }
 
-    [JsonProperty("components")]
+    [JsonProperty(propertyName: "components")]
     public required ComponentStatus Components { get; init; }
 
-    [JsonProperty("is_degraded")]
+    [JsonProperty(propertyName: "is_degraded")]
     public required bool IsDegraded { get; init; }
 }
 
 public record ComponentStatus
 {
-    [JsonProperty("database")]
+    [JsonProperty(propertyName: "database")]
     public required string Database { get; init; }
 
-    [JsonProperty("authentication")]
+    [JsonProperty(propertyName: "authentication")]
     public required string Authentication { get; init; }
 
-    [JsonProperty("network")]
+    [JsonProperty(propertyName: "network")]
     public required string Network { get; init; }
 
-    [JsonProperty("registration")]
+    [JsonProperty(propertyName: "registration")]
     public required string Registration { get; init; }
 }

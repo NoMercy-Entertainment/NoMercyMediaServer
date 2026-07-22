@@ -25,25 +25,25 @@ public sealed class NfsDriverBuilder : IStorageDriverBuilder
 
     public IStorage Build(Ulid folderId, string driverType, string? driverConfigJson, string subPath)
     {
-        if (string.IsNullOrWhiteSpace(driverConfigJson))
+        if (string.IsNullOrWhiteSpace(value: driverConfigJson))
             throw new ArgumentException(
-                $"driver_config is required for 'nfs' (folder {folderId}). "
-                    + "Supply at minimum: server and export.",
-                nameof(driverConfigJson)
+                message: $"driver_config is required for 'nfs' (folder {folderId}). "
+                         + "Supply at minimum: server and export.",
+                paramName: nameof(driverConfigJson)
             );
 
-        NfsDriverConfig nfsConfig = NfsDriverConfig.Parse(driverConfigJson, folderId);
+        NfsDriverConfig nfsConfig = NfsDriverConfig.Parse(json: driverConfigJson, folderId: folderId);
 
         // Record the folder sub-path as SubPath so the mount stays at the
         // export root. Baking subPath into Export caused libnfs to try mounting
         // a non-existent export (e.g. /mnt/vault/Media/Anime instead of /mnt/vault/Media).
-        if (!string.IsNullOrEmpty(subPath))
+        if (!string.IsNullOrEmpty(value: subPath))
         {
-            nfsConfig = nfsConfig with { SubPath = subPath.Replace('\\', '/').Trim('/') };
+            nfsConfig = nfsConfig with { SubPath = subPath.Replace(oldChar: '\\', newChar: '/').Trim(trimChar: '/') };
         }
 
-        NfsStorageDriver nfsDriver = new(nfsConfig, _logger);
-        return new RemoteStorage(nfsDriver);
+        NfsStorageDriver nfsDriver = new(config: nfsConfig, log: _logger);
+        return new RemoteStorage(driver: nfsDriver);
     }
 
 }

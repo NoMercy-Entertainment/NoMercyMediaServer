@@ -67,7 +67,7 @@ public class HardwareBenchmark(
     // explicitly excluded: they crawl at 0.05 fps at 4K and a single tier
     // would block the benchmark for 5+ minutes.
     private static readonly HashSet<string> FastSoftwareEncoders = new(
-        StringComparer.OrdinalIgnoreCase
+        comparer: StringComparer.OrdinalIgnoreCase
     )
     {
         "libx264",
@@ -80,7 +80,7 @@ public class HardwareBenchmark(
     // these encoders is meaningful from frame 1 because there is no
     // realistic steady-state to wait for — they're already crawling.
     private static readonly HashSet<string> SlowSoftwareEncoders = new(
-        StringComparer.OrdinalIgnoreCase
+        comparer: StringComparer.OrdinalIgnoreCase
     )
     {
         "libaom-av1",
@@ -112,7 +112,7 @@ public class HardwareBenchmark(
 
     // Recalibrate once a month by default. Hardware / driver updates can
     // change real throughput noticeably.
-    private static readonly TimeSpan RecalibrationInterval = TimeSpan.FromDays(30);
+    private static readonly TimeSpan RecalibrationInterval = TimeSpan.FromDays(days: 30);
 
     /// <summary>
     /// Version stamp baked into every cached SpeedIndex on disk. Bump when
@@ -132,7 +132,7 @@ public class HardwareBenchmark(
     /// </summary>
     public const int BenchmarkSchemaVersion = 2;
 
-    private SpeedIndex _cache = new(new());
+    private SpeedIndex _cache = new(Measurements: new());
     private bool _isRunning;
     private BenchmarkProgress? _progress;
 
@@ -171,9 +171,7 @@ public class HardwareBenchmark(
         if (loadedVersion is null || loadedVersion.Value < BenchmarkSchemaVersion)
         {
             logger.LogInformation(
-                "SpeedIndex cache schema {Loaded} older than current {Current} — forcing recalibration",
-                loadedVersion?.ToString() ?? "(none)",
-                BenchmarkSchemaVersion
+                message: "SpeedIndex cache schema {Loaded} older than current {Current} — forcing recalibration", args: [loadedVersion?.ToString() ?? "(none)", BenchmarkSchemaVersion]
             );
             return true;
         }
@@ -188,10 +186,10 @@ public class HardwareBenchmark(
     public async Task<SpeedIndex> CalibrateAsync(CancellationToken ct)
     {
         _isRunning = true;
-        _progress = new(0, 0, 0, "starting", DateTime.UtcNow);
+        _progress = new(PercentComplete: 0, CompletedProbes: 0, TotalProbes: 0, Stage: "starting", UpdatedAt: DateTime.UtcNow);
         try
         {
-            return await CalibrateInternalAsync(ct).ConfigureAwait(false);
+            return await CalibrateInternalAsync(ct: ct).ConfigureAwait(continueOnCapturedContext: false);
         }
         finally
         {
@@ -206,24 +204,24 @@ public class HardwareBenchmark(
         // dashboard mid-benchmark. Each successful probe overwrites the
         // matching key; failed probes leave the previous reading in place
         // until the next full run.
-        Dictionary<SpeedKey, SpeedMeasurement> results = new(GetCachedIndex().Measurements);
+        Dictionary<SpeedKey, SpeedMeasurement> results = new(dictionary: GetCachedIndex().Measurements);
 
         IAnalysisProgressObserver observer = progress ?? NullAnalysisProgressObserver.Instance;
-        string jobId = Guid.NewGuid().ToString("N");
+        string jobId = Guid.NewGuid().ToString(format: "N");
 
         // Enumerate all (target, tier) pairs once upfront so we can compute
         // percent-complete as each probe finishes.
         List<(CalibrationTarget Target, int Width, int Height)> allWork = [];
         foreach (CalibrationTarget candidate in SelectCandidates())
         {
-            foreach ((int w, int h) in TiersForTarget(candidate))
-                allWork.Add((candidate, w, h));
+            foreach ((int w, int h) in TiersForTarget(target: candidate))
+                allWork.Add(item: (candidate, w, h));
         }
 
         int total = allWork.Count;
         int completed = 0;
 
-        observer.Report(jobId, "benchmark", 0, "starting");
+        observer.Report(jobId: jobId, type: "benchmark", percent: 0, stage: "starting");
 
         foreach ((CalibrationTarget target, int tierWidth, int tierHeight) in allWork)
         {
@@ -231,34 +229,28 @@ public class HardwareBenchmark(
 
             try
             {
-                SpeedMeasurement? measured = await MeasureAsync(target, tierWidth, tierHeight, ct);
+                SpeedMeasurement? measured = await MeasureAsync(target: target, width: tierWidth, height: tierHeight, ct: ct);
 
                 if (measured is null)
                     continue;
 
                 SpeedKey key = new(
-                    target.Codec,
-                    target.Encoder.FfmpegName,
-                    tierWidth,
-                    target.Device?.Name
+                    Codec: target.Codec,
+                    Encoder: target.Encoder.FfmpegName,
+                    Width: tierWidth,
+                    DeviceName: target.Device?.Name
                 );
-                results[key] = measured;
+                results[key: key] = measured;
 
                 // Publish the partial index immediately so the dashboard's
                 // GET /hardware/benchmark poll sees this row appear within
                 // its next refetch interval. Without this, _cache only
                 // updates after the entire ~10 min run completes and the
                 // user watches a stale table for the whole benchmark.
-                _cache = new(new(results));
+                _cache = new(Measurements: new(dictionary: results));
 
                 logger.LogInformation(
-                    "Benchmarked {Encoder}{DeviceTag} @ {W}x{H}: {Fps:F1} fps ({Speed:F2}x)",
-                    target.Encoder.FfmpegName,
-                    target.Device is null ? " (CPU)" : $" on {target.Device.Name}",
-                    tierWidth,
-                    tierHeight,
-                    measured.Fps,
-                    measured.SpeedMultiplier
+                    message: "Benchmarked {Encoder}{DeviceTag} @ {W}x{H}: {Fps:F1} fps ({Speed:F2}x)", args: [target.Encoder.FfmpegName, target.Device is null ? " (CPU)" : $" on {target.Device.Name}", tierWidth, tierHeight, measured.Fps, measured.SpeedMultiplier]
                 );
             }
             catch (OperationCanceledException)
@@ -268,12 +260,8 @@ public class HardwareBenchmark(
             catch (Exception ex)
             {
                 logger.LogWarning(
-                    ex,
-                    "Benchmark failed for {Encoder}{DeviceTag} @ {W}x{H} — skipping",
-                    target.Encoder.FfmpegName,
-                    target.Device is null ? "" : $" on {target.Device.Name}",
-                    tierWidth,
-                    tierHeight
+                    exception: ex,
+                    message: "Benchmark failed for {Encoder}{DeviceTag} @ {W}x{H} — skipping", args: [target.Encoder.FfmpegName, target.Device is null ? "" : $" on {target.Device.Name}", tierWidth, tierHeight]
                 );
             }
             finally
@@ -281,16 +269,16 @@ public class HardwareBenchmark(
                 completed++;
                 double pct = total > 0 ? (double)completed / total * 100.0 : 100.0;
                 string stage = $"{target.Encoder.FfmpegName} {tierWidth}x{tierHeight}";
-                observer.Report(jobId, "benchmark", pct, stage);
-                _progress = new(pct, completed, total, stage, DateTime.UtcNow);
+                observer.Report(jobId: jobId, type: "benchmark", percent: pct, stage: stage);
+                _progress = new(PercentComplete: pct, CompletedProbes: completed, TotalProbes: total, Stage: stage, UpdatedAt: DateTime.UtcNow);
             }
         }
 
-        observer.Report(jobId, "benchmark", 100, "done");
-        _progress = new(100, completed, total, "done", DateTime.UtcNow);
+        observer.Report(jobId: jobId, type: "benchmark", percent: 100, stage: "done");
+        _progress = new(PercentComplete: 100, CompletedProbes: completed, TotalProbes: total, Stage: "done", UpdatedAt: DateTime.UtcNow);
 
-        SpeedIndex index = new(results);
-        store.Save(index);
+        SpeedIndex index = new(Measurements: results);
+        store.Save(index: index);
         _cache = index;
         return index;
     }
@@ -311,18 +299,18 @@ public class HardwareBenchmark(
             if (encoder.RequiredVendor is GpuVendor vendor)
             {
                 List<(GpuDevice Device, int VendorIndex)> matchingGpus = EnumerateGpusForVendor(
-                    vendor
+                    vendor: vendor
                 );
                 if (matchingGpus.Count == 0)
                     continue; // Vendor not installed — skip encoder entirely.
 
                 foreach ((GpuDevice device, int vendorIndex) in matchingGpus)
-                    yield return new(codec, encoder, device, vendorIndex);
+                    yield return new(Codec: codec, Encoder: encoder, Device: device, VendorIndex: vendorIndex);
             }
             else
             {
                 // Software encoder — no device, no index.
-                yield return new(codec, encoder, Device: null, VendorIndex: 0);
+                yield return new(Codec: codec, Encoder: encoder, Device: null, VendorIndex: 0);
             }
         }
     }
@@ -343,7 +331,7 @@ public class HardwareBenchmark(
     {
         bool gpuFourKCapable = target.Device is { VramMb: >= FourKCapableVramMb };
         bool swFourKCapable =
-            target.Device is null && FastSoftwareEncoders.Contains(target.Encoder.FfmpegName);
+            target.Device is null && FastSoftwareEncoders.Contains(item: target.Encoder.FfmpegName);
 
         if (gpuFourKCapable || swFourKCapable)
             yield return UhdTier;
@@ -361,7 +349,7 @@ public class HardwareBenchmark(
     /// </summary>
     internal static (double SourceSeconds, int MaxFrames) CalibrationProfile(EncoderInfo encoder)
     {
-        if (SlowSoftwareEncoders.Contains(encoder.FfmpegName))
+        if (SlowSoftwareEncoders.Contains(item: encoder.FfmpegName))
             return (SlowEncoderSourceSeconds, SlowEncoderMaxFrames);
         return (FastEncoderSourceSeconds, FastEncoderMaxFrames);
     }
@@ -380,7 +368,7 @@ public class HardwareBenchmark(
             if (gpu.Vendor != vendor)
                 continue;
 
-            result.Add((gpu, idx));
+            result.Add(item: (gpu, idx));
             idx++;
         }
         return result;
@@ -394,9 +382,9 @@ public class HardwareBenchmark(
     )
     {
         string[] arguments = CalibrationArgumentBuilder.BuildCalibrationArguments(
-            target,
-            width,
-            height
+            target: target,
+            width: width,
+            height: height
         );
 
         ProgressParser parser = new();
@@ -405,24 +393,24 @@ public class HardwareBenchmark(
 
         void OnStdOut(string line)
         {
-            FfmpegProgressSnapshot? snapshot = parser.FeedLine(line);
+            FfmpegProgressSnapshot? snapshot = parser.FeedLine(line: line);
             if (snapshot is null)
                 return;
 
             if (snapshot.Fps > 0)
-                observedFps = Math.Max(observedFps, snapshot.Fps);
+                observedFps = Math.Max(val1: observedFps, val2: snapshot.Fps);
             if (snapshot.Frame > lastFrame)
                 lastFrame = snapshot.Frame;
         }
 
         Stopwatch wall = Stopwatch.StartNew();
         ProcessResult result = await processRunner.RunAsync(
-            options.FfmpegPath,
-            arguments,
-            OnStdOut,
-            null,
-            null,
-            ct
+            executable: options.FfmpegPath,
+            arguments: arguments,
+            onStdOut: OnStdOut,
+            onStdErr: null,
+            workingDirectory: null,
+            cancellationToken: ct
         );
         wall.Stop();
 
@@ -437,13 +425,7 @@ public class HardwareBenchmark(
             // hid the explanation from anyone running on the default
             // Information log level.
             logger.LogInformation(
-                "Benchmark probe for {Encoder}{DeviceTag} @ {W}x{H} exited {Code} — encoder will be omitted from the speed index. Stderr tail: {StdErr}",
-                target.Encoder.FfmpegName,
-                target.Device is null ? "" : $" on {target.Device.Name}",
-                width,
-                height,
-                result.ExitCode,
-                CalibrationArgumentBuilder.TruncateStderr(result.StdErr)
+                message: "Benchmark probe for {Encoder}{DeviceTag} @ {W}x{H} exited {Code} — encoder will be omitted from the speed index. Stderr tail: {StdErr}", args: [target.Encoder.FfmpegName, target.Device is null ? "" : $" on {target.Device.Name}", width, height, result.ExitCode, CalibrationArgumentBuilder.TruncateStderr(stderr: result.StdErr)]
             );
             return null;
         }
@@ -461,13 +443,7 @@ public class HardwareBenchmark(
         {
             observedFps = lastFrame / wall.Elapsed.TotalSeconds;
             logger.LogDebug(
-                "Wall-clock fps fallback for {Encoder} @ {W}x{H}: {Frames} frames in {Elapsed:F2}s = {Fps:F1} fps",
-                target.Encoder.FfmpegName,
-                width,
-                height,
-                lastFrame,
-                wall.Elapsed.TotalSeconds,
-                observedFps
+                message: "Wall-clock fps fallback for {Encoder} @ {W}x{H}: {Frames} frames in {Elapsed:F2}s = {Fps:F1} fps", args: [target.Encoder.FfmpegName, width, height, lastFrame, wall.Elapsed.TotalSeconds, observedFps]
             );
         }
 

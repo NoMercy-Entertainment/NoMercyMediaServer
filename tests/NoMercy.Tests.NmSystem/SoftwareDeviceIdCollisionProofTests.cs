@@ -26,9 +26,9 @@ public class SoftwareDeviceIdCollisionProofTests
     [Fact]
     public void EmptyGeneratedIdString_HashesToTheSameGuid_OnEveryInstall()
     {
-        byte[] installAHash = MD5.HashData(Encoding.UTF8.GetBytes(string.Empty));
-        byte[] installBHash = MD5.HashData(Encoding.UTF8.GetBytes(string.Empty));
+        byte[] installAHash = MD5.HashData(source: Encoding.UTF8.GetBytes(s: string.Empty));
+        byte[] installBHash = MD5.HashData(source: Encoding.UTF8.GetBytes(s: string.Empty));
 
-        Assert.Equal(new Guid(installAHash), new Guid(installBHash));
+        Assert.Equal(expected: new Guid(b: installAHash), actual: new Guid(b: installBHash));
     }
 }

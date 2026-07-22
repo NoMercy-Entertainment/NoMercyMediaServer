@@ -21,53 +21,53 @@ public class ResourceMonitorBehaviorTests
     [Fact]
     public void ResourceMonitor_AfterStop_Monitor_ReturnsEmptyResource()
     {
-        ResourceMonitor monitor = new(NullLogger<ResourceMonitor>.Instance);
+        ResourceMonitor monitor = new(logger: NullLogger<ResourceMonitor>.Instance);
 
         monitor.Stop();
         Resource result = monitor.Monitor();
 
-        result.Cpu.Total.Should().Be(0.0, "stopped monitor has no provider — CPU must be zero");
+        result.Cpu.Total.Should().Be(expected: 0.0, because: "stopped monitor has no provider — CPU must be zero");
         result
             .Memory.Total.Should()
-            .Be(0.0, "stopped monitor has no provider — Memory must be zero");
-        result.Gpu.Should().BeEmpty("stopped monitor has no provider — GPU list must be empty");
+            .Be(expected: 0.0, because: "stopped monitor has no provider — Memory must be zero");
+        result.Gpu.Should().BeEmpty(because: "stopped monitor has no provider — GPU list must be empty");
     }
 
     [Fact]
     public void ResourceMonitor_AfterStop_Dispose_DoesNotThrow()
     {
-        ResourceMonitor monitor = new(NullLogger<ResourceMonitor>.Instance);
+        ResourceMonitor monitor = new(logger: NullLogger<ResourceMonitor>.Instance);
 
         monitor.Stop();
 
         Action act = () => monitor.Dispose();
 
-        act.Should().NotThrow("double-stop and dispose must be idempotent");
+        act.Should().NotThrow(because: "double-stop and dispose must be idempotent");
     }
 
     [Fact]
     public void ResourceMonitor_Dispose_ThenMonitor_ReturnsEmptyResource()
     {
-        ResourceMonitor monitor = new(NullLogger<ResourceMonitor>.Instance);
+        ResourceMonitor monitor = new(logger: NullLogger<ResourceMonitor>.Instance);
 
         monitor.Dispose();
         Resource result = monitor.Monitor();
 
-        result.Cpu.Total.Should().Be(0.0);
-        result.Memory.Total.Should().Be(0.0);
+        result.Cpu.Total.Should().Be(expected: 0.0);
+        result.Memory.Total.Should().Be(expected: 0.0);
         result.Gpu.Should().BeEmpty();
     }
 
     [Fact]
     public void ResourceMonitor_Stop_ThenStart_DoesNotThrow()
     {
-        ResourceMonitor monitor = new(NullLogger<ResourceMonitor>.Instance);
+        ResourceMonitor monitor = new(logger: NullLogger<ResourceMonitor>.Instance);
 
         monitor.Stop();
 
         Action act = () => monitor.Start();
 
-        act.Should().NotThrow("restarting the provider after stop must succeed");
+        act.Should().NotThrow(because: "restarting the provider after stop must succeed");
 
         monitor.Dispose();
     }
@@ -75,7 +75,7 @@ public class ResourceMonitorBehaviorTests
     [Fact]
     public void ResourceMonitor_Monitor_ReturnsNonNullResource()
     {
-        ResourceMonitor monitor = new(NullLogger<ResourceMonitor>.Instance);
+        ResourceMonitor monitor = new(logger: NullLogger<ResourceMonitor>.Instance);
 
         Resource result = monitor.Monitor();
 
@@ -90,16 +90,16 @@ public class ResourceMonitorBehaviorTests
     [Fact]
     public void ResourceMonitor_CpuTotal_IsBetweenZeroAndOneHundred()
     {
-        ResourceMonitor monitor = new(NullLogger<ResourceMonitor>.Instance);
+        ResourceMonitor monitor = new(logger: NullLogger<ResourceMonitor>.Instance);
 
         Resource result = monitor.Monitor();
 
         result
             .Cpu.Total.Should()
             .BeInRange(
-                0.0,
-                100.0,
-                "CPU total must be clamped to [0, 100] — turbo boost headroom is handled by the provider"
+                minimumValue: 0.0,
+                maximumValue: 100.0,
+                because: "CPU total must be clamped to [0, 100] — turbo boost headroom is handled by the provider"
             );
 
         monitor.Dispose();
@@ -108,15 +108,15 @@ public class ResourceMonitorBehaviorTests
     [Fact]
     public void ResourceMonitor_MemoryTotal_IsPositiveOnRealHost()
     {
-        ResourceMonitor monitor = new(NullLogger<ResourceMonitor>.Instance);
+        ResourceMonitor monitor = new(logger: NullLogger<ResourceMonitor>.Instance);
 
         Resource result = monitor.Monitor();
 
         result
             .Memory.Total.Should()
             .BeGreaterThanOrEqualTo(
-                0.0,
-                "memory total is non-negative (0 only when the provider cannot read system memory)"
+                expected: 0.0,
+                because: "memory total is non-negative (0 only when the provider cannot read system memory)"
             );
 
         monitor.Dispose();
@@ -125,15 +125,15 @@ public class ResourceMonitorBehaviorTests
     [Fact]
     public void ResourceMonitor_WhenProviderThrows_MonitorReturnsEmptyResource_NotAnException()
     {
-        ResourceMonitor monitor = new(NullLogger<ResourceMonitor>.Instance);
-        ReflectionHelpers.SetField(monitor, "_provider", new ThrowingResourceProvider());
+        ResourceMonitor monitor = new(logger: NullLogger<ResourceMonitor>.Instance);
+        ReflectionHelpers.SetField(instance: monitor, fieldName: "_provider", value: new ThrowingResourceProvider());
 
         Resource result = monitor.Monitor();
 
         result
             .Cpu.Total.Should()
-            .Be(0.0, "a throwing provider must degrade to an empty Resource, not propagate");
-        result.Memory.Total.Should().Be(0.0);
+            .Be(expected: 0.0, because: "a throwing provider must degrade to an empty Resource, not propagate");
+        result.Memory.Total.Should().Be(expected: 0.0);
         result.Gpu.Should().BeEmpty();
 
         monitor.Dispose();
@@ -142,20 +142,20 @@ public class ResourceMonitorBehaviorTests
     [Fact]
     public void ResourceMonitor_Start_WhenAlreadyStarted_IsANoOp()
     {
-        ResourceMonitor monitor = new(NullLogger<ResourceMonitor>.Instance);
+        ResourceMonitor monitor = new(logger: NullLogger<ResourceMonitor>.Instance);
         object? providerBeforeSecondStart = ReflectionHelpers.GetField<object?>(
-            monitor,
-            "_provider"
+            instance: monitor,
+            fieldName: "_provider"
         );
 
         monitor.Start();
 
         ReflectionHelpers
-            .GetField<object?>(monitor, "_provider")
+            .GetField<object?>(instance: monitor, fieldName: "_provider")
             .Should()
             .BeSameAs(
-                providerBeforeSecondStart,
-                "Start() must not replace an already-running provider"
+                expected: providerBeforeSecondStart,
+                because: "Start() must not replace an already-running provider"
             );
 
         monitor.Dispose();
@@ -170,8 +170,8 @@ public class ResourceMonitorBehaviorTests
         // host, which is why Start()'s "else if (OperatingSystem.IsLinux())" branch
         // is itemized rather than covered here (see coverage report notes).
         object provider = ReflectionHelpers.InvokeStatic(
-            typeof(ResourceMonitor),
-            "CreateLinuxProvider"
+            type: typeof(ResourceMonitor),
+            methodName: "CreateLinuxProvider"
         )!;
 
         provider.Should().BeAssignableTo<IResourceProvider>();

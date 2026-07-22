@@ -32,7 +32,7 @@ public sealed class EventAuditLog
     {
         if (!_options.Enabled)
             return;
-        if (_options.ExcludedEventTypes.Contains(eventTypeName))
+        if (_options.ExcludedEventTypes.Contains(item: eventTypeName))
             return;
 
         EventAuditEntry entry = new()
@@ -41,11 +41,11 @@ public sealed class EventAuditLog
             EventType = eventTypeName,
             Source = @event.Source,
             Timestamp = @event.Timestamp,
-            Payload = SerializePayload(@event),
+            Payload = SerializePayload(@event: @event),
         };
 
-        _entries.Enqueue(entry);
-        Interlocked.Increment(ref _count);
+        _entries.Enqueue(item: entry);
+        Interlocked.Increment(location: ref _count);
 
         if (_count > _options.MaxEntries)
             Compact();
@@ -58,18 +58,18 @@ public sealed class EventAuditLog
 
     public IReadOnlyList<EventAuditEntry> GetEntries(string eventType)
     {
-        return _entries.Where(entry => entry.EventType == eventType).ToArray();
+        return _entries.Where(predicate: entry => entry.EventType == eventType).ToArray();
     }
 
     public IReadOnlyList<EventAuditEntry> GetEntries(DateTime from, DateTime to)
     {
-        return _entries.Where(entry => entry.Timestamp >= from && entry.Timestamp <= to).ToArray();
+        return _entries.Where(predicate: entry => entry.Timestamp >= from && entry.Timestamp <= to).ToArray();
     }
 
     public void Clear()
     {
-        while (_entries.TryDequeue(out _)) { }
-        Interlocked.Exchange(ref _count, 0);
+        while (_entries.TryDequeue(result: out _)) { }
+        Interlocked.Exchange(location1: ref _count, value: 0);
     }
 
     private void Compact()
@@ -77,8 +77,8 @@ public sealed class EventAuditLog
         int toRemove = (int)(_options.MaxEntries * _options.CompactionPercentage);
         for (int i = 0; i < toRemove; i++)
         {
-            if (_entries.TryDequeue(out _))
-                Interlocked.Decrement(ref _count);
+            if (_entries.TryDequeue(result: out _))
+                Interlocked.Decrement(location: ref _count);
         }
     }
 

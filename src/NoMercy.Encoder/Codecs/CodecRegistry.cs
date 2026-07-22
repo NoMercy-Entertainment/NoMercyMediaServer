@@ -29,26 +29,26 @@ public class CodecRegistry
             new CopyVideoDefinition(),
         ];
 
-        _videoDefinitions = definitions.ToDictionary(d => d.CodecType);
+        _videoDefinitions = definitions.ToDictionary(keySelector: d => d.CodecType);
 
         _encodersByName = new();
         foreach (ICodecDefinition def in definitions)
         {
             foreach (EncoderInfo encoder in def.Encoders)
             {
-                _encodersByName[encoder.FfmpegName] = encoder;
+                _encodersByName[key: encoder.FfmpegName] = encoder;
             }
         }
     }
 
     public ICodecDefinition GetVideoDefinition(VideoCodecType codecType) =>
-        _videoDefinitions[codecType];
+        _videoDefinitions[key: codecType];
 
     public EncoderInfo? GetVideoEncoderByName(string ffmpegName) =>
-        _encodersByName.GetValueOrDefault(ffmpegName);
+        _encodersByName.GetValueOrDefault(key: ffmpegName);
 
     public AudioEncoderInfo GetAudioEncoder(AudioCodecType codecType) =>
-        AudioCodecDefinitions.GetEncoder(codecType);
+        AudioCodecDefinitions.GetEncoder(codecType: codecType);
 
     public IEnumerable<(VideoCodecType CodecType, EncoderInfo Encoder)> EnumerateVideoEncoders()
     {
@@ -75,10 +75,10 @@ public class CodecRegistry
     /// </summary>
     public static bool IsHardware(string ffmpegEncoderName)
     {
-        return ffmpegEncoderName.Contains("_nvenc", StringComparison.OrdinalIgnoreCase)
-            || ffmpegEncoderName.Contains("_qsv", StringComparison.OrdinalIgnoreCase)
-            || ffmpegEncoderName.Contains("_amf", StringComparison.OrdinalIgnoreCase)
-            || ffmpegEncoderName.Contains("_videotoolbox", StringComparison.OrdinalIgnoreCase)
-            || ffmpegEncoderName.Contains("_vaapi", StringComparison.OrdinalIgnoreCase);
+        return ffmpegEncoderName.Contains(value: "_nvenc", comparisonType: StringComparison.OrdinalIgnoreCase)
+            || ffmpegEncoderName.Contains(value: "_qsv", comparisonType: StringComparison.OrdinalIgnoreCase)
+            || ffmpegEncoderName.Contains(value: "_amf", comparisonType: StringComparison.OrdinalIgnoreCase)
+            || ffmpegEncoderName.Contains(value: "_videotoolbox", comparisonType: StringComparison.OrdinalIgnoreCase)
+            || ffmpegEncoderName.Contains(value: "_vaapi", comparisonType: StringComparison.OrdinalIgnoreCase);
     }
 }

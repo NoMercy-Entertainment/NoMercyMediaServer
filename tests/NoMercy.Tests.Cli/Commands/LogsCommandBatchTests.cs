@@ -30,25 +30,25 @@ namespace NoMercy.Tests.Cli.Commands;
 /// The static <c>_lastEntryTime</c> field this relies on is reset before every
 /// test via reflection so results never depend on execution order.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class LogsCommandBatchTests
 {
     public LogsCommandBatchTests()
     {
         PrivateReflection.ResetStaticField(
-            typeof(LogsCommand),
-            "_lastEntryTime",
-            DateTime.MinValue
+            type: typeof(LogsCommand),
+            fieldName: "_lastEntryTime",
+            value: DateTime.MinValue
         );
     }
 
     private static async Task<int> RunAsync(ICliClientFactory factory, params string[] extraArgs)
     {
-        Option<string?> pipeOption = new("--pipe", "-p");
-        RootCommand root = new("test");
-        root.Options.Add(pipeOption);
-        root.Subcommands.Add(LogsCommand.Create(pipeOption, factory));
-        return await root.Parse(["logs", .. extraArgs]).InvokeAsync();
+        Option<string?> pipeOption = new(name: "--pipe", aliases: "-p");
+        RootCommand root = new(description: "test");
+        root.Options.Add(item: pipeOption);
+        root.Subcommands.Add(item: LogsCommand.Create(pipeOption: pipeOption, clientFactory: factory));
+        return await root.Parse(args: ["logs", .. extraArgs]).InvokeAsync();
     }
 
     private static Mock<ICliClientFactory> FactoryReturning(
@@ -58,46 +58,46 @@ public sealed class LogsCommandBatchTests
     {
         client = new Mock<ICliClient>();
         client
-            .Setup(c =>
+            .Setup(expression: c =>
                 c.GetAsync<List<LogEntryResponse>>(
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(logs);
+            .ReturnsAsync(value: logs);
 
         Mock<ICliClientFactory> factory = new();
-        factory.Setup(f => f.Create(It.IsAny<string?>())).Returns(client.Object);
+        factory.Setup(expression: f => f.Create(It.IsAny<string?>())).Returns(value: client.Object);
         return factory;
     }
 
     [Fact]
     public async Task Logs_ServerUnreachable_PrintsError_AndReturnsServerError()
     {
-        Mock<ICliClientFactory> factory = FactoryReturning(null, out _);
+        Mock<ICliClientFactory> factory = FactoryReturning(logs: null, client: out _);
 
         using ConsoleCapture console = new();
-        int exitCode = await RunAsync(factory.Object);
+        int exitCode = await RunAsync(factory: factory.Object);
 
-        exitCode.Should().Be((int)ExitCode.ServerError);
-        console.Error.Should().Contain("Could not connect to server.");
+        exitCode.Should().Be(expected: (int)ExitCode.ServerError);
+        console.Error.Should().Contain(expected: "Could not connect to server.");
     }
 
     [Fact]
     public async Task Logs_RequestsWithTailLevelAndTypeQueryParameters()
     {
-        Mock<ICliClientFactory> factory = FactoryReturning([], out Mock<ICliClient> client);
+        Mock<ICliClientFactory> factory = FactoryReturning(logs: [], client: out Mock<ICliClient> client);
 
         using ConsoleCapture _ = new();
-        await RunAsync(factory.Object, "--tail", "50", "--level", "Error", "--type", "App");
+        await RunAsync(factory: factory.Object, extraArgs: ["--tail", "50", "--level", "Error", "--type", "App"]);
 
         client.Verify(
-            c =>
+            expression: c =>
                 c.GetAsync<List<LogEntryResponse>>(
                     "/manage/logs?tail=50&levels=Error&types=App",
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Once
+            times: Times.Once
         );
     }
 
@@ -111,20 +111,20 @@ public sealed class LogsCommandBatchTests
                 Type = "App",
                 Level = "Information",
                 Color = "",
-                Time = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc),
+                Time = new DateTime(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0, kind: DateTimeKind.Utc),
                 Message = "\"line one\\nline two with \\\"quotes\\\"\"",
             },
         ];
 
-        Mock<ICliClientFactory> factory = FactoryReturning(entries, out _);
+        Mock<ICliClientFactory> factory = FactoryReturning(logs: entries, client: out _);
 
         using ConsoleCapture console = new();
-        int exitCode = await RunAsync(factory.Object);
+        int exitCode = await RunAsync(factory: factory.Object);
 
-        exitCode.Should().Be((int)ExitCode.Success);
-        console.Out.Should().Contain("line one\nline two with \"quotes\"");
-        console.Out.Should().NotContain("\\n");
-        console.Out.Should().NotContain("\\\"");
+        exitCode.Should().Be(expected: (int)ExitCode.Success);
+        console.Out.Should().Contain(expected: "line one\nline two with \"quotes\"");
+        console.Out.Should().NotContain(unexpected: "\\n");
+        console.Out.Should().NotContain(unexpected: "\\\"");
     }
 
     [Fact]
@@ -142,10 +142,10 @@ public sealed class LogsCommandBatchTests
             },
         ];
 
-        Mock<ICliClientFactory> factory = FactoryReturning(entries, out _);
+        Mock<ICliClientFactory> factory = FactoryReturning(logs: entries, client: out _);
 
         using ConsoleCapture console = new();
-        await RunAsync(factory.Object);
+        await RunAsync(factory: factory.Object);
 
         // "31m" is the SGR code from the injected ANSI escape in the fixture
         // above; it must be gone after cleaning. The timestamp/type columns are
@@ -153,8 +153,8 @@ public sealed class LogsCommandBatchTests
         // "no ESC/bracket anywhere in the line" would fail regardless of whether
         // CleanMessage did its job -- this asserts on the specific stripped
         // sequence instead.
-        console.Out.Should().Contain("| red text");
-        console.Out.Should().NotContain("31m");
+        console.Out.Should().Contain(expected: "| red text");
+        console.Out.Should().NotContain(unexpected: "31m");
     }
 
     [Fact]
@@ -167,7 +167,7 @@ public sealed class LogsCommandBatchTests
                 Type = "App",
                 Level = "Information",
                 Color = "",
-                Time = new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc),
+                Time = new DateTime(year: 2026, month: 1, day: 2, hour: 0, minute: 0, second: 0, kind: DateTimeKind.Utc),
                 Message = "before restart",
             },
             new()
@@ -175,17 +175,17 @@ public sealed class LogsCommandBatchTests
                 Type = "App",
                 Level = "Information",
                 Color = "",
-                Time = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                Time = new DateTime(year: 2026, month: 1, day: 1, hour: 0, minute: 0, second: 0, kind: DateTimeKind.Utc),
                 Message = "after restart",
             },
         ];
 
-        Mock<ICliClientFactory> factory = FactoryReturning(entries, out _);
+        Mock<ICliClientFactory> factory = FactoryReturning(logs: entries, client: out _);
 
         using ConsoleCapture console = new();
-        await RunAsync(factory.Object);
+        await RunAsync(factory: factory.Object);
 
-        console.Out.Should().Contain("Server Restart");
+        console.Out.Should().Contain(expected: "Server Restart");
     }
 
     [Fact]
@@ -198,7 +198,7 @@ public sealed class LogsCommandBatchTests
                 Type = "App",
                 Level = "Information",
                 Color = "",
-                Time = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                Time = new DateTime(year: 2026, month: 1, day: 1, hour: 0, minute: 0, second: 0, kind: DateTimeKind.Utc),
                 Message = "first",
             },
             new()
@@ -206,17 +206,17 @@ public sealed class LogsCommandBatchTests
                 Type = "App",
                 Level = "Information",
                 Color = "",
-                Time = new DateTime(2026, 1, 1, 0, 0, 1, DateTimeKind.Utc),
+                Time = new DateTime(year: 2026, month: 1, day: 1, hour: 0, minute: 0, second: 1, kind: DateTimeKind.Utc),
                 Message = "second",
             },
         ];
 
-        Mock<ICliClientFactory> factory = FactoryReturning(entries, out _);
+        Mock<ICliClientFactory> factory = FactoryReturning(logs: entries, client: out _);
 
         using ConsoleCapture console = new();
-        await RunAsync(factory.Object);
+        await RunAsync(factory: factory.Object);
 
-        console.Out.Should().NotContain("Server Restart");
+        console.Out.Should().NotContain(unexpected: "Server Restart");
     }
 
     [Fact]
@@ -238,12 +238,12 @@ public sealed class LogsCommandBatchTests
             },
         ];
 
-        Mock<ICliClientFactory> factory = FactoryReturning(entries, out _);
+        Mock<ICliClientFactory> factory = FactoryReturning(logs: entries, client: out _);
 
         using ConsoleCapture console = new();
-        int exitCode = await RunAsync(factory.Object);
+        int exitCode = await RunAsync(factory: factory.Object);
 
-        exitCode.Should().Be((int)ExitCode.Success);
-        console.Out.Should().Contain("encode failed");
+        exitCode.Should().Be(expected: (int)ExitCode.Success);
+        console.Out.Should().Contain(expected: "encode failed");
     }
 }

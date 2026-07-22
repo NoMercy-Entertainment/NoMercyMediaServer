@@ -34,11 +34,11 @@ public class TwoPassSplitTests : IDisposable
 
     public TwoPassSplitTests()
     {
-        _outputDir = Path.Combine(Path.GetTempPath(), $"TwoPassSplit_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_outputDir);
+        _outputDir = Path.Combine(path1: Path.GetTempPath(), path2: $"TwoPassSplit_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: _outputDir);
 
         _encoder
-            .Setup(encoder =>
+            .Setup(expression: encoder =>
                 encoder.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
@@ -46,41 +46,41 @@ public class TwoPassSplitTests : IDisposable
                 )
             )
             .ReturnsAsync(
-                new EncodingResult(
+                value: new EncodingResult(
                     Success: true,
                     OutputPath: "/out",
                     Duration: TimeSpan.Zero,
                     Error: null,
-                    Metrics: new(0, 0, 0, "test", null)
+                    Metrics: new(OutputSizeBytes: 0, AverageSpeed: 0, AverageFps: 0, EncoderUsed: "test", GpuUsed: null)
                 )
             );
 
         _checkpointStore
-            .Setup(store => store.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((JobCheckpoint?)null);
+            .Setup(expression: store => store.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: (JobCheckpoint?)null);
 
         _strategy = new(
-            _encoder.Object,
-            _checkpointStore.Object,
-            NullLogger<HlsTwoPassStrategy>.Instance,
-            TestStorageFactory.CreateLocal()
+            encoder: _encoder.Object,
+            checkpointStore: _checkpointStore.Object,
+            logger: NullLogger<HlsTwoPassStrategy>.Instance,
+            storage: TestStorageFactory.CreateLocal()
         );
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(_outputDir))
-            Directory.Delete(_outputDir, recursive: true);
-        GC.SuppressFinalize(this);
+        if (Directory.Exists(path: _outputDir))
+            Directory.Delete(path: _outputDir, recursive: true);
+        GC.SuppressFinalize(obj: this);
     }
 
     [Fact]
     public async Task EncodeAsync_PassOneExplicit_CallsEncoderExactlyOnceWithPassOne()
     {
-        EncodingRequest request = BuildRequest(EncodingPass.One);
+        EncodingRequest request = BuildRequest(passOverride: EncodingPass.One);
 
         EncodingResult result = await _strategy.EncodeAsync(
-            request,
+            request: request,
             progress: null,
             ct: CancellationToken.None
         );
@@ -88,7 +88,7 @@ public class TwoPassSplitTests : IDisposable
         result.Success.Should().BeTrue();
 
         _encoder.Verify(
-            encoder =>
+            expression: encoder =>
                 encoder.EncodeAsync(
                     It.Is<EncodingRequest>(encodingRequest =>
                         encodingRequest.Options != null
@@ -97,13 +97,13 @@ public class TwoPassSplitTests : IDisposable
                     It.IsAny<IProgressObserver?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Once,
-            "pass=1 should call the encoder exactly once with Pass == One"
+            times: Times.Once,
+            failMessage: "pass=1 should call the encoder exactly once with Pass == One"
         );
 
         // Must NOT invoke encoder with Pass == Two when only Pass1 is requested.
         _encoder.Verify(
-            encoder =>
+            expression: encoder =>
                 encoder.EncodeAsync(
                     It.Is<EncodingRequest>(encodingRequest =>
                         encodingRequest.Options != null
@@ -112,19 +112,19 @@ public class TwoPassSplitTests : IDisposable
                     It.IsAny<IProgressObserver?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Never,
-            "pass=1 must not invoke a pass=2 encode"
+            times: Times.Never,
+            failMessage: "pass=1 must not invoke a pass=2 encode"
         );
     }
 
     [Fact]
     public async Task EncodeAsync_PassTwoExplicit_CallsEncoderExactlyOnceWithPassTwo()
     {
-        string statsPath = Path.Combine(_outputDir, ".2pass", "x264");
-        EncodingRequest request = BuildRequest(EncodingPass.Two, statsPath);
+        string statsPath = Path.Combine(path1: _outputDir, path2: ".2pass", path3: "x264");
+        EncodingRequest request = BuildRequest(passOverride: EncodingPass.Two, statsFilePath: statsPath);
 
         EncodingResult result = await _strategy.EncodeAsync(
-            request,
+            request: request,
             progress: null,
             ct: CancellationToken.None
         );
@@ -132,7 +132,7 @@ public class TwoPassSplitTests : IDisposable
         result.Success.Should().BeTrue();
 
         _encoder.Verify(
-            encoder =>
+            expression: encoder =>
                 encoder.EncodeAsync(
                     It.Is<EncodingRequest>(encodingRequest =>
                         encodingRequest.Options != null
@@ -141,13 +141,13 @@ public class TwoPassSplitTests : IDisposable
                     It.IsAny<IProgressObserver?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Once,
-            "pass=2 should call the encoder exactly once with Pass == Two"
+            times: Times.Once,
+            failMessage: "pass=2 should call the encoder exactly once with Pass == Two"
         );
 
         // Must NOT invoke encoder with Pass == One when only Pass2 is requested.
         _encoder.Verify(
-            encoder =>
+            expression: encoder =>
                 encoder.EncodeAsync(
                     It.Is<EncodingRequest>(encodingRequest =>
                         encodingRequest.Options != null
@@ -156,8 +156,8 @@ public class TwoPassSplitTests : IDisposable
                     It.IsAny<IProgressObserver?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Never,
-            "pass=2 must not re-run pass=1"
+            times: Times.Never,
+            failMessage: "pass=2 must not re-run pass=1"
         );
     }
 
@@ -167,24 +167,24 @@ public class TwoPassSplitTests : IDisposable
         // Legacy inline path (no explicit pass) must still run both passes.
         EncodingRequest request = BuildRequest(passOverride: null);
 
-        await _strategy.EncodeAsync(request, progress: null, ct: CancellationToken.None);
+        await _strategy.EncodeAsync(request: request, progress: null, ct: CancellationToken.None);
 
         _encoder.Verify(
-            encoder =>
+            expression: encoder =>
                 encoder.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Exactly(2),
-            "inline two-pass must call the encoder twice (pass1 then pass2)"
+            times: Times.Exactly(callCount: 2),
+            failMessage: "inline two-pass must call the encoder twice (pass1 then pass2)"
         );
     }
 
     private EncodingRequest BuildRequest(EncodingPass? passOverride, string? statsFilePath = null)
     {
         return new(
-            InputPath: Path.Combine(_outputDir, "input.mp4"),
+            InputPath: Path.Combine(path1: _outputDir, path2: "input.mp4"),
             OutputDirectory: _outputDir,
             Profile: new(
                 Id: Ulid.NewUlid(),

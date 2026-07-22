@@ -45,19 +45,19 @@ public class ShowManager(
         bool? priority = false
     )
     {
-        logger.LogInformation("Show {Id}: Adding to Library {Title}", id, library.Title);
+        logger.LogInformation(message: "Show {Id}: Adding to Library {Title}", args: [id, library.Title]);
 
-        using TmdbTvClient showClient = new(id);
+        using TmdbTvClient showClient = new(id: id);
         TmdbTvShowAppends? showAppends = await MetadataRetry.FetchAsync(
-            () => showClient.WithAllAppends(priority),
-            $"TMDB tv {id}"
+            fetch: () => showClient.WithAllAppends(priority: priority),
+            description: $"TMDB tv {id}"
         );
 
         if (showAppends == null)
             return null;
 
-        string baseUrl = BaseUrl(showAppends.Name, showAppends.FirstAirDate);
-        string mediaType = await mediaTypeClassifier.ClassifyAsync(showAppends);
+        string baseUrl = BaseUrl(title: showAppends.Name, releaseDate: showAppends.FirstAirDate);
+        string mediaType = await mediaTypeClassifier.ClassifyAsync(show: showAppends);
 
         DateTime folderCreatedAt = DateTime.UtcNow;
 
@@ -67,28 +67,28 @@ public class ShowManager(
                 continue;
 
             IStorage folderStorage = storageFactory.For(
-                folderLibrary.Folder.Id,
-                folderLibrary.Folder.DriverId,
-                string.Empty
+                folderId: folderLibrary.Folder.Id,
+                driverId: folderLibrary.Folder.DriverId,
+                subPath: string.Empty
             );
-            string folderRoot = FolderRootPath(folderStorage, folderLibrary.Folder.Path);
-            string folderName = folderStorage.CombinePath(folderRoot, baseUrl.Replace("/", ""));
+            string folderRoot = FolderRootPath(storage: folderStorage, path: folderLibrary.Folder.Path);
+            string folderName = folderStorage.CombinePath(parent: folderRoot, child: baseUrl.Replace(oldValue: "/", newValue: ""));
 
-            if (!folderStorage.Exists(folderName))
+            if (!folderStorage.Exists(path: folderName))
             {
                 string? match = FileNameSanitizer.FindMatchingDirectory(
-                    folderStorage.Driver,
-                    folderRoot,
-                    baseUrl.Replace("/", "")
+                    driver: folderStorage.Driver,
+                    rootPath: folderRoot,
+                    expectedFolderName: baseUrl.Replace(oldValue: "/", newValue: "")
                 );
                 if (match != null)
                     folderName = match;
             }
 
-            if (!folderStorage.Exists(folderName))
+            if (!folderStorage.Exists(path: folderName))
                 continue;
 
-            folderCreatedAt = folderStorage.Driver.GetCreationTimeUtc(folderName);
+            folderCreatedAt = folderStorage.Driver.GetCreationTimeUtc(path: folderName);
 
             if (folderCreatedAt != DateTime.UtcNow)
                 break;
@@ -118,7 +118,7 @@ public class ShowManager(
             Status = showAppends.Status,
             Tagline = showAppends.Tagline,
             Title = showAppends.Name,
-            TitleSort = showAppends.Name?.TitleSort(showAppends.FirstAirDate) ?? string.Empty,
+            TitleSort = showAppends.Name?.TitleSort(date: showAppends.FirstAirDate) ?? string.Empty,
             TvdbId = showAppends.ExternalIds.TvdbId,
             Type = showAppends.Type,
             VoteAverage = showAppends.VoteAverage,
@@ -138,24 +138,22 @@ public class ShowManager(
                 showAppends.Videos.Results.Length > 0 ? showAppends.Videos.Results[0].Key : null,
         };
 
-        await showRepository.AddAsync(show);
-        logger.LogDebug("Show {Title}: Added to Database", show.Title);
+        await showRepository.AddAsync(show: show);
+        logger.LogDebug(message: "Show {Title}: Added to Database", args: show.Title);
 
-        await showRepository.LinkToLibrary(library, show);
-        logger.LogDebug("Show {Title}: Linked to Library {Title2}", show.Title, library.Title);
+        await showRepository.LinkToLibrary(library: library, show: show);
+        logger.LogDebug(message: "Show {Title}: Linked to Library {Title2}", args: [show.Title, library.Title]);
 
-        await StoreGenres(showAppends);
-        await StoreContentRatings(showAppends);
-        await StoreTranslations(showAppends);
+        await StoreGenres(show: showAppends);
+        await StoreContentRatings(show: showAppends);
+        await StoreTranslations(show: showAppends);
 
         logger.LogInformation(
-            "Show {Name}: Added to Library {Title}",
-            showAppends.Name,
-            library.Title
+            message: "Show {Name}: Added to Library {Title}", args: [showAppends.Name, library.Title]
         );
 
-        jobDispatcher.DispatchColorPaletteJob("tv", show.Id.ToString());
-        jobDispatcher.DispatchJob<ShowExtrasJob, TmdbTvShowAppends>(showAppends);
+        jobDispatcher.DispatchColorPaletteJob(entityType: "tv", entityId: show.Id.ToString());
+        jobDispatcher.DispatchJob<ShowExtrasJob, TmdbTvShowAppends>(data: showAppends);
 
         return showAppends;
     }
@@ -164,19 +162,19 @@ public class ShowManager(
     {
         // Re-importing refreshes all metadata; every write is an idempotent
         // upsert, so re-running AddShowAsync updates existing rows in place.
-        return AddShowAsync(id, library);
+        return AddShowAsync(id: id, library: library);
     }
 
     public async Task RemoveShowAsync(int id)
     {
-        await showRepository.Remove(id);
-        logger.LogDebug("Show {Id}: Removed from Database", id);
+        await showRepository.Remove(id: id);
+        logger.LogDebug(message: "Show {Id}: Removed from Database", args: id);
     }
 
     internal async Task StoreAlternativeTitles(TmdbTvShowAppends show)
     {
         IEnumerable<AlternativeTitle> alternativeTitles = show.AlternativeTitles.Results.Select(
-            tmdbShowAlternativeTitles => new AlternativeTitle
+            selector: tmdbShowAlternativeTitles => new AlternativeTitle
             {
                 Iso31661 = tmdbShowAlternativeTitles.Iso31661,
                 Title = tmdbShowAlternativeTitles.Title,
@@ -184,15 +182,15 @@ public class ShowManager(
             }
         );
 
-        await showRepository.StoreAlternativeTitles(alternativeTitles);
+        await showRepository.StoreAlternativeTitles(alternativeTitles: alternativeTitles);
 
-        logger.LogDebug("Show {Name}: AlternativeTitles stored", show.Name);
+        logger.LogDebug(message: "Show {Name}: AlternativeTitles stored", args: show.Name);
     }
 
     internal async Task StoreTranslations(TmdbTvShowAppends show)
     {
         List<Translation> translations = show
-            .Translations.Translations.Select(translation => new Translation
+            .Translations.Translations.Select(selector: translation => new Translation
             {
                 Iso31661 = translation.Iso31661,
                 Iso6391 = translation.Iso6391,
@@ -206,15 +204,15 @@ public class ShowManager(
             })
             .ToList();
 
-        await showRepository.StoreTranslations(translations);
+        await showRepository.StoreTranslations(translations: translations);
 
-        logger.LogDebug("Show {Name}: Translations stored", show.Name);
+        logger.LogDebug(message: "Show {Name}: Translations stored", args: show.Name);
     }
 
     internal async Task StoreContentRatings(TmdbTvShowAppends show)
     {
         List<CertificationCriteria> certificationCriteria = show
-            .ContentRatings.Results.Select(r => new CertificationCriteria
+            .ContentRatings.Results.Select(selector: r => new CertificationCriteria
             {
                 Iso31661 = r.Iso31661,
                 Certification = r.Rating,
@@ -222,19 +220,19 @@ public class ShowManager(
             .ToList();
 
         IEnumerable<CertificationTv> certificationTvs = showRepository.GetCertificationTvs(
-            show,
-            certificationCriteria
+            show: show,
+            certificationCriteria: certificationCriteria
         );
 
-        await showRepository.StoreContentRatings(certificationTvs);
+        await showRepository.StoreContentRatings(certifications: certificationTvs);
 
-        logger.LogDebug("Show {Name}: Content Ratings stored", show.Name);
+        logger.LogDebug(message: "Show {Name}: Content Ratings stored", args: show.Name);
     }
 
     internal async Task StoreSimilar(TmdbTvShowAppends show)
     {
         IEnumerable<Similar> similar = show
-            .Similar.Results.Select(similar => new Similar
+            .Similar.Results.Select(selector: similar => new Similar
             {
                 Backdrop = similar.BackdropPath,
                 Overview = similar.Overview,
@@ -246,25 +244,25 @@ public class ShowManager(
             })
             .ToArray();
 
-        await showRepository.StoreSimilar(similar);
+        await showRepository.StoreSimilar(similar: similar);
 
-        logger.LogDebug("Show {Name}: Similar stored", show.Name);
+        logger.LogDebug(message: "Show {Name}: Similar stored", args: show.Name);
 
         await using MediaContext db = new();
         List<int> similarIds = await db
             .Similar.AsNoTracking()
-            .Where(s => s.TvFromId == show.Id && (s._colorPalette == null || s._colorPalette == ""))
-            .Select(s => s.Id)
+            .Where(predicate: s => s.TvFromId == show.Id && (s._colorPalette == null || s._colorPalette == ""))
+            .Select(selector: s => s.Id)
             .ToListAsync();
 
         foreach (int id in similarIds)
-            jobDispatcher.DispatchColorPaletteJob("similar", id.ToString());
+            jobDispatcher.DispatchColorPaletteJob(entityType: "similar", entityId: id.ToString());
     }
 
     internal async Task StoreRecommendations(TmdbTvShowAppends show)
     {
         IEnumerable<Recommendation> recommendations = show
-            .Recommendations.Results.Select(recommendation => new Recommendation
+            .Recommendations.Results.Select(selector: recommendation => new Recommendation
             {
                 Backdrop = recommendation.BackdropPath,
                 Overview = recommendation.Overview,
@@ -276,24 +274,24 @@ public class ShowManager(
             })
             .ToArray();
 
-        await showRepository.StoreRecommendations(recommendations);
+        await showRepository.StoreRecommendations(recommendations: recommendations);
 
-        logger.LogDebug("Show {Name}: Recommendations stored", show.Name);
+        logger.LogDebug(message: "Show {Name}: Recommendations stored", args: show.Name);
 
         await using MediaContext db = new();
         List<int> recommendationIds = await db
             .Recommendations.AsNoTracking()
-            .Where(r => r.TvFromId == show.Id && (r._colorPalette == null || r._colorPalette == ""))
-            .Select(r => r.Id)
+            .Where(predicate: r => r.TvFromId == show.Id && (r._colorPalette == null || r._colorPalette == ""))
+            .Select(selector: r => r.Id)
             .ToListAsync();
 
         foreach (int id in recommendationIds)
-            jobDispatcher.DispatchColorPaletteJob("recommendation", id.ToString());
+            jobDispatcher.DispatchColorPaletteJob(entityType: "recommendation", entityId: id.ToString());
     }
 
     internal async Task StoreVideos(TmdbTvShowAppends show)
     {
-        IEnumerable<Media> videos = show.Videos.Results.Select(media => new Media
+        IEnumerable<Media> videos = show.Videos.Results.Select(selector: media => new Media
         {
             Id = Ulid.NewUlid(),
             Iso6391 = media.Iso6391,
@@ -305,15 +303,15 @@ public class ShowManager(
             TvId = show.Id,
         });
 
-        await showRepository.StoreVideos(videos);
+        await showRepository.StoreVideos(videos: videos);
 
-        logger.LogDebug("Show {Name}: Videos stored", show.Name);
+        logger.LogDebug(message: "Show {Name}: Videos stored", args: show.Name);
     }
 
     internal async Task StoreImages(TmdbTvShowAppends show)
     {
         IEnumerable<Image> posters = show
-            .Images.Posters.Select(image => new Image
+            .Images.Posters.Select(selector: image => new Image
             {
                 AspectRatio = image.AspectRatio,
                 Height = image.Height,
@@ -328,10 +326,10 @@ public class ShowManager(
             })
             .ToArray();
 
-        await showRepository.StoreImages(posters);
+        await showRepository.StoreImages(images: posters);
 
         IEnumerable<Image> backdrops = show
-            .Images.Backdrops.Select(image => new Image
+            .Images.Backdrops.Select(selector: image => new Image
             {
                 AspectRatio = image.AspectRatio,
                 Height = image.Height,
@@ -346,11 +344,11 @@ public class ShowManager(
             })
             .ToArray();
 
-        await showRepository.StoreImages(backdrops);
-        logger.LogDebug("Show {Name}: backdrops stored", show.Name);
+        await showRepository.StoreImages(images: backdrops);
+        logger.LogDebug(message: "Show {Name}: backdrops stored", args: show.Name);
 
         IEnumerable<Image> logos = show
-            .Images.Logos.Select(image => new Image
+            .Images.Logos.Select(selector: image => new Image
             {
                 AspectRatio = image.AspectRatio,
                 Height = image.Height,
@@ -365,51 +363,51 @@ public class ShowManager(
             })
             .ToArray();
 
-        await showRepository.StoreImages(logos);
-        logger.LogDebug("Show {Name}: Logos stored", show.Name);
+        await showRepository.StoreImages(images: logos);
+        logger.LogDebug(message: "Show {Name}: Logos stored", args: show.Name);
 
         await using MediaContext db = new();
         List<int> imageIds = await db
             .Images.AsNoTracking()
-            .Where(i => i.TvId == show.Id && (i._colorPalette == null || i._colorPalette == ""))
-            .Select(i => i.Id)
+            .Where(predicate: i => i.TvId == show.Id && (i._colorPalette == null || i._colorPalette == ""))
+            .Select(selector: i => i.Id)
             .ToListAsync();
 
         foreach (int id in imageIds)
-            jobDispatcher.DispatchColorPaletteJob("image", id.ToString());
+            jobDispatcher.DispatchColorPaletteJob(entityType: "image", entityId: id.ToString());
     }
 
     internal async Task StoreKeywords(TmdbTvShowAppends show)
     {
-        IEnumerable<Keyword> keywords = show.Keywords.Results.Select(keyword => new Keyword
+        IEnumerable<Keyword> keywords = show.Keywords.Results.Select(selector: keyword => new Keyword
         {
             Id = keyword.Id,
             Name = keyword.Name,
         });
 
-        await showRepository.StoreKeywords(keywords);
-        logger.LogDebug("Show {Name}: Keywords stored", show.Name);
+        await showRepository.StoreKeywords(keywords: keywords);
+        logger.LogDebug(message: "Show {Name}: Keywords stored", args: show.Name);
 
-        IEnumerable<KeywordTv> keywordTvs = show.Keywords.Results.Select(keyword => new KeywordTv
+        IEnumerable<KeywordTv> keywordTvs = show.Keywords.Results.Select(selector: keyword => new KeywordTv
         {
             KeywordId = keyword.Id,
             TvId = show.Id,
         });
 
-        await showRepository.LinkKeywordsToTv(keywordTvs);
-        logger.LogDebug("Show {Name}: Keywords linked to Show", show.Name);
+        await showRepository.LinkKeywordsToTv(keywordTvs: keywordTvs);
+        logger.LogDebug(message: "Show {Name}: Keywords linked to Show", args: show.Name);
     }
 
     internal async Task StoreGenres(TmdbTvShowAppends show)
     {
-        IEnumerable<GenreTv> genreShows = show.Genres.Select(genre => new GenreTv
+        IEnumerable<GenreTv> genreShows = show.Genres.Select(selector: genre => new GenreTv
         {
             GenreId = genre.Id,
             TvId = show.Id,
         });
 
-        await showRepository.StoreGenres(genreShows);
-        logger.LogDebug("Show {Name}: Genres stored", show.Name);
+        await showRepository.StoreGenres(genreTvs: genreShows);
+        logger.LogDebug(message: "Show {Name}: Genres stored", args: show.Name);
     }
 
     internal async Task StoreWatchProviders(TmdbTvShowAppends show)
@@ -423,13 +421,13 @@ public class ShowManager(
                 string providerType,
                 TmdbPaymentDetails provider,
                 string? link
-            ) in TmdbWatchProviders.ExtractProviders(show.WatchProviders.TmdbWatchProviderResults)
+            ) in TmdbWatchProviders.ExtractProviders(results: show.WatchProviders.TmdbWatchProviderResults)
         )
         {
-            if (watchProviders.All(wp => wp.Id != provider.ProviderId))
+            if (watchProviders.All(predicate: wp => wp.Id != provider.ProviderId))
             {
                 watchProviders.Add(
-                    new()
+                    item: new()
                     {
                         Id = provider.ProviderId,
                         Name = provider.ProviderName,
@@ -440,7 +438,7 @@ public class ShowManager(
             }
 
             watchProviderMedias.Add(
-                new()
+                item: new()
                 {
                     WatchProviderId = provider.ProviderId,
                     TvId = show.Id,
@@ -452,36 +450,36 @@ public class ShowManager(
         }
 
         if (watchProviders.Count != 0)
-            await showRepository.StoreWatchProviders(watchProviders);
+            await showRepository.StoreWatchProviders(watchProviders: watchProviders);
 
         if (watchProviderMedias.Count != 0)
-            await showRepository.StoreWatchProviderMedias(watchProviderMedias);
+            await showRepository.StoreWatchProviderMedias(watchProviderMedias: watchProviderMedias);
 
-        logger.LogDebug("Show {Name}: WatchProviders stored", show.Name);
+        logger.LogDebug(message: "Show {Name}: WatchProviders stored", args: show.Name);
     }
 
     internal async Task StoreNetworks(TmdbTvShowAppends show)
     {
         if (show.Networks.Length == 0)
         {
-            logger.LogDebug("Show {Name}: No networks found", show.Name);
+            logger.LogDebug(message: "Show {Name}: No networks found", args: show.Name);
             return;
         }
 
-        TmdbTvClient showClient = new(show.Id);
+        TmdbTvClient showClient = new(id: show.Id);
 
         List<Network> networks = [];
 
         foreach (TmdbNetwork network in show.Networks)
         {
-            TmdbTmdbNetworkDetails? nw = await showClient.NetworkDetails(network.Id);
+            TmdbTmdbNetworkDetails? nw = await showClient.NetworkDetails(id: network.Id);
             if (nw == null)
                 continue;
 
-            if (networks.All(n => n.Id != nw.Id))
+            if (networks.All(predicate: n => n.Id != nw.Id))
             {
                 networks.Add(
-                    new()
+                    item: new()
                     {
                         Id = nw.Id,
                         Name = nw.Name,
@@ -495,42 +493,42 @@ public class ShowManager(
         }
 
         List<NetworkTv> networkTvs = show
-            .Networks.Select(network => new NetworkTv { NetworkId = network.Id, TvId = show.Id })
+            .Networks.Select(selector: network => new NetworkTv { NetworkId = network.Id, TvId = show.Id })
             .ToList();
 
         if (networks.Count != 0)
-            await showRepository.StoreNetworks(networks);
+            await showRepository.StoreNetworks(networks: networks);
 
         if (networkTvs.Count != 0)
-            await showRepository.StoreNetworkTvs(networkTvs);
+            await showRepository.StoreNetworkTvs(networkTvs: networkTvs);
 
-        logger.LogDebug("Show {Name}: Networks stored", show.Name);
+        logger.LogDebug(message: "Show {Name}: Networks stored", args: show.Name);
     }
 
     internal async Task StoreCompanies(TmdbTvShowAppends show)
     {
         if (show.ProductionCompanies.Length == 0)
         {
-            logger.LogDebug("Show {Name}: No production companies found", show.Name);
+            logger.LogDebug(message: "Show {Name}: No production companies found", args: show.Name);
             return;
         }
 
-        TmdbTvClient showClient = new(show.Id);
+        TmdbTvClient showClient = new(id: show.Id);
 
         ConcurrentDictionary<int, Company> companiesDict = new();
 
         await Parallel.ForEachAsync(
-            show.ProductionCompanies,
-            SystemParallelism.Options,
-            async (productionCompany, _) =>
+            source: show.ProductionCompanies,
+            parallelOptions: SystemParallelism.Options,
+            body: async (productionCompany, _) =>
             {
-                TmdbTmdbNetworkDetails? nw = await showClient.CompanyDetails(productionCompany.Id);
+                TmdbTmdbNetworkDetails? nw = await showClient.CompanyDetails(id: productionCompany.Id);
                 if (nw == null)
                     return;
 
                 companiesDict.TryAdd(
-                    nw.Id,
-                    new()
+                    key: nw.Id,
+                    value: new()
                     {
                         Id = nw.Id,
                         Name = nw.Name,
@@ -546,15 +544,15 @@ public class ShowManager(
         List<Company> companies = companiesDict.Values.ToList();
 
         List<CompanyTv> companyTvs = companies
-            .Select(company => new CompanyTv { CompanyId = company.Id, TvId = show.Id })
+            .Select(selector: company => new CompanyTv { CompanyId = company.Id, TvId = show.Id })
             .ToList();
 
         if (companies.Count != 0)
-            await showRepository.StoreCompanies(companies);
+            await showRepository.StoreCompanies(companies: companies);
 
         if (companyTvs.Count != 0)
-            await showRepository.StoreCompanyTvs(companyTvs);
+            await showRepository.StoreCompanyTvs(companyTvs: companyTvs);
 
-        logger.LogDebug("Show {Name}: Companies stored", show.Name);
+        logger.LogDebug(message: "Show {Name}: Companies stored", args: show.Name);
     }
 }

@@ -36,7 +36,7 @@ public sealed class NvencSessionCap(
         // Use the most restrictive cap across all GPUs. A multi-GPU system with
         // one consumer card (cap 3) and one pro card (cap int.MaxValue) should
         // respect the consumer card's limit because the session could land on it.
-        int effectiveCap = hardware.Gpus.Min(g => g.MaxEncoderSessions);
+        int effectiveCap = hardware.Gpus.Min(selector: g => g.MaxEncoderSessions);
 
         // No cap means the hardware reports unlimited sessions (pro cards).
         if (effectiveCap <= 0 || effectiveCap == int.MaxValue)
@@ -46,9 +46,9 @@ public sealed class NvencSessionCap(
         if (active >= effectiveCap)
         {
             throw RuntimeErrors.GpuCapacityExhausted(
-                gpuName,
-                active,
-                "Wait for an active encode to free a slot, or set hardware_preference=force_software on this profile to use CPU instead."
+                gpu: gpuName,
+                sessions: active,
+                suggestion: "Wait for an active encode to free a slot, or set hardware_preference=force_software on this profile to use CPU instead."
             );
         }
     }

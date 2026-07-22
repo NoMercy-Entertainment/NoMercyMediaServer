@@ -15,30 +15,30 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbAggregatedCredit
 {
-    [JsonProperty("adult")]
+    [JsonProperty(propertyName: "adult")]
     public bool Adult { get; set; }
 
-    [JsonProperty("gender")]
+    [JsonProperty(propertyName: "gender")]
     public int Gender { get; set; }
 
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("known_for_department")]
+    [JsonProperty(propertyName: "known_for_department")]
     public string? KnownForDepartment { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("original_name")]
+    [JsonProperty(propertyName: "original_name")]
     public string OriginalName { get; set; } = string.Empty;
 
-    [JsonProperty("popularity")]
+    [JsonProperty(propertyName: "popularity")]
     public float Popularity { get; set; }
 
-    [JsonProperty("profile_path")]
+    [JsonProperty(propertyName: "profile_path")]
     public string? ProfilePath { get; set; }
 
-    [JsonProperty("order")]
+    [JsonProperty(propertyName: "order")]
     public int Order { get; set; }
 }

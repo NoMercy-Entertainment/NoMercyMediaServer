@@ -15,70 +15,70 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Users;
 
-[Index(nameof(Email), IsUnique = true)]
-[Index(nameof(Name))]
-[Index(nameof(Allowed))]
-[Index(nameof(Owner))]
-[Index(nameof(Manage))]
-[PrimaryKey(nameof(Id))]
+[Index(propertyName: nameof(Email), IsUnique = true)]
+[Index(propertyName: nameof(Name))]
+[Index(propertyName: nameof(Allowed))]
+[Index(propertyName: nameof(Owner))]
+[Index(propertyName: nameof(Manage))]
+[PrimaryKey(propertyName: nameof(Id))]
 public class User : Timestamps
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.None)]
-    [JsonProperty("id")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
+    [JsonProperty(propertyName: "id")]
     public Guid Id { get; set; }
 
-    [JsonProperty("email")]
+    [JsonProperty(propertyName: "email")]
     public string Email { get; set; } = string.Empty;
 
-    [JsonProperty("manage")]
+    [JsonProperty(propertyName: "manage")]
     public bool Manage { get; set; }
 
-    [JsonProperty("owner")]
+    [JsonProperty(propertyName: "owner")]
     public bool Owner { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("allowed")]
+    [JsonProperty(propertyName: "allowed")]
     public bool Allowed { get; set; }
 
-    [JsonProperty("audio_transcoding")]
+    [JsonProperty(propertyName: "audio_transcoding")]
     public bool AudioTranscoding { get; set; }
 
-    [JsonProperty("video_transcoding")]
+    [JsonProperty(propertyName: "video_transcoding")]
     public bool VideoTranscoding { get; set; }
 
-    [JsonProperty("no_transcoding")]
+    [JsonProperty(propertyName: "no_transcoding")]
     public bool NoTranscoding { get; set; }
 
-    [JsonProperty("library_user")]
+    [JsonProperty(propertyName: "library_user")]
     public virtual ICollection<LibraryUser> LibraryUser { get; set; } = [];
 
-    [JsonProperty("movie_user")]
+    [JsonProperty(propertyName: "movie_user")]
     public virtual ICollection<MovieUser> MovieUser { get; set; } = [];
 
-    [JsonProperty("tv_user")]
+    [JsonProperty(propertyName: "tv_user")]
     public virtual ICollection<TvUser> TvUser { get; set; } = [];
 
-    [JsonProperty("collection_user")]
+    [JsonProperty(propertyName: "collection_user")]
     public virtual ICollection<CollectionUser> CollectionUser { get; set; } = [];
 
-    [JsonProperty("special_user")]
+    [JsonProperty(propertyName: "special_user")]
     public virtual ICollection<SpecialUser> SpecialUser { get; set; } = [];
 
-    [JsonProperty("notification_user")]
+    [JsonProperty(propertyName: "notification_user")]
     public virtual ICollection<NotificationUser> NotificationUser { get; set; } = [];
 
-    [JsonProperty("album_user")]
+    [JsonProperty(propertyName: "album_user")]
     public virtual ICollection<AlbumUser> AlbumUser { get; set; } = [];
 
-    [JsonProperty("artist_user")]
+    [JsonProperty(propertyName: "artist_user")]
     public virtual ICollection<ArtistUser> ArtistUser { get; set; } = [];
 
-    [JsonProperty("track_user")]
+    [JsonProperty(propertyName: "track_user")]
     public virtual ICollection<TrackUser> TrackUser { get; set; } = [];
 
-    [JsonProperty("playback_preferences")]
+    [JsonProperty(propertyName: "playback_preferences")]
     public virtual ICollection<PlaybackPreference> PlaybackPreferences { get; set; } = [];
 
     public User()

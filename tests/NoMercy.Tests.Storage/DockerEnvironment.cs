@@ -38,14 +38,14 @@ public static class DockerEnvironment
     {
         try
         {
-            ProcessStartInfo psi = new("docker", "info")
+            ProcessStartInfo psi = new(fileName: "docker", arguments: "info")
             {
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true,
             };
-            using Process proc = Process.Start(psi)!;
+            using Process proc = Process.Start(startInfo: psi)!;
             await proc.WaitForExitAsync();
             return proc.ExitCode == 0;
         }
@@ -59,8 +59,8 @@ public static class DockerEnvironment
     {
         try
         {
-            using HttpClient http = new() { Timeout = TimeSpan.FromSeconds(3) };
-            HttpResponseMessage response = await http.GetAsync("http://localhost:2375/info");
+            using HttpClient http = new() { Timeout = TimeSpan.FromSeconds(seconds: 3) };
+            HttpResponseMessage response = await http.GetAsync(requestUri: "http://localhost:2375/info");
             return response.IsSuccessStatusCode;
         }
         catch

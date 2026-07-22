@@ -13,53 +13,53 @@ using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Tests.NmSystem;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class ToSecondsTests
 {
     [Theory]
-    [InlineData("45", 45)]
-    [InlineData("00", 0)]
-    [InlineData("05.500", 5)]
+    [InlineData(data: ["45", 45])]
+    [InlineData(data: ["00", 0])]
+    [InlineData(data: ["05.500", 5])]
     public void ToSeconds_SingleSegment_ReturnsSeconds(string input, int expected)
     {
-        input.ToSeconds().Should().Be(expected);
+        input.ToSeconds().Should().Be(expected: expected);
     }
 
     [Theory]
-    [InlineData("02:30", 150)]
-    [InlineData("00:05", 5)]
-    [InlineData("10:00", 600)]
+    [InlineData(data: ["02:30", 150])]
+    [InlineData(data: ["00:05", 5])]
+    [InlineData(data: ["10:00", 600])]
     public void ToSeconds_TwoSegments_ReturnsMinutesAndSeconds(string input, int expected)
     {
-        input.ToSeconds().Should().Be(expected);
+        input.ToSeconds().Should().Be(expected: expected);
     }
 
     [Theory]
-    [InlineData("01:02:03", 3723)]
-    [InlineData("00:00:00", 0)]
-    [InlineData("02:00:00.250", 7200)]
+    [InlineData(data: ["01:02:03", 3723])]
+    [InlineData(data: ["00:00:00", 0])]
+    [InlineData(data: ["02:00:00.250", 7200])]
     public void ToSeconds_ThreeSegments_ReturnsHoursMinutesAndSeconds(string input, int expected)
     {
-        input.ToSeconds().Should().Be(expected);
+        input.ToSeconds().Should().Be(expected: expected);
     }
 
     [Theory]
-    [InlineData("abc")]
-    [InlineData("ab:cd")]
-    [InlineData("ab:cd:ef")]
-    [InlineData(":")]
-    [InlineData("::")]
+    [InlineData(data: "abc")]
+    [InlineData(data: "ab:cd")]
+    [InlineData(data: "ab:cd:ef")]
+    [InlineData(data: ":")]
+    [InlineData(data: "::")]
     public void ToSeconds_MalformedInput_ReturnsZeroInsteadOfThrowing(string input)
     {
         Action act = () => input.ToSeconds();
         act.Should().NotThrow();
-        input.ToSeconds().Should().Be(0);
+        input.ToSeconds().Should().Be(expected: 0);
     }
 
     [Fact]
     public void ToSeconds_NullOrEmpty_ReturnsZero()
     {
-        ((string?)null).ToSeconds().Should().Be(0);
-        string.Empty.ToSeconds().Should().Be(0);
+        ((string?)null).ToSeconds().Should().Be(expected: 0);
+        string.Empty.ToSeconds().Should().Be(expected: 0);
     }
 }

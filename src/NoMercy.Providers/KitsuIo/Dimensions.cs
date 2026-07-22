@@ -15,15 +15,15 @@ namespace NoMercy.Providers.KitsuIo;
 
 public class Dimensions
 {
-    [JsonProperty("tiny")]
+    [JsonProperty(propertyName: "tiny")]
     public Large? Tiny { get; set; }
 
-    [JsonProperty("large?")]
+    [JsonProperty(propertyName: "large?")]
     public Large? Large { get; set; }
 
-    [JsonProperty("small")]
+    [JsonProperty(propertyName: "small")]
     public Large? Small { get; set; }
 
-    [JsonProperty("medium")]
+    [JsonProperty(propertyName: "medium")]
     public Large? Medium { get; set; }
 }

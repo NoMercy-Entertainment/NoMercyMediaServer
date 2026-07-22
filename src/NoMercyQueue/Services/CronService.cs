@@ -17,13 +17,13 @@ public class CronService
 {
     public static DateTime GetNextOccurrence(string cronExpression, DateTime baseTime)
     {
-        CrontabSchedule? schedule = CrontabSchedule.Parse(cronExpression);
-        return schedule.GetNextOccurrence(baseTime);
+        CrontabSchedule? schedule = CrontabSchedule.Parse(expression: cronExpression);
+        return schedule.GetNextOccurrence(baseTime: baseTime);
     }
 
     public static bool ShouldRun(string cronExpression, DateTime lastRun, DateTime currentTime)
     {
-        DateTime nextRun = GetNextOccurrence(cronExpression, lastRun);
+        DateTime nextRun = GetNextOccurrence(cronExpression: cronExpression, baseTime: lastRun);
         return currentTime >= nextRun;
     }
 }

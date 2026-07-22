@@ -30,7 +30,7 @@ namespace NoMercy.Tests.Storage;
 // library is not present, so they don't break CI on machines without it.
 // ============================================================================
 
-[Collection("StorageBackends")]
+[Collection(name: "StorageBackends")]
 public class NfsLiveNasTests(StorageBackendsFixture fix)
 {
     private const string Skip_Unavailable =
@@ -44,11 +44,11 @@ public class NfsLiveNasTests(StorageBackendsFixture fix)
 
     private NfsStorageDriver Mount()
     {
-        Skip.If(!fix.Available, Skip_Unavailable);
+        Skip.If(condition: !fix.Available, reason: Skip_Unavailable);
         NfsStorageDriver? driver = fix.TryBuildNfsDriver();
         Skip.If(
-            driver is null,
-            "libnfs native library not loadable; container NFS driver unavailable"
+            condition: driver is null,
+            reason: "libnfs native library not loadable; container NFS driver unavailable"
         );
         try
         {
@@ -56,12 +56,12 @@ public class NfsLiveNasTests(StorageBackendsFixture fix)
         }
         catch (DllNotFoundException ex)
         {
-            Skip.If(true, $"libnfs native library not loadable: {ex.Message}");
+            Skip.If(condition: true, reason: $"libnfs native library not loadable: {ex.Message}");
             throw;
         }
         catch (Exception ex) when (ex is IOException or InvalidOperationException)
         {
-            Skip.If(true, $"NFS mount failed: {ex.GetType().Name}: {ex.Message}");
+            Skip.If(condition: true, reason: $"NFS mount failed: {ex.GetType().Name}: {ex.Message}");
             throw;
         }
     }
@@ -80,7 +80,7 @@ public class NfsLiveNasTests(StorageBackendsFixture fix)
         using NfsStorageDriver driver = Mount();
         List<string> entries =
         [
-            .. driver.EnumerateFileSystemEntries("/", "*", SearchOption.TopDirectoryOnly),
+            .. driver.EnumerateFileSystemEntries(directory: "/", searchPattern: "*", option: SearchOption.TopDirectoryOnly),
         ];
         entries.Should().NotBeEmpty();
     }
@@ -91,11 +91,11 @@ public class NfsLiveNasTests(StorageBackendsFixture fix)
         using NfsStorageDriver driver = Mount();
         List<string> entries =
         [
-            .. driver.EnumerateFileSystemEntries("/", "*", SearchOption.TopDirectoryOnly),
+            .. driver.EnumerateFileSystemEntries(directory: "/", searchPattern: "*", option: SearchOption.TopDirectoryOnly),
         ];
         entries
             .Should()
-            .Contain(e => e == "/Music" || e.EndsWith("/Music", StringComparison.Ordinal));
+            .Contain(predicate: e => e == "/Music" || e.EndsWith("/Music", StringComparison.Ordinal));
     }
 
     // --- Directory.Exists semantics — these are the bug-finder tests --------
@@ -104,35 +104,35 @@ public class NfsLiveNasTests(StorageBackendsFixture fix)
     public void DirectoryExists_returns_true_for_root()
     {
         using NfsStorageDriver driver = Mount();
-        driver.DirectoryExists("/").Should().BeTrue();
+        driver.DirectoryExists(path: "/").Should().BeTrue();
     }
 
     [SkippableFact]
     public void DirectoryExists_returns_true_for_top_level_dir()
     {
         using NfsStorageDriver driver = Mount();
-        driver.DirectoryExists("Music").Should().BeTrue();
+        driver.DirectoryExists(path: "Music").Should().BeTrue();
     }
 
     [SkippableFact]
     public void DirectoryExists_returns_true_for_nested_dir()
     {
         using NfsStorageDriver driver = Mount();
-        driver.DirectoryExists(KnownDir).Should().BeTrue();
+        driver.DirectoryExists(path: KnownDir).Should().BeTrue();
     }
 
     [SkippableFact]
     public void DirectoryExists_returns_true_for_dir_with_brackets_and_dollar()
     {
         using NfsStorageDriver driver = Mount();
-        driver.DirectoryExists(KnownDeepDir).Should().BeTrue();
+        driver.DirectoryExists(path: KnownDeepDir).Should().BeTrue();
     }
 
     [SkippableFact]
     public void DirectoryExists_returns_false_for_nonexistent()
     {
         using NfsStorageDriver driver = Mount();
-        driver.DirectoryExists("does/not/exist").Should().BeFalse();
+        driver.DirectoryExists(path: "does/not/exist").Should().BeFalse();
     }
 
     // --- File.Exists / Size ---------------------------------------------------
@@ -141,35 +141,35 @@ public class NfsLiveNasTests(StorageBackendsFixture fix)
     public void FileExists_returns_true_for_known_file()
     {
         using NfsStorageDriver driver = Mount();
-        driver.FileExists(KnownFile).Should().BeTrue();
+        driver.FileExists(path: KnownFile).Should().BeTrue();
     }
 
     [SkippableFact]
     public void FileExists_returns_false_for_dir()
     {
         using NfsStorageDriver driver = Mount();
-        driver.FileExists(KnownDir).Should().BeFalse();
+        driver.FileExists(path: KnownDir).Should().BeFalse();
     }
 
     [SkippableFact]
     public void GetFileSize_returns_positive_for_known_file()
     {
         using NfsStorageDriver driver = Mount();
-        driver.GetFileSize(KnownFile).Should().BeGreaterThan(0);
+        driver.GetFileSize(path: KnownFile).Should().BeGreaterThan(expected: 0);
     }
 
     [SkippableFact]
     public void OpenRead_returns_mp3_with_id3_signature()
     {
         using NfsStorageDriver driver = Mount();
-        using Stream s = driver.OpenRead(KnownFile);
+        using Stream s = driver.OpenRead(path: KnownFile);
         byte[] head = new byte[8];
-        int read = s.Read(head, 0, head.Length);
-        read.Should().Be(8);
+        int read = s.Read(buffer: head, offset: 0, count: head.Length);
+        read.Should().Be(expected: 8);
         // Either ID3v2 ("ID3...") or MP3 frame sync (0xFF 0xEx)
         bool isId3 = head[0] == 0x49 && head[1] == 0x44 && head[2] == 0x33;
         bool isSync = head[0] == 0xFF && (head[1] & 0xE0) == 0xE0;
-        (isId3 || isSync).Should().BeTrue($"unexpected header: {BitConverter.ToString(head)}");
+        (isId3 || isSync).Should().BeTrue(because: $"unexpected header: {BitConverter.ToString(value: head)}");
     }
 
     // --- UTF-8 path handling --------------------------------------------------
@@ -178,7 +178,7 @@ public class NfsLiveNasTests(StorageBackendsFixture fix)
     public void FileExists_returns_true_for_utf8_filename()
     {
         using NfsStorageDriver driver = Mount();
-        driver.FileExists(KnownUtf8File).Should().BeTrue();
+        driver.FileExists(path: KnownUtf8File).Should().BeTrue();
     }
 
     [SkippableFact]
@@ -187,14 +187,14 @@ public class NfsLiveNasTests(StorageBackendsFixture fix)
         using NfsStorageDriver driver = Mount();
         List<string> entries =
         [
-            .. driver.EnumerateFileSystemEntries(KnownDeepDir, "*", SearchOption.TopDirectoryOnly),
+            .. driver.EnumerateFileSystemEntries(directory: KnownDeepDir, searchPattern: "*", option: SearchOption.TopDirectoryOnly),
         ];
 
         entries
             .Should()
             .Contain(
-                e => e.Contains("Tëst", StringComparison.Ordinal),
-                "libnfs returns NFS3/4 names as UTF-8; CharSet.Ansi mangled them to mojibake"
+                predicate: e => e.Contains("Tëst", StringComparison.Ordinal),
+                because: "libnfs returns NFS3/4 names as UTF-8; CharSet.Ansi mangled them to mojibake"
             );
     }
 
@@ -205,21 +205,21 @@ public class NfsLiveNasTests(StorageBackendsFixture fix)
     [SkippableFact]
     public void RemoteStorage_List_marks_subdirs_correctly()
     {
-        Skip.If(!fix.Available, Skip_Unavailable);
+        Skip.If(condition: !fix.Available, reason: Skip_Unavailable);
         using NfsStorageDriver driver = Mount();
-        RemoteStorage rs = new(driver);
+        RemoteStorage rs = new(driver: driver);
 
-        IReadOnlyList<StorageEntry> entries = rs.List("Music", pattern: null, recursive: false);
+        IReadOnlyList<StorageEntry> entries = rs.List(path: "Music", pattern: null, recursive: false);
         entries.Should().NotBeEmpty();
 
         // 'Music' on the export contains alphabet directories (A, B, ...).
         // Every direct child should report IsDirectory == true.
-        IReadOnlyList<StorageEntry> dirs = [.. entries.Where(e => e.IsDirectory)];
+        IReadOnlyList<StorageEntry> dirs = [.. entries.Where(predicate: e => e.IsDirectory)];
         dirs.Should()
             .HaveCountGreaterThan(
-                0,
-                "RemoteStorage.List uses driver.DirectoryExists(entryPath) to set IsDirectory; "
-                    + "if Stat64 returns wrong mode bits or fails for nested paths, this stays empty"
+                expected: 0,
+                because: "RemoteStorage.List uses driver.DirectoryExists(entryPath) to set IsDirectory; "
+                         + "if Stat64 returns wrong mode bits or fails for nested paths, this stays empty"
             );
     }
 
@@ -227,13 +227,13 @@ public class NfsLiveNasTests(StorageBackendsFixture fix)
     public void ListDirectories_marks_subdirs_as_directories()
     {
         using NfsStorageDriver driver = Mount();
-        List<(string Name, bool IsDirectory)> entries = driver.ListDirectories("Music/A/artist$");
+        List<(string Name, bool IsDirectory)> entries = driver.ListDirectories(relativePath: "Music/A/artist$");
 
         // The artist$ folder contains album subdirectories like "[2025] album$".
         // ListDirectories filters to only directories, so any returned entry
         // must be IsDirectory == true.
         entries.Should().NotBeEmpty();
-        entries.Should().OnlyContain(e => e.IsDirectory);
-        entries.Should().Contain(e => e.Name.Contains("[2025]"));
+        entries.Should().OnlyContain(predicate: e => e.IsDirectory);
+        entries.Should().Contain(predicate: e => e.Name.Contains("[2025]"));
     }
 }

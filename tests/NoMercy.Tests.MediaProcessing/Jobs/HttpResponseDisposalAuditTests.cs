@@ -18,33 +18,33 @@ namespace NoMercy.Tests.MediaProcessing.Jobs;
 /// HttpResponseMessage implements IDisposable and holds network buffers.
 /// Every API call that doesn't dispose the response leaks memory.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public partial class HttpResponseDisposalAuditTests
 {
     [Fact]
     public void Source_HttpResponseMessage_HasUsing()
     {
         string srcDir = FindSrcDirectory();
-        string[] csFiles = Directory.GetFiles(srcDir, "*.cs", SearchOption.AllDirectories);
+        string[] csFiles = Directory.GetFiles(path: srcDir, searchPattern: "*.cs", searchOption: SearchOption.AllDirectories);
 
         List<string> violations = [];
 
         foreach (string file in csFiles)
         {
-            string content = File.ReadAllText(file);
-            string[] lines = content.Split('\n');
+            string content = File.ReadAllText(path: file);
+            string[] lines = content.Split(separator: '\n');
 
             for (int i = 0; i < lines.Length; i++)
             {
                 string trimmed = lines[i].Trim();
-                if (trimmed.StartsWith("//") || trimmed.StartsWith("*"))
+                if (trimmed.StartsWith(value: "//") || trimmed.StartsWith(value: "*"))
                     continue;
 
-                if (!HttpResponseDeclarationPattern().IsMatch(trimmed))
+                if (!HttpResponseDeclarationPattern().IsMatch(input: trimmed))
                     continue;
 
                 // Allow: lines with 'using' keyword
-                if (trimmed.Contains("using "))
+                if (trimmed.Contains(value: "using "))
                     continue;
 
                 // Allow: the declaration is the first argument of a multi-line
@@ -52,7 +52,7 @@ public partial class HttpResponseDisposalAuditTests
                 // formatter puts the `using (` opener on its own line above,
                 // so this line alone doesn't contain the keyword.
                 bool multiLineUsingOpener = false;
-                for (int look = i - 1; look >= Math.Max(0, i - 3); look--)
+                for (int look = i - 1; look >= Math.Max(val1: 0, val2: i - 3); look--)
                 {
                     if (lines[look].Trim() == "using (")
                     {
@@ -63,14 +63,14 @@ public partial class HttpResponseDisposalAuditTests
                 if (multiLineUsingOpener)
                     continue;
 
-                string relative = Path.GetRelativePath(srcDir, file);
+                string relative = Path.GetRelativePath(relativeTo: srcDir, path: file);
 
                 // Allow: ownership explicitly transferred to HttpResponseStream within a few lines
                 // (the wrapper disposes both the response and its content stream on close)
                 bool transferredToWrapper = false;
-                for (int look = i + 1; look < Math.Min(i + 6, lines.Length); look++)
+                for (int look = i + 1; look < Math.Min(val1: i + 6, val2: lines.Length); look++)
                 {
-                    if (lines[look].Contains("new HttpResponseStream(", StringComparison.Ordinal))
+                    if (lines[look].Contains(value: "new HttpResponseStream(", comparisonType: StringComparison.Ordinal))
                     {
                         transferredToWrapper = true;
                         break;
@@ -79,11 +79,11 @@ public partial class HttpResponseDisposalAuditTests
                 if (transferredToWrapper)
                     continue;
 
-                violations.Add($"{relative}:{i + 1} — {trimmed}");
+                violations.Add(item: $"{relative}:{i + 1} — {trimmed}");
             }
         }
 
-        Assert.Empty(violations);
+        Assert.Empty(collection: violations);
     }
 
     private static string FindSrcDirectory()
@@ -91,20 +91,20 @@ public partial class HttpResponseDisposalAuditTests
         string? dir = AppDomain.CurrentDomain.BaseDirectory;
         while (dir != null)
         {
-            string candidate = Path.Combine(dir, "src");
-            if (Directory.Exists(candidate))
+            string candidate = Path.Combine(path1: dir, path2: "src");
+            if (Directory.Exists(path: candidate))
                 return candidate;
 
-            dir = Directory.GetParent(dir)?.FullName;
+            dir = Directory.GetParent(path: dir)?.FullName;
         }
 
         string fallback = "/workspaces/NoMercyMediaServer/src";
-        if (Directory.Exists(fallback))
+        if (Directory.Exists(path: fallback))
             return fallback;
 
-        throw new DirectoryNotFoundException("Could not find src/ directory");
+        throw new DirectoryNotFoundException(message: "Could not find src/ directory");
     }
 
-    [GeneratedRegex(@"HttpResponseMessage\s+\w+\s*=")]
+    [GeneratedRegex(pattern: @"HttpResponseMessage\s+\w+\s*=")]
     private static partial Regex HttpResponseDeclarationPattern();
 }

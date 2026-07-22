@@ -23,38 +23,38 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// "Access to the path '…/cache/images/original' is denied" at runtime. The
 /// guard must short-circuit before any filesystem write.
 /// </summary>
-[Trait("Category", "Unit")]
-[Collection("TmdbImageClient")]
+[Trait(name: "Category", value: "Unit")]
+[Collection(name: "TmdbImageClient")]
 public class TmdbImageClientDownloadGuardTests
 {
     [Theory]
-    [InlineData("")]
-    [InlineData("/")]
-    [InlineData("   ")]
+    [InlineData(data: "")]
+    [InlineData(data: "/")]
+    [InlineData(data: "   ")]
     public async Task Download_EmptyOrSlashOnlyPath_NeverWritesToStorage(string path)
     {
-        Mock<IStorage> storage = new(MockBehavior.Loose);
+        Mock<IStorage> storage = new(behavior: MockBehavior.Loose);
         storage
-            .Setup(s => s.ExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+            .Setup(expression: s => s.ExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: false);
         storage
-            .Setup(s => s.CreateDirectoryAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .Setup(expression: s => s.CreateDirectoryAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(value: Task.CompletedTask);
 
-        TmdbImageClient.Initialize(storage.Object);
+        TmdbImageClient.Initialize(storage: storage.Object);
 
         Task<SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>?>? download =
-            TmdbImageClient.Download(path);
+            TmdbImageClient.Download(path: path);
         if (download is not null)
             await download;
 
         // The whole point: an empty file name must NOT reach WriteAsync, which
         // would target the 'original' directory and throw access-denied.
         storage.Verify(
-            s =>
+            expression: s =>
                 s.WriteAsync(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<CancellationToken>()),
-            Times.Never,
-            "an empty/slash-only image path must short-circuit before any write to the images cache"
+            times: Times.Never,
+            failMessage: "an empty/slash-only image path must short-circuit before any write to the images cache"
         );
     }
 }

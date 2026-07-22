@@ -16,7 +16,7 @@ using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 
 namespace NoMercy.Tests.MediaProcessing.Palettes;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class ColorPaletteJobTests : IDisposable
 {
     private readonly MediaContext _db;
@@ -24,9 +24,9 @@ public class ColorPaletteJobTests : IDisposable
     public ColorPaletteJobTests()
     {
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
-        _db = new(options);
+        _db = new(options: options);
     }
 
     public void Dispose()
@@ -55,7 +55,7 @@ public class ColorPaletteJobTests : IDisposable
             MediaContext db,
             string id,
             CancellationToken ct
-        ) => Task.FromResult<string?>(_current);
+        ) => Task.FromResult<string?>(result: _current);
 
         public Task<PaletteResult> GenerateAsync(
             MediaContext db,
@@ -76,9 +76,9 @@ public class ColorPaletteJobTests : IDisposable
         Func<Task<PaletteResult>> generate
     )
     {
-        StubSource source = new(current, generate);
-        PaletteSourceRegistry registry = new([source]);
-        ColorPaletteJob job = new("stub", "1");
+        StubSource source = new(current: current, generateFactory: generate);
+        PaletteSourceRegistry registry = new(sources: [source]);
+        ColorPaletteJob job = new(entityType: "stub", entityId: "1");
         return (job, source);
     }
 
@@ -89,13 +89,13 @@ public class ColorPaletteJobTests : IDisposable
     {
         (ColorPaletteJob job, StubSource source) = Build(
             current: "{\"poster\":{}}",
-            generate: () => Task.FromResult(PaletteResult.Success("{\"poster\":{}}"))
+            generate: () => Task.FromResult(result: PaletteResult.Success(json: "{\"poster\":{}}"))
         );
-        PaletteSourceRegistry registry = new([source]);
+        PaletteSourceRegistry registry = new(sources: [source]);
 
-        await job.HandleCore(_db, registry);
+        await job.HandleCore(dbOverride: _db, registryOverride: registry);
 
-        source.PersistCalled.Should().BeFalse("palette is already filled");
+        source.PersistCalled.Should().BeFalse(because: "palette is already filled");
     }
 
     [Fact]
@@ -104,14 +104,14 @@ public class ColorPaletteJobTests : IDisposable
         string expectedJson = "{\"poster\":{\"dominant\":\"#abc\"}}";
         (ColorPaletteJob job, StubSource source) = Build(
             current: "",
-            generate: () => Task.FromResult(PaletteResult.Success(expectedJson))
+            generate: () => Task.FromResult(result: PaletteResult.Success(json: expectedJson))
         );
-        PaletteSourceRegistry registry = new([source]);
+        PaletteSourceRegistry registry = new(sources: [source]);
 
-        await job.HandleCore(_db, registry);
+        await job.HandleCore(dbOverride: _db, registryOverride: registry);
 
         source.PersistCalled.Should().BeTrue();
-        source.PersistedJson.Should().Be(expectedJson);
+        source.PersistedJson.Should().Be(expected: expectedJson);
     }
 
     [Fact]
@@ -119,14 +119,14 @@ public class ColorPaletteJobTests : IDisposable
     {
         (ColorPaletteJob job, StubSource source) = Build(
             current: "",
-            generate: () => throw new HttpRequestException("simulated network failure")
+            generate: () => throw new HttpRequestException(message: "simulated network failure")
         );
-        PaletteSourceRegistry registry = new([source]);
+        PaletteSourceRegistry registry = new(sources: [source]);
 
-        Func<Task> act = () => job.HandleCore(_db, registry);
+        Func<Task> act = () => job.HandleCore(dbOverride: _db, registryOverride: registry);
 
         await act.Should().ThrowAsync<HttpRequestException>();
-        source.PersistCalled.Should().BeFalse("transient failures must not write \"{}\"");
+        source.PersistCalled.Should().BeFalse(because: "transient failures must not write \"{}\"");
     }
 
     [Fact]
@@ -134,14 +134,14 @@ public class ColorPaletteJobTests : IDisposable
     {
         (ColorPaletteJob job, StubSource source) = Build(
             current: "",
-            generate: () => Task.FromResult(PaletteResult.NoImage())
+            generate: () => Task.FromResult(result: PaletteResult.NoImage())
         );
-        PaletteSourceRegistry registry = new([source]);
+        PaletteSourceRegistry registry = new(sources: [source]);
 
-        await job.HandleCore(_db, registry);
+        await job.HandleCore(dbOverride: _db, registryOverride: registry);
 
         source.PersistCalled.Should().BeTrue();
-        source.PersistedJson.Should().Be("{}");
+        source.PersistedJson.Should().Be(expected: "{}");
     }
 
     [Fact]
@@ -158,24 +158,24 @@ public class ColorPaletteJobTests : IDisposable
             generate: () =>
             {
                 generated = true;
-                return Task.FromResult(PaletteResult.NoImage());
+                return Task.FromResult(result: PaletteResult.NoImage());
             }
         );
-        PaletteSourceRegistry registry = new([source]);
+        PaletteSourceRegistry registry = new(sources: [source]);
 
-        await job.HandleCore(_db, registry);
+        await job.HandleCore(dbOverride: _db, registryOverride: registry);
 
-        generated.Should().BeFalse("\"{}\" is PaletteResult.NoImage's Permanent marker");
+        generated.Should().BeFalse(because: "\"{}\" is PaletteResult.NoImage's Permanent marker");
         source.PersistCalled.Should().BeFalse();
     }
 
     [Fact]
     public async Task Unknown_entity_type_returns_without_error()
     {
-        ColorPaletteJob job = new("unknown_type", "42");
-        PaletteSourceRegistry registry = new([]);
+        ColorPaletteJob job = new(entityType: "unknown_type", entityId: "42");
+        PaletteSourceRegistry registry = new(sources: []);
 
-        Func<Task> act = () => job.HandleCore(_db, registry);
+        Func<Task> act = () => job.HandleCore(dbOverride: _db, registryOverride: registry);
 
         await act.Should().NotThrowAsync();
     }

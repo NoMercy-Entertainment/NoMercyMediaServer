@@ -14,6 +14,6 @@ internal sealed class CliClientFactory : ICliClientFactory
 {
     public ICliClient Create(string? pipeNameOrSocketPath)
     {
-        return new CliClient(pipeNameOrSocketPath);
+        return new CliClient(pipeNameOrSocketPath: pipeNameOrSocketPath);
     }
 }

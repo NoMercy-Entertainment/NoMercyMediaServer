@@ -22,17 +22,17 @@ namespace NoMercy.Tests.Networking;
 /// Tests verifying that the ExternalIp property getter does not block
 /// with .Result on an async operation, and that DiscoverExternalIpAsync() eagerly populates the IP.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class NetworkingExternalIpTests
 {
     [Fact]
     public void ExternalIp_Getter_NoBlockingResult()
     {
         // The ExternalIp getter must NOT call .Result on async GetExternalIp().
-        string sourceFile = FindSourceFile("src/NoMercy.Networking/Discovery/NetworkDiscovery.cs");
-        string source = File.ReadAllText(sourceFile);
+        string sourceFile = FindSourceFile(relativePath: "src/NoMercy.Networking/Discovery/NetworkDiscovery.cs");
+        string source = File.ReadAllText(path: sourceFile);
 
-        string[] lines = source.Split('\n');
+        string[] lines = source.Split(separator: '\n');
         bool insideExternalIpGetter = false;
         int braceDepth = 0;
         List<string> getterLines = [];
@@ -41,7 +41,7 @@ public class NetworkingExternalIpTests
         {
             string trimmed = lines[i].Trim();
 
-            if (trimmed.Contains("public string ExternalIp"))
+            if (trimmed.Contains(value: "public string ExternalIp"))
             {
                 insideExternalIpGetter = true;
                 braceDepth = 0;
@@ -50,14 +50,14 @@ public class NetworkingExternalIpTests
 
             if (insideExternalIpGetter)
             {
-                if (trimmed.Contains('{'))
+                if (trimmed.Contains(value: '{'))
                     braceDepth++;
-                if (trimmed.Contains('}'))
+                if (trimmed.Contains(value: '}'))
                     braceDepth--;
 
-                if (trimmed.StartsWith("get"))
+                if (trimmed.StartsWith(value: "get"))
                 {
-                    getterLines.Add(trimmed);
+                    getterLines.Add(item: trimmed);
                 }
 
                 if (braceDepth <= 0 && getterLines.Count > 0)
@@ -65,11 +65,11 @@ public class NetworkingExternalIpTests
             }
         }
 
-        Assert.NotEmpty(getterLines);
+        Assert.NotEmpty(collection: getterLines);
 
         foreach (string line in getterLines)
         {
-            Assert.DoesNotContain(".Result", line);
+            Assert.DoesNotContain(expectedSubstring: ".Result", actualString: line);
         }
     }
 
@@ -77,28 +77,28 @@ public class NetworkingExternalIpTests
     public void ExternalIp_Getter_ReturnsFallbackWhenNotPopulated()
     {
         // The getter should return a safe fallback ("0.0.0.0"), not call async methods.
-        string sourceFile = FindSourceFile("src/NoMercy.Networking/Discovery/NetworkDiscovery.cs");
-        string source = File.ReadAllText(sourceFile);
+        string sourceFile = FindSourceFile(relativePath: "src/NoMercy.Networking/Discovery/NetworkDiscovery.cs");
+        string source = File.ReadAllText(path: sourceFile);
 
-        string[] lines = source.Split('\n');
-        string? getterLine = lines.FirstOrDefault(l =>
-            l.Trim().StartsWith("get =>") && l.Contains("externalIp")
+        string[] lines = source.Split(separator: '\n');
+        string? getterLine = lines.FirstOrDefault(predicate: l =>
+            l.Trim().StartsWith(value: "get =>") && l.Contains(value: "externalIp")
         );
 
-        Assert.NotNull(getterLine);
-        Assert.Contains("??", getterLine);
-        Assert.DoesNotContain("GetExternalIp()", getterLine);
+        Assert.NotNull(@object: getterLine);
+        Assert.Contains(expectedSubstring: "??", actualString: getterLine);
+        Assert.DoesNotContain(expectedSubstring: "GetExternalIp()", actualString: getterLine);
     }
 
     [Fact]
     public void Discover_AlwaysPopulatesExternalIp()
     {
         // DiscoverExternalIpAsync() must eagerly fetch the external IP so the getter never blocks.
-        string sourceFile = FindSourceFile("src/NoMercy.Networking/Discovery/NetworkDiscovery.cs");
-        string source = File.ReadAllText(sourceFile);
+        string sourceFile = FindSourceFile(relativePath: "src/NoMercy.Networking/Discovery/NetworkDiscovery.cs");
+        string source = File.ReadAllText(path: sourceFile);
 
-        Assert.Contains("string.IsNullOrEmpty(_externalIp)", source);
-        Assert.Contains("await GetExternalIpAsync()", source);
+        Assert.Contains(expectedSubstring: "string.IsNullOrEmpty(_externalIp)", actualString: source);
+        Assert.Contains(expectedSubstring: "await GetExternalIpAsync()", actualString: source);
     }
 
     [Fact]
@@ -106,17 +106,17 @@ public class NetworkingExternalIpTests
     {
         // After setting ExternalIp, the getter returns the cached value instantly.
         NetworkDiscovery discovery = new(
-            NullLogger<NetworkDiscovery>.Instance,
-            new LocalStorageDriver(),
-            new AuthTokenStore(),
-            new ConnectivityStatus(),
-            new()
+            logger: NullLogger<NetworkDiscovery>.Instance,
+            driver: new LocalStorageDriver(),
+            authTokenStore: new AuthTokenStore(),
+            connectivityStatus: new ConnectivityStatus(),
+            networkProbeConfig: new()
         );
         string original = discovery.ExternalIp;
 
         discovery.ExternalIp = "1.2.3.4";
 
-        Assert.Equal("1.2.3.4", discovery.ExternalIp);
+        Assert.Equal(expected: "1.2.3.4", actual: discovery.ExternalIp);
 
         // Restore original state
         discovery.ExternalIp = original;
@@ -127,16 +127,16 @@ public class NetworkingExternalIpTests
     {
         // When _externalIp is null, getter must not return null or empty.
         // We can verify by checking the source — the fallback is "0.0.0.0".
-        string sourceFile = FindSourceFile("src/NoMercy.Networking/Discovery/NetworkDiscovery.cs");
-        string source = File.ReadAllText(sourceFile);
+        string sourceFile = FindSourceFile(relativePath: "src/NoMercy.Networking/Discovery/NetworkDiscovery.cs");
+        string source = File.ReadAllText(path: sourceFile);
 
-        string[] lines = source.Split('\n');
-        string? getterLine = lines.FirstOrDefault(l =>
-            l.Trim().StartsWith("get =>") && l.Contains("externalIp")
+        string[] lines = source.Split(separator: '\n');
+        string? getterLine = lines.FirstOrDefault(predicate: l =>
+            l.Trim().StartsWith(value: "get =>") && l.Contains(value: "externalIp")
         );
 
-        Assert.NotNull(getterLine);
-        Assert.Contains("\"0.0.0.0\"", getterLine);
+        Assert.NotNull(@object: getterLine);
+        Assert.Contains(expectedSubstring: "\"0.0.0.0\"", actualString: getterLine);
     }
 
     private static string FindSourceFile(string relativePath)
@@ -144,22 +144,22 @@ public class NetworkingExternalIpTests
         string? dir = AppDomain.CurrentDomain.BaseDirectory;
         while (dir != null)
         {
-            string candidate = Path.Combine(dir, relativePath);
-            if (File.Exists(candidate))
+            string candidate = Path.Combine(path1: dir, path2: relativePath);
+            if (File.Exists(path: candidate))
                 return candidate;
 
-            string repoCandidate = Path.Combine(dir, "..", "..", "..", "..", "..", relativePath);
-            string resolved = Path.GetFullPath(repoCandidate);
-            if (File.Exists(resolved))
+            string repoCandidate = Path.Combine(paths: [dir, "..", "..", "..", "..", "..", relativePath]);
+            string resolved = Path.GetFullPath(path: repoCandidate);
+            if (File.Exists(path: resolved))
                 return resolved;
 
-            dir = Directory.GetParent(dir)?.FullName;
+            dir = Directory.GetParent(path: dir)?.FullName;
         }
 
-        string fallback = Path.Combine("/workspaces/NoMercyMediaServer", relativePath);
-        if (File.Exists(fallback))
+        string fallback = Path.Combine(path1: "/workspaces/NoMercyMediaServer", path2: relativePath);
+        if (File.Exists(path: fallback))
             return fallback;
 
-        throw new FileNotFoundException($"Could not find source file: {relativePath}");
+        throw new FileNotFoundException(message: $"Could not find source file: {relativePath}");
     }
 }

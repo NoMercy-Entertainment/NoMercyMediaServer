@@ -22,61 +22,61 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record CollectionMovieDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public long Id { get; set; }
 
-    [JsonProperty("backdrop")]
+    [JsonProperty(propertyName: "backdrop")]
     public string? Backdrop { get; set; }
 
-    [JsonProperty("favorite")]
+    [JsonProperty(propertyName: "favorite")]
     public bool Favorite { get; set; }
 
-    [JsonProperty("watched")]
+    [JsonProperty(propertyName: "watched")]
     public bool Watched { get; set; }
 
-    [JsonProperty("logo")]
+    [JsonProperty(propertyName: "logo")]
     public string? Logo { get; set; }
 
-    [JsonProperty("media_type")]
+    [JsonProperty(propertyName: "media_type")]
     public string MediaType { get; set; }
 
-    [JsonProperty("overview")]
+    [JsonProperty(propertyName: "overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty("color_palette")]
+    [JsonProperty(propertyName: "color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty("poster")]
+    [JsonProperty(propertyName: "poster")]
     public string? Poster { get; set; }
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string? Title { get; set; }
 
-    [JsonProperty("titleSort")]
+    [JsonProperty(propertyName: "titleSort")]
     public string? TitleSort { get; set; }
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; }
 
-    [JsonProperty("year")]
+    [JsonProperty(propertyName: "year")]
     public long Year { get; set; }
 
-    [JsonProperty("genres")]
+    [JsonProperty(propertyName: "genres")]
     public GenreDto[] Genres { get; set; }
 
-    [JsonProperty("link")]
+    [JsonProperty(propertyName: "link")]
     public Uri Link { get; set; }
 
-    [JsonProperty("rating")]
+    [JsonProperty(propertyName: "rating")]
     public Certification? Rating { get; set; }
 
-    [JsonProperty("videoId")]
+    [JsonProperty(propertyName: "videoId")]
     public string? VideoId { get; set; }
 
-    [JsonProperty("number_of_items")]
+    [JsonProperty(propertyName: "number_of_items")]
     public int? NumberOfItems { get; set; }
 
-    [JsonProperty("have_items")]
+    [JsonProperty(propertyName: "have_items")]
     public int? HaveItems { get; set; }
 
     public CollectionMovieDto(Movie movie)
@@ -85,26 +85,26 @@ public record CollectionMovieDto
         string? overview = movie.Translations.FirstOrDefault()?.Overview;
 
         Id = movie.Id;
-        Title = !string.IsNullOrEmpty(title) ? title : movie.Title;
+        Title = !string.IsNullOrEmpty(value: title) ? title : movie.Title;
 
         TitleSort = movie.TitleSort;
-        Overview = !string.IsNullOrEmpty(overview) ? overview : movie.Overview;
+        Overview = !string.IsNullOrEmpty(value: overview) ? overview : movie.Overview;
 
         Backdrop = movie.Backdrop;
         Favorite = movie.MovieUser.Count != 0;
         // Watched = movie.Watched;
-        Logo = movie.Images.FirstOrDefault(media => media.Type == "logo")?.FilePath;
+        Logo = movie.Images.FirstOrDefault(predicate: media => media.Type == "logo")?.FilePath;
 
         MediaType = MediaTypes.MovieMediaType;
         ColorPalette = movie.ColorPalette;
         Poster = movie.Poster;
         Type = MediaTypes.MovieMediaType;
         Year = movie.ReleaseDate.ParseYear();
-        Link = new($"/movie/{Id}", UriKind.Relative);
-        Genres = movie.GenreMovies.Select(genreMovie => new GenreDto(genreMovie.Genre)).ToArray();
+        Link = new(uriString: $"/movie/{Id}", uriKind: UriKind.Relative);
+        Genres = movie.GenreMovies.Select(selector: genreMovie => new GenreDto(genreMovie: genreMovie.Genre)).ToArray();
 
         Rating = movie
-            .CertificationMovies.Select(certificationMovie => certificationMovie.Certification)
+            .CertificationMovies.Select(selector: certificationMovie => certificationMovie.Certification)
             .FirstOrDefault();
 
         NumberOfItems = 1;
@@ -120,14 +120,14 @@ public record CollectionMovieDto
         Overview = tmdbMovie.Overview;
         Id = tmdbMovie.Id;
         Title = tmdbMovie.Title;
-        TitleSort = tmdbMovie.TitleSort(tmdbMovie.ReleaseDate);
+        TitleSort = tmdbMovie.TitleSort(date: tmdbMovie.ReleaseDate);
         Overview = tmdbMovie.Overview;
         Backdrop = tmdbMovie.BackdropPath;
         Favorite = false;
         Watched = false;
         // Logo = movie.Logo;
         Genres = [];
-        Link = new($"/movie/{Id}", UriKind.Relative);
+        Link = new(uriString: $"/movie/{Id}", uriKind: UriKind.Relative);
         MediaType = MediaTypes.MovieMediaType;
         ColorPalette = new();
         Poster = tmdbMovie.PosterPath;

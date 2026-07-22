@@ -23,13 +23,13 @@ namespace NoMercy.Setup.Server;
 /// </summary>
 public sealed class ManifestAsset
 {
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("sha256")]
+    [JsonProperty(propertyName: "sha256")]
     public string Sha256 { get; set; } = string.Empty;
 
-    [JsonProperty("size")]
+    [JsonProperty(propertyName: "size")]
     public long Size { get; set; }
 }
 
@@ -38,16 +38,16 @@ public sealed class ManifestAsset
 /// </summary>
 public sealed class ReleaseManifest
 {
-    [JsonProperty("version")]
+    [JsonProperty(propertyName: "version")]
     public string Version { get; set; } = string.Empty;
 
-    [JsonProperty("commit_sha")]
+    [JsonProperty(propertyName: "commit_sha")]
     public string CommitSha { get; set; } = string.Empty;
 
-    [JsonProperty("build_timestamp")]
+    [JsonProperty(propertyName: "build_timestamp")]
     public string BuildTimestamp { get; set; } = string.Empty;
 
-    [JsonProperty("assets")]
+    [JsonProperty(propertyName: "assets")]
     public ManifestAsset[] Assets { get; set; } = [];
 }
 
@@ -76,14 +76,14 @@ public static class BinaryVerification
     )
     {
         await using FileStream fs = new(
-            filePath,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.Read,
+            path: filePath,
+            mode: FileMode.Open,
+            access: FileAccess.Read,
+            share: FileShare.Read,
             bufferSize: 81920,
             useAsync: true
         );
-        return await VerifyStreamSha256Async(fs, expectedHex, ct);
+        return await VerifyStreamSha256Async(stream: fs, expectedHex: expectedHex, ct: ct);
     }
 
     /// <summary>
@@ -102,9 +102,9 @@ public static class BinaryVerification
         CancellationToken ct = default
     )
     {
-        byte[] hash = await SHA256.HashDataAsync(stream, ct);
-        string actual = Convert.ToHexString(hash);
-        return string.Equals(actual, expectedHex, StringComparison.OrdinalIgnoreCase);
+        byte[] hash = await SHA256.HashDataAsync(source: stream, cancellationToken: ct);
+        string actual = Convert.ToHexString(inArray: hash);
+        return string.Equals(a: actual, b: expectedHex, comparisonType: StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -119,11 +119,11 @@ public static class BinaryVerification
     /// </returns>
     public static string? ExtractSha256FromDigest(string? digest)
     {
-        if (string.IsNullOrWhiteSpace(digest))
+        if (string.IsNullOrWhiteSpace(value: digest))
             return null;
 
         const string prefix = "sha256:";
-        return digest.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+        return digest.StartsWith(value: prefix, comparisonType: StringComparison.OrdinalIgnoreCase)
             ? digest[prefix.Length..]
             : null;
     }
@@ -137,18 +137,18 @@ public static class BinaryVerification
     /// <returns>The bare hex digest, or <c>null</c> when no line matches.</returns>
     public static string? ParseSha256Sums(string sumsContent, string targetFileName)
     {
-        if (string.IsNullOrEmpty(sumsContent))
+        if (string.IsNullOrEmpty(value: sumsContent))
             return null;
 
-        foreach (string line in sumsContent.Split('\n'))
+        foreach (string line in sumsContent.Split(separator: '\n'))
         {
             string[] parts = line.Trim()
-                .Split((char[]?)null, 2, StringSplitOptions.RemoveEmptyEntries);
+                .Split(separator: (char[]?)null, count: 2, options: StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length != 2)
                 continue;
 
-            string fileName = parts[1].TrimStart('*').Trim();
-            if (fileName.Equals(targetFileName, StringComparison.OrdinalIgnoreCase))
+            string fileName = parts[1].TrimStart(trimChar: '*').Trim();
+            if (fileName.Equals(value: targetFileName, comparisonType: StringComparison.OrdinalIgnoreCase))
                 return parts[0].Trim();
         }
 
@@ -167,16 +167,16 @@ public static class BinaryVerification
     /// </returns>
     public static bool VerifyManifestSignature(string manifestJson, string armoredSignature)
     {
-        if (string.IsNullOrEmpty(EmbeddedPublicKey))
+        if (string.IsNullOrEmpty(value: EmbeddedPublicKey))
         {
             NmSystem.SystemCalls.Logger.Setup(
-                "No embedded org public key — manifest signature not verified",
-                LogEventLevel.Warning
+                message: "No embedded org public key — manifest signature not verified",
+                level: LogEventLevel.Warning
             );
             return false;
         }
 
-        return VerifyManifestSignature(manifestJson, armoredSignature, EmbeddedPublicKey);
+        return VerifyManifestSignature(manifestJson: manifestJson, armoredSignature: armoredSignature, armoredPublicKey: EmbeddedPublicKey);
     }
 
     /// <summary>
@@ -195,18 +195,18 @@ public static class BinaryVerification
         try
         {
             using MemoryStream keyStream = new(
-                System.Text.Encoding.ASCII.GetBytes(armoredPublicKey)
+                buffer: System.Text.Encoding.ASCII.GetBytes(s: armoredPublicKey)
             );
             using MemoryStream sigStream = new(
-                System.Text.Encoding.ASCII.GetBytes(armoredSignature)
+                buffer: System.Text.Encoding.ASCII.GetBytes(s: armoredSignature)
             );
-            using MemoryStream dataStream = new(System.Text.Encoding.UTF8.GetBytes(manifestJson));
+            using MemoryStream dataStream = new(buffer: System.Text.Encoding.UTF8.GetBytes(s: manifestJson));
 
-            using ArmoredInputStream armoredKey = new(keyStream);
-            PgpPublicKeyRingBundle keyRingBundle = new(armoredKey);
+            using ArmoredInputStream armoredKey = new(input: keyStream);
+            PgpPublicKeyRingBundle keyRingBundle = new(inputStream: armoredKey);
 
-            using ArmoredInputStream armoredSig = new(sigStream);
-            PgpObjectFactory sigFactory = new(armoredSig);
+            using ArmoredInputStream armoredSig = new(input: sigStream);
+            PgpObjectFactory sigFactory = new(inputStream: armoredSig);
 
             PgpSignatureList? signatureList = null;
             PgpObject? sigObj = sigFactory.NextPgpObject();
@@ -226,15 +226,15 @@ public static class BinaryVerification
 
             for (int i = 0; i < signatureList.Count; i++)
             {
-                PgpSignature signature = signatureList[i];
-                PgpPublicKey? pubKey = keyRingBundle.GetPublicKey(signature.KeyId);
+                PgpSignature signature = signatureList[index: i];
+                PgpPublicKey? pubKey = keyRingBundle.GetPublicKey(keyId: signature.KeyId);
                 if (pubKey is null)
                     continue;
 
-                signature.InitVerify(pubKey);
+                signature.InitVerify(pubKey: pubKey);
 
-                byte[] data = System.Text.Encoding.UTF8.GetBytes(manifestJson);
-                signature.Update(data, 0, data.Length);
+                byte[] data = System.Text.Encoding.UTF8.GetBytes(s: manifestJson);
+                signature.Update(bytes: data, off: 0, length: data.Length);
 
                 if (signature.Verify())
                     return true;
@@ -245,8 +245,8 @@ public static class BinaryVerification
         catch (Exception ex)
         {
             NmSystem.SystemCalls.Logger.Setup(
-                $"Manifest signature verification error: {ex.Message}",
-                LogEventLevel.Warning
+                message: $"Manifest signature verification error: {ex.Message}",
+                level: LogEventLevel.Warning
             );
             return false;
         }
@@ -258,18 +258,18 @@ public static class BinaryVerification
         {
             Assembly assembly = typeof(BinaryVerification).Assembly;
             string resourceName = "NoMercy.Setup.Resources.nomercy-public-key.asc";
-            using Stream? stream = assembly.GetManifestResourceStream(resourceName);
+            using Stream? stream = assembly.GetManifestResourceStream(name: resourceName);
             if (stream is null)
                 return null;
 
-            using StreamReader reader = new(stream);
+            using StreamReader reader = new(stream: stream);
             string content = reader.ReadToEnd().Trim();
 
             // Treat a placeholder/empty file as "not configured"
             if (
-                string.IsNullOrWhiteSpace(content)
-                || content.StartsWith("# PLACEHOLDER", StringComparison.OrdinalIgnoreCase)
-                || !content.Contains("BEGIN PGP PUBLIC KEY BLOCK", StringComparison.Ordinal)
+                string.IsNullOrWhiteSpace(value: content)
+                || content.StartsWith(value: "# PLACEHOLDER", comparisonType: StringComparison.OrdinalIgnoreCase)
+                || !content.Contains(value: "BEGIN PGP PUBLIC KEY BLOCK", comparisonType: StringComparison.Ordinal)
             )
                 return null;
 

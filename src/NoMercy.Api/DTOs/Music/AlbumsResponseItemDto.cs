@@ -19,56 +19,56 @@ namespace NoMercy.Api.DTOs.Music;
 
 public record AlbumsResponseItemDto
 {
-    [JsonProperty("color_palette")]
+    [JsonProperty(propertyName: "color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty("backdrop")]
+    [JsonProperty(propertyName: "backdrop")]
     public string? Backdrop { get; set; }
 
-    [JsonProperty("cover")]
+    [JsonProperty(propertyName: "cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty("disambiguation")]
+    [JsonProperty(propertyName: "disambiguation")]
     public string? Disambiguation { get; set; }
 
-    [JsonProperty("description")]
+    [JsonProperty(propertyName: "description")]
     public string? Description { get; set; }
 
-    [JsonProperty("folder")]
+    [JsonProperty(propertyName: "folder")]
     public string? Folder { get; set; }
 
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public Guid Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; }
 
-    [JsonProperty("track_id")]
+    [JsonProperty(propertyName: "track_id")]
     public string? TrackId { get; set; }
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; }
 
-    [JsonProperty("link")]
+    [JsonProperty(propertyName: "link")]
     public Uri Link { get; set; }
 
-    [JsonProperty("tracks")]
+    [JsonProperty(propertyName: "tracks")]
     public int Tracks { get; set; }
 
     public AlbumsResponseItemDto(Album album, string? country = "US")
     {
         string? description = album
-            .Translations.FirstOrDefault(translation => translation.Iso31661 == country)
+            .Translations.FirstOrDefault(predicate: translation => translation.Iso31661 == country)
             ?.Description;
-        Image? img = album.Images.FirstOrDefault(image => image.Type == "background");
+        Image? img = album.Images.FirstOrDefault(predicate: image => image.Type == "background");
 
-        Description = !string.IsNullOrEmpty(description) ? description : album.Description;
+        Description = !string.IsNullOrEmpty(value: description) ? description : album.Description;
 
-        Backdrop = !string.IsNullOrEmpty(img?.FilePath)
-            ? new Uri($"/images/music{img.FilePath}", UriKind.Relative).ToString()
+        Backdrop = !string.IsNullOrEmpty(value: img?.FilePath)
+            ? new Uri(uriString: $"/images/music{img.FilePath}", uriKind: UriKind.Relative).ToString()
             : null;
-        Cover = !string.IsNullOrEmpty(album.Cover)
-            ? new Uri($"/images/music{album.Cover}", UriKind.Relative).ToString()
+        Cover = !string.IsNullOrEmpty(value: album.Cover)
+            ? new Uri(uriString: $"/images/music{album.Cover}", uriKind: UriKind.Relative).ToString()
             : null;
         ColorPalette = album.ColorPalette;
         if (ColorPalette is not null)
@@ -78,30 +78,30 @@ public record AlbumsResponseItemDto
         Id = album.Id;
         Name = album.Name;
         Type = "album";
-        Link = new($"/music/albums/{Id}", UriKind.Relative);
+        Link = new(uriString: $"/music/albums/{Id}", uriKind: UriKind.Relative);
 
         Tracks = album
-            .AlbumTrack.Select(albumTrack => albumTrack.Track)
-            .Count(albumTrack => albumTrack.Duration != null);
+            .AlbumTrack.Select(selector: albumTrack => albumTrack.Track)
+            .Count(predicate: albumTrack => albumTrack.Duration != null);
     }
 
     public AlbumsResponseItemDto(AlbumCardDto album)
     {
-        Description = !string.IsNullOrEmpty(album.TranslatedDescription)
+        Description = !string.IsNullOrEmpty(value: album.TranslatedDescription)
             ? album.TranslatedDescription
             : album.Description;
 
-        Backdrop = !string.IsNullOrEmpty(album.BackgroundImagePath)
-            ? new Uri($"/images/music{album.BackgroundImagePath}", UriKind.Relative).ToString()
+        Backdrop = !string.IsNullOrEmpty(value: album.BackgroundImagePath)
+            ? new Uri(uriString: $"/images/music{album.BackgroundImagePath}", uriKind: UriKind.Relative).ToString()
             : null;
-        Cover = !string.IsNullOrEmpty(album.Cover)
-            ? new Uri($"/images/music{album.Cover}", UriKind.Relative).ToString()
+        Cover = !string.IsNullOrEmpty(value: album.Cover)
+            ? new Uri(uriString: $"/images/music{album.Cover}", uriKind: UriKind.Relative).ToString()
             : null;
-        ColorPalette = ColorPalette.FromJsonOrNull(album.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(json: album.ColorPalette);
         if (ColorPalette is not null)
         {
             ColorPalette? bgPalette = ColorPalette.FromJsonOrNull(
-                album.BackgroundImageColorPalette
+                json: album.BackgroundImageColorPalette
             );
             ColorPalette.Backdrop = bgPalette?.Image;
         }
@@ -110,7 +110,7 @@ public record AlbumsResponseItemDto
         Id = album.Id;
         Name = album.Name;
         Type = "album";
-        Link = new($"/music/albums/{Id}", UriKind.Relative);
+        Link = new(uriString: $"/music/albums/{Id}", uriKind: UriKind.Relative);
         Tracks = album.TrackCount;
     }
 }

@@ -32,12 +32,12 @@ public class LoggingEventBusDecoratorTests
     {
         InMemoryEventBus inner = new();
         List<string> logMessages = [];
-        LoggingEventBusDecorator decorator = new(inner, msg => logMessages.Add(msg));
+        LoggingEventBusDecorator decorator = new(inner: inner, log: msg => logMessages.Add(item: msg));
 
-        await decorator.PublishAsync(new TestEvent { Data = "hello" });
+        await decorator.PublishAsync(@event: new TestEvent { Data = "hello" });
 
         logMessages.Should().ContainSingle();
-        logMessages[0].Should().Contain("TestEvent");
+        logMessages[index: 0].Should().Contain(expected: "TestEvent");
     }
 
     [Fact]
@@ -45,11 +45,11 @@ public class LoggingEventBusDecoratorTests
     {
         InMemoryEventBus inner = new();
         List<string> logMessages = [];
-        LoggingEventBusDecorator decorator = new(inner, msg => logMessages.Add(msg));
+        LoggingEventBusDecorator decorator = new(inner: inner, log: msg => logMessages.Add(item: msg));
 
-        await decorator.PublishAsync(new TestEvent { Data = "hello" });
+        await decorator.PublishAsync(@event: new TestEvent { Data = "hello" });
 
-        logMessages[0].Should().Contain("Source=TestSource");
+        logMessages[index: 0].Should().Contain(expected: "Source=TestSource");
     }
 
     [Fact]
@@ -57,12 +57,12 @@ public class LoggingEventBusDecoratorTests
     {
         InMemoryEventBus inner = new();
         List<string> logMessages = [];
-        LoggingEventBusDecorator decorator = new(inner, msg => logMessages.Add(msg));
+        LoggingEventBusDecorator decorator = new(inner: inner, log: msg => logMessages.Add(item: msg));
 
         TestEvent evt = new() { Data = "hello" };
-        await decorator.PublishAsync(evt);
+        await decorator.PublishAsync(@event: evt);
 
-        logMessages[0].Should().Contain($"EventId={evt.EventId}");
+        logMessages[index: 0].Should().Contain(expected: $"EventId={evt.EventId}");
     }
 
     [Fact]
@@ -70,11 +70,11 @@ public class LoggingEventBusDecoratorTests
     {
         InMemoryEventBus inner = new();
         List<string> logMessages = [];
-        LoggingEventBusDecorator decorator = new(inner, msg => logMessages.Add(msg));
+        LoggingEventBusDecorator decorator = new(inner: inner, log: msg => logMessages.Add(item: msg));
 
-        await decorator.PublishAsync(new TestEvent { Data = "hello" });
+        await decorator.PublishAsync(@event: new TestEvent { Data = "hello" });
 
-        logMessages[0].Should().Contain("Timestamp=");
+        logMessages[index: 0].Should().Contain(expected: "Timestamp=");
     }
 
     [Fact]
@@ -82,21 +82,21 @@ public class LoggingEventBusDecoratorTests
     {
         InMemoryEventBus inner = new();
         List<string> logMessages = [];
-        LoggingEventBusDecorator decorator = new(inner, msg => logMessages.Add(msg));
+        LoggingEventBusDecorator decorator = new(inner: inner, log: msg => logMessages.Add(item: msg));
 
         List<TestEvent> received = [];
         decorator.Subscribe<TestEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
 
         TestEvent testEvent = new() { Data = "test-data" };
-        await decorator.PublishAsync(testEvent);
+        await decorator.PublishAsync(@event: testEvent);
 
-        received.Should().ContainSingle().Which.Data.Should().Be("test-data");
+        received.Should().ContainSingle().Which.Data.Should().Be(expected: "test-data");
         logMessages.Should().ContainSingle();
     }
 
@@ -105,13 +105,13 @@ public class LoggingEventBusDecoratorTests
     {
         InMemoryEventBus inner = new();
         List<string> logMessages = [];
-        LoggingEventBusDecorator decorator = new(inner, msg => logMessages.Add(msg));
+        LoggingEventBusDecorator decorator = new(inner: inner, log: msg => logMessages.Add(item: msg));
 
-        await decorator.PublishAsync(new TestEvent { Data = "first" });
-        await decorator.PublishAsync(new TestEvent { Data = "second" });
-        await decorator.PublishAsync(new TestEvent { Data = "third" });
+        await decorator.PublishAsync(@event: new TestEvent { Data = "first" });
+        await decorator.PublishAsync(@event: new TestEvent { Data = "second" });
+        await decorator.PublishAsync(@event: new TestEvent { Data = "third" });
 
-        logMessages.Should().HaveCount(3);
+        logMessages.Should().HaveCount(expected: 3);
     }
 
     [Fact]
@@ -119,10 +119,10 @@ public class LoggingEventBusDecoratorTests
     {
         InMemoryEventBus inner = new();
         List<string> logMessages = [];
-        LoggingEventBusDecorator decorator = new(inner, msg => logMessages.Add(msg));
+        LoggingEventBusDecorator decorator = new(inner: inner, log: msg => logMessages.Add(item: msg));
 
         await decorator.PublishAsync(
-            new PlaybackStartedEvent
+            @event: new PlaybackStartedEvent
             {
                 UserId = Guid.NewGuid(),
                 MediaId = 1,
@@ -131,7 +131,7 @@ public class LoggingEventBusDecoratorTests
         );
 
         await decorator.PublishAsync(
-            new EncodingStartedEvent
+            @event: new EncodingStartedEvent
             {
                 JobId = 1,
                 InputPath = "/a.mkv",
@@ -141,69 +141,69 @@ public class LoggingEventBusDecoratorTests
         );
 
         await decorator.PublishAsync(
-            new LibraryScanStartedEvent { LibraryId = Ulid.NewUlid(), LibraryName = "Movies" }
+            @event: new LibraryScanStartedEvent { LibraryId = Ulid.NewUlid(), LibraryName = "Movies" }
         );
 
-        logMessages.Should().HaveCount(3);
-        logMessages[0].Should().Contain("PlaybackStartedEvent").And.Contain("Source=Playback");
-        logMessages[1].Should().Contain("EncodingStartedEvent").And.Contain("Source=Encoder");
-        logMessages[2]
+        logMessages.Should().HaveCount(expected: 3);
+        logMessages[index: 0].Should().Contain(expected: "PlaybackStartedEvent").And.Contain(expected: "Source=Playback");
+        logMessages[index: 1].Should().Contain(expected: "EncodingStartedEvent").And.Contain(expected: "Source=Encoder");
+        logMessages[index: 2]
             .Should()
-            .Contain("LibraryScanStartedEvent")
-            .And.Contain("Source=LibraryScanner");
+            .Contain(expected: "LibraryScanStartedEvent")
+            .And.Contain(expected: "Source=LibraryScanner");
     }
 
     [Fact]
     public async Task Subscribe_ReturnsDisposable_UnsubscribesOnDispose()
     {
         InMemoryEventBus inner = new();
-        LoggingEventBusDecorator decorator = new(inner, _ => { });
+        LoggingEventBusDecorator decorator = new(inner: inner, log: _ => { });
 
         List<TestEvent> received = [];
         IDisposable subscription = decorator.Subscribe<TestEvent>(
-            (evt, _) =>
+            handler: (evt, _) =>
             {
-                received.Add(evt);
+                received.Add(item: evt);
                 return Task.CompletedTask;
             }
         );
 
-        await decorator.PublishAsync(new TestEvent { Data = "before" });
+        await decorator.PublishAsync(@event: new TestEvent { Data = "before" });
         received.Should().ContainSingle();
 
         subscription.Dispose();
 
-        await decorator.PublishAsync(new TestEvent { Data = "after" });
-        received.Should().ContainSingle("handler should not be called after dispose");
+        await decorator.PublishAsync(@event: new TestEvent { Data = "after" });
+        received.Should().ContainSingle(because: "handler should not be called after dispose");
     }
 
     [Fact]
     public async Task Subscribe_WithEventHandler_DelegatesToInner()
     {
         InMemoryEventBus inner = new();
-        LoggingEventBusDecorator decorator = new(inner, _ => { });
+        LoggingEventBusDecorator decorator = new(inner: inner, log: _ => { });
 
         TestHandler handler = new();
-        decorator.Subscribe(handler);
+        decorator.Subscribe(handler: handler);
 
-        await decorator.PublishAsync(new TestEvent { Data = "handler-test" });
+        await decorator.PublishAsync(@event: new TestEvent { Data = "handler-test" });
 
-        handler.Received.Should().ContainSingle().Which.Data.Should().Be("handler-test");
+        handler.Received.Should().ContainSingle().Which.Data.Should().Be(expected: "handler-test");
     }
 
     [Fact]
     public void Constructor_NullInner_Throws()
     {
-        Action act = () => new LoggingEventBusDecorator(null!, _ => { });
-        act.Should().Throw<ArgumentNullException>().WithParameterName("inner");
+        Action act = () => new LoggingEventBusDecorator(inner: null!, log: _ => { });
+        act.Should().Throw<ArgumentNullException>().WithParameterName(paramName: "inner");
     }
 
     [Fact]
     public void Constructor_NullLog_Throws()
     {
         InMemoryEventBus inner = new();
-        Action act = () => new LoggingEventBusDecorator(inner, null!);
-        act.Should().Throw<ArgumentNullException>().WithParameterName("log");
+        Action act = () => new LoggingEventBusDecorator(inner: inner, log: null!);
+        act.Should().Throw<ArgumentNullException>().WithParameterName(paramName: "log");
     }
 
     [Fact]
@@ -211,39 +211,39 @@ public class LoggingEventBusDecoratorTests
     {
         InMemoryEventBus inner = new();
         List<string> order = [];
-        LoggingEventBusDecorator decorator = new(inner, _ => order.Add("logged"));
+        LoggingEventBusDecorator decorator = new(inner: inner, log: _ => order.Add(item: "logged"));
 
         decorator.Subscribe<TestEvent>(
-            (_, _) =>
+            handler: (_, _) =>
             {
-                order.Add("handled");
+                order.Add(item: "handled");
                 return Task.CompletedTask;
             }
         );
 
-        await decorator.PublishAsync(new TestEvent());
+        await decorator.PublishAsync(@event: new TestEvent());
 
-        order.Should().Equal("logged", "handled");
+        order.Should().Equal(expected: ["logged", "handled"]);
     }
 
     [Fact]
     public async Task PublishAsync_PropagatesCancellation()
     {
         InMemoryEventBus inner = new();
-        LoggingEventBusDecorator decorator = new(inner, _ => { });
+        LoggingEventBusDecorator decorator = new(inner: inner, log: _ => { });
         CancellationTokenSource cts = new();
 
         decorator.Subscribe<TestEvent>(
-            (_, _) =>
+            handler: (_, _) =>
             {
                 cts.Cancel();
                 return Task.CompletedTask;
             }
         );
 
-        decorator.Subscribe<TestEvent>((_, _) => Task.CompletedTask);
+        decorator.Subscribe<TestEvent>(handler: (_, _) => Task.CompletedTask);
 
-        Func<Task> act = () => decorator.PublishAsync(new TestEvent(), cts.Token);
+        Func<Task> act = () => decorator.PublishAsync(@event: new TestEvent(), ct: cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
@@ -253,13 +253,13 @@ public class LoggingEventBusDecoratorTests
     {
         InMemoryEventBus inner = new();
         List<string> logMessages = [];
-        LoggingEventBusDecorator decorator = new(inner, msg => logMessages.Add(msg));
+        LoggingEventBusDecorator decorator = new(inner: inner, log: msg => logMessages.Add(item: msg));
 
         Guid userId = Guid.NewGuid();
         Ulid libraryId = Ulid.NewUlid();
 
         await decorator.PublishAsync(
-            new PlaybackStartedEvent
+            @event: new PlaybackStartedEvent
             {
                 UserId = userId,
                 MediaId = 1,
@@ -267,7 +267,7 @@ public class LoggingEventBusDecoratorTests
             }
         );
         await decorator.PublishAsync(
-            new PlaybackProgressUpdatedEvent
+            @event: new PlaybackProgressUpdatedEvent
             {
                 UserId = userId,
                 MediaId = 1,
@@ -276,7 +276,7 @@ public class LoggingEventBusDecoratorTests
             }
         );
         await decorator.PublishAsync(
-            new PlaybackCompletedEvent
+            @event: new PlaybackCompletedEvent
             {
                 UserId = userId,
                 MediaId = 1,
@@ -284,7 +284,7 @@ public class LoggingEventBusDecoratorTests
             }
         );
         await decorator.PublishAsync(
-            new EncodingStartedEvent
+            @event: new EncodingStartedEvent
             {
                 JobId = 1,
                 InputPath = "/a",
@@ -292,9 +292,9 @@ public class LoggingEventBusDecoratorTests
                 ProfileName = "x264",
             }
         );
-        await decorator.PublishAsync(new EncodingProgressUpdatedEvent { JobId = 1, Percentage = 50 });
+        await decorator.PublishAsync(@event: new EncodingProgressUpdatedEvent { JobId = 1, Percentage = 50 });
         await decorator.PublishAsync(
-            new EncodingCompletedEvent
+            @event: new EncodingCompletedEvent
             {
                 JobId = 1,
                 OutputPath = "/b",
@@ -302,7 +302,7 @@ public class LoggingEventBusDecoratorTests
             }
         );
         await decorator.PublishAsync(
-            new EncodingFailedEvent
+            @event: new EncodingFailedEvent
             {
                 JobId = 1,
                 InputPath = "/a",
@@ -310,10 +310,10 @@ public class LoggingEventBusDecoratorTests
             }
         );
         await decorator.PublishAsync(
-            new LibraryScanStartedEvent { LibraryId = libraryId, LibraryName = "Movies" }
+            @event: new LibraryScanStartedEvent { LibraryId = libraryId, LibraryName = "Movies" }
         );
         await decorator.PublishAsync(
-            new LibraryScanCompletedEvent
+            @event: new LibraryScanCompletedEvent
             {
                 LibraryId = libraryId,
                 LibraryName = "Movies",
@@ -322,7 +322,7 @@ public class LoggingEventBusDecoratorTests
             }
         );
         await decorator.PublishAsync(
-            new MediaAddedEvent
+            @event: new MediaAddedEvent
             {
                 MediaId = 1,
                 MediaType = "movie",
@@ -331,7 +331,7 @@ public class LoggingEventBusDecoratorTests
             }
         );
         await decorator.PublishAsync(
-            new MediaRemovedEvent
+            @event: new MediaRemovedEvent
             {
                 MediaId = 1,
                 MediaType = "movie",
@@ -340,10 +340,10 @@ public class LoggingEventBusDecoratorTests
             }
         );
 
-        logMessages.Should().HaveCount(11);
-        logMessages.Should().OnlyContain(m => m.StartsWith("[Event]"));
-        logMessages.Should().OnlyContain(m => m.Contains("EventId="));
-        logMessages.Should().OnlyContain(m => m.Contains("Source="));
+        logMessages.Should().HaveCount(expected: 11);
+        logMessages.Should().OnlyContain(predicate: m => m.StartsWith("[Event]"));
+        logMessages.Should().OnlyContain(predicate: m => m.Contains("EventId="));
+        logMessages.Should().OnlyContain(predicate: m => m.Contains("Source="));
     }
 
     private sealed class TestHandler : IEventHandler<TestEvent>
@@ -352,7 +352,7 @@ public class LoggingEventBusDecoratorTests
 
         public Task HandleAsync(TestEvent @event, CancellationToken ct = default)
         {
-            Received.Add(@event);
+            Received.Add(item: @event);
             return Task.CompletedTask;
         }
     }

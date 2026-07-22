@@ -21,7 +21,7 @@ namespace NoMercy.Tests.Providers.TVDB.Client;
 /// LoginAsync and refactored — these tests guard the same safety contract on the
 /// current implementation.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class TvdbBaseClientTests
 {
     [Fact]
@@ -36,24 +36,24 @@ public class TvdbBaseClientTests
 
         // Find the compiler-generated state machine for LoginAsync
         Type? stateMachineType = clientType
-            .GetNestedTypes(BindingFlags.NonPublic)
-            .FirstOrDefault(t => t.Name.Contains("LoginAsync"));
+            .GetNestedTypes(bindingAttr: BindingFlags.NonPublic)
+            .FirstOrDefault(predicate: t => t.Name.Contains(value: "LoginAsync"));
 
-        Assert.NotNull(stateMachineType);
+        Assert.NotNull(@object: stateMachineType);
 
         MethodInfo? moveNext = stateMachineType.GetMethod(
-            "MoveNext",
-            BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public
+            name: "MoveNext",
+            bindingAttr: BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public
         );
 
-        Assert.NotNull(moveNext);
+        Assert.NotNull(@object: moveNext);
 
         MethodBody? body = moveNext.GetMethodBody();
-        Assert.NotNull(body);
+        Assert.NotNull(@object: body);
 
         byte[] ilBytes = body.GetILAsByteArray()!;
-        Assert.NotNull(ilBytes);
-        Assert.True(ilBytes.Length > 0);
+        Assert.NotNull(@object: ilBytes);
+        Assert.True(condition: ilBytes.Length > 0);
 
         // Resolve the metadata token for Task<HttpResponseMessage>.get_Result
         // by scanning all method references in the IL for any get_Result call.
@@ -68,16 +68,16 @@ public class TvdbBaseClientTests
             if (ilBytes[i] != 0x28 && ilBytes[i] != 0x6F)
                 continue;
 
-            int token = BitConverter.ToInt32(ilBytes, i + 1);
+            int token = BitConverter.ToInt32(value: ilBytes, startIndex: i + 1);
             try
             {
-                MethodBase? method = module.ResolveMethod(token);
+                MethodBase? method = module.ResolveMethod(metadataToken: token);
                 if (method is null)
                     continue;
 
                 if (
                     method is { Name: "get_Result", DeclaringType.FullName: not null }
-                    && method.DeclaringType.FullName.Contains("Task")
+                    && method.DeclaringType.FullName.Contains(value: "Task")
                 )
                 {
                     foundGetResult = true;
@@ -91,9 +91,9 @@ public class TvdbBaseClientTests
         }
 
         Assert.False(
-            foundGetResult,
-            "PROV-CRIT-03 regression: TvdbBaseClient.LoginAsync still calls .Result on a Task. "
-                + "Use 'await' instead of '.Result' to avoid deadlocks."
+            condition: foundGetResult,
+            userMessage: "PROV-CRIT-03 regression: TvdbBaseClient.LoginAsync still calls .Result on a Task. "
+                         + "Use 'await' instead of '.Result' to avoid deadlocks."
         );
     }
 
@@ -102,21 +102,21 @@ public class TvdbBaseClientTests
     {
         // Verify LoginAsync is declared as an async method (returns Task<T>)
         MethodInfo? loginMethod = typeof(TvdbBaseClient).GetMethod(
-            "LoginAsync",
-            BindingFlags.NonPublic | BindingFlags.Instance
+            name: "LoginAsync",
+            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
         );
 
-        Assert.NotNull(loginMethod);
+        Assert.NotNull(@object: loginMethod);
 
         // Async methods return Task or Task<T>
         Type returnType = loginMethod.ReturnType;
         Assert.True(
-            returnType == typeof(Task)
-                || (
-                    returnType.IsGenericType
-                    && returnType.GetGenericTypeDefinition() == typeof(Task<>)
-                ),
-            "LoginAsync should be async and return a Task or Task<T>"
+            condition: returnType == typeof(Task)
+                       || (
+                           returnType.IsGenericType
+                           && returnType.GetGenericTypeDefinition() == typeof(Task<>)
+                       ),
+            userMessage: "LoginAsync should be async and return a Task or Task<T>"
         );
     }
 
@@ -131,20 +131,20 @@ public class TvdbBaseClientTests
         Type clientType = typeof(TvdbBaseClient);
 
         Type? stateMachineType = clientType
-            .GetNestedTypes(BindingFlags.NonPublic)
-            .FirstOrDefault(t => t.Name.Contains("LoginAsync"));
+            .GetNestedTypes(bindingAttr: BindingFlags.NonPublic)
+            .FirstOrDefault(predicate: t => t.Name.Contains(value: "LoginAsync"));
 
-        Assert.NotNull(stateMachineType);
+        Assert.NotNull(@object: stateMachineType);
 
         MethodInfo? moveNext = stateMachineType.GetMethod(
-            "MoveNext",
-            BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public
+            name: "MoveNext",
+            bindingAttr: BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public
         );
 
-        Assert.NotNull(moveNext);
+        Assert.NotNull(@object: moveNext);
 
         MethodBody? body = moveNext.GetMethodBody();
-        Assert.NotNull(body);
+        Assert.NotNull(@object: body);
 
         byte[] ilBytes = body.GetILAsByteArray()!;
         Module module = stateMachineType.Module;
@@ -158,16 +158,16 @@ public class TvdbBaseClientTests
             if (ilBytes[i] != 0x28 && ilBytes[i] != 0x6F)
                 continue;
 
-            int token = BitConverter.ToInt32(ilBytes, i + 1);
+            int token = BitConverter.ToInt32(value: ilBytes, startIndex: i + 1);
             try
             {
-                MethodBase? method = module.ResolveMethod(token);
+                MethodBase? method = module.ResolveMethod(metadataToken: token);
                 if (method is null)
                     continue;
 
                 if (
                     method is { Name: "GetResult", DeclaringType.FullName: not null }
-                    && method.DeclaringType.FullName.Contains("TaskAwaiter")
+                    && method.DeclaringType.FullName.Contains(value: "TaskAwaiter")
                 )
                 {
                     awaiterGetResultCount++;
@@ -182,9 +182,9 @@ public class TvdbBaseClientTests
         // The correct implementation has at least 2 await points:
         // await SendAsync + await ReadAsStringAsync
         Assert.True(
-            awaiterGetResultCount >= 2,
-            $"Expected at least 2 await points (SendAsync + ReadAsStringAsync) in LoginAsync, "
-                + $"but found {awaiterGetResultCount}. The .Result blocking call may still be present."
+            condition: awaiterGetResultCount >= 2,
+            userMessage: $"Expected at least 2 await points (SendAsync + ReadAsStringAsync) in LoginAsync, "
+                         + $"but found {awaiterGetResultCount}. The .Result blocking call may still be present."
         );
     }
 }

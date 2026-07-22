@@ -15,9 +15,9 @@ namespace NoMercy.MediaProcessing.Files;
 
 public record Audio
 {
-    [JsonProperty("index")]
+    [JsonProperty(propertyName: "index")]
     public int Index { get; set; }
 
-    [JsonProperty("language")]
+    [JsonProperty(propertyName: "language")]
     public string? Language { get; set; } = string.Empty;
 }

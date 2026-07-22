@@ -19,34 +19,34 @@ public class CoverArtImage
     // ReSharper disable once InconsistentNaming
     private readonly Uri? __image;
 
-    [JsonProperty("approved")]
+    [JsonProperty(propertyName: "approved")]
     public bool Approved { get; set; }
 
-    [JsonProperty("back")]
+    [JsonProperty(propertyName: "back")]
     public bool Back { get; set; }
 
-    [JsonProperty("comment")]
+    [JsonProperty(propertyName: "comment")]
     public string Comment { get; set; } = string.Empty;
 
-    [JsonProperty("edit")]
+    [JsonProperty(propertyName: "edit")]
     public int Edit { get; set; }
 
-    [JsonProperty("front")]
+    [JsonProperty(propertyName: "front")]
     public bool Front { get; set; }
 
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty("image")]
+    [JsonProperty(propertyName: "image")]
     public Uri? Image
     {
         get => __image?.ToHttps();
         init => __image = value;
     }
 
-    [JsonProperty("thumbnails")]
+    [JsonProperty(propertyName: "thumbnails")]
     public CoverArtThumbnails CoverArtThumbnails { get; set; } = new();
 
-    [JsonProperty("types")]
+    [JsonProperty(propertyName: "types")]
     public string[] Types { get; set; } = [];
 }

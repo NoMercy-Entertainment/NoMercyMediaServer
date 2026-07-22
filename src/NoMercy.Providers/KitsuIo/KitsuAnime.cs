@@ -15,12 +15,12 @@ namespace NoMercy.Providers.KitsuIo;
 
 public class KitsuAnime
 {
-    [JsonProperty("data")]
+    [JsonProperty(propertyName: "data")]
     public Data[] Data { get; set; } = [];
 
-    [JsonProperty("meta")]
+    [JsonProperty(propertyName: "meta")]
     public KitsuIoMeta Meta { get; set; } = new();
 
-    [JsonProperty("links")]
+    [JsonProperty(propertyName: "links")]
     public KitsuIoLinks Links { get; set; } = new();
 }

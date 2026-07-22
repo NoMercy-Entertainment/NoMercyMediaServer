@@ -17,21 +17,21 @@ namespace NoMercy.Providers.TMDB.Models.Credits;
 
 public class TmdbMedia
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("original_name")]
+    [JsonProperty(propertyName: "original_name")]
     public string OriginalName { get; set; } = string.Empty;
 
-    [JsonProperty("character")]
+    [JsonProperty(propertyName: "character")]
     public string Character { get; set; } = string.Empty;
 
-    [JsonProperty("episodes")]
+    [JsonProperty(propertyName: "episodes")]
     public TmdbEpisode[] Episodes { get; set; } = [];
 
-    [JsonProperty("seasons")]
+    [JsonProperty(propertyName: "seasons")]
     public TmdbSeason[] Seasons { get; set; } = [];
 }

@@ -26,7 +26,7 @@ namespace NoMercy.Tests.Queue;
 /// resolve an executor by DI type) and that the job runner genuinely invokes
 /// that instance at execution time rather than only recording it.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class CronWorkerRegisterExecutorTests
 {
     [Fact]
@@ -35,27 +35,27 @@ public class CronWorkerRegisterExecutorTests
         await using ServiceProvider provider = BuildProvider();
         TestQueueContextAdapter queueContext = new();
         CronWorker cronWorker = new(
-            provider,
-            provider.GetRequiredService<ILogger<CronWorker>>(),
-            queueContext
+            serviceProvider: provider,
+            logger: provider.GetRequiredService<ILogger<CronWorker>>(),
+            queueContext: queueContext
         );
 
         RecordingCronJobExecutor executor = new(
-            "plugin:11111111-1111-1111-1111-111111111111",
-            "*/5 * * * *"
+            jobName: "plugin:11111111-1111-1111-1111-111111111111",
+            cronExpression: "*/5 * * * *"
         );
 
-        cronWorker.RegisterExecutor(executor);
+        cronWorker.RegisterExecutor(executor: executor);
 
-        CronJobModel scheduled = GetCodeDefinedJobs(cronWorker)
-            .Single(job => job.JobType == executor.JobName);
+        CronJobModel scheduled = GetCodeDefinedJobs(cronWorker: cronWorker)
+            .Single(predicate: job => job.JobType == executor.JobName);
 
-        Assert.Equal(executor.JobName, scheduled.Name);
-        Assert.Equal(executor.CronExpression, scheduled.CronExpression);
-        Assert.True(scheduled.IsEnabled);
+        Assert.Equal(expected: executor.JobName, actual: scheduled.Name);
+        Assert.Equal(expected: executor.CronExpression, actual: scheduled.CronExpression);
+        Assert.True(condition: scheduled.IsEnabled);
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
-        await cronWorker.StopAsync(cts.Token);
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
+        await cronWorker.StopAsync(cancellationToken: cts.Token);
     }
 
     [Fact]
@@ -71,33 +71,33 @@ public class CronWorkerRegisterExecutorTests
         await using ServiceProvider provider = BuildProvider();
         TestQueueContextAdapter queueContext = new();
         CronWorker cronWorker = new(
-            provider,
-            provider.GetRequiredService<ILogger<CronWorker>>(),
-            queueContext
+            serviceProvider: provider,
+            logger: provider.GetRequiredService<ILogger<CronWorker>>(),
+            queueContext: queueContext
         );
 
         RecordingCronJobExecutor executor = new(
-            "plugin:22222222-2222-2222-2222-222222222222",
-            "*/5 * * * *"
+            jobName: "plugin:22222222-2222-2222-2222-222222222222",
+            cronExpression: "*/5 * * * *"
         );
-        cronWorker.RegisterExecutor(executor);
+        cronWorker.RegisterExecutor(executor: executor);
 
-        CronJobModel scheduled = GetCodeDefinedJobs(cronWorker)
-            .Single(job => job.JobType == executor.JobName);
+        CronJobModel scheduled = GetCodeDefinedJobs(cronWorker: cronWorker)
+            .Single(predicate: job => job.JobType == executor.JobName);
 
-        bool success = await InvokeExecuteJob(cronWorker, scheduled);
+        bool success = await InvokeExecuteJob(cronWorker: cronWorker, job: scheduled);
 
         Assert.True(
-            success,
-            "ExecuteJob must resolve and run the directly-registered instance executor."
+            condition: success,
+            userMessage: "ExecuteJob must resolve and run the directly-registered instance executor."
         );
         Assert.True(
-            executor.WasExecuted,
-            "The instance executor itself must run — proves the runner is genuinely live, not merely registered."
+            condition: executor.WasExecuted,
+            userMessage: "The instance executor itself must run — proves the runner is genuinely live, not merely registered."
         );
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
-        await cronWorker.StopAsync(cts.Token);
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
+        await cronWorker.StopAsync(cancellationToken: cts.Token);
     }
 
     private static ServiceProvider BuildProvider()
@@ -110,23 +110,23 @@ public class CronWorkerRegisterExecutorTests
     private static List<CronJobModel> GetCodeDefinedJobs(CronWorker cronWorker)
     {
         FieldInfo field = typeof(CronWorker).GetField(
-            "_codeDefinedJobs",
-            BindingFlags.NonPublic | BindingFlags.Instance
+            name: "_codeDefinedJobs",
+            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
         )!;
 
-        return (List<CronJobModel>)field.GetValue(cronWorker)!;
+        return (List<CronJobModel>)field.GetValue(obj: cronWorker)!;
     }
 
     private static async Task<bool> InvokeExecuteJob(CronWorker cronWorker, CronJobModel job)
     {
         MethodInfo executeJob = typeof(CronWorker).GetMethod(
-            "ExecuteJob",
-            BindingFlags.NonPublic | BindingFlags.Instance
+            name: "ExecuteJob",
+            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
         )!;
 
         Task<bool> resultTask =
             (Task<bool>)
-                executeJob.Invoke(cronWorker, [job, DateTime.UtcNow, CancellationToken.None])!;
+                executeJob.Invoke(obj: cronWorker, parameters: [job, DateTime.UtcNow, CancellationToken.None])!;
 
         return await resultTask;
     }

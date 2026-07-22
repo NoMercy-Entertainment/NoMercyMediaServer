@@ -21,10 +21,10 @@ using NoMercy.Storage;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 
 [ApiController]
-[Tags("Dashboard Encoder Bundles")]
-[ApiVersion(1.0)]
+[Tags(tags: "Dashboard Encoder Bundles")]
+[ApiVersion(version: 1.0)]
 [Authorize(Policy = "Owner")]
-[Route("api/v{version:apiVersion}/dashboard/encoder")]
+[Route(template: "api/v{version:apiVersion}/dashboard/encoder")]
 public class EncoderBundleController(
     IBundleGarbageCollector bundleGarbageCollector,
     IFolderRepository folderRepository,
@@ -38,27 +38,27 @@ public class EncoderBundleController(
     /// the on-disk state. Results are surfaced for the user to review and
     /// purge; no files are deleted by this endpoint.
     /// </summary>
-    [HttpGet("bundle-orphans")]
+    [HttpGet(template: "bundle-orphans")]
     public async Task<IActionResult> BundleOrphans(CancellationToken ct)
     {
-        List<Folder> folders = await folderRepository.GetAllFoldersAsync(ct);
+        List<Folder> folders = await folderRepository.GetAllFoldersAsync(ct: ct);
 
         List<BundleOrphan> allOrphans = [];
         foreach (Folder folder in folders)
         {
-            IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
+            IStorage folderStorage = storageFactory.For(folderId: folder.Id, driverId: folder.DriverId, subPath: string.Empty);
             // Resolve through the driver, not the IStorage facade: the facade's
             // GetFullPath is a LocalStorage-only escape hatch that throws on every
             // remote backend, so a facade call here killed the orphan sweep for
             // NFS / SMB / S3 / WebDAV libraries.
-            string libraryRoot = folderStorage.Driver.GetFullPath(folder.Path);
+            string libraryRoot = folderStorage.Driver.GetFullPath(path: folder.Path);
             IReadOnlyList<BundleOrphan> orphans = await bundleGarbageCollector.SweepAsync(
-                libraryRoot,
-                ct
+                libraryRoot: libraryRoot,
+                ct: ct
             );
-            allOrphans.AddRange(orphans);
+            allOrphans.AddRange(collection: orphans);
         }
 
-        return Ok(new { data = allOrphans });
+        return Ok(value: new { data = allOrphans });
     }
 }

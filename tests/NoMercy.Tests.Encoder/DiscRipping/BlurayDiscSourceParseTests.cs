@@ -52,42 +52,42 @@ src/libbluray/disc/aacs.c:306: Unable to decrypt unit (AACS)!";
     public void ParsePlaylists_AvatarS1D1_Returns19Playlists()
     {
         List<(int Index, TimeSpan Duration)> playlists = BlurayDiscSource.ParsePlaylists(
-            AvatarStderr
+            stderr: AvatarStderr
         );
 
-        playlists.Should().HaveCount(19);
+        playlists.Should().HaveCount(expected: 19);
     }
 
     [Fact]
     public void ParsePlaylists_AvatarS1D1_LongestIsMainPlaylist00600()
     {
         List<(int Index, TimeSpan Duration)> playlists = BlurayDiscSource.ParsePlaylists(
-            AvatarStderr
+            stderr: AvatarStderr
         );
 
         (int Index, TimeSpan Duration) longest = playlists
-            .OrderByDescending(p => p.Duration)
+            .OrderByDescending(keySelector: p => p.Duration)
             .First();
-        longest.Index.Should().Be(600);
-        longest.Duration.Should().Be(new(3, 7, 12));
+        longest.Index.Should().Be(expected: 600);
+        longest.Duration.Should().Be(expected: new(hours: 3, minutes: 7, seconds: 12));
     }
 
     [Fact]
     public void ParsePlaylists_AvatarS1D1_EpisodePlaylistsAreAround22Minutes()
     {
         List<(int Index, TimeSpan Duration)> playlists = BlurayDiscSource.ParsePlaylists(
-            AvatarStderr
+            stderr: AvatarStderr
         );
 
         // The episode playlists (everything except the main concat 00600 and
         // the two short intros 00250 / 00252) all fall in the 21-24 min band.
-        IEnumerable<(int Index, TimeSpan Duration)> episodes = playlists.Where(p =>
+        IEnumerable<(int Index, TimeSpan Duration)> episodes = playlists.Where(predicate: p =>
             p.Index != 600 && p.Index != 250 && p.Index != 252
         );
 
         episodes
             .Should()
-            .OnlyContain(p =>
+            .OnlyContain(predicate: p =>
                 p.Duration >= TimeSpan.FromMinutes(20) && p.Duration <= TimeSpan.FromMinutes(25)
             );
     }
@@ -96,31 +96,31 @@ src/libbluray/disc/aacs.c:306: Unable to decrypt unit (AACS)!";
     public void ParsePlaylists_AvatarS1D1_DurationsParsedCorrectly()
     {
         List<(int Index, TimeSpan Duration)> playlists = BlurayDiscSource.ParsePlaylists(
-            AvatarStderr
+            stderr: AvatarStderr
         );
 
-        (int Index, TimeSpan Duration) intro252 = playlists.First(p => p.Index == 252);
-        intro252.Duration.Should().Be(new(0, 3, 59));
+        (int Index, TimeSpan Duration) intro252 = playlists.First(predicate: p => p.Index == 252);
+        intro252.Duration.Should().Be(expected: new(hours: 0, minutes: 3, seconds: 59));
 
-        (int Index, TimeSpan Duration) intro250 = playlists.First(p => p.Index == 250);
-        intro250.Duration.Should().Be(new(0, 4, 38));
+        (int Index, TimeSpan Duration) intro250 = playlists.First(predicate: p => p.Index == 250);
+        intro250.Duration.Should().Be(expected: new(hours: 0, minutes: 4, seconds: 38));
 
-        (int Index, TimeSpan Duration) episode01601 = playlists.First(p => p.Index == 1601);
-        episode01601.Duration.Should().Be(new(0, 23, 39));
+        (int Index, TimeSpan Duration) episode01601 = playlists.First(predicate: p => p.Index == 1601);
+        episode01601.Duration.Should().Be(expected: new(hours: 0, minutes: 23, seconds: 39));
     }
 
     [Fact]
     public void ParsePlaylists_EmptyInput_ReturnsEmpty()
     {
-        BlurayDiscSource.ParsePlaylists("").Should().BeEmpty();
-        BlurayDiscSource.ParsePlaylists(null!).Should().BeEmpty();
+        BlurayDiscSource.ParsePlaylists(stderr: "").Should().BeEmpty();
+        BlurayDiscSource.ParsePlaylists(stderr: null!).Should().BeEmpty();
     }
 
     [Fact]
     public void ParsePlaylists_NoPlaylistLines_ReturnsEmpty()
     {
         BlurayDiscSource
-            .ParsePlaylists("Some random output\nNo playlists here\n[bluray] cert error")
+            .ParsePlaylists(stderr: "Some random output\nNo playlists here\n[bluray] cert error")
             .Should()
             .BeEmpty();
     }
@@ -133,6 +133,6 @@ src/libbluray/disc/aacs.c:306: Unable to decrypt unit (AACS)!";
 [bluray] playlist 00600.mpls (3:07:12)
 [bluray] playlist 00601.mpls (0:23:40)";
 
-        BlurayDiscSource.ParsePlaylists(duplicateInput).Should().HaveCount(2);
+        BlurayDiscSource.ParsePlaylists(stderr: duplicateInput).Should().HaveCount(expected: 2);
     }
 }

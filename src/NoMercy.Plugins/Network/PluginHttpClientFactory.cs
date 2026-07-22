@@ -18,10 +18,10 @@ public static class PluginHttpClientFactory
     public static HttpClient Create(PluginCapabilities? capabilities)
     {
         IReadOnlyList<string> hosts = capabilities?.Network?.Hosts ?? [];
-        PluginNetworkAllowlistHandler handler = new(hosts)
+        PluginNetworkAllowlistHandler handler = new(allowedHosts: hosts)
         {
             InnerHandler = new SocketsHttpHandler(),
         };
-        return new(handler);
+        return new(handler: handler);
     }
 }

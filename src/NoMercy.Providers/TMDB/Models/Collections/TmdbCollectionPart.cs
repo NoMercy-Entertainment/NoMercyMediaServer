@@ -15,45 +15,45 @@ namespace NoMercy.Providers.TMDB.Models.Collections;
 
 public class TmdbCollectionPart
 {
-    [JsonProperty("adult")]
+    [JsonProperty(propertyName: "adult")]
     public bool Adult { get; set; }
 
-    [JsonProperty("backdrop_path")]
+    [JsonProperty(propertyName: "backdrop_path")]
     public object? BackdropPath { get; set; }
 
-    [JsonProperty("genre_ids")]
+    [JsonProperty(propertyName: "genre_ids")]
     public int[] GenreIds { get; set; } = [];
 
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("original_language")]
+    [JsonProperty(propertyName: "original_language")]
     public string? OriginalLanguage { get; set; }
 
-    [JsonProperty("original_title")]
+    [JsonProperty(propertyName: "original_title")]
     public string OriginalTitle { get; set; } = string.Empty;
 
-    [JsonProperty("overview")]
+    [JsonProperty(propertyName: "overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty("release_date")]
+    [JsonProperty(propertyName: "release_date")]
     public DateTime? ReleaseDate { get; set; }
 
-    [JsonProperty("poster_path")]
+    [JsonProperty(propertyName: "poster_path")]
     public string? PosterPath { get; set; }
 
-    [JsonProperty("popularity")]
+    [JsonProperty(propertyName: "popularity")]
     public double? Popularity { get; set; }
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty("video")]
+    [JsonProperty(propertyName: "video")]
     public bool? Video { get; set; }
 
-    [JsonProperty("vote_average")]
+    [JsonProperty(propertyName: "vote_average")]
     public double VoteAverage { get; set; }
 
-    [JsonProperty("vote_count")]
+    [JsonProperty(propertyName: "vote_count")]
     public int VoteCount { get; set; }
 }

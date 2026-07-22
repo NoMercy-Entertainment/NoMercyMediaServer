@@ -15,24 +15,24 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.People;
 
-[PrimaryKey(nameof(Id))]
-[Index(nameof(CreditId), IsUnique = true)]
+[PrimaryKey(propertyName: nameof(Id))]
+[Index(propertyName: nameof(CreditId), IsUnique = true)]
 public class Job
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    [JsonProperty("id")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.Identity)]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("task")]
+    [JsonProperty(propertyName: "task")]
     public string? Task { get; set; }
 
-    [JsonProperty("episode_count")]
+    [JsonProperty(propertyName: "episode_count")]
     public int? EpisodeCount { get; set; }
 
-    [JsonProperty("order")]
+    [JsonProperty(propertyName: "order")]
     public int? Order { get; set; }
 
-    [JsonProperty("credit_id")]
+    [JsonProperty(propertyName: "credit_id")]
     public string CreditId { get; set; } = null!;
     public Crew? Crew { get; set; } = null!;
 }

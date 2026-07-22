@@ -15,9 +15,9 @@ namespace NoMercy.Providers.FanArt.Models;
 
 public class CdArt : Image
 {
-    [JsonProperty("disc")]
+    [JsonProperty(propertyName: "disc")]
     public int Disc { get; set; }
 
-    [JsonProperty("size")]
+    [JsonProperty(propertyName: "size")]
     public int Size { get; set; }
 }

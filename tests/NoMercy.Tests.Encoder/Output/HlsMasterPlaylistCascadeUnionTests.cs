@@ -47,53 +47,53 @@ public class HlsMasterPlaylistCascadeUnionTests : IDisposable
     public HlsMasterPlaylistCascadeUnionTests()
     {
         _outputDirectory = Path.Combine(
-            Path.GetTempPath(),
-            $"nomercy-cascade-union-{Guid.NewGuid():N}"
+            path1: Path.GetTempPath(),
+            path2: $"nomercy-cascade-union-{Guid.NewGuid():N}"
         );
-        Directory.CreateDirectory(_outputDirectory);
+        Directory.CreateDirectory(path: _outputDirectory);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(_outputDirectory))
-            Directory.Delete(_outputDirectory, true);
+        if (Directory.Exists(path: _outputDirectory))
+            Directory.Delete(path: _outputDirectory, recursive: true);
     }
 
     [Fact]
     public async Task NarrowPerBundlePlan_OrphansEarlierBundlesRenditions()
     {
-        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
 
         // Bundle 1 ("4K HDR"): produces the 4K video rendition plus the
         // audio and subtitle tracks — the smart orchestrator shares those
         // once across the whole ladder instead of duplicating them per rung.
-        WriteVariant("video_3840x2160", "video_3840x2160", segmentBytes: 900_000);
-        WriteVariant("audio_eng_eac3", "audio_eng_eac3", segmentBytes: 60_000);
-        WriteVariant("audio_jpn_eac3", "audio_jpn_eac3", segmentBytes: 60_000);
-        WriteSubtitle("eng", "full");
+        WriteVariant(subDirectory: "video_3840x2160", name: "video_3840x2160", segmentBytes: 900_000);
+        WriteVariant(subDirectory: "audio_eng_eac3", name: "audio_eng_eac3", segmentBytes: 60_000);
+        WriteVariant(subDirectory: "audio_jpn_eac3", name: "audio_jpn_eac3", segmentBytes: 60_000);
+        WriteSubtitle(language: "eng", variant: "full");
 
         OutputPlan bundle1Plan = BuildPlan(
             videoOutputs: [Create4KHdrVideo()],
-            audioOutputs: [CreateAudio("eng"), CreateAudio("jpn")],
+            audioOutputs: [CreateAudio(language: "eng"), CreateAudio(language: "jpn")],
             subtitleOutputs: [CreateSubtitle()]
         );
 
         await strategy.FinalizeAsync(
-            _outputDirectory,
-            bundle1Plan,
-            "Title",
-            CancellationToken.None
+            outputDirectory: _outputDirectory,
+            plan: bundle1Plan,
+            mediaTitle: "Title",
+            ct: CancellationToken.None
         );
 
-        string masterAfterBundle1 = await File.ReadAllTextAsync(MasterPath);
-        masterAfterBundle1.Should().Contain("3840x2160");
-        masterAfterBundle1.Should().Contain("TYPE=AUDIO");
-        masterAfterBundle1.Should().Contain("TYPE=SUBTITLES");
+        string masterAfterBundle1 = await File.ReadAllTextAsync(path: MasterPath);
+        masterAfterBundle1.Should().Contain(expected: "3840x2160");
+        masterAfterBundle1.Should().Contain(expected: "TYPE=AUDIO");
+        masterAfterBundle1.Should().Contain(expected: "TYPE=SUBTITLES");
 
         // Bundle 2 ("1080p SDR"): a separate job, publishing its own video
         // rendition only — its OWN OutputPlan carries no audio and no
         // subtitle outputs at all, because those were bundle 1's job.
-        WriteVariant("video_1920x1080_SDR", "video_1920x1080_SDR", segmentBytes: 300_000);
+        WriteVariant(subDirectory: "video_1920x1080_SDR", name: "video_1920x1080_SDR", segmentBytes: 300_000);
 
         OutputPlan bundle2Plan = BuildPlan(
             videoOutputs: [Create1080pSdrVideo()],
@@ -102,32 +102,32 @@ public class HlsMasterPlaylistCascadeUnionTests : IDisposable
         );
 
         await strategy.FinalizeAsync(
-            _outputDirectory,
-            bundle2Plan,
-            "Title",
-            CancellationToken.None
+            outputDirectory: _outputDirectory,
+            plan: bundle2Plan,
+            mediaTitle: "Title",
+            ct: CancellationToken.None
         );
 
-        string masterAfterBundle2 = await File.ReadAllTextAsync(MasterPath);
+        string masterAfterBundle2 = await File.ReadAllTextAsync(path: MasterPath);
 
         // The defect: bundle 2's narrow plan overwrote the master, orphaning
         // everything bundle 1 published even though it is still on disk.
-        masterAfterBundle2.Should().NotContain("3840x2160");
-        masterAfterBundle2.Should().NotContain("TYPE=AUDIO");
-        masterAfterBundle2.Should().NotContain("TYPE=SUBTITLES");
-        masterAfterBundle2.Should().Contain("1920x1080");
+        masterAfterBundle2.Should().NotContain(unexpected: "3840x2160");
+        masterAfterBundle2.Should().NotContain(unexpected: "TYPE=AUDIO");
+        masterAfterBundle2.Should().NotContain(unexpected: "TYPE=SUBTITLES");
+        masterAfterBundle2.Should().Contain(expected: "1920x1080");
     }
 
     [Fact]
     public async Task UnionedPlan_ProducesCompleteMasterWithNoOrphans()
     {
-        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
 
-        WriteVariant("video_3840x2160", "video_3840x2160", segmentBytes: 900_000);
-        WriteVariant("video_1920x1080_SDR", "video_1920x1080_SDR", segmentBytes: 300_000);
-        WriteVariant("audio_eng_eac3", "audio_eng_eac3", segmentBytes: 60_000);
-        WriteVariant("audio_jpn_eac3", "audio_jpn_eac3", segmentBytes: 60_000);
-        WriteSubtitle("eng", "full");
+        WriteVariant(subDirectory: "video_3840x2160", name: "video_3840x2160", segmentBytes: 900_000);
+        WriteVariant(subDirectory: "video_1920x1080_SDR", name: "video_1920x1080_SDR", segmentBytes: 300_000);
+        WriteVariant(subDirectory: "audio_eng_eac3", name: "audio_eng_eac3", segmentBytes: 60_000);
+        WriteVariant(subDirectory: "audio_jpn_eac3", name: "audio_jpn_eac3", segmentBytes: 60_000);
+        WriteSubtitle(language: "eng", variant: "full");
 
         // What NoMercy.MediaProcessing.VideoEncodeJob.ReconcileMasterPlaylistAsync
         // now builds via IEncodingOrchestrator.PlanMergedAsync before calling
@@ -135,74 +135,74 @@ public class HlsMasterPlaylistCascadeUnionTests : IDisposable
         // outputs, not just the last bundle's own slice.
         OutputPlan unionedPlan = BuildPlan(
             videoOutputs: [Create4KHdrVideo(), Create1080pSdrVideo()],
-            audioOutputs: [CreateAudio("eng"), CreateAudio("jpn")],
+            audioOutputs: [CreateAudio(language: "eng"), CreateAudio(language: "jpn")],
             subtitleOutputs: [CreateSubtitle()]
         );
 
         await strategy.FinalizeAsync(
-            _outputDirectory,
-            unionedPlan,
-            "Title",
-            CancellationToken.None
+            outputDirectory: _outputDirectory,
+            plan: unionedPlan,
+            mediaTitle: "Title",
+            ct: CancellationToken.None
         );
 
-        string master = await File.ReadAllTextAsync(MasterPath);
+        string master = await File.ReadAllTextAsync(path: MasterPath);
 
         List<string> streamInfLines = master
-            .Split('\n')
-            .Where(line => line.StartsWith("#EXT-X-STREAM-INF:", StringComparison.Ordinal))
+            .Split(separator: '\n')
+            .Where(predicate: line => line.StartsWith(value: "#EXT-X-STREAM-INF:", comparisonType: StringComparison.Ordinal))
             .ToList();
-        streamInfLines.Should().HaveCount(2);
+        streamInfLines.Should().HaveCount(expected: 2);
 
-        string? hdrLine = streamInfLines.FirstOrDefault(line =>
-            line.Contains("RESOLUTION=3840x2160", StringComparison.Ordinal)
+        string? hdrLine = streamInfLines.FirstOrDefault(predicate: line =>
+            line.Contains(value: "RESOLUTION=3840x2160", comparisonType: StringComparison.Ordinal)
         );
-        string? sdrLine = streamInfLines.FirstOrDefault(line =>
-            line.Contains("RESOLUTION=1920x1080", StringComparison.Ordinal)
+        string? sdrLine = streamInfLines.FirstOrDefault(predicate: line =>
+            line.Contains(value: "RESOLUTION=1920x1080", comparisonType: StringComparison.Ordinal)
         );
         hdrLine.Should().NotBeNull();
         sdrLine.Should().NotBeNull();
 
-        hdrLine.Should().Contain("VIDEO-RANGE=PQ");
-        sdrLine.Should().Contain("VIDEO-RANGE=SDR");
+        hdrLine.Should().Contain(expected: "VIDEO-RANGE=PQ");
+        sdrLine.Should().Contain(expected: "VIDEO-RANGE=SDR");
 
-        hdrLine.Should().MatchRegex(@"CODECS=""hvc1\.2\.4\.L150\.B0,ec-3""");
-        sdrLine.Should().MatchRegex(@"CODECS=""hvc1\.1\.6\.L120\.B0,ec-3""");
+        hdrLine.Should().MatchRegex(regularExpression: @"CODECS=""hvc1\.2\.4\.L150\.B0,ec-3""");
+        sdrLine.Should().MatchRegex(regularExpression: @"CODECS=""hvc1\.1\.6\.L120\.B0,ec-3""");
 
-        int hdrBandwidth = ExtractInt(hdrLine!, "BANDWIDTH");
-        int sdrBandwidth = ExtractInt(sdrLine!, "BANDWIDTH");
-        hdrBandwidth.Should().NotBe(sdrBandwidth);
-        hdrBandwidth.Should().BeGreaterThan(sdrBandwidth);
+        int hdrBandwidth = ExtractInt(streamInfLine: hdrLine!, attribute: "BANDWIDTH");
+        int sdrBandwidth = ExtractInt(streamInfLine: sdrLine!, attribute: "BANDWIDTH");
+        hdrBandwidth.Should().NotBe(unexpected: sdrBandwidth);
+        hdrBandwidth.Should().BeGreaterThan(expected: sdrBandwidth);
 
         master
             .Should()
             .Contain(
-                "TYPE=AUDIO,GROUP-ID=\"audio_eac3\",LANGUAGE=\"eng\"",
-                "the English audio rendition must still be referenced"
+                expected: "TYPE=AUDIO,GROUP-ID=\"audio_eac3\",LANGUAGE=\"eng\"",
+                because: "the English audio rendition must still be referenced"
             );
         master
             .Should()
             .Contain(
-                "TYPE=AUDIO,GROUP-ID=\"audio_eac3\",LANGUAGE=\"jpn\"",
-                "the Japanese audio rendition must still be referenced"
+                expected: "TYPE=AUDIO,GROUP-ID=\"audio_eac3\",LANGUAGE=\"jpn\"",
+                because: "the Japanese audio rendition must still be referenced"
             );
-        master.Should().Contain("TYPE=SUBTITLES");
+        master.Should().Contain(expected: "TYPE=SUBTITLES");
 
         // Zero orphans: every video_*/audio_* rendition directory and the
         // subtitle sidecar on disk is referenced somewhere in the master.
-        master.Should().Contain("video_3840x2160/video_3840x2160.m3u8");
-        master.Should().Contain("video_1920x1080_SDR/video_1920x1080_SDR.m3u8");
-        master.Should().Contain("audio_eng_eac3/audio_eng_eac3.m3u8");
-        master.Should().Contain("audio_jpn_eac3/audio_jpn_eac3.m3u8");
-        master.Should().Contain("subtitles/eng/full.ass");
+        master.Should().Contain(expected: "video_3840x2160/video_3840x2160.m3u8");
+        master.Should().Contain(expected: "video_1920x1080_SDR/video_1920x1080_SDR.m3u8");
+        master.Should().Contain(expected: "audio_eng_eac3/audio_eng_eac3.m3u8");
+        master.Should().Contain(expected: "audio_jpn_eac3/audio_jpn_eac3.m3u8");
+        master.Should().Contain(expected: "subtitles/eng/full.ass");
     }
 
-    private string MasterPath => Path.Combine(_outputDirectory, "Title.m3u8");
+    private string MasterPath => Path.Combine(path1: _outputDirectory, path2: "Title.m3u8");
 
     private static int ExtractInt(string streamInfLine, string attribute)
     {
-        Match match = Regex.Match(streamInfLine, $@"{attribute}=(?<value>\d+)");
-        return int.Parse(match.Groups["value"].Value);
+        Match match = Regex.Match(input: streamInfLine, pattern: $@"{attribute}=(?<value>\d+)");
+        return int.Parse(s: match.Groups[groupname: "value"].Value);
     }
 
     private static OutputPlan BuildPlan(
@@ -282,20 +282,20 @@ public class HlsMasterPlaylistCascadeUnionTests : IDisposable
 
     private void WriteVariant(string subDirectory, string name, int segmentBytes)
     {
-        string variantDirectory = Path.Combine(_outputDirectory, subDirectory);
-        Directory.CreateDirectory(variantDirectory);
+        string variantDirectory = Path.Combine(path1: _outputDirectory, path2: subDirectory);
+        Directory.CreateDirectory(path: variantDirectory);
 
         byte[] segment = new byte[segmentBytes];
-        File.WriteAllBytes(Path.Combine(variantDirectory, $"{name}_00000.ts"), segment);
+        File.WriteAllBytes(path: Path.Combine(path1: variantDirectory, path2: $"{name}_00000.ts"), bytes: segment);
 
         string playlist = $"#EXTM3U\n#EXTINF:6.000000,\n{name}_00000.ts\n#EXT-X-ENDLIST\n";
-        File.WriteAllText(Path.Combine(variantDirectory, $"{name}.m3u8"), playlist);
+        File.WriteAllText(path: Path.Combine(path1: variantDirectory, path2: $"{name}.m3u8"), contents: playlist);
     }
 
     private void WriteSubtitle(string language, string variant)
     {
-        string subtitleDirectory = Path.Combine(_outputDirectory, "subtitles", language);
-        Directory.CreateDirectory(subtitleDirectory);
-        File.WriteAllText(Path.Combine(subtitleDirectory, $"{variant}.ass"), "[Script Info]\n");
+        string subtitleDirectory = Path.Combine(path1: _outputDirectory, path2: "subtitles", path3: language);
+        Directory.CreateDirectory(path: subtitleDirectory);
+        File.WriteAllText(path: Path.Combine(path1: subtitleDirectory, path2: $"{variant}.ass"), contents: "[Script Info]\n");
     }
 }

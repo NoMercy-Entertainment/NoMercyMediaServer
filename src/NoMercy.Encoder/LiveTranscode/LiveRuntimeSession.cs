@@ -70,7 +70,7 @@ public sealed class LiveRuntimeSession : IAsyncDisposable
     /// embedded in segment URLs — that indices from a previous generation are now
     /// stale and must be discarded.
     /// </summary>
-    public string CurrentEpoch => Volatile.Read(ref _epoch).ToString(CultureInfo.InvariantCulture);
+    public string CurrentEpoch => Volatile.Read(location: ref _epoch).ToString(provider: CultureInfo.InvariantCulture);
 
     internal Task? DrainerTask { get; set; }
 
@@ -85,24 +85,24 @@ public sealed class LiveRuntimeSession : IAsyncDisposable
         ScratchDirectory = scratchDirectory;
     }
 
-    public bool IsComplete => Volatile.Read(ref _isComplete) == 1;
+    public bool IsComplete => Volatile.Read(location: ref _isComplete) == 1;
 
     /// <summary>
     /// UTC time of the last playlist or segment access. Used by the idle reaper.
     /// </summary>
-    public DateTime LastAccess => new(Interlocked.Read(ref _lastAccessTicks), DateTimeKind.Utc);
+    public DateTime LastAccess => new(ticks: Interlocked.Read(location: ref _lastAccessTicks), kind: DateTimeKind.Utc);
 
     /// <summary>
     /// Updates <see cref="LastAccess"/> to now. Called from playlist and segment
     /// serve points so the reaper knows the session is still in use.
     /// </summary>
     public void TouchLastAccess() =>
-        Interlocked.Exchange(ref _lastAccessTicks, DateTime.UtcNow.Ticks);
+        Interlocked.Exchange(location1: ref _lastAccessTicks, value: DateTime.UtcNow.Ticks);
 
-    public int HighestSegmentIndex => Volatile.Read(ref _highestIndex);
+    public int HighestSegmentIndex => Volatile.Read(location: ref _highestIndex);
 
     public bool TryGetSegment(int index, out Segment segment) =>
-        _segments.TryGetValue(index, out segment!);
+        _segments.TryGetValue(key: index, value: out segment!);
 
     /// <summary>
     /// Snapshot of buffered segments ordered by index. Safe to call concurrently
@@ -111,33 +111,33 @@ public sealed class LiveRuntimeSession : IAsyncDisposable
     /// </summary>
     public IReadOnlyList<Segment> SnapshotSegments()
     {
-        return _segments.Values.OrderBy(s => s.Index).ToList();
+        return _segments.Values.OrderBy(keySelector: s => s.Index).ToList();
     }
 
     internal CancellationToken DrainerCancellation => _drainerCts.Token;
 
     internal void BufferSegment(Segment segment)
     {
-        _segments[segment.Index] = segment;
+        _segments[key: segment.Index] = segment;
 
         int current;
         do
         {
-            current = Volatile.Read(ref _highestIndex);
+            current = Volatile.Read(location: ref _highestIndex);
             if (segment.Index <= current)
                 break;
-        } while (Interlocked.CompareExchange(ref _highestIndex, segment.Index, current) != current);
+        } while (Interlocked.CompareExchange(location1: ref _highestIndex, value: segment.Index, comparand: current) != current);
     }
 
-    internal void MarkComplete() => Interlocked.Exchange(ref _isComplete, 1);
+    internal void MarkComplete() => Interlocked.Exchange(location1: ref _isComplete, value: 1);
 
     internal void ResetBuffer()
     {
         _segments.Clear();
-        Volatile.Write(ref _highestIndex, -1);
+        Volatile.Write(location: ref _highestIndex, value: -1);
         // Bump the generation so segment URLs minted before this reset (e.g. a
         // pre-seek playlist the client cached) are recognised as stale.
-        Interlocked.Increment(ref _epoch);
+        Interlocked.Increment(location: ref _epoch);
     }
 
     public async ValueTask DisposeAsync()
@@ -155,7 +155,7 @@ public sealed class LiveRuntimeSession : IAsyncDisposable
         {
             try
             {
-                await DrainerTask.ConfigureAwait(false);
+                await DrainerTask.ConfigureAwait(continueOnCapturedContext: false);
             }
             catch (OperationCanceledException)
             {
@@ -163,7 +163,7 @@ public sealed class LiveRuntimeSession : IAsyncDisposable
             }
         }
 
-        await Session.DisposeAsync().ConfigureAwait(false);
+        await Session.DisposeAsync().ConfigureAwait(continueOnCapturedContext: false);
         _drainerCts.Dispose();
     }
 }

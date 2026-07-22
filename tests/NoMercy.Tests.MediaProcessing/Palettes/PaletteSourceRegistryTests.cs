@@ -14,7 +14,7 @@ using NoMercy.MediaProcessing.Images.Palettes;
 
 namespace NoMercy.Tests.MediaProcessing.Palettes;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class PaletteSourceRegistryTests
 {
     private sealed class FakeSource(string type) : IPaletteSource
@@ -25,13 +25,13 @@ public class PaletteSourceRegistryTests
             MediaContext db,
             string id,
             CancellationToken ct
-        ) => Task.FromResult<string?>("");
+        ) => Task.FromResult<string?>(result: "");
 
         public Task<PaletteResult> GenerateAsync(
             MediaContext db,
             string id,
             CancellationToken ct
-        ) => Task.FromResult(PaletteResult.NoImage());
+        ) => Task.FromResult(result: PaletteResult.NoImage());
 
         public Task PersistAsync(MediaContext db, string id, string json, CancellationToken ct) =>
             Task.CompletedTask;
@@ -40,10 +40,10 @@ public class PaletteSourceRegistryTests
     [Fact]
     public void Resolves_registered_source_and_null_for_unknown()
     {
-        PaletteSourceRegistry registry = new([new FakeSource("movie"), new FakeSource("tv")]);
+        PaletteSourceRegistry registry = new(sources: [new FakeSource(type: "movie"), new FakeSource(type: "tv")]);
 
-        registry.Resolve("movie").Should().NotBeNull();
-        registry.Resolve("nope").Should().BeNull();
-        registry.EntityTypes.Should().BeEquivalentTo(["movie", "tv"]);
+        registry.Resolve(entityType: "movie").Should().NotBeNull();
+        registry.Resolve(entityType: "nope").Should().BeNull();
+        registry.EntityTypes.Should().BeEquivalentTo(expectation: ["movie", "tv"]);
     }
 }

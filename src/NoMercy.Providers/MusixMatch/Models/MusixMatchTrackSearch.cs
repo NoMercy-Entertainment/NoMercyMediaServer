@@ -15,6 +15,6 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class MusixMatchTrackSearch
 {
-    [JsonProperty("track_list")]
+    [JsonProperty(propertyName: "track_list")]
     public List<MusixMatchTrackList> Results { get; set; } = [];
 }

@@ -40,9 +40,9 @@ public class TrackCoverBackfillJob : IShouldQueue
         await using MediaContext db = new();
 
         List<TrackAlbumCover> pairs = await db
-            .AlbumTrack.Where(at => at.Track.Cover == null && at.Album.Cover != null)
-            .Take(BatchSize)
-            .Select(at => new TrackAlbumCover(at.TrackId, at.Album.Cover!))
+            .AlbumTrack.Where(predicate: at => at.Track.Cover == null && at.Album.Cover != null)
+            .Take(count: BatchSize)
+            .Select(selector: at => new TrackAlbumCover(at.TrackId, at.Album.Cover!))
             .ToListAsync();
 
         if (pairs.Count == 0)
@@ -50,15 +50,15 @@ public class TrackCoverBackfillJob : IShouldQueue
 
         foreach (TrackAlbumCover pair in pairs)
             await db
-                .Tracks.Where(t => t.Id == pair.TrackId && t.Cover == null)
-                .ExecuteUpdateAsync(s => s.SetProperty(t => t.Cover, pair.Cover));
+                .Tracks.Where(predicate: t => t.Id == pair.TrackId && t.Cover == null)
+                .ExecuteUpdateAsync(setPropertyCalls: s => s.SetProperty(propertyExpression: t => t.Cover, valueExpression: pair.Cover));
 
         // The pending filter shrinks every pass, so re-enqueueing self terminates
         // once all null covers are filled.
         QueueRunner.Current?.Dispatcher.Dispatch(
-            new TrackCoverBackfillJob(),
-            "palette",
-            PalettePriority.BackfillCoordinator
+            job: new TrackCoverBackfillJob(),
+            onQueue: "palette",
+            priority: PalettePriority.BackfillCoordinator
         );
     }
 

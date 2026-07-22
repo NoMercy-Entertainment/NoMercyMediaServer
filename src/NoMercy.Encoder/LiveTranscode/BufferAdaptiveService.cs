@@ -45,7 +45,7 @@ public class BufferAdaptiveService(
     ILiveSessionTransport? transport = null
 ) : BackgroundService
 {
-    private static readonly TimeSpan EvalInterval = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan EvalInterval = TimeSpan.FromSeconds(seconds: 5);
 
     // Consecutive raise-eligible sweep count per session, keyed by SessionId.
     // Pruned every sweep to whatever sessions are still active so a torn-down
@@ -56,7 +56,7 @@ public class BufferAdaptiveService(
     // segment; until then its buffer is legitimately near-zero. Acting inside
     // this window would misread that as "drop quality" and cancel the fresh
     // runner every sweep, so a seek / quality-change / resume never completes.
-    private static readonly TimeSpan TranscodeWarmup = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan TranscodeWarmup = TimeSpan.FromSeconds(seconds: 10);
 
     // FFmpeg speed (× realtime) above which the encoder is comfortably keeping up.
     // A low client buffer while the encoder runs this fast just means the viewer
@@ -66,13 +66,13 @@ public class BufferAdaptiveService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        logger.LogDebug("BufferAdaptiveService started (eval interval = 5 s)");
+        logger.LogDebug(message: "BufferAdaptiveService started (eval interval = 5 s)");
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await Task.Delay(EvalInterval, stoppingToken).ConfigureAwait(false);
+                await Task.Delay(delay: EvalInterval, cancellationToken: stoppingToken).ConfigureAwait(continueOnCapturedContext: false);
             }
             catch (OperationCanceledException)
             {
@@ -81,11 +81,11 @@ public class BufferAdaptiveService(
 
             try
             {
-                await EvaluateAllAsync(stoppingToken).ConfigureAwait(false);
+                await EvaluateAllAsync(ct: stoppingToken).ConfigureAwait(continueOnCapturedContext: false);
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "BufferAdaptiveService evaluation sweep failed; will retry");
+                logger.LogWarning(exception: ex, message: "BufferAdaptiveService evaluation sweep failed; will retry");
             }
         }
     }
@@ -93,11 +93,11 @@ public class BufferAdaptiveService(
     internal async Task EvaluateAllAsync(CancellationToken ct)
     {
         IReadOnlyCollection<string> activeSessionIds = streamingService.ActiveSessionIds;
-        PruneRaiseSweepCounts(activeSessionIds);
+        PruneRaiseSweepCounts(activeSessionIds: activeSessionIds);
 
         foreach (string sessionId in activeSessionIds)
         {
-            if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
+            if (!streamingService.TryGetRuntime(sessionId: sessionId, runtime: out LiveRuntimeSession runtime))
                 continue;
 
             if (runtime.IsComplete)
@@ -105,13 +105,13 @@ public class BufferAdaptiveService(
 
             ILiveSession session = runtime.Session;
 
-            bool networkActionTaken = await TryApplyNetworkAxisAsync(runtime, session, ct)
-                .ConfigureAwait(false);
+            bool networkActionTaken = await TryApplyNetworkAxisAsync(runtime: runtime, session: session, ct: ct)
+                .ConfigureAwait(continueOnCapturedContext: false);
 
             if (!networkActionTaken)
-                await ApplyEncoderCapacityAxisAsync(runtime, session, ct).ConfigureAwait(false);
+                await ApplyEncoderCapacityAxisAsync(runtime: runtime, session: session, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
 
-            await PushTranscodeStateAsync(session, ct).ConfigureAwait(false);
+            await PushTranscodeStateAsync(session: session, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
         }
     }
 
@@ -122,7 +122,7 @@ public class BufferAdaptiveService(
     )
     {
         bool isSuspended = session.State == LiveSessionState.Buffered;
-        BufferAction action = bufferManager.Evaluate(session.BufferAhead, isSuspended);
+        BufferAction action = bufferManager.Evaluate(bufferAhead: session.BufferAhead, isSuspended: isSuspended);
 
         // Suppress adaptive actions during the warm-up window after a
         // (re)start so the fresh runner is left alone to fill its buffer; the
@@ -144,36 +144,32 @@ public class BufferAdaptiveService(
         {
             case BufferAction.Suspend:
                 logger.LogDebug(
-                    "BufferAdaptive: plan=encoder-suspend session={SessionId} buffer={Buf:F1}s",
-                    session.SessionId,
-                    session.BufferAhead.TotalSeconds
+                    message: "BufferAdaptive: plan=encoder-suspend session={SessionId} buffer={Buf:F1}s", args: [session.SessionId, session.BufferAhead.TotalSeconds]
                 );
                 session.Suspend();
                 break;
 
             case BufferAction.Resume:
                 logger.LogDebug(
-                    "BufferAdaptive: plan=encoder-resume session={SessionId} buffer={Buf:F1}s",
-                    session.SessionId,
-                    session.BufferAhead.TotalSeconds
+                    message: "BufferAdaptive: plan=encoder-resume session={SessionId} buffer={Buf:F1}s", args: [session.SessionId, session.BufferAhead.TotalSeconds]
                 );
                 session.Resume();
                 break;
 
             case BufferAction.DropQuality:
-                await TryDropQualityAsync(runtime, session, QualityChangeReason.AutoAdaptive, ct)
-                    .ConfigureAwait(false);
+                await TryDropQualityAsync(runtime: runtime, session: session, reason: QualityChangeReason.AutoAdaptive, ct: ct)
+                    .ConfigureAwait(continueOnCapturedContext: false);
                 break;
 
             case BufferAction.EmergencyDropQuality:
                 await TryDropQualityAsync(
-                        runtime,
-                        session,
-                        QualityChangeReason.AutoAdaptive,
-                        ct,
+                        runtime: runtime,
+                        session: session,
+                        reason: QualityChangeReason.AutoAdaptive,
+                        ct: ct,
                         emergency: true
                     )
-                    .ConfigureAwait(false);
+                    .ConfigureAwait(continueOnCapturedContext: false);
                 break;
 
             case BufferAction.None:
@@ -202,7 +198,7 @@ public class BufferAdaptiveService(
 
         if (
             !session.HasFreshClientHealth(
-                TimeSpan.FromSeconds(thresholds.ClientHealthStalenessSeconds)
+                maxAge: TimeSpan.FromSeconds(seconds: thresholds.ClientHealthStalenessSeconds)
             )
         )
             return false;
@@ -211,16 +207,16 @@ public class BufferAdaptiveService(
             return false;
 
         LiveQuality[] available = qualitySelector.GetAvailableQualities(
-            runtime.CachedMediaInfo,
-            runtime.ClientCapabilities,
-            speedIndex,
-            resourceBudget
+            input: runtime.CachedMediaInfo,
+            client: runtime.ClientCapabilities,
+            speeds: speedIndex,
+            budget: resourceBudget
         );
         if (available.Length == 0)
             return false;
 
         LiveQuality current = session.CurrentQuality;
-        int currentIndex = Array.FindIndex(available, q => q.Id == current.Id);
+        int currentIndex = Array.FindIndex(array: available, match: q => q.Id == current.Id);
         if (currentIndex < 0)
             currentIndex = 0;
 
@@ -228,32 +224,28 @@ public class BufferAdaptiveService(
 
         if (clientBuffer.TotalSeconds < thresholds.ClientEmergencyStallSeconds)
         {
-            ResetRaiseSweepCount(session.SessionId);
+            ResetRaiseSweepCount(sessionId: session.SessionId);
 
             LiveQuality lowest = available[^1];
             if (lowest.Id == current.Id)
                 return false;
 
             logger.LogInformation(
-                "BufferAdaptive: plan=network-emergency-drop session={SessionId} {From}→{To} clientBuffer={Buf:F1}s",
-                session.SessionId,
-                current.Label,
-                lowest.Label,
-                clientBuffer.TotalSeconds
+                message: "BufferAdaptive: plan=network-emergency-drop session={SessionId} {From}→{To} clientBuffer={Buf:F1}s", args: [session.SessionId, current.Label, lowest.Label, clientBuffer.TotalSeconds]
             );
-            await ChangeQualityAndPushAsync(session, lowest, QualityChangeReason.AutoAdaptive, ct)
-                .ConfigureAwait(false);
+            await ChangeQualityAndPushAsync(session: session, target: lowest, reason: QualityChangeReason.AutoAdaptive, ct: ct)
+                .ConfigureAwait(continueOnCapturedContext: false);
             return true;
         }
 
         int observedBandwidthKbps = session.ObservedBandwidthKbps;
         LiveQuality fit = qualitySelector.SelectForBandwidth(
-            available,
-            observedBandwidthKbps,
-            thresholds.UsableBandwidthFraction,
-            current
+            available: available,
+            observedBandwidthKbps: observedBandwidthKbps,
+            usableFraction: thresholds.UsableBandwidthFraction,
+            current: current
         );
-        int fitIndex = Array.FindIndex(available, q => q.Id == fit.Id);
+        int fitIndex = Array.FindIndex(array: available, match: q => q.Id == fit.Id);
         if (fitIndex < 0)
             fitIndex = currentIndex;
 
@@ -262,17 +254,13 @@ public class BufferAdaptiveService(
         // sustains it.
         if (fitIndex > currentIndex)
         {
-            ResetRaiseSweepCount(session.SessionId);
+            ResetRaiseSweepCount(sessionId: session.SessionId);
 
             logger.LogInformation(
-                "BufferAdaptive: plan=network-drop session={SessionId} {From}→{To} bandwidth={Kbps}kbps",
-                session.SessionId,
-                current.Label,
-                fit.Label,
-                observedBandwidthKbps
+                message: "BufferAdaptive: plan=network-drop session={SessionId} {From}→{To} bandwidth={Kbps}kbps", args: [session.SessionId, current.Label, fit.Label, observedBandwidthKbps]
             );
-            await ChangeQualityAndPushAsync(session, fit, QualityChangeReason.AutoAdaptive, ct)
-                .ConfigureAwait(false);
+            await ChangeQualityAndPushAsync(session: session, target: fit, reason: QualityChangeReason.AutoAdaptive, ct: ct)
+                .ConfigureAwait(continueOnCapturedContext: false);
             return true;
         }
 
@@ -281,49 +269,41 @@ public class BufferAdaptiveService(
 
         if (!bandwidthSustainsHigher || !bufferHealthy)
         {
-            ResetRaiseSweepCount(session.SessionId);
+            ResetRaiseSweepCount(sessionId: session.SessionId);
             return false;
         }
 
         int sweepCount = _raiseSweepCounts.AddOrUpdate(
-            session.SessionId,
-            1,
-            (_, previous) => previous + 1
+            key: session.SessionId,
+            addValue: 1,
+            updateValueFactory: (_, previous) => previous + 1
         );
 
         if (sweepCount < thresholds.RaiseSustainSweeps)
         {
             logger.LogDebug(
-                "BufferAdaptive: plan=network-raise-pending session={SessionId} sweep={Count}/{Sustain}",
-                session.SessionId,
-                sweepCount,
-                thresholds.RaiseSustainSweeps
+                message: "BufferAdaptive: plan=network-raise-pending session={SessionId} sweep={Count}/{Sustain}", args: [session.SessionId, sweepCount, thresholds.RaiseSustainSweeps]
             );
             return false;
         }
 
-        ResetRaiseSweepCount(session.SessionId);
+        ResetRaiseSweepCount(sessionId: session.SessionId);
 
-        int raiseIndex = Math.Max(0, currentIndex - 1);
+        int raiseIndex = Math.Max(val1: 0, val2: currentIndex - 1);
         if (raiseIndex == currentIndex)
             return false;
 
         LiveQuality raiseTarget = available[raiseIndex];
         logger.LogInformation(
-            "BufferAdaptive: plan=network-raise session={SessionId} {From}→{To} bandwidth={Kbps}kbps clientBuffer={Buf:F1}s",
-            session.SessionId,
-            current.Label,
-            raiseTarget.Label,
-            observedBandwidthKbps,
-            clientBuffer.TotalSeconds
+            message: "BufferAdaptive: plan=network-raise session={SessionId} {From}→{To} bandwidth={Kbps}kbps clientBuffer={Buf:F1}s", args: [session.SessionId, current.Label, raiseTarget.Label, observedBandwidthKbps, clientBuffer.TotalSeconds]
         );
-        await ChangeQualityAndPushAsync(session, raiseTarget, QualityChangeReason.AutoAdaptive, ct)
-            .ConfigureAwait(false);
+        await ChangeQualityAndPushAsync(session: session, target: raiseTarget, reason: QualityChangeReason.AutoAdaptive, ct: ct)
+            .ConfigureAwait(continueOnCapturedContext: false);
         return true;
     }
 
     private void ResetRaiseSweepCount(string sessionId) =>
-        _raiseSweepCounts.TryRemove(sessionId, out _);
+        _raiseSweepCounts.TryRemove(key: sessionId, value: out _);
 
     private void PruneRaiseSweepCounts(IReadOnlyCollection<string> activeSessionIds)
     {
@@ -332,8 +312,8 @@ public class BufferAdaptiveService(
 
         foreach (string trackedSessionId in _raiseSweepCounts.Keys)
         {
-            if (!activeSessionIds.Contains(trackedSessionId))
-                _raiseSweepCounts.TryRemove(trackedSessionId, out _);
+            if (!activeSessionIds.Contains(value: trackedSessionId))
+                _raiseSweepCounts.TryRemove(key: trackedSessionId, value: out _);
         }
     }
 
@@ -349,10 +329,10 @@ public class BufferAdaptiveService(
             return;
 
         LiveQuality[] available = qualitySelector.GetAvailableQualities(
-            runtime.CachedMediaInfo,
-            runtime.ClientCapabilities,
-            speedIndex,
-            resourceBudget
+            input: runtime.CachedMediaInfo,
+            client: runtime.ClientCapabilities,
+            speeds: speedIndex,
+            budget: resourceBudget
         );
 
         if (available.Length == 0)
@@ -367,7 +347,7 @@ public class BufferAdaptiveService(
         }
         else
         {
-            int currentIndex = Array.FindIndex(available, q => q.Id == current.Id);
+            int currentIndex = Array.FindIndex(array: available, match: q => q.Id == current.Id);
             int nextIndex = currentIndex >= 0 ? currentIndex + 1 : available.Length - 1;
             target = nextIndex < available.Length ? available[nextIndex] : null;
         }
@@ -376,15 +356,10 @@ public class BufferAdaptiveService(
             return;
 
         logger.LogInformation(
-            "BufferAdaptive: plan=encoder-drop-quality session={SessionId} {From}→{To} (reason={Reason}, buffer={Buf:F1}s)",
-            session.SessionId,
-            current.Label,
-            target.Label,
-            reason,
-            session.BufferAhead.TotalSeconds
+            message: "BufferAdaptive: plan=encoder-drop-quality session={SessionId} {From}→{To} (reason={Reason}, buffer={Buf:F1}s)", args: [session.SessionId, current.Label, target.Label, reason, session.BufferAhead.TotalSeconds]
         );
 
-        await ChangeQualityAndPushAsync(session, target, reason, ct).ConfigureAwait(false);
+        await ChangeQualityAndPushAsync(session: session, target: target, reason: reason, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
     }
 
     /// <summary>
@@ -403,8 +378,8 @@ public class BufferAdaptiveService(
         if (target.Id == session.CurrentQuality.Id)
             return;
 
-        await session.ChangeQualityAsync(target.Id, target, ct).ConfigureAwait(false);
-        await PushQualityChangedAsync(session, target, reason, ct).ConfigureAwait(false);
+        await session.ChangeQualityAsync(qualityId: target.Id, newQuality: target, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
+        await PushQualityChangedAsync(session: session, newQuality: target, reason: reason, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
     }
 
     private async Task PushQualityChangedAsync(
@@ -421,14 +396,14 @@ public class BufferAdaptiveService(
 
         try
         {
-            await transport.SendToClientAsync(session.SessionId, message, ct).ConfigureAwait(false);
+            await transport.SendToClientAsync(sessionId: session.SessionId, message: message, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
         }
         catch (Exception ex)
         {
             logger.LogDebug(
-                ex,
-                "Transport push failed for QualityChanged on session {SessionId}",
-                session.SessionId
+                exception: ex,
+                message: "Transport push failed for QualityChanged on session {SessionId}",
+                args: session.SessionId
             );
         }
     }
@@ -446,14 +421,14 @@ public class BufferAdaptiveService(
 
         try
         {
-            await transport.SendToClientAsync(session.SessionId, message, ct).ConfigureAwait(false);
+            await transport.SendToClientAsync(sessionId: session.SessionId, message: message, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
         }
         catch (Exception ex)
         {
             logger.LogDebug(
-                ex,
-                "Transport push failed for TranscodeState on session {SessionId}",
-                session.SessionId
+                exception: ex,
+                message: "Transport push failed for TranscodeState on session {SessionId}",
+                args: session.SessionId
             );
         }
     }

@@ -16,9 +16,9 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record FileListResponseDto
 {
-    [JsonProperty("status")]
+    [JsonProperty(propertyName: "status")]
     public string Status { get; set; } = string.Empty;
 
-    [JsonProperty("files")]
+    [JsonProperty(propertyName: "files")]
     public List<FileItem> Files { get; set; } = new();
 }

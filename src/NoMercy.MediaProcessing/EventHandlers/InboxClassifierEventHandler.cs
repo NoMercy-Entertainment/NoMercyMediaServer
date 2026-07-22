@@ -56,7 +56,7 @@ public class InboxClassifierEventHandler : IDisposable
         _routing = routing;
         _contextFactory = contextFactory;
         _storageFactory = storageFactory;
-        _subscriptions.Add(eventBus.Subscribe<FileCreatedEvent>(OnFileCreated));
+        _subscriptions.Add(item: eventBus.Subscribe<FileCreatedEvent>(handler: OnFileCreated));
     }
 
     private static async Task<FileContentFingerprint?> TryComputeFingerprintAsync(
@@ -68,12 +68,12 @@ public class InboxClassifierEventHandler : IDisposable
     {
         try
         {
-            await using Stream stream = storage.OpenRead(path);
-            int len = (int)Math.Min(65536, sizeBytes <= 0 ? 65536 : sizeBytes);
+            await using Stream stream = storage.OpenRead(path: path);
+            int len = (int)Math.Min(val1: 65536, val2: sizeBytes <= 0 ? 65536 : sizeBytes);
             byte[] buffer = new byte[len];
-            int read = await stream.ReadAsync(buffer.AsMemory(0, len), ct);
-            string hash = Convert.ToHexString(MD5.HashData(buffer.AsSpan(0, read)));
-            return new FileContentFingerprint(sizeBytes, hash);
+            int read = await stream.ReadAsync(buffer: buffer.AsMemory(start: 0, length: len), cancellationToken: ct);
+            string hash = Convert.ToHexString(inArray: MD5.HashData(source: buffer.AsSpan(start: 0, length: read)));
+            return new FileContentFingerprint(SizeBytes: sizeBytes, HashPrefix: hash);
         }
         catch
         {
@@ -89,37 +89,37 @@ public class InboxClassifierEventHandler : IDisposable
             return;
 
         _logger.LogInformation(
-            "InboxClassifier: Processing drop event in {FolderPath}",
-            @event.FolderPath
+            message: "InboxClassifier: Processing drop event in {FolderPath}",
+            args: @event.FolderPath
         );
 
         await using MediaContext context = _contextFactory();
 
         Library? library = await context
             .Libraries.AsNoTracking()
-            .Include(l => l.FolderLibraries)
-                .ThenInclude(fl => fl.Folder)
-            .FirstOrDefaultAsync(l => l.Id == @event.LibraryId, ct);
+            .Include(navigationPropertyPath: l => l.FolderLibraries)
+                .ThenInclude(navigationPropertyPath: fl => fl.Folder)
+            .FirstOrDefaultAsync(predicate: l => l.Id == @event.LibraryId, cancellationToken: ct);
 
         if (library is null)
         {
             _logger.LogWarning(
-                "InboxClassifier: Library {LibraryId} not found, dropping event",
-                @event.LibraryId
+                message: "InboxClassifier: Library {LibraryId} not found, dropping event",
+                args: @event.LibraryId
             );
             return;
         }
 
         FolderLibrary? folderLibrary =
-            library.FolderLibraries.FirstOrDefault(fl =>
-                @event.FolderPath.StartsWith(fl.Folder.Path, StringComparison.OrdinalIgnoreCase)
+            library.FolderLibraries.FirstOrDefault(predicate: fl =>
+                @event.FolderPath.StartsWith(value: fl.Folder.Path, comparisonType: StringComparison.OrdinalIgnoreCase)
             ) ?? library.FolderLibraries.FirstOrDefault();
 
         if (folderLibrary is null)
         {
             _logger.LogWarning(
-                "InboxClassifier: No folder found for library {LibraryId}",
-                @event.LibraryId
+                message: "InboxClassifier: No folder found for library {LibraryId}",
+                args: @event.LibraryId
             );
             return;
         }
@@ -128,79 +128,77 @@ public class InboxClassifierEventHandler : IDisposable
         Ulid folderId = folderLibrary.FolderId;
         Ulid driverId = folderLibrary.Folder.DriverId;
 
-        IStorage storage = _storageFactory.For(folderId, driverId, inboxRoot);
+        IStorage storage = _storageFactory.For(folderId: folderId, driverId: driverId, subPath: inboxRoot);
 
-        IReadOnlyList<StorageEntry> children = storage.List("", null, recursive: false);
+        IReadOnlyList<StorageEntry> children = storage.List(path: "", pattern: null, recursive: false);
 
         if (children.Count == 0)
         {
             _logger.LogWarning(
-                "InboxClassifier: No children found in inbox root {InboxRoot}",
-                inboxRoot
+                message: "InboxClassifier: No children found in inbox root {InboxRoot}",
+                args: inboxRoot
             );
             return;
         }
 
         HashSet<string> tracked = await context
             .InboxItems.AsNoTracking()
-            .Select(item => item.SourcePath)
-            .ToHashSetAsync(StringComparer.OrdinalIgnoreCase, ct);
+            .Select(selector: item => item.SourcePath)
+            .ToHashSetAsync(comparer: StringComparer.OrdinalIgnoreCase, cancellationToken: ct);
 
         foreach (StorageEntry child in children)
         {
-            string childPath = storage.CombinePath(inboxRoot, child.Path);
+            string childPath = storage.CombinePath(parent: inboxRoot, child: child.Path);
 
-            if (tracked.Contains(childPath))
+            if (tracked.Contains(item: childPath))
                 continue;
 
             FileContentFingerprint? fingerprint = await TryComputeFingerprintAsync(
-                storage,
-                childPath,
-                child.SizeBytes,
-                ct
+                storage: storage,
+                path: childPath,
+                sizeBytes: child.SizeBytes,
+                ct: ct
             );
-            if (fingerprint is { } fp && !_seenContent.TryAdd(fp, childPath))
+            if (fingerprint is { } fp && !_seenContent.TryAdd(key: fp, value: childPath))
             {
                 _logger.LogInformation(
-                    "InboxClassifier: skipping {ChildPath} — duplicate content already seen at {Fp}",
-                    childPath,
-                    _seenContent[fp]
+                    message: "InboxClassifier: skipping {ChildPath} — duplicate content already seen at {Fp}", args: [childPath, _seenContent[key: fp]]
                 );
                 continue;
             }
 
             _logger.LogInformation(
-                "InboxClassifier: Classifying inbox child {ChildPath}",
-                childPath
+                message: "InboxClassifier: Classifying inbox child {ChildPath}",
+                args: childPath
             );
 
             try
             {
                 ClassificationResult classification = await _classifier.Classify(
-                    childPath,
-                    driverId,
-                    ct
+                    path: childPath,
+                    driverId: driverId,
+                    ct: ct
                 );
                 RouteOutcome outcome = await _routing.Route(
-                    classification,
-                    childPath,
-                    driverId,
-                    context,
-                    ct
+                    classification: classification,
+                    sourcePath: childPath,
+                    driverId: driverId,
+                    context: context,
+                    ct: ct
                 );
 
                 if (outcome.Mode == "auto")
                 {
-                    await _routing.ExecuteAuto(outcome, context, ct);
+                    await _routing.ExecuteAuto(outcome: outcome, context: context, ct: ct);
                 }
                 else
                 {
                     InboxItem item = outcome.Item;
-                    context.InboxItems.Add(item);
-                    await context.SaveChangesAsync(ct);
+                    context.InboxItems.Add(entity: item);
+                    await context.SaveChangesAsync(cancellationToken: ct);
 
                     await _eventBus.PublishAsync(
-                        new InboxItemDetectedEvent
+                        @event: new InboxItemDetectedEvent
                         {
                             Id = item.Id.ToString(),
                             DetectedType = item.DetectedType,
@@ -213,9 +211,7 @@ public class InboxClassifierEventHandler : IDisposable
             catch (Exception ex)
             {
                 _logger.LogError(
-                    "InboxClassifier: Error processing {ChildPath}: {Message}",
-                    childPath,
-                    ex.Message
+                    message: "InboxClassifier: Error processing {ChildPath}: {Message}", args: [childPath, ex.Message]
                 );
 
                 InboxItem failedItem = new()
@@ -231,20 +227,18 @@ public class InboxClassifierEventHandler : IDisposable
                 try
                 {
                     await using MediaContext failContext = _contextFactory();
-                    failContext.InboxItems.Add(failedItem);
-                    await failContext.SaveChangesAsync(ct);
+                    failContext.InboxItems.Add(entity: failedItem);
+                    await failContext.SaveChangesAsync(cancellationToken: ct);
                 }
                 catch (Exception saveEx)
                 {
                     _logger.LogError(
-                        "InboxClassifier: Could not persist Failed item for {ChildPath}: {Message}",
-                        childPath,
-                        saveEx.Message
+                        message: "InboxClassifier: Could not persist Failed item for {ChildPath}: {Message}", args: [childPath, saveEx.Message]
                     );
                 }
 
                 await _eventBus.PublishAsync(
-                    new InboxItemDetectedEvent
+                    @event: new InboxItemDetectedEvent
                     {
                         Id = failedItem.Id.ToString(),
                         DetectedType = failedItem.DetectedType,

@@ -15,159 +15,159 @@ namespace NoMercy.Api.DTOs.Management;
 
 public record ManagementStatusDto
 {
-    [JsonProperty("status")]
+    [JsonProperty(propertyName: "status")]
     public string Status { get; set; } = "ok";
 
-    [JsonProperty("server_name")]
+    [JsonProperty(propertyName: "server_name")]
     public string ServerName { get; set; } = string.Empty;
 
-    [JsonProperty("version")]
+    [JsonProperty(propertyName: "version")]
     public string Version { get; set; } = string.Empty;
 
-    [JsonProperty("platform")]
+    [JsonProperty(propertyName: "platform")]
     public string Platform { get; set; } = string.Empty;
 
-    [JsonProperty("architecture")]
+    [JsonProperty(propertyName: "architecture")]
     public string Architecture { get; set; } = string.Empty;
 
-    [JsonProperty("os")]
+    [JsonProperty(propertyName: "os")]
     public string Os { get; set; } = string.Empty;
 
-    [JsonProperty("uptime_seconds")]
+    [JsonProperty(propertyName: "uptime_seconds")]
     public long UptimeSeconds { get; set; }
 
-    [JsonProperty("start_time")]
+    [JsonProperty(propertyName: "start_time")]
     public DateTime StartTime { get; set; }
 
-    [JsonProperty("is_dev")]
+    [JsonProperty(propertyName: "is_dev")]
     public bool IsDev { get; set; }
 
-    [JsonProperty("auto_start")]
+    [JsonProperty(propertyName: "auto_start")]
     public bool AutoStart { get; set; }
 
-    [JsonProperty("is_docker")]
+    [JsonProperty(propertyName: "is_docker")]
     public bool IsDocker { get; set; }
 
-    [JsonProperty("update_available")]
+    [JsonProperty(propertyName: "update_available")]
     public bool UpdateAvailable { get; set; }
 
-    [JsonProperty("restart_needed")]
+    [JsonProperty(propertyName: "restart_needed")]
     public bool RestartNeeded { get; set; }
 
-    [JsonProperty("latest_version")]
+    [JsonProperty(propertyName: "latest_version")]
     public string? LatestVersion { get; set; }
 
-    [JsonProperty("setup_phase")]
+    [JsonProperty(propertyName: "setup_phase")]
     public string? SetupPhase { get; set; }
 
-    [JsonProperty("internal_address")]
+    [JsonProperty(propertyName: "internal_address")]
     public string? InternalAddress { get; set; }
 
-    [JsonProperty("external_address")]
+    [JsonProperty(propertyName: "external_address")]
     public string? ExternalAddress { get; set; }
 
-    [JsonProperty("app_status")]
+    [JsonProperty(propertyName: "app_status")]
     public AppProcessStatusDto? AppStatus { get; set; }
 }
 
 public record AppProcessStatusDto
 {
-    [JsonProperty("running")]
+    [JsonProperty(propertyName: "running")]
     public bool Running { get; set; }
 
-    [JsonProperty("pid")]
+    [JsonProperty(propertyName: "pid")]
     public int? Pid { get; set; }
 }
 
 public record ManagementConfigDto
 {
-    [JsonProperty("internal_port")]
+    [JsonProperty(propertyName: "internal_port")]
     public int InternalPort { get; set; }
 
-    [JsonProperty("external_port")]
+    [JsonProperty(propertyName: "external_port")]
     public int ExternalPort { get; set; }
 
-    [JsonProperty("server_name")]
+    [JsonProperty(propertyName: "server_name")]
     public string? ServerName { get; set; }
 
-    [JsonProperty("library_workers")]
+    [JsonProperty(propertyName: "library_workers")]
     public int LibraryWorkers { get; set; }
 
-    [JsonProperty("import_workers")]
+    [JsonProperty(propertyName: "import_workers")]
     public int ImportWorkers { get; set; }
 
-    [JsonProperty("extras_workers")]
+    [JsonProperty(propertyName: "extras_workers")]
     public int ExtrasWorkers { get; set; }
 
-    [JsonProperty("encoder_workers")]
+    [JsonProperty(propertyName: "encoder_workers")]
     public int EncoderWorkers { get; set; }
 
-    [JsonProperty("cron_workers")]
+    [JsonProperty(propertyName: "cron_workers")]
     public int CronWorkers { get; set; }
 
-    [JsonProperty("image_workers")]
+    [JsonProperty(propertyName: "image_workers")]
     public int ImageWorkers { get; set; }
 
-    [JsonProperty("file_workers")]
+    [JsonProperty(propertyName: "file_workers")]
     public int FileWorkers { get; set; }
 
-    [JsonProperty("music_workers")]
+    [JsonProperty(propertyName: "music_workers")]
     public int MusicWorkers { get; set; }
 
-    [JsonProperty("swagger")]
+    [JsonProperty(propertyName: "swagger")]
     public bool Swagger { get; set; }
 }
 
 public record ManagementConfigUpdateDto
 {
-    [JsonProperty("server_name")]
+    [JsonProperty(propertyName: "server_name")]
     public string? ServerName { get; set; }
 
-    [JsonProperty("library_workers")]
+    [JsonProperty(propertyName: "library_workers")]
     public int? LibraryWorkers { get; set; }
 
-    [JsonProperty("import_workers")]
+    [JsonProperty(propertyName: "import_workers")]
     public int? ImportWorkers { get; set; }
 
-    [JsonProperty("extras_workers")]
+    [JsonProperty(propertyName: "extras_workers")]
     public int? ExtrasWorkers { get; set; }
 
-    [JsonProperty("encoder_workers")]
+    [JsonProperty(propertyName: "encoder_workers")]
     public int? EncoderWorkers { get; set; }
 
-    [JsonProperty("cron_workers")]
+    [JsonProperty(propertyName: "cron_workers")]
     public int? CronWorkers { get; set; }
 
-    [JsonProperty("image_workers")]
+    [JsonProperty(propertyName: "image_workers")]
     public int? ImageWorkers { get; set; }
 
-    [JsonProperty("file_workers")]
+    [JsonProperty(propertyName: "file_workers")]
     public int? FileWorkers { get; set; }
 
-    [JsonProperty("music_workers")]
+    [JsonProperty(propertyName: "music_workers")]
     public int? MusicWorkers { get; set; }
 }
 
 public record ManagementQueueStatusDto
 {
-    [JsonProperty("workers")]
+    [JsonProperty(propertyName: "workers")]
     public Dictionary<string, ManagementWorkerStatusDto> Workers { get; set; } = new();
 
-    [JsonProperty("pending_jobs")]
+    [JsonProperty(propertyName: "pending_jobs")]
     public int PendingJobs { get; set; }
 
-    [JsonProperty("failed_jobs")]
+    [JsonProperty(propertyName: "failed_jobs")]
     public int FailedJobs { get; set; }
 }
 
 public record ManagementWorkerStatusDto
 {
-    [JsonProperty("active_threads")]
+    [JsonProperty(propertyName: "active_threads")]
     public int ActiveThreads { get; set; }
 }
 
 public record AutoStartDto
 {
-    [JsonProperty("enabled")]
+    [JsonProperty(propertyName: "enabled")]
     public bool Enabled { get; set; }
 }

@@ -40,7 +40,7 @@ public class StorageMonitor
                 resourceMonitorDto.Available = d.AvailableFreeSpace / 1024 / 1024 / 1024;
             }
 
-            resourceMonitorDtos.Add(resourceMonitorDto);
+            resourceMonitorDtos.Add(item: resourceMonitorDto);
         }
 
         return resourceMonitorDtos;
@@ -51,17 +51,17 @@ public class StorageMonitor
         using MediaContext context = new();
 
         _libraries = context
-            .Libraries.Include(library => library.FolderLibraries)
-                .ThenInclude(folderLibrary => folderLibrary.Folder)
-            .Include(library => library.LibraryTvs)
-                .ThenInclude(folder => folder.Tv)
-                    .ThenInclude(tv => tv.Episodes)
-                        .ThenInclude(episode => episode.VideoFiles)
-            .Include(folder => folder.LibraryMovies)
-                .ThenInclude(folder => folder.Movie)
-                    .ThenInclude(movie => movie.VideoFiles)
-            .Include(folder => folder.LibraryTracks)
-                .ThenInclude(folder => folder.Track)
+            .Libraries.Include(navigationPropertyPath: library => library.FolderLibraries)
+                .ThenInclude(navigationPropertyPath: folderLibrary => folderLibrary.Folder)
+            .Include(navigationPropertyPath: library => library.LibraryTvs)
+                .ThenInclude(navigationPropertyPath: folder => folder.Tv)
+                    .ThenInclude(navigationPropertyPath: tv => tv.Episodes)
+                        .ThenInclude(navigationPropertyPath: episode => episode.VideoFiles)
+            .Include(navigationPropertyPath: folder => folder.LibraryMovies)
+                .ThenInclude(navigationPropertyPath: folder => folder.Movie)
+                    .ThenInclude(navigationPropertyPath: movie => movie.VideoFiles)
+            .Include(navigationPropertyPath: folder => folder.LibraryTracks)
+                .ThenInclude(navigationPropertyPath: folder => folder.Track)
             .ToList();
 
         foreach (Library library in _libraries)
@@ -80,7 +80,7 @@ public class StorageMonitor
                     Other = 0,
                 },
             };
-            Storage.Add(movieStorageDto);
+            Storage.Add(item: movieStorageDto);
 
             StorageDto tvStorageDto = new()
             {
@@ -95,7 +95,7 @@ public class StorageMonitor
                     Other = 0,
                 },
             };
-            Storage.Add(tvStorageDto);
+            Storage.Add(item: tvStorageDto);
 
             StorageDto musicStorageDto = new()
             {
@@ -110,10 +110,10 @@ public class StorageMonitor
                     Other = 0,
                 },
             };
-            Storage.Add(musicStorageDto);
+            Storage.Add(item: musicStorageDto);
         }
 
-        Storage = Storage.GroupBy(f => f.Path).Select(f => f.First()).ToList();
+        Storage = Storage.GroupBy(keySelector: f => f.Path).Select(selector: f => f.First()).ToList();
 
         return Task.CompletedTask;
     }
@@ -121,44 +121,44 @@ public class StorageMonitor
 
 public record StorageDto
 {
-    [JsonProperty("path")]
+    [JsonProperty(propertyName: "path")]
     public string Path { get; set; } = string.Empty;
 
-    [JsonProperty("data")]
+    [JsonProperty(propertyName: "data")]
     public Usage Data { get; set; } = new();
 }
 
 public class Usage
 {
-    [JsonProperty("movies")]
+    [JsonProperty(propertyName: "movies")]
     public long Movies
     {
-        get => CalculatePercentage(field);
+        get => CalculatePercentage(value: field);
         set => field = value / 1024 / 8;
     }
 
-    [JsonProperty("shows")]
+    [JsonProperty(propertyName: "shows")]
     public long Shows
     {
-        get => CalculatePercentage(field);
+        get => CalculatePercentage(value: field);
         set => field = value / 1024 / 8;
     }
 
-    [JsonProperty("music")]
+    [JsonProperty(propertyName: "music")]
     public long Music
     {
-        get => CalculatePercentage(field);
+        get => CalculatePercentage(value: field);
         set => field = value / 1024 / 8;
     }
 
-    [JsonProperty("other")]
+    [JsonProperty(propertyName: "other")]
     public long Other
     {
-        get => CalculatePercentage(field);
+        get => CalculatePercentage(value: field);
         set => field = value / 1024 / 8;
     }
 
-    [JsonProperty("used")]
+    [JsonProperty(propertyName: "used")]
     public long Used
     {
         get;

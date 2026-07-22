@@ -29,100 +29,100 @@ public sealed class LocalStorage : IStorage
 
     public LocalStorage(IStorageDriver driver, StoragePathGuard guard)
     {
-        _driver = driver ?? throw new ArgumentNullException(nameof(driver));
-        _guard = guard ?? throw new ArgumentNullException(nameof(guard));
+        _driver = driver ?? throw new ArgumentNullException(paramName: nameof(driver));
+        _guard = guard ?? throw new ArgumentNullException(paramName: nameof(guard));
     }
 
     public IStorageDriver Driver => _driver;
 
     public async Task<byte[]> ReadAsync(string path, CancellationToken ct)
     {
-        string safe = ValidateScoped(path);
-        await using Stream stream = _driver.OpenRead(safe);
+        string safe = ValidateScoped(path: path);
+        await using Stream stream = _driver.OpenRead(path: safe);
         using MemoryStream ms = new();
-        await stream.CopyToAsync(ms, ct);
+        await stream.CopyToAsync(destination: ms, cancellationToken: ct);
         return ms.ToArray();
     }
 
     public Task<Stream> OpenReadAsync(string path, CancellationToken ct)
     {
-        string safe = ValidateScoped(path);
-        return Task.FromResult(_driver.OpenRead(safe));
+        string safe = ValidateScoped(path: path);
+        return Task.FromResult(result: _driver.OpenRead(path: safe));
     }
 
     public async Task WriteAsync(string path, byte[] bytes, CancellationToken ct)
     {
-        string safe = ValidateScoped(path);
-        EnsureParentDirectory(safe);
-        await using Stream stream = _driver.OpenWrite(safe, overwrite: true);
-        await stream.WriteAsync(bytes.AsMemory(), ct);
+        string safe = ValidateScoped(path: path);
+        EnsureParentDirectory(path: safe);
+        await using Stream stream = _driver.OpenWrite(path: safe, overwrite: true);
+        await stream.WriteAsync(buffer: bytes.AsMemory(), cancellationToken: ct);
     }
 
     public Task<Stream> OpenWriteAsync(string path, bool overwrite, CancellationToken ct)
     {
-        string safe = ValidateScoped(path);
-        EnsureParentDirectory(safe);
-        return Task.FromResult(_driver.OpenWrite(safe, overwrite));
+        string safe = ValidateScoped(path: path);
+        EnsureParentDirectory(path: safe);
+        return Task.FromResult(result: _driver.OpenWrite(path: safe, overwrite: overwrite));
     }
 
     public Task<bool> ExistsAsync(string path, CancellationToken ct)
     {
-        string safe = ValidateScoped(path);
-        return Task.FromResult(_driver.FileExists(safe) || _driver.DirectoryExists(safe));
+        string safe = ValidateScoped(path: path);
+        return Task.FromResult(result: _driver.FileExists(path: safe) || _driver.DirectoryExists(path: safe));
     }
 
     public Task DeleteAsync(string path, CancellationToken ct)
     {
-        string safe = ValidateScoped(path);
-        if (_driver.FileExists(safe))
-            _driver.DeleteFile(safe);
+        string safe = ValidateScoped(path: path);
+        if (_driver.FileExists(path: safe))
+            _driver.DeleteFile(path: safe);
         return Task.CompletedTask;
     }
 
     public Task DeleteDirectoryAsync(string path, bool recursive, CancellationToken ct)
     {
-        string safe = ValidateScoped(path);
-        if (_driver.DirectoryExists(safe))
-            _driver.DeleteDirectory(safe, recursive);
+        string safe = ValidateScoped(path: path);
+        if (_driver.DirectoryExists(path: safe))
+            _driver.DeleteDirectory(path: safe, recursive: recursive);
         return Task.CompletedTask;
     }
 
     public Task CreateDirectoryAsync(string path, CancellationToken ct)
     {
-        string safe = ValidateScoped(path);
-        _driver.CreateDirectory(safe);
+        string safe = ValidateScoped(path: path);
+        _driver.CreateDirectory(path: safe);
         return Task.CompletedTask;
     }
 
     public Task MoveAsync(string from, string to, CancellationToken ct)
     {
-        string safeFrom = ValidateScoped(from);
-        string safeTo = ValidateScoped(to);
-        EnsureParentDirectory(safeTo);
-        _driver.MoveFile(safeFrom, safeTo);
+        string safeFrom = ValidateScoped(path: from);
+        string safeTo = ValidateScoped(path: to);
+        EnsureParentDirectory(path: safeTo);
+        _driver.MoveFile(source: safeFrom, destination: safeTo);
         return Task.CompletedTask;
     }
 
     public Task CopyAsync(string from, string to, CancellationToken ct)
     {
-        string safeFrom = ValidateScoped(from);
-        string safeTo = ValidateScoped(to);
-        EnsureParentDirectory(safeTo);
-        _driver.CopyFile(safeFrom, safeTo, overwrite: true);
+        string safeFrom = ValidateScoped(path: from);
+        string safeTo = ValidateScoped(path: to);
+        EnsureParentDirectory(path: safeTo);
+        _driver.CopyFile(source: safeFrom, destination: safeTo, overwrite: true);
         return Task.CompletedTask;
     }
 
     public Task<long> SizeAsync(string path, CancellationToken ct)
     {
-        string safe = ValidateScoped(path);
-        return Task.FromResult(_driver.GetFileSize(safe));
+        string safe = ValidateScoped(path: path);
+        return Task.FromResult(result: _driver.GetFileSize(path: safe));
     }
 
     public Task<DateTimeOffset> LastModifiedAsync(string path, CancellationToken ct)
     {
-        string safe = ValidateScoped(path);
-        DateTime utc = _driver.GetLastWriteTimeUtc(safe);
-        return Task.FromResult(new DateTimeOffset(utc, TimeSpan.Zero));
+        string safe = ValidateScoped(path: path);
+        DateTime utc = _driver.GetLastWriteTimeUtc(path: safe);
+        return Task.FromResult(result: new DateTimeOffset(dateTime: utc, offset: TimeSpan.Zero));
     }
 
     public async IAsyncEnumerable<StorageEntry> ListAsync(
@@ -132,20 +132,20 @@ public sealed class LocalStorage : IStorage
         [EnumeratorCancellation] CancellationToken ct
     )
     {
-        string safe = ValidateScoped(path);
+        string safe = ValidateScoped(path: path);
         SearchOption option = recursive
             ? SearchOption.AllDirectories
             : SearchOption.TopDirectoryOnly;
-        string effectivePattern = string.IsNullOrEmpty(pattern) ? "*" : pattern;
+        string effectivePattern = string.IsNullOrEmpty(value: pattern) ? "*" : pattern;
 
-        foreach (StorageEntryInfo info in _driver.EnumerateEntries(safe, effectivePattern, option))
+        foreach (StorageEntryInfo info in _driver.EnumerateEntries(directory: safe, searchPattern: effectivePattern, option: option))
         {
             ct.ThrowIfCancellationRequested();
             yield return new(
-                ToScopeRelative(info.Path),
-                info.IsDirectory,
-                info.Size,
-                new(info.LastWriteUtc, TimeSpan.Zero)
+                Path: ToScopeRelative(absolutePath: info.Path),
+                IsDirectory: info.IsDirectory,
+                SizeBytes: info.Size,
+                LastModified: new(dateTime: info.LastWriteUtc, offset: TimeSpan.Zero)
             );
             await Task.Yield();
         }
@@ -153,127 +153,127 @@ public sealed class LocalStorage : IStorage
 
     public async Task<string> HashAsync(string path, string algorithm, CancellationToken ct)
     {
-        string safe = ValidateScoped(path);
+        string safe = ValidateScoped(path: path);
         using HashAlgorithm hasher = algorithm.ToLowerInvariant() switch
         {
             "sha256" => SHA256.Create(),
             "md5" => MD5.Create(),
             _ => throw new ArgumentException(
-                $"unsupported hash algorithm: {algorithm} (allowed: sha256, md5)",
-                nameof(algorithm)
+                message: $"unsupported hash algorithm: {algorithm} (allowed: sha256, md5)",
+                paramName: nameof(algorithm)
             ),
         };
 
-        await using Stream stream = _driver.OpenRead(safe);
-        byte[] digest = await hasher.ComputeHashAsync(stream, ct);
-        return Convert.ToHexString(digest).ToLowerInvariant();
+        await using Stream stream = _driver.OpenRead(path: safe);
+        byte[] digest = await hasher.ComputeHashAsync(inputStream: stream, cancellationToken: ct);
+        return Convert.ToHexString(inArray: digest).ToLowerInvariant();
     }
 
     public Task<LocalPathLease> AcquireLocalPathAsync(string path, CancellationToken ct)
     {
-        string safe = ValidateScoped(path);
-        return Task.FromResult(new LocalPathLease(safe));
+        string safe = ValidateScoped(path: path);
+        return Task.FromResult(result: new LocalPathLease(path: safe));
     }
 
     // --- Sync companions ----------------------------------------------------
 
     public bool Exists(string path)
     {
-        string safe = ValidateScoped(path);
-        return _driver.FileExists(safe) || _driver.DirectoryExists(safe);
+        string safe = ValidateScoped(path: path);
+        return _driver.FileExists(path: safe) || _driver.DirectoryExists(path: safe);
     }
 
     public long SizeOrZero(string path)
     {
-        string safe = ValidateScoped(path);
-        return _driver.FileExists(safe) ? _driver.GetFileSize(safe) : 0L;
+        string safe = ValidateScoped(path: path);
+        return _driver.FileExists(path: safe) ? _driver.GetFileSize(path: safe) : 0L;
     }
 
     public long Size(string path)
     {
-        string safe = ValidateScoped(path);
-        return _driver.GetFileSize(safe);
+        string safe = ValidateScoped(path: path);
+        return _driver.GetFileSize(path: safe);
     }
 
     public DateTimeOffset LastModified(string path)
     {
-        string safe = ValidateScoped(path);
-        return new(_driver.GetLastWriteTimeUtc(safe), TimeSpan.Zero);
+        string safe = ValidateScoped(path: path);
+        return new(dateTime: _driver.GetLastWriteTimeUtc(path: safe), offset: TimeSpan.Zero);
     }
 
     public void CreateDirectory(string path)
     {
-        string safe = ValidateScoped(path);
-        _driver.CreateDirectory(safe);
+        string safe = ValidateScoped(path: path);
+        _driver.CreateDirectory(path: safe);
     }
 
     public void Delete(string path)
     {
-        string safe = ValidateScoped(path);
-        if (_driver.FileExists(safe))
-            _driver.DeleteFile(safe);
+        string safe = ValidateScoped(path: path);
+        if (_driver.FileExists(path: safe))
+            _driver.DeleteFile(path: safe);
     }
 
     public void DeleteDirectory(string path, bool recursive)
     {
-        string safe = ValidateScoped(path);
-        if (_driver.DirectoryExists(safe))
-            _driver.DeleteDirectory(safe, recursive);
+        string safe = ValidateScoped(path: path);
+        if (_driver.DirectoryExists(path: safe))
+            _driver.DeleteDirectory(path: safe, recursive: recursive);
     }
 
     public byte[] Read(string path)
     {
-        string safe = ValidateScoped(path);
-        using Stream stream = _driver.OpenRead(safe);
+        string safe = ValidateScoped(path: path);
+        using Stream stream = _driver.OpenRead(path: safe);
         using MemoryStream ms = new();
-        stream.CopyTo(ms);
+        stream.CopyTo(destination: ms);
         return ms.ToArray();
     }
 
     public Stream OpenRead(string path)
     {
-        string safe = ValidateScoped(path);
-        return _driver.OpenRead(safe);
+        string safe = ValidateScoped(path: path);
+        return _driver.OpenRead(path: safe);
     }
 
     public Stream OpenWrite(string path, bool overwrite)
     {
-        string safe = ValidateScoped(path);
-        EnsureParentDirectory(safe);
-        return _driver.OpenWrite(safe, overwrite);
+        string safe = ValidateScoped(path: path);
+        EnsureParentDirectory(path: safe);
+        return _driver.OpenWrite(path: safe, overwrite: overwrite);
     }
 
     public void Write(string path, byte[] bytes)
     {
-        string safe = ValidateScoped(path);
-        EnsureParentDirectory(safe);
-        using Stream stream = _driver.OpenWrite(safe, overwrite: true);
-        stream.Write(bytes, 0, bytes.Length);
+        string safe = ValidateScoped(path: path);
+        EnsureParentDirectory(path: safe);
+        using Stream stream = _driver.OpenWrite(path: safe, overwrite: true);
+        stream.Write(buffer: bytes, offset: 0, count: bytes.Length);
     }
 
     public void Move(string from, string to)
     {
-        string safeFrom = ValidateScoped(from);
-        string safeTo = ValidateScoped(to);
-        EnsureParentDirectory(safeTo);
-        _driver.MoveFile(safeFrom, safeTo);
+        string safeFrom = ValidateScoped(path: from);
+        string safeTo = ValidateScoped(path: to);
+        EnsureParentDirectory(path: safeTo);
+        _driver.MoveFile(source: safeFrom, destination: safeTo);
     }
 
     public void Copy(string from, string to)
     {
-        string safeFrom = ValidateScoped(from);
-        string safeTo = ValidateScoped(to);
-        EnsureParentDirectory(safeTo);
-        _driver.CopyFile(safeFrom, safeTo, overwrite: true);
+        string safeFrom = ValidateScoped(path: from);
+        string safeTo = ValidateScoped(path: to);
+        EnsureParentDirectory(path: safeTo);
+        _driver.CopyFile(source: safeFrom, destination: safeTo, overwrite: true);
     }
 
     public IReadOnlyList<StorageEntry> List(string path, string? pattern, bool recursive)
     {
-        string safe = ValidateScoped(path);
+        string safe = ValidateScoped(path: path);
         SearchOption option = recursive
             ? SearchOption.AllDirectories
             : SearchOption.TopDirectoryOnly;
-        string effectivePattern = string.IsNullOrEmpty(pattern) ? "*" : pattern;
+        string effectivePattern = string.IsNullOrEmpty(value: pattern) ? "*" : pattern;
 
         List<StorageEntry> entries = [];
         // Single-pass metadata via the driver's readdir enumeration — size,
@@ -283,13 +283,13 @@ public sealed class LocalStorage : IStorage
         // (DirectoryExists + GetFileSize + GetLastWriteTimeUtc); over a network
         // mount that turned one listing of a rendition dir into hundreds of
         // round-trips, and a library scan lists every rendition dir of every file.
-        foreach (StorageEntryInfo info in _driver.EnumerateEntries(safe, effectivePattern, option))
+        foreach (StorageEntryInfo info in _driver.EnumerateEntries(directory: safe, searchPattern: effectivePattern, option: option))
             entries.Add(
-                new(
-                    ToScopeRelative(info.Path),
-                    info.IsDirectory,
-                    info.Size,
-                    new(info.LastWriteUtc, TimeSpan.Zero)
+                item: new(
+                    Path: ToScopeRelative(absolutePath: info.Path),
+                    IsDirectory: info.IsDirectory,
+                    SizeBytes: info.Size,
+                    LastModified: new(dateTime: info.LastWriteUtc, offset: TimeSpan.Zero)
                 )
             );
         return entries;
@@ -297,19 +297,19 @@ public sealed class LocalStorage : IStorage
 
     public LocalPathLease AcquireLocalPath(string path)
     {
-        string safe = ValidateScoped(path);
-        return new(safe);
+        string safe = ValidateScoped(path: path);
+        return new(path: safe);
     }
 
-    string IStorage.GetFullPath(string path) => ValidateScoped(path);
+    string IStorage.GetFullPath(string path) => ValidateScoped(path: path);
 
     private void EnsureParentDirectory(string path)
     {
-        string? parent = Path.GetDirectoryName(path);
-        if (string.IsNullOrEmpty(parent))
+        string? parent = Path.GetDirectoryName(path: path);
+        if (string.IsNullOrEmpty(value: parent))
             return;
-        if (!_driver.DirectoryExists(parent))
-            _driver.CreateDirectory(parent);
+        if (!_driver.DirectoryExists(path: parent))
+            _driver.CreateDirectory(path: parent);
     }
 
     /// <summary>
@@ -332,16 +332,16 @@ public sealed class LocalStorage : IStorage
         if (!_guard.Enforced || _guard.AllowedRoots.Count == 0)
             return path;
 
-        string root = _guard.AllowedRoots[0];
+        string root = _guard.AllowedRoots[index: 0];
 
-        if (string.IsNullOrEmpty(path))
+        if (string.IsNullOrEmpty(value: path))
             return root;
 
-        if (StoragePathGuard.IsRootedAnyStyle(path))
+        if (StoragePathGuard.IsRootedAnyStyle(path: path))
             return path;
 
-        string normalized = path.Replace('\\', '/').TrimStart('/');
-        return Path.Combine(root, normalized.Replace('/', Path.DirectorySeparatorChar));
+        string normalized = path.Replace(oldChar: '\\', newChar: '/').TrimStart(trimChar: '/');
+        return Path.Combine(path1: root, path2: normalized.Replace(oldChar: '/', newChar: Path.DirectorySeparatorChar));
     }
 
     /// <summary>
@@ -351,7 +351,7 @@ public sealed class LocalStorage : IStorage
     /// dashboard browser, anything outside the process CWD) trip the
     /// under-root guard check.
     /// </summary>
-    private string ValidateScoped(string path) => _guard.Validate(ResolveAgainstScopedRoot(path));
+    private string ValidateScoped(string path) => _guard.Validate(requestedPath: ResolveAgainstScopedRoot(path: path));
 
     /// <summary>
     /// Strips the configured scoped root from an OS-absolute path returned
@@ -362,54 +362,54 @@ public sealed class LocalStorage : IStorage
     /// </summary>
     private string ToScopeRelative(string absolutePath)
     {
-        string normalized = absolutePath.Replace('\\', '/');
+        string normalized = absolutePath.Replace(oldChar: '\\', newChar: '/');
 
         if (!_guard.Enforced || _guard.AllowedRoots.Count == 0)
             return normalized;
 
-        string root = _guard.AllowedRoots[0].Replace('\\', '/').TrimEnd('/');
+        string root = _guard.AllowedRoots[index: 0].Replace(oldChar: '\\', newChar: '/').TrimEnd(trimChar: '/');
 
         StringComparison comparison = OperatingSystem.IsWindows()
             ? StringComparison.OrdinalIgnoreCase
             : StringComparison.Ordinal;
 
-        if (normalized.StartsWith(root + '/', comparison))
+        if (normalized.StartsWith(value: root + '/', comparisonType: comparison))
             return normalized[(root.Length + 1)..];
 
-        if (string.Equals(normalized, root, comparison))
+        if (string.Equals(a: normalized, b: root, comparisonType: comparison))
             return string.Empty;
 
-        return normalized.TrimStart('/');
+        return normalized.TrimStart(trimChar: '/');
     }
 
     public async Task<string> ReadAllTextAsync(string path, CancellationToken ct)
     {
-        string safe = ValidateScoped(path);
-        using StreamReader reader = new(_driver.OpenRead(safe));
-        return await reader.ReadToEndAsync(ct);
+        string safe = ValidateScoped(path: path);
+        using StreamReader reader = new(stream: _driver.OpenRead(path: safe));
+        return await reader.ReadToEndAsync(cancellationToken: ct);
     }
 
     public async Task WriteAllTextAsync(string path, string contents, CancellationToken ct)
     {
-        string safe = ValidateScoped(path);
-        EnsureParentDirectory(safe);
-        await using StreamWriter writer = new(_driver.OpenWrite(safe, overwrite: true));
-        await writer.WriteAsync(contents.AsMemory(), ct);
-        await writer.FlushAsync(ct);
+        string safe = ValidateScoped(path: path);
+        EnsureParentDirectory(path: safe);
+        await using StreamWriter writer = new(stream: _driver.OpenWrite(path: safe, overwrite: true));
+        await writer.WriteAsync(buffer: contents.AsMemory(), cancellationToken: ct);
+        await writer.FlushAsync(cancellationToken: ct);
     }
 
     public Task MoveDirectoryAsync(string from, string to, CancellationToken ct)
     {
-        string safeFrom = ValidateScoped(from);
-        string safeTo = ValidateScoped(to);
-        _driver.MoveDirectory(safeFrom, safeTo);
+        string safeFrom = ValidateScoped(path: from);
+        string safeTo = ValidateScoped(path: to);
+        _driver.MoveDirectory(source: safeFrom, destination: safeTo);
         return Task.CompletedTask;
     }
 
     public void MoveDirectory(string from, string to)
     {
-        string safeFrom = ValidateScoped(from);
-        string safeTo = ValidateScoped(to);
-        _driver.MoveDirectory(safeFrom, safeTo);
+        string safeFrom = ValidateScoped(path: from);
+        string safeTo = ValidateScoped(path: to);
+        _driver.MoveDirectory(source: safeFrom, destination: safeTo);
     }
 }

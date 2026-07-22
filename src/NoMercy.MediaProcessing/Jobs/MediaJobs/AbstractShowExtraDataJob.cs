@@ -50,7 +50,7 @@ public abstract class AbstractShowExtraDataJob<T, TS> : IShouldQueue
     public ILoggerFactory LoggerFactory { get; private set; } = null!;
 
     [JsonIgnore]
-    protected ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
+    protected ILogger Log => field ??= LoggerFactory.CreateLogger(type: GetType());
 
     public abstract Task Handle();
 

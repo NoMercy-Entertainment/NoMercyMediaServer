@@ -22,16 +22,16 @@ public class EventBusProviderTests
     {
         InMemoryEventBus bus = new();
 
-        EventBusProvider.Configure(bus);
+        EventBusProvider.Configure(eventBus: bus);
 
         EventBusProvider.IsConfigured.Should().BeTrue();
-        EventBusProvider.Current.Should().BeSameAs(bus);
+        EventBusProvider.Current.Should().BeSameAs(expected: bus);
     }
 
     [Fact]
     public void Configure_NullArg_ThrowsArgumentNullException()
     {
-        Action act = () => EventBusProvider.Configure(null!);
+        Action act = () => EventBusProvider.Configure(eventBus: null!);
 
         act.Should().Throw<ArgumentNullException>();
     }

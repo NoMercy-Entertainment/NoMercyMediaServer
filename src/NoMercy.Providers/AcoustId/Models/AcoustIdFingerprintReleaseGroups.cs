@@ -15,30 +15,30 @@ namespace NoMercy.Providers.AcoustId.Models;
 
 public class AcoustIdFingerprintReleaseGroups
 {
-    [JsonProperty("artists")]
+    [JsonProperty(propertyName: "artists")]
     public AcoustIdFingerprintArtist[] Artists { get; set; } = [];
 
-    [JsonProperty("country")]
+    [JsonProperty(propertyName: "country")]
     public string Country { get; set; } = string.Empty;
 
-    [JsonProperty("date")]
+    [JsonProperty(propertyName: "date")]
     public AcoustIdFingerprintDate? Date { get; set; }
 
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public Guid Id { get; set; }
 
-    [JsonProperty("medium_count")]
+    [JsonProperty(propertyName: "medium_count")]
     public int? MediumCount { get; set; }
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string? Title { get; set; }
 
-    [JsonProperty("track_count")]
+    [JsonProperty(propertyName: "track_count")]
     public int? TrackCount { get; set; } = 0;
 
-    [JsonProperty("mediums")]
+    [JsonProperty(propertyName: "mediums")]
     public AcoustIdFingerprintMedium[] Mediums { get; set; } = [];
 
-    [JsonProperty("releaseevents")]
+    [JsonProperty(propertyName: "releaseevents")]
     public AcoustIdFingerprintReleaseEvent[] Releaseevents { get; set; } = [];
 }

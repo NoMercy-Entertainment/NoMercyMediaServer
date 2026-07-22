@@ -28,7 +28,7 @@ public class JobDispatcher : IJobDispatcher
 
     public void Dispatch(IShouldQueue job)
     {
-        Dispatch(job, job.QueueName, job.Priority);
+        Dispatch(job: job, onQueue: job.QueueName, priority: job.Priority);
     }
 
     public void Dispatch(IShouldQueue job, string onQueue, int priority)
@@ -36,18 +36,18 @@ public class JobDispatcher : IJobDispatcher
         QueueJobModel jobData = new()
         {
             Queue = onQueue,
-            Payload = SerializationHelper.Serialize(job),
+            Payload = SerializationHelper.Serialize(obj: job),
             AvailableAt = DateTime.UtcNow,
             Priority = priority,
         };
 
         try
         {
-            _queue.Enqueue(jobData);
+            _queue.Enqueue(queueJob: jobData);
         }
         catch (Exception e)
         {
-            _logger.LogError("{Message}", e.Message);
+            _logger.LogError(message: "{Message}", args: e.Message);
         }
     }
 
@@ -62,7 +62,7 @@ public class JobDispatcher : IJobDispatcher
         QueueJobModel jobData = new()
         {
             Queue = onQueue,
-            Payload = SerializationHelper.Serialize(job),
+            Payload = SerializationHelper.Serialize(obj: job),
             AvailableAt = DateTime.UtcNow,
             Priority = priority,
             ParentJobId = parentJobId,
@@ -71,11 +71,11 @@ public class JobDispatcher : IJobDispatcher
 
         try
         {
-            _queue.Enqueue(jobData);
+            _queue.Enqueue(queueJob: jobData);
         }
         catch (Exception e)
         {
-            _logger.LogError("{Message}", e.Message);
+            _logger.LogError(message: "{Message}", args: e.Message);
         }
     }
 }

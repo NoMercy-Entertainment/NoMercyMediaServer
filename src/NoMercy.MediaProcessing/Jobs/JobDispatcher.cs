@@ -38,12 +38,12 @@ public class JobDispatcher : IJobDispatcher
 
     public void Dispatch(IShouldQueue job)
     {
-        Dispatcher.Dispatch(job);
+        Dispatcher.Dispatch(job: job);
     }
 
     public virtual void Dispatch(IShouldQueue job, string onQueue, int priority)
     {
-        Dispatcher.Dispatch(job, onQueue, priority);
+        Dispatcher.Dispatch(job: job, onQueue: onQueue, priority: priority);
     }
 
     public void DispatchChild(
@@ -54,13 +54,13 @@ public class JobDispatcher : IJobDispatcher
         string groupTag
     )
     {
-        Dispatcher.DispatchChild(job, onQueue, priority, parentJobId, groupTag);
+        Dispatcher.DispatchChild(job: job, onQueue: onQueue, priority: priority, parentJobId: parentJobId, groupTag: groupTag);
     }
 
     private QueueJobDispatcher Dispatcher =>
         field
         ?? throw new InvalidOperationException(
-            "JobDispatcher requires a QueueRunner instance. Ensure QueueRunner is initialized before dispatching jobs."
+            message: "JobDispatcher requires a QueueRunner instance. Ensure QueueRunner is initialized before dispatching jobs."
         );
 
     public virtual void DispatchJob<TJob>(
@@ -80,7 +80,7 @@ public class JobDispatcher : IJobDispatcher
             InputFile = inputFile,
             SourceDriverId = sourceDriverId,
         };
-        Dispatcher.Dispatch(job);
+        Dispatcher.Dispatch(job: job);
     }
 
     public virtual void DispatchJob<TJob>(
@@ -97,7 +97,7 @@ public class JobDispatcher : IJobDispatcher
             ReleaseId = releaseId,
             InputFolder = filePath,
         };
-        Dispatcher.Dispatch(job);
+        Dispatcher.Dispatch(job: job);
     }
 
     public virtual void DispatchJob<TJob>(Ulid libraryId, Ulid folderId, string filePath)
@@ -109,49 +109,49 @@ public class JobDispatcher : IJobDispatcher
             FolderId = folderId,
             InputFolder = filePath,
         };
-        Dispatcher.Dispatch(job);
+        Dispatcher.Dispatch(job: job);
     }
 
     public virtual void DispatchJob<TJob>(int id, Ulid libraryId)
         where TJob : AbstractMediaJob, new()
     {
         TJob job = new() { Id = id, LibraryId = libraryId };
-        Dispatcher.Dispatch(job);
+        Dispatcher.Dispatch(job: job);
     }
 
     public virtual void DispatchJob<TJob>(Ulid libraryId)
         where TJob : AbstractMediaJob, new()
     {
         TJob job = new() { LibraryId = libraryId };
-        Dispatcher.Dispatch(job);
+        Dispatcher.Dispatch(job: job);
     }
 
     public virtual void DispatchJob<TJob>(int id, Library library, int? priority = null)
         where TJob : AbstractMediaJob, new()
     {
         TJob job = new() { Id = id, LibraryId = library.Id };
-        Dispatcher.Dispatch(job, job.QueueName, priority ?? job.Priority);
+        Dispatcher.Dispatch(job: job, onQueue: job.QueueName, priority: priority ?? job.Priority);
     }
 
     internal virtual void DispatchJob<TJob, TChild>(TChild data)
         where TJob : AbstractMediaExraDataJob<TChild>, new()
     {
         TJob job = new() { Storage = data };
-        Dispatcher.Dispatch(job);
+        Dispatcher.Dispatch(job: job);
     }
 
     public virtual void DispatchJob<TJob, TChild>(IEnumerable<TChild> data, string name)
         where TJob : AbstractShowExtraDataJob<TChild, string>, new()
     {
         TJob job = new() { Storage = data, Name = name };
-        Dispatcher.Dispatch(job);
+        Dispatcher.Dispatch(job: job);
     }
 
     public virtual void DispatchJob<TJob>(string baseFolderPath, Ulid libraryId)
         where TJob : AbstractMusicFolderJob, new()
     {
         TJob job = new() { InputFolder = baseFolderPath, LibraryId = libraryId };
-        Dispatcher.Dispatch(job);
+        Dispatcher.Dispatch(job: job);
     }
 
     public virtual void DispatchJob<TJob>(
@@ -169,7 +169,7 @@ public class JobDispatcher : IJobDispatcher
             BaseFolder = baseFolder,
             MediaFolder = mediaFolder,
         };
-        Dispatcher.Dispatch(job);
+        Dispatcher.Dispatch(job: job);
     }
 
     public virtual void DispatchJob<TJob>(Guid id1, Guid? id2 = null, Guid? id3 = null)
@@ -181,21 +181,21 @@ public class JobDispatcher : IJobDispatcher
             Id2 = id2,
             Id3 = id3,
         };
-        Dispatcher.Dispatch(job);
+        Dispatcher.Dispatch(job: job);
     }
 
     public virtual void DispatchJob<TJob>(MusicBrainzReleaseGroup musicBrainzReleaseGroup)
         where TJob : MusicMetadataJob, new()
     {
         TJob job = new() { MusicBrainzReleaseGroup = musicBrainzReleaseGroup };
-        Dispatcher.Dispatch(job);
+        Dispatcher.Dispatch(job: job);
     }
 
     public virtual void DispatchJob<TJob>(MusicBrainzArtist musicBrainzArtist)
         where TJob : MusicMetadataJob, new()
     {
         TJob job = new() { MusicBrainzArtist = musicBrainzArtist };
-        Dispatcher.Dispatch(job);
+        Dispatcher.Dispatch(job: job);
     }
 
     public virtual void DispatchJob<TJob>(
@@ -221,14 +221,14 @@ public class JobDispatcher : IJobDispatcher
             InputFolder = inputFolder,
             InputFile = inputFile,
         };
-        Dispatcher.Dispatch(job);
+        Dispatcher.Dispatch(job: job);
     }
 
     public virtual void DispatchJob<TJob>(Track track)
         where TJob : AbstractLyricJob, new()
     {
         TJob job = new() { Track = track };
-        Dispatcher.Dispatch(job);
+        Dispatcher.Dispatch(job: job);
     }
 
     public virtual void DispatchColorPaletteJob(
@@ -237,11 +237,11 @@ public class JobDispatcher : IJobDispatcher
         int? priority = null
     )
     {
-        if (!NeedsPalette(entityType, entityId))
+        if (!NeedsPalette(entityType: entityType, entityId: entityId))
             return;
 
-        ColorPaletteJob job = new(entityType, entityId);
-        Dispatch(job, "palette", priority ?? job.Priority);
+        ColorPaletteJob job = new(entityType: entityType, entityId: entityId);
+        Dispatch(job: job, onQueue: "palette", priority: priority ?? job.Priority);
     }
 
     /// <summary>
@@ -259,7 +259,7 @@ public class JobDispatcher : IJobDispatcher
     /// </summary>
     protected virtual bool NeedsPalette(string entityType, string entityId)
     {
-        IPaletteSource? source = DefaultPaletteSourceRegistry.Instance.Resolve(entityType);
+        IPaletteSource? source = DefaultPaletteSourceRegistry.Instance.Resolve(entityType: entityType);
         if (source is null)
             return true;
 
@@ -267,11 +267,11 @@ public class JobDispatcher : IJobDispatcher
         {
             using MediaContext db = new();
             string? current = source
-                .CurrentPaletteAsync(db, entityId, CancellationToken.None)
+                .CurrentPaletteAsync(db: db, entityId: entityId, ct: CancellationToken.None)
                 .GetAwaiter()
                 .GetResult();
 
-            return string.IsNullOrEmpty(current);
+            return string.IsNullOrEmpty(value: current);
         }
         catch
         {

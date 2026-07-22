@@ -117,12 +117,12 @@ public class ProfileValidatorCoreTests
             video: Video(codec: VideoCodecType.H265)
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result.IsValid.Should().BeFalse();
         result
             .Errors.Should()
-            .Contain(e =>
+            .Contain(predicate: e =>
                 e.Contains("HlsTs") && e.Contains("H265") && e.Contains("Compatible containers")
             );
     }
@@ -136,9 +136,9 @@ public class ProfileValidatorCoreTests
             video: Video(codec: VideoCodecType.Av1)
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Errors.Should().NotContain(e => e.Contains("does not support video"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("does not support video"));
     }
 
     [Fact]
@@ -150,9 +150,9 @@ public class ProfileValidatorCoreTests
             video: Video(policy: StreamPolicy.Copy)
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Errors.Should().NotContain(e => e.Contains("does not support video"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("does not support video"));
     }
 
     [Fact]
@@ -164,12 +164,12 @@ public class ProfileValidatorCoreTests
             audio: [Audio(codec: AudioCodecType.TrueHd)]
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result.IsValid.Should().BeFalse();
         result
             .Errors.Should()
-            .Contain(e =>
+            .Contain(predicate: e =>
                 e.Contains("HlsFmp4") && e.Contains("TrueHd") && e.Contains("Compatible containers")
             );
     }
@@ -184,9 +184,9 @@ public class ProfileValidatorCoreTests
             audio: [Audio(codec: AudioCodecType.Opus)]
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Errors.Should().NotContain(e => e.Contains("does not support audio"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("does not support audio"));
     }
 
     [Fact]
@@ -198,9 +198,9 @@ public class ProfileValidatorCoreTests
             audio: [Audio(codec: AudioCodecType.Opus, policy: StreamPolicy.Copy)]
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Errors.Should().NotContain(e => e.Contains("does not support audio"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("does not support audio"));
     }
 
     [Fact]
@@ -213,27 +213,27 @@ public class ProfileValidatorCoreTests
             audio: [Audio(codec: AudioCodecType.Aac), Audio(codec: AudioCodecType.Opus)]
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("Mp4") && e.Contains("Opus"));
-        result.Errors.Should().NotContain(e => e.Contains("Mp4") && e.Contains("Aac"));
+        result.Errors.Should().Contain(predicate: e => e.Contains("Mp4") && e.Contains("Opus"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("Mp4") && e.Contains("Aac"));
     }
 
     // ── ValidateAudioBitrate ─────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(-128)]
+    [InlineData(data: 0)]
+    [InlineData(data: -1)]
+    [InlineData(data: -128)]
     public void Audio_transcode_with_non_positive_bitrate_rejects(int bitrate)
     {
         EncodingProfile profile = Profile(audio: [Audio(bitrateKbps: bitrate)]);
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("BitrateKbps must be > 0"));
+        result.Errors.Should().Contain(predicate: e => e.Contains("BitrateKbps must be > 0"));
     }
 
     [Fact]
@@ -241,9 +241,9 @@ public class ProfileValidatorCoreTests
     {
         EncodingProfile profile = Profile(audio: [Audio(bitrateKbps: 1)]);
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Errors.Should().NotContain(e => e.Contains("BitrateKbps must be > 0"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("BitrateKbps must be > 0"));
     }
 
     [Fact]
@@ -255,9 +255,9 @@ public class ProfileValidatorCoreTests
             audio: [Audio(codec: AudioCodecType.Flac, bitrateKbps: 0)]
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Errors.Should().NotContain(e => e.Contains("BitrateKbps must be > 0"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("BitrateKbps must be > 0"));
     }
 
     [Fact]
@@ -269,9 +269,9 @@ public class ProfileValidatorCoreTests
             audio: [Audio(codec: AudioCodecType.TrueHd, bitrateKbps: 0)]
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Errors.Should().NotContain(e => e.Contains("BitrateKbps must be > 0"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("BitrateKbps must be > 0"));
     }
 
     [Fact]
@@ -282,9 +282,9 @@ public class ProfileValidatorCoreTests
             audio: [Audio(bitrateKbps: 0, policy: StreamPolicy.Copy)]
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Errors.Should().NotContain(e => e.Contains("BitrateKbps must be > 0"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("BitrateKbps must be > 0"));
     }
 
     // ── ValidateLadder (Manual mode) ─────────────────────────────────────────
@@ -297,10 +297,10 @@ public class ProfileValidatorCoreTests
             ladder: new() { Mode = LadderMode.Manual, Rungs = null }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("Manual ladder requires non-empty Rungs"));
+        result.Errors.Should().Contain(predicate: e => e.Contains("Manual ladder requires non-empty Rungs"));
     }
 
     [Fact]
@@ -311,10 +311,10 @@ public class ProfileValidatorCoreTests
             ladder: new() { Mode = LadderMode.Manual, Rungs = [] }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("Manual ladder requires non-empty Rungs"));
+        result.Errors.Should().Contain(predicate: e => e.Contains("Manual ladder requires non-empty Rungs"));
     }
 
     [Fact]
@@ -348,12 +348,12 @@ public class ProfileValidatorCoreTests
             ladder: new() { Mode = LadderMode.Manual, Rungs = rungs }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result.IsValid.Should().BeFalse();
         result
             .Errors.Should()
-            .Contain(e => e.Contains("Manual ladder rungs must be sorted ascending by bitrate"));
+            .Contain(predicate: e => e.Contains("Manual ladder rungs must be sorted ascending by bitrate"));
     }
 
     [Fact]
@@ -387,11 +387,11 @@ public class ProfileValidatorCoreTests
             ladder: new() { Mode = LadderMode.Manual, Rungs = rungs }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result
             .Errors.Should()
-            .Contain(e => e.Contains("Manual ladder rungs must be sorted ascending by bitrate"));
+            .Contain(predicate: e => e.Contains("Manual ladder rungs must be sorted ascending by bitrate"));
     }
 
     [Fact]
@@ -424,9 +424,9 @@ public class ProfileValidatorCoreTests
             ladder: new() { Mode = LadderMode.Manual, Rungs = rungs }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Errors.Should().NotContain(e => e.Contains("Manual ladder"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("Manual ladder"));
     }
 
     [Fact]
@@ -434,9 +434,9 @@ public class ProfileValidatorCoreTests
     {
         EncodingProfile profile = Profile(container: Container.HlsFmp4, ladder: null);
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Errors.Should().NotContain(e => e.Contains("ladder") || e.Contains("Ladder"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("ladder") || e.Contains("Ladder"));
     }
 
     // ── ValidateCmafCompatibility ────────────────────────────────────────────
@@ -461,12 +461,12 @@ public class ProfileValidatorCoreTests
             hls: new(CmafCompatible: true)
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result.IsValid.Should().BeFalse();
         result
             .Errors.Should()
-            .Contain(e => e.Contains("CMAF requires a CMAF-compatible audio codec"));
+            .Contain(predicate: e => e.Contains("CMAF requires a CMAF-compatible audio codec"));
     }
 
     [Fact]
@@ -480,9 +480,9 @@ public class ProfileValidatorCoreTests
             hls: new(CmafCompatible: false)
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Errors.Should().NotContain(e => e.Contains("CMAF requires"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("CMAF requires"));
     }
 
     [Fact]
@@ -496,9 +496,9 @@ public class ProfileValidatorCoreTests
             hls: new(CmafCompatible: true)
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Errors.Should().NotContain(e => e.Contains("CMAF requires"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("CMAF requires"));
     }
 
     [Fact]
@@ -512,9 +512,9 @@ public class ProfileValidatorCoreTests
             hls: null
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Errors.Should().NotContain(e => e.Contains("CMAF requires"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("CMAF requires"));
     }
 
     [Fact]
@@ -528,9 +528,9 @@ public class ProfileValidatorCoreTests
             hls: new(CmafCompatible: true)
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Errors.Should().NotContain(e => e.Contains("CMAF requires"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("CMAF requires"));
     }
 
     [Fact]
@@ -544,44 +544,44 @@ public class ProfileValidatorCoreTests
             hls: new(CmafCompatible: true)
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Errors.Should().NotContain(e => e.Contains("CMAF requires"));
+        result.Errors.Should().NotContain(predicate: e => e.Contains("CMAF requires"));
     }
 
     // ── ValidateCustomArguments ──────────────────────────────────────────────
 
     [Theory]
-    [InlineData("c:v")]
-    [InlineData("c:a")]
-    [InlineData("c:s")]
-    [InlineData("f")]
-    [InlineData("vcodec")]
-    [InlineData("acodec")]
-    [InlineData("scodec")]
+    [InlineData(data: "c:v")]
+    [InlineData(data: "c:a")]
+    [InlineData(data: "c:s")]
+    [InlineData(data: "f")]
+    [InlineData(data: "vcodec")]
+    [InlineData(data: "acodec")]
+    [InlineData(data: "scodec")]
     public void Forbidden_custom_arg_produces_warning(string key)
     {
-        EncodingProfile profile = Profile(customArguments: new() { [key] = "libx264" });
+        EncodingProfile profile = Profile(customArguments: new() { [key: key] = "libx264" });
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         // Warnings don't make IsValid false — they're informational.
         result.IsValid.Should().BeTrue();
-        result.Warnings.Should().Contain(w => w.Contains(key) && w.Contains("hard-reject"));
+        result.Warnings.Should().Contain(predicate: w => w.Contains(key) && w.Contains("hard-reject"));
     }
 
     [Theory]
-    [InlineData("C:V")]
-    [InlineData("Vcodec")]
-    [InlineData("ACODEC")]
+    [InlineData(data: "C:V")]
+    [InlineData(data: "Vcodec")]
+    [InlineData(data: "ACODEC")]
     public void Forbidden_custom_arg_match_is_case_insensitive(string key)
     {
         // The hash set uses StringComparer.OrdinalIgnoreCase — casing must not bypass.
-        EncodingProfile profile = Profile(customArguments: new() { [key] = "anything" });
+        EncodingProfile profile = Profile(customArguments: new() { [key: key] = "anything" });
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Warnings.Should().Contain(w => w.Contains(key));
+        result.Warnings.Should().Contain(predicate: w => w.Contains(key));
     }
 
     [Fact]
@@ -590,15 +590,15 @@ public class ProfileValidatorCoreTests
         EncodingProfile profile = Profile(
             customArguments: new()
             {
-                ["preset"] = "slow",
-                ["crf"] = "20",
-                ["g"] = "120",
+                [key: "preset"] = "slow",
+                [key: "crf"] = "20",
+                [key: "g"] = "120",
             }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Warnings.Should().NotContain(w => w.Contains("hard-reject"));
+        result.Warnings.Should().NotContain(predicate: w => w.Contains("hard-reject"));
     }
 
     [Fact]
@@ -606,9 +606,9 @@ public class ProfileValidatorCoreTests
     {
         EncodingProfile profile = Profile(customArguments: null);
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Warnings.Should().NotContain(w => w.Contains("hard-reject"));
+        result.Warnings.Should().NotContain(predicate: w => w.Contains("hard-reject"));
     }
 
     [Fact]
@@ -616,14 +616,14 @@ public class ProfileValidatorCoreTests
     {
         // Two forbidden keys must each emit a warning — loop must not deduplicate.
         EncodingProfile profile = Profile(
-            customArguments: new() { ["c:v"] = "libx264", ["c:a"] = "aac" }
+            customArguments: new() { [key: "c:v"] = "libx264", [key: "c:a"] = "aac" }
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-        result.Warnings.Should().Contain(w => w.Contains("c:v"));
-        result.Warnings.Should().Contain(w => w.Contains("c:a"));
-        result.Warnings.Count(w => w.Contains("hard-reject")).Should().Be(2);
+        result.Warnings.Should().Contain(predicate: w => w.Contains("c:v"));
+        result.Warnings.Should().Contain(predicate: w => w.Contains("c:a"));
+        result.Warnings.Count(predicate: w => w.Contains(value: "hard-reject")).Should().Be(expected: 2);
     }
 
     // ── Validate orchestration ───────────────────────────────────────────────
@@ -638,20 +638,20 @@ public class ProfileValidatorCoreTests
             audio: [Audio(bitrateKbps: 0)] // bitrate error
         );
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("does not support video"));
-        result.Errors.Should().Contain(e => e.Contains("BitrateKbps must be > 0"));
+        result.Errors.Should().Contain(predicate: e => e.Contains("does not support video"));
+        result.Errors.Should().Contain(predicate: e => e.Contains("BitrateKbps must be > 0"));
     }
 
     [Fact]
     public void Validate_is_valid_when_only_warnings_present()
     {
         // Forbidden custom arg is the only issue — IsValid should still be true.
-        EncodingProfile profile = Profile(customArguments: new() { ["c:v"] = "libx264" });
+        EncodingProfile profile = Profile(customArguments: new() { [key: "c:v"] = "libx264" });
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result.IsValid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
@@ -664,7 +664,7 @@ public class ProfileValidatorCoreTests
         // Vanilla Mkv + H264 + Aac@192 — nothing should trip.
         EncodingProfile profile = Profile();
 
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
         result.IsValid.Should().BeTrue();
         result.Errors.Should().BeEmpty();

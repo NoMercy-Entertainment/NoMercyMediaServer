@@ -23,5 +23,5 @@ public sealed class FilenameParsingOptions
     public List<string> Order { get; set; } = new();
 
     /// <summary>Adapter names that should be skipped entirely.</summary>
-    public HashSet<string> Disabled { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public HashSet<string> Disabled { get; set; } = new(comparer: StringComparer.OrdinalIgnoreCase);
 }

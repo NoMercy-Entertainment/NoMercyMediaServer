@@ -15,6 +15,6 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record LoloMoResponseDto<T>
 {
-    [JsonProperty("data")]
+    [JsonProperty(propertyName: "data")]
     public IEnumerable<ComponentDto<NmCardDto>> Data { get; set; } = [];
 }

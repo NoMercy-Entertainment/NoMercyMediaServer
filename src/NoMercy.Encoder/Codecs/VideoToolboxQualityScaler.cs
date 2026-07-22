@@ -25,13 +25,13 @@ namespace NoMercy.Encoder.Codecs;
 /// </summary>
 public sealed class VideoToolboxQualityScaler : IQualityScaler
 {
-    private static readonly HashSet<string> _handles = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> _handles = new(comparer: StringComparer.OrdinalIgnoreCase)
     {
         "h264_videotoolbox",
         "hevc_videotoolbox",
     };
 
-    public bool Supports(string encoderHandle) => _handles.Contains(encoderHandle);
+    public bool Supports(string encoderHandle) => _handles.Contains(item: encoderHandle);
 
     public int Translate(int sourceCrf, int sourceMax, int targetMax, CodecHint hint)
     {
@@ -41,10 +41,10 @@ public sealed class VideoToolboxQualityScaler : IQualityScaler
         if (sourceMax <= 0)
             return vtMax; // Unknown scale → default to best quality
 
-        int linearScaled = (int)Math.Round((double)sourceCrf / sourceMax * vtMax);
+        int linearScaled = (int)Math.Round(a: (double)sourceCrf / sourceMax * vtMax);
         int inverted = vtMax - linearScaled;
 
         // Inversion: CRF 0 (best quality) → q:v 100 (best quality).
-        return Math.Clamp(inverted, 0, vtMax);
+        return Math.Clamp(value: inverted, min: 0, max: vtMax);
     }
 }

@@ -34,7 +34,7 @@ namespace NoMercy.Tests.Api.Dashboard;
 /// WithWebHostBuilder; these tests only exercise auth, the drop-folder /
 /// Inbox-library validation, and the JSON envelope.
 /// </summary>
-[Trait("Category", "Intake")]
+[Trait(name: "Category", value: "Intake")]
 public class IntakeControllerTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -47,12 +47,12 @@ public class IntakeControllerTests : IClassFixture<NoMercyApiFactory>
     private HttpClient BuildClient(FakeIntakeSettings fakeSettings)
     {
         return _factory
-            .WithWebHostBuilder(builder =>
+            .WithWebHostBuilder(configuration: builder =>
             {
-                builder.ConfigureTestServices(services =>
+                builder.ConfigureTestServices(servicesConfiguration: services =>
                 {
                     services.RemoveAll<IIntakeSettings>();
-                    services.AddSingleton<IIntakeSettings>(fakeSettings);
+                    services.AddSingleton<IIntakeSettings>(implementationInstance: fakeSettings);
                 });
             })
             .CreateClient();
@@ -66,7 +66,7 @@ public class IntakeControllerTests : IClassFixture<NoMercyApiFactory>
         using MediaContext context = new();
 
         context.Libraries.Add(
-            new()
+            entity: new()
             {
                 Id = libraryId,
                 Title = "Intake Inbox",
@@ -75,7 +75,7 @@ public class IntakeControllerTests : IClassFixture<NoMercyApiFactory>
         );
 
         context.Folders.Add(
-            new()
+            entity: new()
             {
                 Id = folderId,
                 Path = folderPath,
@@ -83,7 +83,7 @@ public class IntakeControllerTests : IClassFixture<NoMercyApiFactory>
             }
         );
 
-        context.FolderLibrary.Add(new(folderId, libraryId));
+        context.FolderLibrary.Add(entity: new(folderId: folderId, libraryId: libraryId));
 
         context.SaveChanges();
 
@@ -98,7 +98,7 @@ public class IntakeControllerTests : IClassFixture<NoMercyApiFactory>
         using MediaContext context = new();
 
         context.Libraries.Add(
-            new()
+            entity: new()
             {
                 Id = libraryId,
                 Title = "Some Movie Library",
@@ -107,7 +107,7 @@ public class IntakeControllerTests : IClassFixture<NoMercyApiFactory>
         );
 
         context.Folders.Add(
-            new()
+            entity: new()
             {
                 Id = folderId,
                 Path = folderPath,
@@ -115,7 +115,7 @@ public class IntakeControllerTests : IClassFixture<NoMercyApiFactory>
             }
         );
 
-        context.FolderLibrary.Add(new(folderId, libraryId));
+        context.FolderLibrary.Add(entity: new(folderId: folderId, libraryId: libraryId));
 
         context.SaveChanges();
 
@@ -127,37 +127,37 @@ public class IntakeControllerTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task GetIndex_Unauthenticated_Returns401()
     {
-        HttpClient client = BuildClient(new()).AsUnauthenticated();
+        HttpClient client = BuildClient(fakeSettings: new()).AsUnauthenticated();
 
-        HttpResponseMessage response = await client.GetAsync("/api/v1/dashboard/intake");
+        HttpResponseMessage response = await client.GetAsync(requestUri: "/api/v1/dashboard/intake");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.Unauthorized);
     }
 
     [Fact]
     public async Task PutDropFolder_Unauthenticated_Returns401()
     {
-        HttpClient client = BuildClient(new()).AsUnauthenticated();
+        HttpClient client = BuildClient(fakeSettings: new()).AsUnauthenticated();
 
         HttpResponseMessage response = await client.PutAsJsonAsync(
-            "/api/v1/dashboard/intake/drop-folder",
-            new { path = "/media/intake" }
+            requestUri: "/api/v1/dashboard/intake/drop-folder",
+            value: new { path = "/media/intake" }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.Unauthorized);
     }
 
     [Fact]
     public async Task PostToken_Unauthenticated_Returns401()
     {
-        HttpClient client = BuildClient(new()).AsUnauthenticated();
+        HttpClient client = BuildClient(fakeSettings: new()).AsUnauthenticated();
 
         HttpResponseMessage response = await client.PostAsync(
-            "/api/v1/dashboard/intake/token",
-            null
+            requestUri: "/api/v1/dashboard/intake/token",
+            content: null
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.Unauthorized);
     }
 
     // ── GET / ──────────────────────────────────────────────────────────────
@@ -166,43 +166,43 @@ public class IntakeControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task GetIndex_Authenticated_ReturnsDropFolderHasTokenAndWebhookHints()
     {
         FakeIntakeSettings settings = new() { DropFolder = "/media/intake", Token = "abc" };
-        HttpClient client = BuildClient(settings).AsAuthenticated();
+        HttpClient client = BuildClient(fakeSettings: settings).AsAuthenticated();
 
-        HttpResponseMessage response = await client.GetAsync("/api/v1/dashboard/intake");
+        HttpResponseMessage response = await client.GetAsync(requestUri: "/api/v1/dashboard/intake");
 
         string body = await response.Content.ReadAsStringAsync();
-        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK, because: body);
 
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
         JsonElement root = doc.RootElement;
 
-        root.GetProperty("dropFolder").GetString().Should().Be("/media/intake");
-        root.GetProperty("hasToken").GetBoolean().Should().BeTrue();
-        root.GetProperty("webhookPath").GetString().Should().Be("api/v1/intake/webhook");
-        root.GetProperty("webhookHeader").GetString().Should().Be("X-Intake-Token");
+        root.GetProperty(propertyName: "dropFolder").GetString().Should().Be(expected: "/media/intake");
+        root.GetProperty(propertyName: "hasToken").GetBoolean().Should().BeTrue();
+        root.GetProperty(propertyName: "webhookPath").GetString().Should().Be(expected: "api/v1/intake/webhook");
+        root.GetProperty(propertyName: "webhookHeader").GetString().Should().Be(expected: "X-Intake-Token");
 
-        root.TryGetProperty("token", out _).Should().BeFalse("the token must never be readable");
-        root.TryGetProperty("tokenHash", out _)
+        root.TryGetProperty(propertyName: "token", value: out _).Should().BeFalse(because: "the token must never be readable");
+        root.TryGetProperty(propertyName: "tokenHash", value: out _)
             .Should()
-            .BeFalse("the token hash must never be readable");
+            .BeFalse(because: "the token hash must never be readable");
     }
 
     [Fact]
     public async Task GetIndex_NoDropFolderOrTokenConfigured_ReturnsNullAndFalse()
     {
         FakeIntakeSettings settings = new() { DropFolder = null, Token = null };
-        HttpClient client = BuildClient(settings).AsAuthenticated();
+        HttpClient client = BuildClient(fakeSettings: settings).AsAuthenticated();
 
-        HttpResponseMessage response = await client.GetAsync("/api/v1/dashboard/intake");
+        HttpResponseMessage response = await client.GetAsync(requestUri: "/api/v1/dashboard/intake");
 
         string body = await response.Content.ReadAsStringAsync();
-        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK, because: body);
 
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
         JsonElement root = doc.RootElement;
 
-        root.GetProperty("dropFolder").ValueKind.Should().Be(JsonValueKind.Null);
-        root.GetProperty("hasToken").GetBoolean().Should().BeFalse();
+        root.GetProperty(propertyName: "dropFolder").ValueKind.Should().Be(expected: JsonValueKind.Null);
+        root.GetProperty(propertyName: "hasToken").GetBoolean().Should().BeFalse();
     }
 
     // ── PUT /drop-folder — validation against Inbox libraries ────────────
@@ -210,18 +210,18 @@ public class IntakeControllerTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task PutDropFolder_PathNotAnInboxLibraryFolder_Returns400AndDoesNotPersist()
     {
-        string nonInboxFolder = SeedNonInboxLibrary($"/media/movies-{Guid.NewGuid():N}");
+        string nonInboxFolder = SeedNonInboxLibrary(folderPath: $"/media/movies-{Guid.NewGuid():N}");
 
         FakeIntakeSettings settings = new();
-        HttpClient client = BuildClient(settings).AsAuthenticated();
+        HttpClient client = BuildClient(fakeSettings: settings).AsAuthenticated();
 
         HttpResponseMessage response = await client.PutAsJsonAsync(
-            "/api/v1/dashboard/intake/drop-folder",
-            new { path = nonInboxFolder }
+            requestUri: "/api/v1/dashboard/intake/drop-folder",
+            value: new { path = nonInboxFolder }
         );
 
         string body = await response.Content.ReadAsStringAsync();
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest, body);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest, because: body);
 
         settings.SetDropFolderCalls.Should().BeEmpty();
     }
@@ -230,55 +230,55 @@ public class IntakeControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task PutDropFolder_PathNotRegisteredAtAll_Returns400()
     {
         FakeIntakeSettings settings = new();
-        HttpClient client = BuildClient(settings).AsAuthenticated();
+        HttpClient client = BuildClient(fakeSettings: settings).AsAuthenticated();
 
         HttpResponseMessage response = await client.PutAsJsonAsync(
-            "/api/v1/dashboard/intake/drop-folder",
-            new { path = $"/media/unregistered-{Guid.NewGuid():N}" }
+            requestUri: "/api/v1/dashboard/intake/drop-folder",
+            value: new { path = $"/media/unregistered-{Guid.NewGuid():N}" }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
         settings.SetDropFolderCalls.Should().BeEmpty();
     }
 
     [Fact]
     public async Task PutDropFolder_ValidInboxLibraryFolder_Returns200AndInvokesSetDropFolder()
     {
-        string inboxFolder = SeedInboxLibrary($"/media/intake-{Guid.NewGuid():N}");
+        string inboxFolder = SeedInboxLibrary(folderPath: $"/media/intake-{Guid.NewGuid():N}");
 
         FakeIntakeSettings settings = new();
-        HttpClient client = BuildClient(settings).AsAuthenticated();
+        HttpClient client = BuildClient(fakeSettings: settings).AsAuthenticated();
 
         HttpResponseMessage response = await client.PutAsJsonAsync(
-            "/api/v1/dashboard/intake/drop-folder",
-            new { path = inboxFolder }
+            requestUri: "/api/v1/dashboard/intake/drop-folder",
+            value: new { path = inboxFolder }
         );
 
         string body = await response.Content.ReadAsStringAsync();
-        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK, because: body);
 
-        using JsonDocument doc = JsonDocument.Parse(body);
-        doc.RootElement.GetProperty("dropFolder").GetString().Should().Be(inboxFolder);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
+        doc.RootElement.GetProperty(propertyName: "dropFolder").GetString().Should().Be(expected: inboxFolder);
 
-        settings.SetDropFolderCalls.Should().ContainSingle().Which.Should().Be(inboxFolder);
-        settings.DropFolder.Should().Be(inboxFolder);
+        settings.SetDropFolderCalls.Should().ContainSingle().Which.Should().Be(expected: inboxFolder);
+        settings.DropFolder.Should().Be(expected: inboxFolder);
     }
 
     [Fact]
     public async Task PutDropFolder_TrailingSlashAndBackslashVariants_StillMatchInboxLibraryFolder()
     {
-        string inboxFolder = SeedInboxLibrary($"/media/intake-{Guid.NewGuid():N}");
+        string inboxFolder = SeedInboxLibrary(folderPath: $"/media/intake-{Guid.NewGuid():N}");
 
         FakeIntakeSettings settings = new();
-        HttpClient client = BuildClient(settings).AsAuthenticated();
+        HttpClient client = BuildClient(fakeSettings: settings).AsAuthenticated();
 
         HttpResponseMessage response = await client.PutAsJsonAsync(
-            "/api/v1/dashboard/intake/drop-folder",
-            new { path = inboxFolder + "/" }
+            requestUri: "/api/v1/dashboard/intake/drop-folder",
+            value: new { path = inboxFolder + "/" }
         );
 
         string body = await response.Content.ReadAsStringAsync();
-        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK, because: body);
         settings.SetDropFolderCalls.Should().ContainSingle();
     }
 
@@ -286,18 +286,18 @@ public class IntakeControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task PutDropFolder_EmptyPath_ClearsWithoutLibraryValidation()
     {
         FakeIntakeSettings settings = new() { DropFolder = "/media/old-intake" };
-        HttpClient client = BuildClient(settings).AsAuthenticated();
+        HttpClient client = BuildClient(fakeSettings: settings).AsAuthenticated();
 
         HttpResponseMessage response = await client.PutAsJsonAsync(
-            "/api/v1/dashboard/intake/drop-folder",
-            new { path = "" }
+            requestUri: "/api/v1/dashboard/intake/drop-folder",
+            value: new { path = "" }
         );
 
         string body = await response.Content.ReadAsStringAsync();
-        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK, because: body);
 
-        using JsonDocument doc = JsonDocument.Parse(body);
-        doc.RootElement.GetProperty("dropFolder").ValueKind.Should().Be(JsonValueKind.Null);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
+        doc.RootElement.GetProperty(propertyName: "dropFolder").ValueKind.Should().Be(expected: JsonValueKind.Null);
 
         settings.SetDropFolderCalls.Should().ContainSingle().Which.Should().BeNull();
         settings.DropFolder.Should().BeNull();
@@ -309,53 +309,53 @@ public class IntakeControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task PostToken_ReturnsNonEmptyPlaintextTokenOnly()
     {
         FakeIntakeSettings settings = new();
-        HttpClient client = BuildClient(settings).AsAuthenticated();
+        HttpClient client = BuildClient(fakeSettings: settings).AsAuthenticated();
 
         HttpResponseMessage response = await client.PostAsync(
-            "/api/v1/dashboard/intake/token",
-            null
+            requestUri: "/api/v1/dashboard/intake/token",
+            content: null
         );
 
         string body = await response.Content.ReadAsStringAsync();
-        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK, because: body);
 
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
         JsonElement root = doc.RootElement;
 
-        string? token = root.GetProperty("token").GetString();
+        string? token = root.GetProperty(propertyName: "token").GetString();
         token.Should().NotBeNullOrEmpty();
-        token.Should().Be(settings.Token, "the plaintext returned must be the one just issued");
+        token.Should().Be(expected: settings.Token, because: "the plaintext returned must be the one just issued");
 
-        List<string> propertyNames = root.EnumerateObject().Select(p => p.Name).ToList();
-        propertyNames.Should().Equal(["token"], "no hash or other secret material may be present");
+        List<string> propertyNames = root.EnumerateObject().Select(selector: p => p.Name).ToList();
+        propertyNames.Should().Equal(expected: ["token"], because: "no hash or other secret material may be present");
     }
 
     [Fact]
     public async Task PostToken_CalledTwice_IssuesADifferentTokenEachTime()
     {
         FakeIntakeSettings settings = new();
-        HttpClient client = BuildClient(settings).AsAuthenticated();
+        HttpClient client = BuildClient(fakeSettings: settings).AsAuthenticated();
 
         HttpResponseMessage firstResponse = await client.PostAsync(
-            "/api/v1/dashboard/intake/token",
-            null
+            requestUri: "/api/v1/dashboard/intake/token",
+            content: null
         );
         HttpResponseMessage secondResponse = await client.PostAsync(
-            "/api/v1/dashboard/intake/token",
-            null
+            requestUri: "/api/v1/dashboard/intake/token",
+            content: null
         );
 
         using JsonDocument firstDoc = JsonDocument.Parse(
-            await firstResponse.Content.ReadAsStringAsync()
+            json: await firstResponse.Content.ReadAsStringAsync()
         );
         using JsonDocument secondDoc = JsonDocument.Parse(
-            await secondResponse.Content.ReadAsStringAsync()
+            json: await secondResponse.Content.ReadAsStringAsync()
         );
 
-        string firstToken = firstDoc.RootElement.GetProperty("token").GetString()!;
-        string secondToken = secondDoc.RootElement.GetProperty("token").GetString()!;
+        string firstToken = firstDoc.RootElement.GetProperty(propertyName: "token").GetString()!;
+        string secondToken = secondDoc.RootElement.GetProperty(propertyName: "token").GetString()!;
 
-        firstToken.Should().NotBe(secondToken, "issuing a token rotates the stored hash");
+        firstToken.Should().NotBe(unexpected: secondToken, because: "issuing a token rotates the stored hash");
     }
 
     // ── fake settings ────────────────────────────────────────────────────
@@ -369,25 +369,25 @@ public class IntakeControllerTests : IClassFixture<NoMercyApiFactory>
         public List<string?> SetDropFolderCalls { get; } = [];
 
         public Task<string?> GetDropFolderAsync(CancellationToken ct) =>
-            Task.FromResult(DropFolder);
+            Task.FromResult(result: DropFolder);
 
         public Task SetDropFolderAsync(string? path, CancellationToken ct)
         {
-            SetDropFolderCalls.Add(path);
+            SetDropFolderCalls.Add(item: path);
             DropFolder = path;
             return Task.CompletedTask;
         }
 
         public Task<bool> HasTokenAsync(CancellationToken ct) =>
-            Task.FromResult(!string.IsNullOrEmpty(Token));
+            Task.FromResult(result: !string.IsNullOrEmpty(value: Token));
 
         public Task<string> IssueTokenAsync(CancellationToken ct)
         {
-            Token = Guid.NewGuid().ToString("N");
-            return Task.FromResult(Token);
+            Token = Guid.NewGuid().ToString(format: "N");
+            return Task.FromResult(result: Token);
         }
 
         public Task<bool> VerifyTokenAsync(string? presented, CancellationToken ct) =>
-            Task.FromResult(!string.IsNullOrEmpty(presented) && presented == Token);
+            Task.FromResult(result: !string.IsNullOrEmpty(value: presented) && presented == Token);
     }
 }

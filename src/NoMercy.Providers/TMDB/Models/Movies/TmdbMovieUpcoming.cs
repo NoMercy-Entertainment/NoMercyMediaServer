@@ -16,6 +16,6 @@ namespace NoMercy.Providers.TMDB.Models.Movies;
 
 public class TmdbMovieUpcoming : TmdbPaginatedResponse<TmdbMovie>
 {
-    [JsonProperty("dates")]
+    [JsonProperty(propertyName: "dates")]
     public TmdbUpcomingMovieDates MovieDates { get; set; } = new();
 }

@@ -17,28 +17,28 @@ namespace NoMercy.Encoder.Jobs;
 
 public class JobSerializer : IJobSerializer
 {
-    private static readonly TimeSpan MaxPayloadAge = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan MaxPayloadAge = TimeSpan.FromMinutes(minutes: 5);
 
     public string Serialize(EncodingJob job, byte[] signingKey)
     {
         SignedPayload payload = new(Job: job, TimestampUtc: DateTime.UtcNow);
 
-        string json = JsonConvert.SerializeObject(payload);
-        string signature = ComputeHmac(json, signingKey);
+        string json = JsonConvert.SerializeObject(value: payload);
+        string signature = ComputeHmac(data: json, key: signingKey);
 
-        SignedEnvelope envelope = new(json, signature);
-        return JsonConvert.SerializeObject(envelope);
+        SignedEnvelope envelope = new(Payload: json, Signature: signature);
+        return JsonConvert.SerializeObject(value: envelope);
     }
 
     public EncodingJob? Deserialize(string payload, byte[] signingKey)
     {
-        if (string.IsNullOrEmpty(payload))
+        if (string.IsNullOrEmpty(value: payload))
             return null;
 
         SignedEnvelope? envelope;
         try
         {
-            envelope = JsonConvert.DeserializeObject<SignedEnvelope>(payload);
+            envelope = JsonConvert.DeserializeObject<SignedEnvelope>(value: payload);
         }
         catch (JsonException)
         {
@@ -55,15 +55,15 @@ public class JobSerializer : IJobSerializer
         // Null payload/signature means the envelope was deserialized from
         // partial JSON (e.g. "{}") — treat as rejected. Without this check
         // the HMAC comparison below would NRE on Encoding.UTF8.GetBytes(null).
-        if (string.IsNullOrEmpty(envelope.Payload) || string.IsNullOrEmpty(envelope.Signature))
+        if (string.IsNullOrEmpty(value: envelope.Payload) || string.IsNullOrEmpty(value: envelope.Signature))
             return null;
 
         // Verify HMAC
-        string expectedSignature = ComputeHmac(envelope.Payload, signingKey);
+        string expectedSignature = ComputeHmac(data: envelope.Payload, key: signingKey);
         if (
             !CryptographicOperations.FixedTimeEquals(
-                Encoding.UTF8.GetBytes(envelope.Signature),
-                Encoding.UTF8.GetBytes(expectedSignature)
+                left: Encoding.UTF8.GetBytes(s: envelope.Signature),
+                right: Encoding.UTF8.GetBytes(s: expectedSignature)
             )
         )
         {
@@ -71,7 +71,7 @@ public class JobSerializer : IJobSerializer
         }
 
         // Verify timestamp
-        SignedPayload? signed = JsonConvert.DeserializeObject<SignedPayload>(envelope.Payload);
+        SignedPayload? signed = JsonConvert.DeserializeObject<SignedPayload>(value: envelope.Payload);
         if (signed is null)
             return null;
 
@@ -85,9 +85,9 @@ public class JobSerializer : IJobSerializer
 
     private static string ComputeHmac(string data, byte[] key)
     {
-        using HMACSHA256 hmac = new(key);
-        byte[] hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(data));
-        return Convert.ToBase64String(hash);
+        using HMACSHA256 hmac = new(key: key);
+        byte[] hash = hmac.ComputeHash(buffer: Encoding.UTF8.GetBytes(s: data));
+        return Convert.ToBase64String(inArray: hash);
     }
 
     private record SignedPayload(EncodingJob Job, DateTime TimestampUtc);

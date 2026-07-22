@@ -60,7 +60,7 @@ public class EncodeTaskJob
 
     public new void InjectStorageServices(IServiceProvider serviceProvider)
     {
-        base.InjectStorageServices(serviceProvider);
+        base.InjectStorageServices(serviceProvider: serviceProvider);
         _encodingOrchestrator = serviceProvider.GetRequiredService<IEncodingOrchestrator>();
         _encoderProcessRegistry = serviceProvider.GetRequiredService<IEncoderProcessRegistry>();
     }
@@ -121,30 +121,27 @@ public class EncodeTaskJob
     public override async Task Handle()
     {
         await using MediaContext context = new();
-        await using LibraryRepository libraryRepository = new(context, StorageDriver);
+        await using LibraryRepository libraryRepository = new(context: context, storageDriver: StorageDriver);
 
-        Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
+        Folder? folder = await libraryRepository.GetLibraryFolder(folderId: FolderId);
         if (folder is null)
             return;
 
         EncodingProfile encodingProfile;
         try
         {
-            encodingProfile = PresetResolver.Resolve(PresetId, new DbPresetLookup(context));
+            encodingProfile = PresetResolver.Resolve(presetId: PresetId, lookup: new DbPresetLookup(context: context));
         }
         catch (Exception ex)
         {
             Log.LogWarning(
-                "[EncodeTaskJob] Skipping task '{Label}' for preset {PresetId}: resolve failed — {Message}",
-                Task.Label,
-                PresetId,
-                ex.Message
+                message: "[EncodeTaskJob] Skipping task '{Label}' for preset {PresetId}: resolve failed — {Message}", args: [Task.Label, PresetId, ex.Message]
             );
             await PublishCompletedAsync(success: false, error: ex.Message, artifacts: []);
             return;
         }
 
-        FileMetadata fileMetadata = await GetFileMetaData(folder, context);
+        FileMetadata fileMetadata = await GetFileMetaData(folder: folder, context: context);
         if (!fileMetadata.Success)
         {
             await PublishCompletedAsync(
@@ -157,10 +154,10 @@ public class EncodeTaskJob
 
         IEncodingOrchestrator orchestrator = _encodingOrchestrator!;
 
-        IStorage destinationStorage = StorageFactory.For(folder.Id, folder.DriverId, folder.Path);
+        IStorage destinationStorage = StorageFactory.For(folderId: folder.Id, driverId: folder.DriverId, subPath: folder.Path);
 
         IStorage sourceStorage = SourceDriverId.HasValue
-            ? StorageFactory.For(SourceDriverId.Value, SourceDriverId.Value, string.Empty)
+            ? StorageFactory.For(folderId: SourceDriverId.Value, driverId: SourceDriverId.Value, subPath: string.Empty)
             : destinationStorage;
 
         EncodingRequest request = new(
@@ -188,38 +185,33 @@ public class EncodeTaskJob
         // having to carry the whole thing through the queue payload.
         if (PresetIds is { Length: > 1 } presetIds)
         {
-            List<EncodingRequest> mergeRequests = new(presetIds.Length);
+            List<EncodingRequest> mergeRequests = new(capacity: presetIds.Length);
             foreach (Ulid presetId in presetIds)
             {
                 EncodingProfile presetProfile;
                 try
                 {
-                    presetProfile = PresetResolver.Resolve(presetId, new DbPresetLookup(context));
+                    presetProfile = PresetResolver.Resolve(presetId: presetId, lookup: new DbPresetLookup(context: context));
                 }
                 catch (Exception ex)
                 {
                     Log.LogWarning(
-                        "[EncodeTaskJob] Merged task '{Label}': preset {PresetId} resolve failed — {Message}",
-                        Task.Label,
-                        presetId,
-                        ex.Message
+                        message: "[EncodeTaskJob] Merged task '{Label}': preset {PresetId} resolve failed — {Message}", args: [Task.Label, presetId, ex.Message]
                     );
                     await PublishCompletedAsync(success: false, error: ex.Message, artifacts: []);
                     return;
                 }
 
-                mergeRequests.Add(request with { Profile = presetProfile });
+                mergeRequests.Add(item: request with { Profile = presetProfile });
             }
 
-            OutputPlan? mergedPlan = await orchestrator.PlanMergedAsync(mergeRequests);
+            OutputPlan? mergedPlan = await orchestrator.PlanMergedAsync(requests: mergeRequests);
             if (mergedPlan is null)
             {
                 string error =
-                    $"Could not rebuild the merged plan for preset set [{string.Join(", ", presetIds)}]";
+                    $"Could not rebuild the merged plan for preset set [{string.Join(separator: ", ", values: presetIds)}]";
                 Log.LogError(
-                    "[EncodeTaskJob] Merged task '{Label}' failed: {Error}",
-                    Task.Label,
-                    error
+                    message: "[EncodeTaskJob] Merged task '{Label}' failed: {Error}", args: [Task.Label, error]
                 );
                 await PublishCompletedAsync(success: false, error: error, artifacts: []);
                 return;
@@ -236,7 +228,7 @@ public class EncodeTaskJob
 
         // Propagate StatsFilePath from the task descriptor so TwoPassStrategyBase
         // receives the coordinator-resolved path for Pass2 tasks.
-        if (!string.IsNullOrEmpty(Task.StatsFilePath))
+        if (!string.IsNullOrEmpty(value: Task.StatsFilePath))
         {
             request = request with
             {
@@ -261,7 +253,7 @@ public class EncodeTaskJob
 
         try
         {
-            EncodingResult result = await orchestrator.EncodeAsync(request, Task, progressObserver);
+            EncodingResult result = await orchestrator.EncodeAsync(request: request, task: Task, progress: progressObserver);
             stopwatch.Stop();
 
             if (!result.Success)
@@ -269,29 +261,25 @@ public class EncodeTaskJob
                 string errorMsg =
                     result.Error?.Message ?? result.EnrichedError?.Message ?? "encode failed";
                 Log.LogWarning(
-                    "[EncodeTaskJob] Task '{Label}' failed: {ErrorMsg}",
-                    Task.Label,
-                    errorMsg
+                    message: "[EncodeTaskJob] Task '{Label}' failed: {ErrorMsg}", args: [Task.Label, errorMsg]
                 );
                 await PublishCompletedAsync(success: false, error: errorMsg, artifacts: []);
                 return;
             }
 
             Log.LogInformation(
-                "[EncodeTaskJob] Task '{Label}' completed in {TotalSeconds:F1}s",
-                Task.Label,
-                stopwatch.Elapsed.TotalSeconds
+                message: "[EncodeTaskJob] Task '{Label}' completed in {TotalSeconds:F1}s", args: [Task.Label, stopwatch.Elapsed.TotalSeconds]
             );
 
             List<string> artifactPaths = result
-                .Artifacts.Select(artifact => artifact.Path)
+                .Artifacts.Select(selector: artifact => artifact.Path)
                 .ToList();
             await PublishCompletedAsync(success: true, error: null, artifacts: artifactPaths);
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            Log.LogError("[EncodeTaskJob] Task '{Label}' threw: {Message}", Task.Label, ex.Message);
+            Log.LogError(message: "[EncodeTaskJob] Task '{Label}' threw: {Message}", args: [Task.Label, ex.Message]);
             await PublishCompletedAsync(success: false, error: ex.Message, artifacts: []);
             throw;
         }
@@ -309,13 +297,13 @@ public class EncodeTaskJob
         IReadOnlyList<string> artifacts
     )
     {
-        await WriteOutcomeRowAsync(success, error, artifacts);
+        await WriteOutcomeRowAsync(success: success, error: error, artifacts: artifacts);
 
         if (!EventBusProvider.IsConfigured)
             return;
 
         await EventBusProvider.Current.PublishAsync(
-            new EncodeTaskCompletedEvent
+            @event: new EncodeTaskCompletedEvent
             {
                 TaskId = Task.TaskId,
                 ParentJobId = Task.ParentJobId,
@@ -341,24 +329,24 @@ public class EncodeTaskJob
         string[]? bundledIds = Task.BundledTaskIds;
         if (bundledIds is { Length: > 0 })
         {
-            await WriteBundleOutcomesAsync(bundledIds, success, error, artifacts);
+            await WriteBundleOutcomesAsync(bundledIds: bundledIds, success: success, error: error, artifacts: artifacts);
             return;
         }
 
         try
         {
             await using MediaContext outcomeContext = new();
-            bool alreadyExists = await outcomeContext.EncodeTaskOutcomes.AnyAsync(row =>
+            bool alreadyExists = await outcomeContext.EncodeTaskOutcomes.AnyAsync(predicate: row =>
                 row.TaskId == Task.TaskId
             );
 
             if (alreadyExists)
                 return;
 
-            string? artifactsJson = artifacts.Count > 0 ? string.Join("\n", artifacts) : null;
+            string? artifactsJson = artifacts.Count > 0 ? string.Join(separator: "\n", values: artifacts) : null;
 
             outcomeContext.EncodeTaskOutcomes.Add(
-                new()
+                entity: new()
                 {
                     TaskId = Task.TaskId,
                     ParentJobId = Task.ParentJobId,
@@ -376,9 +364,7 @@ public class EncodeTaskJob
         catch (Exception ex)
         {
             Log.LogWarning(
-                "[EncodeTaskJob] Failed to write outcome row for task '{TaskId}': {Message}",
-                Task.TaskId,
-                ex.Message
+                message: "[EncodeTaskJob] Failed to write outcome row for task '{TaskId}': {Message}", args: [Task.TaskId, ex.Message]
             );
         }
     }
@@ -395,20 +381,20 @@ public class EncodeTaskJob
             await using MediaContext outcomeContext = new();
             HashSet<string> existing = (
                 await outcomeContext
-                    .EncodeTaskOutcomes.Where(row => bundledIds.Contains(row.TaskId))
-                    .Select(row => row.TaskId)
+                    .EncodeTaskOutcomes.Where(predicate: row => bundledIds.Contains(row.TaskId))
+                    .Select(selector: row => row.TaskId)
                     .ToListAsync()
             ).ToHashSet();
 
-            string? artifactsJson = artifacts.Count > 0 ? string.Join("\n", artifacts) : null;
+            string? artifactsJson = artifacts.Count > 0 ? string.Join(separator: "\n", values: artifacts) : null;
 
             foreach (string id in bundledIds)
             {
-                if (existing.Contains(id))
+                if (existing.Contains(item: id))
                     continue;
 
                 outcomeContext.EncodeTaskOutcomes.Add(
-                    new()
+                    entity: new()
                     {
                         TaskId = id,
                         ParentJobId = Task.ParentJobId,
@@ -427,31 +413,29 @@ public class EncodeTaskJob
         catch (Exception ex)
         {
             Log.LogWarning(
-                "[EncodeTaskJob] Failed to write bundle outcome rows for {Length} tasks: {Message}",
-                bundledIds.Length,
-                ex.Message
+                message: "[EncodeTaskJob] Failed to write bundle outcome rows for {Length} tasks: {Message}", args: [bundledIds.Length, ex.Message]
             );
         }
     }
 
     private async Task<FileMetadata> GetFileMetaData(Folder folder, MediaContext context)
     {
-        Movie? movie = folder.FolderLibraries.Any(x => x.Library.Type == MediaTypes.MovieMediaType)
-            ? await context.Movies.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == Id.ToInt())
+        Movie? movie = folder.FolderLibraries.Any(predicate: x => x.Library.Type == MediaTypes.MovieMediaType)
+            ? await context.Movies.IgnoreQueryFilters().FirstOrDefaultAsync(predicate: x => x.Id == Id.ToInt())
             : null;
 
-        Episode? episode = folder.FolderLibraries.Any(x =>
+        Episode? episode = folder.FolderLibraries.Any(predicate: x =>
             x.Library.Type == MediaTypes.TvMediaType || x.Library.Type == MediaTypes.AnimeMediaType
         )
-            ? await context.Episodes.Include(x => x.Tv).FirstOrDefaultAsync(x => x.Id == Id.ToInt())
+            ? await context.Episodes.Include(navigationPropertyPath: x => x.Tv).FirstOrDefaultAsync(predicate: x => x.Id == Id.ToInt())
             : null;
 
         if (movie is null && episode is null)
             return new() { Success = false };
 
         string folderName =
-            movie?.CreateFolderName().Replace("/", "")
-            ?? episode!.Tv.CreateFolderName().Replace("/", "") + episode.CreateFolderName();
+            movie?.CreateFolderName().Replace(oldValue: "/", newValue: "")
+            ?? episode!.Tv.CreateFolderName().Replace(oldValue: "/", newValue: "") + episode.CreateFolderName();
 
         string title = movie?.CreateTitle() ?? episode!.CreateTitle();
         string fileName = movie?.CreateFileName() ?? episode!.CreateFileName();
@@ -466,7 +450,7 @@ public class EncodeTaskJob
             FileName = fileName,
             Path = basePath,
             Id = baseId,
-            MediaItem = MediaItemRefFactory.Create(movie, episode),
+            MediaItem = MediaItemRefFactory.Create(movie: movie, episode: episode),
         };
     }
 

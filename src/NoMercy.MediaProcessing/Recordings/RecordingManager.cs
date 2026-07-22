@@ -49,18 +49,14 @@ public partial class RecordingManager(
     )
     {
         logger.LogTrace(
-            "Storing Recording: {Title} - {Position}-{Position2} {Title2}",
-            releaseAppends.Title,
-            musicBrainzMedia.Position,
-            musicBrainzTrack.Position,
-            musicBrainzTrack.Title
+            message: "Storing Recording: {Title} - {Position}-{Position2} {Title2}", args: [releaseAppends.Title, musicBrainzMedia.Position, musicBrainzTrack.Position, musicBrainzTrack.Title]
         );
 
-        MediaScan mediaScan = new(storageDriver);
+        MediaScan mediaScan = new(driver: storageDriver);
         ConcurrentBag<MediaFolderExtend> folders = await mediaScan
             .EnableFileListing()
-            .FilterByMediaType("music")
-            .Process(mediaFolder.Path, 1);
+            .FilterByMediaType(mediaType: "music")
+            .Process(rootFolder: mediaFolder.Path, depth: 1);
 
         foreach (MediaFolderExtend folder in folders)
         {
@@ -69,10 +65,10 @@ public partial class RecordingManager(
             foreach (MediaFile file in folder.Files)
             {
                 MediaFile? mediaFile = FileMatch(
-                    file,
-                    releaseAppends,
-                    musicBrainzMedia,
-                    musicBrainzTrack.Position
+                    inputFile: file,
+                    musicBrainzRelease: releaseAppends,
+                    musicBrainzMedia: musicBrainzMedia,
+                    trackNumber: musicBrainzTrack.Position
                 );
                 if (mediaFile is null)
                     continue;
@@ -80,16 +76,16 @@ public partial class RecordingManager(
                 TagFile? tagFile = file.TagFile;
                 if (tagFile == null || mediaFile.FFprobe == null)
                 {
-                    logger.LogError("File not found: {Name}", file.Name);
+                    logger.LogError(message: "File not found: {Name}", args: file.Name);
                     continue;
                 }
 
-                logger.LogTrace("Recording {Title} found", musicBrainzTrack.Title);
+                logger.LogTrace(message: "Recording {Title} found", args: musicBrainzTrack.Title);
 
                 string path =
                     mediaFile
-                        .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
-                        .Replace("\\" + mediaFile.Name, "")
+                        .Parsed?.FilePath.Replace(oldValue: "/" + mediaFile.Name, newValue: "")
+                        .Replace(oldValue: "\\" + mediaFile.Name, newValue: "")
                     ?? string.Empty;
 
                 Track insert = new()
@@ -102,10 +98,10 @@ public partial class RecordingManager(
                     DiscNumber = musicBrainzMedia.Position,
                     TrackNumber = musicBrainzTrack.Position,
 
-                    Filename = "/" + StoragePathHelpers.GetName(mediaFile.Path.Replace('\\', '/')),
+                    Filename = "/" + StoragePathHelpers.GetName(path: mediaFile.Path.Replace(oldChar: '\\', newChar: '/')),
                     Quality = (int)
                         Math.Floor(
-                            (
+                            d: (
                                 (double?)mediaFile.FFprobe?.Format.BitRate
                                 ?? (double?)(tagFile!.Properties?.AudioBitrate * 1000)
                                 ?? 0.0
@@ -113,16 +109,16 @@ public partial class RecordingManager(
                         ),
                     Duration = HmsRegex()
                         .Replace(
-                            (
+                            input: (
                                 mediaFile.FFprobe?.Duration
                                 ?? tagFile!.Properties?.Duration
                                 ?? TimeSpan.Zero
-                            ).ToString(@"hh\:mm\:ss"),
-                            ""
+                            ).ToString(format: @"hh\:mm\:ss"),
+                            replacement: ""
                         ),
 
                     FolderId = libraryFolder.Id,
-                    Folder = path.Replace(ResolveLibraryRoot(libraryFolder), "").Replace("\\", "/"),
+                    Folder = path.Replace(oldValue: ResolveLibraryRoot(libraryFolder: libraryFolder), newValue: "").Replace(oldValue: "\\", newValue: "/"),
                     HostFolder = path.PathName(),
 
                     Cover = releaseCoverPalette?.Url is not null
@@ -130,17 +126,17 @@ public partial class RecordingManager(
                         : null,
                 };
 
-                await recordingRepository.Store(insert);
+                await recordingRepository.Store(recording: insert);
 
-                await LinkToRelease(musicBrainzTrack, releaseAppends);
+                await LinkToRelease(musicBrainzTrack: musicBrainzTrack, releaseAppends: releaseAppends);
                 await LinkToLibrary(
-                    musicBrainzTrack,
-                    libraryFolder.FolderLibraries.FirstOrDefault()!.Library
+                    track: musicBrainzTrack,
+                    library: libraryFolder.FolderLibraries.FirstOrDefault()!.Library
                 );
 
                 List<MusicGenreTrack> genres =
                     musicBrainzTrack
-                        .Genres?.Select(genre => new MusicGenreTrack
+                        .Genres?.Select(selector: genre => new MusicGenreTrack
                         {
                             TrackId = musicBrainzTrack.Id,
                             GenreId = genre.Id,
@@ -148,11 +144,11 @@ public partial class RecordingManager(
                         .ToList()
                     ?? [];
 
-                await musicGenreRepository.LinkToRecording(genres);
+                await musicGenreRepository.LinkToRecording(genreRecordings: genres);
 
-                new JobDispatcher().DispatchColorPaletteJob("track", insert.Id.ToString());
+                new JobDispatcher().DispatchColorPaletteJob(entityType: "track", entityId: insert.Id.ToString());
 
-                logger.LogTrace("Recording {Title} stored", musicBrainzTrack.Title);
+                logger.LogTrace(message: "Recording {Title} stored", args: musicBrainzTrack.Title);
 
                 return true;
             }
@@ -167,9 +163,7 @@ public partial class RecordingManager(
     )
     {
         logger.LogTrace(
-            "Linking Recording to Artist: {Title} - {Title2}",
-            musicBrainzTrack.Title,
-            releaseAppends.MusicBrainzReleaseGroup.Title
+            message: "Linking Recording to Artist: {Title} - {Title2}", args: [musicBrainzTrack.Title, releaseAppends.MusicBrainzReleaseGroup.Title]
         );
 
         foreach (ReleaseArtistCredit credit in releaseAppends.ArtistCredit)
@@ -180,35 +174,35 @@ public partial class RecordingManager(
                 TrackId = musicBrainzTrack.Id,
             };
 
-            await recordingRepository.LinkToArtist(insert);
+            await recordingRepository.LinkToArtist(insert: insert);
         }
     }
 
     private async Task LinkToRelease(Track track, MusicBrainzReleaseAppends releaseAppends)
     {
-        logger.LogTrace("Linking Recording to Release: {Title}", releaseAppends.Title);
+        logger.LogTrace(message: "Linking Recording to Release: {Title}", args: releaseAppends.Title);
 
         AlbumTrack insert = new() { AlbumId = releaseAppends.Id, TrackId = track.Id };
 
-        await recordingRepository.LinkToRelease(insert);
+        await recordingRepository.LinkToRelease(trackRelease: insert);
     }
 
     private async Task LinkToLibrary(MusicBrainzTrack track, Library library)
     {
-        logger.LogTrace("Linking Recording to Library: {Title}", track.Title);
+        logger.LogTrace(message: "Linking Recording to Library: {Title}", args: track.Title);
 
         LibraryTrack insert = new() { LibraryId = library.Id, TrackId = track.Id };
 
-        await recordingRepository.LinkToLibrary(insert);
+        await recordingRepository.LinkToLibrary(libraryTrack: insert);
     }
 
     private async Task LinkToLibrary(Track track, Library library)
     {
-        logger.LogTrace("Linking Recording to Library: {Title}", library.Title);
+        logger.LogTrace(message: "Linking Recording to Library: {Title}", args: library.Title);
 
         LibraryTrack insert = new() { LibraryId = library.Id, TrackId = track.Id };
 
-        await recordingRepository.LinkToLibrary(insert);
+        await recordingRepository.LinkToLibrary(libraryTrack: insert);
     }
 
     private MediaFile? FileMatch(
@@ -219,51 +213,51 @@ public partial class RecordingManager(
     )
     {
         bool hasMatch = FindTrackWithAlbumNumberByNumberPadded(
-            inputFile,
-            musicBrainzMedia,
-            false,
-            musicBrainzRelease.Media.Length,
-            trackNumber,
-            4
+            inputFile: inputFile,
+            musicBrainzMedia: musicBrainzMedia,
+            hasMatch: false,
+            numberOfAlbums: musicBrainzRelease.Media.Length,
+            trackNumber: trackNumber,
+            padding: 4
         );
         hasMatch = FindTrackWithAlbumNumberByNumberPadded(
-            inputFile,
-            musicBrainzMedia,
-            hasMatch,
-            musicBrainzRelease.Media.Length,
-            trackNumber,
-            3
+            inputFile: inputFile,
+            musicBrainzMedia: musicBrainzMedia,
+            hasMatch: hasMatch,
+            numberOfAlbums: musicBrainzRelease.Media.Length,
+            trackNumber: trackNumber,
+            padding: 3
         );
         hasMatch = FindTrackWithAlbumNumberByNumberPadded(
-            inputFile,
-            musicBrainzMedia,
-            hasMatch,
-            musicBrainzRelease.Media.Length,
-            trackNumber
+            inputFile: inputFile,
+            musicBrainzMedia: musicBrainzMedia,
+            hasMatch: hasMatch,
+            numberOfAlbums: musicBrainzRelease.Media.Length,
+            trackNumber: trackNumber
         );
 
         hasMatch = FindTrackWithoutAlbumNumberByNumberPadded(
-            inputFile,
-            musicBrainzMedia,
-            hasMatch,
-            musicBrainzRelease.Media.Length,
-            trackNumber,
-            4
+            inputFile: inputFile,
+            musicBrainzMedia: musicBrainzMedia,
+            hasMatch: hasMatch,
+            numberOfAlbums: musicBrainzRelease.Media.Length,
+            trackNumber: trackNumber,
+            padding: 4
         );
         hasMatch = FindTrackWithoutAlbumNumberByNumberPadded(
-            inputFile,
-            musicBrainzMedia,
-            hasMatch,
-            musicBrainzRelease.Media.Length,
-            trackNumber,
-            3
+            inputFile: inputFile,
+            musicBrainzMedia: musicBrainzMedia,
+            hasMatch: hasMatch,
+            numberOfAlbums: musicBrainzRelease.Media.Length,
+            trackNumber: trackNumber,
+            padding: 3
         );
         hasMatch = FindTrackWithoutAlbumNumberByNumberPadded(
-            inputFile,
-            musicBrainzMedia,
-            hasMatch,
-            musicBrainzRelease.Media.Length,
-            trackNumber
+            inputFile: inputFile,
+            musicBrainzMedia: musicBrainzMedia,
+            hasMatch: hasMatch,
+            numberOfAlbums: musicBrainzRelease.Media.Length,
+            trackNumber: trackNumber
         );
 
         if (!hasMatch)
@@ -287,12 +281,12 @@ public partial class RecordingManager(
         if (inputFile.Parsed is null)
             return false;
 
-        string fileName = Path.GetFileName(inputFile.Parsed.FilePath)
+        string fileName = Path.GetFileName(path: inputFile.Parsed.FilePath)
             .RemoveDiacritics()
             .RemoveNonAlphaNumericCharacters()
             .ToLower();
 
-        string matchNumber = $"{trackNumber.ToString().PadLeft(padding, '0')} ";
+        string matchNumber = $"{trackNumber.ToString().PadLeft(totalWidth: padding, paddingChar: '0')} ";
         if (musicBrainzMedia.Tracks.Length < trackNumber)
             return false;
         string matchString = musicBrainzMedia
@@ -300,9 +294,9 @@ public partial class RecordingManager(
             .Title.RemoveDiacritics()
             .RemoveNonAlphaNumericCharacters()
             .ToLower()
-            .Replace(".mp3", "");
+            .Replace(oldValue: ".mp3", newValue: "");
 
-        return fileName.StartsWith(matchNumber) && fileName.Contains(matchString);
+        return fileName.StartsWith(value: matchNumber) && fileName.Contains(value: matchString);
     }
 
     private bool FindTrackWithAlbumNumberByNumberPadded(
@@ -321,13 +315,13 @@ public partial class RecordingManager(
         if (inputFile.Parsed is null)
             return false;
 
-        string fileName = Path.GetFileName(inputFile.Parsed.FilePath)
+        string fileName = Path.GetFileName(path: inputFile.Parsed.FilePath)
             .RemoveDiacritics()
             .RemoveNonAlphaNumericCharacters()
             .ToLower();
 
         string matchNumber =
-            $"{musicBrainzMedia.Position}-{trackNumber.ToString().PadLeft(padding, '0')} ";
+            $"{musicBrainzMedia.Position}-{trackNumber.ToString().PadLeft(totalWidth: padding, paddingChar: '0')} ";
         if (musicBrainzMedia.Tracks.Length < trackNumber)
             return false;
         string matchString = musicBrainzMedia
@@ -335,22 +329,22 @@ public partial class RecordingManager(
             .Title.RemoveDiacritics()
             .RemoveNonAlphaNumericCharacters()
             .ToLower()
-            .Replace(".mp3", "");
+            .Replace(oldValue: ".mp3", newValue: "");
 
-        return fileName.StartsWith(matchNumber) && fileName.Contains(matchString);
+        return fileName.StartsWith(value: matchNumber) && fileName.Contains(value: matchString);
     }
 
     private string ResolveLibraryRoot(Folder libraryFolder)
     {
         IStorage folderStorage = storageFactory.For(
-            libraryFolder.Id,
-            libraryFolder.DriverId,
-            string.Empty
+            folderId: libraryFolder.Id,
+            driverId: libraryFolder.DriverId,
+            subPath: string.Empty
         );
-        return FolderRootPath(folderStorage, libraryFolder.Path);
+        return FolderRootPath(storage: folderStorage, path: libraryFolder.Path);
     }
 
-    [GeneratedRegex("^00:")]
+    [GeneratedRegex(pattern: "^00:")]
     private static partial Regex HmsRegex();
 
     public async Task Store(
@@ -363,19 +357,19 @@ public partial class RecordingManager(
     )
     {
         JobDispatcher jobDispatcher = new();
-        logger.LogTrace("Recording {Title} found", releaseAppends.Title);
+        logger.LogTrace(message: "Recording {Title} found", args: releaseAppends.Title);
 
         foreach (MusicBrainzArtistAppends artist in artistAppends)
         {
             try
             {
                 CoverArtImageManagerManager.CoverPalette? coverPalette =
-                    await FanArtImageManager.Add(artist.Id, true);
+                    await FanArtImageManager.Add(id: artist.Id, priority: true);
 
                 if (coverPalette is not null)
                 {
                     using Image<Rgba32>? downloadedImage = await FanArtImageClient.Download(
-                        coverPalette.Url!
+                        url: coverPalette.Url!
                     );
                 }
 
@@ -393,31 +387,31 @@ public partial class RecordingManager(
 
                     FolderId = libraryFolder.Id,
                     Folder = mediaFile
-                        .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
-                        .Replace("\\" + mediaFile.Name, "")
-                        .Replace(ResolveLibraryRoot(libraryFolder), "")
-                        .Replace("\\", "/"),
+                        .Parsed?.FilePath.Replace(oldValue: "/" + mediaFile.Name, newValue: "")
+                        .Replace(oldValue: "\\" + mediaFile.Name, newValue: "")
+                        .Replace(oldValue: ResolveLibraryRoot(libraryFolder: libraryFolder), newValue: "")
+                        .Replace(oldValue: "\\", newValue: "/"),
                     HostFolder = mediaFile
-                        .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
-                        .Replace("\\" + mediaFile.Name, "")
+                        .Parsed?.FilePath.Replace(oldValue: "/" + mediaFile.Name, newValue: "")
+                        .Replace(oldValue: "\\" + mediaFile.Name, newValue: "")
                         .PathName()!,
 
                     LibraryId = libraryFolder.FolderLibraries.FirstOrDefault()!.LibraryId,
                 };
 
-                await artistRepository.StoreAsync(artistEntity);
-                jobDispatcher.DispatchJob<MusicMetadataJob>(artist);
+                await artistRepository.StoreAsync(artist: artistEntity);
+                jobDispatcher.DispatchJob<MusicMetadataJob>(musicBrainzArtist: artist);
             }
             catch (Exception e)
             {
-                logger.LogError(e, "Failed to store recording artist metadata");
+                logger.LogError(exception: e, message: "Failed to store recording artist metadata");
             }
         }
 
         string path =
             mediaFile
-                .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
-                .Replace("\\" + mediaFile.Name, "")
+                .Parsed?.FilePath.Replace(oldValue: "/" + mediaFile.Name, newValue: "")
+                .Replace(oldValue: "\\" + mediaFile.Name, newValue: "")
             ?? string.Empty;
 
         Track insert = new()
@@ -428,10 +422,10 @@ public partial class RecordingManager(
             DiscNumber = mediaFile.Parsed?.DiscNumber ?? 0,
             TrackNumber = mediaFile.Parsed?.TrackNumber ?? 0,
 
-            Filename = "/" + StoragePathHelpers.GetName(mediaFile.Path.Replace('\\', '/')),
+            Filename = "/" + StoragePathHelpers.GetName(path: mediaFile.Path.Replace(oldChar: '\\', newChar: '/')),
             Quality = (int)
                 Math.Floor(
-                    (
+                    d: (
                         mediaFile.FFprobe?.Format.BitRate
                         ?? mediaFile.TagFile?.Properties?.AudioBitrate * 1000
                         ?? 0
@@ -439,14 +433,14 @@ public partial class RecordingManager(
                 ),
             Duration = HmsRegex()
                 .Replace(
-                    (
+                    input: (
                         mediaFile.FFprobe?.Duration ?? mediaFile.TagFile!.Properties!.Duration
-                    ).ToString(@"hh\:mm\:ss"),
-                    ""
+                    ).ToString(format: @"hh\:mm\:ss"),
+                    replacement: ""
                 ),
 
             FolderId = libraryFolder.Id,
-            Folder = path.Replace(ResolveLibraryRoot(libraryFolder), "").Replace("\\", "/"),
+            Folder = path.Replace(oldValue: ResolveLibraryRoot(libraryFolder: libraryFolder), newValue: "").Replace(oldValue: "\\", newValue: "/"),
             HostFolder = path.PathName(),
 
             Cover = releaseCoverPalette?.Url is not null
@@ -454,11 +448,11 @@ public partial class RecordingManager(
                 : null,
         };
 
-        await recordingRepository.Store(insert);
+        await recordingRepository.Store(recording: insert);
 
-        await LinkToRelease(insert, releaseAppends);
-        await LinkToLibrary(insert, libraryFolder.FolderLibraries.FirstOrDefault()!.Library);
-        await LinkToArtist(insert, artistAppends);
+        await LinkToRelease(track: insert, releaseAppends: releaseAppends);
+        await LinkToLibrary(track: insert, library: libraryFolder.FolderLibraries.FirstOrDefault()!.Library);
+        await LinkToArtist(insert: insert, artistAppends: artistAppends);
         foreach (
             MusicBrainzGenreDetails musicBrainzGenreDetails in trackAppends.Genres
                 ?? trackAppends.Recording.Genres
@@ -469,16 +463,16 @@ public partial class RecordingManager(
                 Id = musicBrainzGenreDetails.Id,
                 Name = musicBrainzGenreDetails.Name,
             };
-            await musicGenreRepository.Store(musicGenre);
+            await musicGenreRepository.Store(musicGenre: musicGenre);
         }
         List<MusicGenreTrack> genres = (trackAppends.Genres ?? trackAppends.Recording.Genres)
-            .Select(genre => new MusicGenreTrack { TrackId = insert.Id, GenreId = genre.Id })
+            .Select(selector: genre => new MusicGenreTrack { TrackId = insert.Id, GenreId = genre.Id })
             .ToList();
 
         if (genres.Count > 0)
-            await musicGenreRepository.LinkToRecording(genres);
+            await musicGenreRepository.LinkToRecording(genreRecordings: genres);
 
-        logger.LogTrace("Recording {Title} stored", trackAppends.Title);
+        logger.LogTrace(message: "Recording {Title} stored", args: trackAppends.Title);
     }
 
     private async Task LinkToArtist(Track insert, MusicBrainzArtistAppends[] artistAppends)
@@ -486,7 +480,7 @@ public partial class RecordingManager(
         foreach (MusicBrainzArtistAppends artist in artistAppends)
         {
             ArtistTrack link = new() { ArtistId = artist.Id, TrackId = insert.Id };
-            await recordingRepository.LinkToArtist(link);
+            await recordingRepository.LinkToArtist(insert: link);
         }
     }
 }

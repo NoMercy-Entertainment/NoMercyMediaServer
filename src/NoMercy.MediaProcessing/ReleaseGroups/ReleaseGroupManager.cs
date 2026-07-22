@@ -30,27 +30,27 @@ public class ReleaseGroupManager(
         CoverArtImageManagerManager.CoverPalette? coverPalette
     )
     {
-        logger.LogTrace("Storing Release Group: {Title}", releaseGroup.Title);
+        logger.LogTrace(message: "Storing Release Group: {Title}", args: releaseGroup.Title);
 
         ReleaseGroup insert = new()
         {
             Id = releaseGroup.Id,
             Title = releaseGroup.Title,
-            Description = string.IsNullOrEmpty(releaseGroup.Disambiguation)
+            Description = string.IsNullOrEmpty(value: releaseGroup.Disambiguation)
                 ? null
                 : releaseGroup.Disambiguation,
             Year = releaseGroup.FirstReleaseDate.ParseYear(),
             LibraryId = id,
-            Disambiguation = string.IsNullOrEmpty(releaseGroup.Disambiguation)
+            Disambiguation = string.IsNullOrEmpty(value: releaseGroup.Disambiguation)
                 ? null
                 : releaseGroup.Disambiguation,
 
             Cover = coverPalette?.Url is not null ? $"/{coverPalette.Url.FileName()}" : null,
         };
 
-        await releaseGroupRepository.Store(insert);
-        jobDispatcher.DispatchColorPaletteJob("releasegroup", insert.Id.ToString());
+        await releaseGroupRepository.Store(releaseGroup: insert);
+        jobDispatcher.DispatchColorPaletteJob(entityType: "releasegroup", entityId: insert.Id.ToString());
 
-        logger.LogTrace("Release Group {Title} stored", releaseGroup.Title);
+        logger.LogTrace(message: "Release Group {Title} stored", args: releaseGroup.Title);
     }
 }

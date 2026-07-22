@@ -33,27 +33,27 @@ public class CommandBuilderInvariantScenarioTests
     public void SingleRungCopy_NoFilterComplex_VerifiesNoFilterGraphPads()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddInput(new(InputPath))
+            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddInput(input: new(FilePath: InputPath))
             .AddOutput(
-                new(OutputPath, VideoCodec: "copy", AudioCodec: "copy", MapStreams: ["0:v", "0:a"])
+                output: new(FilePath: OutputPath, VideoCodec: "copy", AudioCodec: "copy", MapStreams: ["0:v", "0:a"])
             )
-            .Build(FfmpegPath);
+            .Build(ffmpegPath: FfmpegPath);
 
-        string argString = string.Join(" ", cmd.Arguments);
+        string argString = string.Join(separator: " ", value: cmd.Arguments);
         argString
             .Should()
-            .NotContain("-filter_complex", "copy codec should not use filter_complex");
+            .NotContain(unexpected: "-filter_complex", because: "copy codec should not use filter_complex");
 
         int mapIdx = 0;
-        while ((mapIdx = Array.IndexOf(cmd.Arguments, "-map", mapIdx)) >= 0)
+        while ((mapIdx = Array.IndexOf(array: cmd.Arguments, value: "-map", startIndex: mapIdx)) >= 0)
         {
             if ((mapIdx + 1) < cmd.Arguments.Length)
             {
                 string mapValue = cmd.Arguments[mapIdx + 1];
                 mapValue
                     .Should()
-                    .NotStartWith("[", "copy output should not map from filter graph labels");
+                    .NotStartWith(unexpected: "[", because: "copy output should not map from filter graph labels");
             }
             mapIdx++;
         }
@@ -63,54 +63,54 @@ public class CommandBuilderInvariantScenarioTests
     public void SingleRungCopy_CopyCodecHasNoEncoderOnlyFlags()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddInput(new(InputPath))
-            .AddOutput(new(OutputPath, VideoCodec: "copy", MapStreams: ["0:v"]))
-            .Build(FfmpegPath);
+            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddInput(input: new(FilePath: InputPath))
+            .AddOutput(output: new(FilePath: OutputPath, VideoCodec: "copy", MapStreams: ["0:v"]))
+            .Build(ffmpegPath: FfmpegPath);
 
         int[] copyArgIndices = cmd
-            .Arguments.Select((arg, idx) => (arg, idx))
-            .Where(x => x.arg == "copy")
-            .Select(x => x.idx)
+            .Arguments.Select(selector: (arg, idx) => (arg, idx))
+            .Where(predicate: x => x.arg == "copy")
+            .Select(selector: x => x.idx)
             .ToArray();
 
         copyArgIndices.Should().NotBeEmpty();
 
-        int outputStartIdx = Array.IndexOf(cmd.Arguments, OutputPath);
-        string[] argRange = cmd.Arguments.Take(outputStartIdx).ToArray();
+        int outputStartIdx = Array.IndexOf(array: cmd.Arguments, value: OutputPath);
+        string[] argRange = cmd.Arguments.Take(count: outputStartIdx).ToArray();
 
         argRange
             .Should()
-            .NotContain("-crf", "copy codec should not have -crf")
-            .And.NotContain("-preset", "copy codec should not have -preset");
+            .NotContain(unexpected: "-crf", because: "copy codec should not have -crf")
+            .And.NotContain(unexpected: "-preset", because: "copy codec should not have -preset");
     }
 
     [Fact]
     public void SingleRungTranscode_VideoCodecFollowedByCodecValue()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddInput(new(InputPath))
+            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddInput(input: new(FilePath: InputPath))
             .AddOutput(
-                new(
-                    OutputPath,
+                output: new(
+                    FilePath: OutputPath,
                     VideoCodec: "libx264",
                     Crf: 23,
                     Preset: "medium",
                     MapStreams: ["0:v"]
                 )
             )
-            .Build(FfmpegPath);
+            .Build(ffmpegPath: FfmpegPath);
 
-        int codecIdx = Array.IndexOf(cmd.Arguments, "-c:v");
-        codecIdx.Should().BeGreaterThan(-1);
-        (codecIdx + 1).Should().BeLessThan(cmd.Arguments.Length);
-        cmd.Arguments[codecIdx + 1].Should().Be("libx264");
+        int codecIdx = Array.IndexOf(array: cmd.Arguments, value: "-c:v");
+        codecIdx.Should().BeGreaterThan(expected: -1);
+        (codecIdx + 1).Should().BeLessThan(expected: cmd.Arguments.Length);
+        cmd.Arguments[codecIdx + 1].Should().Be(expected: "libx264");
 
-        cmd.Arguments.Should().Contain("-crf");
-        int crfIdx = Array.IndexOf(cmd.Arguments, "-crf");
-        (crfIdx + 1).Should().BeLessThan(cmd.Arguments.Length);
-        cmd.Arguments[crfIdx + 1].Should().Be("23");
+        cmd.Arguments.Should().Contain(expected: "-crf");
+        int crfIdx = Array.IndexOf(array: cmd.Arguments, value: "-crf");
+        (crfIdx + 1).Should().BeLessThan(expected: cmd.Arguments.Length);
+        cmd.Arguments[crfIdx + 1].Should().Be(expected: "23");
     }
 
     [Fact]
@@ -119,42 +119,42 @@ public class CommandBuilderInvariantScenarioTests
         string filterGraph = "[0:v]split=2[v0][v1];[v0]copy[v0_out];[v1]scale=1280:-2[v1_out]";
 
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddInput(new(InputPath))
-            .WithFilterComplex(filterGraph)
+            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddInput(input: new(FilePath: InputPath))
+            .WithFilterComplex(filterGraph: filterGraph)
             .AddOutput(
-                new("/output/v1.mp4", VideoCodec: "libx264", MapStreams: ["[v0_out]"], Crf: 23)
+                output: new(FilePath: "/output/v1.mp4", VideoCodec: "libx264", MapStreams: ["[v0_out]"], Crf: 23)
             )
             .AddOutput(
-                new("/output/v2.mp4", VideoCodec: "libx264", MapStreams: ["[v1_out]"], Crf: 23)
+                output: new(FilePath: "/output/v2.mp4", VideoCodec: "libx264", MapStreams: ["[v1_out]"], Crf: 23)
             )
-            .Build(FfmpegPath);
+            .Build(ffmpegPath: FfmpegPath);
 
         MatchCollection padMatches = Regex.Matches(
-            filterGraph,
-            @"\[(\w+)\]",
-            RegexOptions.IgnoreCase
+            input: filterGraph,
+            pattern: @"\[(\w+)\]",
+            options: RegexOptions.IgnoreCase
         );
         string[] outputPads = padMatches
             .Cast<Match>()
-            .Select(m => m.Groups[1].Value)
+            .Select(selector: m => m.Groups[groupnum: 1].Value)
             .Distinct()
             .ToArray();
 
         int mapIdx = 0;
         foreach (string pad in outputPads)
         {
-            mapIdx = Array.IndexOf(cmd.Arguments, "-map", mapIdx);
+            mapIdx = Array.IndexOf(array: cmd.Arguments, value: "-map", startIndex: mapIdx);
             if (mapIdx > -1 && (mapIdx + 1) < cmd.Arguments.Length)
             {
                 string mapValue = cmd.Arguments[mapIdx + 1];
-                if (mapValue.StartsWith("[") && mapValue.EndsWith("]"))
+                if (mapValue.StartsWith(value: "[") && mapValue.EndsWith(value: "]"))
                 {
                     outputPads
                         .Should()
                         .Contain(
-                            mapValue.Trim('[', ']'),
-                            "mapped label must be produced by -filter_complex"
+                            expected: mapValue.Trim(trimChars: ['[', ']']),
+                            because: "mapped label must be produced by -filter_complex"
                         );
                 }
             }
@@ -166,7 +166,7 @@ public class CommandBuilderInvariantScenarioTests
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
             .WithGlobalOptions(
-                new(
+                options: new(
                     Overwrite: true,
                     HideBanner: false,
                     ProgressPipe: true,
@@ -174,10 +174,10 @@ public class CommandBuilderInvariantScenarioTests
                     AnalyzeDurationUs: 5_000_000
                 )
             )
-            .AddInput(new(InputPath, SeekTo: TimeSpan.FromSeconds(1.5)))
+            .AddInput(input: new(FilePath: InputPath, SeekTo: TimeSpan.FromSeconds(value: 1.5)))
             .AddOutput(
-                new(
-                    OutputPath,
+                output: new(
+                    FilePath: OutputPath,
                     VideoCodec: "libx264",
                     Crf: 23,
                     Preset: "medium",
@@ -185,7 +185,7 @@ public class CommandBuilderInvariantScenarioTests
                     MapStreams: ["0:v"]
                 )
             )
-            .Build(FfmpegPath);
+            .Build(ffmpegPath: FfmpegPath);
 
         string[] flagsWithRequiredValues =
         [
@@ -204,20 +204,20 @@ public class CommandBuilderInvariantScenarioTests
         for (int i = 0; i < cmd.Arguments.Length; i++)
         {
             string arg = cmd.Arguments[i];
-            if (flagsWithRequiredValues.Contains(arg))
+            if (flagsWithRequiredValues.Contains(value: arg))
             {
                 (i + 1)
                     .Should()
                     .BeLessThan(
-                        cmd.Arguments.Length,
-                        $"Flag {arg} at position {i} lacks a following value"
+                        expected: cmd.Arguments.Length,
+                        because: $"Flag {arg} at position {i} lacks a following value"
                     );
                 string nextArg = cmd.Arguments[i + 1];
                 nextArg
                     .Should()
                     .NotStartWith(
-                        "-",
-                        $"Value for {arg} should not start with '-'; got '{nextArg}'"
+                        unexpected: "-",
+                        because: $"Value for {arg} should not start with '-'; got '{nextArg}'"
                     );
             }
         }
@@ -227,82 +227,82 @@ public class CommandBuilderInvariantScenarioTests
     public void NoGlobalFlagDuplicates_SingleDashY_SingleDashProgress()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(Overwrite: true, HideBanner: true, ProgressPipe: true))
-            .AddInput(new(InputPath))
-            .AddOutput(new(OutputPath, VideoCodec: "copy", MapStreams: ["0:v"]))
-            .Build(FfmpegPath);
+            .WithGlobalOptions(options: new(Overwrite: true, HideBanner: true, ProgressPipe: true))
+            .AddInput(input: new(FilePath: InputPath))
+            .AddOutput(output: new(FilePath: OutputPath, VideoCodec: "copy", MapStreams: ["0:v"]))
+            .Build(ffmpegPath: FfmpegPath);
 
-        int yCount = cmd.Arguments.Count(arg => arg == "-y");
-        yCount.Should().Be(1, "-y should appear exactly once");
+        int yCount = cmd.Arguments.Count(predicate: arg => arg == "-y");
+        yCount.Should().Be(expected: 1, because: "-y should appear exactly once");
 
-        int progressCount = cmd.Arguments.Count(arg => arg == "-progress");
-        progressCount.Should().Be(1, "-progress should appear exactly once");
+        int progressCount = cmd.Arguments.Count(predicate: arg => arg == "-progress");
+        progressCount.Should().Be(expected: 1, because: "-progress should appear exactly once");
 
-        int hideBannerCount = cmd.Arguments.Count(arg => arg == "-hide_banner");
-        hideBannerCount.Should().Be(1, "-hide_banner should appear exactly once");
+        int hideBannerCount = cmd.Arguments.Count(predicate: arg => arg == "-hide_banner");
+        hideBannerCount.Should().Be(expected: 1, because: "-hide_banner should appear exactly once");
     }
 
     [Fact]
     public void AudioOnlyOutput_NoVideoCodecNoHevcTags()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddInput(new(InputPath))
+            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddInput(input: new(FilePath: InputPath))
             .AddOutput(
-                new(OutputPath, AudioCodec: "aac", AudioBitrateKbps: 192, MapStreams: ["0:a"])
+                output: new(FilePath: OutputPath, AudioCodec: "aac", AudioBitrateKbps: 192, MapStreams: ["0:a"])
             )
-            .Build(FfmpegPath);
+            .Build(ffmpegPath: FfmpegPath);
 
         cmd.Arguments.Should()
-            .NotContain("libx264", "audio-only output should not reference video codec");
-        cmd.Arguments.Should().NotContain("-tag:v", "audio-only output should not use video tags");
+            .NotContain(unexpected: "libx264", because: "audio-only output should not reference video codec");
+        cmd.Arguments.Should().NotContain(unexpected: "-tag:v", because: "audio-only output should not use video tags");
 
-        string argString = string.Join(" ", cmd.Arguments);
-        argString.Should().NotContain("hvc1", "audio-only should not reference hvc1");
+        string argString = string.Join(separator: " ", value: cmd.Arguments);
+        argString.Should().NotContain(unexpected: "hvc1", because: "audio-only should not reference hvc1");
     }
 
     [Fact]
     public void HevcOutputToMp4Container_IncludesHvc1Tag()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddInput(new(InputPath))
+            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddInput(input: new(FilePath: InputPath))
             .AddOutput(
-                new(
-                    "/output/video.mp4",
+                output: new(
+                    FilePath: "/output/video.mp4",
                     VideoCodec: "libx265",
                     Crf: 23,
                     MapStreams: ["0:v"],
                     ExtraFlags: new() { { "-tag:v", "hvc1" } }
                 )
             )
-            .Build(FfmpegPath);
+            .Build(ffmpegPath: FfmpegPath);
 
-        int tagVIdx = Array.IndexOf(cmd.Arguments, "-tag:v");
-        tagVIdx.Should().BeGreaterThan(-1, "-tag:v should be present for HEVC in MP4");
-        cmd.Arguments[tagVIdx + 1].Should().Be("hvc1");
+        int tagVIdx = Array.IndexOf(array: cmd.Arguments, value: "-tag:v");
+        tagVIdx.Should().BeGreaterThan(expected: -1, because: "-tag:v should be present for HEVC in MP4");
+        cmd.Arguments[tagVIdx + 1].Should().Be(expected: "hvc1");
     }
 
     [Fact]
     public void DolbyVisionOutput_IncludesDvh1Tag()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddInput(new(InputPath))
+            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddInput(input: new(FilePath: InputPath))
             .AddOutput(
-                new(
-                    OutputPath,
+                output: new(
+                    FilePath: OutputPath,
                     VideoCodec: "libx265",
                     Crf: 23,
                     MapStreams: ["0:v"],
                     ExtraFlags: new() { { "-tag:v", "dvh1" } }
                 )
             )
-            .Build(FfmpegPath);
+            .Build(ffmpegPath: FfmpegPath);
 
-        int dvh1Idx = Array.IndexOf(cmd.Arguments, "-tag:v");
-        dvh1Idx.Should().BeGreaterThan(-1);
-        cmd.Arguments[dvh1Idx + 1].Should().Be("dvh1");
+        int dvh1Idx = Array.IndexOf(array: cmd.Arguments, value: "-tag:v");
+        dvh1Idx.Should().BeGreaterThan(expected: -1);
+        cmd.Arguments[dvh1Idx + 1].Should().Be(expected: "dvh1");
     }
 
     [Fact]
@@ -311,17 +311,17 @@ public class CommandBuilderInvariantScenarioTests
         Dictionary<string, string> customGlobalFlags = new() { { "-hwaccel", "cuda" } };
 
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .WithGlobalExtraFlags(customGlobalFlags)
-            .AddInput(new(InputPath))
-            .AddOutput(new(OutputPath, VideoCodec: "copy", MapStreams: ["0:v"]))
-            .Build(FfmpegPath);
+            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .WithGlobalExtraFlags(flags: customGlobalFlags)
+            .AddInput(input: new(FilePath: InputPath))
+            .AddOutput(output: new(FilePath: OutputPath, VideoCodec: "copy", MapStreams: ["0:v"]))
+            .Build(ffmpegPath: FfmpegPath);
 
-        int hwaccelIdx = Array.IndexOf(cmd.Arguments, "-hwaccel");
-        int inputIdx = Array.IndexOf(cmd.Arguments, "-i");
+        int hwaccelIdx = Array.IndexOf(array: cmd.Arguments, value: "-hwaccel");
+        int inputIdx = Array.IndexOf(array: cmd.Arguments, value: "-i");
 
-        hwaccelIdx.Should().BeGreaterThan(-1, "custom -hwaccel should be present");
-        hwaccelIdx.Should().BeLessThan(inputIdx, "-hwaccel must appear before -i");
+        hwaccelIdx.Should().BeGreaterThan(expected: -1, because: "custom -hwaccel should be present");
+        hwaccelIdx.Should().BeLessThan(expected: inputIdx, because: "-hwaccel must appear before -i");
     }
 
     [Fact]
@@ -330,54 +330,54 @@ public class CommandBuilderInvariantScenarioTests
         Dictionary<string, string> outputCustomFlags = new() { { "-color_primaries", "bt709" } };
 
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddInput(new(InputPath))
+            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddInput(input: new(FilePath: InputPath))
             .AddOutput(
-                new(
-                    OutputPath,
+                output: new(
+                    FilePath: OutputPath,
                     VideoCodec: "libx264",
                     Crf: 23,
                     MapStreams: ["0:v"],
                     ExtraFlags: outputCustomFlags
                 )
             )
-            .Build(FfmpegPath);
+            .Build(ffmpegPath: FfmpegPath);
 
-        int colorPrimariesIdx = Array.IndexOf(cmd.Arguments, "-color_primaries");
+        int colorPrimariesIdx = Array.IndexOf(array: cmd.Arguments, value: "-color_primaries");
         colorPrimariesIdx
             .Should()
-            .BeGreaterThan(-1, "output ExtraFlags should be emitted in the command");
-        cmd.Arguments[colorPrimariesIdx + 1].Should().Be("bt709");
+            .BeGreaterThan(expected: -1, because: "output ExtraFlags should be emitted in the command");
+        cmd.Arguments[colorPrimariesIdx + 1].Should().Be(expected: "bt709");
 
-        int outputPathIdx = Array.IndexOf(cmd.Arguments, OutputPath);
+        int outputPathIdx = Array.IndexOf(array: cmd.Arguments, value: OutputPath);
         colorPrimariesIdx
             .Should()
-            .BeLessThan(outputPathIdx, "extra flags must appear before output path");
+            .BeLessThan(expected: outputPathIdx, because: "extra flags must appear before output path");
     }
 
     [Fact]
     public void BooleanExtraFlagWithEmptyValue_OmitsEmptyToken()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddInput(new(InputPath))
+            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddInput(input: new(FilePath: InputPath))
             .AddOutput(
-                new(
-                    OutputPath,
+                output: new(
+                    FilePath: OutputPath,
                     VideoCodec: "copy",
                     MapStreams: ["0:v"],
                     ExtraFlags: new() { { "-an", "" } }
                 )
             )
-            .Build(FfmpegPath);
+            .Build(ffmpegPath: FfmpegPath);
 
-        int anIdx = Array.IndexOf(cmd.Arguments, "-an");
-        anIdx.Should().BeGreaterThan(-1, "boolean flag -an should be present");
+        int anIdx = Array.IndexOf(array: cmd.Arguments, value: "-an");
+        anIdx.Should().BeGreaterThan(expected: -1, because: "boolean flag -an should be present");
 
         if (anIdx + 1 < cmd.Arguments.Length)
         {
             string nextArg = cmd.Arguments[anIdx + 1];
-            nextArg.Should().NotBe("", "empty string value should not produce an empty token");
+            nextArg.Should().NotBe(unexpected: "", because: "empty string value should not produce an empty token");
         }
     }
 
@@ -385,57 +385,57 @@ public class CommandBuilderInvariantScenarioTests
     public void MultipleInputs_AllInputsHaveDashI()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddInput(new("/media/source1.mkv"))
-            .AddInput(new("/media/source2.mkv"))
-            .AddOutput(new(OutputPath, VideoCodec: "copy", MapStreams: ["0:v", "1:a"]))
-            .Build(FfmpegPath);
+            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddInput(input: new(FilePath: "/media/source1.mkv"))
+            .AddInput(input: new(FilePath: "/media/source2.mkv"))
+            .AddOutput(output: new(FilePath: OutputPath, VideoCodec: "copy", MapStreams: ["0:v", "1:a"]))
+            .Build(ffmpegPath: FfmpegPath);
 
-        int inputCount = cmd.Arguments.Count(arg => arg == "-i");
-        inputCount.Should().Be(2, "two inputs should produce two -i flags");
+        int inputCount = cmd.Arguments.Count(predicate: arg => arg == "-i");
+        inputCount.Should().Be(expected: 2, because: "two inputs should produce two -i flags");
     }
 
     [Fact]
     public void OutputMetadataStripping_IncludesMapMetadata()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddInput(new(InputPath))
+            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddInput(input: new(FilePath: InputPath))
             .AddOutput(
-                new(OutputPath, VideoCodec: "copy", MapStreams: ["0:v"], StripSourceMetadata: true)
+                output: new(FilePath: OutputPath, VideoCodec: "copy", MapStreams: ["0:v"], StripSourceMetadata: true)
             )
-            .Build(FfmpegPath);
+            .Build(ffmpegPath: FfmpegPath);
 
-        int mapMetadataIdx = Array.IndexOf(cmd.Arguments, "-map_metadata");
-        mapMetadataIdx.Should().BeGreaterThan(-1, "-map_metadata -1 should strip source metadata");
-        cmd.Arguments[mapMetadataIdx + 1].Should().Be("-1");
+        int mapMetadataIdx = Array.IndexOf(array: cmd.Arguments, value: "-map_metadata");
+        mapMetadataIdx.Should().BeGreaterThan(expected: -1, because: "-map_metadata -1 should strip source metadata");
+        cmd.Arguments[mapMetadataIdx + 1].Should().Be(expected: "-1");
     }
 
     [Fact]
     public void OutputStreamMetadata_AppearsBeforeOutputPath()
     {
-        OutputStreamTag[] tags = [new("v:0", "language", "eng"), new("a:0", "title", "English")];
+        OutputStreamTag[] tags = [new(StreamSpecifier: "v:0", Key: "language", Value: "eng"), new(StreamSpecifier: "a:0", Key: "title", Value: "English")];
 
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddInput(new(InputPath))
+            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddInput(input: new(FilePath: InputPath))
             .AddOutput(
-                new(
-                    OutputPath,
+                output: new(
+                    FilePath: OutputPath,
                     VideoCodec: "copy",
                     MapStreams: ["0:v", "0:a"],
                     StreamMetadata: tags
                 )
             )
-            .Build(FfmpegPath);
+            .Build(ffmpegPath: FfmpegPath);
 
-        string argString = string.Join(" ", cmd.Arguments);
-        argString.Should().Contain("-metadata:v:0", "stream metadata should include language tag");
+        string argString = string.Join(separator: " ", value: cmd.Arguments);
+        argString.Should().Contain(expected: "-metadata:v:0", because: "stream metadata should include language tag");
 
-        int metadataIdx = Array.IndexOf(cmd.Arguments, "-metadata:v:0");
-        int outputPathIdx = Array.IndexOf(cmd.Arguments, OutputPath);
+        int metadataIdx = Array.IndexOf(array: cmd.Arguments, value: "-metadata:v:0");
+        int outputPathIdx = Array.IndexOf(array: cmd.Arguments, value: OutputPath);
 
-        metadataIdx.Should().BeLessThan(outputPathIdx, "metadata must appear before output path");
+        metadataIdx.Should().BeLessThan(expected: outputPathIdx, because: "metadata must appear before output path");
     }
 
     [Fact]
@@ -448,19 +448,19 @@ public class CommandBuilderInvariantScenarioTests
         };
 
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddInput(new(InputPath))
+            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddInput(input: new(FilePath: InputPath))
             .AddOutput(
-                new("/dev/null", VideoCodec: "libx264", MapStreams: ["0:v"], ExtraFlags: pass1Flags)
+                output: new(FilePath: "/dev/null", VideoCodec: "libx264", MapStreams: ["0:v"], ExtraFlags: pass1Flags)
             )
-            .Build(FfmpegPath);
+            .Build(ffmpegPath: FfmpegPath);
 
-        int pass1Idx = Array.IndexOf(cmd.Arguments, "-pass");
-        pass1Idx.Should().BeGreaterThan(-1, "pass 1 should include -pass flag");
-        cmd.Arguments[pass1Idx + 1].Should().Be("1");
+        int pass1Idx = Array.IndexOf(array: cmd.Arguments, value: "-pass");
+        pass1Idx.Should().BeGreaterThan(expected: -1, because: "pass 1 should include -pass flag");
+        cmd.Arguments[pass1Idx + 1].Should().Be(expected: "1");
 
-        int passlogIdx = Array.IndexOf(cmd.Arguments, "-passlogfile");
-        passlogIdx.Should().BeGreaterThan(-1, "-passlogfile should be present");
+        int passlogIdx = Array.IndexOf(array: cmd.Arguments, value: "-passlogfile");
+        passlogIdx.Should().BeGreaterThan(expected: -1, because: "-passlogfile should be present");
     }
 
     [Fact]
@@ -469,18 +469,18 @@ public class CommandBuilderInvariantScenarioTests
         string filterGraph = "[0:v]scale=1280:-2[scaled]";
 
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddInput(new(InputPath))
-            .WithFilterComplex(filterGraph)
-            .AddOutput(new(OutputPath, VideoCodec: "libx264", Crf: 23, MapStreams: ["[scaled]"]))
-            .Build(FfmpegPath);
+            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddInput(input: new(FilePath: InputPath))
+            .WithFilterComplex(filterGraph: filterGraph)
+            .AddOutput(output: new(FilePath: OutputPath, VideoCodec: "libx264", Crf: 23, MapStreams: ["[scaled]"]))
+            .Build(ffmpegPath: FfmpegPath);
 
-        int inputIdx = Array.IndexOf(cmd.Arguments, "-i");
-        int filterComplexIdx = Array.IndexOf(cmd.Arguments, "-filter_complex");
-        int mapIdx = Array.IndexOf(cmd.Arguments, "-map");
+        int inputIdx = Array.IndexOf(array: cmd.Arguments, value: "-i");
+        int filterComplexIdx = Array.IndexOf(array: cmd.Arguments, value: "-filter_complex");
+        int mapIdx = Array.IndexOf(array: cmd.Arguments, value: "-map");
 
-        inputIdx.Should().BeLessThan(filterComplexIdx, "-i must come before -filter_complex");
-        filterComplexIdx.Should().BeLessThan(mapIdx, "-filter_complex must come before -map");
+        inputIdx.Should().BeLessThan(expected: filterComplexIdx, because: "-i must come before -filter_complex");
+        filterComplexIdx.Should().BeLessThan(expected: mapIdx, because: "-filter_complex must come before -map");
     }
 
     [Fact]
@@ -489,24 +489,24 @@ public class CommandBuilderInvariantScenarioTests
         System.Globalization.CultureInfo previous = Thread.CurrentThread.CurrentCulture;
         try
         {
-            Thread.CurrentThread.CurrentCulture = new("de-DE");
+            Thread.CurrentThread.CurrentCulture = new(name: "de-DE");
 
             FfmpegCommand cmd = new FfmpegCommandBuilder()
-                .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+                .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
                 .AddInput(
-                    new(
-                        InputPath,
-                        SeekTo: TimeSpan.FromMilliseconds(12_345),
-                        Duration: TimeSpan.FromMilliseconds(7_500)
+                    input: new(
+                        FilePath: InputPath,
+                        SeekTo: TimeSpan.FromMilliseconds(milliseconds: 12_345),
+                        Duration: TimeSpan.FromMilliseconds(milliseconds: 7_500)
                     )
                 )
-                .AddOutput(new(OutputPath, VideoCodec: "copy", MapStreams: ["0:v"]))
-                .Build(FfmpegPath);
+                .AddOutput(output: new(FilePath: OutputPath, VideoCodec: "copy", MapStreams: ["0:v"]))
+                .Build(ffmpegPath: FfmpegPath);
 
-            string argString = string.Join(" ", cmd.Arguments);
-            argString.Should().Contain("12.345", "seek should use dot separator not comma");
-            argString.Should().Contain("7.500", "duration should use dot separator not comma");
-            argString.Should().NotContain("12,345", "de-DE comma should not appear");
+            string argString = string.Join(separator: " ", value: cmd.Arguments);
+            argString.Should().Contain(expected: "12.345", because: "seek should use dot separator not comma");
+            argString.Should().Contain(expected: "7.500", because: "duration should use dot separator not comma");
+            argString.Should().NotContain(unexpected: "12,345", because: "de-DE comma should not appear");
         }
         finally
         {
@@ -518,132 +518,132 @@ public class CommandBuilderInvariantScenarioTests
     public void OutputPathIsAlwaysLastInItsBlock_NoArgsAfterIt()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddInput(new(InputPath))
-            .AddOutput(new(OutputPath, VideoCodec: "libx264", Crf: 23, MapStreams: ["0:v"]))
-            .Build(FfmpegPath);
+            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddInput(input: new(FilePath: InputPath))
+            .AddOutput(output: new(FilePath: OutputPath, VideoCodec: "libx264", Crf: 23, MapStreams: ["0:v"]))
+            .Build(ffmpegPath: FfmpegPath);
 
-        int outputPathIdx = Array.IndexOf(cmd.Arguments, OutputPath);
+        int outputPathIdx = Array.IndexOf(array: cmd.Arguments, value: OutputPath);
         outputPathIdx
             .Should()
-            .Be(cmd.Arguments.Length - 1, "output path should be the last argument in the command");
+            .Be(expected: cmd.Arguments.Length - 1, because: "output path should be the last argument in the command");
     }
 
     [Fact]
     public void MultipleOutputs_EachHasOwnPath_AtEndOfItsBlock()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddInput(new(InputPath))
-            .WithFilterComplex("[0:v]split=2[v0][v1]")
+            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddInput(input: new(FilePath: InputPath))
+            .WithFilterComplex(filterGraph: "[0:v]split=2[v0][v1]")
             .AddOutput(
-                new("/output/out1.mp4", VideoCodec: "libx264", Crf: 23, MapStreams: ["[v0]"])
+                output: new(FilePath: "/output/out1.mp4", VideoCodec: "libx264", Crf: 23, MapStreams: ["[v0]"])
             )
             .AddOutput(
-                new("/output/out2.mp4", VideoCodec: "libx265", Crf: 24, MapStreams: ["[v1]"])
+                output: new(FilePath: "/output/out2.mp4", VideoCodec: "libx265", Crf: 24, MapStreams: ["[v1]"])
             )
-            .Build(FfmpegPath);
+            .Build(ffmpegPath: FfmpegPath);
 
-        int path1Idx = Array.IndexOf(cmd.Arguments, "/output/out1.mp4");
-        int path2Idx = Array.IndexOf(cmd.Arguments, "/output/out2.mp4");
+        int path1Idx = Array.IndexOf(array: cmd.Arguments, value: "/output/out1.mp4");
+        int path2Idx = Array.IndexOf(array: cmd.Arguments, value: "/output/out2.mp4");
 
-        path1Idx.Should().BeGreaterThan(-1);
-        path2Idx.Should().BeGreaterThan(-1);
-        path1Idx.Should().BeLessThan(path2Idx, "paths must appear in declaration order");
-        path2Idx.Should().Be(cmd.Arguments.Length - 1, "last output path must be at the end");
+        path1Idx.Should().BeGreaterThan(expected: -1);
+        path2Idx.Should().BeGreaterThan(expected: -1);
+        path1Idx.Should().BeLessThan(expected: path2Idx, because: "paths must appear in declaration order");
+        path2Idx.Should().Be(expected: cmd.Arguments.Length - 1, because: "last output path must be at the end");
     }
 
     [Fact]
     public void AudioBitrate_ProducesDashBColonA_WithKSuffix()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddInput(new(InputPath))
+            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddInput(input: new(FilePath: InputPath))
             .AddOutput(
-                new(OutputPath, AudioCodec: "aac", AudioBitrateKbps: 192, MapStreams: ["0:a"])
+                output: new(FilePath: OutputPath, AudioCodec: "aac", AudioBitrateKbps: 192, MapStreams: ["0:a"])
             )
-            .Build(FfmpegPath);
+            .Build(ffmpegPath: FfmpegPath);
 
-        int bitRateIdx = Array.IndexOf(cmd.Arguments, "-b:a");
-        bitRateIdx.Should().BeGreaterThan(-1);
+        int bitRateIdx = Array.IndexOf(array: cmd.Arguments, value: "-b:a");
+        bitRateIdx.Should().BeGreaterThan(expected: -1);
         cmd.Arguments[bitRateIdx + 1]
             .Should()
-            .Be("192k", "audio bitrate should include 'k' suffix");
+            .Be(expected: "192k", because: "audio bitrate should include 'k' suffix");
     }
 
     [Fact]
     public void VideoBitrate_ProducesDashBColonV_WithKSuffix()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddInput(new(InputPath))
+            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddInput(input: new(FilePath: InputPath))
             .AddOutput(
-                new(OutputPath, VideoCodec: "libx264", VideoBitrateKbps: 5000, MapStreams: ["0:v"])
+                output: new(FilePath: OutputPath, VideoCodec: "libx264", VideoBitrateKbps: 5000, MapStreams: ["0:v"])
             )
-            .Build(FfmpegPath);
+            .Build(ffmpegPath: FfmpegPath);
 
-        int bitRateIdx = Array.IndexOf(cmd.Arguments, "-b:v");
-        bitRateIdx.Should().BeGreaterThan(-1);
+        int bitRateIdx = Array.IndexOf(array: cmd.Arguments, value: "-b:v");
+        bitRateIdx.Should().BeGreaterThan(expected: -1);
         cmd.Arguments[bitRateIdx + 1]
             .Should()
-            .Be("5000k", "video bitrate should include 'k' suffix");
+            .Be(expected: "5000k", because: "video bitrate should include 'k' suffix");
     }
 
     [Fact]
     public void ProfileAndLevel_AppearsForVideoOutput()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddInput(new(InputPath))
+            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddInput(input: new(FilePath: InputPath))
             .AddOutput(
-                new(
-                    OutputPath,
+                output: new(
+                    FilePath: OutputPath,
                     VideoCodec: "libx264",
                     Profile: "high",
                     Level: "4.1",
                     MapStreams: ["0:v"]
                 )
             )
-            .Build(FfmpegPath);
+            .Build(ffmpegPath: FfmpegPath);
 
-        int profileIdx = Array.IndexOf(cmd.Arguments, "-profile:v");
-        profileIdx.Should().BeGreaterThan(-1);
-        cmd.Arguments[profileIdx + 1].Should().Be("high");
+        int profileIdx = Array.IndexOf(array: cmd.Arguments, value: "-profile:v");
+        profileIdx.Should().BeGreaterThan(expected: -1);
+        cmd.Arguments[profileIdx + 1].Should().Be(expected: "high");
 
-        int levelIdx = Array.IndexOf(cmd.Arguments, "-level");
-        levelIdx.Should().BeGreaterThan(-1);
-        cmd.Arguments[levelIdx + 1].Should().Be("4.1");
+        int levelIdx = Array.IndexOf(array: cmd.Arguments, value: "-level");
+        levelIdx.Should().BeGreaterThan(expected: -1);
+        cmd.Arguments[levelIdx + 1].Should().Be(expected: "4.1");
     }
 
     [Fact]
     public void PixelFormat_AppearsForVideoOutput()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddInput(new(InputPath))
+            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddInput(input: new(FilePath: InputPath))
             .AddOutput(
-                new(OutputPath, VideoCodec: "libx264", PixelFormat: "yuv420p", MapStreams: ["0:v"])
+                output: new(FilePath: OutputPath, VideoCodec: "libx264", PixelFormat: "yuv420p", MapStreams: ["0:v"])
             )
-            .Build(FfmpegPath);
+            .Build(ffmpegPath: FfmpegPath);
 
-        int pixFmtIdx = Array.IndexOf(cmd.Arguments, "-pix_fmt");
-        pixFmtIdx.Should().BeGreaterThan(-1);
-        cmd.Arguments[pixFmtIdx + 1].Should().Be("yuv420p");
+        int pixFmtIdx = Array.IndexOf(array: cmd.Arguments, value: "-pix_fmt");
+        pixFmtIdx.Should().BeGreaterThan(expected: -1);
+        cmd.Arguments[pixFmtIdx + 1].Should().Be(expected: "yuv420p");
     }
 
     [Fact]
     public void KeyframeInterval_AppearsForVideoOutput()
     {
         FfmpegCommand cmd = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(Overwrite: false, HideBanner: false, ProgressPipe: false))
-            .AddInput(new(InputPath))
+            .WithGlobalOptions(options: new(Overwrite: false, HideBanner: false, ProgressPipe: false))
+            .AddInput(input: new(FilePath: InputPath))
             .AddOutput(
-                new(OutputPath, VideoCodec: "libx264", KeyframeInterval: 120, MapStreams: ["0:v"])
+                output: new(FilePath: OutputPath, VideoCodec: "libx264", KeyframeInterval: 120, MapStreams: ["0:v"])
             )
-            .Build(FfmpegPath);
+            .Build(ffmpegPath: FfmpegPath);
 
-        int gIdx = Array.IndexOf(cmd.Arguments, "-g");
-        gIdx.Should().BeGreaterThan(-1);
-        cmd.Arguments[gIdx + 1].Should().Be("120");
+        int gIdx = Array.IndexOf(array: cmd.Arguments, value: "-g");
+        gIdx.Should().BeGreaterThan(expected: -1);
+        cmd.Arguments[gIdx + 1].Should().Be(expected: "120");
     }
 }

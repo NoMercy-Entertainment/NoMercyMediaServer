@@ -22,7 +22,7 @@ namespace NoMercy.Tests.Networking;
 /// top of the inherited Device identity fields, and ClientRequest must round
 /// trip every registration field the client sends when it announces itself.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class HttpDtoTests
 {
     [Fact]
@@ -30,7 +30,7 @@ public sealed class HttpDtoTests
     {
         Client client = new();
 
-        Assert.Equal(string.Empty, client.Endpoint);
+        Assert.Equal(expected: string.Empty, actual: client.Endpoint);
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public sealed class HttpDtoTests
     {
         Client client = new();
 
-        Assert.Null(client.Ping);
+        Assert.Null(value: client.Ping);
     }
 
     [Fact]
@@ -55,10 +55,10 @@ public sealed class HttpDtoTests
             Endpoint = "/videoHub",
         };
 
-        Assert.Equal(sub, client.Sub);
-        Assert.Equal(42, client.Ping);
-        Assert.Same(proxy.Object, client.Socket);
-        Assert.Equal("/videoHub", client.Endpoint);
+        Assert.Equal(expected: sub, actual: client.Sub);
+        Assert.Equal(expected: 42, actual: client.Ping);
+        Assert.Same(expected: proxy.Object, actual: client.Socket);
+        Assert.Equal(expected: "/videoHub", actual: client.Endpoint);
     }
 
     [Fact]
@@ -66,8 +66,8 @@ public sealed class HttpDtoTests
     {
         Client client = new() { DeviceId = "device-123", Name = "Living Room TV" };
 
-        Assert.Equal("device-123", client.DeviceId);
-        Assert.Equal("Living Room TV", client.Name);
+        Assert.Equal(expected: "device-123", actual: client.DeviceId);
+        Assert.Equal(expected: "Living Room TV", actual: client.Name);
     }
 
     [Fact]
@@ -75,14 +75,14 @@ public sealed class HttpDtoTests
     {
         ClientRequest request = new();
 
-        Assert.Equal(string.Empty, request.Id);
-        Assert.Equal(string.Empty, request.Browser);
-        Assert.Equal(string.Empty, request.Os);
-        Assert.Equal(string.Empty, request.Device);
-        Assert.Equal(string.Empty, request.CustomName);
-        Assert.Equal(string.Empty, request.Type);
-        Assert.Equal(string.Empty, request.Name);
-        Assert.Equal(string.Empty, request.Version);
+        Assert.Equal(expected: string.Empty, actual: request.Id);
+        Assert.Equal(expected: string.Empty, actual: request.Browser);
+        Assert.Equal(expected: string.Empty, actual: request.Os);
+        Assert.Equal(expected: string.Empty, actual: request.Device);
+        Assert.Equal(expected: string.Empty, actual: request.CustomName);
+        Assert.Equal(expected: string.Empty, actual: request.Type);
+        Assert.Equal(expected: string.Empty, actual: request.Name);
+        Assert.Equal(expected: string.Empty, actual: request.Version);
     }
 
     [Fact]
@@ -100,13 +100,13 @@ public sealed class HttpDtoTests
             Version = "1.2.3",
         };
 
-        Assert.Equal("id-1", request.Id);
-        Assert.Equal("Chrome", request.Browser);
-        Assert.Equal("Windows", request.Os);
-        Assert.Equal("Desktop", request.Device);
-        Assert.Equal("Office PC", request.CustomName);
-        Assert.Equal("web", request.Type);
-        Assert.Equal("NoMercy Web", request.Name);
-        Assert.Equal("1.2.3", request.Version);
+        Assert.Equal(expected: "id-1", actual: request.Id);
+        Assert.Equal(expected: "Chrome", actual: request.Browser);
+        Assert.Equal(expected: "Windows", actual: request.Os);
+        Assert.Equal(expected: "Desktop", actual: request.Device);
+        Assert.Equal(expected: "Office PC", actual: request.CustomName);
+        Assert.Equal(expected: "web", actual: request.Type);
+        Assert.Equal(expected: "NoMercy Web", actual: request.Name);
+        Assert.Equal(expected: "1.2.3", actual: request.Version);
     }
 }

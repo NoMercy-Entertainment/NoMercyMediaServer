@@ -23,7 +23,7 @@ using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.Tests.MediaProcessing.Reclaim;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class ReclaimDeleteTests
 {
     private static IDbContextFactory<MediaContext> ContextFactory(
@@ -31,7 +31,7 @@ public class ReclaimDeleteTests
         Action<MediaContext> seed
     )
     {
-        SqliteConnection conn = new("DataSource=:memory:");
+        SqliteConnection conn = new(connectionString: "DataSource=:memory:");
         conn.Open();
         connection = conn;
 
@@ -42,28 +42,28 @@ public class ReclaimDeleteTests
         }
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseSqlite(conn)
+            .UseSqlite(connection: conn)
             .Options;
 
-        using (MediaContext seedContext = new(options))
+        using (MediaContext seedContext = new(options: options))
         {
             seedContext.Database.EnsureCreated();
-            seed(seedContext);
+            seed(obj: seedContext);
             seedContext.SaveChanges();
         }
 
         Mock<IDbContextFactory<MediaContext>> factory = new();
         factory
-            .Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => new(options));
-        factory.Setup(f => f.CreateDbContext()).Returns(() => new(options));
+            .Setup(expression: f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(valueFunction: () => new(options: options));
+        factory.Setup(expression: f => f.CreateDbContext()).Returns(valueFunction: () => new(options: options));
         return factory.Object;
     }
 
     private static T Seed<T>(MediaContext context, T entity)
         where T : class
     {
-        context.Add(entity);
+        context.Add(entity: entity);
         return entity;
     }
 
@@ -78,8 +78,8 @@ public class ReclaimDeleteTests
     )
     {
         Seed(
-            context,
-            new Folder
+            context: context,
+            entity: new Folder
             {
                 Id = folderId,
                 Path = hostFolder,
@@ -88,8 +88,8 @@ public class ReclaimDeleteTests
         );
 
         Seed(
-            context,
-            new Movie
+            context: context,
+            entity: new Movie
             {
                 Id = movieId,
                 Title = movieTitle,
@@ -99,8 +99,8 @@ public class ReclaimDeleteTests
         );
 
         return Seed(
-            context,
-            new VideoFile
+            context: context,
+            entity: new VideoFile
             {
                 Id = Ulid.NewUlid(),
                 Filename = filename,
@@ -114,21 +114,21 @@ public class ReclaimDeleteTests
 
     private static async Task WaitUntilNotScanningAsync(IReclaimScanService service)
     {
-        DateTime deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+        DateTime deadline = DateTime.UtcNow + TimeSpan.FromSeconds(seconds: 5);
         while (service.State == ReclaimScanState.Scanning && DateTime.UtcNow < deadline)
-            await Task.Delay(10);
+            await Task.Delay(millisecondsDelay: 10);
     }
 
     private static Mock<IStorage> BuildStorageMock(string hostFolder, List<StorageEntry> entries)
     {
         Mock<IStorage> storage = new();
-        storage.Setup(s => s.List(hostFolder, null, false)).Returns(entries);
+        storage.Setup(expression: s => s.List(hostFolder, null, false)).Returns(value: entries);
         storage
-            .Setup(s => s.GetName(It.IsAny<string>()))
+            .Setup(expression: s => s.GetName(It.IsAny<string>()))
             .Returns(
-                (string path) =>
+                valueFunction: (string path) =>
                 {
-                    int idx = path.LastIndexOf('/');
+                    int idx = path.LastIndexOf(value: '/');
                     return idx < 0 ? path : path[(idx + 1)..];
                 }
             );
@@ -143,14 +143,14 @@ public class ReclaimDeleteTests
         const string HostFolder = "movies/Reclaimable Movie (2019)";
 
         IDbContextFactory<MediaContext> factory = ContextFactory(
-            out SqliteConnection connection,
-            context =>
+            connection: out SqliteConnection connection,
+            seed: context =>
                 SeedMovieVideoFile(
-                    context,
-                    folderId,
-                    driverId,
-                    HostFolder,
-                    "/movie.mkv",
+                    context: context,
+                    folderId: folderId,
+                    driverId: driverId,
+                    hostFolder: HostFolder,
+                    filename: "/movie.mkv",
                     movieId: 1,
                     movieTitle: "Reclaimable Movie"
                 )
@@ -159,67 +159,67 @@ public class ReclaimDeleteTests
 
         List<FolderEntry> scanEntries =
         [
-            new("movie.mkv", false, 4_000_000_000, DateTimeOffset.UtcNow.AddDays(-30)),
-            new("movie.NoMercy.m3u8", false, 500, DateTimeOffset.UtcNow.AddDays(-1)),
-            new("video_1920x1080_SDR", true, 1_500_000_000, DateTimeOffset.UtcNow.AddDays(-1)),
-            new("audio_eng", true, 200_000_000, DateTimeOffset.UtcNow.AddDays(-1)),
+            new(Name: "movie.mkv", IsDirectory: false, Size: 4_000_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -30)),
+            new(Name: "movie.NoMercy.m3u8", IsDirectory: false, Size: 500, LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)),
+            new(Name: "video_1920x1080_SDR", IsDirectory: true, Size: 1_500_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)),
+            new(Name: "audio_eng", IsDirectory: true, Size: 200_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)),
         ];
 
         List<StorageEntry> freshEntries =
         [
             new(
-                $"{HostFolder}/movie.mkv",
-                false,
-                4_000_000_000,
-                DateTimeOffset.UtcNow.AddDays(-30)
+                Path: $"{HostFolder}/movie.mkv",
+                IsDirectory: false,
+                SizeBytes: 4_000_000_000,
+                LastModified: DateTimeOffset.UtcNow.AddDays(days: -30)
             ),
-            new($"{HostFolder}/movie.NoMercy.m3u8", false, 500, DateTimeOffset.UtcNow.AddDays(-1)),
+            new(Path: $"{HostFolder}/movie.NoMercy.m3u8", IsDirectory: false, SizeBytes: 500, LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)),
             new(
-                $"{HostFolder}/video_1920x1080_SDR",
-                true,
-                1_500_000_000,
-                DateTimeOffset.UtcNow.AddDays(-1)
+                Path: $"{HostFolder}/video_1920x1080_SDR",
+                IsDirectory: true,
+                SizeBytes: 1_500_000_000,
+                LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)
             ),
-            new($"{HostFolder}/audio_eng", true, 200_000_000, DateTimeOffset.UtcNow.AddDays(-1)),
+            new(Path: $"{HostFolder}/audio_eng", IsDirectory: true, SizeBytes: 200_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)),
         ];
 
-        Mock<IStorage> storage = BuildStorageMock(HostFolder, freshEntries);
+        Mock<IStorage> storage = BuildStorageMock(hostFolder: HostFolder, entries: freshEntries);
         Mock<IStorageFactory> storageFactory = new();
-        storageFactory.Setup(f => f.For(folderId, driverId, string.Empty)).Returns(storage.Object);
+        storageFactory.Setup(expression: f => f.For(folderId, driverId, string.Empty)).Returns(value: storage.Object);
 
         ReclaimScanService service = new(
-            factory,
-            storageFactory.Object,
-            new StubConfigurationStore(),
-            NullLogger<ReclaimScanService>.Instance,
-            (_, _, _) => scanEntries
+            contextFactory: factory,
+            storageFactory: storageFactory.Object,
+            configurationStore: new StubConfigurationStore(),
+            logger: NullLogger<ReclaimScanService>.Instance,
+            listFolderEntriesOverride: (_, _, _) => scanEntries
         );
 
-        await service.StartScanAsync(CancellationToken.None);
-        await WaitUntilNotScanningAsync(service);
+        await service.StartScanAsync(ct: CancellationToken.None);
+        await WaitUntilNotScanningAsync(service: service);
 
         service.Latest.Should().NotBeNull();
-        service.Latest!.Items.Should().HaveCount(1);
-        ReclaimableItem item = service.Latest.Items[0];
+        service.Latest!.Items.Should().HaveCount(expected: 1);
+        ReclaimableItem item = service.Latest.Items[index: 0];
 
-        long freedBytes = await service.DeleteItemAsync(item.Id, CancellationToken.None);
+        long freedBytes = await service.DeleteItemAsync(itemId: item.Id, ct: CancellationToken.None);
 
-        freedBytes.Should().Be(500 + 1_500_000_000 + 200_000_000);
+        freedBytes.Should().Be(expected: 500 + 1_500_000_000 + 200_000_000);
 
         storage.Verify(
-            s => s.DeleteDirectory($"{HostFolder}/video_1920x1080_SDR", true),
-            Times.Once
+            expression: s => s.DeleteDirectory($"{HostFolder}/video_1920x1080_SDR", true),
+            times: Times.Once
         );
-        storage.Verify(s => s.DeleteDirectory($"{HostFolder}/audio_eng", true), Times.Once);
-        storage.Verify(s => s.Delete($"{HostFolder}/movie.NoMercy.m3u8"), Times.Once);
-        storage.Verify(s => s.Delete($"{HostFolder}/movie.mkv"), Times.Never);
+        storage.Verify(expression: s => s.DeleteDirectory($"{HostFolder}/audio_eng", true), times: Times.Once);
+        storage.Verify(expression: s => s.Delete($"{HostFolder}/movie.NoMercy.m3u8"), times: Times.Once);
+        storage.Verify(expression: s => s.Delete($"{HostFolder}/movie.mkv"), times: Times.Never);
         storage.Verify(
-            s => s.DeleteDirectory($"{HostFolder}/movie.mkv", It.IsAny<bool>()),
-            Times.Never
+            expression: s => s.DeleteDirectory($"{HostFolder}/movie.mkv", It.IsAny<bool>()),
+            times: Times.Never
         );
 
         service.Latest.Items.Should().BeEmpty();
-        service.Latest.TotalReclaimableBytes.Should().Be(0);
+        service.Latest.TotalReclaimableBytes.Should().Be(expected: 0);
     }
 
     [Fact]
@@ -230,14 +230,14 @@ public class ReclaimDeleteTests
         const string HostFolder = "movies/Race Condition Movie (2019)";
 
         IDbContextFactory<MediaContext> factory = ContextFactory(
-            out SqliteConnection connection,
-            context =>
+            connection: out SqliteConnection connection,
+            seed: context =>
                 SeedMovieVideoFile(
-                    context,
-                    folderId,
-                    driverId,
-                    HostFolder,
-                    "/movie.mkv",
+                    context: context,
+                    folderId: folderId,
+                    driverId: driverId,
+                    hostFolder: HostFolder,
+                    filename: "/movie.mkv",
                     movieId: 2,
                     movieTitle: "Race Condition Movie"
                 )
@@ -246,58 +246,58 @@ public class ReclaimDeleteTests
 
         List<FolderEntry> scanEntries =
         [
-            new("movie.mkv", false, 4_000_000_000, DateTimeOffset.UtcNow.AddDays(-30)),
-            new("movie.NoMercy.m3u8", false, 500, DateTimeOffset.UtcNow.AddDays(-1)),
-            new("video_1920x1080_SDR", true, 1_500_000_000, DateTimeOffset.UtcNow.AddDays(-1)),
-            new("audio_eng", true, 200_000_000, DateTimeOffset.UtcNow.AddDays(-1)),
+            new(Name: "movie.mkv", IsDirectory: false, Size: 4_000_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -30)),
+            new(Name: "movie.NoMercy.m3u8", IsDirectory: false, Size: 500, LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)),
+            new(Name: "video_1920x1080_SDR", IsDirectory: true, Size: 1_500_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)),
+            new(Name: "audio_eng", IsDirectory: true, Size: 200_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)),
         ];
 
         // Strict: any call to the storage factory during the guarded refusal fails the test —
         // the served-copy check must abort before storage is ever touched.
-        Mock<IStorageFactory> storageFactory = new(MockBehavior.Strict);
+        Mock<IStorageFactory> storageFactory = new(behavior: MockBehavior.Strict);
 
         ReclaimScanService service = new(
-            factory,
-            storageFactory.Object,
-            new StubConfigurationStore(),
-            NullLogger<ReclaimScanService>.Instance,
-            (_, _, _) => scanEntries
+            contextFactory: factory,
+            storageFactory: storageFactory.Object,
+            configurationStore: new StubConfigurationStore(),
+            logger: NullLogger<ReclaimScanService>.Instance,
+            listFolderEntriesOverride: (_, _, _) => scanEntries
         );
 
-        await service.StartScanAsync(CancellationToken.None);
-        await WaitUntilNotScanningAsync(service);
+        await service.StartScanAsync(ct: CancellationToken.None);
+        await WaitUntilNotScanningAsync(service: service);
 
         service.Latest.Should().NotBeNull();
-        service.Latest!.Items.Should().HaveCount(1);
-        ReclaimableItem item = service.Latest.Items[0];
-        item.TargetPaths.Should().Contain($"{HostFolder}/movie.NoMercy.m3u8");
+        service.Latest!.Items.Should().HaveCount(expected: 1);
+        ReclaimableItem item = service.Latest.Items[index: 0];
+        item.TargetPaths.Should().Contain(expected: $"{HostFolder}/movie.NoMercy.m3u8");
 
         // Simulate the race: between scan and delete, the served copy pointer moved to the
         // exact file the stale snapshot marked as a reclaim target. Production stores
         // VideoFile.Filename with a leading slash — use that real format, not a bare leaf,
         // so this test cannot stay green against a guard that stopped normalizing it.
         await using (
-            MediaContext mutateContext = await factory.CreateDbContextAsync(CancellationToken.None)
+            MediaContext mutateContext = await factory.CreateDbContextAsync(cancellationToken: CancellationToken.None)
         )
         {
-            VideoFile row = await mutateContext.VideoFiles.SingleAsync(v =>
+            VideoFile row = await mutateContext.VideoFiles.SingleAsync(predicate: v =>
                 v.HostFolder == HostFolder
             );
             row.Filename = "/movie.NoMercy.m3u8";
             await mutateContext.SaveChangesAsync();
         }
 
-        Func<Task> act = async () => await service.DeleteItemAsync(item.Id, CancellationToken.None);
+        Func<Task> act = async () => await service.DeleteItemAsync(itemId: item.Id, ct: CancellationToken.None);
 
         await act.Should().ThrowAsync<InvalidOperationException>();
 
         storageFactory.Verify(
-            f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()),
-            Times.Never
+            expression: f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()),
+            times: Times.Never
         );
 
-        service.Latest.Items.Should().HaveCount(1);
-        service.Latest.Items[0].Id.Should().Be(item.Id);
+        service.Latest.Items.Should().HaveCount(expected: 1);
+        service.Latest.Items[index: 0].Id.Should().Be(expected: item.Id);
     }
 
     [Fact]
@@ -308,14 +308,14 @@ public class ReclaimDeleteTests
         const string HostFolder = "movies/Vanished Original Movie (2019)";
 
         IDbContextFactory<MediaContext> factory = ContextFactory(
-            out SqliteConnection connection,
-            context =>
+            connection: out SqliteConnection connection,
+            seed: context =>
                 SeedMovieVideoFile(
-                    context,
-                    folderId,
-                    driverId,
-                    HostFolder,
-                    "/movie.mkv",
+                    context: context,
+                    folderId: folderId,
+                    driverId: driverId,
+                    hostFolder: HostFolder,
+                    filename: "/movie.mkv",
                     movieId: 6,
                     movieTitle: "Vanished Original Movie"
                 )
@@ -326,10 +326,10 @@ public class ReclaimDeleteTests
         // legitimate ReclaimableHls snapshot item.
         List<FolderEntry> scanEntries =
         [
-            new("movie.mkv", false, 4_000_000_000, DateTimeOffset.UtcNow.AddDays(-30)),
-            new("movie.NoMercy.m3u8", false, 500, DateTimeOffset.UtcNow.AddDays(-1)),
-            new("video_1920x1080_SDR", true, 1_500_000_000, DateTimeOffset.UtcNow.AddDays(-1)),
-            new("audio_eng", true, 200_000_000, DateTimeOffset.UtcNow.AddDays(-1)),
+            new(Name: "movie.mkv", IsDirectory: false, Size: 4_000_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -30)),
+            new(Name: "movie.NoMercy.m3u8", IsDirectory: false, Size: 500, LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)),
+            new(Name: "video_1920x1080_SDR", IsDirectory: true, Size: 1_500_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)),
+            new(Name: "audio_eng", IsDirectory: true, Size: 200_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)),
         ];
 
         // Between scan and delete the original was removed from disk (e.g. a concurrent
@@ -338,56 +338,56 @@ public class ReclaimDeleteTests
         // last playable copy's only remnant and must not be touched.
         List<StorageEntry> freshEntries =
         [
-            new($"{HostFolder}/movie.NoMercy.m3u8", false, 500, DateTimeOffset.UtcNow.AddDays(-1)),
+            new(Path: $"{HostFolder}/movie.NoMercy.m3u8", IsDirectory: false, SizeBytes: 500, LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)),
             new(
-                $"{HostFolder}/video_1920x1080_SDR",
-                true,
-                1_500_000_000,
-                DateTimeOffset.UtcNow.AddDays(-1)
+                Path: $"{HostFolder}/video_1920x1080_SDR",
+                IsDirectory: true,
+                SizeBytes: 1_500_000_000,
+                LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)
             ),
-            new($"{HostFolder}/audio_eng", true, 200_000_000, DateTimeOffset.UtcNow.AddDays(-1)),
+            new(Path: $"{HostFolder}/audio_eng", IsDirectory: true, SizeBytes: 200_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)),
         ];
 
-        Mock<IStorage> storage = new(MockBehavior.Strict);
-        storage.Setup(s => s.List(HostFolder, null, false)).Returns(freshEntries);
+        Mock<IStorage> storage = new(behavior: MockBehavior.Strict);
+        storage.Setup(expression: s => s.List(HostFolder, null, false)).Returns(value: freshEntries);
         storage
-            .Setup(s => s.GetName(It.IsAny<string>()))
+            .Setup(expression: s => s.GetName(It.IsAny<string>()))
             .Returns(
-                (string path) =>
+                valueFunction: (string path) =>
                 {
-                    int idx = path.LastIndexOf('/');
+                    int idx = path.LastIndexOf(value: '/');
                     return idx < 0 ? path : path[(idx + 1)..];
                 }
             );
 
         Mock<IStorageFactory> storageFactory = new();
-        storageFactory.Setup(f => f.For(folderId, driverId, string.Empty)).Returns(storage.Object);
+        storageFactory.Setup(expression: f => f.For(folderId, driverId, string.Empty)).Returns(value: storage.Object);
 
         ReclaimScanService service = new(
-            factory,
-            storageFactory.Object,
-            new StubConfigurationStore(),
-            NullLogger<ReclaimScanService>.Instance,
-            (_, _, _) => scanEntries
+            contextFactory: factory,
+            storageFactory: storageFactory.Object,
+            configurationStore: new StubConfigurationStore(),
+            logger: NullLogger<ReclaimScanService>.Instance,
+            listFolderEntriesOverride: (_, _, _) => scanEntries
         );
 
-        await service.StartScanAsync(CancellationToken.None);
-        await WaitUntilNotScanningAsync(service);
+        await service.StartScanAsync(ct: CancellationToken.None);
+        await WaitUntilNotScanningAsync(service: service);
 
         service.Latest.Should().NotBeNull();
-        service.Latest!.Items.Should().HaveCount(1);
-        ReclaimableItem item = service.Latest.Items[0];
+        service.Latest!.Items.Should().HaveCount(expected: 1);
+        ReclaimableItem item = service.Latest.Items[index: 0];
 
-        Func<Task> act = async () => await service.DeleteItemAsync(item.Id, CancellationToken.None);
+        Func<Task> act = async () => await service.DeleteItemAsync(itemId: item.Id, ct: CancellationToken.None);
 
         await act.Should().ThrowAsync<InvalidOperationException>();
 
-        storage.Verify(s => s.Delete(It.IsAny<string>()), Times.Never);
-        storage.Verify(s => s.DeleteDirectory(It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+        storage.Verify(expression: s => s.Delete(It.IsAny<string>()), times: Times.Never);
+        storage.Verify(expression: s => s.DeleteDirectory(It.IsAny<string>(), It.IsAny<bool>()), times: Times.Never);
 
-        service.Latest.Items.Should().HaveCount(1);
-        service.Latest.Items[0].Id.Should().Be(item.Id);
-        service.Latest.TotalReclaimableBytes.Should().Be(item.ReclaimableBytes);
+        service.Latest.Items.Should().HaveCount(expected: 1);
+        service.Latest.Items[index: 0].Id.Should().Be(expected: item.Id);
+        service.Latest.TotalReclaimableBytes.Should().Be(expected: item.ReclaimableBytes);
     }
 
     [Fact]
@@ -398,45 +398,45 @@ public class ReclaimDeleteTests
         const string HostFolder = "movies/Known Movie (2020)";
 
         IDbContextFactory<MediaContext> factory = ContextFactory(
-            out SqliteConnection connection,
-            context =>
+            connection: out SqliteConnection connection,
+            seed: context =>
                 SeedMovieVideoFile(
-                    context,
-                    folderId,
-                    driverId,
-                    HostFolder,
-                    "/movie.mkv",
+                    context: context,
+                    folderId: folderId,
+                    driverId: driverId,
+                    hostFolder: HostFolder,
+                    filename: "/movie.mkv",
                     movieId: 3,
                     movieTitle: "Known Movie"
                 )
         );
         using SqliteConnection _ = connection;
 
-        Mock<IStorageFactory> storageFactory = new(MockBehavior.Strict);
+        Mock<IStorageFactory> storageFactory = new(behavior: MockBehavior.Strict);
 
         ReclaimScanService service = new(
-            factory,
-            storageFactory.Object,
-            new StubConfigurationStore(),
-            NullLogger<ReclaimScanService>.Instance,
-            (_, _, _) =>
+            contextFactory: factory,
+            storageFactory: storageFactory.Object,
+            configurationStore: new StubConfigurationStore(),
+            logger: NullLogger<ReclaimScanService>.Instance,
+            listFolderEntriesOverride: (_, _, _) =>
                 [
-                    new("movie.mkv", false, 4_000_000_000, DateTimeOffset.UtcNow.AddDays(-30)),
-                    new("movie.NoMercy.m3u8", false, 500, DateTimeOffset.UtcNow.AddDays(-1)),
+                    new(Name: "movie.mkv", IsDirectory: false, Size: 4_000_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -30)),
+                    new(Name: "movie.NoMercy.m3u8", IsDirectory: false, Size: 500, LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)),
                     new(
-                        "video_1920x1080_SDR",
-                        true,
-                        1_500_000_000,
-                        DateTimeOffset.UtcNow.AddDays(-1)
+                        Name: "video_1920x1080_SDR",
+                        IsDirectory: true,
+                        Size: 1_500_000_000,
+                        LastModified: DateTimeOffset.UtcNow.AddDays(days: -1)
                     ),
                 ]
         );
 
-        await service.StartScanAsync(CancellationToken.None);
-        await WaitUntilNotScanningAsync(service);
+        await service.StartScanAsync(ct: CancellationToken.None);
+        await WaitUntilNotScanningAsync(service: service);
 
         Func<Task> act = async () =>
-            await service.DeleteItemAsync("unknown-item-id", CancellationToken.None);
+            await service.DeleteItemAsync(itemId: "unknown-item-id", ct: CancellationToken.None);
 
         await act.Should().ThrowAsync<KeyNotFoundException>();
     }
@@ -453,24 +453,24 @@ public class ReclaimDeleteTests
         const string RevivedHostFolder = "movies/Revived Partial Movie (2022)";
 
         IDbContextFactory<MediaContext> factory = ContextFactory(
-            out SqliteConnection connection,
-            context =>
+            connection: out SqliteConnection connection,
+            seed: context =>
             {
                 SeedMovieVideoFile(
-                    context,
-                    staleFolderId,
-                    staleDriverId,
-                    StaleHostFolder,
-                    "/movie.mkv",
+                    context: context,
+                    folderId: staleFolderId,
+                    driverId: staleDriverId,
+                    hostFolder: StaleHostFolder,
+                    filename: "/movie.mkv",
                     movieId: 4,
                     movieTitle: "Stale Partial Movie"
                 );
                 SeedMovieVideoFile(
-                    context,
-                    revivedFolderId,
-                    revivedDriverId,
-                    RevivedHostFolder,
-                    "/movie.mkv",
+                    context: context,
+                    folderId: revivedFolderId,
+                    driverId: revivedDriverId,
+                    hostFolder: RevivedHostFolder,
+                    filename: "/movie.mkv",
                     movieId: 5,
                     movieTitle: "Revived Partial Movie"
                 );
@@ -480,34 +480,34 @@ public class ReclaimDeleteTests
 
         List<FolderEntry> staleScanEntries =
         [
-            new("video_1920x1080_SDR", true, 900_000_000, DateTimeOffset.UtcNow.AddDays(-10)),
-            new("audio_eng", true, 100_000_000, DateTimeOffset.UtcNow.AddDays(-10)),
+            new(Name: "video_1920x1080_SDR", IsDirectory: true, Size: 900_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -10)),
+            new(Name: "audio_eng", IsDirectory: true, Size: 100_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -10)),
         ];
 
         List<FolderEntry> revivedScanEntries =
         [
-            new("video_1280x720_SDR", true, 400_000_000, DateTimeOffset.UtcNow.AddDays(-10)),
+            new(Name: "video_1280x720_SDR", IsDirectory: true, Size: 400_000_000, LastModified: DateTimeOffset.UtcNow.AddDays(days: -10)),
         ];
 
         Dictionary<string, IReadOnlyList<FolderEntry>> scanEntriesByFolder = new()
         {
-            [StaleHostFolder] = staleScanEntries,
-            [RevivedHostFolder] = revivedScanEntries,
+            [key: StaleHostFolder] = staleScanEntries,
+            [key: RevivedHostFolder] = revivedScanEntries,
         };
 
         List<StorageEntry> staleFreshEntries =
         [
             new(
-                $"{StaleHostFolder}/video_1920x1080_SDR",
-                true,
-                900_000_000,
-                DateTimeOffset.UtcNow.AddDays(-10)
+                Path: $"{StaleHostFolder}/video_1920x1080_SDR",
+                IsDirectory: true,
+                SizeBytes: 900_000_000,
+                LastModified: DateTimeOffset.UtcNow.AddDays(days: -10)
             ),
             new(
-                $"{StaleHostFolder}/audio_eng",
-                true,
-                100_000_000,
-                DateTimeOffset.UtcNow.AddDays(-10)
+                Path: $"{StaleHostFolder}/audio_eng",
+                IsDirectory: true,
+                SizeBytes: 100_000_000,
+                LastModified: DateTimeOffset.UtcNow.AddDays(days: -10)
             ),
         ];
 
@@ -515,67 +515,67 @@ public class ReclaimDeleteTests
         List<StorageEntry> revivedFreshEntries =
         [
             new(
-                $"{RevivedHostFolder}/video_1280x720_SDR",
-                true,
-                400_000_000,
-                DateTimeOffset.UtcNow.AddDays(-10)
+                Path: $"{RevivedHostFolder}/video_1280x720_SDR",
+                IsDirectory: true,
+                SizeBytes: 400_000_000,
+                LastModified: DateTimeOffset.UtcNow.AddDays(days: -10)
             ),
             new(
-                $"{RevivedHostFolder}/movie.NoMercy.m3u8",
-                false,
-                600,
-                DateTimeOffset.UtcNow.AddMinutes(-5)
+                Path: $"{RevivedHostFolder}/movie.NoMercy.m3u8",
+                IsDirectory: false,
+                SizeBytes: 600,
+                LastModified: DateTimeOffset.UtcNow.AddMinutes(minutes: -5)
             ),
         ];
 
-        Mock<IStorage> staleStorage = BuildStorageMock(StaleHostFolder, staleFreshEntries);
-        Mock<IStorage> revivedStorage = BuildStorageMock(RevivedHostFolder, revivedFreshEntries);
+        Mock<IStorage> staleStorage = BuildStorageMock(hostFolder: StaleHostFolder, entries: staleFreshEntries);
+        Mock<IStorage> revivedStorage = BuildStorageMock(hostFolder: RevivedHostFolder, entries: revivedFreshEntries);
 
         Mock<IStorageFactory> storageFactory = new();
         storageFactory
-            .Setup(f => f.For(staleFolderId, staleDriverId, string.Empty))
-            .Returns(staleStorage.Object);
+            .Setup(expression: f => f.For(staleFolderId, staleDriverId, string.Empty))
+            .Returns(value: staleStorage.Object);
         storageFactory
-            .Setup(f => f.For(revivedFolderId, revivedDriverId, string.Empty))
-            .Returns(revivedStorage.Object);
+            .Setup(expression: f => f.For(revivedFolderId, revivedDriverId, string.Empty))
+            .Returns(value: revivedStorage.Object);
 
         ReclaimScanService service = new(
-            factory,
-            storageFactory.Object,
-            new StubConfigurationStore(),
-            NullLogger<ReclaimScanService>.Instance,
-            (_, _, hostFolder) => scanEntriesByFolder[hostFolder]
+            contextFactory: factory,
+            storageFactory: storageFactory.Object,
+            configurationStore: new StubConfigurationStore(),
+            logger: NullLogger<ReclaimScanService>.Instance,
+            listFolderEntriesOverride: (_, _, hostFolder) => scanEntriesByFolder[key: hostFolder]
         );
 
-        await service.StartScanAsync(CancellationToken.None);
-        await WaitUntilNotScanningAsync(service);
+        await service.StartScanAsync(ct: CancellationToken.None);
+        await WaitUntilNotScanningAsync(service: service);
 
         service.Latest.Should().NotBeNull();
-        service.Latest!.PartialJunk.Should().HaveCount(2);
+        service.Latest!.PartialJunk.Should().HaveCount(expected: 2);
 
-        (int count, long bytes) result = await service.SweepPartialsAsync(CancellationToken.None);
+        (int count, long bytes) result = await service.SweepPartialsAsync(ct: CancellationToken.None);
 
-        result.count.Should().Be(1);
-        result.bytes.Should().Be(900_000_000 + 100_000_000);
+        result.count.Should().Be(expected: 1);
+        result.bytes.Should().Be(expected: 900_000_000 + 100_000_000);
 
         staleStorage.Verify(
-            s => s.DeleteDirectory($"{StaleHostFolder}/video_1920x1080_SDR", true),
-            Times.Once
+            expression: s => s.DeleteDirectory($"{StaleHostFolder}/video_1920x1080_SDR", true),
+            times: Times.Once
         );
         staleStorage.Verify(
-            s => s.DeleteDirectory($"{StaleHostFolder}/audio_eng", true),
-            Times.Once
+            expression: s => s.DeleteDirectory($"{StaleHostFolder}/audio_eng", true),
+            times: Times.Once
         );
 
         revivedStorage.Verify(
-            s => s.DeleteDirectory(It.IsAny<string>(), It.IsAny<bool>()),
-            Times.Never
+            expression: s => s.DeleteDirectory(It.IsAny<string>(), It.IsAny<bool>()),
+            times: Times.Never
         );
-        revivedStorage.Verify(s => s.Delete(It.IsAny<string>()), Times.Never);
+        revivedStorage.Verify(expression: s => s.Delete(It.IsAny<string>()), times: Times.Never);
 
-        service.Latest.PartialJunk.Should().HaveCount(1);
-        service.Latest.PartialJunk[0].Folder.Should().Be(RevivedHostFolder);
-        service.Latest.TotalPartialJunkBytes.Should().Be(400_000_000);
+        service.Latest.PartialJunk.Should().HaveCount(expected: 1);
+        service.Latest.PartialJunk[index: 0].Folder.Should().Be(expected: RevivedHostFolder);
+        service.Latest.TotalPartialJunkBytes.Should().Be(expected: 400_000_000);
     }
 
     private sealed class StubConfigurationStore(string? partialStaleHoursValue = null)

@@ -15,6 +15,6 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record ImagesDto
 {
-    [JsonProperty("profiles")]
+    [JsonProperty(propertyName: "profiles")]
     public ImageDto[] Profiles { get; set; } = [];
 }

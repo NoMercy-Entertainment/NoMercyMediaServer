@@ -26,11 +26,11 @@ public class AlbumPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        Guid id = Guid.Parse(entityId);
+        Guid id = Guid.Parse(input: entityId);
         return await db
-            .Albums.Where(a => a.Id == id)
-            .Select(a => a._colorPalette)
-            .FirstOrDefaultAsync(ct);
+            .Albums.Where(predicate: a => a.Id == id)
+            .Select(selector: a => a._colorPalette)
+            .FirstOrDefaultAsync(cancellationToken: ct);
     }
 
     public async Task<PaletteResult> GenerateAsync(
@@ -39,21 +39,21 @@ public class AlbumPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        Guid id = Guid.Parse(entityId);
-        Album? album = await db.Albums.FirstOrDefaultAsync(a => a.Id == id, ct);
+        Guid id = Guid.Parse(input: entityId);
+        Album? album = await db.Albums.FirstOrDefaultAsync(predicate: a => a.Id == id, cancellationToken: ct);
         if (album is null)
             return PaletteResult.NoImage();
         if (album.Cover is null)
             return PaletteResult.NoImage();
 
         string filePath = AppFiles.MusicImagesPath + album.Cover;
-        if (!File.Exists(filePath))
+        if (!File.Exists(path: filePath))
             return PaletteResult.NoImage();
 
-        string json = await CoverArtImageManagerManager.ColorPalette("cover", new(filePath));
-        return string.IsNullOrWhiteSpace(json)
+        string json = await CoverArtImageManagerManager.ColorPalette(type: "cover", url: new(uriString: filePath));
+        return string.IsNullOrWhiteSpace(value: json)
             ? PaletteResult.NoImage()
-            : PaletteResult.Success(json);
+            : PaletteResult.Success(json: json);
     }
 
     public async Task PersistAsync(
@@ -63,9 +63,9 @@ public class AlbumPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        Guid id = Guid.Parse(entityId);
+        Guid id = Guid.Parse(input: entityId);
         await db
-            .Albums.Where(a => a.Id == id)
-            .ExecuteUpdateAsync(s => s.SetProperty(a => a._colorPalette, json), ct);
+            .Albums.Where(predicate: a => a.Id == id)
+            .ExecuteUpdateAsync(setPropertyCalls: s => s.SetProperty(propertyExpression: a => a._colorPalette, valueExpression: json), cancellationToken: ct);
     }
 }

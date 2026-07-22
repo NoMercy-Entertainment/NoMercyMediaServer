@@ -43,8 +43,8 @@ public class DiscScanner(
     public async Task<DiscInfo> ScanAsync(string drivePath, CancellationToken ct)
     {
         OpticalDiscType discType = drivePath.StartsWith(
-            "bluray:",
-            StringComparison.OrdinalIgnoreCase
+            value: "bluray:",
+            comparisonType: StringComparison.OrdinalIgnoreCase
         )
             ? OpticalDiscType.BluRay
             : OpticalDiscType.Dvd;
@@ -54,20 +54,20 @@ public class DiscScanner(
         if (discType == OpticalDiscType.BluRay)
         {
             using CancellationTokenSource probeCts =
-                CancellationTokenSource.CreateLinkedTokenSource(ct);
-            probeCts.CancelAfter(TimeSpan.FromSeconds(1));
+                CancellationTokenSource.CreateLinkedTokenSource(token: ct);
+            probeCts.CancelAfter(delay: TimeSpan.FromSeconds(seconds: 1));
 
             try
             {
                 ProcessResult preProbe = await processRunner.RunAsync(
-                    options.FfprobePath,
-                    ["-v", "quiet", "-show_format", drivePath],
+                    executable: options.FfprobePath,
+                    arguments: ["-v", "quiet", "-show_format", drivePath],
                     workingDirectory: null,
                     cancellationToken: probeCts.Token
                 );
 
                 if (!preProbe.IsSuccess)
-                    ClassifyBluRayStderr(drivePath, preProbe.StdErr);
+                    ClassifyBluRayStderr(drivePath: drivePath, stderr: preProbe.StdErr);
             }
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
             {
@@ -89,31 +89,28 @@ public class DiscScanner(
         ];
 
         ProcessResult result = await processRunner.RunAsync(
-            options.FfprobePath,
-            args,
+            executable: options.FfprobePath,
+            arguments: args,
             workingDirectory: null,
             cancellationToken: ct
         );
 
-        if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.StdOut))
+        if (!result.IsSuccess || string.IsNullOrWhiteSpace(value: result.StdOut))
         {
             logger.LogWarning(
-                "Disc scan failed for {Drive} (exit {Exit}): {Stderr}",
-                drivePath,
-                result.ExitCode,
-                TrimStderr(result.StdErr)
+                message: "Disc scan failed for {Drive} (exit {Exit}): {Stderr}", args: [drivePath, result.ExitCode, TrimStderr(stdErr: result.StdErr)]
             );
-            return new(discType, null, [], null, TimeSpan.Zero);
+            return new(Type: discType, DiscLabel: null, Titles: [], AudioTracks: null, TotalDuration: TimeSpan.Zero);
         }
 
         try
         {
-            return Parse(result.StdOut, discType);
+            return Parse(json: result.StdOut, discType: discType);
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to parse disc scan output for {Drive}", drivePath);
-            return new(discType, null, [], null, TimeSpan.Zero);
+            logger.LogWarning(exception: ex, message: "Failed to parse disc scan output for {Drive}", args: drivePath);
+            return new(Type: discType, DiscLabel: null, Titles: [], AudioTracks: null, TotalDuration: TimeSpan.Zero);
         }
     }
 
@@ -131,13 +128,13 @@ public class DiscScanner(
         JsonDocument doc;
         try
         {
-            doc = JsonDocument.Parse(json);
+            doc = JsonDocument.Parse(json: json);
         }
         catch (JsonException ex)
         {
             throw new InvalidOperationException(
-                $"ffprobe output was not valid JSON: {ex.Message}",
-                ex
+                message: $"ffprobe output was not valid JSON: {ex.Message}",
+                innerException: ex
             );
         }
         using JsonDocument _ = doc;
@@ -145,61 +142,61 @@ public class DiscScanner(
 
         string? discLabel = null;
         TimeSpan duration = TimeSpan.Zero;
-        if (root.TryGetProperty("format", out JsonElement format))
+        if (root.TryGetProperty(propertyName: "format", value: out JsonElement format))
         {
             if (
-                format.TryGetProperty("tags", out JsonElement tags)
-                && tags.TryGetProperty("title", out JsonElement titleElement)
+                format.TryGetProperty(propertyName: "tags", value: out JsonElement tags)
+                && tags.TryGetProperty(propertyName: "title", value: out JsonElement titleElement)
             )
             {
                 discLabel = titleElement.GetString();
             }
             if (
-                format.TryGetProperty("duration", out JsonElement durationElement)
+                format.TryGetProperty(propertyName: "duration", value: out JsonElement durationElement)
                 && double.TryParse(
-                    durationElement.GetString(),
-                    NumberStyles.Float,
-                    CultureInfo.InvariantCulture,
-                    out double seconds
+                    s: durationElement.GetString(),
+                    style: NumberStyles.Float,
+                    provider: CultureInfo.InvariantCulture,
+                    result: out double seconds
                 )
             )
             {
-                duration = TimeSpan.FromSeconds(seconds);
+                duration = TimeSpan.FromSeconds(value: seconds);
             }
         }
 
         List<VideoStreamInfo> videoStreams = [];
         List<AudioStreamInfo> audioStreams = [];
         List<SubtitleStreamInfo> subtitles = [];
-        if (root.TryGetProperty("streams", out JsonElement streams))
+        if (root.TryGetProperty(propertyName: "streams", value: out JsonElement streams))
         {
             foreach (JsonElement stream in streams.EnumerateArray())
             {
-                string codecType = stream.TryGetProperty("codec_type", out JsonElement t)
+                string codecType = stream.TryGetProperty(propertyName: "codec_type", value: out JsonElement t)
                     ? (t.GetString() ?? "")
                     : "";
 
                 switch (codecType)
                 {
                     case "video":
-                        videoStreams.Add(ParseVideo(stream));
+                        videoStreams.Add(item: ParseVideo(stream: stream));
                         break;
                     case "audio":
-                        audioStreams.Add(ParseAudio(stream));
+                        audioStreams.Add(item: ParseAudio(stream: stream));
                         break;
                     case "subtitle":
-                        subtitles.Add(ParseSubtitle(stream));
+                        subtitles.Add(item: ParseSubtitle(stream: stream));
                         break;
                 }
             }
         }
 
         List<ChapterInfo> chapters = [];
-        if (root.TryGetProperty("chapters", out JsonElement chaptersElement))
+        if (root.TryGetProperty(propertyName: "chapters", value: out JsonElement chaptersElement))
         {
             foreach (JsonElement chapter in chaptersElement.EnumerateArray())
             {
-                chapters.Add(ParseChapter(chapter));
+                chapters.Add(item: ParseChapter(chapter: chapter));
             }
         }
 
@@ -215,20 +212,20 @@ public class DiscScanner(
             IsMainFeature: true
         );
 
-        return new(discType, discLabel, [singleTitle], null, duration);
+        return new(Type: discType, DiscLabel: discLabel, Titles: [singleTitle], AudioTracks: null, TotalDuration: duration);
     }
 
     private static VideoStreamInfo ParseVideo(JsonElement stream) =>
         new(
-            Index: stream.TryGetProperty("index", out JsonElement i) ? i.GetInt32() : 0,
-            Codec: stream.TryGetProperty("codec_name", out JsonElement c)
+            Index: stream.TryGetProperty(propertyName: "index", value: out JsonElement i) ? i.GetInt32() : 0,
+            Codec: stream.TryGetProperty(propertyName: "codec_name", value: out JsonElement c)
                 ? (c.GetString() ?? "")
                 : "",
-            Width: stream.TryGetProperty("width", out JsonElement w) ? w.GetInt32() : 0,
-            Height: stream.TryGetProperty("height", out JsonElement h) ? h.GetInt32() : 0,
+            Width: stream.TryGetProperty(propertyName: "width", value: out JsonElement w) ? w.GetInt32() : 0,
+            Height: stream.TryGetProperty(propertyName: "height", value: out JsonElement h) ? h.GetInt32() : 0,
             FrameRate: 0,
             BitDepth: 8,
-            PixelFormat: stream.TryGetProperty("pix_fmt", out JsonElement px)
+            PixelFormat: stream.TryGetProperty(propertyName: "pix_fmt", value: out JsonElement px)
                 ? (px.GetString() ?? "")
                 : "",
             ColorPrimaries: null,
@@ -242,21 +239,21 @@ public class DiscScanner(
     {
         string? language = null;
         if (
-            stream.TryGetProperty("tags", out JsonElement tags)
-            && tags.TryGetProperty("language", out JsonElement lang)
+            stream.TryGetProperty(propertyName: "tags", value: out JsonElement tags)
+            && tags.TryGetProperty(propertyName: "language", value: out JsonElement lang)
         )
         {
             language = lang.GetString();
         }
 
         return new(
-            Index: stream.TryGetProperty("index", out JsonElement i) ? i.GetInt32() : 0,
-            Codec: stream.TryGetProperty("codec_name", out JsonElement c)
+            Index: stream.TryGetProperty(propertyName: "index", value: out JsonElement i) ? i.GetInt32() : 0,
+            Codec: stream.TryGetProperty(propertyName: "codec_name", value: out JsonElement c)
                 ? (c.GetString() ?? "")
                 : "",
-            Channels: stream.TryGetProperty("channels", out JsonElement ch) ? ch.GetInt32() : 0,
-            SampleRate: stream.TryGetProperty("sample_rate", out JsonElement sr)
-            && int.TryParse(sr.GetString(), out int srInt)
+            Channels: stream.TryGetProperty(propertyName: "channels", value: out JsonElement ch) ? ch.GetInt32() : 0,
+            SampleRate: stream.TryGetProperty(propertyName: "sample_rate", value: out JsonElement sr)
+            && int.TryParse(s: sr.GetString(), result: out int srInt)
                 ? srInt
                 : 0,
             BitRateKbps: 0,
@@ -270,16 +267,16 @@ public class DiscScanner(
     {
         string? language = null;
         if (
-            stream.TryGetProperty("tags", out JsonElement tags)
-            && tags.TryGetProperty("language", out JsonElement lang)
+            stream.TryGetProperty(propertyName: "tags", value: out JsonElement tags)
+            && tags.TryGetProperty(propertyName: "language", value: out JsonElement lang)
         )
         {
             language = lang.GetString();
         }
 
         return new(
-            Index: stream.TryGetProperty("index", out JsonElement i) ? i.GetInt32() : 0,
-            Codec: stream.TryGetProperty("codec_name", out JsonElement c)
+            Index: stream.TryGetProperty(propertyName: "index", value: out JsonElement i) ? i.GetInt32() : 0,
+            Codec: stream.TryGetProperty(propertyName: "codec_name", value: out JsonElement c)
                 ? (c.GetString() ?? "")
                 : "",
             Language: language,
@@ -293,24 +290,24 @@ public class DiscScanner(
         double start = 0;
         double end = 0;
         if (
-            chapter.TryGetProperty("start_time", out JsonElement s)
+            chapter.TryGetProperty(propertyName: "start_time", value: out JsonElement s)
             && double.TryParse(
-                s.GetString(),
-                NumberStyles.Float,
-                CultureInfo.InvariantCulture,
-                out double startParsed
+                s: s.GetString(),
+                style: NumberStyles.Float,
+                provider: CultureInfo.InvariantCulture,
+                result: out double startParsed
             )
         )
         {
             start = startParsed;
         }
         if (
-            chapter.TryGetProperty("end_time", out JsonElement e)
+            chapter.TryGetProperty(propertyName: "end_time", value: out JsonElement e)
             && double.TryParse(
-                e.GetString(),
-                NumberStyles.Float,
-                CultureInfo.InvariantCulture,
-                out double endParsed
+                s: e.GetString(),
+                style: NumberStyles.Float,
+                provider: CultureInfo.InvariantCulture,
+                result: out double endParsed
             )
         )
         {
@@ -319,14 +316,14 @@ public class DiscScanner(
 
         string? title = null;
         if (
-            chapter.TryGetProperty("tags", out JsonElement tags)
-            && tags.TryGetProperty("title", out JsonElement t)
+            chapter.TryGetProperty(propertyName: "tags", value: out JsonElement tags)
+            && tags.TryGetProperty(propertyName: "title", value: out JsonElement t)
         )
         {
             title = t.GetString();
         }
 
-        return new(TimeSpan.FromSeconds(start), TimeSpan.FromSeconds(end), title);
+        return new(Start: TimeSpan.FromSeconds(value: start), End: TimeSpan.FromSeconds(value: end), Title: title);
     }
 
     /// <summary>
@@ -336,7 +333,7 @@ public class DiscScanner(
     /// </summary>
     internal static void ClassifyBluRayStderr(string drivePath, string stderr)
     {
-        if (string.IsNullOrEmpty(stderr))
+        if (string.IsNullOrEmpty(value: stderr))
             return;
 
         // libaacs emits this when KEYDB.cfg has no entry for the disc's volume ID.
@@ -344,32 +341,32 @@ public class DiscScanner(
         //   "aacs: no matching certificate"  (older builds)
         //   "AACS: no matching certificate"  (case varies by build)
         if (
-            stderr.Contains("no matching certificate", StringComparison.OrdinalIgnoreCase)
-            || stderr.Contains("aacs:", StringComparison.OrdinalIgnoreCase)
-                && stderr.Contains("certificate", StringComparison.OrdinalIgnoreCase)
+            stderr.Contains(value: "no matching certificate", comparisonType: StringComparison.OrdinalIgnoreCase)
+            || stderr.Contains(value: "aacs:", comparisonType: StringComparison.OrdinalIgnoreCase)
+                && stderr.Contains(value: "certificate", comparisonType: StringComparison.OrdinalIgnoreCase)
         )
         {
-            string volumeId = ExtractVolumeId(stderr) ?? drivePath;
-            throw RuntimeErrors.DiscAacsCertMissing(volumeId);
+            string volumeId = ExtractVolumeId(stderr: stderr) ?? drivePath;
+            throw RuntimeErrors.DiscAacsCertMissing(volumeId: volumeId);
         }
 
         // libbdplus emits this when the converter database has no entry for the disc.
         // Pattern from libbdplus src/libbdplus/bdplus.c:
         //   "bdplus: no matching converter"
-        if (stderr.Contains("no matching converter", StringComparison.OrdinalIgnoreCase))
+        if (stderr.Contains(value: "no matching converter", comparisonType: StringComparison.OrdinalIgnoreCase))
         {
-            string volumeId = ExtractVolumeId(stderr) ?? drivePath;
-            throw RuntimeErrors.DiscBdplusConverterMissing(volumeId);
+            string volumeId = ExtractVolumeId(stderr: stderr) ?? drivePath;
+            throw RuntimeErrors.DiscBdplusConverterMissing(volumeId: volumeId);
         }
 
         // Any other protocol-level read failure.
         if (
-            stderr.Contains("Protocol not found", StringComparison.OrdinalIgnoreCase)
-            || stderr.Contains("No such file or directory", StringComparison.OrdinalIgnoreCase)
-            || stderr.Contains("Input/output error", StringComparison.OrdinalIgnoreCase)
+            stderr.Contains(value: "Protocol not found", comparisonType: StringComparison.OrdinalIgnoreCase)
+            || stderr.Contains(value: "No such file or directory", comparisonType: StringComparison.OrdinalIgnoreCase)
+            || stderr.Contains(value: "Input/output error", comparisonType: StringComparison.OrdinalIgnoreCase)
         )
         {
-            throw RuntimeErrors.DiscReadError(drivePath, TrimStderr(stderr));
+            throw RuntimeErrors.DiscReadError(drivePath: drivePath, ffmpegStderrTail: TrimStderr(stdErr: stderr));
         }
     }
 
@@ -380,10 +377,10 @@ public class DiscScanner(
     /// </summary>
     private static string? ExtractVolumeId(string stderr)
     {
-        foreach (string line in stderr.Split('\n'))
+        foreach (string line in stderr.Split(separator: '\n'))
         {
             // Look for a line containing a 32-char hex string — the AACS volume ID.
-            Match m = Regex.Match(line, @"[0-9A-Fa-f]{32}");
+            Match m = Regex.Match(input: line, pattern: @"[0-9A-Fa-f]{32}");
             if (m.Success)
                 return m.Value.ToUpperInvariant();
         }
@@ -393,9 +390,9 @@ public class DiscScanner(
 
     private static string TrimStderr(string stdErr)
     {
-        if (string.IsNullOrEmpty(stdErr))
+        if (string.IsNullOrEmpty(value: stdErr))
             return "(no stderr)";
-        string[] lines = stdErr.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        return lines.Length <= 3 ? stdErr : string.Join('\n', lines[^3..]);
+        string[] lines = stdErr.Split(separator: '\n', options: StringSplitOptions.RemoveEmptyEntries);
+        return lines.Length <= 3 ? stdErr : string.Join(separator: '\n', value: lines[^3..]);
     }
 }

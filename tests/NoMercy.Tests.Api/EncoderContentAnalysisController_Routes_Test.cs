@@ -30,7 +30,7 @@ namespace NoMercy.Tests.Api;
 ///      when present, or accepts that the XML doc remark is the sole marker
 ///      if the attribute is absent).
 /// </summary>
-[Trait("Category", "Routes")]
+[Trait(name: "Category", value: "Routes")]
 public class EncoderContentAnalysisController_Routes_Test
 {
     // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -42,13 +42,13 @@ public class EncoderContentAnalysisController_Routes_Test
     )
     {
         IEnumerable<MethodInfo> actions = controller
-            .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Where(m => m.GetCustomAttributes<HttpMethodAttribute>().Any());
+            .GetMethods(bindingAttr: BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Where(predicate: m => m.GetCustomAttributes<HttpMethodAttribute>().Any());
 
         foreach (MethodInfo method in actions)
         {
             HttpMethodAttribute? attr = method
-                .GetCustomAttributes(httpVerbAttribute, inherit: false)
+                .GetCustomAttributes(attributeType: httpVerbAttribute, inherit: false)
                 .Cast<HttpMethodAttribute>()
                 .FirstOrDefault();
 
@@ -56,7 +56,7 @@ public class EncoderContentAnalysisController_Routes_Test
                 continue;
 
             string template = attr.Template ?? string.Empty;
-            if (string.Equals(template, routeSuffix, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(a: template, b: routeSuffix, comparisonType: StringComparison.OrdinalIgnoreCase))
                 return method;
         }
 
@@ -70,21 +70,21 @@ public class EncoderContentAnalysisController_Routes_Test
         string description
     )
     {
-        MethodInfo? method = FindAction(controller, httpVerb, routeSuffix);
+        MethodInfo? method = FindAction(controller: controller, httpVerbAttribute: httpVerb, routeSuffix: routeSuffix);
         Assert.True(
-            method is not null,
-            $"Missing endpoint on {controller.Name}: {description} (route: \"{routeSuffix}\")"
+            condition: method is not null,
+            userMessage: $"Missing endpoint on {controller.Name}: {description} (route: \"{routeSuffix}\")"
         );
     }
 
     // ─── EncoderContentAnalysisController ────────────────────────────────────
 
     [Theory]
-    [InlineData(typeof(HttpPostAttribute), "crop/{videoFileId}", "POST crop/{videoFileId}")]
-    [InlineData(typeof(HttpPostAttribute), "intro/{seasonId:int}", "POST intro/{seasonId}")]
-    [InlineData(typeof(HttpPostAttribute), "ocr/{videoFileId}", "POST ocr/{videoFileId}")]
-    [InlineData(typeof(HttpPostAttribute), "whisper/{videoFileId}", "POST whisper/{videoFileId}")]
-    [InlineData(typeof(HttpPutAttribute), "segments/{segmentId}", "PUT segments/{segmentId}")]
+    [InlineData(data: [typeof(HttpPostAttribute), "crop/{videoFileId}", "POST crop/{videoFileId}"])]
+    [InlineData(data: [typeof(HttpPostAttribute), "intro/{seasonId:int}", "POST intro/{seasonId}"])]
+    [InlineData(data: [typeof(HttpPostAttribute), "ocr/{videoFileId}", "POST ocr/{videoFileId}"])]
+    [InlineData(data: [typeof(HttpPostAttribute), "whisper/{videoFileId}", "POST whisper/{videoFileId}"])]
+    [InlineData(data: [typeof(HttpPutAttribute), "segments/{segmentId}", "PUT segments/{segmentId}"])]
     public void EncoderContentAnalysisController_HasExpectedEndpoint(
         Type httpVerb,
         string routeSuffix,
@@ -92,22 +92,18 @@ public class EncoderContentAnalysisController_Routes_Test
     )
     {
         AssertEndpointExists(
-            typeof(EncoderContentAnalysisController),
-            httpVerb,
-            routeSuffix,
-            description
+            controller: typeof(EncoderContentAnalysisController),
+            httpVerb: httpVerb,
+            routeSuffix: routeSuffix,
+            description: description
         );
     }
 
     // ─── EncoderOcrLanguagesController ───────────────────────────────────────
 
     [Theory]
-    [InlineData(typeof(HttpGetAttribute), "languages", "GET /languages")]
-    [InlineData(
-        typeof(HttpPostAttribute),
-        "languages/{code}/download",
-        "POST /languages/{code}/download"
-    )]
+    [InlineData(data: [typeof(HttpGetAttribute), "languages", "GET /languages"])]
+    [InlineData(data: [typeof(HttpPostAttribute), "languages/{code}/download", "POST /languages/{code}/download"])]
     public void EncoderOcrLanguagesController_HasExpectedEndpoint(
         Type httpVerb,
         string routeSuffix,
@@ -115,10 +111,10 @@ public class EncoderContentAnalysisController_Routes_Test
     )
     {
         AssertEndpointExists(
-            typeof(EncoderOcrLanguagesController),
-            httpVerb,
-            routeSuffix,
-            description
+            controller: typeof(EncoderOcrLanguagesController),
+            httpVerb: httpVerb,
+            routeSuffix: routeSuffix,
+            description: description
         );
     }
 
@@ -130,19 +126,19 @@ public class EncoderContentAnalysisController_Routes_Test
         // The dashboard crop endpoint carries a <remarks>Deprecated.</remarks>
         // XML doc; additionally the method should exist (regression guard).
         MethodInfo? method = FindAction(
-            typeof(ContentAnalysisController),
-            typeof(HttpGetAttribute),
-            "crop/{videoFileId}"
+            controller: typeof(ContentAnalysisController),
+            httpVerbAttribute: typeof(HttpGetAttribute),
+            routeSuffix: "crop/{videoFileId}"
         );
 
         Assert.True(
-            method is not null,
-            "Dashboard ContentAnalysisController is missing GET crop/{videoFileId}"
+            condition: method is not null,
+            userMessage: "Dashboard ContentAnalysisController is missing GET crop/{videoFileId}"
         );
 
         // If a formal [Obsolete] attribute is later added, verify it.
         // For now the deprecation is communicated via XML doc remarks;
         // this assertion ensures the method at least still exists as an alias.
-        Assert.Equal("DetectCrop", method!.Name);
+        Assert.Equal(expected: "DetectCrop", actual: method!.Name);
     }
 }

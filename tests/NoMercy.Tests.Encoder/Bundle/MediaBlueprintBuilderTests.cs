@@ -26,24 +26,24 @@ namespace NoMercy.Tests.Encoder.Bundle;
 public class MediaBlueprintBuilderTests
 {
     private static readonly JObject SampleFfprobe = JObject.Parse(
-        """
-        {
-          "format": { "format_name": "matroska,webm", "duration": "1440.050000" },
-          "streams": [
-            { "index": 0, "codec_type": "video", "codec_name": "hevc" },
-            { "index": 1, "codec_type": "audio", "codec_name": "flac", "tags": { "language": "jpn" } },
-            { "index": 2, "codec_type": "subtitle", "codec_name": "ass", "tags": { "language": "eng" } }
-          ],
-          "chapters": []
-        }
-        """
+        json: """
+              {
+                "format": { "format_name": "matroska,webm", "duration": "1440.050000" },
+                "streams": [
+                  { "index": 0, "codec_type": "video", "codec_name": "hevc" },
+                  { "index": 1, "codec_type": "audio", "codec_name": "flac", "tags": { "language": "jpn" } },
+                  { "index": 2, "codec_type": "subtitle", "codec_name": "ass", "tags": { "language": "eng" } }
+                ],
+                "chapters": []
+              }
+              """
     );
 
     private static MediaInfo BuildSourceMediaInfo() =>
         new(
             FilePath: "Download/complete/Frieren/[Judas] Frieren - S01E01.mkv",
             Format: "matroska,webm",
-            Duration: TimeSpan.FromSeconds(1440.05),
+            Duration: TimeSpan.FromSeconds(value: 1440.05),
             OverallBitRateKbps: 35000,
             FileSizeBytes: 6_328_934,
             VideoStreams:
@@ -86,7 +86,7 @@ public class MediaBlueprintBuilderTests
 
     private static BlueprintIdentity EpisodeIdentity() =>
         BlueprintIdentityFactory.From(
-            new EpisodeMediaRef(
+            media: new EpisodeMediaRef(
                 Type: MediaType.Episode,
                 Id: 4807632,
                 Title: "OO Magic Episode 1",
@@ -106,13 +106,13 @@ public class MediaBlueprintBuilderTests
         MediaInfo source = BuildSourceMediaInfo();
         MediaBlueprintBuilder builder = new();
 
-        MediaBlueprint blueprint = builder.BuildFromSource(source, EpisodeIdentity());
+        MediaBlueprint blueprint = builder.BuildFromSource(source: source, identity: EpisodeIdentity());
 
-        blueprint.Source.Path.Should().Be(source.FilePath);
-        blueprint.Source.Filename.Should().Be("[Judas] Frieren - S01E01.mkv");
-        blueprint.Source.Container.Should().Be("matroska,webm");
-        blueprint.Source.SizeBytes.Should().Be(6_328_934);
-        blueprint.Source.DurationSeconds.Should().Be(1440.05);
+        blueprint.Source.Path.Should().Be(expected: source.FilePath);
+        blueprint.Source.Filename.Should().Be(expected: "[Judas] Frieren - S01E01.mkv");
+        blueprint.Source.Container.Should().Be(expected: "matroska,webm");
+        blueprint.Source.SizeBytes.Should().Be(expected: 6_328_934);
+        blueprint.Source.DurationSeconds.Should().Be(expected: 1440.05);
     }
 
     [Fact]
@@ -121,7 +121,7 @@ public class MediaBlueprintBuilderTests
         MediaInfo source = BuildSourceMediaInfo();
         MediaBlueprintBuilder builder = new();
 
-        MediaBlueprint blueprint = builder.BuildFromSource(source, EpisodeIdentity());
+        MediaBlueprint blueprint = builder.BuildFromSource(source: source, identity: EpisodeIdentity());
 
         // sha256 is deferred until a streaming hasher is wired into the
         // analyzer pipeline — see SPEC.md "Open items". Documenting the null
@@ -135,13 +135,13 @@ public class MediaBlueprintBuilderTests
         MediaInfo source = BuildSourceMediaInfo();
         MediaBlueprintBuilder builder = new();
 
-        MediaBlueprint blueprint = builder.BuildFromSource(source, EpisodeIdentity());
+        MediaBlueprint blueprint = builder.BuildFromSource(source: source, identity: EpisodeIdentity());
 
         blueprint.Source.Ffprobe.Should().NotBeNull();
-        JToken.DeepEquals(blueprint.Source.Ffprobe, SampleFfprobe).Should().BeTrue();
-        blueprint.Source.Ffprobe!["streams"]!
+        JToken.DeepEquals(t1: blueprint.Source.Ffprobe, t2: SampleFfprobe).Should().BeTrue();
+        blueprint.Source.Ffprobe![propertyName: "streams"]!
             .Should()
-            .HaveCount(3, "video + audio + subtitle streams from the raw ffprobe output");
+            .HaveCount(expected: 3, because: "video + audio + subtitle streams from the raw ffprobe output");
     }
 
     [Fact]
@@ -150,12 +150,12 @@ public class MediaBlueprintBuilderTests
         MediaInfo source = BuildSourceMediaInfo();
         MediaBlueprintBuilder builder = new();
 
-        MediaBlueprint blueprint = builder.BuildFromSource(source, EpisodeIdentity());
+        MediaBlueprint blueprint = builder.BuildFromSource(source: source, identity: EpisodeIdentity());
 
         // The zero-encode-outputs proof: a complete, source-derived blueprint
         // with an empty encodes[] list.
         blueprint.Encodes.Should().BeEmpty();
-        blueprint.Version.Should().Be(1);
+        blueprint.Version.Should().Be(expected: 1);
     }
 
     // ── Identity mapping ────────────────────────────────────────────────────
@@ -166,17 +166,17 @@ public class MediaBlueprintBuilderTests
         MediaInfo source = BuildSourceMediaInfo();
         MediaBlueprintBuilder builder = new();
 
-        MediaBlueprint blueprint = builder.BuildFromSource(source, EpisodeIdentity());
+        MediaBlueprint blueprint = builder.BuildFromSource(source: source, identity: EpisodeIdentity());
 
-        blueprint.Identity.Type.Should().Be("episode");
-        blueprint.Identity.TmdbId.Should().Be(4807632);
+        blueprint.Identity.Type.Should().Be(expected: "episode");
+        blueprint.Identity.TmdbId.Should().Be(expected: 4807632);
         blueprint.Identity.Show.Should().NotBeNull();
-        blueprint.Identity.Show!.TmdbId.Should().Be(209867);
-        blueprint.Identity.Show!.Title.Should().Be("Frieren: Beyond Journey's End");
-        blueprint.Identity.Season.Should().Be(1);
-        blueprint.Identity.Episode.Should().Be(1);
-        blueprint.Identity.Title.Should().Be("OO Magic Episode 1");
-        blueprint.Identity.Year.Should().Be(2023);
+        blueprint.Identity.Show!.TmdbId.Should().Be(expected: 209867);
+        blueprint.Identity.Show!.Title.Should().Be(expected: "Frieren: Beyond Journey's End");
+        blueprint.Identity.Season.Should().Be(expected: 1);
+        blueprint.Identity.Episode.Should().Be(expected: 1);
+        blueprint.Identity.Title.Should().Be(expected: "OO Magic Episode 1");
+        blueprint.Identity.Year.Should().Be(expected: 2023);
     }
 
     [Fact]
@@ -190,12 +190,12 @@ public class MediaBlueprintBuilderTests
             Description: "A hacker discovers reality is a simulation."
         );
 
-        BlueprintIdentity identity = BlueprintIdentityFactory.From(movie);
+        BlueprintIdentity identity = BlueprintIdentityFactory.From(media: movie);
 
-        identity.Type.Should().Be("movie");
-        identity.TmdbId.Should().Be(603);
-        identity.Title.Should().Be("The Matrix");
-        identity.Year.Should().Be(1999);
+        identity.Type.Should().Be(expected: "movie");
+        identity.TmdbId.Should().Be(expected: 603);
+        identity.Title.Should().Be(expected: "The Matrix");
+        identity.Year.Should().Be(expected: 1999);
         identity.Show.Should().BeNull();
         identity.Season.Should().BeNull();
         identity.Episode.Should().BeNull();
@@ -204,9 +204,9 @@ public class MediaBlueprintBuilderTests
     [Fact]
     public void BlueprintIdentityFactory_UnsupportedMediaType_Throws()
     {
-        MediaItemRef track = new(MediaType.Track, Id: 1, Title: "Some Track", Year: null);
+        MediaItemRef track = new(Type: MediaType.Track, Id: 1, Title: "Some Track", Year: null);
 
-        Action act = () => BlueprintIdentityFactory.From(track);
+        Action act = () => BlueprintIdentityFactory.From(media: track);
 
         act.Should().Throw<ArgumentOutOfRangeException>();
     }

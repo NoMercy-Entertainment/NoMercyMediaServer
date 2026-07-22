@@ -17,7 +17,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api;
 
-[Trait("Category", "Characterization")]
+[Trait(name: "Category", value: "Characterization")]
 public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -30,13 +30,13 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     }
 
     private static StringContent JsonBody(object obj) =>
-        new(JsonSerializer.Serialize(obj), Encoding.UTF8, "application/json");
+        new(content: JsonSerializer.Serialize(value: obj), encoding: Encoding.UTF8, mediaType: "application/json");
 
     private static void AssertJsonHasProperty(JsonElement element, string propertyName) =>
         Assert.True(
-            element.TryGetProperty(propertyName, out _),
-            $"Expected JSON property '{propertyName}' not found. "
-                + $"Properties: [{string.Join(", ", EnumerateProperties(element))}]"
+            condition: element.TryGetProperty(propertyName: propertyName, value: out _),
+            userMessage: $"Expected JSON property '{propertyName}' not found. "
+                         + $"Properties: [{string.Join(separator: ", ", values: EnumerateProperties(element: element))}]"
         );
 
     private static IEnumerable<string> EnumerateProperties(JsonElement element)
@@ -48,25 +48,25 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
 
     private static void AssertProblemDetailsShape(JsonElement root, int expectedStatus)
     {
-        AssertJsonHasProperty(root, "type");
-        AssertJsonHasProperty(root, "title");
-        AssertJsonHasProperty(root, "status");
-        AssertJsonHasProperty(root, "detail");
-        AssertJsonHasProperty(root, "instance");
-        Assert.Equal(expectedStatus, root.GetProperty("status").GetInt32());
+        AssertJsonHasProperty(element: root, propertyName: "type");
+        AssertJsonHasProperty(element: root, propertyName: "title");
+        AssertJsonHasProperty(element: root, propertyName: "status");
+        AssertJsonHasProperty(element: root, propertyName: "detail");
+        AssertJsonHasProperty(element: root, propertyName: "instance");
+        Assert.Equal(expected: expectedStatus, actual: root.GetProperty(propertyName: "status").GetInt32());
     }
 
     private static void AssertStatusResponse(JsonElement root)
     {
         bool hasCustomStatus =
-            root.TryGetProperty("message", out _) && root.TryGetProperty("status", out _);
+            root.TryGetProperty(propertyName: "message", value: out _) && root.TryGetProperty(propertyName: "status", value: out _);
         bool hasProblemDetails =
-            root.TryGetProperty("detail", out _) && root.TryGetProperty("status", out _);
+            root.TryGetProperty(propertyName: "detail", value: out _) && root.TryGetProperty(propertyName: "status", value: out _);
 
         Assert.True(
-            hasCustomStatus || hasProblemDetails,
-            $"Expected status response shape. "
-                + $"Properties: [{string.Join(", ", EnumerateProperties(root))}]"
+            condition: hasCustomStatus || hasProblemDetails,
+            userMessage: $"Expected status response shape. "
+                         + $"Properties: [{string.Join(separator: ", ", values: EnumerateProperties(element: root))}]"
         );
     }
 
@@ -77,53 +77,53 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Configuration_Index_ReturnsConfigData()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/dashboard/configuration");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/api/v1/dashboard/configuration");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
     }
 
     [Fact]
     public async Task Configuration_Store_ReturnsPlaceholder()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            "/api/v1/dashboard/configuration",
-            JsonBody(new { })
+            requestUri: "/api/v1/dashboard/configuration",
+            content: JsonBody(obj: new { })
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
     }
 
     [Fact]
     public async Task Configuration_Languages_ReturnsList()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            "/api/v1/dashboard/configuration/languages"
+            requestUri: "/api/v1/dashboard/configuration/languages"
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
+        JsonDocument json = JsonDocument.Parse(json: body);
         Assert.True(
-            json.RootElement.ValueKind == JsonValueKind.Array,
-            "Expected array response for languages"
+            condition: json.RootElement.ValueKind == JsonValueKind.Array,
+            userMessage: "Expected array response for languages"
         );
     }
 
@@ -131,19 +131,19 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Configuration_Countries_ReturnsList()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            "/api/v1/dashboard/configuration/countries"
+            requestUri: "/api/v1/dashboard/configuration/countries"
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
+        JsonDocument json = JsonDocument.Parse(json: body);
         Assert.True(
-            json.RootElement.ValueKind == JsonValueKind.Array,
-            "Expected array response for countries"
+            condition: json.RootElement.ValueKind == JsonValueKind.Array,
+            userMessage: "Expected array response for countries"
         );
     }
 
@@ -154,50 +154,50 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Devices_Index_ReturnsStatusResponse()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/dashboard/devices");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/api/v1/dashboard/devices");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "status");
-        AssertJsonHasProperty(json.RootElement, "data");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "status");
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
     }
 
     [Fact]
     public async Task Devices_Create_ReturnsPlaceholder()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            "/api/v1/dashboard/devices",
-            JsonBody(new { })
+            requestUri: "/api/v1/dashboard/devices",
+            content: JsonBody(obj: new { })
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
     }
 
     [Fact]
     public async Task Devices_Destroy_ReturnsPlaceholder()
     {
-        HttpResponseMessage response = await _client.DeleteAsync("/api/v1/dashboard/devices");
+        HttpResponseMessage response = await _client.DeleteAsync(requestUri: "/api/v1/dashboard/devices");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
     }
 
     // =========================================================================
@@ -207,20 +207,20 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Encoder_Index_ReturnsProfiles()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/dashboard/encoderprofiles");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/api/v1/dashboard/encoderprofiles");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
+        JsonDocument json = JsonDocument.Parse(json: body);
         // The endpoint wraps results in { data: [...] } — not a bare array.
-        AssertJsonHasProperty(json.RootElement, "data");
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
         Assert.True(
-            json.RootElement.GetProperty("data").ValueKind == JsonValueKind.Array,
-            "Expected data property to be an array of encoder profiles"
+            condition: json.RootElement.GetProperty(propertyName: "data").ValueKind == JsonValueKind.Array,
+            userMessage: "Expected data property to be an array of encoder profiles"
         );
     }
 
@@ -230,30 +230,30 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         // POST /api/v1/dashboard/encoderprofiles was removed in the V2 migration.
         // The replacement is POST /api/v1/encoder/profiles/{parentId}/clone.
         HttpResponseMessage response = await _client.PostAsync(
-            "/api/v1/dashboard/encoderprofiles",
-            JsonBody(new { })
+            requestUri: "/api/v1/dashboard/encoderprofiles",
+            content: JsonBody(obj: new { })
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.Gone,
-            $"Expected 410 Gone, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.Gone,
+            userMessage: $"Expected 410 Gone, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "error");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "error");
     }
 
     [Fact]
     public async Task Encoder_Destroy_NonExistent_ReturnsNotFound()
     {
         HttpResponseMessage response = await _client.DeleteAsync(
-            $"/api/v1/dashboard/encoderprofiles/{Ulid.NewUlid()}"
+            requestUri: $"/api/v1/dashboard/encoderprofiles/{Ulid.NewUlid()}"
         );
 
         Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound,
-            $"Expected NotFound, got {(int)response.StatusCode}"
+            condition: response.StatusCode == HttpStatusCode.NotFound,
+            userMessage: $"Expected NotFound, got {(int)response.StatusCode}"
         );
     }
 
@@ -261,34 +261,34 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Encoder_Containers_ReturnsData()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            "/api/v1/dashboard/encoderprofiles/containers"
+            requestUri: "/api/v1/dashboard/encoderprofiles/containers"
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
     }
 
     [Fact]
     public async Task Encoder_FrameSizes_ReturnsData()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            "/api/v1/dashboard/encoderprofiles/framesizes"
+            requestUri: "/api/v1/dashboard/encoderprofiles/framesizes"
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
     }
 
     // =========================================================================
@@ -298,65 +298,65 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task DashboardLibraries_Index_ReturnsLibraries()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/dashboard/libraries");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/api/v1/dashboard/libraries");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
     }
 
     [Fact]
     public async Task DashboardLibraries_Store_ReturnsStatusResponse()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            "/api/v1/dashboard/libraries",
-            JsonBody(new { })
+            requestUri: "/api/v1/dashboard/libraries",
+            content: JsonBody(obj: new { })
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "status");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "status");
     }
 
     [Fact]
     public async Task DashboardLibraries_Delete_NonExistent_ReturnsErrorStatus()
     {
         HttpResponseMessage response = await _client.DeleteAsync(
-            $"/api/v1/dashboard/libraries/{Ulid.NewUlid()}"
+            requestUri: $"/api/v1/dashboard/libraries/{Ulid.NewUlid()}"
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound,
-            $"Expected NotFound, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.NotFound,
+            userMessage: $"Expected NotFound, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertProblemDetailsShape(json.RootElement, 404);
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertProblemDetailsShape(root: json.RootElement, expectedStatus: 404);
     }
 
     [Fact]
     public async Task DashboardLibraries_Rescan_ReturnsStatusResponse()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            "/api/v1/dashboard/libraries/rescan",
-            JsonBody(new { })
+            requestUri: "/api/v1/dashboard/libraries/rescan",
+            content: JsonBody(obj: new { })
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound,
-            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound,
+            userMessage: $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}"
         );
     }
 
@@ -364,13 +364,13 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task DashboardLibraries_RescanById_NonExistent_ReturnsNotFound()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            $"/api/v1/dashboard/libraries/{Ulid.NewUlid()}/rescan",
-            JsonBody(new { })
+            requestUri: $"/api/v1/dashboard/libraries/{Ulid.NewUlid()}/rescan",
+            content: JsonBody(obj: new { })
         );
 
         Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound,
-            $"Expected NotFound, got {(int)response.StatusCode}"
+            condition: response.StatusCode == HttpStatusCode.NotFound,
+            userMessage: $"Expected NotFound, got {(int)response.StatusCode}"
         );
     }
 
@@ -378,14 +378,14 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task DashboardLibraries_Refresh_ReturnsStatusResponse()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            "/api/v1/dashboard/libraries/refresh",
-            JsonBody(new { })
+            requestUri: "/api/v1/dashboard/libraries/refresh",
+            content: JsonBody(obj: new { })
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound,
-            $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound,
+            userMessage: $"Expected OK or NotFound, got {(int)response.StatusCode}: {body}"
         );
     }
 
@@ -393,13 +393,13 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task DashboardLibraries_RefreshById_NonExistent_ReturnsNotFound()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            $"/api/v1/dashboard/libraries/{Ulid.NewUlid()}/refresh",
-            JsonBody(new { })
+            requestUri: $"/api/v1/dashboard/libraries/{Ulid.NewUlid()}/refresh",
+            content: JsonBody(obj: new { })
         );
 
         Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound,
-            $"Expected NotFound, got {(int)response.StatusCode}"
+            condition: response.StatusCode == HttpStatusCode.NotFound,
+            userMessage: $"Expected NotFound, got {(int)response.StatusCode}"
         );
     }
 
@@ -407,13 +407,13 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task DashboardLibraries_AddFolder_NonExistentLibrary_ReturnsNotFound()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            $"/api/v1/dashboard/libraries/{Ulid.NewUlid()}/folders",
-            JsonBody(new { path = "/tmp/test" })
+            requestUri: $"/api/v1/dashboard/libraries/{Ulid.NewUlid()}/folders",
+            content: JsonBody(obj: new { path = "/tmp/test" })
         );
 
         Assert.True(
-            response.StatusCode is HttpStatusCode.NotFound,
-            $"Expected NotFound, got {(int)response.StatusCode}"
+            condition: response.StatusCode is HttpStatusCode.NotFound,
+            userMessage: $"Expected NotFound, got {(int)response.StatusCode}"
         );
     }
 
@@ -421,12 +421,12 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task DashboardLibraries_DeleteFolder_NonExistent_ReturnsNotFound()
     {
         HttpResponseMessage response = await _client.DeleteAsync(
-            $"/api/v1/dashboard/libraries/{Ulid.NewUlid()}/folders/{Ulid.NewUlid()}"
+            requestUri: $"/api/v1/dashboard/libraries/{Ulid.NewUlid()}/folders/{Ulid.NewUlid()}"
         );
 
         Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound,
-            $"Expected NotFound, got {(int)response.StatusCode}"
+            condition: response.StatusCode == HttpStatusCode.NotFound,
+            userMessage: $"Expected NotFound, got {(int)response.StatusCode}"
         );
     }
 
@@ -434,12 +434,12 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task DashboardLibraries_DeleteEncoderProfile_NonExistent_ReturnsNotFound()
     {
         HttpResponseMessage response = await _client.DeleteAsync(
-            $"/api/v1/dashboard/libraries/{Ulid.NewUlid()}/folders/{Ulid.NewUlid()}/encoder_profiles/{Ulid.NewUlid()}"
+            requestUri: $"/api/v1/dashboard/libraries/{Ulid.NewUlid()}/folders/{Ulid.NewUlid()}/encoder_profiles/{Ulid.NewUlid()}"
         );
 
         Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound,
-            $"Expected NotFound, got {(int)response.StatusCode}"
+            condition: response.StatusCode == HttpStatusCode.NotFound,
+            userMessage: $"Expected NotFound, got {(int)response.StatusCode}"
         );
     }
 
@@ -450,46 +450,46 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Logs_Index_ReturnsData()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/dashboard/logs");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/api/v1/dashboard/logs");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
     }
 
     [Fact]
     public async Task Logs_Levels_ReturnsData()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/dashboard/logs/levels");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/api/v1/dashboard/logs/levels");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
     }
 
     [Fact]
     public async Task Logs_Types_ReturnsData()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/dashboard/logs/types");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/api/v1/dashboard/logs/types");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
     }
 
     // =========================================================================
@@ -499,28 +499,28 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Plugins_Index_ReturnsDataResponse()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/dashboard/plugins");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/api/v1/dashboard/plugins");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
     }
 
     [Fact]
     public async Task Plugins_Credentials_ReturnsCredentialsOrNotFound()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            "/api/v1/dashboard/plugins/credentials"
+            requestUri: "/api/v1/dashboard/plugins/credentials"
         );
 
         Assert.True(
-            response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound,
-            $"Expected OK or NotFound, got {(int)response.StatusCode}"
+            condition: response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound,
+            userMessage: $"Expected OK or NotFound, got {(int)response.StatusCode}"
         );
     }
 
@@ -528,9 +528,9 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Plugins_SetCredentials_ReturnsStatusResponse()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            "/api/v1/dashboard/plugins/credentials",
-            JsonBody(
-                new
+            requestUri: "/api/v1/dashboard/plugins/credentials",
+            content: JsonBody(
+                obj: new
                 {
                     key = "AniDb",
                     username = "test",
@@ -541,12 +541,12 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "status");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "status");
     }
 
     // =========================================================================
@@ -556,50 +556,50 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Activity_Index_ReturnsStatusResponse()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/dashboard/activity");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/api/v1/dashboard/activity");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "status");
-        AssertJsonHasProperty(json.RootElement, "data");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "status");
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
     }
 
     [Fact]
     public async Task Activity_Create_ReturnsPlaceholder()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            "/api/v1/dashboard/activity",
-            JsonBody(new { })
+            requestUri: "/api/v1/dashboard/activity",
+            content: JsonBody(obj: new { })
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
     }
 
     [Fact]
     public async Task Activity_Destroy_ReturnsPlaceholder()
     {
-        HttpResponseMessage response = await _client.DeleteAsync("/api/v1/dashboard/activity");
+        HttpResponseMessage response = await _client.DeleteAsync(requestUri: "/api/v1/dashboard/activity");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
     }
 
     // =========================================================================
@@ -609,31 +609,31 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Server_Index_ReturnsOk()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/dashboard/server");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/api/v1/dashboard/server");
 
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}"
         );
     }
 
     [Fact]
     public async Task Server_Setup_ReturnsStatusResponse()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/dashboard/server/setup");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/api/v1/dashboard/server/setup");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "status");
-        AssertJsonHasProperty(json.RootElement, "data");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "status");
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
 
-        JsonElement data = json.RootElement.GetProperty("data");
-        AssertJsonHasProperty(data, "setup_complete");
+        JsonElement data = json.RootElement.GetProperty(propertyName: "data");
+        AssertJsonHasProperty(element: data, propertyName: "setup_complete");
     }
 
     [Fact]
@@ -643,13 +643,13 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         // supervision (systemd, Windows Service, etc.). The endpoint intentionally
         // returns 501 until a supervisor protocol is in place.
         HttpResponseMessage response = await _client.PostAsync(
-            "/api/v1/dashboard/server/start",
-            JsonBody(new { })
+            requestUri: "/api/v1/dashboard/server/start",
+            content: JsonBody(obj: new { })
         );
 
         Assert.True(
-            response.StatusCode == HttpStatusCode.NotImplemented,
-            $"Expected NotImplemented (501), got {(int)response.StatusCode}"
+            condition: response.StatusCode == HttpStatusCode.NotImplemented,
+            userMessage: $"Expected NotImplemented (501), got {(int)response.StatusCode}"
         );
     }
 
@@ -660,13 +660,13 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         // itself. The endpoint intentionally returns 501 until a supervisor protocol
         // is in place.
         HttpResponseMessage response = await _client.PostAsync(
-            "/api/v1/dashboard/server/restart",
-            JsonBody(new { })
+            requestUri: "/api/v1/dashboard/server/restart",
+            content: JsonBody(obj: new { })
         );
 
         Assert.True(
-            response.StatusCode == HttpStatusCode.NotImplemented,
-            $"Expected NotImplemented (501), got {(int)response.StatusCode}"
+            condition: response.StatusCode == HttpStatusCode.NotImplemented,
+            userMessage: $"Expected NotImplemented (501), got {(int)response.StatusCode}"
         );
     }
 
@@ -674,79 +674,79 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Server_CheckForUpdate_ReturnsUpdateStatus()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            "/api/v1/dashboard/server/update/check"
+            requestUri: "/api/v1/dashboard/server/update/check"
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "updateAvailable");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "updateAvailable");
     }
 
     [Fact]
     public async Task Server_Info_ReturnsServerInfo()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/dashboard/server/info");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/api/v1/dashboard/server/info");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "status");
-        AssertJsonHasProperty(json.RootElement, "data");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "status");
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
 
-        JsonElement data = json.RootElement.GetProperty("data");
-        AssertJsonHasProperty(data, "server");
-        AssertJsonHasProperty(data, "setup_complete");
+        JsonElement data = json.RootElement.GetProperty(propertyName: "data");
+        AssertJsonHasProperty(element: data, propertyName: "server");
+        AssertJsonHasProperty(element: data, propertyName: "setup_complete");
     }
 
     [Fact]
     public async Task Server_Resources_ReturnsResourceInfo()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/dashboard/server/resources");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/api/v1/dashboard/server/resources");
 
         string body = await response.Content.ReadAsStringAsync();
         // Resources may fail in test env (no monitoring available)
         Assert.True(
-            response.StatusCode is HttpStatusCode.OK or HttpStatusCode.UnprocessableEntity,
-            $"Expected OK or 422, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode is HttpStatusCode.OK or HttpStatusCode.UnprocessableEntity,
+            userMessage: $"Expected OK or 422, got {(int)response.StatusCode}: {body}"
         );
     }
 
     [Fact]
     public async Task Server_Paths_ReturnsPathsList()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/dashboard/server/paths");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/api/v1/dashboard/server/paths");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
+        JsonDocument json = JsonDocument.Parse(json: body);
         Assert.True(
-            json.RootElement.ValueKind == JsonValueKind.Array,
-            "Expected array response for server paths"
+            condition: json.RootElement.ValueKind == JsonValueKind.Array,
+            userMessage: "Expected array response for server paths"
         );
-        Assert.True(json.RootElement.GetArrayLength() > 0, "Expected at least one path entry");
+        Assert.True(condition: json.RootElement.GetArrayLength() > 0, userMessage: "Expected at least one path entry");
     }
 
     [Fact]
     public async Task Server_Storage_ReturnsStorageInfo()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/dashboard/server/storage");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/api/v1/dashboard/server/storage");
 
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}"
         );
     }
 
@@ -754,18 +754,18 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Server_DirectoryTree_ReturnsTreeOrError()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            "/api/v1/dashboard/server/directorytree",
-            JsonBody(new { folder = "/tmp" })
+            requestUri: "/api/v1/dashboard/server/directorytree",
+            content: JsonBody(obj: new { folder = "/tmp" })
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode is HttpStatusCode.OK or HttpStatusCode.UnprocessableEntity,
-            $"Expected OK or 422, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode is HttpStatusCode.OK or HttpStatusCode.UnprocessableEntity,
+            userMessage: $"Expected OK or 422, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "status");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "status");
     }
 
     // =========================================================================
@@ -775,64 +775,64 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task DashboardSpecials_Index_ReturnsData()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/dashboard/specials");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/api/v1/dashboard/specials");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
     }
 
     [Fact]
     public async Task DashboardSpecials_Store_ReturnsStatusResponse()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            "/api/v1/dashboard/specials",
-            JsonBody(new { })
+            requestUri: "/api/v1/dashboard/specials",
+            content: JsonBody(obj: new { })
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "status");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "status");
     }
 
     [Fact]
     public async Task DashboardSpecials_Delete_NonExistent_ReturnsErrorStatus()
     {
         HttpResponseMessage response = await _client.DeleteAsync(
-            $"/api/v1/dashboard/specials/{Ulid.NewUlid()}"
+            requestUri: $"/api/v1/dashboard/specials/{Ulid.NewUlid()}"
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.NotFound,
-            $"Expected NotFound, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.NotFound,
+            userMessage: $"Expected NotFound, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertProblemDetailsShape(json.RootElement, 404);
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertProblemDetailsShape(root: json.RootElement, expectedStatus: 404);
     }
 
     [Fact]
     public async Task DashboardSpecials_RescanAll_ReturnsStatusOrNotFound()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            "/api/v1/dashboard/specials/rescan",
-            JsonBody(new { })
+            requestUri: "/api/v1/dashboard/specials/rescan",
+            content: JsonBody(obj: new { })
         );
 
         Assert.True(
-            response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound,
-            $"Expected OK or NotFound, got {(int)response.StatusCode}"
+            condition: response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound,
+            userMessage: $"Expected OK or NotFound, got {(int)response.StatusCode}"
         );
     }
 
@@ -840,13 +840,13 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task DashboardSpecials_RescanById_ReturnsStatusOrNotFound()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            $"/api/v1/dashboard/specials/{Ulid.NewUlid()}/rescan",
-            JsonBody(new { })
+            requestUri: $"/api/v1/dashboard/specials/{Ulid.NewUlid()}/rescan",
+            content: JsonBody(obj: new { })
         );
 
         Assert.True(
-            response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound,
-            $"Expected OK or NotFound, got {(int)response.StatusCode}"
+            condition: response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound,
+            userMessage: $"Expected OK or NotFound, got {(int)response.StatusCode}"
         );
     }
 
@@ -857,18 +857,18 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Tasks_Index_ReturnsTasks()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/dashboard/tasks");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/api/v1/dashboard/tasks");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
+        JsonDocument json = JsonDocument.Parse(json: body);
         Assert.True(
-            json.RootElement.ValueKind == JsonValueKind.Array,
-            "Expected array response for tasks"
+            condition: json.RootElement.ValueKind == JsonValueKind.Array,
+            userMessage: "Expected array response for tasks"
         );
     }
 
@@ -876,108 +876,108 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Tasks_Store_ReturnsPlaceholder()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            "/api/v1/dashboard/tasks",
-            JsonBody(new { })
+            requestUri: "/api/v1/dashboard/tasks",
+            content: JsonBody(obj: new { })
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
     }
 
     [Fact]
     public async Task Tasks_Runners_ReturnsPlaceholder()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/dashboard/tasks/runners");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/api/v1/dashboard/tasks/runners");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
     }
 
     [Fact]
     public async Task Tasks_Queue_ReturnsData()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/dashboard/tasks/queue");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/api/v1/dashboard/tasks/queue");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
     }
 
     [Fact]
     public async Task Tasks_DeleteQueue_NonExistent_ReturnsNotFound()
     {
         HttpResponseMessage response = await _client.DeleteAsync(
-            "/api/v1/dashboard/tasks/queue/999999"
+            requestUri: "/api/v1/dashboard/tasks/queue/999999"
         );
 
         Assert.True(
-            response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.OK,
-            $"Expected NotFound or OK, got {(int)response.StatusCode}"
+            condition: response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.OK,
+            userMessage: $"Expected NotFound or OK, got {(int)response.StatusCode}"
         );
     }
 
     [Fact]
     public async Task Tasks_FailedJobs_ReturnsData()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/dashboard/tasks/failed");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/api/v1/dashboard/tasks/failed");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
     }
 
     [Fact]
     public async Task Tasks_RetryFailed_ReturnsStatusResponse()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            "/api/v1/dashboard/tasks/failed/retry",
-            JsonBody(new { })
+            requestUri: "/api/v1/dashboard/tasks/failed/retry",
+            content: JsonBody(obj: new { })
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertStatusResponse(json.RootElement);
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertStatusResponse(root: json.RootElement);
     }
 
     [Fact]
     public async Task Tasks_PauseTask_NonExistent_ReturnsOk()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            "/api/v1/dashboard/tasks/pause/999999",
-            JsonBody(new { })
+            requestUri: "/api/v1/dashboard/tasks/pause/999999",
+            content: JsonBody(obj: new { })
         );
 
         // Pause returns bool result; non-existent ID returns false wrapped in 200
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}"
         );
     }
 
@@ -985,13 +985,13 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Tasks_ResumeTask_NonExistent_ReturnsOk()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            "/api/v1/dashboard/tasks/resume/999999",
-            JsonBody(new { })
+            requestUri: "/api/v1/dashboard/tasks/resume/999999",
+            content: JsonBody(obj: new { })
         );
 
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}"
         );
     }
 
@@ -1002,21 +1002,21 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Users_Index_ReturnsDataOrServerError()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/dashboard/users");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/api/v1/dashboard/users");
 
         string body = await response.Content.ReadAsStringAsync();
         // Known bug: UsersController.Index includes LibraryUser but not
         // .ThenInclude(x => x.Library), causing NullReferenceException in
         // PermissionsResponseItemDto when LibraryUser entries exist.
         Assert.True(
-            response.StatusCode is HttpStatusCode.OK or HttpStatusCode.InternalServerError,
-            $"Expected OK or 500, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode is HttpStatusCode.OK or HttpStatusCode.InternalServerError,
+            userMessage: $"Expected OK or 500, got {(int)response.StatusCode}: {body}"
         );
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
-            JsonDocument json = JsonDocument.Parse(body);
-            AssertJsonHasProperty(json.RootElement, "data");
+            JsonDocument json = JsonDocument.Parse(json: body);
+            AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
         }
     }
 
@@ -1024,29 +1024,29 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Users_Permissions_ReturnsData()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            "/api/v1/dashboard/users/permissions"
+            requestUri: "/api/v1/dashboard/users/permissions"
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertJsonHasProperty(element: json.RootElement, propertyName: "data");
     }
 
     [Fact]
     public async Task Users_Delete_NonExistent_ReturnsNotFound()
     {
         HttpResponseMessage response = await _client.DeleteAsync(
-            $"/api/v1/dashboard/users/{Guid.Empty}"
+            requestUri: $"/api/v1/dashboard/users/{Guid.Empty}"
         );
 
         Assert.True(
-            response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.OK,
-            $"Expected NotFound or OK, got {(int)response.StatusCode}"
+            condition: response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.OK,
+            userMessage: $"Expected NotFound or OK, got {(int)response.StatusCode}"
         );
     }
 
@@ -1054,17 +1054,17 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Users_Delete_Owner_ReturnsUnauthorized()
     {
         HttpResponseMessage response = await _client.DeleteAsync(
-            $"/api/v1/dashboard/users/{TestAuthHandler.DefaultUserId}"
+            requestUri: $"/api/v1/dashboard/users/{TestAuthHandler.DefaultUserId}"
         );
 
         string body = await response.Content.ReadAsStringAsync();
         // Owner cannot be deleted
         Assert.True(
-            response.StatusCode
+            condition: response.StatusCode
                 is HttpStatusCode.Unauthorized
                     or HttpStatusCode.Forbidden
                     or HttpStatusCode.OK,
-            $"Expected 401/403/OK, got {(int)response.StatusCode}: {body}"
+            userMessage: $"Expected 401/403/OK, got {(int)response.StatusCode}: {body}"
         );
     }
 
@@ -1072,18 +1072,18 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Users_Notifications_ReturnsStatusResponse()
     {
         HttpResponseMessage response = await _client.PatchAsync(
-            "/api/v1/dashboard/users/notifications",
-            JsonBody(new { })
+            requestUri: "/api/v1/dashboard/users/notifications",
+            content: JsonBody(obj: new { })
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode == HttpStatusCode.OK,
+            userMessage: $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertStatusResponse(json.RootElement);
+        JsonDocument json = JsonDocument.Parse(json: body);
+        AssertStatusResponse(root: json.RootElement);
     }
 
     [Fact]
@@ -1091,16 +1091,16 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     {
         // Viewing own permissions is denied
         HttpResponseMessage response = await _client.GetAsync(
-            $"/api/v1/dashboard/users/{TestAuthHandler.DefaultUserId}/permissions"
+            requestUri: $"/api/v1/dashboard/users/{TestAuthHandler.DefaultUserId}/permissions"
         );
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode
+            condition: response.StatusCode
                 is HttpStatusCode.Unauthorized
                     or HttpStatusCode.Forbidden
                     or HttpStatusCode.OK,
-            $"Expected 401/403/OK, got {(int)response.StatusCode}: {body}"
+            userMessage: $"Expected 401/403/OK, got {(int)response.StatusCode}: {body}"
         );
     }
 
@@ -1108,12 +1108,12 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Users_UserPermissions_NonExistent_ReturnsNotFound()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            $"/api/v1/dashboard/users/{Guid.Empty}/permissions"
+            requestUri: $"/api/v1/dashboard/users/{Guid.Empty}/permissions"
         );
 
         Assert.True(
-            response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.OK,
-            $"Expected NotFound or OK, got {(int)response.StatusCode}"
+            condition: response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.OK,
+            userMessage: $"Expected NotFound or OK, got {(int)response.StatusCode}"
         );
     }
 
@@ -1124,12 +1124,12 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Optical_Drives_ReturnsListOrError()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/dashboard/optical/drives");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/api/v1/dashboard/optical/drives");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode is HttpStatusCode.OK or HttpStatusCode.InternalServerError,
-            $"Expected OK or 500, got {(int)response.StatusCode}: {body}"
+            condition: response.StatusCode is HttpStatusCode.OK or HttpStatusCode.InternalServerError,
+            userMessage: $"Expected OK or 500, got {(int)response.StatusCode}: {body}"
         );
     }
 
@@ -1138,18 +1138,18 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     // =========================================================================
 
     [Theory]
-    [InlineData("GET", "/api/v1/dashboard/configuration")]
-    [InlineData("GET", "/api/v1/dashboard/devices")]
-    [InlineData("GET", "/api/v1/dashboard/encoderprofiles")]
-    [InlineData("GET", "/api/v1/dashboard/libraries")]
-    [InlineData("GET", "/api/v1/dashboard/logs")]
-    [InlineData("GET", "/api/v1/dashboard/plugins")]
-    [InlineData("GET", "/api/v1/dashboard/activity")]
-    [InlineData("GET", "/api/v1/dashboard/server")]
-    [InlineData("GET", "/api/v1/dashboard/server/info")]
-    [InlineData("GET", "/api/v1/dashboard/specials")]
-    [InlineData("GET", "/api/v1/dashboard/tasks")]
-    [InlineData("GET", "/api/v1/dashboard/users")]
+    [InlineData(data: ["GET", "/api/v1/dashboard/configuration"])]
+    [InlineData(data: ["GET", "/api/v1/dashboard/devices"])]
+    [InlineData(data: ["GET", "/api/v1/dashboard/encoderprofiles"])]
+    [InlineData(data: ["GET", "/api/v1/dashboard/libraries"])]
+    [InlineData(data: ["GET", "/api/v1/dashboard/logs"])]
+    [InlineData(data: ["GET", "/api/v1/dashboard/plugins"])]
+    [InlineData(data: ["GET", "/api/v1/dashboard/activity"])]
+    [InlineData(data: ["GET", "/api/v1/dashboard/server"])]
+    [InlineData(data: ["GET", "/api/v1/dashboard/server/info"])]
+    [InlineData(data: ["GET", "/api/v1/dashboard/specials"])]
+    [InlineData(data: ["GET", "/api/v1/dashboard/tasks"])]
+    [InlineData(data: ["GET", "/api/v1/dashboard/users"])]
     public async Task DashboardEndpoints_ReturnUnauthorized_WhenUnauthenticated(
         string method,
         string url
@@ -1159,14 +1159,14 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
 
         HttpResponseMessage response = method switch
         {
-            "GET" => await unauthed.GetAsync(url),
-            "POST" => await unauthed.PostAsync(url, JsonBody(new { })),
-            _ => throw new ArgumentException($"Unsupported method: {method}"),
+            "GET" => await unauthed.GetAsync(requestUri: url),
+            "POST" => await unauthed.PostAsync(requestUri: url, content: JsonBody(obj: new { })),
+            _ => throw new ArgumentException(message: $"Unsupported method: {method}"),
         };
 
         Assert.True(
-            response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
-            $"Expected 401/403 for {method} {url}, got {(int)response.StatusCode}"
+            condition: response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
+            userMessage: $"Expected 401/403 for {method} {url}, got {(int)response.StatusCode}"
         );
     }
 }

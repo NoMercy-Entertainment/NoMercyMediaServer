@@ -26,7 +26,7 @@ namespace NoMercy.Tests.MediaProcessing.Jobs;
 /// dashboard treats as terminal — not one of running / paused / encoding, which
 /// the client keeps showing.
 /// </summary>
-[Collection("EventBusProvider")]
+[Collection(name: "EventBusProvider")]
 public class EncoderCardTerminatorTests
 {
     // The statuses the web dashboard treats as "still in flight" and keeps a
@@ -37,13 +37,13 @@ public class EncoderCardTerminatorTests
     private static IEventBus? GetCurrentInstance() =>
         (IEventBus?)
             typeof(EventBusProvider)
-                .GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)!
-                .GetValue(null);
+                .GetField(name: "_instance", bindingAttr: BindingFlags.NonPublic | BindingFlags.Static)!
+                .GetValue(obj: null);
 
     private static void SetInstance(IEventBus? bus) =>
         typeof(EventBusProvider)
-            .GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)!
-            .SetValue(null, bus);
+            .GetField(name: "_instance", bindingAttr: BindingFlags.NonPublic | BindingFlags.Static)!
+            .SetValue(obj: null, value: bus);
 
     [Fact]
     public async Task PublishFailedAsync_EmitsTerminalStatus_AndMatchingFailedEvent()
@@ -55,21 +55,21 @@ public class EncoderCardTerminatorTests
             EncodingFailedEvent? failed = null;
 
             Mock<IEventBus> bus = new();
-            bus.Setup(b =>
+            bus.Setup(expression: b =>
                     b.PublishAsync(
                         It.IsAny<EncodingStageChangedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .Callback<EncodingStageChangedEvent, CancellationToken>((e, _) => stage = e)
-                .Returns(Task.CompletedTask);
-            bus.Setup(b =>
+                .Callback<EncodingStageChangedEvent, CancellationToken>(action: (e, _) => stage = e)
+                .Returns(value: Task.CompletedTask);
+            bus.Setup(expression: b =>
                     b.PublishAsync(It.IsAny<EncodingFailedEvent>(), It.IsAny<CancellationToken>())
                 )
-                .Callback<EncodingFailedEvent, CancellationToken>((e, _) => failed = e)
-                .Returns(Task.CompletedTask);
+                .Callback<EncodingFailedEvent, CancellationToken>(action: (e, _) => failed = e)
+                .Returns(value: Task.CompletedTask);
 
-            EventBusProvider.Configure(bus.Object);
+            EventBusProvider.Configure(eventBus: bus.Object);
 
             await EncoderCardTerminator.PublishFailedAsync(
                 jobId: 88061,
@@ -82,21 +82,21 @@ public class EncoderCardTerminatorTests
             // The stage event is what the card list itself listens on; its status
             // must fall outside the in-flight set so the client drops the card.
             stage.Should().NotBeNull();
-            stage!.JobId.Should().Be(88061);
-            stage.Title.Should().Be("Hensuki");
-            InFlightStatuses.Should().NotContain(stage.Status);
-            stage.Status.Should().Be("failed");
+            stage!.JobId.Should().Be(expected: 88061);
+            stage.Title.Should().Be(expected: "Hensuki");
+            InFlightStatuses.Should().NotContain(unexpected: stage.Status);
+            stage.Status.Should().Be(expected: "failed");
 
             // The dedicated failed event is the second removal path, keyed by the
             // same id so it clears the card even if the stage channel is missed.
             failed.Should().NotBeNull();
-            failed!.JobId.Should().Be(88061);
-            failed.ErrorMessage.Should().Be("finalize-only pass failed with no details");
-            failed.ExceptionType.Should().Be("FinalizeFailed");
+            failed!.JobId.Should().Be(expected: 88061);
+            failed.ErrorMessage.Should().Be(expected: "finalize-only pass failed with no details");
+            failed.ExceptionType.Should().Be(expected: "FinalizeFailed");
         }
         finally
         {
-            SetInstance(previous);
+            SetInstance(bus: previous);
         }
     }
 
@@ -106,7 +106,7 @@ public class EncoderCardTerminatorTests
         IEventBus? previous = GetCurrentInstance();
         try
         {
-            SetInstance(null);
+            SetInstance(bus: null);
 
             Func<Task> act = () =>
                 EncoderCardTerminator.PublishFailedAsync(
@@ -121,7 +121,7 @@ public class EncoderCardTerminatorTests
         }
         finally
         {
-            SetInstance(previous);
+            SetInstance(bus: previous);
         }
     }
 }

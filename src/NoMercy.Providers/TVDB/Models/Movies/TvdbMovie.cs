@@ -34,141 +34,141 @@ public class TvdbMovieTranslationResponse : TvdbResponse<TvdbTranslationData> { 
 
 public class TvdbMovie
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public long Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("slug")]
+    [JsonProperty(propertyName: "slug")]
     public string Slug { get; set; } = string.Empty;
 
-    [JsonProperty("image")]
+    [JsonProperty(propertyName: "image")]
     public Uri? Image { get; set; }
 
-    [JsonProperty("nameTranslations")]
+    [JsonProperty(propertyName: "nameTranslations")]
     public string[] NameTranslations { get; set; } = [];
 
-    [JsonProperty("overviewTranslations")]
+    [JsonProperty(propertyName: "overviewTranslations")]
     public string[] OverviewTranslations { get; set; } = [];
 
-    [JsonProperty("aliases")]
+    [JsonProperty(propertyName: "aliases")]
     public TvdbAlias[] Aliases { get; set; } = [];
 
-    [JsonProperty("score")]
+    [JsonProperty(propertyName: "score")]
     public double Score { get; set; }
 
-    [JsonProperty("runtime")]
+    [JsonProperty(propertyName: "runtime")]
     public int? Runtime { get; set; }
 
-    [JsonProperty("status")]
+    [JsonProperty(propertyName: "status")]
     public TvdbStatus? Status { get; set; }
 
-    [JsonProperty("lastUpdated")]
+    [JsonProperty(propertyName: "lastUpdated")]
     public DateTimeOffset? LastUpdated { get; set; }
 
-    [JsonProperty("year")]
+    [JsonProperty(propertyName: "year")]
     public string? Year { get; set; }
 }
 
 public class TvdbMovieExtended : TvdbMovie
 {
-    [JsonProperty("artworks")]
+    [JsonProperty(propertyName: "artworks")]
     public TvdbArtwork[] Artworks { get; set; } = [];
 
-    [JsonProperty("audioLanguages")]
+    [JsonProperty(propertyName: "audioLanguages")]
     public string[]? AudioLanguages { get; set; }
 
-    [JsonProperty("awards")]
+    [JsonProperty(propertyName: "awards")]
     public TvdbAward[]? Awards { get; set; }
 
-    [JsonProperty("boxOffice")]
+    [JsonProperty(propertyName: "boxOffice")]
     public string? BoxOffice { get; set; }
 
-    [JsonProperty("boxOfficeUS")]
+    [JsonProperty(propertyName: "boxOfficeUS")]
     public string? BoxOfficeUS { get; set; }
 
-    [JsonProperty("budget")]
+    [JsonProperty(propertyName: "budget")]
     public string? Budget { get; set; }
 
-    [JsonProperty("characters")]
+    [JsonProperty(propertyName: "characters")]
     public TvdbCharacter[]? Characters { get; set; }
 
-    [JsonProperty("companies")]
+    [JsonProperty(propertyName: "companies")]
     public TvdbMovieCompanies? Companies { get; set; }
 
-    [JsonProperty("contentRatings")]
+    [JsonProperty(propertyName: "contentRatings")]
     public TvdbContentRating[]? ContentRatings { get; set; }
 
-    [JsonProperty("first_release")]
+    [JsonProperty(propertyName: "first_release")]
     public TvdbRelease? FirstRelease { get; set; }
 
-    [JsonProperty("genres")]
+    [JsonProperty(propertyName: "genres")]
     public TvdbGenre[]? Genres { get; set; }
 
-    [JsonProperty("inspirations")]
+    [JsonProperty(propertyName: "inspirations")]
     public TvdbInspiration[]? Inspirations { get; set; }
 
-    [JsonProperty("lists")]
+    [JsonProperty(propertyName: "lists")]
     public TvdbList[]? Lists { get; set; }
 
-    [JsonProperty("originalCountry")]
+    [JsonProperty(propertyName: "originalCountry")]
     public string? OriginalCountry { get; set; }
 
-    [JsonProperty("originalLanguage")]
+    [JsonProperty(propertyName: "originalLanguage")]
     public string? OriginalLanguage { get; set; }
 
-    [JsonProperty("releases")]
+    [JsonProperty(propertyName: "releases")]
     public TvdbRelease[]? Releases { get; set; }
 
-    [JsonProperty("remoteIds")]
+    [JsonProperty(propertyName: "remoteIds")]
     public TvdbRemoteId[]? RemoteIds { get; set; }
 
-    [JsonProperty("spoken_languages")]
+    [JsonProperty(propertyName: "spoken_languages")]
     public string[]? SpokenLanguages { get; set; }
 
-    [JsonProperty("studios")]
+    [JsonProperty(propertyName: "studios")]
     public TvdbCompany[]? Studios { get; set; }
 
-    [JsonProperty("subtitleLanguages")]
+    [JsonProperty(propertyName: "subtitleLanguages")]
     public string[]? SubtitleLanguages { get; set; }
 
-    [JsonProperty("tagOptions")]
+    [JsonProperty(propertyName: "tagOptions")]
     public TvdbTagOption[]? TagOptions { get; set; }
 
-    [JsonProperty("trailers")]
+    [JsonProperty(propertyName: "trailers")]
     public TvdbTrailer[]? Trailers { get; set; }
 
-    [JsonProperty("translations")]
+    [JsonProperty(propertyName: "translations")]
     public TvdbTranslations? Translations { get; set; }
 }
 
 public class TvdbMovieCompanies
 {
-    [JsonProperty("studio")]
+    [JsonProperty(propertyName: "studio")]
     public TvdbCompany[]? Studio { get; set; }
 
-    [JsonProperty("network")]
+    [JsonProperty(propertyName: "network")]
     public TvdbCompany[]? Network { get; set; }
 
-    [JsonProperty("production")]
+    [JsonProperty(propertyName: "production")]
     public TvdbCompany[]? Production { get; set; }
 
-    [JsonProperty("distributor")]
+    [JsonProperty(propertyName: "distributor")]
     public TvdbCompany[]? Distributor { get; set; }
 
-    [JsonProperty("special_effects")]
+    [JsonProperty(propertyName: "special_effects")]
     public TvdbCompany[]? SpecialEffects { get; set; }
 }
 
 public class TvdbRelease
 {
-    [JsonProperty("country")]
+    [JsonProperty(propertyName: "country")]
     public string Country { get; set; } = string.Empty;
 
-    [JsonProperty("date")]
+    [JsonProperty(propertyName: "date")]
     public string Date { get; set; } = string.Empty;
 
-    [JsonProperty("detail")]
+    [JsonProperty(propertyName: "detail")]
     public string? Detail { get; set; }
 }

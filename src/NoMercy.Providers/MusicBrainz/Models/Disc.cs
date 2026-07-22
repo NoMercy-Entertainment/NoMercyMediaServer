@@ -15,15 +15,15 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class Disc
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty("offset-count")]
+    [JsonProperty(propertyName: "offset-count")]
     public int OffsetCount { get; set; }
 
-    [JsonProperty("offsets")]
+    [JsonProperty(propertyName: "offsets")]
     public int[] Offsets { get; set; } = [];
 
-    [JsonProperty("sectors")]
+    [JsonProperty(propertyName: "sectors")]
     public int Sectors { get; set; }
 }

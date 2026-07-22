@@ -15,39 +15,39 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class MusicBrainzArtistDetails : MusicBrainzArtist
 {
-    [JsonProperty("isnis")]
+    [JsonProperty(propertyName: "isnis")]
     public string[] Isnis { get; set; } = [];
 
-    [JsonProperty("end_area")]
+    [JsonProperty(propertyName: "end_area")]
     public object? ArtistAppendsEndArea { get; set; }
 
-    [JsonProperty("gender-id")]
+    [JsonProperty(propertyName: "gender-id")]
     public Guid? GenderId { get; set; }
 
-    [JsonProperty("area")]
+    [JsonProperty(propertyName: "area")]
     public MusicBrainzArea? MusicBrainzArea { get; set; }
 
-    [JsonProperty("country")]
+    [JsonProperty(propertyName: "country")]
     public string Country { get; set; } = string.Empty;
 
-    [JsonProperty("works")]
+    [JsonProperty(propertyName: "works")]
     public MusicBrainzWork[] Works { get; set; } = [];
 
-    [JsonProperty("releases")]
+    [JsonProperty(propertyName: "releases")]
     public MusicBrainzRelease[] Releases { get; set; } = [];
 
-    [JsonProperty("release-groups")]
+    [JsonProperty(propertyName: "release-groups")]
     public MusicBrainzReleaseGroup[] ReleaseGroups { get; set; } = [];
 
-    [JsonProperty("end-area")]
+    [JsonProperty(propertyName: "end-area")]
     public MusicBrainzArea? EndArea { get; set; }
 
-    [JsonProperty("life-span")]
+    [JsonProperty(propertyName: "life-span")]
     public MusicBrainzLifeSpan? LifeSpan { get; set; }
 
-    [JsonProperty("begin-area")]
+    [JsonProperty(propertyName: "begin-area")]
     public MusicBrainzArea? BeginArea { get; set; }
 
-    [JsonProperty("ipis")]
+    [JsonProperty(propertyName: "ipis")]
     public string[] Ipis { get; set; } = [];
 }

@@ -50,33 +50,33 @@ public class ProfileToArgvInvariantTests
     {
         Mock<ICodecResolver> codecResolver = new();
         codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<IHardwareCapabilities>(),
                     It.IsAny<EncoderPreference>()
                 )
             )
-            .Returns(codec);
+            .Returns(value: codec);
 
         Mock<IHardwareCapabilities> hardware = new();
-        hardware.Setup(h => h.HasGpu).Returns(false);
-        hardware.Setup(h => h.CpuCores).Returns(8);
-        hardware.Setup(h => h.Gpus).Returns([]);
-        hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
-        hardware.Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>())).Returns((GpuDevice?)null);
+        hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
+        hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
+        hardware.Setup(expression: h => h.Gpus).Returns(value: []);
+        hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
+        hardware.Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>())).Returns(value: (GpuDevice?)null);
 
         return new(
-            new(),
-            new(),
-            new(),
-            codecResolver.Object,
-            hardware.Object,
-            new TonemapSelector(),
-            new Mock<IFfmpegCapabilities>().Object,
-            new AbrLadderGenerator(),
-            new NoOpCropDetector(),
-            NullLogger<PlanStage>.Instance
+            graphBuilder: new(),
+            groupingStrategy: new(),
+            costEstimator: new(),
+            codecResolver: codecResolver.Object,
+            hardware: hardware.Object,
+            tonemapSelector: new TonemapSelector(),
+            ffmpegCapabilities: new Mock<IFfmpegCapabilities>().Object,
+            abrLadderGenerator: new AbrLadderGenerator(),
+            cropDetector: new NoOpCropDetector(),
+            logger: NullLogger<PlanStage>.Instance
         );
     }
 
@@ -84,7 +84,7 @@ public class ProfileToArgvInvariantTests
         new(
             FilePath: "/media/movie.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(90),
+            Duration: TimeSpan.FromMinutes(minutes: 90),
             OverallBitRateKbps: 10000,
             FileSizeBytes: 1_000_000_000,
             VideoStreams:
@@ -118,7 +118,7 @@ public class ProfileToArgvInvariantTests
                 Presets: ["slow", "medium", "fast"],
                 Profiles: ["baseline", "main", "high"],
                 Levels: ["4.1"],
-                QualityRange: new(0, 51, 23),
+                QualityRange: new(Min: 0, Max: 51, Default: 23),
                 SupportedRateControl: [RateControlMode.Crf, RateControlMode.Vbr],
                 Supports10Bit: true,
                 SupportsHdr: false,
@@ -139,7 +139,7 @@ public class ProfileToArgvInvariantTests
                 Presets: ["p1", "p4", "p7"],
                 Profiles: ["main", "high"],
                 Levels: ["4.1"],
-                QualityRange: new(0, 51, 26),
+                QualityRange: new(Min: 0, Max: 51, Default: 26),
                 SupportedRateControl: [RateControlMode.Cq],
                 Supports10Bit: true,
                 SupportsHdr: false,
@@ -205,7 +205,7 @@ public class ProfileToArgvInvariantTests
         {
             // Only generate codec/container pairs the support matrix allows —
             // the invariant is about VALID profiles, not ones validation rejects.
-            if (!ContainerCompatibility.SupportsVideo(container, codec))
+            if (!ContainerCompatibility.SupportsVideo(container: container, codec: codec))
                 continue;
 
             foreach (V2RateControlMode rc in rateControls)
@@ -220,7 +220,7 @@ public class ProfileToArgvInvariantTests
                 if (rc == V2RateControlMode.Crf && crf == 0)
                     continue;
                 // Only H264/H265 have HW encoders in this grid.
-                if (hardware && !HasHardwareEncoder(codec))
+                if (hardware && !HasHardwareEncoder(codec: codec))
                     continue;
 
                 yield return [codec, container, rc, crf, bitrate, width, bitDepth, hardware];
@@ -229,7 +229,7 @@ public class ProfileToArgvInvariantTests
     }
 
     [Theory]
-    [MemberData(nameof(Grid))]
+    [MemberData(memberName: nameof(Grid))]
     public async Task EveryProfile_ProducesInternallyConsistentArgs(
         VideoCodecType codec,
         Container container,
@@ -242,10 +242,10 @@ public class ProfileToArgvInvariantTests
     )
     {
         ResolvedCodec resolved = hardware
-            ? HardwareCodec(codec == VideoCodecType.H264 ? "h264_nvenc" : "hevc_nvenc")
-            : SoftwareCodec(SoftwareEncoderName(codec));
+            ? HardwareCodec(ffmpegName: codec == VideoCodecType.H264 ? "h264_nvenc" : "hevc_nvenc")
+            : SoftwareCodec(ffmpegName: SoftwareEncoderName(codec: codec));
 
-        PlanStage stage = BuildPlanStage(resolved);
+        PlanStage stage = BuildPlanStage(codec: resolved);
 
         ValidateInput input = new(
             Media: FakeMediaInfo(),
@@ -280,34 +280,34 @@ public class ProfileToArgvInvariantTests
         );
 
         EncodingContext ctx = EncodingContext.Create();
-        StageResult result = await stage.ExecuteAsync(input, ctx, CancellationToken.None);
+        StageResult result = await stage.ExecuteAsync(input: input, context: ctx, ct: CancellationToken.None);
         result.Should().BeOfType<StageSuccess<ExecutionPlan>>();
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)result).Value;
 
-        IOutputStrategy strategy = ResolveStrategy(plan.OutputPlan.Format);
+        IOutputStrategy strategy = ResolveStrategy(format: plan.OutputPlan.Format);
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new("/input.mkv"));
-        strategy.ConfigureOutput(builder, plan.OutputPlan, "/output");
-        string[] args = builder.Build("ffmpeg").Arguments;
+        builder.AddInput(input: new(FilePath: "/input.mkv"));
+        strategy.ConfigureOutput(builder: builder, plan: plan.OutputPlan, outputDirectory: "/output");
+        string[] args = builder.Build(ffmpegPath: "ffmpeg").Arguments;
 
-        AssertInvariants(args, plan.OutputPlan);
+        AssertInvariants(args: args, plan: plan.OutputPlan);
     }
 
     private static void AssertInvariants(string[] args, OutputPlan plan)
     {
         // 1. Rate control is exactly one mode per video output: never -crf AND
         //    -b:v together (that forces ABR and voids the CRF target).
-        bool hasCrf = args.Contains("-crf");
-        bool hasTargetBitrate = args.Contains("-b:v");
+        bool hasCrf = args.Contains(value: "-crf");
+        bool hasTargetBitrate = args.Contains(value: "-b:v");
         (hasCrf && hasTargetBitrate)
             .Should()
-            .BeFalse("a video output must not carry both -crf and -b:v");
+            .BeFalse(because: "a video output must not carry both -crf and -b:v");
 
         // 2. A hardware quality flag must not coexist with -b:v either.
-        bool hasHwQuality = args.Contains("-cq") || args.Contains("-qp");
+        bool hasHwQuality = args.Contains(value: "-cq") || args.Contains(value: "-qp");
         (hasHwQuality && hasTargetBitrate)
             .Should()
-            .BeFalse("a capped-quality HW encode must not carry a redundant -b:v");
+            .BeFalse(because: "a capped-quality HW encode must not carry a redundant -b:v");
 
         // 3. No builder-managed flag is emitted more than once per its value slot.
         //    A duplicate managed flag means a custom-arg / typed-field collision.
@@ -315,18 +315,18 @@ public class ProfileToArgvInvariantTests
             string managed in new[] { "-crf", "-b:v", "-profile:v", "-level", "-pix_fmt", "-g" }
         )
         {
-            int count = args.Count(a => a == managed);
-            count.Should().BeLessThanOrEqualTo(1, $"{managed} must appear at most once per output");
+            int count = args.Count(predicate: a => a == managed);
+            count.Should().BeLessThanOrEqualTo(expected: 1, because: $"{managed} must appear at most once per output");
         }
 
         // 4. Every emitted output dimension is even (odd luma dims abort ffmpeg
         //    on 4:2:0). The plan is the source of truth for width/height.
         foreach (VideoOutputPlan video in plan.VideoOutputs)
         {
-            (video.Width % 2).Should().Be(0, "odd width aborts the encode");
-            (video.Height % 2).Should().Be(0, "odd height aborts the encode");
-            video.Width.Should().BeGreaterThan(0);
-            video.Height.Should().BeGreaterThan(0);
+            (video.Width % 2).Should().Be(expected: 0, because: "odd width aborts the encode");
+            (video.Height % 2).Should().Be(expected: 0, because: "odd height aborts the encode");
+            video.Width.Should().BeGreaterThan(expected: 0);
+            video.Height.Should().BeGreaterThan(expected: 0);
         }
     }
 
@@ -335,11 +335,11 @@ public class ProfileToArgvInvariantTests
         IStorage storage = TestStorageFactory.CreateLocal();
         return format switch
         {
-            OutputFormat.Hls => new HlsOutputStrategy(storage),
-            OutputFormat.Mp4 => new Mp4OutputStrategy(storage),
-            OutputFormat.Mkv => new MkvOutputStrategy(storage),
-            OutputFormat.Dash => new DashOutputStrategy(storage),
-            _ => new HlsOutputStrategy(storage),
+            OutputFormat.Hls => new HlsOutputStrategy(storage: storage),
+            OutputFormat.Mp4 => new Mp4OutputStrategy(storage: storage),
+            OutputFormat.Mkv => new MkvOutputStrategy(storage: storage),
+            OutputFormat.Dash => new DashOutputStrategy(storage: storage),
+            _ => new HlsOutputStrategy(storage: storage),
         };
     }
 }

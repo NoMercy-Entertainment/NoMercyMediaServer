@@ -20,7 +20,7 @@ namespace NoMercy.Tests.MediaProcessing.Jobs;
 /// itself — a Store call that never completes must throw promptly rather than
 /// hang the caller indefinitely.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class JobOperationTimeoutExtensionsTests
 {
     [Fact]
@@ -29,19 +29,19 @@ public sealed class JobOperationTimeoutExtensionsTests
         TaskCompletionSource neverCompletes = new();
 
         Func<Task> act = () =>
-            neverCompletes.Task.WithTimeout("StalledStoreCall", TimeSpan.FromMilliseconds(50));
+            neverCompletes.Task.WithTimeout(operationName: "StalledStoreCall", timeout: TimeSpan.FromMilliseconds(milliseconds: 50));
 
-        TimeoutException exception = await Assert.ThrowsAsync<TimeoutException>(act);
-        exception.Message.Should().Contain("StalledStoreCall");
-        exception.Message.Should().Contain("50");
+        TimeoutException exception = await Assert.ThrowsAsync<TimeoutException>(testCode: act);
+        exception.Message.Should().Contain(expected: "StalledStoreCall");
+        exception.Message.Should().Contain(expected: "50");
     }
 
     [Fact]
     public async Task WithTimeout_OperationCompletesInTime_CompletesNormally()
     {
-        Task fastOperation = Task.Delay(5);
+        Task fastOperation = Task.Delay(millisecondsDelay: 5);
 
-        await fastOperation.WithTimeout("FastStoreCall", TimeSpan.FromSeconds(5));
+        await fastOperation.WithTimeout(operationName: "FastStoreCall", timeout: TimeSpan.FromSeconds(seconds: 5));
 
         fastOperation.IsCompletedSuccessfully.Should().BeTrue();
     }
@@ -49,24 +49,24 @@ public sealed class JobOperationTimeoutExtensionsTests
     [Fact]
     public async Task WithTimeout_OperationFaults_PropagatesOriginalException()
     {
-        Task faulted = Task.FromException(new InvalidOperationException("tmdb 500"));
+        Task faulted = Task.FromException(exception: new InvalidOperationException(message: "tmdb 500"));
 
-        Func<Task> act = () => faulted.WithTimeout("FaultingStoreCall", TimeSpan.FromSeconds(5));
+        Func<Task> act = () => faulted.WithTimeout(operationName: "FaultingStoreCall", timeout: TimeSpan.FromSeconds(seconds: 5));
 
         InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            act
+            testCode: act
         );
-        exception.Message.Should().Be("tmdb 500");
+        exception.Message.Should().Be(expected: "tmdb 500");
     }
 
     [Fact]
     public async Task WithTimeout_NoTimeoutSupplied_UsesDefaultTimeoutConstant()
     {
-        JobOperationTimeoutExtensions.DefaultTimeout.Should().Be(TimeSpan.FromMinutes(3));
+        JobOperationTimeoutExtensions.DefaultTimeout.Should().Be(expected: TimeSpan.FromMinutes(minutes: 3));
 
-        Task fastOperation = Task.Delay(5);
+        Task fastOperation = Task.Delay(millisecondsDelay: 5);
 
-        await fastOperation.WithTimeout("DefaultTimeoutCall");
+        await fastOperation.WithTimeout(operationName: "DefaultTimeoutCall");
 
         fastOperation.IsCompletedSuccessfully.Should().BeTrue();
     }
@@ -87,7 +87,7 @@ public sealed class JobOperationTimeoutExtensionsTests
 
         void Handler(object? _, UnobservedTaskExceptionEventArgs e)
         {
-            unobserved.Add(e.Exception);
+            unobserved.Add(item: e.Exception);
             e.SetObserved();
         }
 
@@ -117,12 +117,12 @@ public sealed class JobOperationTimeoutExtensionsTests
         TaskCompletionSource stalled = new();
 
         Func<Task> act = () =>
-            stalled.Task.WithTimeout("AbandonedStore", TimeSpan.FromMilliseconds(30));
+            stalled.Task.WithTimeout(operationName: "AbandonedStore", timeout: TimeSpan.FromMilliseconds(milliseconds: 30));
 
-        await Assert.ThrowsAsync<TimeoutException>(act);
+        await Assert.ThrowsAsync<TimeoutException>(testCode: act);
 
         // The inner operation faults only AFTER the caller has already unwound —
         // the disposed-MediaContext situation the extras jobs hit in the field.
-        stalled.SetException(new InvalidOperationException("MediaContext disposed"));
+        stalled.SetException(exception: new InvalidOperationException(message: "MediaContext disposed"));
     }
 }

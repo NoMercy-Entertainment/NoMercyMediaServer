@@ -15,9 +15,9 @@ namespace NoMercy.Providers.KitsuIo;
 
 public class RelationshipLinks
 {
-    [JsonProperty("self")]
+    [JsonProperty(propertyName: "self")]
     public Uri Self { get; set; } = default!;
 
-    [JsonProperty("related")]
+    [JsonProperty(propertyName: "related")]
     public Uri Related { get; set; } = default!;
 }

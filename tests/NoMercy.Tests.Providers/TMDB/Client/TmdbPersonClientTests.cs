@@ -17,8 +17,8 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// Unit tests for TmdbPersonClient
 /// Tests person details, credits, images, and related metadata
 /// </summary>
-[Trait("Category", "Unit")]
-[Collection("TmdbApi")]
+[Trait(name: "Category", value: "Unit")]
+[Collection(name: "TmdbApi")]
 public class TmdbPersonClientTests : TmdbTestBase
 {
     #region Constructor Tests
@@ -30,11 +30,11 @@ public class TmdbPersonClientTests : TmdbTestBase
         const int expectedId = ValidPersonId;
 
         // Act
-        using TmdbPersonClient client = new(expectedId);
+        using TmdbPersonClient client = new(id: expectedId);
 
         // Assert
         client.Should().NotBeNull();
-        client.Id.Should().Be(expectedId);
+        client.Id.Should().Be(expected: expectedId);
     }
 
     #endregion

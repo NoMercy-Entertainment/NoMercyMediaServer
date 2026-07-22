@@ -21,8 +21,8 @@ public class WorkerAssignerTests
         WorkerAssigner sut = new();
 
         Dictionary<string, EncodeTask[]> result = sut.Assign(
-            [MakeTask("t0", EncodeTaskType.QualityVariant)],
-            []
+            tasks: [MakeTask(id: "t0", type: EncodeTaskType.QualityVariant)],
+            workers: []
         );
 
         result.Should().BeEmpty();
@@ -34,16 +34,17 @@ public class WorkerAssignerTests
         WorkerAssigner sut = new();
 
         Dictionary<string, EncodeTask[]> result = sut.Assign(
-            [],
+            tasks: [],
+            workers:
             [
-                new("a", SpeedMultiplier: 2.0, AvailableSlots: 4),
-                new("b", SpeedMultiplier: 1.0, AvailableSlots: 2),
+                new(WorkerId: "a", SpeedMultiplier: 2.0, AvailableSlots: 4),
+                new(WorkerId: "b", SpeedMultiplier: 1.0, AvailableSlots: 2),
             ]
         );
 
-        result.Keys.Should().BeEquivalentTo("a", "b");
-        result["a"].Should().BeEmpty();
-        result["b"].Should().BeEmpty();
+        result.Keys.Should().BeEquivalentTo(expectation: ["a", "b"]);
+        result[key: "a"].Should().BeEmpty();
+        result[key: "b"].Should().BeEmpty();
     }
 
     [Fact]
@@ -52,22 +53,23 @@ public class WorkerAssignerTests
         WorkerAssigner sut = new();
         EncodeTask[] tasks =
         [
-            MakeTask("t0", EncodeTaskType.QualityVariant),
-            MakeTask("t1", EncodeTaskType.QualityVariant),
-            MakeTask("t2", EncodeTaskType.QualityVariant),
-            MakeTask("t3", EncodeTaskType.QualityVariant),
+            MakeTask(id: "t0", type: EncodeTaskType.QualityVariant),
+            MakeTask(id: "t1", type: EncodeTaskType.QualityVariant),
+            MakeTask(id: "t2", type: EncodeTaskType.QualityVariant),
+            MakeTask(id: "t3", type: EncodeTaskType.QualityVariant),
         ];
 
         Dictionary<string, EncodeTask[]> result = sut.Assign(
-            tasks,
+            tasks: tasks,
+            workers:
             [
-                new("beast", SpeedMultiplier: 4.0, AvailableSlots: 4),
-                new("laptop", SpeedMultiplier: 1.0, AvailableSlots: 2),
+                new(WorkerId: "beast", SpeedMultiplier: 4.0, AvailableSlots: 4),
+                new(WorkerId: "laptop", SpeedMultiplier: 1.0, AvailableSlots: 2),
             ]
         );
 
-        result["beast"].Length.Should().BeGreaterThan(result["laptop"].Length);
-        (result["beast"].Length + result["laptop"].Length).Should().Be(4);
+        result[key: "beast"].Length.Should().BeGreaterThan(expected: result[key: "laptop"].Length);
+        (result[key: "beast"].Length + result[key: "laptop"].Length).Should().Be(expected: 4);
     }
 
     [Fact]
@@ -76,22 +78,23 @@ public class WorkerAssignerTests
         WorkerAssigner sut = new();
         EncodeTask[] tasks =
         [
-            MakeTask("t0", EncodeTaskType.QualityVariant),
-            MakeTask("t1", EncodeTaskType.QualityVariant),
-            MakeTask("t2", EncodeTaskType.QualityVariant),
-            MakeTask("t3", EncodeTaskType.QualityVariant),
+            MakeTask(id: "t0", type: EncodeTaskType.QualityVariant),
+            MakeTask(id: "t1", type: EncodeTaskType.QualityVariant),
+            MakeTask(id: "t2", type: EncodeTaskType.QualityVariant),
+            MakeTask(id: "t3", type: EncodeTaskType.QualityVariant),
         ];
 
         Dictionary<string, EncodeTask[]> result = sut.Assign(
-            tasks,
+            tasks: tasks,
+            workers:
             [
-                new("a", SpeedMultiplier: 2.0, AvailableSlots: 2),
-                new("b", SpeedMultiplier: 2.0, AvailableSlots: 2),
+                new(WorkerId: "a", SpeedMultiplier: 2.0, AvailableSlots: 2),
+                new(WorkerId: "b", SpeedMultiplier: 2.0, AvailableSlots: 2),
             ]
         );
 
-        result["a"].Length.Should().Be(2);
-        result["b"].Length.Should().Be(2);
+        result[key: "a"].Length.Should().Be(expected: 2);
+        result[key: "b"].Length.Should().Be(expected: 2);
     }
 
     [Fact]
@@ -100,11 +103,11 @@ public class WorkerAssignerTests
         WorkerAssigner sut = new();
 
         Dictionary<string, EncodeTask[]> result = sut.Assign(
-            [MakeTask("t0", EncodeTaskType.QualityVariant)],
-            [new("only", SpeedMultiplier: 1.5, AvailableSlots: 0)]
+            tasks: [MakeTask(id: "t0", type: EncodeTaskType.QualityVariant)],
+            workers: [new(WorkerId: "only", SpeedMultiplier: 1.5, AvailableSlots: 0)]
         );
 
-        result["only"].Should().HaveCount(1);
+        result[key: "only"].Should().HaveCount(expected: 1);
     }
 
     [Fact]
@@ -115,20 +118,21 @@ public class WorkerAssignerTests
         WorkerAssigner sut = new();
         EncodeTask[] tasks =
         [
-            MakeTask("chunk0", EncodeTaskType.TimeChunk),
-            MakeTask("variant0", EncodeTaskType.QualityVariant),
-            MakeTask("chunk1", EncodeTaskType.TimeChunk),
+            MakeTask(id: "chunk0", type: EncodeTaskType.TimeChunk),
+            MakeTask(id: "variant0", type: EncodeTaskType.QualityVariant),
+            MakeTask(id: "chunk1", type: EncodeTaskType.TimeChunk),
         ];
 
         Dictionary<string, EncodeTask[]> result = sut.Assign(
-            tasks,
+            tasks: tasks,
+            workers:
             [
-                new("beast", SpeedMultiplier: 4.0, AvailableSlots: 4),
-                new("slow", SpeedMultiplier: 1.0, AvailableSlots: 2),
+                new(WorkerId: "beast", SpeedMultiplier: 4.0, AvailableSlots: 4),
+                new(WorkerId: "slow", SpeedMultiplier: 1.0, AvailableSlots: 2),
             ]
         );
 
-        result["beast"].Should().Contain(t => t.TaskId == "variant0");
+        result[key: "beast"].Should().Contain(predicate: t => t.TaskId == "variant0");
     }
 
     [Fact]
@@ -139,26 +143,26 @@ public class WorkerAssignerTests
         WorkerAssigner sut = new();
         EncodeTask[] tasks =
         [
-            MakeTask("t0", EncodeTaskType.QualityVariant),
-            MakeTask("t1", EncodeTaskType.TimeChunk),
-            MakeTask("t2", EncodeTaskType.QualityVariant),
-            MakeTask("t3", EncodeTaskType.TimeChunk),
-            MakeTask("t4", EncodeTaskType.QualityVariant),
+            MakeTask(id: "t0", type: EncodeTaskType.QualityVariant),
+            MakeTask(id: "t1", type: EncodeTaskType.TimeChunk),
+            MakeTask(id: "t2", type: EncodeTaskType.QualityVariant),
+            MakeTask(id: "t3", type: EncodeTaskType.TimeChunk),
+            MakeTask(id: "t4", type: EncodeTaskType.QualityVariant),
         ];
 
         Dictionary<string, EncodeTask[]> result = sut.Assign(
-            tasks,
-            [new("a", 2.0, 4), new("b", 1.0, 2), new("c", 0.5, 1)]
+            tasks: tasks,
+            workers: [new(WorkerId: "a", SpeedMultiplier: 2.0, AvailableSlots: 4), new(WorkerId: "b", SpeedMultiplier: 1.0, AvailableSlots: 2), new(WorkerId: "c", SpeedMultiplier: 0.5, AvailableSlots: 1)]
         );
 
-        HashSet<string> placed = result.Values.SelectMany(v => v).Select(t => t.TaskId).ToHashSet();
-        placed.Should().BeEquivalentTo("t0", "t1", "t2", "t3", "t4");
+        HashSet<string> placed = result.Values.SelectMany(selector: v => v).Select(selector: t => t.TaskId).ToHashSet();
+        placed.Should().BeEquivalentTo(expectation: ["t0", "t1", "t2", "t3", "t4"]);
     }
 
     private static EncodeTask MakeTask(string id, EncodeTaskType type) =>
         new(
             TaskId: id,
-            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            Command: new(Executable: "ffmpeg", Arguments: ["-i", "in.mkv", "out.ts"], WorkingDirectory: null),
             OutputPath: $"/out/{id}",
             Type: type
         );
@@ -171,7 +175,7 @@ public class WorkerAssignerTests
     ) =>
         new(
             TaskId: id,
-            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            Command: new(Executable: "ffmpeg", Arguments: ["-i", "in.mkv", "out.ts"], WorkingDirectory: null),
             OutputPath: $"/out/{id}",
             Type: EncodeTaskType.QualityVariant,
             VariantId: variantId,
@@ -185,15 +189,16 @@ public class WorkerAssignerTests
         WorkerAssigner sut = new();
 
         Dictionary<string, EncodeTask[]> result = sut.Assign(
-            [MakeGpuTask("gpu-task", requiresGpu: true)],
+            tasks: [MakeGpuTask(id: "gpu-task", requiresGpu: true)],
+            workers:
             [
-                new("cpu-only", SpeedMultiplier: 4.0, AvailableSlots: 8, HasGpu: false),
-                new("gpu-box", SpeedMultiplier: 2.0, AvailableSlots: 2, HasGpu: true),
+                new(WorkerId: "cpu-only", SpeedMultiplier: 4.0, AvailableSlots: 8, HasGpu: false),
+                new(WorkerId: "gpu-box", SpeedMultiplier: 2.0, AvailableSlots: 2, HasGpu: true),
             ]
         );
 
-        result["gpu-box"].Select(t => t.TaskId).Should().Contain("gpu-task");
-        result["cpu-only"].Should().BeEmpty();
+        result[key: "gpu-box"].Select(selector: t => t.TaskId).Should().Contain(expected: "gpu-task");
+        result[key: "cpu-only"].Should().BeEmpty();
     }
 
     [Fact]
@@ -202,11 +207,11 @@ public class WorkerAssignerTests
         WorkerAssigner sut = new();
 
         Dictionary<string, EncodeTask[]> result = sut.Assign(
-            [MakeGpuTask("gpu-task", requiresGpu: true)],
-            [new("cpu-only", SpeedMultiplier: 1.0, AvailableSlots: 4, HasGpu: false)]
+            tasks: [MakeGpuTask(id: "gpu-task", requiresGpu: true)],
+            workers: [new(WorkerId: "cpu-only", SpeedMultiplier: 1.0, AvailableSlots: 4, HasGpu: false)]
         );
 
-        result["cpu-only"].Select(t => t.TaskId).Should().Contain("gpu-task");
+        result[key: "cpu-only"].Select(selector: t => t.TaskId).Should().Contain(expected: "gpu-task");
     }
 
     [Fact]
@@ -215,24 +220,26 @@ public class WorkerAssignerTests
         WorkerAssigner sut = new();
 
         Dictionary<string, EncodeTask[]> result = sut.Assign(
+            tasks:
             [
-                MakeGpuTask("heavy", requiresGpu: false, cost: 8),
-                MakeGpuTask("a", requiresGpu: false, cost: 1),
-                MakeGpuTask("b", requiresGpu: false, cost: 1),
-                MakeGpuTask("c", requiresGpu: false, cost: 1),
+                MakeGpuTask(id: "heavy", requiresGpu: false, cost: 8),
+                MakeGpuTask(id: "a", requiresGpu: false, cost: 1),
+                MakeGpuTask(id: "b", requiresGpu: false, cost: 1),
+                MakeGpuTask(id: "c", requiresGpu: false, cost: 1),
             ],
+            workers:
             [
-                new("fast", SpeedMultiplier: 2.0, AvailableSlots: 2, HasGpu: false),
-                new("slow", SpeedMultiplier: 1.0, AvailableSlots: 2, HasGpu: false),
+                new(WorkerId: "fast", SpeedMultiplier: 2.0, AvailableSlots: 2, HasGpu: false),
+                new(WorkerId: "slow", SpeedMultiplier: 1.0, AvailableSlots: 2, HasGpu: false),
             ]
         );
 
         // The heavy task drains "fast"'s effective weight on first pass; the
         // following light tasks land on "slow" which still has full capacity.
-        result["fast"].Select(t => t.TaskId).Should().Contain("heavy");
-        result["slow"]
-            .Select(t => t.TaskId)
+        result[key: "fast"].Select(selector: t => t.TaskId).Should().Contain(expected: "heavy");
+        result[key: "slow"]
+            .Select(selector: t => t.TaskId)
             .Should()
-            .Contain(id => id == "a" || id == "b" || id == "c");
+            .Contain(predicate: id => id == "a" || id == "b" || id == "c");
     }
 }

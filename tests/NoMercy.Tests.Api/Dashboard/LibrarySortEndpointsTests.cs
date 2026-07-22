@@ -26,7 +26,7 @@ namespace NoMercy.Tests.Api.Dashboard;
 /// a plain body-only call must never come back as a 400 before the handler
 /// even runs.
 /// </summary>
-[Trait("Category", "DashboardLibrarySort")]
+[Trait(name: "Category", value: "DashboardLibrarySort")]
 public class LibrarySortEndpointsTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly HttpClient _authed;
@@ -39,18 +39,18 @@ public class LibrarySortEndpointsTests : IClassFixture<NoMercyApiFactory>
     }
 
     private static StringContent JsonBody(object obj) =>
-        new(JsonSerializer.Serialize(obj), Encoding.UTF8, "application/json");
+        new(content: JsonSerializer.Serialize(value: obj), encoding: Encoding.UTF8, mediaType: "application/json");
 
     private Task<HttpResponseMessage> PatchAsync(HttpClient client, string url, object body) =>
-        client.PatchAsync(url, JsonBody(body));
+        client.PatchAsync(requestUri: url, content: JsonBody(obj: body));
 
     [Fact]
     public async Task SortLibraries_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await PatchAsync(
-            _unauthed,
-            "/api/v1/dashboard/libraries/sort",
-            new
+            client: _unauthed,
+            url: "/api/v1/dashboard/libraries/sort",
+            body: new
             {
                 libraries = new[]
                 {
@@ -59,16 +59,16 @@ public class LibrarySortEndpointsTests : IClassFixture<NoMercyApiFactory>
             }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task SortLibraries_NoIdQueryString_DoesNotReturnBadRequest()
     {
         HttpResponseMessage response = await PatchAsync(
-            _authed,
-            "/api/v1/dashboard/libraries/sort",
-            new
+            client: _authed,
+            url: "/api/v1/dashboard/libraries/sort",
+            body: new
             {
                 libraries = new[]
                 {
@@ -77,17 +77,17 @@ public class LibrarySortEndpointsTests : IClassFixture<NoMercyApiFactory>
             }
         );
 
-        response.StatusCode.Should().NotBe(HttpStatusCode.BadRequest);
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.NotFound);
+        response.StatusCode.Should().NotBe(unexpected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.OK, HttpStatusCode.NotFound]);
     }
 
     [Fact]
     public async Task SortLibraries_ValidBody_ReturnsOkEnvelopeWithStatusField()
     {
         HttpResponseMessage response = await PatchAsync(
-            _authed,
-            "/api/v1/dashboard/libraries/sort",
-            new
+            client: _authed,
+            url: "/api/v1/dashboard/libraries/sort",
+            body: new
             {
                 libraries = new[]
                 {
@@ -97,24 +97,24 @@ public class LibrarySortEndpointsTests : IClassFixture<NoMercyApiFactory>
             }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
 
-        doc.RootElement.TryGetProperty("status", out JsonElement status)
+        doc.RootElement.TryGetProperty(propertyName: "status", value: out JsonElement status)
             .Should()
-            .BeTrue("sort response must include a 'status' field");
-        status.GetString().Should().Be("ok");
+            .BeTrue(because: "sort response must include a 'status' field");
+        status.GetString().Should().Be(expected: "ok");
     }
 
     [Fact]
     public async Task SortSpecials_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await PatchAsync(
-            _unauthed,
-            "/api/v1/dashboard/specials/sort",
-            new
+            client: _unauthed,
+            url: "/api/v1/dashboard/specials/sort",
+            body: new
             {
                 libraries = new[]
                 {
@@ -123,16 +123,16 @@ public class LibrarySortEndpointsTests : IClassFixture<NoMercyApiFactory>
             }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task SortSpecials_NoIdQueryString_DoesNotReturnBadRequest()
     {
         HttpResponseMessage response = await PatchAsync(
-            _authed,
-            "/api/v1/dashboard/specials/sort",
-            new
+            client: _authed,
+            url: "/api/v1/dashboard/specials/sort",
+            body: new
             {
                 libraries = new[]
                 {
@@ -141,17 +141,17 @@ public class LibrarySortEndpointsTests : IClassFixture<NoMercyApiFactory>
             }
         );
 
-        response.StatusCode.Should().NotBe(HttpStatusCode.BadRequest);
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.NotFound);
+        response.StatusCode.Should().NotBe(unexpected: HttpStatusCode.BadRequest);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.OK, HttpStatusCode.NotFound]);
     }
 
     [Fact]
     public async Task SortSpecials_ValidBody_ReturnsOkEnvelopeWithStatusField()
     {
         HttpResponseMessage response = await PatchAsync(
-            _authed,
-            "/api/v1/dashboard/specials/sort",
-            new
+            client: _authed,
+            url: "/api/v1/dashboard/specials/sort",
+            body: new
             {
                 libraries = new[]
                 {
@@ -160,14 +160,14 @@ public class LibrarySortEndpointsTests : IClassFixture<NoMercyApiFactory>
             }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
 
-        doc.RootElement.TryGetProperty("status", out JsonElement status)
+        doc.RootElement.TryGetProperty(propertyName: "status", value: out JsonElement status)
             .Should()
-            .BeTrue("sort response must include a 'status' field");
-        status.GetString().Should().Be("ok");
+            .BeTrue(because: "sort response must include a 'status' field");
+        status.GetString().Should().Be(expected: "ok");
     }
 }

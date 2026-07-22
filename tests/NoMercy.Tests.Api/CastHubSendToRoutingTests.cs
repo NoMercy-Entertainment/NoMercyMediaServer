@@ -37,7 +37,7 @@ namespace NoMercy.Tests.Api;
 // without a compile error anywhere. These tests build a real CastHub against
 // the app's actual DI-configured MediaContext/UserCache (via NoMercyApiFactory)
 // with IClientMessenger mocked — no real cast/broadcast ever happens.
-[Trait("Category", "Characterization")]
+[Trait(name: "Category", value: "Characterization")]
 public class CastHubSendToRoutingTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -59,27 +59,27 @@ public class CastHubSendToRoutingTests : IClassFixture<NoMercyApiFactory>
         clientMessenger = new Mock<IClientMessenger>();
 
         CastHub hub = new(
-            NullLogger<CastHub>.Instance,
-            Mock.Of<IHttpContextAccessor>(),
-            contextFactory,
-            new ConnectedClients(),
-            clientMessenger.Object,
-            Mock.Of<IActivityLogger>(),
-            Mock.Of<IAuthTokenStore>(),
-            Mock.Of<IChromeCastService>()
+            logger: NullLogger<CastHub>.Instance,
+            httpContextAccessor: Mock.Of<IHttpContextAccessor>(),
+            contextFactory: contextFactory,
+            connectedClients: new ConnectedClients(),
+            clientMessenger: clientMessenger.Object,
+            activityLogger: Mock.Of<IActivityLogger>(),
+            authTokenStore: Mock.Of<IAuthTokenStore>(),
+            chromeCast: Mock.Of<IChromeCastService>()
         );
 
         ClaimsPrincipal principal = new(
-            new ClaimsIdentity(
-                [new(ClaimTypes.NameIdentifier, callerUserId.ToString())],
-                "TestAuth"
+            identity: new ClaimsIdentity(
+                claims: [new(type: ClaimTypes.NameIdentifier, value: callerUserId.ToString())],
+                authenticationType: "TestAuth"
             )
         );
 
         Mock<HubCallerContext> context = new();
-        context.Setup(c => c.User).Returns(principal);
-        context.Setup(c => c.ConnectionId).Returns(Guid.NewGuid().ToString());
-        context.Setup(c => c.ConnectionAborted).Returns(CancellationToken.None);
+        context.Setup(expression: c => c.User).Returns(value: principal);
+        context.Setup(expression: c => c.ConnectionId).Returns(value: Guid.NewGuid().ToString());
+        context.Setup(expression: c => c.ConnectionAborted).Returns(value: CancellationToken.None);
 
         hub.Context = context.Object;
         hub.Clients = Mock.Of<IHubCallerClients>();
@@ -94,32 +94,32 @@ public class CastHubSendToRoutingTests : IClassFixture<NoMercyApiFactory>
         yield return new object[]
         {
             "Time",
-            (Func<CastHub, Task>)(h => h.Time(new CastHub.TimeData())),
+            (Func<CastHub, Task>)(h => h.Time(time: new CastHub.TimeData())),
         };
         yield return new object[] { "Ended", (Func<CastHub, Task>)(h => h.Ended()) };
-        yield return new object[] { "Volume", (Func<CastHub, Task>)(h => h.Volume(50)) };
-        yield return new object[] { "Muted", (Func<CastHub, Task>)(h => h.Muted(true)) };
+        yield return new object[] { "Volume", (Func<CastHub, Task>)(h => h.Volume(volume: 50)) };
+        yield return new object[] { "Muted", (Func<CastHub, Task>)(h => h.Muted(muted: true)) };
         yield return new object[]
         {
             "Item",
-            (Func<CastHub, Task>)(h => h.Item(new CastHub.PlaylistItem())),
+            (Func<CastHub, Task>)(h => h.Item(item: new CastHub.PlaylistItem())),
         };
-        yield return new object[] { "Playlist", (Func<CastHub, Task>)(h => h.Playlist([])) };
+        yield return new object[] { "Playlist", (Func<CastHub, Task>)(h => h.Playlist(item: [])) };
         yield return new object[]
         {
             "SubtitleTracks",
-            (Func<CastHub, Task>)(h => h.SubtitleTracks([])),
+            (Func<CastHub, Task>)(h => h.SubtitleTracks(subtitleTracks: [])),
         };
         yield return new object[]
         {
             "CurrentSubtitleTrack",
-            (Func<CastHub, Task>)(h => h.CurrentSubtitleTrack(new CastHub.TextTrack())),
+            (Func<CastHub, Task>)(h => h.CurrentSubtitleTrack(subtitleTrack: new CastHub.TextTrack())),
         };
-        yield return new object[] { "AudioTracks", (Func<CastHub, Task>)(h => h.AudioTracks([])) };
+        yield return new object[] { "AudioTracks", (Func<CastHub, Task>)(h => h.AudioTracks(audioTrack: [])) };
         yield return new object[]
         {
             "CurrentAudioTrack",
-            (Func<CastHub, Task>)(h => h.CurrentAudioTrack(new CastHub.AudioTrack())),
+            (Func<CastHub, Task>)(h => h.CurrentAudioTrack(audioTrack: new CastHub.AudioTrack())),
         };
         yield return new object[]
         {
@@ -131,26 +131,26 @@ public class CastHubSendToRoutingTests : IClassFixture<NoMercyApiFactory>
             // PlayerState the METHOD forwards a DIFFERENT event name than its own
             // name — this mapping is the entire point of the test.
             "MusicPlayerState",
-            (Func<CastHub, Task>)(h => h.PlayerState(new CastHub.CastPlayerState())),
+            (Func<CastHub, Task>)(h => h.PlayerState(state: new CastHub.CastPlayerState())),
         };
         yield return new object[]
         {
             "SetAudioTrack",
-            (Func<CastHub, Task>)(h => h.SetAudioTrack(1)),
+            (Func<CastHub, Task>)(h => h.SetAudioTrack(audioTrack: 1)),
         };
         yield return new object[]
         {
             "SetSubtitleTrack",
-            (Func<CastHub, Task>)(h => h.SetSubtitleTrack(1)),
+            (Func<CastHub, Task>)(h => h.SetSubtitleTrack(subtitleTrack: 1)),
         };
         yield return new object[]
         {
             "SetPlaylistItem",
-            (Func<CastHub, Task>)(h => h.SetPlaylistItem(1)),
+            (Func<CastHub, Task>)(h => h.SetPlaylistItem(item: 1)),
         };
-        yield return new object[] { "SetVolume", (Func<CastHub, Task>)(h => h.SetVolume(50)) };
-        yield return new object[] { "SetMuted", (Func<CastHub, Task>)(h => h.SetMuted(true)) };
-        yield return new object[] { "SetSeek", (Func<CastHub, Task>)(h => h.SetSeek(10)) };
+        yield return new object[] { "SetVolume", (Func<CastHub, Task>)(h => h.SetVolume(volume: 50)) };
+        yield return new object[] { "SetMuted", (Func<CastHub, Task>)(h => h.SetMuted(muted: true)) };
+        yield return new object[] { "SetSeek", (Func<CastHub, Task>)(h => h.SetSeek(time: 10)) };
         yield return new object[] { "SetNext", (Func<CastHub, Task>)(h => h.SetNext()) };
         yield return new object[] { "SetPrevious", (Func<CastHub, Task>)(h => h.SetPrevious()) };
         yield return new object[] { "SetPlay", (Func<CastHub, Task>)(h => h.SetPlay()) };
@@ -159,52 +159,52 @@ public class CastHubSendToRoutingTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Theory]
-    [MemberData(nameof(RoutedMethods))]
+    [MemberData(memberName: nameof(RoutedMethods))]
     public async Task RoutedMethod_ForwardsExpectedEventName_ToCallerUser(
         string expectedEventName,
         Func<CastHub, Task> invoke
     )
     {
         CastHub hub = CreateHub(
-            TestAuthHandler.DefaultUserId,
-            out Mock<IClientMessenger> clientMessenger
+            callerUserId: TestAuthHandler.DefaultUserId,
+            clientMessenger: out Mock<IClientMessenger> clientMessenger
         );
 
-        await invoke(hub);
+        await invoke(arg: hub);
 
         clientMessenger.Verify(
-            m =>
+            expression: m =>
                 m.SendTo(
                     expectedEventName,
                     "castHub",
                     TestAuthHandler.DefaultUserId,
                     It.IsAny<object?>()
                 ),
-            Times.Once
+            times: Times.Once
         );
     }
 
     [Theory]
-    [MemberData(nameof(RoutedMethods))]
+    [MemberData(memberName: nameof(RoutedMethods))]
     public async Task RoutedMethod_IsNoOp_WhenCallerUserIsNotCached(
         string expectedEventName,
         Func<CastHub, Task> invoke
     )
     {
         _ = expectedEventName;
-        CastHub hub = CreateHub(Guid.NewGuid(), out Mock<IClientMessenger> clientMessenger);
+        CastHub hub = CreateHub(callerUserId: Guid.NewGuid(), clientMessenger: out Mock<IClientMessenger> clientMessenger);
 
-        await invoke(hub);
+        await invoke(arg: hub);
 
         clientMessenger.Verify(
-            m =>
+            expression: m =>
                 m.SendTo(
                     It.IsAny<string>(),
                     It.IsAny<string>(),
                     It.IsAny<Guid>(),
                     It.IsAny<object?>()
                 ),
-            Times.Never
+            times: Times.Never
         );
     }
 }

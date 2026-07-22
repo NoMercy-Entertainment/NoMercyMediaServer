@@ -15,7 +15,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Media;
 
-[Trait("Category", "Specials")]
+[Trait(name: "Category", value: "Specials")]
 public class SpecialControllerTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly HttpClient _authed;
@@ -31,17 +31,17 @@ public class SpecialControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task Available_UnknownSpecial_ReturnsNotFound()
     {
         string id = Ulid.NewUlid().ToString();
-        HttpResponseMessage response = await _authed.GetAsync($"/api/v1/specials/{id}/available");
+        HttpResponseMessage response = await _authed.GetAsync(requestUri: $"/api/v1/specials/{id}/available");
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.NotFound, actual: response.StatusCode);
     }
 
     [Fact]
     public async Task Available_Unauthenticated_DoesNotReturnOk()
     {
         string id = Ulid.NewUlid().ToString();
-        HttpResponseMessage response = await _unauthed.GetAsync($"/api/v1/specials/{id}/available");
+        HttpResponseMessage response = await _unauthed.GetAsync(requestUri: $"/api/v1/specials/{id}/available");
 
-        Assert.NotEqual(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotEqual(expected: HttpStatusCode.OK, actual: response.StatusCode);
     }
 }

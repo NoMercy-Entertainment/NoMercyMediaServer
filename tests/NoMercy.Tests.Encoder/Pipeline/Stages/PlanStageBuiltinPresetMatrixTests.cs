@@ -33,31 +33,31 @@ namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 public class PlanStageBuiltinPresetMatrixTests
 {
     public static IEnumerable<object[]> Presets() =>
-        BuiltinPresets.All().Select(preset => new object[] { preset.Name });
+        BuiltinPresets.All().Select(selector: preset => new object[] { preset.Name });
 
     [Theory]
-    [MemberData(nameof(Presets))]
+    [MemberData(memberName: nameof(Presets))]
     public async Task BuiltinPreset_PlansWithoutThrowing(string presetName)
     {
-        EncodingProfile profile = BuiltinPresets.All().Single(preset => preset.Name == presetName);
+        EncodingProfile profile = BuiltinPresets.All().Single(predicate: preset => preset.Name == presetName);
         PlanStage stage = BuildStage();
 
-        ValidateInput input = new(RichSource(), profile);
+        ValidateInput input = new(Media: RichSource(), Profile: profile);
         StageResult result = await stage.ExecuteAsync(
-            input,
-            EncodingContext.Create(),
-            CancellationToken.None
+            input: input,
+            context: EncodingContext.Create(),
+            ct: CancellationToken.None
         );
 
         result
             .Should()
             .BeOfType<StageSuccess<ExecutionPlan>>(
-                $"builtin preset '{presetName}' must plan cleanly on a rich source"
+                because: $"builtin preset '{presetName}' must plan cleanly on a rich source"
             );
 
         ExecutionPlan plan = ((StageSuccess<ExecutionPlan>)result).Value;
         if (profile.Video is not null && profile.Video.Policy != StreamPolicy.Omit)
-            plan.OutputPlan.VideoOutputs.Should().NotBeEmpty($"'{presetName}' declares video");
+            plan.OutputPlan.VideoOutputs.Should().NotBeEmpty(because: $"'{presetName}' declares video");
     }
 
     private static PlanStage BuildStage()
@@ -66,15 +66,15 @@ public class PlanStageBuiltinPresetMatrixTests
         Mock<IHardwareCapabilities> hardware = new();
         Mock<IFfmpegCapabilities> ffmpeg = new();
 
-        hardware.Setup(h => h.HasGpu).Returns(false);
-        hardware.Setup(h => h.CpuCores).Returns(8);
-        hardware.Setup(h => h.Gpus).Returns([]);
-        hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
-        hardware.Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>())).Returns((GpuDevice?)null);
-        ffmpeg.Setup(f => f.HasFilter(It.IsAny<string>())).Returns(true);
+        hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
+        hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
+        hardware.Setup(expression: h => h.Gpus).Returns(value: []);
+        hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
+        hardware.Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>())).Returns(value: (GpuDevice?)null);
+        ffmpeg.Setup(expression: f => f.HasFilter(It.IsAny<string>())).Returns(value: true);
 
         codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<IHardwareCapabilities>(),
@@ -82,16 +82,16 @@ public class PlanStageBuiltinPresetMatrixTests
                 )
             )
             .Returns(
-                (VideoCodecType codec, IHardwareCapabilities _, EncoderPreference _) =>
+                valueFunction: (VideoCodecType codec, IHardwareCapabilities _, EncoderPreference _) =>
                     new(
-                        FfmpegEncoderName: SoftwareEncoderFor(codec),
+                        FfmpegEncoderName: SoftwareEncoderFor(codec: codec),
                         EncoderInfo: new(
-                            FfmpegName: SoftwareEncoderFor(codec),
+                            FfmpegName: SoftwareEncoderFor(codec: codec),
                             RequiredVendor: null,
                             Presets: ["medium"],
                             Profiles: ["main", "high", "main10"],
                             Levels: ["4.1", "5.1"],
-                            QualityRange: new(0, 51, 23),
+                            QualityRange: new(Min: 0, Max: 51, Default: 23),
                             SupportedRateControl: [RateControlMode.Crf],
                             Supports10Bit: true,
                             SupportsHdr: true,
@@ -105,16 +105,16 @@ public class PlanStageBuiltinPresetMatrixTests
             );
 
         return new(
-            new(),
-            new(),
-            new(),
-            codecResolver.Object,
-            hardware.Object,
-            new TonemapSelector(),
-            ffmpeg.Object,
-            new AbrLadderGenerator(),
-            new NoOpCropDetector(),
-            NullLogger<PlanStage>.Instance
+            graphBuilder: new(),
+            groupingStrategy: new(),
+            costEstimator: new(),
+            codecResolver: codecResolver.Object,
+            hardware: hardware.Object,
+            tonemapSelector: new TonemapSelector(),
+            ffmpegCapabilities: ffmpeg.Object,
+            abrLadderGenerator: new AbrLadderGenerator(),
+            cropDetector: new NoOpCropDetector(),
+            logger: NullLogger<PlanStage>.Instance
         );
     }
 
@@ -132,7 +132,7 @@ public class PlanStageBuiltinPresetMatrixTests
         new(
             FilePath: "/media/rich.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(120),
+            Duration: TimeSpan.FromMinutes(minutes: 120),
             OverallBitRateKbps: 50000,
             FileSizeBytes: 40_000_000_000,
             VideoStreams:

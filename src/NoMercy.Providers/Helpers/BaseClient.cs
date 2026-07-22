@@ -23,7 +23,7 @@ public class BaseClient : IDisposable
 
     protected readonly HttpClient Client;
 
-    protected virtual Uri BaseUrl => new("http://localhost:8080");
+    protected virtual Uri BaseUrl => new(uriString: "http://localhost:8080");
     protected virtual int ConcurrentRequests => 1;
     protected virtual int Interval => 1000;
     protected virtual Dictionary<string, string?> QueryParams => new();
@@ -31,23 +31,23 @@ public class BaseClient : IDisposable
 
     protected BaseClient()
     {
-        Client = HttpClientProvider.CreateClient(HttpClientNames.General);
+        Client = HttpClientProvider.CreateClient(name: HttpClientNames.General);
         Client.BaseAddress = BaseUrl;
-        Client.Timeout = TimeSpan.FromMinutes(5);
+        Client.Timeout = TimeSpan.FromMinutes(minutes: 5);
 
         foreach ((string? key, string? value) in QueryParams)
-            Client.DefaultRequestHeaders.Add(key, value);
+            Client.DefaultRequestHeaders.Add(name: key, value: value);
     }
 
     protected BaseClient(Guid id)
     {
         Id = id;
-        Client = HttpClientProvider.CreateClient(HttpClientNames.General);
+        Client = HttpClientProvider.CreateClient(name: HttpClientNames.General);
         Client.BaseAddress = BaseUrl;
-        Client.Timeout = TimeSpan.FromMinutes(5);
+        Client.Timeout = TimeSpan.FromMinutes(minutes: 5);
 
         foreach ((string? key, string? value) in QueryParams)
-            Client.DefaultRequestHeaders.Add(key, value);
+            Client.DefaultRequestHeaders.Add(name: key, value: value);
     }
 
     private static Queue? _queue;
@@ -55,7 +55,7 @@ public class BaseClient : IDisposable
     protected static Queue Queue()
     {
         return _queue ??= new(
-            new()
+            options: new()
             {
                 Concurrent = 1,
                 Interval = 1000,
@@ -74,20 +74,20 @@ public class BaseClient : IDisposable
         query ??= new();
 
         foreach (KeyValuePair<string, string?> queryParam in QueryParams)
-            query.Add(queryParam.Key, queryParam.Value);
+            query.Add(key: queryParam.Key, value: queryParam.Value);
 
-        string newUrl = QueryHelpers.AddQueryString(url, query);
+        string newUrl = QueryHelpers.AddQueryString(uri: url, queryString: query);
 
-        (bool found, T? result) = await CacheController.ReadAsync<T>(newUrl);
+        (bool found, T? result) = await CacheController.ReadAsync<T>(url: newUrl);
         if (found)
             return result;
 
-        Logger.Http(newUrl, LogEventLevel.Verbose);
+        Logger.Http(message: newUrl, level: LogEventLevel.Verbose);
 
         string response = await Queue()
-            .Enqueue(() => Client.GetStringAsync(newUrl), newUrl, priority);
+            .Enqueue(task: () => Client.GetStringAsync(requestUri: newUrl), url: newUrl, priority: priority);
 
-        await CacheController.Write(newUrl, response);
+        await CacheController.Write(url: newUrl, data: response);
 
         T? data = response.FromJson<T>();
 
@@ -96,6 +96,6 @@ public class BaseClient : IDisposable
 
     public void Dispose()
     {
-        GC.SuppressFinalize(this);
+        GC.SuppressFinalize(obj: this);
     }
 }

@@ -37,7 +37,7 @@ file sealed class TestableDiscRipJob(Folder folder, Library library) : DiscRipJo
         Ulid folderId,
         Ulid libraryId,
         CancellationToken cancellationToken
-    ) => Task.FromResult<(Folder?, Library?)>((folder, library));
+    ) => Task.FromResult<(Folder?, Library?)>(result: (folder, library));
 }
 
 /// <summary>
@@ -51,8 +51,8 @@ file sealed class TestableDiscRipJob(Folder folder, Library library) : DiscRipJo
 /// without moving the file; no candidate at all falls through to the
 /// original (label-based) output naming.
 /// </summary>
-[Collection("EventBusProvider")]
-[Trait("Category", "Unit")]
+[Collection(name: "EventBusProvider")]
+[Trait(name: "Category", value: "Unit")]
 public class DiscRipJobAutoApplyTests
 {
     private static readonly Ulid KnownFolderId = Ulid.NewUlid();
@@ -95,7 +95,7 @@ public class DiscRipJobAutoApplyTests
             TitleIndex: 1,
             OutputPath: outputPath,
             Success: true,
-            Duration: TimeSpan.FromMinutes(100),
+            Duration: TimeSpan.FromMinutes(minutes: 100),
             OutputSizeBytes: 1_000_000,
             Error: null
         );
@@ -104,20 +104,20 @@ public class DiscRipJobAutoApplyTests
     {
         Mock<IStorage> storageMock = new();
         storageMock
-            .Setup(s => s.GetFullPath(It.IsAny<string>()))
-            .Returns<string>(relative => hostPath + "/" + relative.TrimStart('/'));
+            .Setup(expression: s => s.GetFullPath(It.IsAny<string>()))
+            .Returns<string>(valueFunction: relative => hostPath + "/" + relative.TrimStart(trimChar: '/'));
         storageMock
-            .Setup(s => s.CreateDirectoryAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .Setup(expression: s => s.CreateDirectoryAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(value: Task.CompletedTask);
         storageMock
-            .Setup(s =>
+            .Setup(expression: s =>
                 s.OpenWriteAsync(
                     It.IsAny<string>(),
                     It.IsAny<bool>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(Stream.Null);
+            .ReturnsAsync(value: Stream.Null);
         return storageMock;
     }
 
@@ -130,10 +130,10 @@ public class DiscRipJobAutoApplyTests
     {
         Mock<IStorageFactory> factoryMock = new();
         factoryMock
-            .Setup(f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
-            .Returns(folderStorage);
+            .Setup(expression: f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
+            .Returns(value: folderStorage);
 
-        TestableDiscRipJob job = new(MakeFolder(), MakeLibrary())
+        TestableDiscRipJob job = new(folder: MakeFolder(), library: MakeLibrary())
         {
             Request = request,
             OutputDir = Path.GetTempPath(),
@@ -156,50 +156,50 @@ public class DiscRipJobAutoApplyTests
     {
         Mock<IEventBus> busMock = new();
         busMock
-            .Setup(b =>
+            .Setup(expression: b =>
                 b.PublishAsync(It.IsAny<DriveStateChangedEvent>(), It.IsAny<CancellationToken>())
             )
-            .Callback<DriveStateChangedEvent, CancellationToken>((evt, _) => published.Add(evt))
-            .Returns(Task.CompletedTask);
+            .Callback<DriveStateChangedEvent, CancellationToken>(action: (evt, _) => published.Add(item: evt))
+            .Returns(value: Task.CompletedTask);
         busMock
-            .Setup(b =>
+            .Setup(expression: b =>
                 b.PublishAsync(
                     It.IsAny<NoMercy.Events.FileWatcher.FileCreatedEvent>(),
                     It.IsAny<CancellationToken>()
                 )
             )
             .Callback<NoMercy.Events.FileWatcher.FileCreatedEvent, CancellationToken>(
-                (evt, _) => published.Add(evt)
+                action: (evt, _) => published.Add(item: evt)
             )
-            .Returns(Task.CompletedTask);
-        EventBusProvider.Configure(busMock.Object);
+            .Returns(value: Task.CompletedTask);
+        EventBusProvider.Configure(eventBus: busMock.Object);
         return busMock;
     }
 
     [Fact]
     public async Task Handle_NoCustomMetadata_HighConfidenceCandidate_AutoAppliesAndDispatches()
     {
-        string tempFile = Path.Combine(Path.GetTempPath(), $"autoapply_{Guid.NewGuid():N}.mkv");
-        await File.WriteAllBytesAsync(tempFile, []);
+        string tempFile = Path.Combine(path1: Path.GetTempPath(), path2: $"autoapply_{Guid.NewGuid():N}.mkv");
+        await File.WriteAllBytesAsync(path: tempFile, bytes: []);
         try
         {
             Mock<IDiscRipper> ripperMock = new();
             ripperMock
-                .Setup(r =>
+                .Setup(expression: r =>
                     r.RipAsync(
                         It.IsAny<RipRequest>(),
                         It.IsAny<string>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .ReturnsAsync([MakeRipResult(tempFile)]);
+                .ReturnsAsync(value: [MakeRipResult(outputPath: tempFile)]);
 
             Mock<IDiscIdentifier> identifierMock = new();
-            identifierMock.Setup(i => i.CanHandle(It.IsAny<OpticalDiscType>())).Returns(true);
+            identifierMock.Setup(expression: i => i.CanHandle(It.IsAny<OpticalDiscType>())).Returns(value: true);
             identifierMock
-                .Setup(i => i.IdentifyAsync(It.IsAny<DiscInfo>(), It.IsAny<CancellationToken>()))
+                .Setup(expression: i => i.IdentifyAsync(It.IsAny<DiscInfo>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(
-                    new DiscIdentification(
+                    value: new DiscIdentification(
                         Kind: MediaKind.Movie,
                         Candidates:
                         [
@@ -221,63 +221,63 @@ public class DiscRipJobAutoApplyTests
                 );
 
             DiscIdentificationService identificationService = new(
-                [identifierMock.Object],
-                NullLogger<DiscIdentificationService>.Instance
+                identifiers: [identifierMock.Object],
+                logger: NullLogger<DiscIdentificationService>.Instance
             );
 
             List<object> published = [];
-            ConfigureEventBus(published);
+            ConfigureEventBus(published: published);
 
-            Mock<IStorage> storageMock = MakeStorageMock("/media/movies");
+            Mock<IStorage> storageMock = MakeStorageMock(hostPath: "/media/movies");
             DiscRipJob job = BuildJob(
-                MakeNoCustomRequest(),
-                ripperMock.Object,
-                identificationService,
-                storageMock.Object
+                request: MakeNoCustomRequest(),
+                ripper: ripperMock.Object,
+                identificationService: identificationService,
+                folderStorage: storageMock.Object
             );
 
             await job.Handle();
 
             List<string> methods = published
                 .OfType<DriveStateChangedEvent>()
-                .Select(e => e.DriveStateData.Method)
+                .Select(selector: e => e.DriveStateData.Method)
                 .ToList();
-            methods.Should().Contain("rip_complete");
-            methods.Should().NotContain("rip_pending");
+            methods.Should().Contain(expected: "rip_complete");
+            methods.Should().NotContain(unexpected: "rip_pending");
         }
         finally
         {
-            if (File.Exists(tempFile))
-                File.Delete(tempFile);
+            if (File.Exists(path: tempFile))
+                File.Delete(path: tempFile);
         }
     }
 
     [Fact]
     public async Task Handle_NoCustomMetadata_LowConfidenceCandidate_WritesPendingJsonAndSkipsMove()
     {
-        string tempFile = Path.Combine(Path.GetTempPath(), $"pending_{Guid.NewGuid():N}.mkv");
-        await File.WriteAllBytesAsync(tempFile, []);
-        string outputDir = Path.Combine(Path.GetTempPath(), $"rip_out_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(outputDir);
+        string tempFile = Path.Combine(path1: Path.GetTempPath(), path2: $"pending_{Guid.NewGuid():N}.mkv");
+        await File.WriteAllBytesAsync(path: tempFile, bytes: []);
+        string outputDir = Path.Combine(path1: Path.GetTempPath(), path2: $"rip_out_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: outputDir);
         try
         {
             Mock<IDiscRipper> ripperMock = new();
             ripperMock
-                .Setup(r =>
+                .Setup(expression: r =>
                     r.RipAsync(
                         It.IsAny<RipRequest>(),
                         It.IsAny<string>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .ReturnsAsync([MakeRipResult(tempFile)]);
+                .ReturnsAsync(value: [MakeRipResult(outputPath: tempFile)]);
 
             Mock<IDiscIdentifier> identifierMock = new();
-            identifierMock.Setup(i => i.CanHandle(It.IsAny<OpticalDiscType>())).Returns(true);
+            identifierMock.Setup(expression: i => i.CanHandle(It.IsAny<OpticalDiscType>())).Returns(value: true);
             identifierMock
-                .Setup(i => i.IdentifyAsync(It.IsAny<DiscInfo>(), It.IsAny<CancellationToken>()))
+                .Setup(expression: i => i.IdentifyAsync(It.IsAny<DiscInfo>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(
-                    new DiscIdentification(
+                    value: new DiscIdentification(
                         Kind: MediaKind.Movie,
                         Candidates:
                         [
@@ -299,21 +299,21 @@ public class DiscRipJobAutoApplyTests
                 );
 
             DiscIdentificationService identificationService = new(
-                [identifierMock.Object],
-                NullLogger<DiscIdentificationService>.Instance
+                identifiers: [identifierMock.Object],
+                logger: NullLogger<DiscIdentificationService>.Instance
             );
 
             List<object> published = [];
-            ConfigureEventBus(published);
+            ConfigureEventBus(published: published);
 
-            Mock<IStorage> storageMock = MakeStorageMock("/media/movies");
+            Mock<IStorage> storageMock = MakeStorageMock(hostPath: "/media/movies");
             RipRequest request = MakeNoCustomRequest() with { SelectedTitleIndices = [1] };
             Mock<IStorageFactory> factoryMock = new();
             factoryMock
-                .Setup(f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
-                .Returns(storageMock.Object);
+                .Setup(expression: f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
+                .Returns(value: storageMock.Object);
 
-            TestableDiscRipJob job = new(MakeFolder(), MakeLibrary())
+            TestableDiscRipJob job = new(folder: MakeFolder(), library: MakeLibrary())
             {
                 Request = request,
                 OutputDir = outputDir,
@@ -333,72 +333,72 @@ public class DiscRipJobAutoApplyTests
 
             published
                 .OfType<DriveStateChangedEvent>()
-                .Select(e => e.DriveStateData.Method)
+                .Select(selector: e => e.DriveStateData.Method)
                 .Should()
-                .Contain("rip_pending");
+                .Contain(expected: "rip_pending");
 
-            string pendingPath = Path.Combine(outputDir, "pending_01.json");
-            File.Exists(pendingPath)
+            string pendingPath = Path.Combine(path1: outputDir, path2: "pending_01.json");
+            File.Exists(path: pendingPath)
                 .Should()
-                .BeTrue("a low-confidence match must be saved for manual confirmation");
-            string json = await File.ReadAllTextAsync(pendingPath);
-            json.Should().Contain("Maybe Inception");
+                .BeTrue(because: "a low-confidence match must be saved for manual confirmation");
+            string json = await File.ReadAllTextAsync(path: pendingPath);
+            json.Should().Contain(expected: "Maybe Inception");
         }
         finally
         {
-            if (File.Exists(tempFile))
-                File.Delete(tempFile);
-            if (Directory.Exists(outputDir))
-                Directory.Delete(outputDir, recursive: true);
+            if (File.Exists(path: tempFile))
+                File.Delete(path: tempFile);
+            if (Directory.Exists(path: outputDir))
+                Directory.Delete(path: outputDir, recursive: true);
         }
     }
 
     [Fact]
     public async Task Handle_NoCustomMetadata_NoCandidatesFound_FallsBackToLabelBasedNaming()
     {
-        string tempFile = Path.Combine(Path.GetTempPath(), $"nomatch_{Guid.NewGuid():N}.mkv");
-        await File.WriteAllBytesAsync(tempFile, []);
+        string tempFile = Path.Combine(path1: Path.GetTempPath(), path2: $"nomatch_{Guid.NewGuid():N}.mkv");
+        await File.WriteAllBytesAsync(path: tempFile, bytes: []);
         try
         {
             Mock<IDiscRipper> ripperMock = new();
             ripperMock
-                .Setup(r =>
+                .Setup(expression: r =>
                     r.RipAsync(
                         It.IsAny<RipRequest>(),
                         It.IsAny<string>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .ReturnsAsync([MakeRipResult(tempFile)]);
+                .ReturnsAsync(value: [MakeRipResult(outputPath: tempFile)]);
 
             DiscIdentificationService identificationService = new(
-                [],
-                NullLogger<DiscIdentificationService>.Instance
+                identifiers: [],
+                logger: NullLogger<DiscIdentificationService>.Instance
             );
 
             List<object> published = [];
-            ConfigureEventBus(published);
+            ConfigureEventBus(published: published);
 
-            Mock<IStorage> storageMock = MakeStorageMock("/media/movies");
+            Mock<IStorage> storageMock = MakeStorageMock(hostPath: "/media/movies");
             DiscRipJob job = BuildJob(
-                MakeNoCustomRequest(),
-                ripperMock.Object,
-                identificationService,
-                storageMock.Object
+                request: MakeNoCustomRequest(),
+                ripper: ripperMock.Object,
+                identificationService: identificationService,
+                folderStorage: storageMock.Object
             );
 
             await job.Handle();
 
             published
                 .OfType<DriveStateChangedEvent>()
-                .Select(e => e.DriveStateData.Method)
+                .Select(selector: e => e.DriveStateData.Method)
                 .Should()
-                .Contain("rip_complete");
+                .Contain(expected: "rip_complete");
         }
         finally
         {
-            if (File.Exists(tempFile))
-                File.Delete(tempFile);
+            if (File.Exists(path: tempFile))
+                File.Delete(path: tempFile);
         }
     }
 }

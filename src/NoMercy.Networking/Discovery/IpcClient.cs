@@ -22,7 +22,7 @@ public sealed class IpcClient : IDisposable
     private readonly SocketsHttpHandler _handler;
 
     public IpcClient()
-        : this(null) { }
+        : this(pipeNameOrSocketPath: null) { }
 
     public IpcClient(string? pipeNameOrSocketPath)
     {
@@ -30,42 +30,42 @@ public sealed class IpcClient : IDisposable
         {
             ConnectCallback = async (context, cancellationToken) =>
             {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                if (RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows))
                 {
                     string pipeName = pipeNameOrSocketPath ?? Config.ManagementPipeName;
                     NamedPipeClientStream pipe = new(
-                        ".",
-                        pipeName,
-                        PipeDirection.InOut,
-                        PipeOptions.Asynchronous
+                        serverName: ".",
+                        pipeName: pipeName,
+                        direction: PipeDirection.InOut,
+                        options: PipeOptions.Asynchronous
                     );
 
                     using CancellationTokenSource timeoutCts =
-                        CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                    timeoutCts.CancelAfter(TimeSpan.FromSeconds(3));
-                    await pipe.ConnectAsync(timeoutCts.Token);
+                        CancellationTokenSource.CreateLinkedTokenSource(token: cancellationToken);
+                    timeoutCts.CancelAfter(delay: TimeSpan.FromSeconds(seconds: 3));
+                    await pipe.ConnectAsync(cancellationToken: timeoutCts.Token);
                     return pipe;
                 }
                 else
                 {
                     string socketPath = pipeNameOrSocketPath ?? Config.ManagementSocketPath;
                     Socket socket = new(
-                        AddressFamily.Unix,
-                        SocketType.Stream,
-                        ProtocolType.Unspecified
+                        addressFamily: AddressFamily.Unix,
+                        socketType: SocketType.Stream,
+                        protocolType: ProtocolType.Unspecified
                     );
-                    UnixDomainSocketEndPoint endpoint = new(socketPath);
+                    UnixDomainSocketEndPoint endpoint = new(path: socketPath);
 
                     using CancellationTokenSource timeoutCts =
-                        CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                    timeoutCts.CancelAfter(TimeSpan.FromSeconds(3));
-                    await socket.ConnectAsync(endpoint, timeoutCts.Token);
-                    return new NetworkStream(socket, ownsSocket: true);
+                        CancellationTokenSource.CreateLinkedTokenSource(token: cancellationToken);
+                    timeoutCts.CancelAfter(delay: TimeSpan.FromSeconds(seconds: 3));
+                    await socket.ConnectAsync(remoteEP: endpoint, cancellationToken: timeoutCts.Token);
+                    return new NetworkStream(socket: socket, ownsSocket: true);
                 }
             },
         };
 
-        _httpClient = new(_handler) { BaseAddress = new("http://nomercy-ipc") };
+        _httpClient = new(handler: _handler) { BaseAddress = new(uriString: "http://nomercy-ipc") };
     }
 
     public Task<HttpResponseMessage> GetAsync(
@@ -73,7 +73,7 @@ public sealed class IpcClient : IDisposable
         CancellationToken cancellationToken = default
     )
     {
-        return _httpClient.GetAsync(requestUri, cancellationToken);
+        return _httpClient.GetAsync(requestUri: requestUri, cancellationToken: cancellationToken);
     }
 
     public Task<HttpResponseMessage> PostAsync(
@@ -82,7 +82,7 @@ public sealed class IpcClient : IDisposable
         CancellationToken cancellationToken = default
     )
     {
-        return _httpClient.PostAsync(requestUri, content, cancellationToken);
+        return _httpClient.PostAsync(requestUri: requestUri, content: content, cancellationToken: cancellationToken);
     }
 
     public Task<HttpResponseMessage> PutAsync(
@@ -91,7 +91,7 @@ public sealed class IpcClient : IDisposable
         CancellationToken cancellationToken = default
     )
     {
-        return _httpClient.PutAsync(requestUri, content, cancellationToken);
+        return _httpClient.PutAsync(requestUri: requestUri, content: content, cancellationToken: cancellationToken);
     }
 
     public Task<HttpResponseMessage> SendAsync(
@@ -99,7 +99,7 @@ public sealed class IpcClient : IDisposable
         CancellationToken cancellationToken = default
     )
     {
-        return _httpClient.SendAsync(request, cancellationToken);
+        return _httpClient.SendAsync(request: request, cancellationToken: cancellationToken);
     }
 
     public Task<HttpResponseMessage> GetStreamAsync(
@@ -107,11 +107,11 @@ public sealed class IpcClient : IDisposable
         CancellationToken cancellationToken = default
     )
     {
-        HttpRequestMessage request = new(HttpMethod.Get, requestUri);
+        HttpRequestMessage request = new(method: HttpMethod.Get, requestUri: requestUri);
         return _httpClient.SendAsync(
-            request,
-            HttpCompletionOption.ResponseHeadersRead,
-            cancellationToken
+            request: request,
+            completionOption: HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken: cancellationToken
         );
     }
 

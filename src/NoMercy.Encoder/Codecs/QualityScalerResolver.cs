@@ -30,7 +30,7 @@ public sealed class QualityScalerResolver(IEnumerable<IQualityScaler> scalers)
     {
         foreach (IQualityScaler scaler in _scalers)
         {
-            if (scaler.Supports(encoderHandle))
+            if (scaler.Supports(encoderHandle: encoderHandle))
                 return scaler;
         }
 

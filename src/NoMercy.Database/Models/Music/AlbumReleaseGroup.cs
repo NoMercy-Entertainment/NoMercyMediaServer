@@ -14,16 +14,16 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Music;
 
-[PrimaryKey(nameof(AlbumId), nameof(ReleaseGroupId))]
-[Index(nameof(AlbumId))]
-[Index(nameof(ReleaseGroupId))]
+[PrimaryKey(propertyName: nameof(AlbumId), additionalPropertyNames: nameof(ReleaseGroupId))]
+[Index(propertyName: nameof(AlbumId))]
+[Index(propertyName: nameof(ReleaseGroupId))]
 public class AlbumReleaseGroup
 {
-    [JsonProperty("album_id")]
+    [JsonProperty(propertyName: "album_id")]
     public Guid AlbumId { get; set; }
     public Album Album { get; set; } = null!;
 
-    [JsonProperty("release_id")]
+    [JsonProperty(propertyName: "release_id")]
     public Guid ReleaseGroupId { get; set; }
     public ReleaseGroup ReleaseGroup { get; set; } = null!;
 

@@ -15,15 +15,15 @@ namespace NoMercy.Providers.TMDB.Models.People;
 
 public class TmdbPersonChangeItem
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty("action")]
+    [JsonProperty(propertyName: "action")]
     public string Action { get; set; } = string.Empty;
 
-    [JsonProperty("time")]
+    [JsonProperty(propertyName: "time")]
     public string Time { get; set; } = string.Empty;
 
-    [JsonProperty("original_value")]
+    [JsonProperty(propertyName: "original_value")]
     public TmdbPersonChangeOriginalValue TmdbPersonChangeOriginalValue { get; set; } = new();
 }

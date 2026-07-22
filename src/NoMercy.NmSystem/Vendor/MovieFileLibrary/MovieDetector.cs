@@ -17,17 +17,17 @@
         /// <inheritdoc/>
         public MovieFile GetInfo(string filePath)
         {
-            if (string.IsNullOrWhiteSpace(filePath))
+            if (string.IsNullOrWhiteSpace(value: filePath))
             {
-                throw new ArgumentException($"'{nameof(filePath)}' cannot be null or whitespace", nameof(filePath));
+                throw new ArgumentException(message: $"'{nameof(filePath)}' cannot be null or whitespace", paramName: nameof(filePath));
             }
 
-            var movieFile = new MovieFile(filePath);
+            var movieFile = new MovieFile(filePath: filePath);
 
-            string fileName = Path.GetFileName(filePath);
-            string fileNameWx = Path.GetFileNameWithoutExtension(fileName);
+            string fileName = Path.GetFileName(path: filePath);
+            string fileNameWx = Path.GetFileNameWithoutExtension(path: fileName);
 
-            string[] words = GetNormalizedString(fileNameWx, ".").Split('.');
+            string[] words = GetNormalizedString(str: fileNameWx, separator: ".").Split(separator: '.');
 
             // Usually the first item is part of the title.
             movieFile.Title = words[0];
@@ -37,17 +37,17 @@
             {
                 string item = words[i].Trim();
 
-                if (string.IsNullOrWhiteSpace(item))
+                if (string.IsNullOrWhiteSpace(value: item))
                 {
                     continue;
                 }
 
-                if (IsYear(item))
+                if (IsYear(item: item))
                 {
                     // The Legend of 1900 (1998)
                     // 2001: A Space Odyssey (1968)
-                    string? lastYear = words.Skip(1)
-                        .Where(x => IsYear(x) && x != item)
+                    string? lastYear = words.Skip(count: 1)
+                        .Where(predicate: x => IsYear(item: x) && x != item)
                         .LastOrDefault();
 
                     if (lastYear is null)
@@ -61,21 +61,21 @@
                     }
 
                     // Scenes.from.a.Marriage.1973.E01.mkv
-                    if (!IsSeasonPresent(words) && !IsEpisodePresent(words))
+                    if (!IsSeasonPresent(words: words) && !IsEpisodePresent(words: words))
                     {
                         break;
                     }
                 }
-                else if (IsSeason(item))
+                else if (IsSeason(item: item))
                 {
-                    var sepSeason = item.IndexOf("Se", StringComparison.OrdinalIgnoreCase) >= 0 ? "SE" : "S";
-                    var sepEpisode = item.IndexOf("Ep", StringComparison.OrdinalIgnoreCase) >= 0 ? "EP" : "E";
+                    var sepSeason = item.IndexOf(value: "Se", comparisonType: StringComparison.OrdinalIgnoreCase) >= 0 ? "SE" : "S";
+                    var sepEpisode = item.IndexOf(value: "Ep", comparisonType: StringComparison.OrdinalIgnoreCase) >= 0 ? "EP" : "E";
 
                     // Normal.People.S01E04.1080p.mkv
-                    string[] sp = item.Substring(sepSeason.Length, item.Length - sepSeason.Length).ToUpperInvariant()
-                        .Split(new[] { sepEpisode }, StringSplitOptions.RemoveEmptyEntries);
+                    string[] sp = item.Substring(startIndex: sepSeason.Length, length: item.Length - sepSeason.Length).ToUpperInvariant()
+                        .Split(separator: new[] { sepEpisode }, options: StringSplitOptions.RemoveEmptyEntries);
 
-                    if (!int.TryParse(sp[0], out int season))
+                    if (!int.TryParse(s: sp[0], result: out int season))
                     {
                         break;
                     }
@@ -83,49 +83,49 @@
                     movieFile.IsSeries = true;
                     movieFile.Season = season;
 
-                    foreach (var episode in sp.Skip(1))
+                    foreach (var episode in sp.Skip(count: 1))
                     {
-                        if (int.TryParse(episode, out int value))
+                        if (int.TryParse(s: episode, result: out int value))
                         {
-                            movieFile.AddEpisode(value);
+                            movieFile.AddEpisode(episode: value);
                         }
                     }
 
-                    if (IsEpisodePresent(words))
+                    if (IsEpisodePresent(words: words))
                     {
                         continue;
                     }
 
                     break;
                 }
-                else if (IsEpisode(item))
+                else if (IsEpisode(item: item))
                 {
-                    var separator = item.IndexOf("Ep", StringComparison.OrdinalIgnoreCase) >= 0 ? "EP" : "E";
+                    var separator = item.IndexOf(value: "Ep", comparisonType: StringComparison.OrdinalIgnoreCase) >= 0 ? "EP" : "E";
 
                     // The.Grand.Tour.S04.E04.1080p.mkv
                     movieFile.IsSeries = true;
 
-                    string e = item.Substring(separator.Length, item.Length - separator.Length).ToUpperInvariant();
+                    string e = item.Substring(startIndex: separator.Length, length: item.Length - separator.Length).ToUpperInvariant();
 
-                    if (int.TryParse(e, out int episode))
+                    if (int.TryParse(s: e, result: out int episode))
                     {
-                        movieFile.AddEpisode(episode);
+                        movieFile.AddEpisode(episode: episode);
                     }
 
                     break;
                 }
-                else if (IsSeasonAndEpisodeWithX(item))
+                else if (IsSeasonAndEpisodeWithX(item: item))
                 {
                     // Top Gear 17x03 HDTV.mp4
-                    string[] split = item.ToUpperInvariant().Split('X');
+                    string[] split = item.ToUpperInvariant().Split(separator: 'X');
 
                     if (split.Length == 2 &&
-                        int.TryParse(split[0], out int seasonValue) &&
-                        int.TryParse(split[1], out int episodeValue))
+                        int.TryParse(s: split[0], result: out int seasonValue) &&
+                        int.TryParse(s: split[1], result: out int episodeValue))
                     {
                         movieFile.IsSeries = true;
                         movieFile.Season = seasonValue;
-                        movieFile.AddEpisode(episodeValue);
+                        movieFile.AddEpisode(episode: episodeValue);
 
                         break;
                     }
@@ -139,24 +139,24 @@
                 }
             }
 
-            var remaining = words.Skip(i + 1).ToArray();
+            var remaining = words.Skip(count: i + 1).ToArray();
 
-            if (movieFile.IsSeries && remaining.Any(x => x.Equals("Special", StringComparison.OrdinalIgnoreCase)))
+            if (movieFile.IsSeries && remaining.Any(predicate: x => x.Equals(value: "Special", comparisonType: StringComparison.OrdinalIgnoreCase)))
             {
                 movieFile.IsSpecialEpisode = true;
             }
 
             // Find the imdb id (e.g. Batman Begins (2005) {imdb-tt0372784}.mkv).
-            var imdb1 = Array.FindIndex(remaining, t => t.Equals("imdb", StringComparison.OrdinalIgnoreCase));
-            var imdb2 = Array.FindIndex(remaining, t => t.Equals("imdbid", StringComparison.OrdinalIgnoreCase));
+            var imdb1 = Array.FindIndex(array: remaining, match: t => t.Equals(value: "imdb", comparisonType: StringComparison.OrdinalIgnoreCase));
+            var imdb2 = Array.FindIndex(array: remaining, match: t => t.Equals(value: "imdbid", comparisonType: StringComparison.OrdinalIgnoreCase));
 
             if (imdb1 >= 0)
             {
-                movieFile.ImdbId = remaining.ElementAtOrDefault(imdb1 + 1);
+                movieFile.ImdbId = remaining.ElementAtOrDefault(index: imdb1 + 1);
             }
             else if (imdb2 >= 0)
             {
-                movieFile.ImdbId = remaining.ElementAtOrDefault(imdb2 + 1);
+                movieFile.ImdbId = remaining.ElementAtOrDefault(index: imdb2 + 1);
             }
 
             movieFile.IsSuccess = true;
@@ -169,9 +169,9 @@
 
             foreach (string item in items)
             {
-                if (str.Contains(item))
+                if (str.Contains(value: item))
                 {
-                    str = str.Replace(item, separator);
+                    str = str.Replace(oldValue: item, newValue: separator);
                 }
             }
 
@@ -180,24 +180,24 @@
 
         private static bool IsSeasonAndEpisodeWithX(string item)
         {
-            return SeasonEpisodeXRegex().IsMatch(item);
+            return SeasonEpisodeXRegex().IsMatch(input: item);
         }
 
         private static bool IsYear(string item)
         {
-            return YearRegex().IsMatch(item);
+            return YearRegex().IsMatch(input: item);
         }
 
         private static bool IsSeason(string item)
         {
             // S01E01, Se02Ep01
-            if (SeasonEpisodeRegex().IsMatch(item))
+            if (SeasonEpisodeRegex().IsMatch(input: item))
             {
                 return true;
             }
 
             // S01, Se02
-            if (SeasonOnlyRegex().IsMatch(item))
+            if (SeasonOnlyRegex().IsMatch(input: item))
             {
                 return true;
             }
@@ -207,31 +207,31 @@
 
         private static bool IsEpisode(string item)
         {
-            return EpisodeOnlyRegex().IsMatch(item);
+            return EpisodeOnlyRegex().IsMatch(input: item);
         }
 
         private static bool IsSeasonPresent(string[] words)
         {
-            return words.Any(x => IsSeason(x));
+            return words.Any(predicate: x => IsSeason(item: x));
         }
 
         private static bool IsEpisodePresent(string[] words)
         {
-            return words.Any(x => IsEpisode(x));
+            return words.Any(predicate: x => IsEpisode(item: x));
         }
-        [GeneratedRegex("([0-9]{1,2})([xX])([0-9]{1,2})")]
+        [GeneratedRegex(pattern: "([0-9]{1,2})([xX])([0-9]{1,2})")]
         private static partial Regex SeasonEpisodeXRegex();
 
-        [GeneratedRegex("^(19|20)[0-9][0-9]")]
+        [GeneratedRegex(pattern: "^(19|20)[0-9][0-9]")]
         private static partial Regex YearRegex();
 
-        [GeneratedRegex("^Se?([0-9]{1,2})Ep?([0-9]{1,2})", RegexOptions.IgnoreCase)]
+        [GeneratedRegex(pattern: "^Se?([0-9]{1,2})Ep?([0-9]{1,2})", options: RegexOptions.IgnoreCase)]
         private static partial Regex SeasonEpisodeRegex();
 
-        [GeneratedRegex("^Se?([0-9]{1,2})$", RegexOptions.IgnoreCase)]
+        [GeneratedRegex(pattern: "^Se?([0-9]{1,2})$", options: RegexOptions.IgnoreCase)]
         private static partial Regex SeasonOnlyRegex();
 
-        [GeneratedRegex("^Ep?([0-9]{1,2})", RegexOptions.IgnoreCase)]
+        [GeneratedRegex(pattern: "^Ep?([0-9]{1,2})", options: RegexOptions.IgnoreCase)]
         private static partial Regex EpisodeOnlyRegex();
 
     }

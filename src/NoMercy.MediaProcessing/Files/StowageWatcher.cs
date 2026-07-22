@@ -33,8 +33,8 @@ public class StowageWatcherEventArgs : EventArgs
     public FileWatcherEventArgs ToFileWatcherEventArgs()
     {
         return new(
-            null,
-            new(
+            sender: null,
+            fileSystemEventArgs: new(
                 changeType: ChangeType switch
                 {
                     StowageChangeType.Created => WatcherChangeTypes.Created,
@@ -42,8 +42,8 @@ public class StowageWatcherEventArgs : EventArgs
                     StowageChangeType.Deleted => WatcherChangeTypes.Deleted,
                     _ => throw new ArgumentOutOfRangeException(),
                 },
-                directory: System.IO.Path.GetDirectoryName(Path).OrEmpty(),
-                name: System.IO.Path.GetFileName(Path)
+                directory: System.IO.Path.GetDirectoryName(path: Path).OrEmpty(),
+                name: System.IO.Path.GetFileName(path: Path)
             )
         );
     }
@@ -51,15 +51,15 @@ public class StowageWatcherEventArgs : EventArgs
     public FileSystemEventArgs ToFileSystemEventArgsEventArgs(string folder = "")
     {
         return new(
-            ChangeType switch
+            changeType: ChangeType switch
             {
                 StowageChangeType.Created => WatcherChangeTypes.Created,
                 StowageChangeType.Changed => WatcherChangeTypes.Changed,
                 StowageChangeType.Deleted => WatcherChangeTypes.Deleted,
                 _ => throw new ArgumentOutOfRangeException(),
             },
-            System.IO.Path.GetDirectoryName(folder + Path).OrEmpty(),
-            System.IO.Path.GetFileName(folder + Path)
+            directory: System.IO.Path.GetDirectoryName(path: folder + Path).OrEmpty(),
+            name: System.IO.Path.GetFileName(path: folder + Path)
         );
     }
 }
@@ -87,12 +87,12 @@ internal class StowageWatcher : IDisposable
         if (_runTask != null)
             return;
         _cts = new();
-        _runTask = Task.Run(() => WatchLoopAsync(interval, _cts.Token));
+        _runTask = Task.Run(function: () => WatchLoopAsync(interval: interval, ct: _cts.Token));
     }
 
     private async Task WatchLoopAsync(TimeSpan interval, CancellationToken ct)
     {
-        using PeriodicTimer timer = new(interval);
+        using PeriodicTimer timer = new(period: interval);
 
         // Seed the snapshot WITHOUT emitting events. A network backend (NFS/SMB/S3)
         // may not be reachable yet at boot; if this first scan threw here — outside
@@ -111,12 +111,12 @@ internal class StowageWatcher : IDisposable
             catch (Exception ex)
             {
                 Logger.Error(
-                    $"StowageWatcher initial scan of '{_path}' failed, retrying: {ex.Message}"
+                    message: $"StowageWatcher initial scan of '{_path}' failed, retrying: {ex.Message}"
                 );
             }
-        } while (!seeded && await timer.WaitForNextTickAsync(ct));
+        } while (!seeded && await timer.WaitForNextTickAsync(cancellationToken: ct));
 
-        while (await timer.WaitForNextTickAsync(ct))
+        while (await timer.WaitForNextTickAsync(cancellationToken: ct))
         {
             try
             {
@@ -124,31 +124,31 @@ internal class StowageWatcher : IDisposable
             }
             catch (Exception ex)
             {
-                Logger.Error($"Fout: {ex.Message}");
+                Logger.Error(message: $"Fout: {ex.Message}");
             }
         }
     }
 
     private async Task Scan(bool initial)
     {
-        IReadOnlyCollection<IOEntry> entries = await _storage.Ls(_path, recurse: true);
-        List<IOEntry> files = entries.Where(e => !e.Path.IsFolder).ToList();
+        IReadOnlyCollection<IOEntry> entries = await _storage.Ls(path: _path, recurse: true);
+        List<IOEntry> files = entries.Where(predicate: e => !e.Path.IsFolder).ToList();
 
         ConcurrentBag<string> foundPaths = [];
 
         Parallel.ForEach(
-            files,
-            entry =>
+            source: files,
+            body: entry =>
             {
-                foundPaths.Add(entry.Path);
+                foundPaths.Add(item: entry.Path);
 
-                if (!_snapshot.TryGetValue(entry.Path, out IOEntry? oldEntry))
+                if (!_snapshot.TryGetValue(key: entry.Path, value: out IOEntry? oldEntry))
                 {
-                    _snapshot[entry.Path] = entry;
+                    _snapshot[key: entry.Path] = entry;
                     if (initial)
                         return;
                     Created?.Invoke(
-                        new()
+                        obj: new()
                         {
                             Path = entry.Path.ToString(),
                             ChangeType = StowageChangeType.Created,
@@ -163,11 +163,11 @@ internal class StowageWatcher : IDisposable
                     || entry.Size != oldEntry.Size
                 )
                 {
-                    _snapshot[entry.Path] = entry;
+                    _snapshot[key: entry.Path] = entry;
                     if (initial)
                         return;
                     Changed?.Invoke(
-                        new()
+                        obj: new()
                         {
                             Path = entry.Path.ToString(),
                             ChangeType = StowageChangeType.Changed,
@@ -180,20 +180,20 @@ internal class StowageWatcher : IDisposable
         );
 
         ICollection<string> snapshotKeys = _snapshot.Keys;
-        HashSet<string> currentPathsSet = new(foundPaths);
+        HashSet<string> currentPathsSet = new(collection: foundPaths);
 
         Parallel.ForEach(
-            snapshotKeys,
-            path =>
+            source: snapshotKeys,
+            body: path =>
             {
-                if (currentPathsSet.Contains(path))
+                if (currentPathsSet.Contains(item: path))
                     return;
-                if (!_snapshot.TryRemove(path, out IOEntry? oldEntry))
+                if (!_snapshot.TryRemove(key: path, value: out IOEntry? oldEntry))
                     return;
                 if (initial)
                     return;
                 Deleted?.Invoke(
-                    new()
+                    obj: new()
                     {
                         Path = path,
                         ChangeType = StowageChangeType.Deleted,
@@ -221,15 +221,15 @@ internal class StowageWatcher : IDisposable
 
         try
         {
-            _runTask?.Wait(TimeSpan.FromSeconds(5));
+            _runTask?.Wait(timeout: TimeSpan.FromSeconds(seconds: 5));
         }
         catch (AggregateException ae)
-            when (ae.InnerExceptions.All(e => e is OperationCanceledException))
+            when (ae.InnerExceptions.All(predicate: e => e is OperationCanceledException))
         {
             // Expected when cancellation cooperatively stopped the loop.
         }
 
         _cts?.Dispose();
-        GC.SuppressFinalize(this);
+        GC.SuppressFinalize(obj: this);
     }
 }

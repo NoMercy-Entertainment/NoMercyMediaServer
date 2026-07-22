@@ -37,7 +37,7 @@ public class ServerUserSyncCronJob : ICronJobExecutor
     private readonly IUserCache _userCache;
     private readonly ILogger<ServerUserSyncCronJob> _logger;
 
-    public string CronExpression => new CronExpressionBuilder().EveryMinutes(5);
+    public string CronExpression => new CronExpressionBuilder().EveryMinutes(minutes: 5);
     public string JobName => "Server User Sync";
 
     public ServerUserSyncCronJob(
@@ -60,21 +60,21 @@ public class ServerUserSyncCronJob : ICronJobExecutor
     public async Task ExecuteAsync(string parameters, CancellationToken cancellationToken = default)
     {
         string? token = _authTokenStore.AccessToken;
-        if (string.IsNullOrEmpty(token))
+        if (string.IsNullOrEmpty(value: token))
         {
-            _logger.LogDebug("Server user sync skipped — no auth token yet");
+            _logger.LogDebug(message: "Server user sync skipped — no auth token yet");
             return;
         }
 
         await using MediaContext context = await _contextFactory.CreateDbContextAsync(
-            cancellationToken
+            cancellationToken: cancellationToken
         );
 
         ServerUserSyncResult result = await _syncService.SyncAsync(
-            context,
-            _storage,
-            token,
-            cancellationToken
+            dbContext: context,
+            storage: _storage,
+            accessToken: token,
+            cancellationToken: cancellationToken
         );
 
         if (!result.Attempted)
@@ -85,18 +85,16 @@ public class ServerUserSyncCronJob : ICronJobExecutor
         // grants access immediately instead of waiting for whatever unrelated
         // event happens to refresh the cache next.
         await using MediaContext refreshContext = await _contextFactory.CreateDbContextAsync(
-            cancellationToken
+            cancellationToken: cancellationToken
         );
-        await _userCache.RefreshUsersAsync(refreshContext);
+        await _userCache.RefreshUsersAsync(context: refreshContext);
 
         // A no-op sync (nobody revoked) is routine background chatter — keep it at
         // Debug. A run that actually revoked access is a real event worth Info.
         LogLevel syncLevel = result.RevokedCount > 0 ? LogLevel.Information : LogLevel.Debug;
         _logger.Log(
-            syncLevel,
-            "Server user sync complete: {Count} upstream user(s), {Revoked} revoked locally",
-            result.UpstreamUserCount,
-            result.RevokedCount
+            logLevel: syncLevel,
+            message: "Server user sync complete: {Count} upstream user(s), {Revoked} revoked locally", args: [result.UpstreamUserCount, result.RevokedCount]
         );
     }
 }

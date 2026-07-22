@@ -26,7 +26,7 @@ namespace NoMercy.Tests.Networking;
 /// concurrent per connection, and a failing/slow connection must never prevent (or measurably
 /// delay) delivery to a healthy one.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class ClientMessengerTests
 {
     private static Client MakeClient(
@@ -54,54 +54,54 @@ public class ClientMessengerTests
 
         Mock<ISingleClientProxy> slowProxy = new();
         slowProxy
-            .Setup(p =>
+            .Setup(expression: p =>
                 p.SendCoreAsync(
                     It.IsAny<string>(),
                     It.IsAny<object?[]>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Returns(async () => await Task.Delay(500));
+            .Returns(valueFunction: async () => await Task.Delay(millisecondsDelay: 500));
 
         Mock<ISingleClientProxy> fastProxy = new();
         TaskCompletionSource fastProxyCalled = new();
         fastProxy
-            .Setup(p =>
+            .Setup(expression: p =>
                 p.SendCoreAsync(
                     It.IsAny<string>(),
                     It.IsAny<object?[]>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Callback(() => fastProxyCalled.TrySetResult())
-            .Returns(Task.CompletedTask);
+            .Callback(action: () => fastProxyCalled.TrySetResult())
+            .Returns(value: Task.CompletedTask);
 
-        connectedClients.Clients["slow-connection"] = MakeClient(
-            userId,
-            "/musicHub",
-            slowProxy,
-            "device-slow"
+        connectedClients.Clients[key: "slow-connection"] = MakeClient(
+            userId: userId,
+            endpoint: "/musicHub",
+            proxy: slowProxy,
+            deviceId: "device-slow"
         );
-        connectedClients.Clients["fast-connection"] = MakeClient(
-            userId,
-            "/musicHub",
-            fastProxy,
-            "device-fast"
+        connectedClients.Clients[key: "fast-connection"] = MakeClient(
+            userId: userId,
+            endpoint: "/musicHub",
+            proxy: fastProxy,
+            deviceId: "device-fast"
         );
 
-        ClientMessenger messenger = new(connectedClients, NullLogger<ClientMessenger>.Instance);
+        ClientMessenger messenger = new(connectedClients: connectedClients, logger: NullLogger<ClientMessenger>.Instance);
 
-        Task sendTask = messenger.SendTo("MusicPlayerState", "musicHub", userId, new { });
+        Task sendTask = messenger.SendTo(name: "MusicPlayerState", endpoint: "musicHub", userId: userId, data: new { });
 
         Task completed = await Task.WhenAny(
-            fastProxyCalled.Task,
-            Task.Delay(TimeSpan.FromMilliseconds(250))
+            task1: fastProxyCalled.Task,
+            task2: Task.Delay(delay: TimeSpan.FromMilliseconds(milliseconds: 250))
         );
 
         // The fast connection's send must be observed well inside the slow
         // connection's 500ms delay, proving the two dispatches run concurrently
         // rather than the fast one queuing behind the slow one.
-        completed.Should().BeSameAs(fastProxyCalled.Task);
+        completed.Should().BeSameAs(expected: fastProxyCalled.Task);
 
         await sendTask;
     }
@@ -114,53 +114,53 @@ public class ClientMessengerTests
 
         Mock<ISingleClientProxy> throwingProxy = new();
         throwingProxy
-            .Setup(p =>
+            .Setup(expression: p =>
                 p.SendCoreAsync(
                     It.IsAny<string>(),
                     It.IsAny<object?[]>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ThrowsAsync(new InvalidOperationException("connection is gone"));
+            .ThrowsAsync(exception: new InvalidOperationException(message: "connection is gone"));
 
         Mock<ISingleClientProxy> healthyProxy = new();
         healthyProxy
-            .Setup(p =>
+            .Setup(expression: p =>
                 p.SendCoreAsync(
                     It.IsAny<string>(),
                     It.IsAny<object?[]>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Returns(Task.CompletedTask);
+            .Returns(value: Task.CompletedTask);
 
-        connectedClients.Clients["dead-connection"] = MakeClient(
-            userId,
-            "/musicHub",
-            throwingProxy,
-            "device-dead"
+        connectedClients.Clients[key: "dead-connection"] = MakeClient(
+            userId: userId,
+            endpoint: "/musicHub",
+            proxy: throwingProxy,
+            deviceId: "device-dead"
         );
-        connectedClients.Clients["healthy-connection"] = MakeClient(
-            userId,
-            "/musicHub",
-            healthyProxy,
-            "device-healthy"
+        connectedClients.Clients[key: "healthy-connection"] = MakeClient(
+            userId: userId,
+            endpoint: "/musicHub",
+            proxy: healthyProxy,
+            deviceId: "device-healthy"
         );
 
-        ClientMessenger messenger = new(connectedClients, NullLogger<ClientMessenger>.Instance);
+        ClientMessenger messenger = new(connectedClients: connectedClients, logger: NullLogger<ClientMessenger>.Instance);
 
-        Func<Task> act = () => messenger.SendTo("MusicPlayerState", "musicHub", userId, new { });
+        Func<Task> act = () => messenger.SendTo(name: "MusicPlayerState", endpoint: "musicHub", userId: userId, data: new { });
 
         await act.Should().NotThrowAsync();
 
         healthyProxy.Verify(
-            p =>
+            expression: p =>
                 p.SendCoreAsync(
                     "MusicPlayerState",
                     It.IsAny<object?[]>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Once
+            times: Times.Once
         );
     }
 
@@ -171,53 +171,53 @@ public class ClientMessengerTests
 
         Mock<ISingleClientProxy> throwingProxy = new();
         throwingProxy
-            .Setup(p =>
+            .Setup(expression: p =>
                 p.SendCoreAsync(
                     It.IsAny<string>(),
                     It.IsAny<object?[]>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ThrowsAsync(new InvalidOperationException("connection is gone"));
+            .ThrowsAsync(exception: new InvalidOperationException(message: "connection is gone"));
 
         Mock<ISingleClientProxy> healthyProxy = new();
         healthyProxy
-            .Setup(p =>
+            .Setup(expression: p =>
                 p.SendCoreAsync(
                     It.IsAny<string>(),
                     It.IsAny<object?[]>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Returns(Task.CompletedTask);
+            .Returns(value: Task.CompletedTask);
 
-        connectedClients.Clients["dead-connection"] = MakeClient(
-            Guid.NewGuid(),
-            "/musicHub",
-            throwingProxy,
-            "device-dead"
+        connectedClients.Clients[key: "dead-connection"] = MakeClient(
+            userId: Guid.NewGuid(),
+            endpoint: "/musicHub",
+            proxy: throwingProxy,
+            deviceId: "device-dead"
         );
-        connectedClients.Clients["healthy-connection"] = MakeClient(
-            Guid.NewGuid(),
-            "/musicHub",
-            healthyProxy,
-            "device-healthy"
+        connectedClients.Clients[key: "healthy-connection"] = MakeClient(
+            userId: Guid.NewGuid(),
+            endpoint: "/musicHub",
+            proxy: healthyProxy,
+            deviceId: "device-healthy"
         );
 
-        ClientMessenger messenger = new(connectedClients, NullLogger<ClientMessenger>.Instance);
+        ClientMessenger messenger = new(connectedClients: connectedClients, logger: NullLogger<ClientMessenger>.Instance);
 
-        Func<Task> act = () => messenger.SendToAll("ConnectedDevicesState", "musicHub", new { });
+        Func<Task> act = () => messenger.SendToAll(name: "ConnectedDevicesState", endpoint: "musicHub", data: new { });
 
         await act.Should().NotThrowAsync();
 
         healthyProxy.Verify(
-            p =>
+            expression: p =>
                 p.SendCoreAsync(
                     "ConnectedDevicesState",
                     It.IsAny<object?[]>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Once
+            times: Times.Once
         );
     }
 
@@ -230,56 +230,56 @@ public class ClientMessengerTests
 
         Mock<ISingleClientProxy> targetProxy = new();
         targetProxy
-            .Setup(p =>
+            .Setup(expression: p =>
                 p.SendCoreAsync(
                     It.IsAny<string>(),
                     It.IsAny<object?[]>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Returns(Task.CompletedTask);
+            .Returns(value: Task.CompletedTask);
 
         Mock<ISingleClientProxy> otherUserProxy = new();
         Mock<ISingleClientProxy> otherEndpointProxy = new();
 
-        connectedClients.Clients["target"] = MakeClient(targetUser, "/musicHub", targetProxy);
-        connectedClients.Clients["other-user"] = MakeClient(otherUser, "/musicHub", otherUserProxy);
-        connectedClients.Clients["other-endpoint"] = MakeClient(
-            targetUser,
-            "/videoHub",
-            otherEndpointProxy
+        connectedClients.Clients[key: "target"] = MakeClient(userId: targetUser, endpoint: "/musicHub", proxy: targetProxy);
+        connectedClients.Clients[key: "other-user"] = MakeClient(userId: otherUser, endpoint: "/musicHub", proxy: otherUserProxy);
+        connectedClients.Clients[key: "other-endpoint"] = MakeClient(
+            userId: targetUser,
+            endpoint: "/videoHub",
+            proxy: otherEndpointProxy
         );
 
-        ClientMessenger messenger = new(connectedClients, NullLogger<ClientMessenger>.Instance);
+        ClientMessenger messenger = new(connectedClients: connectedClients, logger: NullLogger<ClientMessenger>.Instance);
 
-        await messenger.SendTo("MusicPlayerState", "musicHub", targetUser, new { });
+        await messenger.SendTo(name: "MusicPlayerState", endpoint: "musicHub", userId: targetUser, data: new { });
 
         targetProxy.Verify(
-            p =>
+            expression: p =>
                 p.SendCoreAsync(
                     "MusicPlayerState",
                     It.IsAny<object?[]>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Once
+            times: Times.Once
         );
         otherUserProxy.Verify(
-            p =>
+            expression: p =>
                 p.SendCoreAsync(
                     It.IsAny<string>(),
                     It.IsAny<object?[]>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Never
+            times: Times.Never
         );
         otherEndpointProxy.Verify(
-            p =>
+            expression: p =>
                 p.SendCoreAsync(
                     It.IsAny<string>(),
                     It.IsAny<object?[]>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Never
+            times: Times.Never
         );
     }
 }

@@ -26,7 +26,7 @@ namespace NoMercy.Tests.Service.Seeds;
 /// past the translations block would turn every boot into dozens of TMDB
 /// requests instead of zero.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class GenresSeedTests : IDisposable
 {
     private readonly SqliteConnection _connection;
@@ -34,16 +34,16 @@ public sealed class GenresSeedTests : IDisposable
 
     public GenresSeedTests()
     {
-        _connection = new("DataSource=:memory:");
+        _connection = new(connectionString: "DataSource=:memory:");
         _connection.Open();
         _options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(
-                _connection,
-                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+                connection: _connection,
+                sqliteOptionsAction: o => o.UseQuerySplittingBehavior(querySplittingBehavior: QuerySplittingBehavior.SplitQuery)
             )
             .Options;
 
-        using MediaContext ctx = new(_options);
+        using MediaContext ctx = new(options: _options);
         ctx.Database.EnsureCreated();
     }
 
@@ -52,10 +52,10 @@ public sealed class GenresSeedTests : IDisposable
     [Fact]
     public async Task Init_GenresAlreadySeeded_SkipsFetchAndTranslationFanOut()
     {
-        await using MediaContext seedContext = new(_options);
-        seedContext.Genres.Add(new() { Id = 28, Name = "Action" });
+        await using MediaContext seedContext = new(options: _options);
+        seedContext.Genres.Add(entity: new() { Id = 28, Name = "Action" });
         seedContext.Languages.Add(
-            new()
+            entity: new()
             {
                 Iso6391 = "nl",
                 EnglishName = "Dutch",
@@ -64,13 +64,13 @@ public sealed class GenresSeedTests : IDisposable
         );
         await seedContext.SaveChangesAsync();
 
-        await using MediaContext context = new(_options);
+        await using MediaContext context = new(options: _options);
 
-        await GenresSeed.Init(context);
+        await GenresSeed.Init(dbContext: context);
 
         int genreCount = await context.Genres.CountAsync();
         int translationCount = await context.Translations.CountAsync();
-        Assert.Equal(1, genreCount);
-        Assert.Equal(0, translationCount);
+        Assert.Equal(expected: 1, actual: genreCount);
+        Assert.Equal(expected: 0, actual: translationCount);
     }
 }

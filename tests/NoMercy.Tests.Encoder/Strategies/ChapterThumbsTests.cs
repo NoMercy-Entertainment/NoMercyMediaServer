@@ -41,8 +41,8 @@ public class ChapterThumbsTests : IDisposable
 
     public ChapterThumbsTests()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"ChapterThumbsTests_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempDir);
+        _tempDir = Path.Combine(path1: Path.GetTempPath(), path2: $"ChapterThumbsTests_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: _tempDir);
 
         EncoderOptions options = new()
         {
@@ -50,20 +50,20 @@ public class ChapterThumbsTests : IDisposable
             FfprobePathOverride = "ffprobe",
         };
         _buildStage = new(
-            options,
-            new FontExtractor(TestStorageFactory.CreateLocal()),
-            new SubtitleExtractor(),
-            OutputStrategyFactoryTestHelper.Create(),
-            [],
-            NullLogger<BuildStage>.Instance,
-            TestStorageFactory.CreateLocal()
+            options: options,
+            fontExtractor: new FontExtractor(storage: TestStorageFactory.CreateLocal()),
+            subtitleExtractor: new SubtitleExtractor(),
+            outputStrategyFactory: OutputStrategyFactoryTestHelper.Create(),
+            drmProcessors: [],
+            logger: NullLogger<BuildStage>.Instance,
+            storage: TestStorageFactory.CreateLocal()
         );
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempDir))
-            Directory.Delete(_tempDir, true);
+        if (Directory.Exists(path: _tempDir))
+            Directory.Delete(path: _tempDir, recursive: true);
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────
@@ -71,7 +71,7 @@ public class ChapterThumbsTests : IDisposable
     private static IEncoder MockEncoder()
     {
         Mock<IEncoder> mock = new();
-        mock.Setup(encoder =>
+        mock.Setup(expression: encoder =>
                 encoder.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<NoMercy.Encoder.Progress.IProgressObserver?>(),
@@ -79,12 +79,12 @@ public class ChapterThumbsTests : IDisposable
                 )
             )
             .ReturnsAsync(
-                new EncodingResult(
+                value: new EncodingResult(
                     Success: true,
                     OutputPath: "/out",
                     Duration: TimeSpan.Zero,
                     Error: null,
-                    Metrics: new(0, 0, 0, "test", null)
+                    Metrics: new(OutputSizeBytes: 0, AverageSpeed: 0, AverageFps: 0, EncoderUsed: "test", GpuUsed: null)
                 )
             );
         return mock.Object;
@@ -95,9 +95,9 @@ public class ChapterThumbsTests : IDisposable
         List<ChapterInfo> chapters = [];
         for (int i = 0; i < count; i++)
         {
-            TimeSpan start = TimeSpan.FromMinutes(i * 10);
-            TimeSpan end = TimeSpan.FromMinutes((i + 1) * 10);
-            chapters.Add(new(start, end, $"Chapter {i + 1}"));
+            TimeSpan start = TimeSpan.FromMinutes(minutes: i * 10);
+            TimeSpan end = TimeSpan.FromMinutes(minutes: (i + 1) * 10);
+            chapters.Add(item: new(Start: start, End: end, Title: $"Chapter {i + 1}"));
         }
 
         return chapters;
@@ -110,8 +110,8 @@ public class ChapterThumbsTests : IDisposable
     )
     {
         VideoOutputPlan[] videos = Enumerable
-            .Range(0, videoCount)
-            .Select(i => new VideoOutputPlan(
+            .Range(start: 0, count: videoCount)
+            .Select(selector: i => new VideoOutputPlan(
                 Width: 1920,
                 Height: 1080,
                 EncoderName: "libx264",
@@ -133,7 +133,7 @@ public class ChapterThumbsTests : IDisposable
             AudioOutputs: [],
             SubtitleOutputs: [],
             Thumbnails: null,
-            Chapters: MakeChapters(chapterCount),
+            Chapters: MakeChapters(count: chapterCount),
             GenerateChapterThumbs: generateChapterThumbs
         );
     }
@@ -146,8 +146,8 @@ public class ChapterThumbsTests : IDisposable
                     GroupId: "group_0",
                     Nodes:
                     [
-                        new("decode_0", OperationType.Decode, [], new()),
-                        new("encode_0", OperationType.Encode, ["decode_0"], new()),
+                        new(Id: "decode_0", Operation: OperationType.Decode, DependsOn: [], Parameters: new()),
+                        new(Id: "encode_0", Operation: OperationType.Encode, DependsOn: ["decode_0"], Parameters: new()),
                     ],
                     DeviceId: null,
                     GpuSlotsRequired: 0,
@@ -156,7 +156,7 @@ public class ChapterThumbsTests : IDisposable
                     Priority: 1
                 ),
             ],
-            EstimatedTotalDuration: TimeSpan.FromMinutes(90),
+            EstimatedTotalDuration: TimeSpan.FromMinutes(minutes: 90),
             OutputPlan: outputPlan
         );
 
@@ -166,9 +166,9 @@ public class ChapterThumbsTests : IDisposable
     public void DecomposeAddsChapterTasks_WhenFlagSet()
     {
         HlsSinglePassStrategy strategy = new(
-            MockEncoder(),
-            NullLogger<HlsSinglePassStrategy>.Instance,
-            TestStorageFactory.CreateLocal()
+            encoder: MockEncoder(),
+            logger: NullLogger<HlsSinglePassStrategy>.Instance,
+            storage: TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = MakePlanWithChapters(
             chapterCount: 5,
@@ -176,25 +176,25 @@ public class ChapterThumbsTests : IDisposable
             videoCount: 1
         );
 
-        DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
+        DecomposedTask[] tasks = strategy.Decompose(plan: plan, groupTag: GroupTag);
 
         DecomposedTask[] chapterTasks = tasks
-            .Where(task => task.Kind == EncodeTaskKind.Chapters)
+            .Where(predicate: task => task.Kind == EncodeTaskKind.Chapters)
             .ToArray();
 
-        chapterTasks.Should().HaveCount(5);
-        chapterTasks.Should().AllSatisfy(task => task.GroupTag.Should().Be(GroupTag));
-        chapterTasks.Should().AllSatisfy(task => task.EstimatedCostUnits.Should().Be(1));
+        chapterTasks.Should().HaveCount(expected: 5);
+        chapterTasks.Should().AllSatisfy(expected: task => task.GroupTag.Should().Be(expected: GroupTag));
+        chapterTasks.Should().AllSatisfy(expected: task => task.EstimatedCostUnits.Should().Be(expected: 1));
         chapterTasks
             .Should()
-            .AllSatisfy(task =>
-                task.Resources.Should().BeEquivalentTo(new ResourceRequirement(null, 0, 1))
+            .AllSatisfy(expected: task =>
+                task.Resources.Should().BeEquivalentTo(expectation: new ResourceRequirement(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 1))
             );
 
         for (int i = 0; i < 5; i++)
         {
-            chapterTasks[i].OutputIndex.Should().Be(i);
-            chapterTasks[i].TaskId.Should().Be($"{GroupTag}-chapter-{i}");
+            chapterTasks[i].OutputIndex.Should().Be(expected: i);
+            chapterTasks[i].TaskId.Should().Be(expected: $"{GroupTag}-chapter-{i}");
         }
     }
 
@@ -204,9 +204,9 @@ public class ChapterThumbsTests : IDisposable
     public void DecomposeSkipsChapterTasks_WhenFlagFalse()
     {
         HlsSinglePassStrategy strategy = new(
-            MockEncoder(),
-            NullLogger<HlsSinglePassStrategy>.Instance,
-            TestStorageFactory.CreateLocal()
+            encoder: MockEncoder(),
+            logger: NullLogger<HlsSinglePassStrategy>.Instance,
+            storage: TestStorageFactory.CreateLocal()
         );
         OutputPlan plan = MakePlanWithChapters(
             chapterCount: 5,
@@ -214,9 +214,9 @@ public class ChapterThumbsTests : IDisposable
             videoCount: 1
         );
 
-        DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
+        DecomposedTask[] tasks = strategy.Decompose(plan: plan, groupTag: GroupTag);
 
-        tasks.Where(task => task.Kind == EncodeTaskKind.Chapters).Should().BeEmpty();
+        tasks.Where(predicate: task => task.Kind == EncodeTaskKind.Chapters).Should().BeEmpty();
     }
 
     // ── Test 3: BuildStage emits single-frame extract command ─────────────────
@@ -224,7 +224,7 @@ public class ChapterThumbsTests : IDisposable
     [Fact]
     public async Task BuildStage_ChapterTaskEmitsSingleFrameExtract()
     {
-        IReadOnlyList<ChapterInfo> chapters = MakeChapters(3);
+        IReadOnlyList<ChapterInfo> chapters = MakeChapters(count: 3);
         OutputPlan outputPlan = new(
             Format: OutputFormat.Hls,
             VideoOutputs: [],
@@ -242,13 +242,13 @@ public class ChapterThumbsTests : IDisposable
             GroupTag: GroupTag,
             Kind: EncodeTaskKind.Chapters,
             OutputIndex: targetChapter,
-            Resources: new(null, 0, 1),
+            Resources: new(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 1),
             EstimatedCostUnits: 1,
-            Label: $"chapter still {targetChapter + 1}/3 @ {chapters[targetChapter].Start.TotalSeconds:F0}s"
+            Label: $"chapter still {targetChapter + 1}/3 @ {chapters[index: targetChapter].Start.TotalSeconds:F0}s"
         );
 
         BuildInput input = new(
-            WrapInExecutionPlan(outputPlan),
+            Plan: WrapInExecutionPlan(outputPlan: outputPlan),
             InputPath: "/movies/test.mkv",
             OutputDirectory: _tempDir,
             MediaTitle: "Test",
@@ -256,41 +256,41 @@ public class ChapterThumbsTests : IDisposable
         );
 
         StageResult result = await _buildStage.ExecuteAsync(
-            input,
-            _context,
-            CancellationToken.None
+            input: input,
+            context: _context,
+            ct: CancellationToken.None
         );
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
-        commands.Should().HaveCount(1);
+        commands.Should().HaveCount(expected: 1);
 
         FfmpegCommand cmd = commands[0];
-        string joined = string.Join(" ", cmd.Arguments);
+        string joined = string.Join(separator: " ", value: cmd.Arguments);
 
         // Seek before input for accuracy
-        joined.Should().Contain("-ss");
+        joined.Should().Contain(expected: "-ss");
         joined
             .Should()
             .Contain(
-                chapters[targetChapter]
+                expected: chapters[index: targetChapter]
                     .Start.TotalSeconds.ToString(
-                        "F3",
-                        System.Globalization.CultureInfo.InvariantCulture
+                        format: "F3",
+                        provider: System.Globalization.CultureInfo.InvariantCulture
                     )
             );
 
         // Single frame extraction
-        joined.Should().Contain("-frames:v");
-        joined.Should().Contain("1");
+        joined.Should().Contain(expected: "-frames:v");
+        joined.Should().Contain(expected: "1");
 
         // Scale filter
-        joined.Should().Contain("-vf");
-        joined.Should().Contain("scale=240:-2");
+        joined.Should().Contain(expected: "-vf");
+        joined.Should().Contain(expected: "scale=240:-2");
 
         // Output filename
-        string expectedOutput = Path.Combine("chapters", $"{targetChapter:D2}.webp");
-        joined.Should().Contain(expectedOutput.Replace(Path.DirectorySeparatorChar, '/'));
+        string expectedOutput = Path.Combine(path1: "chapters", path2: $"{targetChapter:D2}.webp");
+        joined.Should().Contain(expected: expectedOutput.Replace(oldChar: Path.DirectorySeparatorChar, newChar: '/'));
     }
 
     // ── Test 4: ChapterWriter emits thumbnail URIs when flag is set ───────────
@@ -298,38 +298,38 @@ public class ChapterThumbsTests : IDisposable
     [Fact]
     public async Task ChapterWriter_EmitsThumbReference_WhenFlagSet()
     {
-        ChapterWriter writer = new(TestStorageFactory.CreateLocal());
-        IReadOnlyList<ChapterInfo> chapters = MakeChapters(3);
+        ChapterWriter writer = new(storage: TestStorageFactory.CreateLocal());
+        IReadOnlyList<ChapterInfo> chapters = MakeChapters(count: 3);
 
         await writer.WriteChaptersAsync(
-            _tempDir,
-            chapters,
-            CancellationToken.None,
+            outputDirectory: _tempDir,
+            chapters: chapters,
+            ct: CancellationToken.None,
             includeThumbUris: true
         );
 
-        string content = await File.ReadAllTextAsync(Path.Combine(_tempDir, "chapters.vtt"));
+        string content = await File.ReadAllTextAsync(path: Path.Combine(path1: _tempDir, path2: "chapters.vtt"));
 
-        content.Should().Contain("chapters/00.webp");
-        content.Should().Contain("chapters/01.webp");
-        content.Should().Contain("chapters/02.webp");
+        content.Should().Contain(expected: "chapters/00.webp");
+        content.Should().Contain(expected: "chapters/01.webp");
+        content.Should().Contain(expected: "chapters/02.webp");
     }
 
     [Fact]
     public async Task ChapterWriter_NoThumbReference_WhenFlagFalse()
     {
-        ChapterWriter writer = new(TestStorageFactory.CreateLocal());
-        IReadOnlyList<ChapterInfo> chapters = MakeChapters(2);
+        ChapterWriter writer = new(storage: TestStorageFactory.CreateLocal());
+        IReadOnlyList<ChapterInfo> chapters = MakeChapters(count: 2);
 
         await writer.WriteChaptersAsync(
-            _tempDir,
-            chapters,
-            CancellationToken.None,
+            outputDirectory: _tempDir,
+            chapters: chapters,
+            ct: CancellationToken.None,
             includeThumbUris: false
         );
 
-        string content = await File.ReadAllTextAsync(Path.Combine(_tempDir, "chapters.vtt"));
+        string content = await File.ReadAllTextAsync(path: Path.Combine(path1: _tempDir, path2: "chapters.vtt"));
 
-        content.Should().NotContain("chapters/");
+        content.Should().NotContain(unexpected: "chapters/");
     }
 }

@@ -35,9 +35,9 @@ public static class GpuResidentActivation
             return null;
         if (plan.Thumbnails is not null)
             return null;
-        if (!GpuResidentEligibility.IsEligible(plan.VideoOutputs, plan.SubtitleOutputs))
+        if (!GpuResidentEligibility.IsEligible(videoOutputs: plan.VideoOutputs, subtitleOutputs: plan.SubtitleOutputs))
             return null;
 
-        return GpuAccelResolver.Resolve(vendor, hasFilter);
+        return GpuAccelResolver.Resolve(vendor: vendor, hasFilter: hasFilter);
     }
 }

@@ -36,67 +36,67 @@ public class EncoderArgumentResolverTests
     [Fact]
     public void ResolveQuality_Software_EmitsCrfDirectly()
     {
-        ResolvedCodec resolved = ResolveH264("libx264", null, RateControlMode.Crf);
+        ResolvedCodec resolved = ResolveH264(ffmpegName: "libx264", vendor: null, defaultRateControl: RateControlMode.Crf);
         Dictionary<string, string> flags = [];
 
-        int crf = EncoderArgumentResolver.ResolveQuality(22, resolved, flags);
+        int crf = EncoderArgumentResolver.ResolveQuality(profileCrf: 22, resolved: resolved, extraFlags: flags);
 
-        crf.Should().Be(22, "libx264 accepts -crf directly");
-        flags.Should().NotContainKey("-cq");
-        flags.Should().NotContainKey("-qp");
-        flags.Should().NotContainKey("-global_quality");
+        crf.Should().Be(expected: 22, because: "libx264 accepts -crf directly");
+        flags.Should().NotContainKey(unexpected: "-cq");
+        flags.Should().NotContainKey(unexpected: "-qp");
+        flags.Should().NotContainKey(unexpected: "-global_quality");
     }
 
     [Fact]
     public void ResolveQuality_Nvenc_MapsToVbrCq()
     {
-        ResolvedCodec resolved = ResolveH264("h264_nvenc", GpuVendor.Nvidia, RateControlMode.Cq);
+        ResolvedCodec resolved = ResolveH264(ffmpegName: "h264_nvenc", vendor: GpuVendor.Nvidia, defaultRateControl: RateControlMode.Cq);
         Dictionary<string, string> flags = [];
 
-        int crf = EncoderArgumentResolver.ResolveQuality(22, resolved, flags);
+        int crf = EncoderArgumentResolver.ResolveQuality(profileCrf: 22, resolved: resolved, extraFlags: flags);
 
-        crf.Should().Be(0, "NVENC doesn't accept -crf");
-        flags["-rc"].Should().Be("vbr");
-        flags["-cq"].Should().Be("22");
+        crf.Should().Be(expected: 0, because: "NVENC doesn't accept -crf");
+        flags[key: "-rc"].Should().Be(expected: "vbr");
+        flags[key: "-cq"].Should().Be(expected: "22");
     }
 
     [Fact]
     public void ResolveQuality_Qsv_MapsToGlobalQuality()
     {
-        ResolvedCodec resolved = ResolveH264("h264_qsv", GpuVendor.Intel, RateControlMode.Icq);
+        ResolvedCodec resolved = ResolveH264(ffmpegName: "h264_qsv", vendor: GpuVendor.Intel, defaultRateControl: RateControlMode.Icq);
         Dictionary<string, string> flags = [];
 
-        int crf = EncoderArgumentResolver.ResolveQuality(22, resolved, flags);
+        int crf = EncoderArgumentResolver.ResolveQuality(profileCrf: 22, resolved: resolved, extraFlags: flags);
 
-        crf.Should().Be(0);
-        flags["-global_quality"].Should().Be("22", "Intel QSV uses ICQ via -global_quality");
-        flags.Should().NotContainKey("-rc");
+        crf.Should().Be(expected: 0);
+        flags[key: "-global_quality"].Should().Be(expected: "22", because: "Intel QSV uses ICQ via -global_quality");
+        flags.Should().NotContainKey(unexpected: "-rc");
     }
 
     [Fact]
     public void ResolveQuality_Amf_MapsToCqpQp()
     {
-        ResolvedCodec resolved = ResolveH264("h264_amf", GpuVendor.Amd, RateControlMode.Cqp);
+        ResolvedCodec resolved = ResolveH264(ffmpegName: "h264_amf", vendor: GpuVendor.Amd, defaultRateControl: RateControlMode.Cqp);
         Dictionary<string, string> flags = [];
 
-        int crf = EncoderArgumentResolver.ResolveQuality(22, resolved, flags);
+        int crf = EncoderArgumentResolver.ResolveQuality(profileCrf: 22, resolved: resolved, extraFlags: flags);
 
-        crf.Should().Be(0);
-        flags["-rc"].Should().Be("cqp");
-        flags["-qp"].Should().Be("22");
+        crf.Should().Be(expected: 0);
+        flags[key: "-rc"].Should().Be(expected: "cqp");
+        flags[key: "-qp"].Should().Be(expected: "22");
     }
 
     [Fact]
     public void ResolveQuality_Vaapi_MapsToCqpQp()
     {
-        ResolvedCodec resolved = ResolveH264("h264_vaapi", GpuVendor.Intel, RateControlMode.Cqp);
+        ResolvedCodec resolved = ResolveH264(ffmpegName: "h264_vaapi", vendor: GpuVendor.Intel, defaultRateControl: RateControlMode.Cqp);
         Dictionary<string, string> flags = [];
 
-        int crf = EncoderArgumentResolver.ResolveQuality(22, resolved, flags);
+        int crf = EncoderArgumentResolver.ResolveQuality(profileCrf: 22, resolved: resolved, extraFlags: flags);
 
-        crf.Should().Be(0);
-        flags["-rc"].Should().Be("cqp");
-        flags["-qp"].Should().Be("22");
+        crf.Should().Be(expected: 0);
+        flags[key: "-rc"].Should().Be(expected: "cqp");
+        flags[key: "-qp"].Should().Be(expected: "22");
     }
 
     [Fact]
@@ -107,31 +107,31 @@ public class EncoderArgumentResolverTests
         // Without scaling, passing 50 raw would be mid-range quality instead
         // of near-lossless as the profile intended.
         ResolvedCodec resolved = ResolveH264(
-            "h264_videotoolbox",
-            GpuVendor.Apple,
-            RateControlMode.QualityLevel
+            ffmpegName: "h264_videotoolbox",
+            vendor: GpuVendor.Apple,
+            defaultRateControl: RateControlMode.QualityLevel
         );
         Dictionary<string, string> flags = [];
 
-        int crf = EncoderArgumentResolver.ResolveQuality(50, resolved, flags);
+        int crf = EncoderArgumentResolver.ResolveQuality(profileCrf: 50, resolved: resolved, extraFlags: flags);
 
-        crf.Should().Be(0);
-        flags["-q:v"]
+        crf.Should().Be(expected: 0);
+        flags[key: "-q:v"]
             .Should()
-            .Be("98", "50/51 of the 0-100 VideoToolbox range = 98 (near-max quality)");
-        flags.Should().NotContainKey("-rc");
+            .Be(expected: "98", because: "50/51 of the 0-100 VideoToolbox range = 98 (near-max quality)");
+        flags.Should().NotContainKey(unexpected: "-rc");
     }
 
     [Fact]
     public void ResolveQuality_ZeroCrf_IsNoOp()
     {
         // 0 = "not configured by profile" — resolver must not emit anything.
-        ResolvedCodec nvenc = ResolveH264("h264_nvenc", GpuVendor.Nvidia, RateControlMode.Cq);
+        ResolvedCodec nvenc = ResolveH264(ffmpegName: "h264_nvenc", vendor: GpuVendor.Nvidia, defaultRateControl: RateControlMode.Cq);
         Dictionary<string, string> flags = [];
 
-        int crf = EncoderArgumentResolver.ResolveQuality(0, nvenc, flags);
+        int crf = EncoderArgumentResolver.ResolveQuality(profileCrf: 0, resolved: nvenc, extraFlags: flags);
 
-        crf.Should().Be(0);
+        crf.Should().Be(expected: 0);
         flags.Should().BeEmpty();
     }
 
@@ -143,15 +143,15 @@ public class EncoderArgumentResolverTests
         // otherwise HEVC videotoolbox loses its required -tag:v hvc1 and Apple
         // clients stop decoding, and AMF loses -usage transcoding and switches
         // to the wrong ratecontrol profile.
-        ResolvedCodec amf = ResolveH264("h264_amf", GpuVendor.Amd, RateControlMode.Cqp);
-        Dictionary<string, string> flags = new(amf.EncoderInfo.VendorSpecificFlags);
-        flags["-usage"].Should().Be("transcoding");
+        ResolvedCodec amf = ResolveH264(ffmpegName: "h264_amf", vendor: GpuVendor.Amd, defaultRateControl: RateControlMode.Cqp);
+        Dictionary<string, string> flags = new(dictionary: amf.EncoderInfo.VendorSpecificFlags);
+        flags[key: "-usage"].Should().Be(expected: "transcoding");
 
-        EncoderArgumentResolver.ResolveQuality(25, amf, flags);
+        EncoderArgumentResolver.ResolveQuality(profileCrf: 25, resolved: amf, extraFlags: flags);
 
-        flags["-usage"].Should().Be("transcoding", "vendor flags must survive ResolveQuality");
-        flags["-rc"].Should().Be("cqp");
-        flags["-qp"].Should().Be("25");
+        flags[key: "-usage"].Should().Be(expected: "transcoding", because: "vendor flags must survive ResolveQuality");
+        flags[key: "-rc"].Should().Be(expected: "cqp");
+        flags[key: "-qp"].Should().Be(expected: "25");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -161,10 +161,10 @@ public class EncoderArgumentResolverTests
     [Fact]
     public void HevcVideoToolbox_HasMandatoryHvc1Tag()
     {
-        EncoderInfo vt = GetEncoder(VideoCodecType.H265, "hevc_videotoolbox");
+        EncoderInfo vt = GetEncoder(codec: VideoCodecType.H265, ffmpegName: "hevc_videotoolbox");
         vt.VendorSpecificFlags.Should()
-            .ContainKey("-tag:v", "HEVC in MP4 without hvc1 tag plays as video/octet on Apple");
-        vt.VendorSpecificFlags["-tag:v"].Should().Be("hvc1");
+            .ContainKey(expected: "-tag:v", because: "HEVC in MP4 without hvc1 tag plays as video/octet on Apple");
+        vt.VendorSpecificFlags[key: "-tag:v"].Should().Be(expected: "hvc1");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -174,37 +174,37 @@ public class EncoderArgumentResolverTests
     [Fact]
     public void ResolvePreset_Software_UsesProfilePresetWhenSupported()
     {
-        EncoderInfo libx264 = GetH264Encoder("libx264");
-        string? preset = EncoderArgumentResolver.ResolvePreset("slow", libx264);
-        preset.Should().Be("slow");
+        EncoderInfo libx264 = GetH264Encoder(ffmpegName: "libx264");
+        string? preset = EncoderArgumentResolver.ResolvePreset(profilePreset: "slow", encoder: libx264);
+        preset.Should().Be(expected: "slow");
     }
 
     [Fact]
     public void ResolvePreset_Nvenc_UnsupportedPresetFallsBackToMiddle()
     {
-        EncoderInfo nvenc = GetH264Encoder("h264_nvenc");
+        EncoderInfo nvenc = GetH264Encoder(ffmpegName: "h264_nvenc");
         // "slow" isn't in NVENC's p1..p7 set — resolver must substitute.
-        string? preset = EncoderArgumentResolver.ResolvePreset("slow", nvenc);
-        preset.Should().Be("p4", "NVENC's 7-preset middle is p4");
+        string? preset = EncoderArgumentResolver.ResolvePreset(profilePreset: "slow", encoder: nvenc);
+        preset.Should().Be(expected: "p4", because: "NVENC's 7-preset middle is p4");
     }
 
     [Fact]
     public void ResolvePreset_Vaapi_ReturnsNull()
     {
         // VAAPI has no preset concept — the driver doesn't accept -preset.
-        EncoderInfo vaapi = GetH264Encoder("h264_vaapi");
+        EncoderInfo vaapi = GetH264Encoder(ffmpegName: "h264_vaapi");
         vaapi.Presets.Should().BeEmpty();
 
-        string? preset = EncoderArgumentResolver.ResolvePreset("medium", vaapi);
+        string? preset = EncoderArgumentResolver.ResolvePreset(profilePreset: "medium", encoder: vaapi);
         preset.Should().BeNull();
     }
 
     [Fact]
     public void ResolvePreset_VideoToolbox_ReturnsNull()
     {
-        EncoderInfo vt = GetH264Encoder("h264_videotoolbox");
+        EncoderInfo vt = GetH264Encoder(ffmpegName: "h264_videotoolbox");
         vt.Presets.Should().BeEmpty();
-        EncoderArgumentResolver.ResolvePreset("medium", vt).Should().BeNull();
+        EncoderArgumentResolver.ResolvePreset(profilePreset: "medium", encoder: vt).Should().BeNull();
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -214,17 +214,17 @@ public class EncoderArgumentResolverTests
     [Fact]
     public void ResolveProfile_UnsupportedProfile_FallsBackToFirst()
     {
-        EncoderInfo nvenc = GetH264Encoder("h264_nvenc");
+        EncoderInfo nvenc = GetH264Encoder(ffmpegName: "h264_nvenc");
         // high10 isn't in NVENC's profile set — driver rejects it, so we fall back.
-        string? profile = EncoderArgumentResolver.ResolveProfile("high10", nvenc);
-        profile.Should().Be("baseline", "NVENC's first-declared profile is the safe fallback");
+        string? profile = EncoderArgumentResolver.ResolveProfile(profileValue: "high10", encoder: nvenc);
+        profile.Should().Be(expected: "baseline", because: "NVENC's first-declared profile is the safe fallback");
     }
 
     [Fact]
     public void ResolveProfile_SupportedProfile_PassedThrough()
     {
-        EncoderInfo libx264 = GetH264Encoder("libx264");
-        EncoderArgumentResolver.ResolveProfile("high10", libx264).Should().Be("high10");
+        EncoderInfo libx264 = GetH264Encoder(ffmpegName: "libx264");
+        EncoderArgumentResolver.ResolveProfile(profileValue: "high10", encoder: libx264).Should().Be(expected: "high10");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -235,8 +235,8 @@ public class EncoderArgumentResolverTests
     public void ResolveDimensions_DoesNotUpscaleBeyondSource()
     {
         VideoOutput profile = MakeVideoOutput(width: 1920);
-        (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 1280, 720);
-        w.Should().Be(1280, "upscaling is off by design");
+        (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile: profile, sourceWidth: 1280, sourceHeight: 720);
+        w.Should().Be(expected: 1280, because: "upscaling is off by design");
     }
 
     [Fact]
@@ -246,9 +246,9 @@ public class EncoderArgumentResolverTests
         // means "keep source width", never the 2-pixel-wide floor a literal
         // 0 used to collapse to.
         VideoOutput profile = MakeVideoOutput(width: null);
-        (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 3840, 1606);
-        w.Should().Be(3840, "null width means keep the source width");
-        h.Should().Be(1606, "height derives from the source aspect ratio");
+        (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile: profile, sourceWidth: 3840, sourceHeight: 1606);
+        w.Should().Be(expected: 3840, because: "null width means keep the source width");
+        h.Should().Be(expected: 1606, because: "height derives from the source aspect ratio");
     }
 
     [Fact]
@@ -258,26 +258,26 @@ public class EncoderArgumentResolverTests
         // That must resolve exactly like null — keep the source width —
         // never the 2-pixel-wide floor 0 used to collapse to.
         VideoOutput profile = MakeVideoOutput(width: 0);
-        (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 3840, 2160);
-        w.Should().Be(3840, "legacy 0 width means keep the source width, same as null");
-        h.Should().Be(2160);
+        (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile: profile, sourceWidth: 3840, sourceHeight: 2160);
+        w.Should().Be(expected: 3840, because: "legacy 0 width means keep the source width, same as null");
+        h.Should().Be(expected: 2160);
     }
 
     [Fact]
     public void ResolveDimensions_ForcesEvenHeight()
     {
         VideoOutput profile = MakeVideoOutput(width: 853); // 853x480 → 853*(480/1920) = 213.25
-        (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 1920, 480);
-        (h % 2).Should().Be(0, "h.264/h.265 require even dimensions");
+        (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile: profile, sourceWidth: 1920, sourceHeight: 480);
+        (h % 2).Should().Be(expected: 0, because: "h.264/h.265 require even dimensions");
     }
 
     [Fact]
     public void ResolveDimensions_UsesExplicitHeightWhenProvided()
     {
         VideoOutput profile = MakeVideoOutput(width: 1280, height: 720);
-        (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 1920, 1080);
-        w.Should().Be(1280);
-        h.Should().Be(720);
+        (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile: profile, sourceWidth: 1920, sourceHeight: 1080);
+        w.Should().Be(expected: 1280);
+        h.Should().Be(expected: 720);
     }
 
     [Fact]
@@ -290,9 +290,9 @@ public class EncoderArgumentResolverTests
         // from the source aspect ratio. Otherwise the variant is named and
         // advertised "3840x0" (RESOLUTION=3840x0) and players skip the rendition.
         VideoOutput profile = MakeVideoOutput(width: 3840, height: 0);
-        (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 3840, 2160);
-        w.Should().Be(3840);
-        h.Should().Be(2160, "zero height means derive from source AR, never literal 0");
+        (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile: profile, sourceWidth: 3840, sourceHeight: 2160);
+        w.Should().Be(expected: 3840);
+        h.Should().Be(expected: 2160, because: "zero height means derive from source AR, never literal 0");
     }
 
     [Fact]
@@ -301,10 +301,10 @@ public class EncoderArgumentResolverTests
         // 2.39:1 scope source (a "Marvel 4K" master is rarely 16:9): 3840-wide
         // output must derive an even height from the real AR, not 2160.
         VideoOutput profile = MakeVideoOutput(width: 3840, height: 0);
-        (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 3840, 1606);
-        w.Should().Be(3840);
-        h.Should().Be(1606, "derived height tracks the source AR");
-        (h % 2).Should().Be(0, "encoders require even dimensions");
+        (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile: profile, sourceWidth: 3840, sourceHeight: 1606);
+        w.Should().Be(expected: 3840);
+        h.Should().Be(expected: 1606, because: "derived height tracks the source AR");
+        (h % 2).Should().Be(expected: 0, because: "encoders require even dimensions");
     }
 
     [Fact]
@@ -320,7 +320,7 @@ public class EncoderArgumentResolverTests
             Presets: [],
             Profiles: ["66", "77", "100"],
             Levels: [],
-            QualityRange: new(0, 100, 50),
+            QualityRange: new(Min: 0, Max: 100, Default: 50),
             SupportedRateControl: [RateControlMode.QualityLevel],
             Supports10Bit: false,
             SupportsHdr: false,
@@ -329,9 +329,9 @@ public class EncoderArgumentResolverTests
             VendorSpecificFlags: new()
         );
 
-        EncoderArgumentResolver.ResolveProfile("high", videotoolbox).Should().Be("100");
-        EncoderArgumentResolver.ResolveProfile("main", videotoolbox).Should().Be("77");
-        EncoderArgumentResolver.ResolveProfile("baseline", videotoolbox).Should().Be("66");
+        EncoderArgumentResolver.ResolveProfile(profileValue: "high", encoder: videotoolbox).Should().Be(expected: "100");
+        EncoderArgumentResolver.ResolveProfile(profileValue: "main", encoder: videotoolbox).Should().Be(expected: "77");
+        EncoderArgumentResolver.ResolveProfile(profileValue: "baseline", encoder: videotoolbox).Should().Be(expected: "66");
     }
 
     [Fact]
@@ -343,7 +343,7 @@ public class EncoderArgumentResolverTests
             Presets: ["medium"],
             Profiles: ["baseline", "main", "high"],
             Levels: ["4.1"],
-            QualityRange: new(0, 51, 23),
+            QualityRange: new(Min: 0, Max: 51, Default: 23),
             SupportedRateControl: [RateControlMode.Crf],
             Supports10Bit: false,
             SupportsHdr: false,
@@ -352,7 +352,7 @@ public class EncoderArgumentResolverTests
             VendorSpecificFlags: new()
         );
 
-        EncoderArgumentResolver.ResolveProfile("high", libx264).Should().Be("high");
+        EncoderArgumentResolver.ResolveProfile(profileValue: "high", encoder: libx264).Should().Be(expected: "high");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -360,51 +360,51 @@ public class EncoderArgumentResolverTests
     // ──────────────────────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData("high")]
-    [InlineData("main")]
-    [InlineData("baseline")]
+    [InlineData(data: "high")]
+    [InlineData(data: "main")]
+    [InlineData(data: "baseline")]
     public void ResolveProfile_H264_TenBit_PromotesEightBitTierToHigh10(string requested)
     {
         // libx264 with a 10-bit pixel format rejects an 8-bit-only profile
         // string ("high profile doesn't support a bit depth of 10"). H.264's
         // ONLY 10-bit profile is high10 (there is no h264 "main10"), so every
         // 8-bit tier promotes to high10 — the profile libx264 actually accepts.
-        EncoderInfo libx264 = GetH264Encoder("libx264");
+        EncoderInfo libx264 = GetH264Encoder(ffmpegName: "libx264");
         EncoderArgumentResolver
-            .ResolveProfile(requested, libx264, finalBitDepth: 10)
+            .ResolveProfile(profileValue: requested, encoder: libx264, finalBitDepth: 10)
             .Should()
-            .Be("high10");
+            .Be(expected: "high10");
     }
 
     [Fact]
     public void ResolveProfile_H264_TenBit_KeepsAlreadyTenBitProfile()
     {
-        EncoderInfo libx264 = GetH264Encoder("libx264");
+        EncoderInfo libx264 = GetH264Encoder(ffmpegName: "libx264");
         EncoderArgumentResolver
-            .ResolveProfile("high10", libx264, finalBitDepth: 10)
+            .ResolveProfile(profileValue: "high10", encoder: libx264, finalBitDepth: 10)
             .Should()
-            .Be("high10");
+            .Be(expected: "high10");
     }
 
     [Fact]
     public void ResolveProfile_H264_EightBit_LeavesEightBitTierUntouched()
     {
         // The promotion must never fire at 8-bit — "high" stays "high".
-        EncoderInfo libx264 = GetH264Encoder("libx264");
+        EncoderInfo libx264 = GetH264Encoder(ffmpegName: "libx264");
         EncoderArgumentResolver
-            .ResolveProfile("high", libx264, finalBitDepth: 8)
+            .ResolveProfile(profileValue: "high", encoder: libx264, finalBitDepth: 8)
             .Should()
-            .Be("high");
+            .Be(expected: "high");
     }
 
     [Fact]
     public void ResolveProfile_H265_TenBit_PromotesMainToMain10()
     {
-        EncoderInfo libx265 = GetEncoder(VideoCodecType.H265, "libx265");
+        EncoderInfo libx265 = GetEncoder(codec: VideoCodecType.H265, ffmpegName: "libx265");
         EncoderArgumentResolver
-            .ResolveProfile("main", libx265, finalBitDepth: 10)
+            .ResolveProfile(profileValue: "main", encoder: libx265, finalBitDepth: 10)
             .Should()
-            .Be("main10");
+            .Be(expected: "main10");
     }
 
     [Fact]
@@ -412,9 +412,9 @@ public class EncoderArgumentResolverTests
     {
         // A null (Auto) request at 10-bit must not fall back to Profiles[0]
         // ("baseline", 8-bit only) — the fallback itself has to be 10-bit-capable.
-        EncoderInfo libx264 = GetH264Encoder("libx264");
-        string? resolved = EncoderArgumentResolver.ResolveProfile(null, libx264, finalBitDepth: 10);
-        resolved.Should().BeOneOf("high10", "high422", "high444p");
+        EncoderInfo libx264 = GetH264Encoder(ffmpegName: "libx264");
+        string? resolved = EncoderArgumentResolver.ResolveProfile(profileValue: null, encoder: libx264, finalBitDepth: 10);
+        resolved.Should().BeOneOf(validValues: ["high10", "high422", "high444p"]);
     }
 
     [Fact]
@@ -423,11 +423,11 @@ public class EncoderArgumentResolverTests
         // VP9 numeric profiles mean chroma/bit-depth, NOT an H.264 tier. The
         // H26x promotion must not touch them — "main" is not VP9 vocabulary, so
         // it falls back to the encoder's own first profile, never "main10".
-        EncoderInfo vpx = GetEncoder(VideoCodecType.Vp9, "libvpx-vp9");
+        EncoderInfo vpx = GetEncoder(codec: VideoCodecType.Vp9, ffmpegName: "libvpx-vp9");
         EncoderArgumentResolver
-            .ResolveProfile("main", vpx, finalBitDepth: 10)
+            .ResolveProfile(profileValue: "main", encoder: vpx, finalBitDepth: 10)
             .Should()
-            .Be("0", "VP9 falls back to its own first profile, never an H26x sibling");
+            .Be(expected: "0", because: "VP9 falls back to its own first profile, never an H26x sibling");
     }
 
     [Fact]
@@ -436,9 +436,9 @@ public class EncoderArgumentResolverTests
         // 1921 passes validation (Width > 0) but reaches scale=1921:-2, which
         // libx264 rejects ("width not divisible by 2"). Width must be evened.
         VideoOutput profile = MakeVideoOutput(width: 1921);
-        (int w, int _) = EncoderArgumentResolver.ResolveDimensions(profile, 3840, 2160);
-        (w % 2).Should().Be(0, "an odd luma width aborts the encode");
-        w.Should().Be(1920, "round DOWN so the result never exceeds the request/source");
+        (int w, int _) = EncoderArgumentResolver.ResolveDimensions(profile: profile, sourceWidth: 3840, sourceHeight: 2160);
+        (w % 2).Should().Be(expected: 0, because: "an odd luma width aborts the encode");
+        w.Should().Be(expected: 1920, because: "round DOWN so the result never exceeds the request/source");
     }
 
     [Fact]
@@ -447,10 +447,10 @@ public class EncoderArgumentResolverTests
         // Manual ladder rungs carry hand-authored widths (e.g. 853 for 480p);
         // an odd rung width hits the same scale=W:-2 abort as an odd profile width.
         VideoOutput rung = MakeVideoOutput(width: 853, height: 480);
-        (int w, int h) = EncoderArgumentResolver.ResolveDimensions(rung, 1920, 1080);
-        (w % 2).Should().Be(0);
-        (h % 2).Should().Be(0);
-        w.Should().Be(852);
+        (int w, int h) = EncoderArgumentResolver.ResolveDimensions(profile: rung, sourceWidth: 1920, sourceHeight: 1080);
+        (w % 2).Should().Be(expected: 0);
+        (h % 2).Should().Be(expected: 0);
+        w.Should().Be(expected: 852);
     }
 
     [Fact]
@@ -460,9 +460,9 @@ public class EncoderArgumentResolverTests
         // (null) height the old code produced height 0 → RESOLUTION=WIDTHx0 in
         // the HLS master. Height must fall back to a real value.
         VideoOutput profile = MakeVideoOutput(width: 1920, height: null);
-        (int _, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 0, 0);
-        h.Should().BeGreaterThan(0, "a zero-height variant is skipped by every player");
-        (h % 2).Should().Be(0);
+        (int _, int h) = EncoderArgumentResolver.ResolveDimensions(profile: profile, sourceWidth: 0, sourceHeight: 0);
+        h.Should().BeGreaterThan(expected: 0, because: "a zero-height variant is skipped by every player");
+        (h % 2).Should().Be(expected: 0);
     }
 
     [Fact]
@@ -472,8 +472,8 @@ public class EncoderArgumentResolverTests
         // and reached scale_cuda=1280:2160 — a stretched upscale. Explicit
         // height must clamp to the source just like width does.
         VideoOutput profile = MakeVideoOutput(width: 1280, height: 2160);
-        (int _, int h) = EncoderArgumentResolver.ResolveDimensions(profile, 1280, 720);
-        h.Should().Be(720, "explicit height must not upscale beyond source");
+        (int _, int h) = EncoderArgumentResolver.ResolveDimensions(profile: profile, sourceWidth: 1280, sourceHeight: 720);
+        h.Should().Be(expected: 720, because: "explicit height must not upscale beyond source");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -481,7 +481,7 @@ public class EncoderArgumentResolverTests
     // ──────────────────────────────────────────────────────────────────────────
 
     private static EncoderInfo GetH264Encoder(string ffmpegName) =>
-        GetEncoder(VideoCodecType.H264, ffmpegName);
+        GetEncoder(codec: VideoCodecType.H264, ffmpegName: ffmpegName);
 
     private static EncoderInfo GetEncoder(VideoCodecType codec, string ffmpegName)
     {
@@ -490,7 +490,7 @@ public class EncoderArgumentResolverTests
             if (c == codec && encoder.FfmpegName == ffmpegName)
                 return encoder;
         }
-        throw new InvalidOperationException($"Encoder {ffmpegName} not registered for {codec}");
+        throw new InvalidOperationException(message: $"Encoder {ffmpegName} not registered for {codec}");
     }
 
     private static ResolvedCodec ResolveH264(
@@ -499,7 +499,7 @@ public class EncoderArgumentResolverTests
         RateControlMode defaultRateControl
     )
     {
-        EncoderInfo encoder = GetH264Encoder(ffmpegName);
+        EncoderInfo encoder = GetH264Encoder(ffmpegName: ffmpegName);
         GpuDevice? device = vendor is null
             ? null
             : new GpuDevice(
@@ -509,7 +509,7 @@ public class EncoderArgumentResolverTests
                 MaxEncoderSessions: 12,
                 SupportedCodecs: [VideoCodecType.H264]
             );
-        return new(ffmpegName, encoder, device, defaultRateControl);
+        return new(FfmpegEncoderName: ffmpegName, EncoderInfo: encoder, Device: device, DefaultRateControl: defaultRateControl);
     }
 
     private static VideoOutput MakeVideoOutput(int? width, int? height = null) =>

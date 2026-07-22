@@ -36,9 +36,9 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
             ],
         };
 
-        LoginResponse? x = await Post<Login, LoginResponse>("", login);
+        LoginResponse? x = await Post<Login, LoginResponse>(url: "", query: login);
         AccessToken = x
-            ?.Params?.Param?.Value?.Struct?.Member.FirstOrDefault(member => member.Name == "token")
+            ?.Params?.Param?.Value?.Struct?.Member.FirstOrDefault(predicate: member => member.Name == "token")
             ?.Value?.String;
 
         return this;
@@ -70,7 +70,7 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
                                 String =
                                     AccessToken
                                     ?? throw new InvalidOperationException(
-                                        "Login() must be called before accessing the API"
+                                        message: "Login() must be called before accessing the API"
                                     ),
                             },
                         },
@@ -89,13 +89,13 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
                                                 Member =
                                                 [
                                                     new(
-                                                        "sublanguageid",
-                                                        new() { String = language }
+                                                        name: "sublanguageid",
+                                                        value: new() { String = language }
                                                     ),
-                                                    new("moviehash", new() { String = movieHash }),
+                                                    new(name: "moviehash", value: new() { String = movieHash }),
                                                     new(
-                                                        "moviebytesize",
-                                                        new() { String = fileSize.ToString() }
+                                                        name: "moviebytesize",
+                                                        value: new() { String = fileSize.ToString() }
                                                     ),
                                                 ],
                                             },
@@ -109,7 +109,7 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
             },
         };
 
-        return await Post<SubtitleSearch, SubtitleSearchResponse>("", searchRequest, priority);
+        return await Post<SubtitleSearch, SubtitleSearchResponse>(url: "", query: searchRequest, priority: priority);
     }
 
     // TODO(subtitle-acquisition): TrustedUploadersOnly — client-side filter on SubFromTrusted field
@@ -135,7 +135,7 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
                                 String =
                                     AccessToken
                                     ?? throw new InvalidOperationException(
-                                        "Login() must be called before accessing the API"
+                                        message: "Login() must be called before accessing the API"
                                     ),
                             },
                         },
@@ -154,10 +154,10 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
                                                 Member =
                                                 [
                                                     new(
-                                                        "sublanguageid",
-                                                        new() { String = language }
+                                                        name: "sublanguageid",
+                                                        value: new() { String = language }
                                                     ),
-                                                    new("query", new() { String = query }),
+                                                    new(name: "query", value: new() { String = query }),
                                                 ],
                                             },
                                         },
@@ -170,6 +170,6 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
             },
         };
 
-        return await Post<SubtitleSearch, SubtitleSearchResponse>("", searchResponse, priority);
+        return await Post<SubtitleSearch, SubtitleSearchResponse>(url: "", query: searchResponse, priority: priority);
     }
 }

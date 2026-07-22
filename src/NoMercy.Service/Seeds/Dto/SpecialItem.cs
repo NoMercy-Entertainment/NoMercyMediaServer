@@ -15,21 +15,21 @@ namespace NoMercy.Service.Seeds.Dto;
 
 public class SpecialItem
 {
-    [JsonProperty("index")]
+    [JsonProperty(propertyName: "index")]
     public int Index { get; set; }
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty("year")]
+    [JsonProperty(propertyName: "year")]
     public int Year { get; set; }
 
-    [JsonProperty("seasons")]
+    [JsonProperty(propertyName: "seasons")]
     public int[] Seasons { get; set; } = [];
 
-    [JsonProperty("episodes")]
+    [JsonProperty(propertyName: "episodes")]
     public int[] Episodes { get; set; } = [];
 }

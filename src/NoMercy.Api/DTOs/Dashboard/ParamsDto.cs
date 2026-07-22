@@ -15,27 +15,27 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record ParamsDto
 {
-    [JsonProperty("video")]
+    [JsonProperty(propertyName: "video")]
     public int Width { get; set; }
 
-    [JsonProperty("crf")]
+    [JsonProperty(propertyName: "crf")]
     public int Crf { get; set; }
 
-    [JsonProperty("preset")]
+    [JsonProperty(propertyName: "preset")]
     public string Preset { get; set; } = string.Empty;
 
-    [JsonProperty("profile")]
+    [JsonProperty(propertyName: "profile")]
     public string Profile { get; set; } = string.Empty;
 
-    [JsonProperty("codec")]
+    [JsonProperty(propertyName: "codec")]
     public string Codec { get; set; } = string.Empty;
 
-    [JsonProperty("audio")]
+    [JsonProperty(propertyName: "audio")]
     public string Audio { get; set; } = string.Empty;
 
-    [JsonProperty("tune")]
+    [JsonProperty(propertyName: "tune")]
     public string Tune { get; set; } = string.Empty;
 
-    [JsonProperty("level")]
+    [JsonProperty(propertyName: "level")]
     public string Level { get; set; } = string.Empty;
 }

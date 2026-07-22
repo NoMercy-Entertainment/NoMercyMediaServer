@@ -15,69 +15,69 @@ namespace NoMercy.Setup.Dto;
 
 public class AuthResponse
 {
-    [JsonProperty("access_token")]
+    [JsonProperty(propertyName: "access_token")]
     public string? AccessToken { get; set; }
 
-    [JsonProperty("expires_in")]
+    [JsonProperty(propertyName: "expires_in")]
     public int ExpiresIn { get; set; }
 
-    [JsonProperty("id_token")]
+    [JsonProperty(propertyName: "id_token")]
     public string? IdToken { get; set; }
 
-    [JsonProperty("not-before-policy")]
+    [JsonProperty(propertyName: "not-before-policy")]
     public int NotBeforePolicy { get; set; }
 
-    [JsonProperty("refresh_expires_in")]
+    [JsonProperty(propertyName: "refresh_expires_in")]
     public int RefreshExpiresIn { get; set; }
 
-    [JsonProperty("refresh_token")]
+    [JsonProperty(propertyName: "refresh_token")]
     public string? RefreshToken { get; set; }
 
-    [JsonProperty("scope")]
+    [JsonProperty(propertyName: "scope")]
     public string? Scope { get; set; }
 
-    [JsonProperty("session_state")]
+    [JsonProperty(propertyName: "session_state")]
     public string? SessionState { get; set; }
 
-    [JsonProperty("token_type")]
+    [JsonProperty(propertyName: "token_type")]
     public string? TokenType { get; set; }
 }
 
 public class AuthKeysResponse
 {
-    [JsonProperty("account-service")]
+    [JsonProperty(propertyName: "account-service")]
     public string AccountService { get; set; } = string.Empty;
 
-    [JsonProperty("public_key")]
+    [JsonProperty(propertyName: "public_key")]
     public string PublicKey { get; set; } = string.Empty;
 
-    [JsonProperty("realm")]
+    [JsonProperty(propertyName: "realm")]
     public string Realm { get; set; } = string.Empty;
 
-    [JsonProperty("token-service")]
+    [JsonProperty(propertyName: "token-service")]
     public string TokenService { get; set; } = string.Empty;
 
-    [JsonProperty("tokens-not-before")]
+    [JsonProperty(propertyName: "tokens-not-before")]
     public int TokensNotBefore { get; set; }
 }
 
 public class DeviceAuthResponse
 {
-    [JsonProperty("device_code")]
+    [JsonProperty(propertyName: "device_code")]
     public string DeviceCode { get; set; } = string.Empty;
 
-    [JsonProperty("expires_in")]
+    [JsonProperty(propertyName: "expires_in")]
     public int ExpiresIn { get; set; }
 
-    [JsonProperty("interval")]
+    [JsonProperty(propertyName: "interval")]
     public int Interval { get; set; }
 
-    [JsonProperty("user_code")]
+    [JsonProperty(propertyName: "user_code")]
     public string UserCode { get; set; } = string.Empty;
 
-    [JsonProperty("verification_uri")]
+    [JsonProperty(propertyName: "verification_uri")]
     public string VerificationUri { get; set; } = string.Empty;
 
-    [JsonProperty("verification_uri_complete")]
+    [JsonProperty(propertyName: "verification_uri_complete")]
     public string VerificationUriComplete { get; set; } = string.Empty;
 }

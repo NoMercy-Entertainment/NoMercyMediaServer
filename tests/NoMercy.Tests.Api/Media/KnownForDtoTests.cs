@@ -22,7 +22,7 @@ namespace NoMercy.Tests.Api.Media;
 /// null (<c>null != 0</c>), so a cast/crew credit with no Movie must not be
 /// misreported as having files.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class KnownForDtoTests
 {
     [Fact]
@@ -48,9 +48,9 @@ public class KnownForDtoTests
             },
         };
 
-        KnownForDto dto = new(cast);
+        KnownForDto dto = new(cast: cast);
 
         dto.HasItem.Should().BeFalse();
-        dto.HaveItems.Should().Be(0);
+        dto.HaveItems.Should().Be(expected: 0);
     }
 }

@@ -14,25 +14,25 @@ using Xunit;
 
 namespace NoMercy.Tests.Api;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class MusicHubVolumeTests
 {
     [Theory]
-    [InlineData(-10, 0)]
-    [InlineData(0, 0)]
-    [InlineData(55, 55)]
-    [InlineData(150, 100)]
+    [InlineData(data: [-10, 0])]
+    [InlineData(data: [0, 0])]
+    [InlineData(data: [55, 55])]
+    [InlineData(data: [150, 100])]
     public void Volume_IsClampedToZeroHundred(int input, int expected)
     {
-        int clamped = Math.Clamp(input, 0, 100);
-        clamped.Should().Be(expected);
+        int clamped = Math.Clamp(value: input, min: 0, max: 100);
+        clamped.Should().Be(expected: expected);
     }
 
     [Fact]
     public void NeverSetVolume_CoalescesToDeviceDefault()
     {
         int? neverSet = null;
-        (neverSet ?? Device.DefaultVolumePercent).Should().Be(Device.DefaultVolumePercent);
+        (neverSet ?? Device.DefaultVolumePercent).Should().Be(expected: Device.DefaultVolumePercent);
     }
 
     [Fact]
@@ -41,7 +41,7 @@ public class MusicHubVolumeTests
         // A never-set device must broadcast a sane level for legacy clients
         // that cannot distinguish null from a deliberate value. 50 is the
         // contract: not silent, not blasting.
-        Device.DefaultVolumePercent.Should().Be(50);
+        Device.DefaultVolumePercent.Should().Be(expected: 50);
     }
 
     [Fact]
@@ -52,8 +52,8 @@ public class MusicHubVolumeTests
         int? deliberateZero = 0;
         int? neverSet = null;
 
-        deliberateZero.Should().NotBe(neverSet);
-        (deliberateZero ?? Device.DefaultVolumePercent).Should().Be(0);
-        (neverSet ?? Device.DefaultVolumePercent).Should().Be(Device.DefaultVolumePercent);
+        deliberateZero.Should().NotBe(unexpected: neverSet);
+        (deliberateZero ?? Device.DefaultVolumePercent).Should().Be(expected: 0);
+        (neverSet ?? Device.DefaultVolumePercent).Should().Be(expected: Device.DefaultVolumePercent);
     }
 }

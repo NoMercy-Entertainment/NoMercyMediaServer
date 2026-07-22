@@ -23,12 +23,12 @@ public class EntityBaseUpdatedAtInterceptor : SaveChangesInterceptor
     )
     {
         if (eventData.Context is null)
-            return await base.SavingChangesAsync(eventData, result, cancellationToken);
+            return await base.SavingChangesAsync(eventData: eventData, result: result, cancellationToken: cancellationToken);
 
         IEnumerable<Timestamps> entries = eventData
             .Context.ChangeTracker.Entries()
-            .Where(e => e.State == EntityState.Modified)
-            .Select(e => e.Entity)
+            .Where(predicate: e => e.State == EntityState.Modified)
+            .Select(selector: e => e.Entity)
             .OfType<Timestamps>();
 
         foreach (Timestamps entry in entries)
@@ -38,6 +38,6 @@ public class EntityBaseUpdatedAtInterceptor : SaveChangesInterceptor
             entry.UpdatedAt = DateTime.UtcNow;
         }
 
-        return await base.SavingChangesAsync(eventData, result, cancellationToken);
+        return await base.SavingChangesAsync(eventData: eventData, result: result, cancellationToken: cancellationToken);
     }
 }

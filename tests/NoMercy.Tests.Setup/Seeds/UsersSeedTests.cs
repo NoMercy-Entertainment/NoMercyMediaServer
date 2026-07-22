@@ -26,7 +26,7 @@ namespace NoMercy.Tests.Setup.Seeds;
 /// never re-runs once any user exists (that ongoing job now belongs to
 /// <c>ServerUserSyncCronJob</c>, covered separately).
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class UsersSeedTests : IDisposable
 {
     private readonly SqliteConnection _connection;
@@ -35,25 +35,26 @@ public class UsersSeedTests : IDisposable
 
     public UsersSeedTests()
     {
-        _connection = new("DataSource=:memory:");
+        _connection = new(connectionString: "DataSource=:memory:");
         _connection.Open();
 
-        _options = new DbContextOptionsBuilder<MediaContext>().UseSqlite(_connection).Options;
+        _options = new DbContextOptionsBuilder<MediaContext>().UseSqlite(connection: _connection).Options;
 
-        using MediaContext ctx = new(_options);
+        using MediaContext ctx = new(options: _options);
         ctx.Database.EnsureCreated();
     }
 
     public void Dispose() => _connection.Dispose();
 
-    private MediaContext CreateContext() => new(_options);
+    private MediaContext CreateContext() => new(options: _options);
 
-    private static readonly Guid OwnerId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+    private static readonly Guid OwnerId = Guid.Parse(input: "33333333-3333-3333-3333-333333333333");
 
     [Fact]
     public async Task Init_EmptyUsersTable_SeedsFromUpstream()
     {
-        FakeServerUserApiClient api = new([
+        FakeServerUserApiClient api = new(response:
+        [
             new()
             {
                 UserId = OwnerId.ToString(),
@@ -63,15 +64,15 @@ public class UsersSeedTests : IDisposable
                 Enabled = true,
             },
         ]);
-        ServerUserSyncService realSyncService = new(api);
+        ServerUserSyncService realSyncService = new(apiClient: api);
 
         await using MediaContext ctx = CreateContext();
-        await ctx.Init(NoLibrariesStorage.Object, "valid-token", realSyncService);
+        await ctx.Init(storage: NoLibrariesStorage.Object, accessToken: "valid-token", syncService: realSyncService);
 
-        User? owner = await ctx.Users.FirstOrDefaultAsync(u => u.Id == OwnerId);
-        Assert.NotNull(owner);
-        Assert.True(owner!.Owner);
-        Assert.True(api.WasCalled);
+        User? owner = await ctx.Users.FirstOrDefaultAsync(predicate: u => u.Id == OwnerId);
+        Assert.NotNull(@object: owner);
+        Assert.True(condition: owner!.Owner);
+        Assert.True(condition: api.WasCalled);
     }
 
     [Fact]
@@ -79,7 +80,7 @@ public class UsersSeedTests : IDisposable
     {
         await using MediaContext seedCtx = CreateContext();
         seedCtx.Users.Add(
-            new()
+            entity: new()
             {
                 Id = OwnerId,
                 Email = "owner@example.com",
@@ -90,14 +91,14 @@ public class UsersSeedTests : IDisposable
         );
         await seedCtx.SaveChangesAsync();
 
-        FakeServerUserApiClient api = new([]);
-        ServerUserSyncService realSyncService = new(api);
+        FakeServerUserApiClient api = new(response: []);
+        ServerUserSyncService realSyncService = new(apiClient: api);
 
         await using MediaContext ctx = CreateContext();
-        await ctx.Init(NoLibrariesStorage.Object, "valid-token", realSyncService);
+        await ctx.Init(storage: NoLibrariesStorage.Object, accessToken: "valid-token", syncService: realSyncService);
 
         // The one-shot seed must stay gated — ongoing sync is the cron job's job.
-        Assert.False(api.WasCalled);
+        Assert.False(condition: api.WasCalled);
     }
 
     [Fact]
@@ -105,10 +106,10 @@ public class UsersSeedTests : IDisposable
     {
         await using MediaContext ctx = CreateContext();
 
-        Exception? exception = await Record.ExceptionAsync(() =>
-            UsersSeed.Init(ctx, NoLibrariesStorage.Object, null)
+        Exception? exception = await Record.ExceptionAsync(testCode: () =>
+            UsersSeed.Init(dbContext: ctx, storage: NoLibrariesStorage.Object, accessToken: null)
         );
 
-        Assert.Null(exception);
+        Assert.Null(@object: exception);
     }
 }

@@ -28,7 +28,7 @@ public class StrategyResolver(IEnumerable<IEncodingStrategy> strategies) : IStra
         // Walk in reverse so later registrations (plugins) override built-ins.
         for (int i = _strategies.Count - 1; i >= 0; i--)
         {
-            IEncodingStrategy strategy = _strategies[i];
+            IEncodingStrategy strategy = _strategies[index: i];
             if (strategy.Format == format && strategy.EncodeMode == mode)
                 return strategy;
         }

@@ -16,10 +16,10 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class TrackSnippetGetMessage
 {
-    [JsonProperty("header")]
+    [JsonProperty(propertyName: "header")]
     public TrackSnippetGetMessageHeader Header { get; set; } = new();
 
-    [JsonProperty("body")]
-    [JsonConverter(typeof(ObjectOrEmptyArrayConverter<TrackSnippetGetMessageBody>))]
+    [JsonProperty(propertyName: "body")]
+    [JsonConverter(converterType: typeof(ObjectOrEmptyArrayConverter<TrackSnippetGetMessageBody>))]
     public TrackSnippetGetMessageBody Body { get; set; } = new();
 }

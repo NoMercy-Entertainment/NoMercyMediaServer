@@ -19,51 +19,51 @@ internal static class AutoStartCommand
 {
     public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
-        Command statusCmd = new("status") { Description = "Check if autostart is enabled" };
+        Command statusCmd = new(name: "status") { Description = "Check if autostart is enabled" };
 
         statusCmd.SetAction(
-            async (parseResult, ct) =>
+            action: async (parseResult, ct) =>
             {
-                string? pipe = parseResult.GetValue(pipeOption);
-                using ICliClient client = clientFactory.Create(pipe);
+                string? pipe = parseResult.GetValue(option: pipeOption);
+                using ICliClient client = clientFactory.Create(pipeNameOrSocketPath: pipe);
                 AutoStartResponse? response = await client.GetAsync<AutoStartResponse>(
-                    ApiRoutes.AutoStart,
-                    ct
+                    path: ApiRoutes.AutoStart,
+                    cancellationToken: ct
                 );
 
                 if (response is null)
                 {
-                    await Console.Error.WriteLineAsync("Could not retrieve autostart status.");
+                    await Console.Error.WriteLineAsync(value: "Could not retrieve autostart status.");
                     return (int)ExitCode.ServerError;
                 }
 
-                Console.WriteLine($"Autostart:    {(response.Enabled ? "enabled" : "disabled")}");
+                Console.WriteLine(value: $"Autostart:    {(response.Enabled ? "enabled" : "disabled")}");
                 return (int)ExitCode.Success;
             }
         );
 
-        Command enableCmd = new("enable") { Description = "Enable autostart" };
+        Command enableCmd = new(name: "enable") { Description = "Enable autostart" };
 
         enableCmd.SetAction(
-            async (parseResult, ct) =>
+            action: async (parseResult, ct) =>
             {
-                return await SetAutoStart(clientFactory, parseResult, pipeOption, true, ct);
+                return await SetAutoStart(clientFactory: clientFactory, parseResult: parseResult, pipeOption: pipeOption, enabled: true, ct: ct);
             }
         );
 
-        Command disableCmd = new("disable") { Description = "Disable autostart" };
+        Command disableCmd = new(name: "disable") { Description = "Disable autostart" };
 
         disableCmd.SetAction(
-            async (parseResult, ct) =>
+            action: async (parseResult, ct) =>
             {
-                return await SetAutoStart(clientFactory, parseResult, pipeOption, false, ct);
+                return await SetAutoStart(clientFactory: clientFactory, parseResult: parseResult, pipeOption: pipeOption, enabled: false, ct: ct);
             }
         );
 
-        Command command = new("autostart") { Description = "Manage server autostart" };
-        command.Subcommands.Add(statusCmd);
-        command.Subcommands.Add(enableCmd);
-        command.Subcommands.Add(disableCmd);
+        Command command = new(name: "autostart") { Description = "Manage server autostart" };
+        command.Subcommands.Add(item: statusCmd);
+        command.Subcommands.Add(item: enableCmd);
+        command.Subcommands.Add(item: disableCmd);
 
         return command;
     }
@@ -76,17 +76,17 @@ internal static class AutoStartCommand
         CancellationToken ct
     )
     {
-        string? pipe = parseResult.GetValue(pipeOption);
-        using ICliClient client = clientFactory.Create(pipe);
+        string? pipe = parseResult.GetValue(option: pipeOption);
+        using ICliClient client = clientFactory.Create(pipeNameOrSocketPath: pipe);
 
-        string json = JsonConvert.SerializeObject(new { enabled });
-        StringContent content = new(json, Encoding.UTF8, "application/json");
+        string json = JsonConvert.SerializeObject(value: new { enabled });
+        StringContent content = new(content: json, encoding: Encoding.UTF8, mediaType: "application/json");
 
-        bool ok = await client.PostAsync(ApiRoutes.AutoStart, content, ct);
+        bool ok = await client.PostAsync(path: ApiRoutes.AutoStart, content: content, cancellationToken: ct);
 
         if (ok)
         {
-            Console.WriteLine($"Autostart {(enabled ? "enabled" : "disabled")}.");
+            Console.WriteLine(value: $"Autostart {(enabled ? "enabled" : "disabled")}.");
             return (int)ExitCode.Success;
         }
 
@@ -95,7 +95,7 @@ internal static class AutoStartCommand
 
     private class AutoStartResponse
     {
-        [JsonProperty("enabled")]
+        [JsonProperty(propertyName: "enabled")]
         public bool Enabled { get; set; }
     }
 }

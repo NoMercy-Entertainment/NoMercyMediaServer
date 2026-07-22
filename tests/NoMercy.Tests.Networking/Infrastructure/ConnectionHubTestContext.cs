@@ -31,16 +31,16 @@ public sealed class ConnectionHubTestDbContextFactory : IDbContextFactory<MediaC
     public ConnectionHubTestDbContextFactory()
     {
         string dbName = Guid.NewGuid().ToString();
-        _connection = new($"DataSource={dbName};Mode=Memory;Cache=Shared");
+        _connection = new(connectionString: $"DataSource={dbName};Mode=Memory;Cache=Shared");
         _connection.Open();
 
-        _options = new DbContextOptionsBuilder<MediaContext>().UseSqlite(_connection).Options;
+        _options = new DbContextOptionsBuilder<MediaContext>().UseSqlite(connection: _connection).Options;
 
-        using MediaContext init = new(_options);
+        using MediaContext init = new(options: _options);
         init.Database.EnsureCreated();
     }
 
-    public MediaContext CreateDbContext() => new(_options);
+    public MediaContext CreateDbContext() => new(options: _options);
 
     public void Dispose() => _connection.Dispose();
 }

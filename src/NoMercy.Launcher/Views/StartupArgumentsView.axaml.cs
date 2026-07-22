@@ -34,7 +34,7 @@ public partial class StartupArgumentsView : UserControl
         }
         catch (Exception ex)
         {
-            LauncherLog.Error($"StartupArgumentsView.OnSaveClick failed: {ex.Message}", ex);
+            LauncherLog.Error(message: $"StartupArgumentsView.OnSaveClick failed: {ex.Message}", ex: ex);
         }
     }
 }

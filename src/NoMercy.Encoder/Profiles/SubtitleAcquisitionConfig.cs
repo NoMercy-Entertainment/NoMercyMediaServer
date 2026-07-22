@@ -42,7 +42,7 @@ public record SubtitleAcquisitionConfig
     public int MinDownloads { get; init; }
     public bool TrustedUploadersOnly { get; init; }
     public bool RequireMatchingFps { get; init; }
-    public TimeSpan PerRequestTimeout { get; init; } = TimeSpan.FromSeconds(5);
+    public TimeSpan PerRequestTimeout { get; init; } = TimeSpan.FromSeconds(seconds: 5);
     public bool FillMissingOnly { get; init; } = true;
     public SubtitleEmbedPolicy EmbedPolicy { get; init; } = SubtitleEmbedPolicy.ExactMatchOnly;
 }

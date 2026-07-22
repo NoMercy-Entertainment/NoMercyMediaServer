@@ -36,7 +36,7 @@ public class DrivesHub : ConnectionHub
         ConnectedClients connectedClients,
         IActivityLogger activityLogger
     )
-        : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
+        : base(httpContextAccessor: httpContextAccessor, contextFactory: contextFactory, connectedClients: connectedClients, activityLogger: activityLogger)
     {
         _logger = logger;
     }
@@ -44,12 +44,12 @@ public class DrivesHub : ConnectionHub
     public override async Task OnConnectedAsync()
     {
         await base.OnConnectedAsync();
-        _logger.LogInformation("Drives client connected");
+        _logger.LogInformation(message: "Drives client connected");
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        await base.OnDisconnectedAsync(exception);
-        _logger.LogInformation("Drives client disconnected");
+        await base.OnDisconnectedAsync(exception: exception);
+        _logger.LogInformation(message: "Drives client disconnected");
     }
 }

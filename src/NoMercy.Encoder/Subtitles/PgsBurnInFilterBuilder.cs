@@ -75,7 +75,7 @@ public sealed class PgsBurnInFilterBuilder
     /// stream in <c>-map</c>.
     /// </returns>
     public PgsBurnInFilterChain Build(int videoStreamIndex, int subtitleStreamIndex) =>
-        Build(videoStreamIndex, subtitleStreamIndex, videoOutputCount: 1, includeThumbnails: false);
+        Build(videoStreamIndex: videoStreamIndex, subtitleStreamIndex: subtitleStreamIndex, videoOutputCount: 1, includeThumbnails: false);
 
     /// <summary>
     /// Builds the PGS overlay chain, splitting the composited output into one
@@ -91,7 +91,7 @@ public sealed class PgsBurnInFilterBuilder
         bool includeThumbnails
     )
     {
-        int consumers = Math.Max(1, videoOutputCount) + (includeThumbnails ? 1 : 0);
+        int consumers = Math.Max(val1: 1, val2: videoOutputCount) + (includeThumbnails ? 1 : 0);
 
         string overlay = $"[0:v:{videoStreamIndex}][0:s:{subtitleStreamIndex}]overlay=format=auto";
 
@@ -108,21 +108,21 @@ public sealed class PgsBurnInFilterBuilder
         }
 
         List<string> videoLabels = [];
-        for (int i = 0; i < Math.Max(1, videoOutputCount); i++)
-            videoLabels.Add($"[burned{i}]");
+        for (int i = 0; i < Math.Max(val1: 1, val2: videoOutputCount); i++)
+            videoLabels.Add(item: $"[burned{i}]");
 
         string? thumbnailLabel = includeThumbnails ? "[burnedthumbs]" : null;
 
         List<string> splitPads = [.. videoLabels];
         if (thumbnailLabel is not null)
-            splitPads.Add(thumbnailLabel);
+            splitPads.Add(item: thumbnailLabel);
 
-        string splitTargets = string.Concat(splitPads);
+        string splitTargets = string.Concat(values: splitPads);
         string filterComplex = $"{overlay},split={consumers}{splitTargets}";
 
         return new(
             FilterComplex: filterComplex,
-            MapLabel: videoLabels[0],
+            MapLabel: videoLabels[index: 0],
             VideoLabels: videoLabels,
             ThumbnailLabel: thumbnailLabel
         );

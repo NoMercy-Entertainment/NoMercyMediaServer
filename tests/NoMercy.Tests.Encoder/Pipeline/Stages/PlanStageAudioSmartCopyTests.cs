@@ -42,21 +42,21 @@ public class PlanStageAudioSmartCopyTests
 
     public PlanStageAudioSmartCopyTests()
     {
-        _hardware.Setup(h => h.HasGpu).Returns(false);
-        _hardware.Setup(h => h.CpuCores).Returns(8);
-        _hardware.Setup(h => h.Gpus).Returns([]);
+        _hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
+        _hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
+        _hardware.Setup(expression: h => h.Gpus).Returns(value: []);
 
         _stage = new(
-            new(),
-            new(),
-            new(),
-            _codecResolver.Object,
-            _hardware.Object,
-            new TonemapSelector(),
-            new Mock<IFfmpegCapabilities>().Object,
-            new AbrLadderGenerator(),
-            new NoOpCropDetector(),
-            NullLogger<PlanStage>.Instance
+            graphBuilder: new(),
+            groupingStrategy: new(),
+            costEstimator: new(),
+            codecResolver: _codecResolver.Object,
+            hardware: _hardware.Object,
+            tonemapSelector: new TonemapSelector(),
+            ffmpegCapabilities: new Mock<IFfmpegCapabilities>().Object,
+            abrLadderGenerator: new AbrLadderGenerator(),
+            cropDetector: new NoOpCropDetector(),
+            logger: NullLogger<PlanStage>.Instance
         );
     }
 
@@ -70,7 +70,7 @@ public class PlanStageAudioSmartCopyTests
         new(
             FilePath: "/music/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(3),
+            Duration: TimeSpan.FromMinutes(minutes: 3),
             OverallBitRateKbps: bitRateKbps,
             FileSizeBytes: 5_000_000,
             VideoStreams: [],
@@ -127,43 +127,43 @@ public class PlanStageAudioSmartCopyTests
     [Fact]
     public async Task AacSourceMatchingAacOutput_DowngradesToCopy()
     {
-        MediaInfo media = BuildAudioOnlyMedia("aac", bitRateKbps: 192);
-        EncodingProfile profile = BuildProfile([BuildAudioOutput(AudioCodecType.Aac)]);
+        MediaInfo media = BuildAudioOnlyMedia(codec: "aac", bitRateKbps: 192);
+        EncodingProfile profile = BuildProfile(audio: [BuildAudioOutput(codec: AudioCodecType.Aac)]);
 
-        ValidateInput input = new(media, profile);
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        ValidateInput input = new(Media: media, Profile: profile);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
-        AudioOutputPlan audio = Assert.Single(success.Value.OutputPlan.AudioOutputs);
-        audio.Action.Should().Be(StreamAction.Copy);
-        audio.EncoderName.Should().Be("copy");
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
+        AudioOutputPlan audio = Assert.Single(collection: success.Value.OutputPlan.AudioOutputs);
+        audio.Action.Should().Be(expected: StreamAction.Copy);
+        audio.EncoderName.Should().Be(expected: "copy");
         audio
             .CodecToken.Should()
             .Be(
-                "aac",
-                "the on-disk rendition must name the real source codec, not the literal \"copy\" pseudo-encoder"
+                expected: "aac",
+                because: "the on-disk rendition must name the real source codec, not the literal \"copy\" pseudo-encoder"
             );
 
         _context
             .Decisions!.Snapshot()
             .Should()
-            .Contain(entry => entry.Key == "plan.audio_smart_copy");
+            .Contain(predicate: entry => entry.Key == "plan.audio_smart_copy");
     }
 
     [Fact]
     public async Task OpusSourceAgainstAacRequestedOutput_StaysTranscode()
     {
         // Codec mismatch: ResolveAudio returns Transcode, so the downgrade must not fire.
-        MediaInfo media = BuildAudioOnlyMedia("opus", bitRateKbps: 192);
-        EncodingProfile profile = BuildProfile([BuildAudioOutput(AudioCodecType.Aac)]);
+        MediaInfo media = BuildAudioOnlyMedia(codec: "opus", bitRateKbps: 192);
+        EncodingProfile profile = BuildProfile(audio: [BuildAudioOutput(codec: AudioCodecType.Aac)]);
 
-        ValidateInput input = new(media, profile);
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        ValidateInput input = new(Media: media, Profile: profile);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
-        AudioOutputPlan audio = Assert.Single(success.Value.OutputPlan.AudioOutputs);
-        audio.Action.Should().Be(StreamAction.Transcode);
-        audio.EncoderName.Should().Be("libfdk_aac");
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
+        AudioOutputPlan audio = Assert.Single(collection: success.Value.OutputPlan.AudioOutputs);
+        audio.Action.Should().Be(expected: StreamAction.Transcode);
+        audio.EncoderName.Should().Be(expected: "libfdk_aac");
     }
 
     [Fact]
@@ -171,18 +171,18 @@ public class PlanStageAudioSmartCopyTests
     {
         // Lossless source (flac) heading toward a lossy target (aac) must always
         // transcode, even though nothing else about the match would block it.
-        MediaInfo media = BuildAudioOnlyMedia("flac", bitRateKbps: 900);
+        MediaInfo media = BuildAudioOnlyMedia(codec: "flac", bitRateKbps: 900);
         EncodingProfile profile = BuildProfile(
-            [BuildAudioOutput(AudioCodecType.Aac)],
-            Container.Mkv
+            audio: [BuildAudioOutput(codec: AudioCodecType.Aac)],
+            container: Container.Mkv
         );
 
-        ValidateInput input = new(media, profile);
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        ValidateInput input = new(Media: media, Profile: profile);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
-        AudioOutputPlan audio = Assert.Single(success.Value.OutputPlan.AudioOutputs);
-        audio.Action.Should().Be(StreamAction.Transcode);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
+        AudioOutputPlan audio = Assert.Single(collection: success.Value.OutputPlan.AudioOutputs);
+        audio.Action.Should().Be(expected: StreamAction.Transcode);
     }
 
     [Fact]
@@ -191,19 +191,20 @@ public class PlanStageAudioSmartCopyTests
         // "Keep it per-output": one profile requesting AAC + E-AC-3 from a
         // single AAC source copies the AAC rendition and still transcodes
         // toward E-AC-3 (codec mismatch on that output alone).
-        MediaInfo media = BuildAudioOnlyMedia("aac", bitRateKbps: 192);
-        EncodingProfile profile = BuildProfile([
-            BuildAudioOutput(AudioCodecType.Aac),
-            BuildAudioOutput(AudioCodecType.Eac3, bitrateKbps: 448),
+        MediaInfo media = BuildAudioOnlyMedia(codec: "aac", bitRateKbps: 192);
+        EncodingProfile profile = BuildProfile(audio:
+        [
+            BuildAudioOutput(codec: AudioCodecType.Aac),
+            BuildAudioOutput(codec: AudioCodecType.Eac3, bitrateKbps: 448),
         ]);
 
-        ValidateInput input = new(media, profile);
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        ValidateInput input = new(Media: media, Profile: profile);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
-        success.Value.OutputPlan.AudioOutputs.Should().HaveCount(2);
-        success.Value.OutputPlan.AudioOutputs[0].Action.Should().Be(StreamAction.Copy);
-        success.Value.OutputPlan.AudioOutputs[1].Action.Should().Be(StreamAction.Transcode);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
+        success.Value.OutputPlan.AudioOutputs.Should().HaveCount(expected: 2);
+        success.Value.OutputPlan.AudioOutputs[0].Action.Should().Be(expected: StreamAction.Copy);
+        success.Value.OutputPlan.AudioOutputs[1].Action.Should().Be(expected: StreamAction.Transcode);
     }
 
     [Fact]
@@ -213,17 +214,17 @@ public class PlanStageAudioSmartCopyTests
         // must still not downgrade when the profile's own container cannot
         // carry the codec — HlsTs has no Opus entry in ContainerCompatibility,
         // mirroring the video HlsTs-can-only-carry-H264 guard.
-        MediaInfo media = BuildAudioOnlyMedia("opus", bitRateKbps: 192);
+        MediaInfo media = BuildAudioOnlyMedia(codec: "opus", bitRateKbps: 192);
         EncodingProfile profile = BuildProfile(
-            [BuildAudioOutput(AudioCodecType.Opus)],
-            Container.HlsTs
+            audio: [BuildAudioOutput(codec: AudioCodecType.Opus)],
+            container: Container.HlsTs
         );
 
-        ValidateInput input = new(media, profile);
-        StageResult result = await _stage.ExecuteAsync(input, _context, default);
+        ValidateInput input = new(Media: media, Profile: profile);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: default);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
-        AudioOutputPlan audio = Assert.Single(success.Value.OutputPlan.AudioOutputs);
-        audio.Action.Should().Be(StreamAction.Transcode);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
+        AudioOutputPlan audio = Assert.Single(collection: success.Value.OutputPlan.AudioOutputs);
+        audio.Action.Should().Be(expected: StreamAction.Transcode);
     }
 }

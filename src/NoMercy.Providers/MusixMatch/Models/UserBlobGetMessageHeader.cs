@@ -15,6 +15,6 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class UserBlobGetMessageHeader
 {
-    [JsonProperty("status_code")]
+    [JsonProperty(propertyName: "status_code")]
     public long StatusCode { get; set; }
 }

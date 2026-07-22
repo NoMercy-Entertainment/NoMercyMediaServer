@@ -18,61 +18,61 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record LibrariesResponseItemDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public Ulid Id { get; set; }
 
-    [JsonProperty("autoRefreshInterval")]
+    [JsonProperty(propertyName: "autoRefreshInterval")]
     public long AutoRefreshInterval { get; set; }
 
-    [JsonProperty("chapterImages")]
+    [JsonProperty(propertyName: "chapterImages")]
     public long ChapterImages { get; set; }
 
-    [JsonProperty("image")]
+    [JsonProperty(propertyName: "image")]
     public string? Image { get; set; }
 
-    [JsonProperty("perfectSubtitleMatch")]
+    [JsonProperty(propertyName: "perfectSubtitleMatch")]
     public bool PerfectSubtitleMatch { get; set; }
 
-    [JsonProperty("realtime")]
+    [JsonProperty(propertyName: "realtime")]
     public bool Realtime { get; set; }
 
-    [JsonProperty("autoEncodeOnScan")]
+    [JsonProperty(propertyName: "autoEncodeOnScan")]
     public bool AutoEncodeOnScan { get; set; }
 
-    [JsonProperty("encodePresetId")]
+    [JsonProperty(propertyName: "encodePresetId")]
     public Ulid? EncodePresetId { get; set; }
 
-    [JsonProperty("specialSeasonName")]
+    [JsonProperty(propertyName: "specialSeasonName")]
     public string? SpecialSeasonName { get; set; }
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string? Title { get; set; }
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string? Type { get; set; }
 
-    [JsonProperty("order")]
+    [JsonProperty(propertyName: "order")]
     public int? Order { get; set; }
 
-    [JsonProperty("color_palette")]
+    [JsonProperty(propertyName: "color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty("pagination")]
+    [JsonProperty(propertyName: "pagination")]
     public string Pagination { get; set; } = "auto";
 
-    [JsonProperty("link")]
+    [JsonProperty(propertyName: "link")]
     public Uri Link { get; set; } = null!;
 
-    [JsonProperty("created_at")]
+    [JsonProperty(propertyName: "created_at")]
     public DateTime? CreatedAt { get; set; }
 
-    [JsonProperty("updated_at")]
+    [JsonProperty(propertyName: "updated_at")]
     public DateTime? UpdatedAt { get; set; }
 
-    [JsonProperty("folder_library")]
+    [JsonProperty(propertyName: "folder_library")]
     public FolderLibraryDto[] FolderLibrary { get; set; }
 
-    [JsonProperty("subtitles")]
+    [JsonProperty(propertyName: "subtitles")]
     public string[] Subtitles { get; set; }
 
     public LibrariesResponseItemDto(Library library)
@@ -92,14 +92,14 @@ public record LibrariesResponseItemDto
         CreatedAt = library.CreatedAt;
         Pagination = shouldPaginate ? "letter" : "auto";
         Link = shouldPaginate
-            ? new($"/libraries/{Id}/letter/A", UriKind.Relative)
-            : new($"/libraries/{Id}", UriKind.Relative);
+            ? new(uriString: $"/libraries/{Id}/letter/A", uriKind: UriKind.Relative)
+            : new(uriString: $"/libraries/{Id}", uriKind: UriKind.Relative);
         Subtitles = library
-            .LanguageLibraries.Select(languageLibrary => languageLibrary.Language.Iso6391)
+            .LanguageLibraries.Select(selector: languageLibrary => languageLibrary.Language.Iso6391)
             .ToArray();
 
         FolderLibrary = library
-            .FolderLibraries.Select(folderLibrary => new FolderLibraryDto
+            .FolderLibraries.Select(selector: folderLibrary => new FolderLibraryDto
             {
                 FolderId = folderLibrary.FolderId,
                 LibraryId = folderLibrary.LibraryId,
@@ -110,8 +110,8 @@ public record LibrariesResponseItemDto
                     DriverId = folderLibrary.Folder.DriverId,
                     DriverName = folderLibrary.Folder.Driver?.Name ?? string.Empty,
                     EncoderProfiles = folderLibrary
-                        .Folder.EncodingPresetFolders.Where(link => link.Preset is not null)
-                        .Select(link => new Data.DTOs.Encoder.FolderPresetDto
+                        .Folder.EncodingPresetFolders.Where(predicate: link => link.Preset is not null)
+                        .Select(selector: link => new Data.DTOs.Encoder.FolderPresetDto
                         {
                             Id = link.Preset!.Id,
                             Name = link.Preset!.Name,

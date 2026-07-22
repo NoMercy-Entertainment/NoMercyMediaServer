@@ -17,8 +17,8 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// Unit tests for TmdbCollectionClient
 /// Tests movie collection details and related metadata
 /// </summary>
-[Trait("Category", "Unit")]
-[Collection("TmdbApi")]
+[Trait(name: "Category", value: "Unit")]
+[Collection(name: "TmdbApi")]
 public class TmdbCollectionClientTests : TmdbTestBase
 {
     #region Constructor Tests
@@ -30,11 +30,11 @@ public class TmdbCollectionClientTests : TmdbTestBase
         const int expectedId = ValidCollectionId;
 
         // Act
-        using TmdbCollectionClient client = new(expectedId);
+        using TmdbCollectionClient client = new(id: expectedId);
 
         // Assert
         client.Should().NotBeNull();
-        client.Id.Should().Be(expectedId);
+        client.Id.Should().Be(expected: expectedId);
     }
 
     #endregion

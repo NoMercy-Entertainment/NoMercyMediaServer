@@ -48,9 +48,9 @@ public class LiveSessionIdleReaperBranchTests
     {
         NoMercy.Storage.IStorage storage = TestStorageFactory.CreateLocal();
         return new(
-            NullLogger<LiveStreamingService>.Instance,
-            storage,
-            TestStorageFactory.CreateSegmentInventory(storage)
+            logger: NullLogger<LiveStreamingService>.Instance,
+            storage: storage,
+            segmentInventory: TestStorageFactory.CreateSegmentInventory(storage: storage)
         );
     }
 
@@ -60,10 +60,10 @@ public class LiveSessionIdleReaperBranchTests
         int idleTimeoutMinutes = 5
     ) =>
         new(
-            streamingService,
-            sessionManager,
-            new() { IdleTimeoutMinutes = idleTimeoutMinutes },
-            NullLogger<LiveSessionIdleReaper>.Instance
+            streamingService: streamingService,
+            sessionManager: sessionManager,
+            limits: new() { IdleTimeoutMinutes = idleTimeoutMinutes },
+            logger: NullLogger<LiveSessionIdleReaper>.Instance
         );
 
     // ── No active sessions ──────────────────────────────────────────────────
@@ -72,16 +72,16 @@ public class LiveSessionIdleReaperBranchTests
     public async Task SweepAsync_no_sessions_no_op()
     {
         Mock<ILiveStreamingService> service = new();
-        service.Setup(s => s.ActiveSessionIds).Returns(Array.Empty<string>());
+        service.Setup(expression: s => s.ActiveSessionIds).Returns(value: Array.Empty<string>());
 
         Mock<ISessionManager> sessionMgr = new();
-        LiveSessionIdleReaper reaper = BuildReaper(service.Object, sessionMgr.Object);
+        LiveSessionIdleReaper reaper = BuildReaper(streamingService: service.Object, sessionManager: sessionMgr.Object);
 
         Func<Task> act = () => reaper.SweepAsync();
         await act.Should().NotThrowAsync();
 
-        service.Verify(s => s.RemoveAsync(It.IsAny<string>()), Times.Never);
-        sessionMgr.Verify(m => m.RemoveSession(It.IsAny<string>()), Times.Never);
+        service.Verify(expression: s => s.RemoveAsync(It.IsAny<string>()), times: Times.Never);
+        sessionMgr.Verify(expression: m => m.RemoveSession(It.IsAny<string>()), times: Times.Never);
     }
 
     // ── Completed session NOT evicted even if idle ──────────────────────────
@@ -90,36 +90,36 @@ public class LiveSessionIdleReaperBranchTests
     public async Task SweepAsync_complete_session_is_not_evicted()
     {
         LiveStreamingService realService = NewStreamingService();
-        LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
-        realService.Register(session, TimeSpan.FromSeconds(4));
+        LiveSession session = new(sessionId: Ulid.NewUlid().ToString(), quality: MakeQuality());
+        realService.Register(session: session, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 4));
 
         // Age the session AND mark complete via reflection on the runtime.
-        if (realService.TryGetRuntime(session.SessionId, out LiveRuntimeSession? runtime))
+        if (realService.TryGetRuntime(sessionId: session.SessionId, runtime: out LiveRuntimeSession? runtime))
         {
             // Backdate by 10 minutes via reflection.
             System.Reflection.FieldInfo? field = typeof(LiveRuntimeSession).GetField(
-                "_lastAccessTicks",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
+                name: "_lastAccessTicks",
+                bindingAttr: System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
             );
-            field?.SetValue(runtime, DateTime.UtcNow.AddMinutes(-10).Ticks);
+            field?.SetValue(obj: runtime, value: DateTime.UtcNow.AddMinutes(value: -10).Ticks);
 
             // Mark complete via reflection on the internal method.
             System.Reflection.MethodInfo? markComplete = typeof(LiveRuntimeSession).GetMethod(
-                "MarkComplete",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
+                name: "MarkComplete",
+                bindingAttr: System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
             );
-            markComplete?.Invoke(runtime, []);
+            markComplete?.Invoke(obj: runtime, parameters: []);
         }
 
         Mock<ISessionManager> sessionMgr = new();
-        LiveSessionIdleReaper reaper = BuildReaper(realService, sessionMgr.Object);
+        LiveSessionIdleReaper reaper = BuildReaper(streamingService: realService, sessionManager: sessionMgr.Object);
 
         await reaper.SweepAsync();
 
         // Complete sessions are excluded from idle eviction — the runtime is
         // still registered (it'll be removed via the normal completion path).
-        realService.ActiveSessionIds.Should().Contain(session.SessionId);
-        sessionMgr.Verify(m => m.RemoveSession(It.IsAny<string>()), Times.Never);
+        realService.ActiveSessionIds.Should().Contain(expected: session.SessionId);
+        sessionMgr.Verify(expression: m => m.RemoveSession(It.IsAny<string>()), times: Times.Never);
     }
 
     // ── Eviction failure propagation ────────────────────────────────────────
@@ -132,38 +132,38 @@ public class LiveSessionIdleReaperBranchTests
         // process the second idle session.
         LiveStreamingService streamingService = NewStreamingService();
 
-        LiveSession first = new(Ulid.NewUlid().ToString(), MakeQuality());
-        LiveSession second = new(Ulid.NewUlid().ToString(), MakeQuality());
+        LiveSession first = new(sessionId: Ulid.NewUlid().ToString(), quality: MakeQuality());
+        LiveSession second = new(sessionId: Ulid.NewUlid().ToString(), quality: MakeQuality());
 
-        streamingService.Register(first, TimeSpan.FromSeconds(4));
-        streamingService.Register(second, TimeSpan.FromSeconds(4));
+        streamingService.Register(session: first, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 4));
+        streamingService.Register(session: second, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 4));
 
         // Backdate both so they're idle.
         foreach (string id in new[] { first.SessionId, second.SessionId })
         {
-            if (streamingService.TryGetRuntime(id, out LiveRuntimeSession? runtime))
+            if (streamingService.TryGetRuntime(sessionId: id, runtime: out LiveRuntimeSession? runtime))
             {
                 System.Reflection.FieldInfo? field = typeof(LiveRuntimeSession).GetField(
-                    "_lastAccessTicks",
-                    System.Reflection.BindingFlags.NonPublic
-                        | System.Reflection.BindingFlags.Instance
+                    name: "_lastAccessTicks",
+                    bindingAttr: System.Reflection.BindingFlags.NonPublic
+                                 | System.Reflection.BindingFlags.Instance
                 );
-                field?.SetValue(runtime, DateTime.UtcNow.AddMinutes(-10).Ticks);
+                field?.SetValue(obj: runtime, value: DateTime.UtcNow.AddMinutes(value: -10).Ticks);
             }
         }
 
         Mock<ISessionManager> sessionMgr = new();
         // Throw on the FIRST session's removal — loop must continue.
         sessionMgr
-            .Setup(m => m.RemoveSession(first.SessionId))
-            .Throws(new InvalidOperationException("session manager exploded"));
+            .Setup(expression: m => m.RemoveSession(first.SessionId))
+            .Throws(exception: new InvalidOperationException(message: "session manager exploded"));
 
-        LiveSessionIdleReaper reaper = BuildReaper(streamingService, sessionMgr.Object);
+        LiveSessionIdleReaper reaper = BuildReaper(streamingService: streamingService, sessionManager: sessionMgr.Object);
 
         Func<Task> act = () => reaper.SweepAsync();
         await act.Should().NotThrowAsync();
 
         // Second session's removal was attempted (proves loop didn't bail).
-        sessionMgr.Verify(m => m.RemoveSession(second.SessionId), Times.Once);
+        sessionMgr.Verify(expression: m => m.RemoveSession(second.SessionId), times: Times.Once);
     }
 }

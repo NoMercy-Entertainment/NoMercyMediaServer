@@ -26,25 +26,25 @@ public static class MovieHashHelper
 
         byte[] head = new byte[ChunkSize];
         stream.Position = 0;
-        int headRead = stream.Read(head, 0, ChunkSize);
-        hash = AddBuffer(hash, head, headRead);
+        int headRead = stream.Read(buffer: head, offset: 0, count: ChunkSize);
+        hash = AddBuffer(h: hash, buf: head, count: headRead);
 
         byte[] tail = new byte[ChunkSize];
-        long tailOffset = Math.Max(0, fileSize - ChunkSize);
+        long tailOffset = Math.Max(val1: 0, val2: fileSize - ChunkSize);
         stream.Position = tailOffset;
-        int tailRead = stream.Read(tail, 0, ChunkSize);
-        hash = AddBuffer(hash, tail, tailRead);
+        int tailRead = stream.Read(buffer: tail, offset: 0, count: ChunkSize);
+        hash = AddBuffer(h: hash, buf: tail, count: tailRead);
 
         return hash;
     }
 
-    public static string FormatHash(ulong hash) => hash.ToString("x16");
+    public static string FormatHash(ulong hash) => hash.ToString(format: "x16");
 
     private static ulong AddBuffer(ulong h, byte[] buf, int count)
     {
         int paddedCount = count - (count % 8);
         for (int i = 0; i < paddedCount; i += 8)
-            h += BitConverter.ToUInt64(buf, i);
+            h += BitConverter.ToUInt64(value: buf, startIndex: i);
         return h;
     }
 }

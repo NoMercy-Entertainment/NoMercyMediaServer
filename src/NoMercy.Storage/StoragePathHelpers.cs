@@ -28,10 +28,10 @@ public static class StoragePathHelpers
     /// </summary>
     public static string GetName(string path)
     {
-        if (string.IsNullOrEmpty(path))
+        if (string.IsNullOrEmpty(value: path))
             return string.Empty;
-        string trimmed = path.TrimEnd('/');
-        int idx = trimmed.LastIndexOf('/');
+        string trimmed = path.TrimEnd(trimChar: '/');
+        int idx = trimmed.LastIndexOf(value: '/');
         return idx < 0 ? trimmed : trimmed[(idx + 1)..];
     }
 
@@ -42,14 +42,14 @@ public static class StoragePathHelpers
     /// </summary>
     public static string? GetParent(string path)
     {
-        if (string.IsNullOrEmpty(path))
+        if (string.IsNullOrEmpty(value: path))
             return null;
-        string trimmed = path.TrimEnd('/');
-        int idx = trimmed.LastIndexOf('/');
+        string trimmed = path.TrimEnd(trimChar: '/');
+        int idx = trimmed.LastIndexOf(value: '/');
         if (idx < 0)
             return null;
         string parent = trimmed[..idx];
-        return string.IsNullOrEmpty(parent) ? null : parent;
+        return string.IsNullOrEmpty(value: parent) ? null : parent;
     }
 
     /// <summary>
@@ -59,8 +59,8 @@ public static class StoragePathHelpers
     /// </summary>
     public static string GetNameWithoutExtension(string path)
     {
-        string name = GetName(path);
-        int dot = name.LastIndexOf('.');
+        string name = GetName(path: path);
+        int dot = name.LastIndexOf(value: '.');
         return dot < 0 ? name : name[..dot];
     }
 
@@ -72,12 +72,12 @@ public static class StoragePathHelpers
     /// </summary>
     public static string Combine(string parent, string child)
     {
-        if (string.IsNullOrEmpty(child))
+        if (string.IsNullOrEmpty(value: child))
             return parent;
-        if (string.IsNullOrEmpty(parent))
+        if (string.IsNullOrEmpty(value: parent))
             return child;
-        string trimmedParent = parent.TrimEnd('/', '\\');
-        string trimmedChild = child.TrimStart('/', '\\');
+        string trimmedParent = parent.TrimEnd(trimChars: ['/', '\\']);
+        string trimmedChild = child.TrimStart(trimChars: ['/', '\\']);
         return $"{trimmedParent}/{trimmedChild}";
     }
 
@@ -95,15 +95,15 @@ public static class StoragePathHelpers
     /// </summary>
     public static string RebaseToFolderRoot(string absolutePath, string folderPath)
     {
-        string normalizedItem = absolutePath.Replace('\\', '/');
-        string normalizedRoot = folderPath.Replace('\\', '/').Trim('/');
+        string normalizedItem = absolutePath.Replace(oldChar: '\\', newChar: '/');
+        string normalizedRoot = folderPath.Replace(oldChar: '\\', newChar: '/').Trim(trimChar: '/');
 
         if (normalizedRoot.Length == 0)
-            return normalizedItem.TrimStart('/');
+            return normalizedItem.TrimStart(trimChar: '/');
 
-        int rootIndex = normalizedItem.IndexOf(normalizedRoot, StringComparison.OrdinalIgnoreCase);
+        int rootIndex = normalizedItem.IndexOf(value: normalizedRoot, comparisonType: StringComparison.OrdinalIgnoreCase);
         return rootIndex < 0
-            ? normalizedItem.TrimStart('/')
-            : normalizedItem[rootIndex..].TrimStart('/');
+            ? normalizedItem.TrimStart(trimChar: '/')
+            : normalizedItem[rootIndex..].TrimStart(trimChar: '/');
     }
 }

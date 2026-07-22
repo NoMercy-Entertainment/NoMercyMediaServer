@@ -30,7 +30,7 @@ namespace NoMercy.Tests.Service.Extensions;
 /// method wires up is registered exactly once, as a Singleton (shared
 /// subscription state, not per-request).
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class EventHandlerExtensionsTests
 {
     private static readonly Type[] ExpectedSingletonHandlerTypes =
@@ -64,13 +64,13 @@ public class EventHandlerExtensionsTests
             services
                 .Should()
                 .ContainSingle(
-                    d => d.ServiceType == handlerType,
-                    $"{handlerType.Name} must be registered exactly once"
+                    predicate: d => d.ServiceType == handlerType,
+                    because: $"{handlerType.Name} must be registered exactly once"
                 )
                 .Which.Lifetime.Should()
                 .Be(
-                    ServiceLifetime.Singleton,
-                    $"{handlerType.Name} holds shared subscription state"
+                    expected: ServiceLifetime.Singleton,
+                    because: $"{handlerType.Name} holds shared subscription state"
                 );
         }
     }
@@ -82,8 +82,8 @@ public class EventHandlerExtensionsTests
 
         services.AddSignalREventHandlers();
 
-        services.Should().Contain(d => d.ServiceType == typeof(IInboxMetadataProbe));
-        services.Should().Contain(d => d.ServiceType == typeof(IInboxAudioTagReader));
+        services.Should().Contain(predicate: d => d.ServiceType == typeof(IInboxMetadataProbe));
+        services.Should().Contain(predicate: d => d.ServiceType == typeof(IInboxAudioTagReader));
     }
 
     [Fact]
@@ -93,6 +93,6 @@ public class EventHandlerExtensionsTests
 
         IServiceCollection result = services.AddSignalREventHandlers();
 
-        result.Should().BeSameAs(services);
+        result.Should().BeSameAs(expected: services);
     }
 }

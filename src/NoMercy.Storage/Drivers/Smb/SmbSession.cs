@@ -60,6 +60,6 @@ internal static class SmbStatus
     public static void EnsureSuccess(NTStatus status, string what)
     {
         if (status != NTStatus.STATUS_SUCCESS)
-            throw new IOException($"SMB {what} failed (status {status}).");
+            throw new IOException(message: $"SMB {what} failed (status {status}).");
     }
 }

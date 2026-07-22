@@ -42,11 +42,11 @@ public sealed class CdDiscSource(
 
     public async Task<DiscInfo> ProbeAsync(DiscDrive drive, CancellationToken ct)
     {
-        DiscTrack[] audioTracks = await ProbeAudioTracksAsync(drive, ct);
+        DiscTrack[] audioTracks = await ProbeAudioTracksAsync(drive: drive, ct: ct);
         if (audioTracks.Length > 0)
         {
             DiscTitle[] titles = audioTracks
-                .Select(t => new DiscTitle(
+                .Select(selector: t => new DiscTitle(
                     Index: t.Index,
                     Name: $"Track {t.Index:D2}",
                     Duration: t.Duration,
@@ -64,15 +64,15 @@ public sealed class CdDiscSource(
                 DiscLabel: drive.Label,
                 Titles: titles,
                 AudioTracks: audioTracks,
-                TotalDuration: audioTracks.Sum(t => t.Duration.Ticks) is long ticks
-                    ? TimeSpan.FromTicks(ticks)
+                TotalDuration: audioTracks.Sum(selector: t => t.Duration.Ticks) is long ticks
+                    ? TimeSpan.FromTicks(value: ticks)
                     : TimeSpan.Zero
             );
         }
 
         // Data CD fallback: enumerate top-level files via the unvalidated
         // low-level driver (disc roots aren't in the library allowlist).
-        DiscTrack[] files = EnumerateDataCd(drive);
+        DiscTrack[] files = EnumerateDataCd(drive: drive);
         return new(
             Type: OpticalDiscType.Cd,
             DiscLabel: drive.Label,
@@ -87,7 +87,7 @@ public sealed class CdDiscSource(
         // Per-track / per-file detail isn't fetched separately — everything
         // we know is in the initial probe.
         return Task.FromResult(
-            new DiscTitle(
+            result: new DiscTitle(
                 Index: titleIndex,
                 Name: $"Track {titleIndex:D2}",
                 Duration: TimeSpan.Zero,
@@ -104,7 +104,8 @@ public sealed class CdDiscSource(
     private async Task<DiscTrack[]> ProbeAudioTracksAsync(DiscDrive drive, CancellationToken ct)
     {
         ProcessResult result = await processRunner.RunAsync(
-            options.FfprobePath,
+            executable: options.FfprobePath,
+            arguments:
             [
                 "-hide_banner",
                 "-v",
@@ -122,20 +123,18 @@ public sealed class CdDiscSource(
             cancellationToken: ct
         );
 
-        if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.StdOut))
+        if (!result.IsSuccess || string.IsNullOrWhiteSpace(value: result.StdOut))
             return [];
 
         try
         {
-            return ParseTracks(result.StdOut);
+            return ParseTracks(json: result.StdOut);
         }
         catch (JsonException ex)
         {
             logger.LogInformation(
-                ex,
-                "Audio CD probe parse failed for {Drive}: {Message}",
-                drive.Path,
-                ex.Message
+                exception: ex,
+                message: "Audio CD probe parse failed for {Drive}: {Message}", args: [drive.Path, ex.Message]
             );
             return [];
         }
@@ -147,27 +146,27 @@ public sealed class CdDiscSource(
         {
             // Derive separator from the drive path itself so the path is
             // valid on both Windows and Linux regardless of the host.
-            char sep = drive.Path.Contains('\\') ? '\\' : '/';
-            string root = drive.Path.TrimEnd('\\', '/') + sep;
+            char sep = drive.Path.Contains(value: '\\') ? '\\' : '/';
+            string root = drive.Path.TrimEnd(trimChars: ['\\', '/']) + sep;
             int idx = 1;
             List<DiscTrack> tracks = new();
             foreach (
                 string entry in storageDriver.EnumerateFileSystemEntries(
-                    root,
-                    "*",
-                    SearchOption.TopDirectoryOnly
+                    directory: root,
+                    searchPattern: "*",
+                    option: SearchOption.TopDirectoryOnly
                 )
             )
             {
-                if (storageDriver.DirectoryExists(entry))
+                if (storageDriver.DirectoryExists(path: entry))
                     continue;
                 tracks.Add(
-                    new(
+                    item: new(
                         Index: idx++,
                         // Separator-agnostic leaf: Path.GetFileName treats '\' as
                         // a literal on Linux, so a Windows-style entry would keep
                         // its whole path on the CI runner. Split on both separators.
-                        Title: entry[(entry.LastIndexOfAny(['\\', '/']) + 1)..],
+                        Title: entry[(entry.LastIndexOfAny(anyOf: ['\\', '/']) + 1)..],
                         Artist: null,
                         Duration: TimeSpan.Zero,
                         SampleRate: 0,
@@ -180,10 +179,8 @@ public sealed class CdDiscSource(
         catch (Exception ex)
         {
             logger.LogInformation(
-                ex,
-                "Data CD enumeration failed for {Drive}: {Message}",
-                drive.Path,
-                ex.Message
+                exception: ex,
+                message: "Data CD enumeration failed for {Drive}: {Message}", args: [drive.Path, ex.Message]
             );
             return [];
         }
@@ -195,46 +192,46 @@ public sealed class CdDiscSource(
     /// </summary>
     internal static DiscTrack[] ParseTracks(string json)
     {
-        using JsonDocument doc = JsonDocument.Parse(json);
-        if (!doc.RootElement.TryGetProperty("streams", out JsonElement streams))
+        using JsonDocument doc = JsonDocument.Parse(json: json);
+        if (!doc.RootElement.TryGetProperty(propertyName: "streams", value: out JsonElement streams))
             return [];
 
         List<DiscTrack> result = new();
         foreach (JsonElement stream in streams.EnumerateArray())
         {
-            string codecType = stream.TryGetProperty("codec_type", out JsonElement ct)
+            string codecType = stream.TryGetProperty(propertyName: "codec_type", value: out JsonElement ct)
                 ? ct.GetString() ?? ""
                 : "";
-            if (!string.Equals(codecType, "audio", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(a: codecType, b: "audio", comparisonType: StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            int rawIndex = stream.TryGetProperty("index", out JsonElement i) ? i.GetInt32() : 0;
+            int rawIndex = stream.TryGetProperty(propertyName: "index", value: out JsonElement i) ? i.GetInt32() : 0;
 
             TimeSpan duration = TimeSpan.Zero;
             if (
-                stream.TryGetProperty("duration", out JsonElement d)
+                stream.TryGetProperty(propertyName: "duration", value: out JsonElement d)
                 && double.TryParse(
-                    d.GetString(),
-                    NumberStyles.Float,
-                    CultureInfo.InvariantCulture,
-                    out double seconds
+                    s: d.GetString(),
+                    style: NumberStyles.Float,
+                    provider: CultureInfo.InvariantCulture,
+                    result: out double seconds
                 )
             )
             {
-                duration = TimeSpan.FromSeconds(seconds);
+                duration = TimeSpan.FromSeconds(value: seconds);
             }
 
             int sampleRate =
-                stream.TryGetProperty("sample_rate", out JsonElement sr)
-                && int.TryParse(sr.GetString(), out int srInt)
+                stream.TryGetProperty(propertyName: "sample_rate", value: out JsonElement sr)
+                && int.TryParse(s: sr.GetString(), result: out int srInt)
                     ? srInt
                     : 44100;
-            int channels = stream.TryGetProperty("channels", out JsonElement ch)
+            int channels = stream.TryGetProperty(propertyName: "channels", value: out JsonElement ch)
                 ? ch.GetInt32()
                 : 2;
 
             result.Add(
-                new(
+                item: new(
                     Index: rawIndex + 1,
                     Title: null,
                     Artist: null,

@@ -51,24 +51,22 @@ public class DefaultEncodingPresetLinker(
     {
         bool alreadyLinked = await context
             .EncodingPresetFolders.AsNoTracking()
-            .AnyAsync(link => link.FolderId == folderId, ct);
+            .AnyAsync(predicate: link => link.FolderId == folderId, cancellationToken: ct);
 
         if (alreadyLinked)
             return false;
 
-        Ulid? presetId = await ResolveDefaultPresetIdAsync(ct);
+        Ulid? presetId = await ResolveDefaultPresetIdAsync(ct: ct);
         if (presetId is null)
         {
             logger.LogWarning(
-                "DefaultEncodingPresetLinker: no default preset available (builtin '{Name}' missing, no existing IsDefault link to fall back to) — folder {FolderId} left without auto-encode",
-                DefaultBuiltinPresetName,
-                folderId
+                message: "DefaultEncodingPresetLinker: no default preset available (builtin '{Name}' missing, no existing IsDefault link to fall back to) — folder {FolderId} left without auto-encode", args: [DefaultBuiltinPresetName, folderId]
             );
             return false;
         }
 
         context.EncodingPresetFolders.Add(
-            new()
+            entity: new()
             {
                 FolderId = folderId,
                 PresetId = presetId.Value,
@@ -76,7 +74,7 @@ public class DefaultEncodingPresetLinker(
             }
         );
 
-        await context.SaveChangesAsync(ct);
+        await context.SaveChangesAsync(cancellationToken: ct);
         return true;
     }
 
@@ -84,7 +82,7 @@ public class DefaultEncodingPresetLinker(
     {
         EncodingPreset? standard = await context
             .EncodingPresets.AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Name == DefaultBuiltinPresetName && p.IsBuiltIn, ct);
+            .FirstOrDefaultAsync(predicate: p => p.Name == DefaultBuiltinPresetName && p.IsBuiltIn, cancellationToken: ct);
 
         if (standard is not null)
             return standard.Id;
@@ -93,12 +91,12 @@ public class DefaultEncodingPresetLinker(
         // on some other folder's link, if one exists.
         List<Ulid> fallback = await context
             .EncodingPresetFolders.AsNoTracking()
-            .Where(link => link.IsDefault)
-            .Select(link => link.PresetId)
+            .Where(predicate: link => link.IsDefault)
+            .Select(selector: link => link.PresetId)
             .Distinct()
-            .Take(1)
-            .ToListAsync(ct);
+            .Take(count: 1)
+            .ToListAsync(cancellationToken: ct);
 
-        return fallback.Count > 0 ? fallback[0] : null;
+        return fallback.Count > 0 ? fallback[index: 0] : null;
     }
 }

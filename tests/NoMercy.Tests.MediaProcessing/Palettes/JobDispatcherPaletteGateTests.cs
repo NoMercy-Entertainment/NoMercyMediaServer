@@ -20,7 +20,7 @@ namespace NoMercy.Tests.MediaProcessing.Palettes;
 /// entity. ColorPaletteJob no-ops on those, so queueing them only burns queue
 /// throughput. These pin the gate that keeps them out of the queue.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class JobDispatcherPaletteGateTests
 {
     /// <summary>
@@ -34,13 +34,13 @@ public class JobDispatcherPaletteGateTests
 
         protected override bool NeedsPalette(string entityType, string entityId)
         {
-            GateAsked.Add((entityType, entityId));
+            GateAsked.Add(item: (entityType, entityId));
             return needsPalette;
         }
 
         public override void Dispatch(IShouldQueue job, string onQueue, int priority)
         {
-            Dispatched.Add(("dispatched", onQueue));
+            Dispatched.Add(item: ("dispatched", onQueue));
         }
     }
 
@@ -49,9 +49,9 @@ public class JobDispatcherPaletteGateTests
     {
         RecordingDispatcher dispatcher = new(needsPalette: false);
 
-        dispatcher.DispatchColorPaletteJob("person", "1445824");
+        dispatcher.DispatchColorPaletteJob(entityType: "person", entityId: "1445824");
 
-        Assert.Empty(dispatcher.Dispatched);
+        Assert.Empty(collection: dispatcher.Dispatched);
     }
 
     [Fact]
@@ -59,10 +59,10 @@ public class JobDispatcherPaletteGateTests
     {
         RecordingDispatcher dispatcher = new(needsPalette: true);
 
-        dispatcher.DispatchColorPaletteJob("person", "1445824");
+        dispatcher.DispatchColorPaletteJob(entityType: "person", entityId: "1445824");
 
-        Assert.Single(dispatcher.Dispatched);
-        Assert.Equal("palette", dispatcher.Dispatched[0].EntityId);
+        Assert.Single(collection: dispatcher.Dispatched);
+        Assert.Equal(expected: "palette", actual: dispatcher.Dispatched[index: 0].EntityId);
     }
 
     [Fact]
@@ -70,10 +70,10 @@ public class JobDispatcherPaletteGateTests
     {
         RecordingDispatcher dispatcher = new(needsPalette: true);
 
-        dispatcher.DispatchColorPaletteJob("episode", "550");
+        dispatcher.DispatchColorPaletteJob(entityType: "episode", entityId: "550");
 
-        Assert.Single(dispatcher.GateAsked);
-        Assert.Equal(("episode", "550"), dispatcher.GateAsked[0]);
+        Assert.Single(collection: dispatcher.GateAsked);
+        Assert.Equal(expected: ("episode", "550"), actual: dispatcher.GateAsked[index: 0]);
     }
 
     [Fact]
@@ -83,10 +83,10 @@ public class JobDispatcherPaletteGateTests
         // cast dispatched again for every title they appear in.
         RecordingDispatcher painted = new(needsPalette: false);
         foreach (string id in new[] { "1", "2", "3", "4", "5" })
-            painted.DispatchColorPaletteJob("person", id);
+            painted.DispatchColorPaletteJob(entityType: "person", entityId: id);
 
-        Assert.Empty(painted.Dispatched);
-        Assert.Equal(5, painted.GateAsked.Count);
+        Assert.Empty(collection: painted.Dispatched);
+        Assert.Equal(expected: 5, actual: painted.GateAsked.Count);
     }
 
     [Fact]
@@ -96,9 +96,9 @@ public class JobDispatcherPaletteGateTests
         // never be the thing that silently drops work — it defers to the job.
         JobDispatcher dispatcher = new();
 
-        bool needs = InvokeNeedsPalette(dispatcher, "not-a-real-entity-type", "1");
+        bool needs = InvokeNeedsPalette(dispatcher: dispatcher, entityType: "not-a-real-entity-type", entityId: "1");
 
-        Assert.True(needs);
+        Assert.True(condition: needs);
     }
 
     private static bool InvokeNeedsPalette(
@@ -108,10 +108,10 @@ public class JobDispatcherPaletteGateTests
     )
     {
         System.Reflection.MethodInfo method = typeof(JobDispatcher).GetMethod(
-            "NeedsPalette",
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic
+            name: "NeedsPalette",
+            bindingAttr: System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic
         )!;
 
-        return (bool)method.Invoke(dispatcher, [entityType, entityId])!;
+        return (bool)method.Invoke(obj: dispatcher, parameters: [entityType, entityId])!;
     }
 }

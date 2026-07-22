@@ -46,27 +46,27 @@ public static partial class EncodeFidelityOracle
         if (video is null)
             return;
 
-        string tag = ((string?)video["codec_tag_string"] ?? string.Empty).ToLowerInvariant();
-        bool taggedDv = DolbyVisionTags.Contains(tag);
-        bool hasRpu = output.FirstFrameSideData.Any(sd =>
+        string tag = ((string?)video[propertyName: "codec_tag_string"] ?? string.Empty).ToLowerInvariant();
+        bool taggedDv = DolbyVisionTags.Contains(value: tag);
+        bool hasRpu = output.FirstFrameSideData.Any(predicate: sd =>
         {
-            string type = ((string?)sd["side_data_type"] ?? string.Empty).ToLowerInvariant();
-            return type.Contains("dolby vision")
-                || type.Contains("dovi")
-                || (int?)sd["rpu_present_flag"] == 1;
+            string type = ((string?)sd[propertyName: "side_data_type"] ?? string.Empty).ToLowerInvariant();
+            return type.Contains(value: "dolby vision")
+                || type.Contains(value: "dovi")
+                || (int?)sd[propertyName: "rpu_present_flag"] == 1;
         });
 
         if (taggedDv && !hasRpu)
             violations.Add(
-                $"DV-tag-without-RPU: codec_tag '{tag}' claims Dolby Vision but no DOVI "
-                    + "configuration/RPU side-data is present — a re-encode that strips the RPU "
-                    + "MUST be tagged hvc1/hev1. This is the reported corrupt-playback case."
+                item: $"DV-tag-without-RPU: codec_tag '{tag}' claims Dolby Vision but no DOVI "
+                      + "configuration/RPU side-data is present — a re-encode that strips the RPU "
+                      + "MUST be tagged hvc1/hev1. This is the reported corrupt-playback case."
             );
 
         if (!taggedDv && hasRpu)
             violations.Add(
-                $"DV-RPU-without-tag: an RPU is present but codec_tag '{tag}' is not a Dolby "
-                    + "Vision tag — the DV signalling is inconsistent."
+                item: $"DV-RPU-without-tag: an RPU is present but codec_tag '{tag}' is not a Dolby "
+                      + "Vision tag — the DV signalling is inconsistent."
             );
     }
 
@@ -83,24 +83,24 @@ public static partial class EncodeFidelityOracle
         if (video is null)
             return;
 
-        string transfer = (string?)video["color_transfer"] ?? string.Empty;
-        if (!string.Equals(transfer, "smpte2084", StringComparison.OrdinalIgnoreCase))
+        string transfer = (string?)video[propertyName: "color_transfer"] ?? string.Empty;
+        if (!string.Equals(a: transfer, b: "smpte2084", comparisonType: StringComparison.OrdinalIgnoreCase))
             return; // not HDR10 — HLG/SDR checked elsewhere
 
-        string primaries = (string?)video["color_primaries"] ?? string.Empty;
-        string space = (string?)video["color_space"] ?? string.Empty;
-        string pixFmt = (string?)video["pix_fmt"] ?? string.Empty;
+        string primaries = (string?)video[propertyName: "color_primaries"] ?? string.Empty;
+        string space = (string?)video[propertyName: "color_space"] ?? string.Empty;
+        string pixFmt = (string?)video[propertyName: "pix_fmt"] ?? string.Empty;
 
-        if (!string.Equals(primaries, "bt2020", StringComparison.OrdinalIgnoreCase))
-            violations.Add($"HDR10-primaries: color_primaries='{primaries}', expected bt2020.");
-        if (!string.Equals(space, "bt2020nc", StringComparison.OrdinalIgnoreCase))
-            violations.Add($"HDR10-space: color_space='{space}', expected bt2020nc.");
-        if (!pixFmt.Contains("10"))
-            violations.Add($"HDR10-bitdepth: pix_fmt='{pixFmt}' is not 10-bit.");
-        if (!output.HasSideData("Mastering display metadata"))
+        if (!string.Equals(a: primaries, b: "bt2020", comparisonType: StringComparison.OrdinalIgnoreCase))
+            violations.Add(item: $"HDR10-primaries: color_primaries='{primaries}', expected bt2020.");
+        if (!string.Equals(a: space, b: "bt2020nc", comparisonType: StringComparison.OrdinalIgnoreCase))
+            violations.Add(item: $"HDR10-space: color_space='{space}', expected bt2020nc.");
+        if (!pixFmt.Contains(value: "10"))
+            violations.Add(item: $"HDR10-bitdepth: pix_fmt='{pixFmt}' is not 10-bit.");
+        if (!output.HasSideData(sideDataType: "Mastering display metadata"))
             violations.Add(
-                "HDR10-mastering-display: PQ transfer but no Mastering-display side-data "
-                    + "(dropped on re-encode → washed-out HDR)."
+                item: "HDR10-mastering-display: PQ transfer but no Mastering-display side-data "
+                      + "(dropped on re-encode → washed-out HDR)."
             );
     }
 
@@ -116,14 +116,14 @@ public static partial class EncodeFidelityOracle
         JObject? video = output.PrimaryVideo;
         if (video is null)
             return;
-        if ((string?)video["codec_name"] != "hevc")
+        if ((string?)video[propertyName: "codec_name"] != "hevc")
             return;
 
-        string tag = ((string?)video["codec_tag_string"] ?? string.Empty).ToLowerInvariant();
+        string tag = ((string?)video[propertyName: "codec_tag_string"] ?? string.Empty).ToLowerInvariant();
         if (tag == "hev1")
             violations.Add(
-                "HEVC-tag-hev1: HLS fMP4 requires hvc1 (params in init segment); hev1 is "
-                    + "refused by Safari/AVFoundation."
+                item: "HEVC-tag-hev1: HLS fMP4 requires hvc1 (params in init segment); hev1 is "
+                      + "refused by Safari/AVFoundation."
             );
     }
 
@@ -136,10 +136,10 @@ public static partial class EncodeFidelityOracle
     /// </summary>
     public static void CheckMasterPlaylist(string masterPlaylistText, List<string> violations)
     {
-        MatchCollection streamInfs = StreamInfRegex().Matches(masterPlaylistText);
+        MatchCollection streamInfs = StreamInfRegex().Matches(input: masterPlaylistText);
         if (streamInfs.Count == 0)
         {
-            violations.Add("HLS-master-empty: no EXT-X-STREAM-INF variants in the master.");
+            violations.Add(item: "HLS-master-empty: no EXT-X-STREAM-INF variants in the master.");
             return;
         }
 
@@ -147,28 +147,28 @@ public static partial class EncodeFidelityOracle
         foreach (Match m in streamInfs)
         {
             string line = m.Value;
-            Match bw = Regex.Match(line, @"BANDWIDTH=(\d+)");
+            Match bw = Regex.Match(input: line, pattern: @"BANDWIDTH=(\d+)");
             if (!bw.Success)
             {
-                violations.Add($"HLS-missing-bandwidth: variant has no BANDWIDTH → {Trim(line)}");
+                violations.Add(item: $"HLS-missing-bandwidth: variant has no BANDWIDTH → {Trim(line: line)}");
                 continue;
             }
-            bandwidths.Add(long.Parse(bw.Groups[1].Value));
+            bandwidths.Add(item: long.Parse(s: bw.Groups[groupnum: 1].Value));
 
-            if (!line.Contains("CODECS="))
-                violations.Add($"HLS-missing-codecs: variant has no CODECS → {Trim(line)}");
-            if (!line.Contains("VIDEO-RANGE="))
+            if (!line.Contains(value: "CODECS="))
+                violations.Add(item: $"HLS-missing-codecs: variant has no CODECS → {Trim(line: line)}");
+            if (!line.Contains(value: "VIDEO-RANGE="))
                 violations.Add(
-                    $"HLS-missing-video-range: variant has no VIDEO-RANGE → {Trim(line)}"
+                    item: $"HLS-missing-video-range: variant has no VIDEO-RANGE → {Trim(line: line)}"
                 );
 
-            CheckHevcCodecsLevelForResolution(line, violations);
+            CheckHevcCodecsLevelForResolution(streamInf: line, violations: violations);
         }
 
         if (bandwidths.Count > 1 && bandwidths.Distinct().Count() == 1)
             violations.Add(
-                $"HLS-identical-bandwidth: all {bandwidths.Count} variants advertise the same "
-                    + $"BANDWIDTH={bandwidths[0]} — ABR cannot pick by bitrate (the MapLabel-collision bug)."
+                item: $"HLS-identical-bandwidth: all {bandwidths.Count} variants advertise the same "
+                      + $"BANDWIDTH={bandwidths[index: 0]} — ABR cannot pick by bitrate (the MapLabel-collision bug)."
             );
     }
 
@@ -182,13 +182,13 @@ public static partial class EncodeFidelityOracle
     /// </summary>
     private static void CheckHevcCodecsLevelForResolution(string streamInf, List<string> violations)
     {
-        Match res = Regex.Match(streamInf, @"RESOLUTION=(\d+)x(\d+)");
-        Match hevc = Regex.Match(streamInf, @"hvc1\.\d+\.[0-9A-Fa-f]+\.L(\d+)");
+        Match res = Regex.Match(input: streamInf, pattern: @"RESOLUTION=(\d+)x(\d+)");
+        Match hevc = Regex.Match(input: streamInf, pattern: @"hvc1\.\d+\.[0-9A-Fa-f]+\.L(\d+)");
         if (!res.Success || !hevc.Success)
             return;
 
-        long lumaPs = long.Parse(res.Groups[1].Value) * long.Parse(res.Groups[2].Value);
-        int levelIdc = int.Parse(hevc.Groups[1].Value);
+        long lumaPs = long.Parse(s: res.Groups[groupnum: 1].Value) * long.Parse(s: res.Groups[groupnum: 2].Value);
+        int levelIdc = int.Parse(s: hevc.Groups[groupnum: 1].Value);
 
         // HEVC Annex A MaxLumaPs → the lowest level_idc that can hold lumaPs.
         int floorIdc = lumaPs switch
@@ -201,8 +201,8 @@ public static partial class EncodeFidelityOracle
 
         if (levelIdc < floorIdc)
             violations.Add(
-                $"HLS-codecs-level-too-low: {res.Groups[1].Value}x{res.Groups[2].Value} variant "
-                    + $"advertises HEVC L{levelIdc} but needs ≥ L{floorIdc} for that resolution → {Trim(streamInf)}"
+                item: $"HLS-codecs-level-too-low: {res.Groups[groupnum: 1].Value}x{res.Groups[groupnum: 2].Value} variant "
+                      + $"advertises HEVC L{levelIdc} but needs ≥ L{floorIdc} for that resolution → {Trim(line: streamInf)}"
             );
     }
 
@@ -223,43 +223,43 @@ public static partial class EncodeFidelityOracle
 
         if (outAudio.Count < srcAudio.Count)
             violations.Add(
-                $"audio-tracks-dropped: source has {srcAudio.Count} audio track(s), output has "
-                    + $"{outAudio.Count} — a track was dropped (keep-all unless a policy explicitly prunes)."
+                item: $"audio-tracks-dropped: source has {srcAudio.Count} audio track(s), output has "
+                      + $"{outAudio.Count} — a track was dropped (keep-all unless a policy explicitly prunes)."
             );
 
         foreach (JObject a in outAudio)
         {
-            string lang = Lang(a);
+            string lang = Lang(stream: a);
             if (lang == "und")
             {
                 // Only a violation if a matching source track HAD a language.
-                if (srcAudio.Any(s => Lang(s) != "und"))
+                if (srcAudio.Any(predicate: s => Lang(stream: s) != "und"))
                     violations.Add(
-                        "audio-language-stripped: an output audio track has language 'und' while "
-                            + "the source carried language tags."
+                        item: "audio-language-stripped: an output audio track has language 'und' while "
+                              + "the source carried language tags."
                     );
             }
         }
 
-        int outDefaults = outAudio.Count(a => (int?)a["disposition"]?["default"] == 1);
+        int outDefaults = outAudio.Count(predicate: a => (int?)a[propertyName: "disposition"]?[key: "default"] == 1);
         if (outAudio.Count > 0 && outDefaults != 1)
             violations.Add(
-                $"audio-default-disposition: expected exactly one default audio track, found {outDefaults}."
+                item: $"audio-default-disposition: expected exactly one default audio track, found {outDefaults}."
             );
 
         // Channel-layout exactness for the primary track (best-effort by index 0).
         if (srcAudio.Count > 0 && outAudio.Count > 0)
         {
-            string srcLayout = (string?)srcAudio[0]["channel_layout"] ?? string.Empty;
-            string outLayout = (string?)outAudio[0]["channel_layout"] ?? string.Empty;
+            string srcLayout = (string?)srcAudio[index: 0][propertyName: "channel_layout"] ?? string.Empty;
+            string outLayout = (string?)outAudio[index: 0][propertyName: "channel_layout"] ?? string.Empty;
             // Only assert when the primary track is a copy (same codec); a downmix
             // legitimately changes the layout.
             bool sameCodec =
-                (string?)srcAudio[0]["codec_name"] == (string?)outAudio[0]["codec_name"];
+                (string?)srcAudio[index: 0][propertyName: "codec_name"] == (string?)outAudio[index: 0][propertyName: "codec_name"];
             if (sameCodec && srcLayout.Length > 0 && outLayout != srcLayout)
                 violations.Add(
-                    $"audio-channel-layout: copied primary audio layout changed '{srcLayout}' → "
-                        + $"'{outLayout}' (5.1(side) vs 5.1 mismatches break channel routing)."
+                    item: $"audio-channel-layout: copied primary audio layout changed '{srcLayout}' → "
+                          + $"'{outLayout}' (5.1(side) vs 5.1 mismatches break channel routing)."
                 );
         }
     }
@@ -273,24 +273,24 @@ public static partial class EncodeFidelityOracle
     )
     {
         List<JObject> srcSubs = source
-            .SubtitleStreams.Where(s => IsTextSub(s) || IsBitmapSub(s))
+            .SubtitleStreams.Where(predicate: s => IsTextSub(s: s) || IsBitmapSub(s: s))
             .ToList();
         List<JObject> outSubs = output.SubtitleStreams.ToList();
 
         // Text subs must survive (bitmap subs may be routed/burned, so only warn
         // when ALL subtitle tracks vanished and the source had text subs).
-        int srcText = source.SubtitleStreams.Count(IsTextSub);
+        int srcText = source.SubtitleStreams.Count(predicate: IsTextSub);
         if (srcText > 0 && outSubs.Count == 0)
             violations.Add(
-                $"subtitle-tracks-dropped: source had {srcText} text subtitle track(s), output has 0."
+                item: $"subtitle-tracks-dropped: source had {srcText} text subtitle track(s), output has 0."
             );
 
         foreach (JObject s in outSubs)
         {
-            if (Lang(s) == "und" && source.SubtitleStreams.Any(x => Lang(x) != "und"))
+            if (Lang(stream: s) == "und" && source.SubtitleStreams.Any(predicate: x => Lang(stream: x) != "und"))
                 violations.Add(
-                    "subtitle-language-stripped: an output subtitle track is 'und' while the "
-                        + "source carried subtitle languages."
+                    item: "subtitle-language-stripped: an output subtitle track is 'und' while the "
+                          + "source carried subtitle languages."
                 );
         }
     }
@@ -305,7 +305,7 @@ public static partial class EncodeFidelityOracle
     {
         if (source.Chapters.Count > 0 && output.Chapters.Count == 0)
             violations.Add(
-                $"chapters-dropped: source had {source.Chapters.Count} chapters, output has none."
+                item: $"chapters-dropped: source had {source.Chapters.Count} chapters, output has none."
             );
     }
 
@@ -324,21 +324,21 @@ public static partial class EncodeFidelityOracle
         if (video is null)
             return;
 
-        string transfer = ((string?)video["color_transfer"] ?? string.Empty).ToLowerInvariant();
-        string primaries = ((string?)video["color_primaries"] ?? string.Empty).ToLowerInvariant();
+        string transfer = ((string?)video[propertyName: "color_transfer"] ?? string.Empty).ToLowerInvariant();
+        string primaries = ((string?)video[propertyName: "color_primaries"] ?? string.Empty).ToLowerInvariant();
 
         // Heuristic for "this is meant to be SDR": BT.709 primaries. If a BT.709
         // stream still advertises a PQ/HLG transfer, the colour re-stamp was missed.
         bool looksSdr = primaries == "bt709";
         if (looksSdr && transfer is "smpte2084" or "arib-std-b67")
             violations.Add(
-                $"SDR-residual-hdr-transfer: bt709 primaries but color_transfer='{transfer}' — "
-                    + "an SDR output must not keep an HDR transfer characteristic."
+                item: $"SDR-residual-hdr-transfer: bt709 primaries but color_transfer='{transfer}' — "
+                      + "an SDR output must not keep an HDR transfer characteristic."
             );
-        if (looksSdr && output.HasSideData("Mastering display metadata"))
+        if (looksSdr && output.HasSideData(sideDataType: "Mastering display metadata"))
             violations.Add(
-                "SDR-residual-mastering-display: an SDR (bt709) output still carries HDR "
-                    + "mastering-display side-data."
+                item: "SDR-residual-mastering-display: an SDR (bt709) output still carries HDR "
+                      + "mastering-display side-data."
             );
     }
 
@@ -357,21 +357,21 @@ public static partial class EncodeFidelityOracle
         if (video is null || audio is null)
             return;
 
-        double vStart = StartTime(video);
-        double aStart = StartTime(audio);
+        double vStart = StartTime(stream: video);
+        double aStart = StartTime(stream: audio);
 
-        if (Math.Abs(vStart) > 0.5)
+        if (Math.Abs(value: vStart) > 0.5)
             violations.Add(
-                $"av-video-start-offset: primary video start_time={vStart:F3}s (expected ≈0)."
+                item: $"av-video-start-offset: primary video start_time={vStart:F3}s (expected ≈0)."
             );
-        if (Math.Abs(aStart) > 0.5)
+        if (Math.Abs(value: aStart) > 0.5)
             violations.Add(
-                $"av-audio-start-offset: primary audio start_time={aStart:F3}s (expected ≈0)."
+                item: $"av-audio-start-offset: primary audio start_time={aStart:F3}s (expected ≈0)."
             );
-        if (Math.Abs(vStart - aStart) > 0.1)
+        if (Math.Abs(value: vStart - aStart) > 0.1)
             violations.Add(
-                $"av-sync-drift: video/audio start_time differ by {Math.Abs(vStart - aStart):F3}s "
-                    + "(>100ms → lip-sync drift on edit-list-ignoring players)."
+                item: $"av-sync-drift: video/audio start_time differ by {Math.Abs(value: vStart - aStart):F3}s "
+                      + "(>100ms → lip-sync drift on edit-list-ignoring players)."
             );
     }
 
@@ -394,18 +394,18 @@ public static partial class EncodeFidelityOracle
         if (src is null || outp is null)
             return;
 
-        string srcDar = (string?)src["display_aspect_ratio"] ?? string.Empty;
-        string outDar = (string?)outp["display_aspect_ratio"] ?? string.Empty;
+        string srcDar = (string?)src[propertyName: "display_aspect_ratio"] ?? string.Empty;
+        string outDar = (string?)outp[propertyName: "display_aspect_ratio"] ?? string.Empty;
         if (srcDar.Length == 0 || srcDar is "0:1" or "N/A")
             return; // source DAR unknown — nothing to preserve
 
         // Compare DAR as a ratio within tolerance (16:9 == 1.778).
-        double srcRatio = Ratio(srcDar);
-        double outRatio = Ratio(outDar);
-        if (srcRatio > 0 && (outRatio <= 0 || Math.Abs(srcRatio - outRatio) / srcRatio > 0.02))
+        double srcRatio = Ratio(aspect: srcDar);
+        double outRatio = Ratio(aspect: outDar);
+        if (srcRatio > 0 && (outRatio <= 0 || Math.Abs(value: srcRatio - outRatio) / srcRatio > 0.02))
             violations.Add(
-                $"anamorphic-dar-lost: source display_aspect_ratio='{srcDar}' but output='{outDar}' "
-                    + "— anamorphic geometry collapsed (SAR reset to 1:1 without a compensating scale)."
+                item: $"anamorphic-dar-lost: source display_aspect_ratio='{srcDar}' but output='{outDar}' "
+                      + "— anamorphic geometry collapsed (SAR reset to 1:1 without a compensating scale)."
             );
     }
 
@@ -421,12 +421,12 @@ public static partial class EncodeFidelityOracle
         List<string> violations
     )
     {
-        int srcRot = Rotation(source);
+        int srcRot = Rotation(media: source);
         if (srcRot == 0)
             return;
 
-        int outRot = Rotation(output);
-        bool dimsSwapped = DimsSwapped(source.PrimaryVideo, output.PrimaryVideo);
+        int outRot = Rotation(media: output);
+        bool dimsSwapped = DimsSwapped(a: source.PrimaryVideo, b: output.PrimaryVideo);
 
         // Preserved (remux): output keeps the same rotation. Applied (transcode):
         // output rotation is 0 AND width/height swapped for 90/270. Anything else
@@ -435,8 +435,8 @@ public static partial class EncodeFidelityOracle
         bool applied = outRot == 0 && (srcRot % 180 == 0 || dimsSwapped);
         if (!preserved && !applied)
             violations.Add(
-                $"rotation-lost-or-doubled: source rotation={srcRot}° but output rotation={outRot}° "
-                    + $"(dims swapped={dimsSwapped}) — plays sideways or double-rotated."
+                item: $"rotation-lost-or-doubled: source rotation={srcRot}° but output rotation={outRot}° "
+                      + $"(dims swapped={dimsSwapped}) — plays sideways or double-rotated."
             );
     }
 
@@ -453,47 +453,47 @@ public static partial class EncodeFidelityOracle
     )
     {
         List<string> violations = [];
-        CheckDolbyVisionTagCoherence(output, violations);
-        CheckHdr10Signaling(output, violations);
-        CheckSdrColorConsistency(output, violations);
-        CheckHevcFmp4Tag(output, violations);
-        CheckAvStartAlignment(output, violations);
-        CheckAudioFidelity(source, output, violations);
-        CheckSubtitleFidelity(source, output, violations);
-        CheckChaptersPreserved(source, output, violations);
-        CheckAnamorphicPreserved(source, output, violations);
-        CheckRotationPreserved(source, output, violations);
+        CheckDolbyVisionTagCoherence(output: output, violations: violations);
+        CheckHdr10Signaling(output: output, violations: violations);
+        CheckSdrColorConsistency(output: output, violations: violations);
+        CheckHevcFmp4Tag(output: output, violations: violations);
+        CheckAvStartAlignment(output: output, violations: violations);
+        CheckAudioFidelity(source: source, output: output, violations: violations);
+        CheckSubtitleFidelity(source: source, output: output, violations: violations);
+        CheckChaptersPreserved(source: source, output: output, violations: violations);
+        CheckAnamorphicPreserved(source: source, output: output, violations: violations);
+        CheckRotationPreserved(source: source, output: output, violations: violations);
         if (masterPlaylistText is not null)
-            CheckMasterPlaylist(masterPlaylistText, violations);
+            CheckMasterPlaylist(masterPlaylistText: masterPlaylistText, violations: violations);
         return violations;
     }
 
     private static double StartTime(JObject stream) =>
         double.TryParse(
-            (string?)stream["start_time"],
-            System.Globalization.NumberStyles.Float,
-            System.Globalization.CultureInfo.InvariantCulture,
-            out double v
+            s: (string?)stream[propertyName: "start_time"],
+            style: System.Globalization.NumberStyles.Float,
+            provider: System.Globalization.CultureInfo.InvariantCulture,
+            result: out double v
         )
             ? v
             : 0.0;
 
     private static double Ratio(string aspect)
     {
-        string[] parts = aspect.Split(':');
+        string[] parts = aspect.Split(separator: ':');
         if (
             parts.Length == 2
             && double.TryParse(
-                parts[0],
-                System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture,
-                out double w
+                s: parts[0],
+                style: System.Globalization.NumberStyles.Float,
+                provider: System.Globalization.CultureInfo.InvariantCulture,
+                result: out double w
             )
             && double.TryParse(
-                parts[1],
-                System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture,
-                out double h
+                s: parts[1],
+                style: System.Globalization.NumberStyles.Float,
+                provider: System.Globalization.CultureInfo.InvariantCulture,
+                result: out double h
             )
             && h != 0
         )
@@ -505,13 +505,13 @@ public static partial class EncodeFidelityOracle
     {
         // ffmpeg exposes rotation on the Display Matrix side-data (negative =
         // clockwise); normalise to 0..359.
-        JObject? matrix = media.SideData("Display Matrix");
-        if (matrix?["rotation"] is not null && int.TryParse((string?)matrix["rotation"], out int r))
+        JObject? matrix = media.SideData(sideDataType: "Display Matrix");
+        if (matrix?[propertyName: "rotation"] is not null && int.TryParse(s: (string?)matrix[propertyName: "rotation"], result: out int r))
             return ((r % 360) + 360) % 360;
 
         // Legacy tag fallback.
-        string? tag = (string?)media.PrimaryVideo?["tags"]?["rotate"];
-        if (int.TryParse(tag, out int t))
+        string? tag = (string?)media.PrimaryVideo?[propertyName: "tags"]?[key: "rotate"];
+        if (int.TryParse(s: tag, result: out int t))
             return ((t % 360) + 360) % 360;
         return 0;
     }
@@ -520,23 +520,23 @@ public static partial class EncodeFidelityOracle
     {
         if (a is null || b is null)
             return false;
-        int aw = (int?)a["width"] ?? 0;
-        int ah = (int?)a["height"] ?? 0;
-        int bw = (int?)b["width"] ?? 0;
-        int bh = (int?)b["height"] ?? 0;
+        int aw = (int?)a[propertyName: "width"] ?? 0;
+        int ah = (int?)a[propertyName: "height"] ?? 0;
+        int bw = (int?)b[propertyName: "width"] ?? 0;
+        int bh = (int?)b[propertyName: "height"] ?? 0;
         return aw == bh && ah == bw && aw != ah;
     }
 
-    private static string Lang(JObject stream) => (string?)stream["tags"]?["language"] ?? "und";
+    private static string Lang(JObject stream) => (string?)stream[propertyName: "tags"]?[key: "language"] ?? "und";
 
     private static bool IsTextSub(JObject s) =>
-        (string?)s["codec_name"] is "mov_text" or "subrip" or "ass" or "ssa" or "webvtt";
+        (string?)s[propertyName: "codec_name"] is "mov_text" or "subrip" or "ass" or "ssa" or "webvtt";
 
     private static bool IsBitmapSub(JObject s) =>
-        (string?)s["codec_name"] is "hdmv_pgs_subtitle" or "dvd_subtitle" or "dvb_subtitle";
+        (string?)s[propertyName: "codec_name"] is "hdmv_pgs_subtitle" or "dvd_subtitle" or "dvb_subtitle";
 
     private static string Trim(string line) => line.Length > 90 ? line[..90] + "…" : line;
 
-    [GeneratedRegex(@"#EXT-X-STREAM-INF:[^\r\n]+", RegexOptions.Multiline)]
+    [GeneratedRegex(pattern: @"#EXT-X-STREAM-INF:[^\r\n]+", options: RegexOptions.Multiline)]
     private static partial Regex StreamInfRegex();
 }

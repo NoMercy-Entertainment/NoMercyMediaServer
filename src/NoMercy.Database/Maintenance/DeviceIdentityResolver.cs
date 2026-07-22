@@ -88,22 +88,22 @@ public static class DeviceIdentityResolver
         if (!(inContainer ?? Screen.IsDocker))
             return hardwareId;
 
-        Configuration? existing = db.Configuration.FirstOrDefault(c => c.Key == ConfigKey);
+        Configuration? existing = db.Configuration.FirstOrDefault(predicate: c => c.Key == ConfigKey);
         if (
             existing is not null
-            && Guid.TryParse(existing.Value, out Guid persistedId)
-            && !KnownDegenerateDeviceIds.IsDegenerate(persistedId)
+            && Guid.TryParse(input: existing.Value, result: out Guid persistedId)
+            && !KnownDegenerateDeviceIds.IsDegenerate(id: persistedId)
         )
             return persistedId;
 
         Guid resolvedId;
 
-        if (KnownDegenerateDeviceIds.IsDegenerate(hardwareId))
+        if (KnownDegenerateDeviceIds.IsDegenerate(id: hardwareId))
         {
             resolvedId = Guid.NewGuid();
             Logger.Setup(
-                $"Device id {hardwareId} is a known non-unique value; migrating to unique identity {resolvedId}.",
-                LogEventLevel.Warning
+                message: $"Device id {hardwareId} is a known non-unique value; migrating to unique identity {resolvedId}.",
+                level: LogEventLevel.Warning
             );
 
             // A cert issued for the old (shared, non-unique) id doesn't cover the new
@@ -113,17 +113,17 @@ public static class DeviceIdentityResolver
             // make HasValidCertificate() keep reporting "registered" and BootOrchestrator
             // would skip re-registration under the new identity. Auth tokens are
             // deliberately left untouched so re-registration is non-interactive.
-            InvalidateStaleCertificate(db);
+            InvalidateStaleCertificate(db: db);
         }
         else
         {
-            resolvedId = HasEvidenceOfPriorRegistration(db) ? hardwareId : Guid.NewGuid();
+            resolvedId = HasEvidenceOfPriorRegistration(db: db) ? hardwareId : Guid.NewGuid();
         }
 
         if (existing is not null)
             existing.Value = resolvedId.ToString();
         else
-            db.Configuration.Add(new() { Key = ConfigKey, Value = resolvedId.ToString() });
+            db.Configuration.Add(entity: new() { Key = ConfigKey, Value = resolvedId.ToString() });
 
         db.SaveChanges();
 
@@ -133,15 +133,15 @@ public static class DeviceIdentityResolver
     private static void InvalidateStaleCertificate(AppDbContext db)
     {
         List<Configuration> staleCertRows = db
-            .Configuration.Where(c => c.Key == SslCertificateKey || c.Key == SslPrivateKeyKey)
+            .Configuration.Where(predicate: c => c.Key == SslCertificateKey || c.Key == SslPrivateKeyKey)
             .ToList();
 
         if (staleCertRows.Count > 0)
-            db.Configuration.RemoveRange(staleCertRows);
+            db.Configuration.RemoveRange(entities: staleCertRows);
     }
 
     private static bool HasEvidenceOfPriorRegistration(AppDbContext db)
     {
-        return db.Configuration.Any(c => c.Key == SslCertificateKey || c.Key == SslPrivateKeyKey);
+        return db.Configuration.Any(predicate: c => c.Key == SslCertificateKey || c.Key == SslPrivateKeyKey);
     }
 }

@@ -45,7 +45,7 @@ public sealed class ServerReadinessGate : IServerReadinessGate
     // IHostedService.StartAsync completions (which precede ApplicationStarted)
     // have had a chance to call AddSignal before any waiter snapshots the list.
     private readonly TaskCompletionSource _sealed = new(
-        TaskCreationOptions.RunContinuationsAsynchronously
+        creationOptions: TaskCreationOptions.RunContinuationsAsynchronously
     );
 
     // Resolved once the first caller has either observed every signal as
@@ -54,7 +54,7 @@ public sealed class ServerReadinessGate : IServerReadinessGate
     // Task.WhenAny over the same signal set, and threadpool starvation could
     // hold one worker's continuation for minutes while another already passed.
     private readonly TaskCompletionSource _resolvedTcs = new(
-        TaskCreationOptions.RunContinuationsAsynchronously
+        creationOptions: TaskCreationOptions.RunContinuationsAsynchronously
     );
 
     // 5 minutes — covers a full hardware benchmark sweep on a cold boot
@@ -71,14 +71,14 @@ public sealed class ServerReadinessGate : IServerReadinessGate
     {
         _logger = logger;
 
-        TaskCompletionSource startedTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        lifetime.ApplicationStarted.Register(() =>
+        TaskCompletionSource startedTcs = new(creationOptions: TaskCreationOptions.RunContinuationsAsynchronously);
+        lifetime.ApplicationStarted.Register(callback: () =>
         {
             startedTcs.TrySetResult();
             // Seal one async tick later — gives any synchronous AddSignal
             // calls that follow ApplicationStarted a chance to register
             // before WaitCoreAsync snapshots the list.
-            Task.Run(() => _sealed.TrySetResult());
+            Task.Run(function: () => _sealed.TrySetResult());
         });
 
         // If ApplicationStarted already fired (e.g. re-entrant call in tests)
@@ -91,7 +91,7 @@ public sealed class ServerReadinessGate : IServerReadinessGate
 
         lock (_lock)
         {
-            _signals.Add(("host-started", startedTcs.Task));
+            _signals.Add(item: ("host-started", startedTcs.Task));
         }
     }
 
@@ -106,8 +106,8 @@ public sealed class ServerReadinessGate : IServerReadinessGate
             {
                 // Gate already sealed — caller registered after the snapshot window.
                 _logger.LogWarning(
-                    "Server readiness: signal '{Name}' added after gate sealed — ignored",
-                    name
+                    message: "Server readiness: signal '{Name}' added after gate sealed — ignored",
+                    args: name
                 );
                 return;
             }
@@ -116,22 +116,22 @@ public sealed class ServerReadinessGate : IServerReadinessGate
             {
                 // Gate fully resolved — caller registered too late.
                 _logger.LogWarning(
-                    "Server readiness: signal '{Name}' added after gate resolved — ignored",
-                    name
+                    message: "Server readiness: signal '{Name}' added after gate resolved — ignored",
+                    args: name
                 );
                 return;
             }
 
-            _signals.Add((name, signal));
+            _signals.Add(item: (name, signal));
         }
     }
 
     public Task WaitForReadyAsync(CancellationToken ct)
     {
-        if (Interlocked.CompareExchange(ref _watcherStarted, 1, 0) == 0)
-            _ = Task.Run(() => WatchAsync(ct));
+        if (Interlocked.CompareExchange(location1: ref _watcherStarted, value: 1, comparand: 0) == 0)
+            _ = Task.Run(function: () => WatchAsync(ct: ct));
 
-        return _resolvedTcs.Task.WaitAsync(ct);
+        return _resolvedTcs.Task.WaitAsync(cancellationToken: ct);
     }
 
     private async Task WatchAsync(CancellationToken ct)
@@ -140,7 +140,7 @@ public sealed class ServerReadinessGate : IServerReadinessGate
         {
             // Step 1: wait until the registration window closes so the snapshot
             // includes every signal that was added during hosted service startup.
-            await _sealed.Task.WaitAsync(ct).ConfigureAwait(false);
+            await _sealed.Task.WaitAsync(cancellationToken: ct).ConfigureAwait(continueOnCapturedContext: false);
 
             // Step 2: snapshot the now-final list.
             (string Name, Task Signal)[] snapshot;
@@ -149,35 +149,33 @@ public sealed class ServerReadinessGate : IServerReadinessGate
                 snapshot = [.. _signals];
             }
 
-            string names = string.Join(", ", snapshot.Select(s => s.Name));
-            _logger.LogInformation("Server readiness: queues waiting for [{Names}]", names);
+            string names = string.Join(separator: ", ", values: snapshot.Select(selector: s => s.Name));
+            _logger.LogInformation(message: "Server readiness: queues waiting for [{Names}]", args: names);
 
-            Task allReady = Task.WhenAll(snapshot.Select(s => s.Signal));
-            Task timeout = Task.Delay(TimeSpan.FromSeconds(TimeoutSeconds), ct);
+            Task allReady = Task.WhenAll(tasks: snapshot.Select(selector: s => s.Signal));
+            Task timeout = Task.Delay(delay: TimeSpan.FromSeconds(seconds: TimeoutSeconds), cancellationToken: ct);
 
-            Task first = await Task.WhenAny(allReady, timeout).ConfigureAwait(false);
+            Task first = await Task.WhenAny(task1: allReady, task2: timeout).ConfigureAwait(continueOnCapturedContext: false);
 
             if (first != allReady)
             {
                 List<string> laggards = snapshot
-                    .Where(s => !s.Signal.IsCompleted)
-                    .Select(s => s.Name)
+                    .Where(predicate: s => !s.Signal.IsCompleted)
+                    .Select(selector: s => s.Name)
                     .ToList();
 
                 _logger.LogWarning(
-                    "Server readiness: {Timeout}s timeout reached — signals still pending: [{Laggards}]. Proceeding anyway",
-                    TimeoutSeconds,
-                    string.Join(", ", laggards)
+                    message: "Server readiness: {Timeout}s timeout reached — signals still pending: [{Laggards}]. Proceeding anyway", args: [TimeoutSeconds, string.Join(separator: ", ", values: laggards)]
                 );
             }
             else
             {
-                _logger.LogInformation("Server readiness: all signals satisfied — queues active");
+                _logger.LogInformation(message: "Server readiness: all signals satisfied — queues active");
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Server readiness watcher failed; releasing gate anyway");
+            _logger.LogError(exception: ex, message: "Server readiness watcher failed; releasing gate anyway");
         }
         finally
         {

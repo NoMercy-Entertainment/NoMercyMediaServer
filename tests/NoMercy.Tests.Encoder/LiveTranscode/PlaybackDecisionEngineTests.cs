@@ -69,7 +69,7 @@ public class PlaybackDecisionEngineTests
         return new(
             FilePath: "/media/test.file",
             Format: format,
-            Duration: TimeSpan.FromMinutes(90),
+            Duration: TimeSpan.FromMinutes(minutes: 90),
             OverallBitRateKbps: 10000,
             FileSizeBytes: 1_000_000_000L,
             VideoStreams: videos,
@@ -128,38 +128,38 @@ public class PlaybackDecisionEngineTests
         // The exact real-world case: browser lists HEVC but not 10-bit, source is
         // SDR 10-bit HEVC HLS. Without the bit-depth gate this was judged "codec
         // compatible" and remuxed through as undecodable 10-bit.
-        MediaInfo media = MakeMedia("hls", MakeVideo10BitSdr("hevc"), MakeAudio("aac"));
+        MediaInfo media = MakeMedia(format: "hls", video: MakeVideo10BitSdr(codec: "hevc"), audio: MakeAudio(codec: "aac"));
 
         ClientCapabilities client = MakeClient(
-            [VideoCodecType.H265],
-            [AudioCodecType.Aac],
-            ["hls"],
+            videoCodecs: [VideoCodecType.H265],
+            audioCodecs: [AudioCodecType.Aac],
+            containers: ["hls"],
             supportsHdr: true,
             supports10Bit: false
         );
 
-        PlaybackDecision decision = _engine.Decide(media, client);
+        PlaybackDecision decision = _engine.Decide(media: media, client: client);
 
-        decision.Action.Should().Be(PlaybackAction.TranscodeVideo);
-        decision.Reason.Should().Contain("10-bit");
+        decision.Action.Should().Be(expected: PlaybackAction.TranscodeVideo);
+        decision.Reason.Should().Contain(expected: "10-bit");
     }
 
     [Fact]
     public void Hevc10BitSdr_ClientSupports10Bit_DirectPlay()
     {
-        MediaInfo media = MakeMedia("hls", MakeVideo10BitSdr("hevc"), MakeAudio("aac"));
+        MediaInfo media = MakeMedia(format: "hls", video: MakeVideo10BitSdr(codec: "hevc"), audio: MakeAudio(codec: "aac"));
 
         ClientCapabilities client = MakeClient(
-            [VideoCodecType.H265],
-            [AudioCodecType.Aac],
-            ["hls"],
+            videoCodecs: [VideoCodecType.H265],
+            audioCodecs: [AudioCodecType.Aac],
+            containers: ["hls"],
             supportsHdr: true,
             supports10Bit: true
         );
 
-        PlaybackDecision decision = _engine.Decide(media, client);
+        PlaybackDecision decision = _engine.Decide(media: media, client: client);
 
-        decision.Action.Should().Be(PlaybackAction.DirectPlay);
+        decision.Action.Should().Be(expected: PlaybackAction.DirectPlay);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -170,37 +170,37 @@ public class PlaybackDecisionEngineTests
     public void H264_Aac_Mp4_ToMp4Client_DirectPlay()
     {
         MediaInfo media = MakeMedia(
-            "mov,mp4,m4a,dash,3gp,3g2,mj2",
-            MakeVideo("h264"),
-            MakeAudio("aac")
+            format: "mov,mp4,m4a,dash,3gp,3g2,mj2",
+            video: MakeVideo(codec: "h264"),
+            audio: MakeAudio(codec: "aac")
         );
 
         ClientCapabilities client = MakeClient(
-            [VideoCodecType.H264],
-            [AudioCodecType.Aac],
-            ["mp4"]
+            videoCodecs: [VideoCodecType.H264],
+            audioCodecs: [AudioCodecType.Aac],
+            containers: ["mp4"]
         );
 
-        PlaybackDecision decision = _engine.Decide(media, client);
+        PlaybackDecision decision = _engine.Decide(media: media, client: client);
 
-        decision.Action.Should().Be(PlaybackAction.DirectPlay);
+        decision.Action.Should().Be(expected: PlaybackAction.DirectPlay);
         decision.Reason.Should().BeNull();
     }
 
     [Fact]
     public void H264_Aac_InMkv_ToMkvClient_DirectPlay()
     {
-        MediaInfo media = MakeMedia("matroska,webm", MakeVideo("h264"), MakeAudio("aac"));
+        MediaInfo media = MakeMedia(format: "matroska,webm", video: MakeVideo(codec: "h264"), audio: MakeAudio(codec: "aac"));
 
         ClientCapabilities client = MakeClient(
-            [VideoCodecType.H264],
-            [AudioCodecType.Aac],
-            ["mkv"]
+            videoCodecs: [VideoCodecType.H264],
+            audioCodecs: [AudioCodecType.Aac],
+            containers: ["mkv"]
         );
 
-        PlaybackDecision decision = _engine.Decide(media, client);
+        PlaybackDecision decision = _engine.Decide(media: media, client: client);
 
-        decision.Action.Should().Be(PlaybackAction.DirectPlay);
+        decision.Action.Should().Be(expected: PlaybackAction.DirectPlay);
         decision.Reason.Should().BeNull();
     }
 
@@ -211,18 +211,18 @@ public class PlaybackDecisionEngineTests
     [Fact]
     public void H264_InMkv_ToMp4OnlyClient_Remux()
     {
-        MediaInfo media = MakeMedia("matroska,webm", MakeVideo("h264"), MakeAudio("aac"));
+        MediaInfo media = MakeMedia(format: "matroska,webm", video: MakeVideo(codec: "h264"), audio: MakeAudio(codec: "aac"));
 
         ClientCapabilities client = MakeClient(
-            [VideoCodecType.H264],
-            [AudioCodecType.Aac],
-            ["mp4"]
+            videoCodecs: [VideoCodecType.H264],
+            audioCodecs: [AudioCodecType.Aac],
+            containers: ["mp4"]
         );
 
-        PlaybackDecision decision = _engine.Decide(media, client);
+        PlaybackDecision decision = _engine.Decide(media: media, client: client);
 
-        decision.Action.Should().Be(PlaybackAction.Remux);
-        decision.Reason.Should().Contain("matroska");
+        decision.Action.Should().Be(expected: PlaybackAction.Remux);
+        decision.Reason.Should().Contain(expected: "matroska");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -232,18 +232,18 @@ public class PlaybackDecisionEngineTests
     [Fact]
     public void Ac3_Audio_ToAacOnlyClient_TranscodeAudio()
     {
-        MediaInfo media = MakeMedia("matroska,webm", MakeVideo("h264"), MakeAudio("ac3"));
+        MediaInfo media = MakeMedia(format: "matroska,webm", video: MakeVideo(codec: "h264"), audio: MakeAudio(codec: "ac3"));
 
         ClientCapabilities client = MakeClient(
-            [VideoCodecType.H264],
-            [AudioCodecType.Aac],
-            ["mkv", "mp4"]
+            videoCodecs: [VideoCodecType.H264],
+            audioCodecs: [AudioCodecType.Aac],
+            containers: ["mkv", "mp4"]
         );
 
-        PlaybackDecision decision = _engine.Decide(media, client);
+        PlaybackDecision decision = _engine.Decide(media: media, client: client);
 
-        decision.Action.Should().Be(PlaybackAction.TranscodeAudio);
-        decision.Reason.Should().Contain("Audio");
+        decision.Action.Should().Be(expected: PlaybackAction.TranscodeAudio);
+        decision.Reason.Should().Contain(expected: "Audio");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -253,85 +253,85 @@ public class PlaybackDecisionEngineTests
     [Fact]
     public void Hevc_InMkv_ToH264OnlyClient_TranscodeVideo()
     {
-        MediaInfo media = MakeMedia("matroska,webm", MakeVideo("hevc"), MakeAudio("aac"));
+        MediaInfo media = MakeMedia(format: "matroska,webm", video: MakeVideo(codec: "hevc"), audio: MakeAudio(codec: "aac"));
 
         ClientCapabilities client = MakeClient(
-            [VideoCodecType.H264],
-            [AudioCodecType.Aac],
-            ["mkv", "mp4"]
+            videoCodecs: [VideoCodecType.H264],
+            audioCodecs: [AudioCodecType.Aac],
+            containers: ["mkv", "mp4"]
         );
 
-        PlaybackDecision decision = _engine.Decide(media, client);
+        PlaybackDecision decision = _engine.Decide(media: media, client: client);
 
-        decision.Action.Should().Be(PlaybackAction.TranscodeVideo);
-        decision.Reason.Should().Contain("hevc");
+        decision.Action.Should().Be(expected: PlaybackAction.TranscodeVideo);
+        decision.Reason.Should().Contain(expected: "hevc");
     }
 
     [Fact]
     public void FourK_To1080pMaxClient_TranscodeVideo()
     {
         MediaInfo media = MakeMedia(
-            "matroska,webm",
-            MakeVideo("h264", width: 3840, height: 2160),
-            MakeAudio("aac")
+            format: "matroska,webm",
+            video: MakeVideo(codec: "h264", width: 3840, height: 2160),
+            audio: MakeAudio(codec: "aac")
         );
 
         ClientCapabilities client = MakeClient(
-            [VideoCodecType.H264],
-            [AudioCodecType.Aac],
-            ["mkv", "mp4"],
+            videoCodecs: [VideoCodecType.H264],
+            audioCodecs: [AudioCodecType.Aac],
+            containers: ["mkv", "mp4"],
             maxWidth: 1920,
             maxHeight: 1080
         );
 
-        PlaybackDecision decision = _engine.Decide(media, client);
+        PlaybackDecision decision = _engine.Decide(media: media, client: client);
 
-        decision.Action.Should().Be(PlaybackAction.TranscodeVideo);
-        decision.Reason.Should().Contain("3840x2160");
+        decision.Action.Should().Be(expected: PlaybackAction.TranscodeVideo);
+        decision.Reason.Should().Contain(expected: "3840x2160");
     }
 
     [Fact]
     public void Hdr_ToNonHdrClient_TranscodeVideo()
     {
         MediaInfo media = MakeMedia(
-            "matroska,webm",
-            MakeVideo("hevc", hdr: true),
-            MakeAudio("aac")
+            format: "matroska,webm",
+            video: MakeVideo(codec: "hevc", hdr: true),
+            audio: MakeAudio(codec: "aac")
         );
 
         ClientCapabilities client = MakeClient(
-            [VideoCodecType.H264, VideoCodecType.H265],
-            [AudioCodecType.Aac],
-            ["mkv", "mp4"],
+            videoCodecs: [VideoCodecType.H264, VideoCodecType.H265],
+            audioCodecs: [AudioCodecType.Aac],
+            containers: ["mkv", "mp4"],
             supportsHdr: false
         );
 
-        PlaybackDecision decision = _engine.Decide(media, client);
+        PlaybackDecision decision = _engine.Decide(media: media, client: client);
 
-        decision.Action.Should().Be(PlaybackAction.TranscodeVideo);
-        decision.Reason.Should().Contain("HDR");
+        decision.Action.Should().Be(expected: PlaybackAction.TranscodeVideo);
+        decision.Reason.Should().Contain(expected: "HDR");
     }
 
     [Fact]
     public void BitrateExceedsLimit_TranscodeVideo()
     {
         MediaInfo media = MakeMedia(
-            "matroska,webm",
-            MakeVideo("h264", bitrateKbps: 40000),
-            MakeAudio("aac")
+            format: "matroska,webm",
+            video: MakeVideo(codec: "h264", bitrateKbps: 40000),
+            audio: MakeAudio(codec: "aac")
         );
 
         ClientCapabilities client = MakeClient(
-            [VideoCodecType.H264],
-            [AudioCodecType.Aac],
-            ["mkv", "mp4"],
+            videoCodecs: [VideoCodecType.H264],
+            audioCodecs: [AudioCodecType.Aac],
+            containers: ["mkv", "mp4"],
             maxBitrateKbps: 8000
         );
 
-        PlaybackDecision decision = _engine.Decide(media, client);
+        PlaybackDecision decision = _engine.Decide(media: media, client: client);
 
-        decision.Action.Should().Be(PlaybackAction.TranscodeVideo);
-        decision.Reason.Should().Contain("Bitrate");
+        decision.Action.Should().Be(expected: PlaybackAction.TranscodeVideo);
+        decision.Reason.Should().Contain(expected: "Bitrate");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -341,26 +341,26 @@ public class PlaybackDecisionEngineTests
     [Fact]
     public void AudioOnly_SupportedCodec_DirectPlay()
     {
-        MediaInfo media = MakeMedia("flac", video: null, audio: MakeAudio("flac"));
+        MediaInfo media = MakeMedia(format: "flac", video: null, audio: MakeAudio(codec: "flac"));
 
-        ClientCapabilities client = MakeClient([], [AudioCodecType.Flac], ["flac"]);
+        ClientCapabilities client = MakeClient(videoCodecs: [], audioCodecs: [AudioCodecType.Flac], containers: ["flac"]);
 
-        PlaybackDecision decision = _engine.Decide(media, client);
+        PlaybackDecision decision = _engine.Decide(media: media, client: client);
 
-        decision.Action.Should().Be(PlaybackAction.DirectPlay);
+        decision.Action.Should().Be(expected: PlaybackAction.DirectPlay);
         decision.Reason.Should().BeNull();
     }
 
     [Fact]
     public void AudioOnly_UnsupportedCodec_TranscodeAudio()
     {
-        MediaInfo media = MakeMedia("flac", video: null, audio: MakeAudio("flac"));
+        MediaInfo media = MakeMedia(format: "flac", video: null, audio: MakeAudio(codec: "flac"));
 
-        ClientCapabilities client = MakeClient([], [AudioCodecType.Aac], ["mp4"]);
+        ClientCapabilities client = MakeClient(videoCodecs: [], audioCodecs: [AudioCodecType.Aac], containers: ["mp4"]);
 
-        PlaybackDecision decision = _engine.Decide(media, client);
+        PlaybackDecision decision = _engine.Decide(media: media, client: client);
 
-        decision.Action.Should().Be(PlaybackAction.TranscodeAudio);
-        decision.Reason.Should().Contain("Audio codec");
+        decision.Action.Should().Be(expected: PlaybackAction.TranscodeAudio);
+        decision.Reason.Should().Contain(expected: "Audio codec");
     }
 }

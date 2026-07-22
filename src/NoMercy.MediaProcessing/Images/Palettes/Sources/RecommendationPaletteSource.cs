@@ -25,11 +25,11 @@ public class RecommendationPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(entityId);
+        int id = int.Parse(s: entityId);
         return await db
-            .Recommendations.Where(r => r.Id == id)
-            .Select(r => r._colorPalette)
-            .FirstOrDefaultAsync(ct);
+            .Recommendations.Where(predicate: r => r.Id == id)
+            .Select(selector: r => r._colorPalette)
+            .FirstOrDefaultAsync(cancellationToken: ct);
     }
 
     public async Task<PaletteResult> GenerateAsync(
@@ -38,23 +38,24 @@ public class RecommendationPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(entityId);
+        int id = int.Parse(s: entityId);
         Recommendation? recommendation = await db.Recommendations.FirstOrDefaultAsync(
-            r => r.Id == id,
-            ct
+            predicate: r => r.Id == id,
+            cancellationToken: ct
         );
         if (recommendation is null)
             return PaletteResult.NoImage();
         if (recommendation.Poster is null && recommendation.Backdrop is null)
             return PaletteResult.NoImage();
 
-        string json = await MovieDbImageManager.MultiColorPalette([
-            new("poster", recommendation.Poster),
-            new("backdrop", recommendation.Backdrop),
+        string json = await MovieDbImageManager.MultiColorPalette(items:
+        [
+            new(key: "poster", path: recommendation.Poster),
+            new(key: "backdrop", path: recommendation.Backdrop),
         ]);
-        return string.IsNullOrWhiteSpace(json)
+        return string.IsNullOrWhiteSpace(value: json)
             ? PaletteResult.NoImage()
-            : PaletteResult.Success(json);
+            : PaletteResult.Success(json: json);
     }
 
     public async Task PersistAsync(
@@ -64,9 +65,9 @@ public class RecommendationPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(entityId);
+        int id = int.Parse(s: entityId);
         await db
-            .Recommendations.Where(r => r.Id == id)
-            .ExecuteUpdateAsync(s => s.SetProperty(r => r._colorPalette, json), ct);
+            .Recommendations.Where(predicate: r => r.Id == id)
+            .ExecuteUpdateAsync(setPropertyCalls: s => s.SetProperty(propertyExpression: r => r._colorPalette, valueExpression: json), cancellationToken: ct);
     }
 }

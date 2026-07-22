@@ -16,6 +16,6 @@ namespace NoMercy.Providers.TMDB.Models.Movies;
 
 public class TmdbMovieKeywords : TmdbSharedKeywords
 {
-    [JsonProperty("keywords")]
+    [JsonProperty(propertyName: "keywords")]
     public override TmdbKeyword[] Results { get; set; } = [];
 }

@@ -23,25 +23,25 @@ public class DeviceCapabilityRegistry(IDbContextFactory<MediaContext> contextFac
     private readonly ConcurrentDictionary<string, DeviceCapabilities> _cache = new();
 
     public DeviceCapabilities? Get(string deviceId) =>
-        _cache.TryGetValue(deviceId, out DeviceCapabilities? caps) ? caps : null;
+        _cache.TryGetValue(key: deviceId, value: out DeviceCapabilities? caps) ? caps : null;
 
     public void Set(string deviceId, DeviceCapabilities capabilities) =>
-        _cache[deviceId] = capabilities;
+        _cache[key: deviceId] = capabilities;
 
-    public void Invalidate(string deviceId) => _cache.TryRemove(deviceId, out _);
+    public void Invalidate(string deviceId) => _cache.TryRemove(key: deviceId, value: out _);
 
     public async Task<DeviceCapabilities?> LoadFromDbAsync(string deviceId, CancellationToken ct)
     {
-        await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-        Device? device = await ctx.Devices.FirstOrDefaultAsync(d => d.DeviceId == deviceId, ct);
+        await using MediaContext ctx = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        Device? device = await ctx.Devices.FirstOrDefaultAsync(predicate: d => d.DeviceId == deviceId, cancellationToken: ct);
         if (device?.CapabilitiesJson is null)
             return null;
 
         DeviceCapabilities? caps = JsonConvert.DeserializeObject<DeviceCapabilities>(
-            device.CapabilitiesJson
+            value: device.CapabilitiesJson
         );
         if (caps is not null)
-            _cache[deviceId] = caps;
+            _cache[key: deviceId] = caps;
         return caps;
     }
 }

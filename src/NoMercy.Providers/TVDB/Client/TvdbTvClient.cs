@@ -18,5 +18,5 @@ namespace NoMercy.Providers.TVDB.Client;
 public class TvdbTvClient : TvdbSeriesClient
 {
     public TvdbTvClient(int id = 0, string language = "eng")
-        : base(id, language) { }
+        : base(id: id, language: language) { }
 }

@@ -100,7 +100,7 @@ public class H265Definition : ICodecDefinition
                 SupportsHdr: true,
                 MaxConcurrentSessions: int.MaxValue,
                 PixelFormat10Bit: "yuv420p10le",
-                VendorSpecificFlags: new() { ["-usage"] = "transcoding" }
+                VendorSpecificFlags: new() { [key: "-usage"] = "transcoding" }
             ),
             // Intel Quick Sync Video — hevc_qsv
             // 7 presets (veryfast→veryslow). Profiles main/main10/mainsp/rext/scc.
@@ -163,7 +163,7 @@ public class H265Definition : ICodecDefinition
                 SupportsHdr: false,
                 MaxConcurrentSessions: int.MaxValue,
                 PixelFormat10Bit: "",
-                VendorSpecificFlags: new() { ["-tag:v"] = "hvc1" }
+                VendorSpecificFlags: new() { [key: "-tag:v"] = "hvc1" }
             ),
         ];
 }

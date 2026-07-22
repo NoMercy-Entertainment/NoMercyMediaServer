@@ -29,10 +29,10 @@ using NoMercy.Events.Users;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 
 [ApiController]
-[Tags("Dashboard Users")]
-[ApiVersion(1.0)]
+[Tags(tags: "Dashboard Users")]
+[ApiVersion(version: 1.0)]
 [Authorize]
-[Route("api/v{version:apiVersion}/dashboard/users", Order = 10)]
+[Route(template: "api/v{version:apiVersion}/dashboard/users", Order = 10)]
 public class UsersController(IUserRepository userRepository) : BaseController
 {
     [HttpGet]
@@ -42,9 +42,9 @@ public class UsersController(IUserRepository userRepository) : BaseController
         List<User> users = await userRepository.GetAllWithLibrariesAsync();
 
         return Ok(
-            new DataResponseDto<IEnumerable<PermissionsResponseItemDto>>
+            value: new DataResponseDto<IEnumerable<PermissionsResponseItemDto>>
             {
-                Data = users.Select(user => new PermissionsResponseItemDto(user)),
+                Data = users.Select(selector: user => new PermissionsResponseItemDto(user: user)),
             }
         );
     }
@@ -54,15 +54,15 @@ public class UsersController(IUserRepository userRepository) : BaseController
     public async Task<IActionResult> Store([FromBody] UserRequest request)
     {
         Guid userId = User.UserId();
-        User? hasPermission = await userRepository.GetByIdAsync(userId);
+        User? hasPermission = await userRepository.GetByIdAsync(userId: userId);
 
         if (hasPermission is null || hasPermission.Owner is false)
-            return NotFoundResponse("You do not have permission to create a user");
+            return NotFoundResponse(detail: "You do not have permission to create a user");
 
-        bool alreadyExists = await userRepository.ExistsAsync(request.Id);
+        bool alreadyExists = await userRepository.ExistsAsync(userId: request.Id);
 
         if (alreadyExists)
-            return UnprocessableEntityResponse("User already exists");
+            return UnprocessableEntityResponse(detail: "User already exists");
 
         User newUser = new()
         {
@@ -77,7 +77,7 @@ public class UsersController(IUserRepository userRepository) : BaseController
             Owner = request.Owner,
             LibraryUser =
                 request
-                    .Libraries?.Select(libraryId => new LibraryUser
+                    .Libraries?.Select(selector: libraryId => new LibraryUser
                     {
                         LibraryId = libraryId,
                         UserId = userId,
@@ -86,17 +86,17 @@ public class UsersController(IUserRepository userRepository) : BaseController
                 ?? [],
         };
 
-        await userRepository.AddAsync(newUser);
+        await userRepository.AddAsync(user: newUser);
 
-        User? createdUser = await userRepository.GetByIdWithLibrariesAfterAddAsync(newUser.Id);
+        User? createdUser = await userRepository.GetByIdWithLibrariesAfterAddAsync(userId: newUser.Id);
 
         if (createdUser is null)
-            return UnprocessableEntityResponse("User was created but could not be retrieved");
+            return UnprocessableEntityResponse(detail: "User was created but could not be retrieved");
 
-        UserCacheService.AddUser(createdUser);
+        UserCacheService.AddUser(user: createdUser);
 
         return Ok(
-            new StatusResponseDto<string>
+            value: new StatusResponseDto<string>
             {
                 Status = "success",
                 Message = "User {0} created successfully",
@@ -105,70 +105,70 @@ public class UsersController(IUserRepository userRepository) : BaseController
         );
     }
 
-    [HttpDelete("{id:guid}")]
+    [HttpDelete(template: "{id:guid}")]
     [Authorize(Policy = "Owner")]
     public async Task<IActionResult> Destroy(Guid id)
     {
-        User? user = await userRepository.GetByIdWithLibrariesAsync(id);
+        User? user = await userRepository.GetByIdWithLibrariesAsync(userId: id);
 
         if (user is null)
-            return NotFoundResponse("User not found");
+            return NotFoundResponse(detail: "User not found");
 
         if (user.Owner)
-            return UnauthorizedResponse("The owner cannot be deleted");
+            return UnauthorizedResponse(detail: "The owner cannot be deleted");
 
-        await userRepository.DeleteAsync(id);
+        await userRepository.DeleteAsync(userId: id);
 
-        UserCacheService.RemoveUser(user);
+        UserCacheService.RemoveUser(user: user);
 
-        return Ok(new StatusResponseDto<string> { Status = "success", Message = "User deleted" });
+        return Ok(value: new StatusResponseDto<string> { Status = "success", Message = "User deleted" });
     }
 
-    [HttpGet("{id:guid}")]
+    [HttpGet(template: "{id:guid}")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Show(Guid id)
     {
-        User? user = await userRepository.GetByIdWithLibrariesAsync(id);
+        User? user = await userRepository.GetByIdWithLibrariesAsync(userId: id);
 
         if (user is null)
-            return NotFoundResponse("User not found");
+            return NotFoundResponse(detail: "User not found");
 
-        return Ok(new DataResponseDto<PermissionsResponseItemDto> { Data = new(user) });
+        return Ok(value: new DataResponseDto<PermissionsResponseItemDto> { Data = new(user: user) });
     }
 
     [HttpGet]
-    [Route("permissions")]
+    [Route(template: "permissions")]
     [Authorize(Policy = "Owner")]
     public async Task<IActionResult> PermissionS()
     {
         List<User> users = await userRepository.GetAllWithLibrariesAsync();
 
         return Ok(
-            new DataResponseDto<IEnumerable<PermissionsResponseItemDto>>
+            value: new DataResponseDto<IEnumerable<PermissionsResponseItemDto>>
             {
-                Data = users.Select(user => new PermissionsResponseItemDto(user)),
+                Data = users.Select(selector: user => new PermissionsResponseItemDto(user: user)),
             }
         );
     }
 
-    [HttpPatch("notifications")]
+    [HttpPatch(template: "notifications")]
     public async Task<IActionResult> NotificationS([FromBody] object request)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(User))
+        if (!AuthPolicy.IsAllowed(principal: User))
             return UnauthorizedResponse(
-                "You do not have permission to update notification settings"
+                detail: "You do not have permission to update notification settings"
             );
 
-        User? user = await userRepository.GetByIdWithNotificationsAsync(userId);
+        User? user = await userRepository.GetByIdWithNotificationsAsync(userId: userId);
 
         if (user is null)
-            return NotFoundResponse("User not found");
+            return NotFoundResponse(detail: "User not found");
 
         // TODO Implement notification settings.
 
         return Ok(
-            new StatusResponseDto<string>
+            value: new StatusResponseDto<string>
             {
                 Status = "success",
                 Message = "Notification settings updated",
@@ -177,42 +177,42 @@ public class UsersController(IUserRepository userRepository) : BaseController
     }
 
     [HttpGet]
-    [Route("{id:guid}/permissions")]
+    [Route(template: "{id:guid}/permissions")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> UserPermissions(Guid id)
     {
-        if (User.IsSelf(id))
-            return UnauthorizedResponse("You do not have permission to edit your own permissions");
+        if (User.IsSelf(userId: id))
+            return UnauthorizedResponse(detail: "You do not have permission to edit your own permissions");
 
-        User? user = await userRepository.GetByIdWithLibrariesAsync(id);
+        User? user = await userRepository.GetByIdWithLibrariesAsync(userId: id);
 
         if (user is null)
-            return NotFoundResponse("User not found");
+            return NotFoundResponse(detail: "User not found");
 
-        return Ok(new DataResponseDto<UserPermissionRequest> { Data = new(user) });
+        return Ok(value: new DataResponseDto<UserPermissionRequest> { Data = new(user: user) });
     }
 
-    [HttpPatch("{id:guid}/permissions")]
+    [HttpPatch(template: "{id:guid}/permissions")]
     public async Task<IActionResult> UserPermissionUpdate(
         Guid id,
         [FromBody] UserPermissionRequest request
     )
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsModerator(User))
-            return UnauthorizedResponse("You do not have permission to update a user");
+        if (!AuthPolicy.IsModerator(principal: User))
+            return UnauthorizedResponse(detail: "You do not have permission to update a user");
 
-        if (User.IsSelf(id))
+        if (User.IsSelf(userId: id))
             return UnauthorizedResponse(
-                "You do not have permission to update your own permissions"
+                detail: "You do not have permission to update your own permissions"
             );
 
-        User? existing = await userRepository.GetByIdWithLibrariesAsync(id);
+        User? existing = await userRepository.GetByIdWithLibrariesAsync(userId: id);
 
         if (existing is null)
-            return NotFoundResponse("User not found");
+            return NotFoundResponse(detail: "User not found");
 
-        bool? manage = AuthPolicy.IsOwner(User) ? request.Manage : null;
+        bool? manage = AuthPolicy.IsOwner(principal: User) ? request.Manage : null;
 
         await userRepository.UpdatePermissionsAsync(
             targetUserId: id,
@@ -225,37 +225,37 @@ public class UsersController(IUserRepository userRepository) : BaseController
             libraryIds: request.Libraries
         );
 
-        User? updatedUser = await userRepository.GetByIdWithLibrariesAsync(id);
+        User? updatedUser = await userRepository.GetByIdWithLibrariesAsync(userId: id);
 
         if (updatedUser is not null)
-            UserCacheService.UpdateUser(updatedUser);
+            UserCacheService.UpdateUser(user: updatedUser);
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
-                new UserPermissionsChangedEvent { UserId = id, ChangedBy = userId }
+                @event: new UserPermissionsChangedEvent { UserId = id, ChangedBy = userId }
             );
 
-        return Ok(new StatusResponseDto<string> { Status = "success", Message = "User updated" });
+        return Ok(value: new StatusResponseDto<string> { Status = "success", Message = "User updated" });
     }
 
-    [HttpPatch("{id:guid}/notifications")]
+    [HttpPatch(template: "{id:guid}/notifications")]
     public async Task<IActionResult> UserNotification(Guid id, [FromBody] object request)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(User))
+        if (!AuthPolicy.IsAllowed(principal: User))
             return UnauthorizedResponse(
-                "You do not have permission to update notification settings"
+                detail: "You do not have permission to update notification settings"
             );
 
-        User? user = await userRepository.GetByIdWithNotificationsAsync(userId);
+        User? user = await userRepository.GetByIdWithNotificationsAsync(userId: userId);
 
         if (user is null)
-            return NotFoundResponse("User not found");
+            return NotFoundResponse(detail: "User not found");
 
         // TODO Implement notification settings.
 
         return Ok(
-            new StatusResponseDto<string>
+            value: new StatusResponseDto<string>
             {
                 Status = "success",
                 Message = "Notification settings updated",

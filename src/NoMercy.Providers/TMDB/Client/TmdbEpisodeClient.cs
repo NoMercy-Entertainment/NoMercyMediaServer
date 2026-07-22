@@ -28,7 +28,7 @@ public class TmdbEpisodeClient : TmdbBaseClient
         string[]? appendices = null,
         string? language = "en-US"
     )
-        : base(id, language!)
+        : base(id: id, language: language!)
     {
         _seasonNumber = seasonNumber;
         _episodeNumber = episodeNumber;
@@ -37,7 +37,7 @@ public class TmdbEpisodeClient : TmdbBaseClient
     public Task<TmdbEpisodeDetails?> Details(bool? priority = false)
     {
         return Get<TmdbEpisodeDetails>(
-            "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber,
+            url: "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber,
             priority: priority
         );
     }
@@ -46,12 +46,12 @@ public class TmdbEpisodeClient : TmdbBaseClient
     {
         Dictionary<string, string?> queryParams = new()
         {
-            ["append_to_response"] = string.Join(",", appendices),
+            [key: "append_to_response"] = string.Join(separator: ",", value: appendices),
         };
 
         return Get<TmdbEpisodeAppends>(
-            "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber,
-            queryParams,
+            url: "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber,
+            query: queryParams,
             priority: priority
         );
     }
@@ -59,7 +59,7 @@ public class TmdbEpisodeClient : TmdbBaseClient
     public Task<TmdbEpisodeAppends?> WithAllAppends(bool? priority = false)
     {
         return WithAppends(
-            ["changes", "credits", "external_ids", "images", "translations", "videos"],
+            appendices: ["changes", "credits", "external_ids", "images", "translations", "videos"],
             priority: priority
         );
     }
@@ -72,13 +72,13 @@ public class TmdbEpisodeClient : TmdbBaseClient
     {
         Dictionary<string, string?> queryParams = new()
         {
-            ["start_date"] = startDate,
-            ["end_date"] = endDate,
+            [key: "start_date"] = startDate,
+            [key: "end_date"] = endDate,
         };
 
         return Get<TmdbEpisodeChanges>(
-            "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber + "/changes",
-            queryParams,
+            url: "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber + "/changes",
+            query: queryParams,
             priority: priority
         );
     }
@@ -86,7 +86,7 @@ public class TmdbEpisodeClient : TmdbBaseClient
     public Task<TmdbEpisodeCredits?> Credits(bool? priority = false)
     {
         return Get<TmdbEpisodeCredits>(
-            "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber + "/credits",
+            url: "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber + "/credits",
             priority: priority
         );
     }
@@ -94,13 +94,13 @@ public class TmdbEpisodeClient : TmdbBaseClient
     public Task<TmdbEpisodeExternalIds?> ExternalIds(bool? priority = false)
     {
         return Get<TmdbEpisodeExternalIds>(
-            "tv/"
-                + Id
-                + "/season/"
-                + _seasonNumber
-                + "/episode/"
-                + _episodeNumber
-                + "/external_ids",
+            url: "tv/"
+                 + Id
+                 + "/season/"
+                 + _seasonNumber
+                 + "/episode/"
+                 + _episodeNumber
+                 + "/external_ids",
             priority: priority
         );
     }
@@ -108,7 +108,7 @@ public class TmdbEpisodeClient : TmdbBaseClient
     public Task<TmdbEpisodeImages?> Images(bool? priority = false)
     {
         return Get<TmdbEpisodeImages>(
-            "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber + "/images",
+            url: "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber + "/images",
             priority: priority
         );
     }
@@ -116,13 +116,13 @@ public class TmdbEpisodeClient : TmdbBaseClient
     public Task<TmdbSharedTranslations?> Translations(bool? priority = false)
     {
         return Get<TmdbSharedTranslations>(
-            "tv/"
-                + Id
-                + "/season/"
-                + _seasonNumber
-                + "/episode/"
-                + _episodeNumber
-                + "/translations",
+            url: "tv/"
+                 + Id
+                 + "/season/"
+                 + _seasonNumber
+                 + "/episode/"
+                 + _episodeNumber
+                 + "/translations",
             priority: priority
         );
     }
@@ -130,7 +130,7 @@ public class TmdbEpisodeClient : TmdbBaseClient
     public Task<Videos?> Videos(bool? priority = false)
     {
         return Get<Videos>(
-            "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber + "/videos",
+            url: "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber + "/videos",
             priority: priority
         );
     }

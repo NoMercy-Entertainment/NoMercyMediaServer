@@ -36,26 +36,26 @@ public class MezzaninePlannerTests
     public void NotDistributed_NeverUsesMezzanine()
     {
         MezzaninePlanner
-            .ShouldUseMezzanine(1000, distributedEncodingEnabled: false, 8, 6, Threshold)
+            .ShouldUseMezzanine(totalCost: 1000, distributedEncodingEnabled: false, workerCount: 8, rungCount: 6, threshold: Threshold)
             .Should()
-            .BeFalse("single-box jobs derive in-process — no extra full-res write");
+            .BeFalse(because: "single-box jobs derive in-process — no extra full-res write");
     }
 
     [Fact]
     public void SingleWorker_NeverUsesMezzanine()
     {
-        MezzaninePlanner.ShouldUseMezzanine(1000, true, 1, 6, Threshold).Should().BeFalse();
+        MezzaninePlanner.ShouldUseMezzanine(totalCost: 1000, distributedEncodingEnabled: true, workerCount: 1, rungCount: 6, threshold: Threshold).Should().BeFalse();
     }
 
     [Fact]
     public void SingleRung_NothingToAmortise_False()
     {
-        MezzaninePlanner.ShouldUseMezzanine(1000, true, 4, 1, Threshold).Should().BeFalse();
+        MezzaninePlanner.ShouldUseMezzanine(totalCost: 1000, distributedEncodingEnabled: true, workerCount: 4, rungCount: 1, threshold: Threshold).Should().BeFalse();
     }
 
     [Fact]
     public void LightJob_BelowThreshold_False()
     {
-        MezzaninePlanner.ShouldUseMezzanine(10, true, 4, 5, Threshold).Should().BeFalse();
+        MezzaninePlanner.ShouldUseMezzanine(totalCost: 10, distributedEncodingEnabled: true, workerCount: 4, rungCount: 5, threshold: Threshold).Should().BeFalse();
     }
 }

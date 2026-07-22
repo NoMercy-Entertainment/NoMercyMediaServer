@@ -41,13 +41,13 @@ public class BuildStageResumeTests
             FfprobePathOverride = "ffprobe",
         };
         _stage = new(
-            options,
-            new FontExtractor(TestStorageFactory.CreateLocal()),
-            new SubtitleExtractor(),
-            OutputStrategyFactoryTestHelper.Create(),
-            [],
-            NullLogger<BuildStage>.Instance,
-            TestStorageFactory.CreateLocal()
+            options: options,
+            fontExtractor: new FontExtractor(storage: TestStorageFactory.CreateLocal()),
+            subtitleExtractor: new SubtitleExtractor(),
+            outputStrategyFactory: OutputStrategyFactoryTestHelper.Create(),
+            drmProcessors: [],
+            logger: NullLogger<BuildStage>.Instance,
+            storage: TestStorageFactory.CreateLocal()
         );
     }
 
@@ -56,14 +56,14 @@ public class BuildStageResumeTests
     [Fact]
     public void ResolveResumeSeek_NullInput_ReturnsNull()
     {
-        TimeSpan? result = BuildStage.ResolveResumeSeek(null);
+        TimeSpan? result = BuildStage.ResolveResumeSeek(resumeFromMs: null);
         result.Should().BeNull();
     }
 
     [Fact]
     public void ResolveResumeSeek_ZeroInput_ReturnsNull()
     {
-        TimeSpan? result = BuildStage.ResolveResumeSeek(0);
+        TimeSpan? result = BuildStage.ResolveResumeSeek(resumeFromMs: 0);
         result.Should().BeNull();
     }
 
@@ -71,23 +71,23 @@ public class BuildStageResumeTests
     public void ResolveResumeSeek_SmallValueUnderBackoff_ClampsToZero()
     {
         // 2000ms < 4000ms backoff → seek to 0 (don't seek before start)
-        TimeSpan? result = BuildStage.ResolveResumeSeek(2000);
-        result.Should().Be(TimeSpan.Zero);
+        TimeSpan? result = BuildStage.ResolveResumeSeek(resumeFromMs: 2000);
+        result.Should().Be(expected: TimeSpan.Zero);
     }
 
     [Fact]
     public void ResolveResumeSeek_ValueAboveBackoff_AppliesBackoff()
     {
         // 60000ms - 4000ms backoff = 56000ms seek position
-        TimeSpan? result = BuildStage.ResolveResumeSeek(60_000);
-        result.Should().Be(TimeSpan.FromMilliseconds(56_000));
+        TimeSpan? result = BuildStage.ResolveResumeSeek(resumeFromMs: 60_000);
+        result.Should().Be(expected: TimeSpan.FromMilliseconds(milliseconds: 56_000));
     }
 
     [Fact]
     public void ResolveResumeSeek_ExactlyAtBackoff_ClampsToZero()
     {
-        TimeSpan? result = BuildStage.ResolveResumeSeek(4000);
-        result.Should().Be(TimeSpan.Zero);
+        TimeSpan? result = BuildStage.ResolveResumeSeek(resumeFromMs: 4000);
+        result.Should().Be(expected: TimeSpan.Zero);
     }
 
     // ── Integration: ResumeFromMs wires -ss into the primary input ─────────
@@ -95,55 +95,55 @@ public class BuildStageResumeTests
     [Fact]
     public async Task BuildStage_WithResumeFromMs_EmitsInputSeekBeforePrimaryInput()
     {
-        string tempDir = Path.Combine(Path.GetTempPath(), $"bsresume_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
+        string tempDir = Path.Combine(path1: Path.GetTempPath(), path2: $"bsresume_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: tempDir);
 
         try
         {
             BuildInput input = MakeBuildInput(tempDir: tempDir, resumeFromMs: 60_000);
 
-            StageResult result = await _stage.ExecuteAsync(input, _context, CancellationToken.None);
+            StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: CancellationToken.None);
 
             result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
             FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
             string[] args = commands[0].Arguments;
 
-            args.Should().Contain("-ss");
+            args.Should().Contain(expected: "-ss");
             // Backoff: 60000 - 4000 = 56000ms = 56.000s
-            args.Should().Contain("56.000");
+            args.Should().Contain(expected: "56.000");
             // -ss must appear BEFORE -i (input seek, not output seek)
-            int ssIdx = Array.IndexOf(args, "-ss");
-            int iIdx = Array.IndexOf(args, "-i");
-            ssIdx.Should().BeGreaterThanOrEqualTo(0);
-            ssIdx.Should().BeLessThan(iIdx);
+            int ssIdx = Array.IndexOf(array: args, value: "-ss");
+            int iIdx = Array.IndexOf(array: args, value: "-i");
+            ssIdx.Should().BeGreaterThanOrEqualTo(expected: 0);
+            ssIdx.Should().BeLessThan(expected: iIdx);
         }
         finally
         {
-            Directory.Delete(tempDir, recursive: true);
+            Directory.Delete(path: tempDir, recursive: true);
         }
     }
 
     [Fact]
     public async Task BuildStage_WithoutResumeFromMs_NoSeekEmitted()
     {
-        string tempDir = Path.Combine(Path.GetTempPath(), $"bsresume_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
+        string tempDir = Path.Combine(path1: Path.GetTempPath(), path2: $"bsresume_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: tempDir);
 
         try
         {
             BuildInput input = MakeBuildInput(tempDir: tempDir, resumeFromMs: null);
 
-            StageResult result = await _stage.ExecuteAsync(input, _context, CancellationToken.None);
+            StageResult result = await _stage.ExecuteAsync(input: input, context: _context, ct: CancellationToken.None);
 
             result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
             FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
             string[] args = commands[0].Arguments;
 
-            args.Should().NotContain("-ss");
+            args.Should().NotContain(unexpected: "-ss");
         }
         finally
         {
-            Directory.Delete(tempDir, recursive: true);
+            Directory.Delete(path: tempDir, recursive: true);
         }
     }
 
@@ -156,8 +156,8 @@ public class BuildStageResumeTests
                     GroupId: "group_0",
                     Nodes:
                     [
-                        new("decode_0", OperationType.Decode, [], new()),
-                        new("encode_0", OperationType.Encode, ["decode_0"], new()),
+                        new(Id: "decode_0", Operation: OperationType.Decode, DependsOn: [], Parameters: new()),
+                        new(Id: "encode_0", Operation: OperationType.Encode, DependsOn: ["decode_0"], Parameters: new()),
                     ],
                     DeviceId: null,
                     GpuSlotsRequired: 0,
@@ -166,7 +166,7 @@ public class BuildStageResumeTests
                     Priority: 1
                 ),
             ],
-            EstimatedTotalDuration: TimeSpan.FromMinutes(90),
+            EstimatedTotalDuration: TimeSpan.FromMinutes(minutes: 90),
             OutputPlan: new(
                 Format: OutputFormat.Hls,
                 VideoOutputs:

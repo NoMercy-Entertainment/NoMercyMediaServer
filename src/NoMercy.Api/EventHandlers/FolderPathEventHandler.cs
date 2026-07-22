@@ -27,32 +27,32 @@ public class FolderPathEventHandler : IDisposable
     public FolderPathEventHandler(IEventBus eventBus, IServiceScopeFactory scopeFactory)
     {
         _scopeFactory = scopeFactory;
-        _subscriptions.Add(eventBus.Subscribe<FolderPathAddedEvent>(OnFolderPathAdded));
-        _subscriptions.Add(eventBus.Subscribe<FolderPathRemovedEvent>(OnFolderPathRemoved));
+        _subscriptions.Add(item: eventBus.Subscribe<FolderPathAddedEvent>(handler: OnFolderPathAdded));
+        _subscriptions.Add(item: eventBus.Subscribe<FolderPathRemovedEvent>(handler: OnFolderPathRemoved));
     }
 
     internal async Task OnFolderPathAdded(FolderPathAddedEvent @event, CancellationToken ct)
     {
-        DynamicStaticFilesMiddleware.AddFolder(@event.RequestPath, @event.DriverId, @event.SubPath);
+        DynamicStaticFilesMiddleware.AddFolder(folderId: @event.RequestPath, driverId: @event.DriverId, subPath: @event.SubPath);
 
         await using AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
         IDbContextFactory<MediaContext> contextFactory = scope.ServiceProvider.GetRequiredService<
             IDbContextFactory<MediaContext>
         >();
-        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
-        await UserCache.Current.RefreshFolderIdsAsync(mediaContext);
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await UserCache.Current.RefreshFolderIdsAsync(context: mediaContext);
     }
 
     internal async Task OnFolderPathRemoved(FolderPathRemovedEvent @event, CancellationToken ct)
     {
-        DynamicStaticFilesMiddleware.RemoveFolder(@event.RequestPath);
+        DynamicStaticFilesMiddleware.RemoveFolder(folderId: @event.RequestPath);
 
         await using AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
         IDbContextFactory<MediaContext> contextFactory = scope.ServiceProvider.GetRequiredService<
             IDbContextFactory<MediaContext>
         >();
-        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
-        await UserCache.Current.RefreshFolderIdsAsync(mediaContext);
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
+        await UserCache.Current.RefreshFolderIdsAsync(context: mediaContext);
     }
 
     public void Dispose()

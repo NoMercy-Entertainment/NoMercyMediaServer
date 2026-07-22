@@ -17,7 +17,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api;
 
-[Trait("Category", "Characterization")]
+[Trait(name: "Category", value: "Characterization")]
 public class DbContextRegistrationTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -34,7 +34,7 @@ public class DbContextRegistrationTests : IClassFixture<NoMercyApiFactory>
         MediaContext first = scope.ServiceProvider.GetRequiredService<MediaContext>();
         MediaContext second = scope.ServiceProvider.GetRequiredService<MediaContext>();
 
-        Assert.Same(first, second);
+        Assert.Same(expected: first, actual: second);
     }
 
     [Fact]
@@ -44,7 +44,7 @@ public class DbContextRegistrationTests : IClassFixture<NoMercyApiFactory>
         QueueContext first = scope.ServiceProvider.GetRequiredService<QueueContext>();
         QueueContext second = scope.ServiceProvider.GetRequiredService<QueueContext>();
 
-        Assert.Same(first, second);
+        Assert.Same(expected: first, actual: second);
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public class DbContextRegistrationTests : IClassFixture<NoMercyApiFactory>
         MediaContext ctx1 = scope1.ServiceProvider.GetRequiredService<MediaContext>();
         MediaContext ctx2 = scope2.ServiceProvider.GetRequiredService<MediaContext>();
 
-        Assert.NotSame(ctx1, ctx2);
+        Assert.NotSame(expected: ctx1, actual: ctx2);
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class DbContextRegistrationTests : IClassFixture<NoMercyApiFactory>
         QueueContext ctx1 = scope1.ServiceProvider.GetRequiredService<QueueContext>();
         QueueContext ctx2 = scope2.ServiceProvider.GetRequiredService<QueueContext>();
 
-        Assert.NotSame(ctx1, ctx2);
+        Assert.NotSame(expected: ctx1, actual: ctx2);
     }
 
     [Fact]
@@ -83,8 +83,8 @@ public class DbContextRegistrationTests : IClassFixture<NoMercyApiFactory>
 
         // If this were transient, ReferenceEquals would be false
         Assert.True(
-            ReferenceEquals(first, second),
-            "MediaContext should be scoped (same instance per scope), not transient (new instance per resolution)"
+            condition: ReferenceEquals(objA: first, objB: second),
+            userMessage: "MediaContext should be scoped (same instance per scope), not transient (new instance per resolution)"
         );
     }
 
@@ -96,8 +96,8 @@ public class DbContextRegistrationTests : IClassFixture<NoMercyApiFactory>
         QueueContext second = scope.ServiceProvider.GetRequiredService<QueueContext>();
 
         Assert.True(
-            ReferenceEquals(first, second),
-            "QueueContext should be scoped (same instance per scope), not transient (new instance per resolution)"
+            condition: ReferenceEquals(objA: first, objB: second),
+            userMessage: "QueueContext should be scoped (same instance per scope), not transient (new instance per resolution)"
         );
     }
 
@@ -109,7 +109,7 @@ public class DbContextRegistrationTests : IClassFixture<NoMercyApiFactory>
 
         // Track a change on the scoped context
         User? user = context.Users.FirstOrDefault();
-        Assert.NotNull(user);
+        Assert.NotNull(@object: user);
 
         string originalName = user.Name;
         string tempName = $"Test_{Guid.NewGuid():N}";
@@ -118,9 +118,9 @@ public class DbContextRegistrationTests : IClassFixture<NoMercyApiFactory>
 
         // Re-resolve from same scope — should be same instance with same change tracker
         MediaContext sameContext = scope.ServiceProvider.GetRequiredService<MediaContext>();
-        User? reloaded = sameContext.Users.FirstOrDefault(u => u.Id == user.Id);
-        Assert.NotNull(reloaded);
-        Assert.Equal(tempName, reloaded.Name);
+        User? reloaded = sameContext.Users.FirstOrDefault(predicate: u => u.Id == user.Id);
+        Assert.NotNull(@object: reloaded);
+        Assert.Equal(expected: tempName, actual: reloaded.Name);
 
         // Restore original name
         reloaded.Name = originalName;
@@ -136,15 +136,15 @@ public class DbContextRegistrationTests : IClassFixture<NoMercyApiFactory>
 
         // Since they're the same instance, changes tracked by ctx1 are visible to ctx2
         User? user = ctx1.Users.FirstOrDefault();
-        Assert.NotNull(user);
+        Assert.NotNull(@object: user);
 
         string originalName = user.Name;
         user.Name = "SharedTracking";
 
         // ctx2 should see the same entity with the modified name (same change tracker)
-        User? fromCtx2 = ctx2.Users.Local.FirstOrDefault(u => u.Id == user.Id);
-        Assert.NotNull(fromCtx2);
-        Assert.Equal("SharedTracking", fromCtx2.Name);
+        User? fromCtx2 = ctx2.Users.Local.FirstOrDefault(predicate: u => u.Id == user.Id);
+        Assert.NotNull(@object: fromCtx2);
+        Assert.Equal(expected: "SharedTracking", actual: fromCtx2.Name);
 
         // Restore
         user.Name = originalName;

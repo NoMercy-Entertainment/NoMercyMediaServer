@@ -37,7 +37,7 @@ public class MovieExtrasJob : AbstractMediaExraDataJob<TmdbMovieAppends>
         IStorageDriver storageDriver,
         ILoggerFactory loggerFactory
     )
-        : base(storageFactory, storageDriver, loggerFactory) { }
+        : base(storageFactory: storageFactory, storageDriver: storageDriver, loggerFactory: loggerFactory) { }
 
     public override string QueueName => "extras";
     public override int Priority => 1;
@@ -47,38 +47,38 @@ public class MovieExtrasJob : AbstractMediaExraDataJob<TmdbMovieAppends>
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
-        MovieRepository movieRepository = new(context);
+        MovieRepository movieRepository = new(context: context);
         MovieManager movieManager = new(
-            movieRepository,
-            jobDispatcher,
-            StorageFactory,
-            LoggerFactory.CreateLogger<MovieManager>()
+            movieRepository: movieRepository,
+            jobDispatcher: jobDispatcher,
+            storageFactory: StorageFactory,
+            logger: LoggerFactory.CreateLogger<MovieManager>()
         );
 
         PersonRepository personRepository = new(
-            context,
-            LoggerFactory.CreateLogger<PersonRepository>()
+            context: context,
+            logger: LoggerFactory.CreateLogger<PersonRepository>()
         );
         PersonManager personManager = new(
-            personRepository,
-            jobDispatcher,
-            LoggerFactory.CreateLogger<PersonManager>()
+            personRepository: personRepository,
+            jobDispatcher: jobDispatcher,
+            logger: LoggerFactory.CreateLogger<PersonManager>()
         );
 
-        await personManager.Store(Storage);
+        await personManager.Store(movie: Storage);
 
-        await movieManager.StoreImages(Storage);
-        await movieManager.StoreSimilar(Storage);
-        await movieManager.StoreRecommendations(Storage);
-        await movieManager.StoreAlternativeTitles(Storage);
-        await movieManager.StoreWatchProviders(Storage);
-        await movieManager.StoreVideos(Storage);
-        await movieManager.StoreCompanies(Storage);
-        await movieManager.StoreKeywords(Storage);
+        await movieManager.StoreImages(movie: Storage);
+        await movieManager.StoreSimilar(movie: Storage);
+        await movieManager.StoreRecommendations(movie: Storage);
+        await movieManager.StoreAlternativeTitles(movie: Storage);
+        await movieManager.StoreWatchProviders(movie: Storage);
+        await movieManager.StoreVideos(movie: Storage);
+        await movieManager.StoreCompanies(movie: Storage);
+        await movieManager.StoreKeywords(movie: Storage);
 
         if (EventBusProvider.IsConfigured)
             await EventBusProvider.Current.PublishAsync(
-                new LibraryRefreshedEvent { QueryKey = ["base", "info", Storage.Id.ToString()] }
+                @event: new LibraryRefreshedEvent { QueryKey = ["base", "info", Storage.Id.ToString()] }
             );
     }
 }

@@ -19,49 +19,49 @@ namespace NoMercy.Tests.NmSystem;
 /// file with a rich, query-friendly line; old runs are pruned to MaxRunFiles; the
 /// callback receives a structured record and a throwing callback never breaks logging.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class NoMercyLoggerSinkTests
 {
     [Fact]
     public void PerRunFile_WritesRichQueryableJsonLine()
     {
-        string dir = Path.Combine(Path.GetTempPath(), $"nm-logdir-{Guid.NewGuid():N}");
+        string dir = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-logdir-{Guid.NewGuid():N}");
         try
         {
             NoMercyLoggerOptions options = new() { Color = false, LogDirectory = dir };
-            using (NoMercyLoggerProvider provider = new(options, new StringWriter()))
+            using (NoMercyLoggerProvider provider = new(options: options, output: new StringWriter()))
             {
                 ILogger logger = provider.CreateLogger(
-                    "NoMercy.Providers.TMDB.Client.TmdbBaseClient"
+                    categoryName: "NoMercy.Providers.TMDB.Client.TmdbBaseClient"
                 );
-                logger.LogInformation("Fetching {Id}", 27205);
+                logger.LogInformation(message: "Fetching {Id}", args: 27205);
             }
 
-            string[] runs = Directory.GetFiles(dir, "run-*.jsonl");
+            string[] runs = Directory.GetFiles(path: dir, searchPattern: "run-*.jsonl");
             runs.Should().ContainSingle();
 
-            string[] lines = File.ReadAllLines(runs[0]);
+            string[] lines = File.ReadAllLines(path: runs[0]);
             lines.Should().ContainSingle();
 
             string line = lines[0];
-            line.Should().Contain("\"@t\":");
-            line.Should().Contain("\"Type\":\"moviedb\"");
-            line.Should().Contain("\"Group\":\"Providers\"");
-            line.Should().Contain("\"Level\":\"Information\"");
-            line.Should().Contain("Fetching 27205");
+            line.Should().Contain(expected: "\"@t\":");
+            line.Should().Contain(expected: "\"Type\":\"moviedb\"");
+            line.Should().Contain(expected: "\"Group\":\"Providers\"");
+            line.Should().Contain(expected: "\"Level\":\"Information\"");
+            line.Should().Contain(expected: "Fetching 27205");
         }
         finally
         {
-            if (Directory.Exists(dir))
-                Directory.Delete(dir, true);
+            if (Directory.Exists(path: dir))
+                Directory.Delete(path: dir, recursive: true);
         }
     }
 
     [Fact]
     public void Retention_KeepsOnlyMaxRunFiles()
     {
-        string dir = Path.Combine(Path.GetTempPath(), $"nm-logdir-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(dir);
+        string dir = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-logdir-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: dir);
         try
         {
             foreach (
@@ -72,7 +72,7 @@ public class NoMercyLoggerSinkTests
                     "run-20200103-000001-1.jsonl",
                 }
             )
-                File.WriteAllText(Path.Combine(dir, old), string.Empty);
+                File.WriteAllText(path: Path.Combine(path1: dir, path2: old), contents: string.Empty);
 
             NoMercyLoggerOptions options = new()
             {
@@ -80,28 +80,28 @@ public class NoMercyLoggerSinkTests
                 LogDirectory = dir,
                 MaxRunFiles = 2,
             };
-            using (NoMercyLoggerProvider provider = new(options, new StringWriter())) { }
+            using (NoMercyLoggerProvider provider = new(options: options, output: new StringWriter())) { }
 
-            Directory.GetFiles(dir, "run-*.jsonl").Length.Should().Be(2);
+            Directory.GetFiles(path: dir, searchPattern: "run-*.jsonl").Length.Should().Be(expected: 2);
         }
         finally
         {
-            if (Directory.Exists(dir))
-                Directory.Delete(dir, true);
+            if (Directory.Exists(path: dir))
+                Directory.Delete(path: dir, recursive: true);
         }
     }
 
     [Fact]
     public void WriteEntry_AppendsLegacyLineToRunFile()
     {
-        string dir = Path.Combine(Path.GetTempPath(), $"nm-logdir-{Guid.NewGuid():N}");
+        string dir = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-logdir-{Guid.NewGuid():N}");
         try
         {
             NoMercyLoggerOptions options = new() { Color = false, LogDirectory = dir };
-            using (NoMercyLoggerProvider provider = new(options, new StringWriter()))
+            using (NoMercyLoggerProvider provider = new(options: options, output: new StringWriter()))
             {
                 provider.WriteEntry(
-                    new()
+                    entry: new()
                     {
                         Type = "queue",
                         Message = "legacy line",
@@ -112,16 +112,16 @@ public class NoMercyLoggerSinkTests
                 );
             }
 
-            string[] runs = Directory.GetFiles(dir, "run-*.jsonl");
+            string[] runs = Directory.GetFiles(path: dir, searchPattern: "run-*.jsonl");
             runs.Should().ContainSingle();
-            string line = File.ReadAllLines(runs[0]).Single();
-            line.Should().Contain("\"Type\":\"queue\"");
-            line.Should().Contain("legacy line");
+            string line = File.ReadAllLines(path: runs[0]).Single();
+            line.Should().Contain(expected: "\"Type\":\"queue\"");
+            line.Should().Contain(expected: "legacy line");
         }
         finally
         {
-            if (Directory.Exists(dir))
-                Directory.Delete(dir, true);
+            if (Directory.Exists(path: dir))
+                Directory.Delete(path: dir, recursive: true);
         }
     }
 
@@ -130,15 +130,15 @@ public class NoMercyLoggerSinkTests
     {
         List<NoMercyLogRecord> received = new();
         NoMercyLoggerOptions options = new() { Color = false, OnRecord = received.Add };
-        using NoMercyLoggerProvider provider = new(options, new StringWriter());
-        ILogger logger = provider.CreateLogger("NoMercy.Providers.TVDB.Client.TvdbBaseClient");
+        using NoMercyLoggerProvider provider = new(options: options, output: new StringWriter());
+        ILogger logger = provider.CreateLogger(categoryName: "NoMercy.Providers.TVDB.Client.TvdbBaseClient");
 
-        logger.LogWarning("rate limited");
+        logger.LogWarning(message: "rate limited");
 
         received.Should().ContainSingle();
-        received[0].CategoryKey.Should().Be("tvdb");
-        received[0].Level.Should().Be(LogLevel.Warning);
-        received[0].Message.Should().Be("rate limited");
+        received[index: 0].CategoryKey.Should().Be(expected: "tvdb");
+        received[index: 0].Level.Should().Be(expected: LogLevel.Warning);
+        received[index: 0].Message.Should().Be(expected: "rate limited");
     }
 
     [Fact]
@@ -148,14 +148,14 @@ public class NoMercyLoggerSinkTests
         NoMercyLoggerOptions options = new()
         {
             Color = false,
-            OnRecord = _ => throw new InvalidOperationException("boom"),
+            OnRecord = _ => throw new InvalidOperationException(message: "boom"),
         };
-        using NoMercyLoggerProvider provider = new(options, sink);
-        ILogger logger = provider.CreateLogger("NoMercy.Service.X");
+        using NoMercyLoggerProvider provider = new(options: options, output: sink);
+        ILogger logger = provider.CreateLogger(categoryName: "NoMercy.Service.X");
 
-        Action act = () => logger.LogInformation("still logged");
+        Action act = () => logger.LogInformation(message: "still logged");
 
         act.Should().NotThrow();
-        sink.ToString().Should().Contain("still logged");
+        sink.ToString().Should().Contain(expected: "still logged");
     }
 }

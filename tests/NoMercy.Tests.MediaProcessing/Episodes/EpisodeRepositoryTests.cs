@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Linq.Expressions;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -26,7 +27,7 @@ public class EpisodeRepositoryTests : IDisposable
 
     public EpisodeRepositoryTests()
     {
-        _connection = new("Data Source=:memory:");
+        _connection = new(connectionString: "Data Source=:memory:");
         _connection.Open();
 
         using (SqliteCommand fkOff = _connection.CreateCommand())
@@ -35,9 +36,9 @@ public class EpisodeRepositoryTests : IDisposable
             fkOff.ExecuteNonQuery();
         }
 
-        _options = new DbContextOptionsBuilder<MediaContext>().UseSqlite(_connection).Options;
+        _options = new DbContextOptionsBuilder<MediaContext>().UseSqlite(connection: _connection).Options;
 
-        using MediaContext ctx = new(_options);
+        using MediaContext ctx = new(options: _options);
         ctx.Database.EnsureCreated();
     }
 
@@ -49,8 +50,8 @@ public class EpisodeRepositoryTests : IDisposable
     [Fact]
     public async Task StoreEpisodes_inserts_new_episode_with_all_fields()
     {
-        using MediaContext context = new(_options);
-        EpisodeRepository repo = new(context);
+        using MediaContext context = new(options: _options);
+        EpisodeRepository repo = new(context: context);
 
         int tvId = 1;
         int seasonId = 1;
@@ -62,7 +63,7 @@ public class EpisodeRepositoryTests : IDisposable
             Title = "Pilot",
             EpisodeNumber = 1,
             SeasonNumber = 1,
-            AirDate = new DateTime(2023, 01, 15),
+            AirDate = new DateTime(year: 2023, month: 01, day: 15),
             Overview = "The first episode introduces the main characters.",
             ProductionCode = "E001",
             Still = "/still_path.jpg",
@@ -70,27 +71,27 @@ public class EpisodeRepositoryTests : IDisposable
             SeasonId = seasonId,
         };
 
-        await repo.StoreEpisodes(new[] { episode });
+        await repo.StoreEpisodes(episodes: new[] { episode });
 
-        using MediaContext verify = new(_options);
-        Episode? stored = await verify.Episodes.FirstOrDefaultAsync(e => e.Id == episodeId);
+        using MediaContext verify = new(options: _options);
+        Episode? stored = await verify.Episodes.FirstOrDefaultAsync(predicate: e => e.Id == episodeId);
 
         stored.Should().NotBeNull();
-        stored!.Title.Should().Be("Pilot");
-        stored.EpisodeNumber.Should().Be(1);
-        stored.SeasonNumber.Should().Be(1);
-        stored.AirDate.Should().Be(new(2023, 01, 15));
-        stored.Overview.Should().Contain("first episode");
-        stored.ProductionCode.Should().Be("E001");
-        stored.Still.Should().Be("/still_path.jpg");
-        stored.TvId.Should().Be(tvId);
-        stored.SeasonId.Should().Be(seasonId);
+        stored!.Title.Should().Be(expected: "Pilot");
+        stored.EpisodeNumber.Should().Be(expected: 1);
+        stored.SeasonNumber.Should().Be(expected: 1);
+        stored.AirDate.Should().Be(expected: new(year: 2023, month: 01, day: 15));
+        stored.Overview.Should().Contain(expected: "first episode");
+        stored.ProductionCode.Should().Be(expected: "E001");
+        stored.Still.Should().Be(expected: "/still_path.jpg");
+        stored.TvId.Should().Be(expected: tvId);
+        stored.SeasonId.Should().Be(expected: seasonId);
     }
 
     [Fact]
     public async Task StoreEpisodes_updates_existing_episode_on_upsert()
     {
-        using MediaContext seed = new(_options);
+        using MediaContext seed = new(options: _options);
         int episodeId = 101;
         Episode original = new()
         {
@@ -98,18 +99,18 @@ public class EpisodeRepositoryTests : IDisposable
             Title = "Old Title",
             EpisodeNumber = 1,
             SeasonNumber = 1,
-            AirDate = new DateTime(2023, 01, 01),
+            AirDate = new DateTime(year: 2023, month: 01, day: 01),
             Overview = "Old overview",
             ProductionCode = "OLD",
             Still = "/old.jpg",
             TvId = 1,
             SeasonId = 1,
         };
-        seed.Episodes.Add(original);
+        seed.Episodes.Add(entity: original);
         await seed.SaveChangesAsync();
 
-        using MediaContext context = new(_options);
-        EpisodeRepository repo = new(context);
+        using MediaContext context = new(options: _options);
+        EpisodeRepository repo = new(context: context);
 
         Episode updated = new()
         {
@@ -117,7 +118,7 @@ public class EpisodeRepositoryTests : IDisposable
             Title = "Updated Title",
             EpisodeNumber = 2,
             SeasonNumber = 1,
-            AirDate = new DateTime(2023, 01, 22),
+            AirDate = new DateTime(year: 2023, month: 01, day: 22),
             Overview = "Updated overview with new content",
             ProductionCode = "NEW",
             Still = "/new.jpg",
@@ -125,23 +126,23 @@ public class EpisodeRepositoryTests : IDisposable
             SeasonId = 1,
         };
 
-        await repo.StoreEpisodes(new[] { updated });
+        await repo.StoreEpisodes(episodes: new[] { updated });
 
-        using MediaContext verify = new(_options);
-        Episode? result = await verify.Episodes.FirstOrDefaultAsync(e => e.Id == episodeId);
+        using MediaContext verify = new(options: _options);
+        Episode? result = await verify.Episodes.FirstOrDefaultAsync(predicate: e => e.Id == episodeId);
 
         result.Should().NotBeNull();
-        result!.Title.Should().Be("Updated Title");
-        result.EpisodeNumber.Should().Be(2);
-        result.AirDate.Should().Be(new(2023, 01, 22));
-        result.ProductionCode.Should().Be("NEW");
+        result!.Title.Should().Be(expected: "Updated Title");
+        result.EpisodeNumber.Should().Be(expected: 2);
+        result.AirDate.Should().Be(expected: new(year: 2023, month: 01, day: 22));
+        result.ProductionCode.Should().Be(expected: "NEW");
     }
 
     [Fact]
     public async Task StoreEpisodes_stores_multiple_episodes_for_season()
     {
-        using MediaContext context = new(_options);
-        EpisodeRepository repo = new(context);
+        using MediaContext context = new(options: _options);
+        EpisodeRepository repo = new(context: context);
 
         int tvId = 1;
         int seasonId = 1;
@@ -154,7 +155,7 @@ public class EpisodeRepositoryTests : IDisposable
                 Title = "Episode 1",
                 EpisodeNumber = 1,
                 SeasonNumber = 1,
-                AirDate = new DateTime(2023, 01, 15),
+                AirDate = new DateTime(year: 2023, month: 01, day: 15),
                 Overview = "First episode",
                 ProductionCode = "E001",
                 Still = "/still1.jpg",
@@ -167,7 +168,7 @@ public class EpisodeRepositoryTests : IDisposable
                 Title = "Episode 2",
                 EpisodeNumber = 2,
                 SeasonNumber = 1,
-                AirDate = new DateTime(2023, 01, 22),
+                AirDate = new DateTime(year: 2023, month: 01, day: 22),
                 Overview = "Second episode",
                 ProductionCode = "E002",
                 Still = "/still2.jpg",
@@ -180,7 +181,7 @@ public class EpisodeRepositoryTests : IDisposable
                 Title = "Episode 3",
                 EpisodeNumber = 3,
                 SeasonNumber = 1,
-                AirDate = new DateTime(2023, 01, 29),
+                AirDate = new DateTime(year: 2023, month: 01, day: 29),
                 Overview = "Third episode",
                 ProductionCode = "E003",
                 Still = "/still3.jpg",
@@ -189,28 +190,28 @@ public class EpisodeRepositoryTests : IDisposable
             },
         };
 
-        await repo.StoreEpisodes(episodes);
+        await repo.StoreEpisodes(episodes: episodes);
 
-        using MediaContext verify = new(_options);
+        using MediaContext verify = new(options: _options);
         List<Episode> stored = await verify
-            .Episodes.Where(e => e.SeasonId == seasonId)
-            .OrderBy(e => e.EpisodeNumber)
+            .Episodes.Where(predicate: e => e.SeasonId == seasonId)
+            .OrderBy(keySelector: e => e.EpisodeNumber)
             .ToListAsync();
 
-        stored.Should().HaveCount(3);
+        stored.Should().HaveCount(expected: 3);
         stored
             .Should()
             .Satisfy(
-                e => e.EpisodeNumber == 1 && e.Title == "Episode 1",
-                e => e.EpisodeNumber == 2 && e.Title == "Episode 2",
-                e => e.EpisodeNumber == 3 && e.Title == "Episode 3"
+                predicates: new Expression<Func<Episode, bool>>[]{e => e.EpisodeNumber == 1 && e.Title == "Episode 1",
+                    e => e.EpisodeNumber == 2 && e.Title == "Episode 2",
+                    e => e.EpisodeNumber == 3 && e.Title == "Episode 3"}
             );
     }
 
     [Fact]
     public async Task StoreEpisodeTranslations_inserts_translations_only_for_existing_episodes()
     {
-        using MediaContext seed = new(_options);
+        using MediaContext seed = new(options: _options);
         int episodeId = 101;
         Episode episode = new()
         {
@@ -225,11 +226,11 @@ public class EpisodeRepositoryTests : IDisposable
             TvId = 1,
             SeasonId = 1,
         };
-        seed.Episodes.Add(episode);
+        seed.Episodes.Add(entity: episode);
         await seed.SaveChangesAsync();
 
-        using MediaContext context = new(_options);
-        EpisodeRepository repo = new(context);
+        using MediaContext context = new(options: _options);
+        EpisodeRepository repo = new(context: context);
 
         List<Translation> translations = new()
         {
@@ -255,21 +256,21 @@ public class EpisodeRepositoryTests : IDisposable
             },
         };
 
-        await repo.StoreEpisodeTranslations(translations);
+        await repo.StoreEpisodeTranslations(translations: translations);
 
-        using MediaContext verify = new(_options);
+        using MediaContext verify = new(options: _options);
         List<Translation> stored = await verify
-            .Translations.Where(t => t.EpisodeId == episodeId || t.EpisodeId == 999)
+            .Translations.Where(predicate: t => t.EpisodeId == episodeId || t.EpisodeId == 999)
             .ToListAsync();
 
-        stored.Should().HaveCount(1);
-        stored.Single().Iso6391.Should().Be("en");
+        stored.Should().HaveCount(expected: 1);
+        stored.Single().Iso6391.Should().Be(expected: "en");
     }
 
     [Fact]
     public async Task StoreEpisodeTranslations_upserts_existing_translations()
     {
-        using MediaContext seed = new(_options);
+        using MediaContext seed = new(options: _options);
         int episodeId = 101;
         Episode episode = new()
         {
@@ -284,7 +285,7 @@ public class EpisodeRepositoryTests : IDisposable
             TvId = 1,
             SeasonId = 1,
         };
-        seed.Episodes.Add(episode);
+        seed.Episodes.Add(entity: episode);
 
         Translation existing = new()
         {
@@ -296,11 +297,11 @@ public class EpisodeRepositoryTests : IDisposable
             EnglishName = "English",
             EpisodeId = episodeId,
         };
-        seed.Translations.Add(existing);
+        seed.Translations.Add(entity: existing);
         await seed.SaveChangesAsync();
 
-        using MediaContext context = new(_options);
-        EpisodeRepository repo = new(context);
+        using MediaContext context = new(options: _options);
+        EpisodeRepository repo = new(context: context);
 
         List<Translation> translations = new()
         {
@@ -316,21 +317,21 @@ public class EpisodeRepositoryTests : IDisposable
             },
         };
 
-        await repo.StoreEpisodeTranslations(translations);
+        await repo.StoreEpisodeTranslations(translations: translations);
 
-        using MediaContext verify = new(_options);
-        Translation? stored = await verify.Translations.FirstOrDefaultAsync(t =>
+        using MediaContext verify = new(options: _options);
+        Translation? stored = await verify.Translations.FirstOrDefaultAsync(predicate: t =>
             t.EpisodeId == episodeId && t.Iso6391 == "en"
         );
 
         stored.Should().NotBeNull();
-        stored!.Title.Should().Be("Updated Title");
+        stored!.Title.Should().Be(expected: "Updated Title");
     }
 
     [Fact]
     public async Task StoreEpisodeImages_inserts_images_only_for_existing_episodes()
     {
-        using MediaContext seed = new(_options);
+        using MediaContext seed = new(options: _options);
         int episodeId = 101;
         Episode episode = new()
         {
@@ -345,11 +346,11 @@ public class EpisodeRepositoryTests : IDisposable
             TvId = 1,
             SeasonId = 1,
         };
-        seed.Episodes.Add(episode);
+        seed.Episodes.Add(entity: episode);
         await seed.SaveChangesAsync();
 
-        using MediaContext context = new(_options);
-        EpisodeRepository repo = new(context);
+        using MediaContext context = new(options: _options);
+        EpisodeRepository repo = new(context: context);
 
         Image[] images = new[]
         {
@@ -381,21 +382,21 @@ public class EpisodeRepositoryTests : IDisposable
             },
         };
 
-        await repo.StoreEpisodeImages(images);
+        await repo.StoreEpisodeImages(images: images);
 
-        using MediaContext verify = new(_options);
+        using MediaContext verify = new(options: _options);
         List<Image> stored = await verify
-            .Images.Where(i => i.EpisodeId == episodeId || i.EpisodeId == 999)
+            .Images.Where(predicate: i => i.EpisodeId == episodeId || i.EpisodeId == 999)
             .ToListAsync();
 
-        stored.Should().HaveCount(1);
-        stored.Single().FilePath.Should().Be("/still1.jpg");
+        stored.Should().HaveCount(expected: 1);
+        stored.Single().FilePath.Should().Be(expected: "/still1.jpg");
     }
 
     [Fact]
     public async Task StoreEpisodeImages_upserts_existing_images()
     {
-        using MediaContext seed = new(_options);
+        using MediaContext seed = new(options: _options);
         int episodeId = 101;
         Episode episode = new()
         {
@@ -410,7 +411,7 @@ public class EpisodeRepositoryTests : IDisposable
             TvId = 1,
             SeasonId = 1,
         };
-        seed.Episodes.Add(episode);
+        seed.Episodes.Add(entity: episode);
 
         Image existing = new()
         {
@@ -425,11 +426,11 @@ public class EpisodeRepositoryTests : IDisposable
             Site = "https://image.tmdb.org/t/p/",
             EpisodeId = episodeId,
         };
-        seed.Images.Add(existing);
+        seed.Images.Add(entity: existing);
         await seed.SaveChangesAsync();
 
-        using MediaContext context = new(_options);
-        EpisodeRepository repo = new(context);
+        using MediaContext context = new(options: _options);
+        EpisodeRepository repo = new(context: context);
 
         Image[] images = new[]
         {
@@ -448,36 +449,36 @@ public class EpisodeRepositoryTests : IDisposable
             },
         };
 
-        await repo.StoreEpisodeImages(images);
+        await repo.StoreEpisodeImages(images: images);
 
-        using MediaContext verify = new(_options);
-        Image? stored = await verify.Images.FirstOrDefaultAsync(i =>
+        using MediaContext verify = new(options: _options);
+        Image? stored = await verify.Images.FirstOrDefaultAsync(predicate: i =>
             i.FilePath == "/still.jpg" && i.EpisodeId == episodeId
         );
 
         stored.Should().NotBeNull();
-        stored!.VoteAverage.Should().Be(9.0);
-        stored.VoteCount.Should().Be(100);
+        stored!.VoteAverage.Should().Be(expected: 9.0);
+        stored.VoteCount.Should().Be(expected: 100);
     }
 
     [Fact]
     public async Task StoreEpisodeImages_handles_empty_image_list()
     {
-        using MediaContext context = new(_options);
-        EpisodeRepository repo = new(context);
+        using MediaContext context = new(options: _options);
+        EpisodeRepository repo = new(context: context);
 
-        await repo.StoreEpisodeImages(Array.Empty<Image>());
+        await repo.StoreEpisodeImages(images: Array.Empty<Image>());
 
-        using MediaContext verify = new(_options);
+        using MediaContext verify = new(options: _options);
         int count = await verify.Images.CountAsync();
 
-        count.Should().Be(0);
+        count.Should().Be(expected: 0);
     }
 
     [Fact]
     public async Task StoreEpisodeImages_stores_multiple_images_for_episode()
     {
-        using MediaContext seed = new(_options);
+        using MediaContext seed = new(options: _options);
         int episodeId = 101;
         Episode episode = new()
         {
@@ -492,11 +493,11 @@ public class EpisodeRepositoryTests : IDisposable
             TvId = 1,
             SeasonId = 1,
         };
-        seed.Episodes.Add(episode);
+        seed.Episodes.Add(entity: episode);
         await seed.SaveChangesAsync();
 
-        using MediaContext context = new(_options);
-        EpisodeRepository repo = new(context);
+        using MediaContext context = new(options: _options);
+        EpisodeRepository repo = new(context: context);
 
         Image[] images = new[]
         {
@@ -528,20 +529,20 @@ public class EpisodeRepositoryTests : IDisposable
             },
         };
 
-        await repo.StoreEpisodeImages(images);
+        await repo.StoreEpisodeImages(images: images);
 
-        using MediaContext verify = new(_options);
+        using MediaContext verify = new(options: _options);
         List<Image> stored = await verify
-            .Images.Where(i => i.EpisodeId == episodeId)
-            .OrderBy(i => i.FilePath)
+            .Images.Where(predicate: i => i.EpisodeId == episodeId)
+            .OrderBy(keySelector: i => i.FilePath)
             .ToListAsync();
 
-        stored.Should().HaveCount(2);
+        stored.Should().HaveCount(expected: 2);
         stored
             .Should()
             .Satisfy(
-                i => i.FilePath == "/still1.jpg" && i.VoteAverage == 8.0,
-                i => i.FilePath == "/still2.jpg" && i.VoteAverage == 7.5
+                predicates: new Expression<Func<Image, bool>>[]{i => i.FilePath == "/still1.jpg" && i.VoteAverage == 8.0,
+                    i => i.FilePath == "/still2.jpg" && i.VoteAverage == 7.5}
             );
     }
 }

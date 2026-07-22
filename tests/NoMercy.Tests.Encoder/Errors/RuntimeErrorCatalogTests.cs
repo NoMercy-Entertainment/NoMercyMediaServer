@@ -28,15 +28,15 @@ namespace NoMercy.Tests.Encoder.Errors;
 public class RuntimeErrorCatalogTests
 {
     private static readonly string[] RuntimeErrorIds = typeof(EncoderRuntimeErrorId)
-        .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-        .Where(f => f is { IsLiteral: true, IsInitOnly: false })
-        .Select(f => (string)f.GetValue(null)!)
+        .GetFields(bindingAttr: BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
+        .Where(predicate: f => f is { IsLiteral: true, IsInitOnly: false })
+        .Select(selector: f => (string)f.GetValue(obj: null)!)
         .ToArray();
 
     private static readonly string[] AllRuleIds = typeof(EncoderRuleId)
-        .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-        .Where(f => f is { IsLiteral: true, IsInitOnly: false })
-        .Select(f => (string)f.GetValue(null)!)
+        .GetFields(bindingAttr: BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
+        .Where(predicate: f => f is { IsLiteral: true, IsInitOnly: false })
+        .Select(selector: f => (string)f.GetValue(obj: null)!)
         .ToArray();
 
     // ---- helper: locate docs/encoder-errors.md relative to the solution root ----
@@ -45,20 +45,20 @@ public class RuntimeErrorCatalogTests
     {
         // Walk up from the test assembly until we find the docs directory.
         DirectoryInfo? dir = new FileInfo(
-            typeof(RuntimeErrorCatalogTests).Assembly.Location
+            fileName: typeof(RuntimeErrorCatalogTests).Assembly.Location
         ).Directory;
 
         while (dir is not null)
         {
-            string candidate = Path.Combine(dir.FullName, "docs", "encoder-errors.md");
-            if (File.Exists(candidate))
+            string candidate = Path.Combine(path1: dir.FullName, path2: "docs", path3: "encoder-errors.md");
+            if (File.Exists(path: candidate))
                 return candidate;
             dir = dir.Parent;
         }
 
         throw new FileNotFoundException(
-            "Could not locate docs/encoder-errors.md. "
-                + "Expected it at the repository root next to apps/, docs/, infra/ etc."
+            message: "Could not locate docs/encoder-errors.md. "
+                     + "Expected it at the repository root next to apps/, docs/, infra/ etc."
         );
     }
 
@@ -72,8 +72,8 @@ public class RuntimeErrorCatalogTests
             AllRuleIds
                 .Should()
                 .Contain(
-                    id,
-                    $"EncoderRuntimeErrorId.{id} must be an alias of an EncoderRuleId constant"
+                    expected: id,
+                    because: $"EncoderRuntimeErrorId.{id} must be an alias of an EncoderRuleId constant"
                 );
         }
     }
@@ -81,34 +81,34 @@ public class RuntimeErrorCatalogTests
     // ---- 2. EncoderRuntimeErrorId covers the required 21 runtime error IDs -----
 
     [Theory]
-    [InlineData("hardware.forced_but_unavailable")]
-    [InlineData("hardware.gpu_telemetry_unsupported")]
-    [InlineData("gpu_capacity_exhausted")]
-    [InlineData("encoder.init_failed")]
-    [InlineData("source.not_accessible")]
-    [InlineData("source.read_error")]
-    [InlineData("output.write_error")]
-    [InlineData("output.path_not_allowed")]
-    [InlineData("license.revoked")]
-    [InlineData("license.unreachable")]
-    [InlineData("capability.fpcalc_missing")]
-    [InlineData("capability.whisper_missing")]
-    [InlineData("capability.tesseract_model_missing")]
-    [InlineData("disc.drive_busy")]
-    [InlineData("disc.aacs_cert_missing")]
-    [InlineData("disc.bdplus_converter_missing")]
-    [InlineData("disc.read_error")]
-    [InlineData("job.interrupted_no_checkpoint")]
-    [InlineData("distribution.hmac_invalid")]
-    [InlineData("distribution.timestamp_replay")]
-    [InlineData("distribution.worker_not_registered")]
+    [InlineData(data: "hardware.forced_but_unavailable")]
+    [InlineData(data: "hardware.gpu_telemetry_unsupported")]
+    [InlineData(data: "gpu_capacity_exhausted")]
+    [InlineData(data: "encoder.init_failed")]
+    [InlineData(data: "source.not_accessible")]
+    [InlineData(data: "source.read_error")]
+    [InlineData(data: "output.write_error")]
+    [InlineData(data: "output.path_not_allowed")]
+    [InlineData(data: "license.revoked")]
+    [InlineData(data: "license.unreachable")]
+    [InlineData(data: "capability.fpcalc_missing")]
+    [InlineData(data: "capability.whisper_missing")]
+    [InlineData(data: "capability.tesseract_model_missing")]
+    [InlineData(data: "disc.drive_busy")]
+    [InlineData(data: "disc.aacs_cert_missing")]
+    [InlineData(data: "disc.bdplus_converter_missing")]
+    [InlineData(data: "disc.read_error")]
+    [InlineData(data: "job.interrupted_no_checkpoint")]
+    [InlineData(data: "distribution.hmac_invalid")]
+    [InlineData(data: "distribution.timestamp_replay")]
+    [InlineData(data: "distribution.worker_not_registered")]
     public void Required_runtime_error_id_is_present(string expectedId)
     {
         RuntimeErrorIds
             .Should()
             .Contain(
-                expectedId,
-                $"EncoderRuntimeErrorId must declare the required runtime error ID '{expectedId}'"
+                expected: expectedId,
+                because: $"EncoderRuntimeErrorId must declare the required runtime error ID '{expectedId}'"
             );
     }
 
@@ -118,15 +118,15 @@ public class RuntimeErrorCatalogTests
     public void Every_EncoderRuleId_constant_has_a_docs_entry()
     {
         string docsFile = FindDocsFile();
-        string docsContent = File.ReadAllText(docsFile);
+        string docsContent = File.ReadAllText(path: docsFile);
 
-        List<string> missing = AllRuleIds.Where(id => !docsContent.Contains($"`{id}`")).ToList();
+        List<string> missing = AllRuleIds.Where(predicate: id => !docsContent.Contains(value: $"`{id}`")).ToList();
 
         missing
             .Should()
             .BeEmpty(
-                "The following EncoderRuleId constants are missing from docs/encoder-errors.md: "
-                    + string.Join(", ", missing)
+                because: "The following EncoderRuleId constants are missing from docs/encoder-errors.md: "
+                         + string.Join(separator: ", ", values: missing)
             );
     }
 
@@ -136,17 +136,17 @@ public class RuntimeErrorCatalogTests
     public void Every_EncoderRuntimeErrorId_constant_has_a_docs_entry()
     {
         string docsFile = FindDocsFile();
-        string docsContent = File.ReadAllText(docsFile);
+        string docsContent = File.ReadAllText(path: docsFile);
 
         List<string> missing = RuntimeErrorIds
-            .Where(id => !docsContent.Contains($"`{id}`"))
+            .Where(predicate: id => !docsContent.Contains(value: $"`{id}`"))
             .ToList();
 
         missing
             .Should()
             .BeEmpty(
-                "The following EncoderRuntimeErrorId constants are missing from docs/encoder-errors.md: "
-                    + string.Join(", ", missing)
+                because: "The following EncoderRuntimeErrorId constants are missing from docs/encoder-errors.md: "
+                         + string.Join(separator: ", ", values: missing)
             );
     }
 
@@ -155,6 +155,6 @@ public class RuntimeErrorCatalogTests
     [Fact]
     public void EncoderRuntimeErrorId_declares_exactly_21_constants()
     {
-        RuntimeErrorIds.Should().HaveCount(21);
+        RuntimeErrorIds.Should().HaveCount(expected: 21);
     }
 }

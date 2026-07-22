@@ -24,20 +24,20 @@ public class PluginConfigurationTests : IDisposable
     public PluginConfigurationTests()
     {
         _tempDir = Path.Combine(
-            Path.GetTempPath(),
-            "nomercy-config-tests-" + Guid.NewGuid().ToString("N")
+            path1: Path.GetTempPath(),
+            path2: "nomercy-config-tests-" + Guid.NewGuid().ToString(format: "N")
         );
-        Directory.CreateDirectory(_tempDir);
-        _config = new(_tempDir, TestStorageHelper.CreateStorage(_tempDir));
+        Directory.CreateDirectory(path: _tempDir);
+        _config = new(dataFolderPath: _tempDir, storage: TestStorageHelper.CreateStorage(rootPath: _tempDir));
     }
 
     public void Dispose()
     {
         try
         {
-            if (Directory.Exists(_tempDir))
+            if (Directory.Exists(path: _tempDir))
             {
-                Directory.Delete(_tempDir, recursive: true);
+                Directory.Delete(path: _tempDir, recursive: true);
             }
         }
         catch (IOException) { }
@@ -61,7 +61,7 @@ public class PluginConfigurationTests : IDisposable
     public void Constructor_NullPath_ThrowsArgumentException()
     {
         Action act = () =>
-            new PluginConfiguration(null!, TestStorageHelper.CreateStorage(_tempDir));
+            new PluginConfiguration(dataFolderPath: null!, storage: TestStorageHelper.CreateStorage(rootPath: _tempDir));
 
         act.Should().Throw<ArgumentException>();
     }
@@ -69,7 +69,7 @@ public class PluginConfigurationTests : IDisposable
     [Fact]
     public void Constructor_EmptyPath_ThrowsArgumentException()
     {
-        Action act = () => new PluginConfiguration("", TestStorageHelper.CreateStorage(_tempDir));
+        Action act = () => new PluginConfiguration(dataFolderPath: "", storage: TestStorageHelper.CreateStorage(rootPath: _tempDir));
 
         act.Should().Throw<ArgumentException>();
     }
@@ -101,15 +101,15 @@ public class PluginConfigurationTests : IDisposable
             Tags = ["tag1", "tag2"],
         };
 
-        _config.SaveConfiguration(saved);
+        _config.SaveConfiguration(configuration: saved);
 
         TestConfig? loaded = _config.GetConfiguration<TestConfig>();
 
         loaded.Should().NotBeNull();
-        loaded!.ApiKey.Should().Be("test-key-123");
-        loaded.MaxRetries.Should().Be(5);
+        loaded!.ApiKey.Should().Be(expected: "test-key-123");
+        loaded.MaxRetries.Should().Be(expected: 5);
         loaded.Enabled.Should().BeFalse();
-        loaded.Tags.Should().BeEquivalentTo("tag1", "tag2");
+        loaded.Tags.Should().BeEquivalentTo(expectation: ["tag1", "tag2"]);
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public class PluginConfigurationTests : IDisposable
     {
         _config.HasConfiguration().Should().BeFalse();
 
-        _config.SaveConfiguration(new TestConfig { ApiKey = "key" });
+        _config.SaveConfiguration(configuration: new TestConfig { ApiKey = "key" });
 
         _config.HasConfiguration().Should().BeTrue();
     }
@@ -125,19 +125,19 @@ public class PluginConfigurationTests : IDisposable
     [Fact]
     public void SaveConfiguration_WritesFormattedJson()
     {
-        _config.SaveConfiguration(new TestConfig { ApiKey = "key" });
+        _config.SaveConfiguration(configuration: new TestConfig { ApiKey = "key" });
 
-        string filePath = Path.Combine(_tempDir, "config.json");
-        string json = File.ReadAllText(filePath);
+        string filePath = Path.Combine(path1: _tempDir, path2: "config.json");
+        string json = File.ReadAllText(path: filePath);
 
-        json.Should().Contain("\n");
-        json.Should().Contain("ApiKey");
+        json.Should().Contain(expected: "\n");
+        json.Should().Contain(expected: "ApiKey");
     }
 
     [Fact]
     public void SaveConfiguration_NullConfig_ThrowsArgumentNullException()
     {
-        Action act = () => _config.SaveConfiguration<TestConfig>(null!);
+        Action act = () => _config.SaveConfiguration<TestConfig>(configuration: null!);
 
         act.Should().Throw<ArgumentNullException>();
     }
@@ -145,17 +145,17 @@ public class PluginConfigurationTests : IDisposable
     [Fact]
     public void SaveConfiguration_Overwrites_ExistingConfig()
     {
-        _config.SaveConfiguration(new TestConfig { ApiKey = "old" });
-        _config.SaveConfiguration(new TestConfig { ApiKey = "new" });
+        _config.SaveConfiguration(configuration: new TestConfig { ApiKey = "old" });
+        _config.SaveConfiguration(configuration: new TestConfig { ApiKey = "new" });
 
         TestConfig? loaded = _config.GetConfiguration<TestConfig>();
-        loaded!.ApiKey.Should().Be("new");
+        loaded!.ApiKey.Should().Be(expected: "new");
     }
 
     [Fact]
     public void DeleteConfiguration_RemovesFile()
     {
-        _config.SaveConfiguration(new TestConfig { ApiKey = "key" });
+        _config.SaveConfiguration(configuration: new TestConfig { ApiKey = "key" });
         _config.HasConfiguration().Should().BeTrue();
 
         _config.DeleteConfiguration();
@@ -190,19 +190,19 @@ public class PluginConfigurationTests : IDisposable
             Tags = ["async-tag"],
         };
 
-        await _config.SaveConfigurationAsync(saved);
+        await _config.SaveConfigurationAsync(configuration: saved);
         TestConfig? loaded = await _config.GetConfigurationAsync<TestConfig>();
 
         loaded.Should().NotBeNull();
-        loaded!.ApiKey.Should().Be("async-key");
-        loaded.MaxRetries.Should().Be(10);
-        loaded.Tags.Should().ContainSingle().Which.Should().Be("async-tag");
+        loaded!.ApiKey.Should().Be(expected: "async-key");
+        loaded.MaxRetries.Should().Be(expected: 10);
+        loaded.Tags.Should().ContainSingle().Which.Should().Be(expected: "async-tag");
     }
 
     [Fact]
     public async Task SaveConfigurationAsync_NullConfig_ThrowsArgumentNullException()
     {
-        Func<Task> act = () => _config.SaveConfigurationAsync<TestConfig>(null!);
+        Func<Task> act = () => _config.SaveConfigurationAsync<TestConfig>(configuration: null!);
 
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
@@ -210,18 +210,18 @@ public class PluginConfigurationTests : IDisposable
     [Fact]
     public void SaveConfiguration_CreatesDirectoryIfNeeded()
     {
-        string nestedDir = Path.Combine(_tempDir, "nested", "deep");
-        Directory.CreateDirectory(nestedDir);
+        string nestedDir = Path.Combine(path1: _tempDir, path2: "nested", path3: "deep");
+        Directory.CreateDirectory(path: nestedDir);
         PluginConfiguration nestedConfig = new(
-            nestedDir,
-            TestStorageHelper.CreateStorage(nestedDir)
+            dataFolderPath: nestedDir,
+            storage: TestStorageHelper.CreateStorage(rootPath: nestedDir)
         );
 
-        nestedConfig.SaveConfiguration(new TestConfig { ApiKey = "nested" });
+        nestedConfig.SaveConfiguration(configuration: new TestConfig { ApiKey = "nested" });
 
         nestedConfig.HasConfiguration().Should().BeTrue();
         TestConfig? loaded = nestedConfig.GetConfiguration<TestConfig>();
-        loaded!.ApiKey.Should().Be("nested");
+        loaded!.ApiKey.Should().Be(expected: "nested");
     }
 
     [Fact]
@@ -231,30 +231,30 @@ public class PluginConfigurationTests : IDisposable
         // directory is NEVER pre-created here — this is the only way to reach
         // the storage.CreateDirectory(directory) call itself rather than just
         // the surrounding existence check.
-        string neverCreatedDir = Path.Combine(_tempDir, "missing", "nested");
+        string neverCreatedDir = Path.Combine(path1: _tempDir, path2: "missing", path3: "nested");
         PluginConfiguration config = new(
-            neverCreatedDir,
-            TestStorageHelper.CreateStorage(_tempDir)
+            dataFolderPath: neverCreatedDir,
+            storage: TestStorageHelper.CreateStorage(rootPath: _tempDir)
         );
 
-        config.SaveConfiguration(new TestConfig { ApiKey = "created-on-demand" });
+        config.SaveConfiguration(configuration: new TestConfig { ApiKey = "created-on-demand" });
 
-        Directory.Exists(neverCreatedDir).Should().BeTrue();
+        Directory.Exists(path: neverCreatedDir).Should().BeTrue();
         config.HasConfiguration().Should().BeTrue();
     }
 
     [Fact]
     public async Task SaveConfigurationAsync_DirectoryDoesNotExistYet_CreatesItBeforeWriting()
     {
-        string neverCreatedDir = Path.Combine(_tempDir, "missing-async", "nested");
+        string neverCreatedDir = Path.Combine(path1: _tempDir, path2: "missing-async", path3: "nested");
         PluginConfiguration config = new(
-            neverCreatedDir,
-            TestStorageHelper.CreateStorage(_tempDir)
+            dataFolderPath: neverCreatedDir,
+            storage: TestStorageHelper.CreateStorage(rootPath: _tempDir)
         );
 
-        await config.SaveConfigurationAsync(new TestConfig { ApiKey = "created-on-demand-async" });
+        await config.SaveConfigurationAsync(configuration: new TestConfig { ApiKey = "created-on-demand-async" });
 
-        Directory.Exists(neverCreatedDir).Should().BeTrue();
+        Directory.Exists(path: neverCreatedDir).Should().BeTrue();
         config.HasConfiguration().Should().BeTrue();
     }
 
@@ -265,8 +265,8 @@ public class PluginConfigurationTests : IDisposable
         // crashes mid-write. TryDeserialize must treat that as "no config" so
         // the plugin can re-initialise with defaults instead of taking the
         // load path down with an unhandled JsonException.
-        string filePath = Path.Combine(_tempDir, "config.json");
-        File.WriteAllText(filePath, "{ not valid json ][");
+        string filePath = Path.Combine(path1: _tempDir, path2: "config.json");
+        File.WriteAllText(path: filePath, contents: "{ not valid json ][");
 
         TestConfig? result = _config.GetConfiguration<TestConfig>();
 
@@ -276,8 +276,8 @@ public class PluginConfigurationTests : IDisposable
     [Fact]
     public async Task GetConfigurationAsync_MalformedJsonOnDisk_ReturnsNullInsteadOfThrowing()
     {
-        string filePath = Path.Combine(_tempDir, "config.json");
-        await File.WriteAllTextAsync(filePath, "{ not valid json ][");
+        string filePath = Path.Combine(path1: _tempDir, path2: "config.json");
+        await File.WriteAllTextAsync(path: filePath, contents: "{ not valid json ][");
 
         TestConfig? result = await _config.GetConfigurationAsync<TestConfig>();
 
@@ -287,13 +287,13 @@ public class PluginConfigurationTests : IDisposable
     [Fact]
     public void GetConfiguration_DifferentType_DeserializesCorrectly()
     {
-        _config.SaveConfiguration(new OtherConfig { Name = "test", Score = 9.5 });
+        _config.SaveConfiguration(configuration: new OtherConfig { Name = "test", Score = 9.5 });
 
         OtherConfig? loaded = _config.GetConfiguration<OtherConfig>();
 
         loaded.Should().NotBeNull();
-        loaded!.Name.Should().Be("test");
-        loaded.Score.Should().Be(9.5);
+        loaded!.Name.Should().Be(expected: "test");
+        loaded.Score.Should().Be(expected: 9.5);
     }
 
     [Fact]
@@ -320,10 +320,10 @@ public class PluginConfigurationTests : IDisposable
 
         Func<Task> act = () =>
             Task.WhenAll(
-                Enumerable
-                    .Range(0, concurrentWrites)
-                    .Select(i =>
-                        _config.SaveConfigurationAsync(new TestConfig { ApiKey = $"key-{i}" })
+                tasks: Enumerable
+                    .Range(start: 0, count: concurrentWrites)
+                    .Select(selector: i =>
+                        _config.SaveConfigurationAsync(configuration: new TestConfig { ApiKey = $"key-{i}" })
                     )
             );
 
@@ -335,18 +335,18 @@ public class PluginConfigurationTests : IDisposable
     {
         const int iterations = 30;
 
-        Task syncTask = Task.Run(() =>
+        Task syncTask = Task.Run(action: () =>
         {
             for (int i = 0; i < iterations; i++)
-                _config.SaveConfiguration(new TestConfig { ApiKey = $"sync-{i}" });
+                _config.SaveConfiguration(configuration: new TestConfig { ApiKey = $"sync-{i}" });
         });
-        Task asyncTask = Task.Run(async () =>
+        Task asyncTask = Task.Run(function: async () =>
         {
             for (int i = 0; i < iterations; i++)
-                await _config.SaveConfigurationAsync(new TestConfig { ApiKey = $"async-{i}" });
+                await _config.SaveConfigurationAsync(configuration: new TestConfig { ApiKey = $"async-{i}" });
         });
 
-        Func<Task> act = () => Task.WhenAll(syncTask, asyncTask);
+        Func<Task> act = () => Task.WhenAll(tasks: [syncTask, asyncTask]);
 
         await act.Should().NotThrowAsync();
     }
@@ -354,21 +354,21 @@ public class PluginConfigurationTests : IDisposable
     [Fact]
     public async Task GetConfigurationAsync_ConcurrentWithSaveConfiguration_DoesNotThrow()
     {
-        _config.SaveConfiguration(new TestConfig { ApiKey = "seed" });
+        _config.SaveConfiguration(configuration: new TestConfig { ApiKey = "seed" });
         const int iterations = 30;
 
-        Task writer = Task.Run(() =>
+        Task writer = Task.Run(action: () =>
         {
             for (int i = 0; i < iterations; i++)
-                _config.SaveConfiguration(new TestConfig { ApiKey = $"writer-{i}" });
+                _config.SaveConfiguration(configuration: new TestConfig { ApiKey = $"writer-{i}" });
         });
-        Task reader = Task.Run(async () =>
+        Task reader = Task.Run(function: async () =>
         {
             for (int i = 0; i < iterations; i++)
                 await _config.GetConfigurationAsync<TestConfig>();
         });
 
-        Func<Task> act = () => Task.WhenAll(writer, reader);
+        Func<Task> act = () => Task.WhenAll(tasks: [writer, reader]);
 
         await act.Should().NotThrowAsync();
     }

@@ -33,7 +33,7 @@ public class MetadataMergerTests
         string? comment = null,
         bool isDefault = false,
         bool isForced = false
-    ) => new(index, kind, language, title, comment, isDefault, isForced);
+    ) => new(OutputIndex: index, Kind: kind, Language: language, Title: title, Comment: comment, IsDefault: isDefault, IsForced: isForced);
 
     private static TrackMetadata Db(
         int index = 0,
@@ -42,7 +42,7 @@ public class MetadataMergerTests
         string? title = null,
         bool isDefault = false,
         bool isForced = false
-    ) => new(index, kind, language, title, isDefault, isForced);
+    ) => new(OutputIndex: index, Kind: kind, Language: language, Title: title, IsDefault: isDefault, IsForced: isForced);
 
     // ------------------------------------------------------------------
     // Rule 1: Title — source preserved unless DB has explicit non-empty value
@@ -52,24 +52,24 @@ public class MetadataMergerTests
     public void Title_DbEmpty_SourceWins()
     {
         IReadOnlyList<TrackMetadata> result = _merger.Merge(
-            [Src(title: "English DTS-HD MA")],
-            [Db(title: null)]
+            source: [Src(title: "English DTS-HD MA")],
+            dbTracks: [Db(title: null)]
         );
 
         result.Should().ContainSingle();
-        result[0].Title.Should().Be("English DTS-HD MA");
+        result[index: 0].Title.Should().Be(expected: "English DTS-HD MA");
     }
 
     [Fact]
     public void Title_DbNonEmpty_DbWins()
     {
         IReadOnlyList<TrackMetadata> result = _merger.Merge(
-            [Src(title: "English DTS-HD MA")],
-            [Db(title: "English (Director's Cut)")]
+            source: [Src(title: "English DTS-HD MA")],
+            dbTracks: [Db(title: "English (Director's Cut)")]
         );
 
         result.Should().ContainSingle();
-        result[0].Title.Should().Be("English (Director's Cut)");
+        result[index: 0].Title.Should().Be(expected: "English (Director's Cut)");
     }
 
     // ------------------------------------------------------------------
@@ -80,12 +80,12 @@ public class MetadataMergerTests
     public void Language_SourceAlwaysWins_EvenWhenDbHasDifferentValue()
     {
         IReadOnlyList<TrackMetadata> result = _merger.Merge(
-            [Src(language: "eng")],
-            [Db(language: "und")]
+            source: [Src(language: "eng")],
+            dbTracks: [Db(language: "und")]
         );
 
         result.Should().ContainSingle();
-        result[0].Language.Should().Be("eng");
+        result[index: 0].Language.Should().Be(expected: "eng");
     }
 
     // ------------------------------------------------------------------
@@ -101,12 +101,12 @@ public class MetadataMergerTests
     public void Comment_SourcePresent_MergedTitleUnaffected()
     {
         IReadOnlyList<TrackMetadata> result = _merger.Merge(
-            [Src(title: "Main Audio", comment: "Ripped from Blu-ray disc 1")],
-            [Db(title: null)]
+            source: [Src(title: "Main Audio", comment: "Ripped from Blu-ray disc 1")],
+            dbTracks: [Db(title: null)]
         );
 
         result.Should().ContainSingle();
-        result[0].Title.Should().Be("Main Audio", "source title must survive when DB is null");
+        result[index: 0].Title.Should().Be(expected: "Main Audio", because: "source title must survive when DB is null");
     }
 
     // ------------------------------------------------------------------
@@ -117,12 +117,12 @@ public class MetadataMergerTests
     public void IsDefault_DbWins_RegardlessOfSource()
     {
         IReadOnlyList<TrackMetadata> result = _merger.Merge(
-            [Src(isDefault: false)],
-            [Db(isDefault: true)]
+            source: [Src(isDefault: false)],
+            dbTracks: [Db(isDefault: true)]
         );
 
         result.Should().ContainSingle();
-        result[0].IsDefault.Should().BeTrue("DB IsDefault must override source value");
+        result[index: 0].IsDefault.Should().BeTrue(because: "DB IsDefault must override source value");
     }
 
     // ------------------------------------------------------------------
@@ -133,12 +133,12 @@ public class MetadataMergerTests
     public void IsForced_DbWins_RegardlessOfSource()
     {
         IReadOnlyList<TrackMetadata> result = _merger.Merge(
-            [Src(isForced: false)],
-            [Db(isForced: true)]
+            source: [Src(isForced: false)],
+            dbTracks: [Db(isForced: true)]
         );
 
         result.Should().ContainSingle();
-        result[0].IsForced.Should().BeTrue("DB IsForced must override source value");
+        result[index: 0].IsForced.Should().BeTrue(because: "DB IsForced must override source value");
     }
 
     // ------------------------------------------------------------------
@@ -149,16 +149,16 @@ public class MetadataMergerTests
     public void SourceOnly_NoDbRow_EmittedWithSourceValues()
     {
         IReadOnlyList<TrackMetadata> result = _merger.Merge(
-            [Src(index: 2, kind: "audio", language: "jpn", title: "Japanese 5.1", isDefault: true)],
-            []
+            source: [Src(index: 2, kind: "audio", language: "jpn", title: "Japanese 5.1", isDefault: true)],
+            dbTracks: []
         );
 
         result.Should().ContainSingle();
-        TrackMetadata track = result[0];
-        track.OutputIndex.Should().Be(2);
-        track.Kind.Should().Be("audio");
-        track.Language.Should().Be("jpn");
-        track.Title.Should().Be("Japanese 5.1");
+        TrackMetadata track = result[index: 0];
+        track.OutputIndex.Should().Be(expected: 2);
+        track.Kind.Should().Be(expected: "audio");
+        track.Language.Should().Be(expected: "jpn");
+        track.Title.Should().Be(expected: "Japanese 5.1");
         track.IsDefault.Should().BeTrue();
         track.IsForced.Should().BeFalse();
     }
@@ -180,10 +180,10 @@ public class MetadataMergerTests
             isForced: false
         );
 
-        IReadOnlyList<TrackMetadata> result = _merger.Merge([], [dbSub]);
+        IReadOnlyList<TrackMetadata> result = _merger.Merge(source: [], dbTracks: [dbSub]);
 
         result.Should().ContainSingle();
-        result[0].Should().Be(dbSub, "DB-only track must pass through without modification");
+        result[index: 0].Should().Be(expected: dbSub, because: "DB-only track must pass through without modification");
     }
 
     // ------------------------------------------------------------------
@@ -194,14 +194,14 @@ public class MetadataMergerTests
     public void MultipleTracksWithDifferentIndexes_ResultSortedByOutputIndex()
     {
         IReadOnlyList<TrackMetadata> result = _merger.Merge(
-            [Src(index: 1, language: "fra"), Src(index: 0, language: "eng")],
-            [Db(index: 0, language: "und"), Db(index: 1, language: "und")]
+            source: [Src(index: 1, language: "fra"), Src(index: 0, language: "eng")],
+            dbTracks: [Db(index: 0, language: "und"), Db(index: 1, language: "und")]
         );
 
-        result.Should().HaveCount(2);
-        result[0].OutputIndex.Should().Be(0);
-        result[0].Language.Should().Be("eng", "source language wins at index 0");
-        result[1].OutputIndex.Should().Be(1);
-        result[1].Language.Should().Be("fra", "source language wins at index 1");
+        result.Should().HaveCount(expected: 2);
+        result[index: 0].OutputIndex.Should().Be(expected: 0);
+        result[index: 0].Language.Should().Be(expected: "eng", because: "source language wins at index 0");
+        result[index: 1].OutputIndex.Should().Be(expected: 1);
+        result[index: 1].Language.Should().Be(expected: "fra", because: "source language wins at index 1");
     }
 }

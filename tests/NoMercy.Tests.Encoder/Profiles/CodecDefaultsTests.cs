@@ -19,91 +19,91 @@ public class CodecDefaultsTests
     [Fact]
     public void For_H264_returns_documented_defaults()
     {
-        CodecDefaults.VideoDefaults defaults = CodecDefaults.For(VideoCodecType.H264);
-        defaults.Crf.Should().Be(22);
-        defaults.Preset.Should().Be("medium");
-        defaults.Profile.Should().Be(CodecProfile.High);
-        defaults.BitDepth.Should().Be(8);
+        CodecDefaults.VideoDefaults defaults = CodecDefaults.For(codec: VideoCodecType.H264);
+        defaults.Crf.Should().Be(expected: 22);
+        defaults.Preset.Should().Be(expected: "medium");
+        defaults.Profile.Should().Be(expected: CodecProfile.High);
+        defaults.BitDepth.Should().Be(expected: 8);
     }
 
     [Fact]
     public void For_HEVC_returns_documented_defaults()
     {
-        CodecDefaults.VideoDefaults defaults = CodecDefaults.For(VideoCodecType.H265);
-        defaults.Crf.Should().Be(20);
-        defaults.Preset.Should().Be("slow");
-        defaults.Profile.Should().Be(CodecProfile.Main10);
-        defaults.BitDepth.Should().Be(10);
+        CodecDefaults.VideoDefaults defaults = CodecDefaults.For(codec: VideoCodecType.H265);
+        defaults.Crf.Should().Be(expected: 20);
+        defaults.Preset.Should().Be(expected: "slow");
+        defaults.Profile.Should().Be(expected: CodecProfile.Main10);
+        defaults.BitDepth.Should().Be(expected: 10);
     }
 
     [Fact]
     public void For_AAC_returns_documented_defaults()
     {
-        CodecDefaults.AudioDefaults defaults = CodecDefaults.For(AudioCodecType.Aac);
-        defaults.BitrateKbps.Should().Be(192);
-        defaults.Channels.Should().Be(2);
-        defaults.SampleRateHz.Should().Be(48000);
+        CodecDefaults.AudioDefaults defaults = CodecDefaults.For(codec: AudioCodecType.Aac);
+        defaults.BitrateKbps.Should().Be(expected: 192);
+        defaults.Channels.Should().Be(expected: 2);
+        defaults.SampleRateHz.Should().Be(expected: 48000);
     }
 
     [Fact]
     public void For_FLAC_returns_zero_bitrate_for_lossless()
     {
-        CodecDefaults.AudioDefaults defaults = CodecDefaults.For(AudioCodecType.Flac);
-        defaults.BitrateKbps.Should().Be(0);
+        CodecDefaults.AudioDefaults defaults = CodecDefaults.For(codec: AudioCodecType.Flac);
+        defaults.BitrateKbps.Should().Be(expected: 0);
     }
 
     [Fact]
     public void For_unknown_video_codec_throws()
     {
-        Action act = () => CodecDefaults.For((VideoCodecType)999);
+        Action act = () => CodecDefaults.For(codec: (VideoCodecType)999);
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Theory]
-    [InlineData(VideoCodecType.H264)]
-    [InlineData(VideoCodecType.H265)]
-    [InlineData(VideoCodecType.Av1)]
-    [InlineData(VideoCodecType.Vp9)]
+    [InlineData(data: VideoCodecType.H264)]
+    [InlineData(data: VideoCodecType.H265)]
+    [InlineData(data: VideoCodecType.Av1)]
+    [InlineData(data: VideoCodecType.Vp9)]
     public void Every_supported_video_codec_returns_non_null_defaults(VideoCodecType codec)
     {
-        Action act = () => CodecDefaults.For(codec);
+        Action act = () => CodecDefaults.For(codec: codec);
         act.Should().NotThrow();
     }
 
     [Theory]
-    [InlineData(AudioCodecType.Aac)]
-    [InlineData(AudioCodecType.Mp3)]
-    [InlineData(AudioCodecType.Opus)]
-    [InlineData(AudioCodecType.Flac)]
-    [InlineData(AudioCodecType.Ac3)]
-    [InlineData(AudioCodecType.Eac3)]
-    [InlineData(AudioCodecType.TrueHd)]
-    [InlineData(AudioCodecType.Dts)]
-    [InlineData(AudioCodecType.Vorbis)]
+    [InlineData(data: AudioCodecType.Aac)]
+    [InlineData(data: AudioCodecType.Mp3)]
+    [InlineData(data: AudioCodecType.Opus)]
+    [InlineData(data: AudioCodecType.Flac)]
+    [InlineData(data: AudioCodecType.Ac3)]
+    [InlineData(data: AudioCodecType.Eac3)]
+    [InlineData(data: AudioCodecType.TrueHd)]
+    [InlineData(data: AudioCodecType.Dts)]
+    [InlineData(data: AudioCodecType.Vorbis)]
     public void Every_supported_audio_codec_returns_non_null_defaults(AudioCodecType codec)
     {
-        Action act = () => CodecDefaults.For(codec);
+        Action act = () => CodecDefaults.For(codec: codec);
         act.Should().NotThrow();
     }
 
     [Fact]
     public void Boundary_int_MinValue_throws_for_video()
     {
-        Action act = () => CodecDefaults.For((VideoCodecType)int.MinValue);
+        Action act = () => CodecDefaults.For(codec: (VideoCodecType)int.MinValue);
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]
     public void Boundary_int_MaxValue_throws_for_video()
     {
-        Action act = () => CodecDefaults.For((VideoCodecType)int.MaxValue);
+        Action act = () => CodecDefaults.For(codec: (VideoCodecType)int.MaxValue);
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]
     public void Boundary_negative_throws_for_audio()
     {
-        Action act = () => CodecDefaults.For((AudioCodecType)(-1));
+        Action act = () => CodecDefaults.For(codec: (AudioCodecType)(-1));
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
@@ -111,61 +111,61 @@ public class CodecDefaultsTests
     public void Video_defaults_table_is_stable()
     {
         CodecDefaults
-            .For(VideoCodecType.H264)
+            .For(codec: VideoCodecType.H264)
             .Should()
-            .Be(new CodecDefaults.VideoDefaults(22, "medium", CodecProfile.High, 8));
+            .Be(expected: new CodecDefaults.VideoDefaults(Crf: 22, Preset: "medium", Profile: CodecProfile.High, BitDepth: 8));
         CodecDefaults
-            .For(VideoCodecType.H265)
+            .For(codec: VideoCodecType.H265)
             .Should()
-            .Be(new CodecDefaults.VideoDefaults(20, "slow", CodecProfile.Main10, 10));
+            .Be(expected: new CodecDefaults.VideoDefaults(Crf: 20, Preset: "slow", Profile: CodecProfile.Main10, BitDepth: 10));
         CodecDefaults
-            .For(VideoCodecType.Av1)
+            .For(codec: VideoCodecType.Av1)
             .Should()
-            .Be(new CodecDefaults.VideoDefaults(30, "6", CodecProfile.Main, 10));
+            .Be(expected: new CodecDefaults.VideoDefaults(Crf: 30, Preset: "6", Profile: CodecProfile.Main, BitDepth: 10));
         CodecDefaults
-            .For(VideoCodecType.Vp9)
+            .For(codec: VideoCodecType.Vp9)
             .Should()
-            .Be(new CodecDefaults.VideoDefaults(32, "good", CodecProfile.Main, 8));
+            .Be(expected: new CodecDefaults.VideoDefaults(Crf: 32, Preset: "good", Profile: CodecProfile.Main, BitDepth: 8));
     }
 
     [Fact]
     public void Audio_defaults_table_is_stable()
     {
         CodecDefaults
-            .For(AudioCodecType.Aac)
+            .For(codec: AudioCodecType.Aac)
             .Should()
-            .Be(new CodecDefaults.AudioDefaults(192, 2, 48000));
+            .Be(expected: new CodecDefaults.AudioDefaults(BitrateKbps: 192, Channels: 2, SampleRateHz: 48000));
         CodecDefaults
-            .For(AudioCodecType.Mp3)
+            .For(codec: AudioCodecType.Mp3)
             .Should()
-            .Be(new CodecDefaults.AudioDefaults(320, 2, 44100));
+            .Be(expected: new CodecDefaults.AudioDefaults(BitrateKbps: 320, Channels: 2, SampleRateHz: 44100));
         CodecDefaults
-            .For(AudioCodecType.Opus)
+            .For(codec: AudioCodecType.Opus)
             .Should()
-            .Be(new CodecDefaults.AudioDefaults(128, 2, 48000));
+            .Be(expected: new CodecDefaults.AudioDefaults(BitrateKbps: 128, Channels: 2, SampleRateHz: 48000));
         CodecDefaults
-            .For(AudioCodecType.Flac)
+            .For(codec: AudioCodecType.Flac)
             .Should()
-            .Be(new CodecDefaults.AudioDefaults(0, 2, 48000));
+            .Be(expected: new CodecDefaults.AudioDefaults(BitrateKbps: 0, Channels: 2, SampleRateHz: 48000));
         CodecDefaults
-            .For(AudioCodecType.Ac3)
+            .For(codec: AudioCodecType.Ac3)
             .Should()
-            .Be(new CodecDefaults.AudioDefaults(384, 6, 48000));
+            .Be(expected: new CodecDefaults.AudioDefaults(BitrateKbps: 384, Channels: 6, SampleRateHz: 48000));
         CodecDefaults
-            .For(AudioCodecType.Eac3)
+            .For(codec: AudioCodecType.Eac3)
             .Should()
-            .Be(new CodecDefaults.AudioDefaults(448, 6, 48000));
+            .Be(expected: new CodecDefaults.AudioDefaults(BitrateKbps: 448, Channels: 6, SampleRateHz: 48000));
         CodecDefaults
-            .For(AudioCodecType.TrueHd)
+            .For(codec: AudioCodecType.TrueHd)
             .Should()
-            .Be(new CodecDefaults.AudioDefaults(0, 6, 48000));
+            .Be(expected: new CodecDefaults.AudioDefaults(BitrateKbps: 0, Channels: 6, SampleRateHz: 48000));
         CodecDefaults
-            .For(AudioCodecType.Dts)
+            .For(codec: AudioCodecType.Dts)
             .Should()
-            .Be(new CodecDefaults.AudioDefaults(1536, 6, 48000));
+            .Be(expected: new CodecDefaults.AudioDefaults(BitrateKbps: 1536, Channels: 6, SampleRateHz: 48000));
         CodecDefaults
-            .For(AudioCodecType.Vorbis)
+            .For(codec: AudioCodecType.Vorbis)
             .Should()
-            .Be(new CodecDefaults.AudioDefaults(192, 2, 48000));
+            .Be(expected: new CodecDefaults.AudioDefaults(BitrateKbps: 192, Channels: 2, SampleRateHz: 48000));
     }
 }

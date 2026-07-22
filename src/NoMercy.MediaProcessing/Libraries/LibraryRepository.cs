@@ -24,9 +24,9 @@ public class LibraryRepository(MediaContext context, IStorageDriver storageDrive
 {
     public async Task<IEnumerable<MediaFolderExtend>> GetRootFoldersAsync(string path)
     {
-        await using MediaScan mediaScan = new(storageDriver);
-        return (await mediaScan.DisableRegexFilter().Process(path, 2))
-            .SelectMany(r => r.SubFolders ?? [])
+        await using MediaScan mediaScan = new(driver: storageDriver);
+        return (await mediaScan.DisableRegexFilter().Process(rootFolder: path, depth: 2))
+            .SelectMany(selector: r => r.SubFolders ?? [])
             .ToList();
     }
 
@@ -34,30 +34,30 @@ public class LibraryRepository(MediaContext context, IStorageDriver storageDrive
     {
         return context
             .Libraries.AsNoTracking()
-            .Include(library => library.FolderLibraries)
-                .ThenInclude(folderLibrary => folderLibrary.Folder)
-            .FirstOrDefaultAsync(library => library.Id == id);
+            .Include(navigationPropertyPath: library => library.FolderLibraries)
+                .ThenInclude(navigationPropertyPath: folderLibrary => folderLibrary.Folder)
+            .FirstOrDefaultAsync(predicate: library => library.Id == id);
     }
 
     public Task<Folder?> GetLibraryFolder(Ulid folderId)
     {
         return context
-            .Folders.Include(folder => folder.FolderLibraries)
-                .ThenInclude(folderLibrary => folderLibrary.Library)
-                    .ThenInclude(f => f.FolderLibraries)
-                        .ThenInclude(f => f.Folder)
-            .Include(folder => folder.EncodingPresetFolders)
-                .ThenInclude(link => link.Preset)
-            .FirstOrDefaultAsync(folder => folder.Id == folderId);
+            .Folders.Include(navigationPropertyPath: folder => folder.FolderLibraries)
+                .ThenInclude(navigationPropertyPath: folderLibrary => folderLibrary.Library)
+                    .ThenInclude(navigationPropertyPath: f => f.FolderLibraries)
+                        .ThenInclude(navigationPropertyPath: f => f.Folder)
+            .Include(navigationPropertyPath: folder => folder.EncodingPresetFolders)
+                .ThenInclude(navigationPropertyPath: link => link.Preset)
+            .FirstOrDefaultAsync(predicate: folder => folder.Id == folderId);
     }
 
     public Task<Library?> GetLibraryByIdWithFolders(Ulid libraryId)
     {
         return context
             .Libraries.AsNoTracking()
-            .Include(library => library.FolderLibraries)
-                .ThenInclude(folderLibrary => folderLibrary.Folder)
-            .FirstOrDefaultAsync(library => library.Id == libraryId);
+            .Include(navigationPropertyPath: library => library.FolderLibraries)
+                .ThenInclude(navigationPropertyPath: folderLibrary => folderLibrary.Folder)
+            .FirstOrDefaultAsync(predicate: library => library.Id == libraryId);
     }
 
     public async Task<HashSet<string>> GetExistingFolderNamesAsync(
@@ -68,20 +68,20 @@ public class LibraryRepository(MediaContext context, IStorageDriver storageDrive
         IEnumerable<string?> folders = libraryType switch
         {
             MediaTypes.MovieMediaType => await context
-                .LibraryMovie.Where(lm => lm.LibraryId == libraryId)
-                .Include(lm => lm.Movie)
-                .Select(lm => lm.Movie.Folder)
+                .LibraryMovie.Where(predicate: lm => lm.LibraryId == libraryId)
+                .Include(navigationPropertyPath: lm => lm.Movie)
+                .Select(selector: lm => lm.Movie.Folder)
                 .ToListAsync(),
             _ => await context
-                .LibraryTv.Where(lt => lt.LibraryId == libraryId)
-                .Include(lt => lt.Tv)
-                .Select(lt => lt.Tv.Folder)
+                .LibraryTv.Where(predicate: lt => lt.LibraryId == libraryId)
+                .Include(navigationPropertyPath: lt => lt.Tv)
+                .Select(selector: lt => lt.Tv.Folder)
                 .ToListAsync(),
         };
 
         return folders
-            .Where(f => f is not null)
-            .Select(f => f!.Replace("/", "").NormalizeForComparison())
+            .Where(predicate: f => f is not null)
+            .Select(selector: f => f!.Replace(oldValue: "/", newValue: "").NormalizeForComparison())
             .ToHashSet();
     }
 

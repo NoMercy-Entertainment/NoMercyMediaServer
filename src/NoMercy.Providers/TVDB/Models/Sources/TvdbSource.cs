@@ -18,21 +18,21 @@ public class TvdbSourceTypesResponse : TvdbResponse<TvdbSourceType[]> { }
 
 public class TvdbSourceType
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("postfix")]
+    [JsonProperty(propertyName: "postfix")]
     public string? Postfix { get; set; }
 
-    [JsonProperty("prefix")]
+    [JsonProperty(propertyName: "prefix")]
     public string? Prefix { get; set; }
 
-    [JsonProperty("slug")]
+    [JsonProperty(propertyName: "slug")]
     public string Slug { get; set; } = string.Empty;
 
-    [JsonProperty("sort")]
+    [JsonProperty(propertyName: "sort")]
     public int Sort { get; set; }
 }

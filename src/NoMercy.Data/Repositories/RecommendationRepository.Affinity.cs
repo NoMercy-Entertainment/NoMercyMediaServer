@@ -25,14 +25,14 @@ public partial class RecommendationRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
 
         // Fetch flat data without nested collection projections to avoid SQL APPLY
         var movies = await context
             .Movies.AsNoTracking()
-            .Where(m => m.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(m => m.VideoFiles.Any())
-            .Select(m => new
+            .Where(predicate: m => m.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(predicate: m => m.VideoFiles.Any())
+            .Select(selector: m => new
             {
                 m.Id,
                 m.Title,
@@ -51,28 +51,28 @@ public partial class RecommendationRepository
                     .FirstOrDefault(),
                 IsFavorited = m.MovieUser.Any(mu => mu.UserId == userId),
             })
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken: ct);
 
         if (movies.Count == 0)
             return [];
 
-        List<int> movieIds = movies.Select(m => m.Id).ToList();
+        List<int> movieIds = movies.Select(selector: m => m.Id).ToList();
 
         // Fetch genre and keyword mappings separately
         Dictionary<int, List<int>> genreMap = await context
             .GenreMovie.AsNoTracking()
-            .Where(gm => movieIds.Contains(gm.MovieId))
-            .GroupBy(gm => gm.MovieId)
-            .ToDictionaryAsync(g => g.Key, g => g.Select(gm => gm.GenreId).ToList(), ct);
+            .Where(predicate: gm => movieIds.Contains(gm.MovieId))
+            .GroupBy(keySelector: gm => gm.MovieId)
+            .ToDictionaryAsync(keySelector: g => g.Key, elementSelector: g => g.Select(selector: gm => gm.GenreId).ToList(), cancellationToken: ct);
 
         Dictionary<int, List<int>> keywordMap = await context
             .KeywordMovie.AsNoTracking()
-            .Where(km => movieIds.Contains(km.MovieId))
-            .GroupBy(km => km.MovieId)
-            .ToDictionaryAsync(g => g.Key, g => g.Select(km => km.KeywordId).ToList(), ct);
+            .Where(predicate: km => movieIds.Contains(km.MovieId))
+            .GroupBy(keySelector: km => km.MovieId)
+            .ToDictionaryAsync(keySelector: g => g.Key, elementSelector: g => g.Select(selector: km => km.KeywordId).ToList(), cancellationToken: ct);
 
         return movies
-            .Select(m => new UserAffinitySourceDto
+            .Select(selector: m => new UserAffinitySourceDto
             {
                 ItemId = m.Id,
                 Title = m.Title,
@@ -83,8 +83,8 @@ public partial class RecommendationRepository
                 TimeWatched = m.TimeWatched,
                 Duration = m.Runtime != null ? m.Runtime * 60 : null,
                 IsFavorited = m.IsFavorited,
-                GenreIds = genreMap.GetValueOrDefault(m.Id, []),
-                KeywordIds = keywordMap.GetValueOrDefault(m.Id, []),
+                GenreIds = genreMap.GetValueOrDefault(key: m.Id, defaultValue: []),
+                KeywordIds = keywordMap.GetValueOrDefault(key: m.Id, defaultValue: []),
             })
             .ToList();
     }
@@ -94,14 +94,14 @@ public partial class RecommendationRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
 
         var tvShows = await context
             .Tvs.AsNoTracking()
-            .Where(t => t.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(t => t.MediaType != MediaTypes.AnimeMediaType)
-            .Where(t => t.Episodes.Any(e => e.SeasonNumber > 0 && e.VideoFiles.Any()))
-            .Select(t => new
+            .Where(predicate: t => t.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(predicate: t => t.MediaType != MediaTypes.AnimeMediaType)
+            .Where(predicate: t => t.Episodes.Any(e => e.SeasonNumber > 0 && e.VideoFiles.Any()))
+            .Select(selector: t => new
             {
                 t.Id,
                 t.Title,
@@ -120,27 +120,27 @@ public partial class RecommendationRepository
                     .FirstOrDefault(),
                 IsFavorited = t.TvUser.Any(tu => tu.UserId == userId),
             })
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken: ct);
 
         if (tvShows.Count == 0)
             return [];
 
-        List<int> tvIds = tvShows.Select(t => t.Id).ToList();
+        List<int> tvIds = tvShows.Select(selector: t => t.Id).ToList();
 
         Dictionary<int, List<int>> genreMap = await context
             .GenreTv.AsNoTracking()
-            .Where(gt => tvIds.Contains(gt.TvId))
-            .GroupBy(gt => gt.TvId)
-            .ToDictionaryAsync(g => g.Key, g => g.Select(gt => gt.GenreId).ToList(), ct);
+            .Where(predicate: gt => tvIds.Contains(gt.TvId))
+            .GroupBy(keySelector: gt => gt.TvId)
+            .ToDictionaryAsync(keySelector: g => g.Key, elementSelector: g => g.Select(selector: gt => gt.GenreId).ToList(), cancellationToken: ct);
 
         Dictionary<int, List<int>> keywordMap = await context
             .KeywordTv.AsNoTracking()
-            .Where(kt => tvIds.Contains(kt.TvId))
-            .GroupBy(kt => kt.TvId)
-            .ToDictionaryAsync(g => g.Key, g => g.Select(kt => kt.KeywordId).ToList(), ct);
+            .Where(predicate: kt => tvIds.Contains(kt.TvId))
+            .GroupBy(keySelector: kt => kt.TvId)
+            .ToDictionaryAsync(keySelector: g => g.Key, elementSelector: g => g.Select(selector: kt => kt.KeywordId).ToList(), cancellationToken: ct);
 
         return tvShows
-            .Select(t => new UserAffinitySourceDto
+            .Select(selector: t => new UserAffinitySourceDto
             {
                 ItemId = t.Id,
                 Title = t.Title,
@@ -151,8 +151,8 @@ public partial class RecommendationRepository
                 TimeWatched = t.TimeWatched,
                 Duration = t.Duration,
                 IsFavorited = t.IsFavorited,
-                GenreIds = genreMap.GetValueOrDefault(t.Id, []),
-                KeywordIds = keywordMap.GetValueOrDefault(t.Id, []),
+                GenreIds = genreMap.GetValueOrDefault(key: t.Id, defaultValue: []),
+                KeywordIds = keywordMap.GetValueOrDefault(key: t.Id, defaultValue: []),
             })
             .ToList();
     }
@@ -162,14 +162,14 @@ public partial class RecommendationRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
 
         var animeShows = await context
             .Tvs.AsNoTracking()
-            .Where(t => t.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(t => t.MediaType == MediaTypes.AnimeMediaType)
-            .Where(t => t.Episodes.Any(e => e.SeasonNumber > 0 && e.VideoFiles.Any()))
-            .Select(t => new
+            .Where(predicate: t => t.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(predicate: t => t.MediaType == MediaTypes.AnimeMediaType)
+            .Where(predicate: t => t.Episodes.Any(e => e.SeasonNumber > 0 && e.VideoFiles.Any()))
+            .Select(selector: t => new
             {
                 t.Id,
                 t.Title,
@@ -188,27 +188,27 @@ public partial class RecommendationRepository
                     .FirstOrDefault(),
                 IsFavorited = t.TvUser.Any(tu => tu.UserId == userId),
             })
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken: ct);
 
         if (animeShows.Count == 0)
             return [];
 
-        List<int> animeIds = animeShows.Select(t => t.Id).ToList();
+        List<int> animeIds = animeShows.Select(selector: t => t.Id).ToList();
 
         Dictionary<int, List<int>> genreMap = await context
             .GenreTv.AsNoTracking()
-            .Where(gt => animeIds.Contains(gt.TvId))
-            .GroupBy(gt => gt.TvId)
-            .ToDictionaryAsync(g => g.Key, g => g.Select(gt => gt.GenreId).ToList(), ct);
+            .Where(predicate: gt => animeIds.Contains(gt.TvId))
+            .GroupBy(keySelector: gt => gt.TvId)
+            .ToDictionaryAsync(keySelector: g => g.Key, elementSelector: g => g.Select(selector: gt => gt.GenreId).ToList(), cancellationToken: ct);
 
         Dictionary<int, List<int>> keywordMap = await context
             .KeywordTv.AsNoTracking()
-            .Where(kt => animeIds.Contains(kt.TvId))
-            .GroupBy(kt => kt.TvId)
-            .ToDictionaryAsync(g => g.Key, g => g.Select(kt => kt.KeywordId).ToList(), ct);
+            .Where(predicate: kt => animeIds.Contains(kt.TvId))
+            .GroupBy(keySelector: kt => kt.TvId)
+            .ToDictionaryAsync(keySelector: g => g.Key, elementSelector: g => g.Select(selector: kt => kt.KeywordId).ToList(), cancellationToken: ct);
 
         return animeShows
-            .Select(t => new UserAffinitySourceDto
+            .Select(selector: t => new UserAffinitySourceDto
             {
                 ItemId = t.Id,
                 Title = t.Title,
@@ -219,8 +219,8 @@ public partial class RecommendationRepository
                 TimeWatched = t.TimeWatched,
                 Duration = t.Duration,
                 IsFavorited = t.IsFavorited,
-                GenreIds = genreMap.GetValueOrDefault(t.Id, []),
-                KeywordIds = keywordMap.GetValueOrDefault(t.Id, []),
+                GenreIds = genreMap.GetValueOrDefault(key: t.Id, defaultValue: []),
+                KeywordIds = keywordMap.GetValueOrDefault(key: t.Id, defaultValue: []),
             })
             .ToList();
     }

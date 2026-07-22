@@ -15,9 +15,9 @@ namespace NoMercy.Providers.TMDB.Models.Keywords;
 
 public class TmdbKeywordDetails
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 }

@@ -15,9 +15,9 @@ namespace NoMercy.Providers.TMDB.Models.Movies;
 
 public class TmdbMovieAlternativeTitles
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("titles")]
+    [JsonProperty(propertyName: "titles")]
     public TmdbMovieAlternativeTitle[] Results { get; set; } = [];
 }

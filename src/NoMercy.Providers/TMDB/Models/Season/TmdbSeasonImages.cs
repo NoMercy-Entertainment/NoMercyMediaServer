@@ -16,9 +16,9 @@ namespace NoMercy.Providers.TMDB.Models.Season;
 
 public class TmdbSeasonImages
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("posters")]
+    [JsonProperty(propertyName: "posters")]
     public TmdbImage[] Posters { get; set; } = [];
 }

@@ -32,11 +32,11 @@ public class NfsExportDiscoveryTests
         List<string>? result;
         try
         {
-            result = await NfsStorageDriver.GetExportsAsync("192.0.2.1", timeoutMs: 500);
+            result = await NfsStorageDriver.GetExportsAsync(server: "192.0.2.1", timeoutMs: 500);
         }
         catch (DllNotFoundException)
         {
-            Skip.If(true, LibSkipReason);
+            Skip.If(condition: true, reason: LibSkipReason);
             return;
         }
 
@@ -50,11 +50,11 @@ public class NfsExportDiscoveryTests
         List<string>? result;
         try
         {
-            result = await NfsStorageDriver.GetExportsAsync("127.0.0.1", timeoutMs: 500);
+            result = await NfsStorageDriver.GetExportsAsync(server: "127.0.0.1", timeoutMs: 500);
         }
         catch (DllNotFoundException)
         {
-            Skip.If(true, LibSkipReason);
+            Skip.If(condition: true, reason: LibSkipReason);
             return;
         }
 
@@ -66,12 +66,12 @@ public class NfsExportDiscoveryTests
     [Fact]
     public void NfsDriverConfig_For_builds_valid_config()
     {
-        NfsDriverConfig config = NfsDriverConfig.For("nas.local", "/media", version: 3);
+        NfsDriverConfig config = NfsDriverConfig.For(server: "nas.local", export: "/media", version: 3);
 
-        config.Server.Should().Be("nas.local");
-        config.Export.Should().Be("/media");
-        config.Version.Should().Be(3);
-        config.Port.Should().Be(2049);
+        config.Server.Should().Be(expected: "nas.local");
+        config.Export.Should().Be(expected: "/media");
+        config.Version.Should().Be(expected: 3);
+        config.Port.Should().Be(expected: 2049);
         config.Uid.Should().BeNull();
         config.Gid.Should().BeNull();
     }
@@ -79,24 +79,24 @@ public class NfsExportDiscoveryTests
     [Fact]
     public void NfsDriverConfig_For_accepts_uid_gid()
     {
-        NfsDriverConfig config = NfsDriverConfig.For("nas.local", "/media", uid: 1000, gid: 1000);
+        NfsDriverConfig config = NfsDriverConfig.For(server: "nas.local", export: "/media", uid: 1000, gid: 1000);
 
-        config.Uid.Should().Be(1000);
-        config.Gid.Should().Be(1000);
+        config.Uid.Should().Be(expected: 1000);
+        config.Gid.Should().Be(expected: 1000);
     }
 
     [Fact]
     public void NfsDriverConfig_For_normalizes_export_leading_slash()
     {
-        NfsDriverConfig config = NfsDriverConfig.For("nas.local", "media/files");
-        config.Export.Should().StartWith("/");
+        NfsDriverConfig config = NfsDriverConfig.For(server: "nas.local", export: "media/files");
+        config.Export.Should().StartWith(expected: "/");
     }
 
     [Fact]
     public void NfsDriverConfig_For_strips_trailing_slash()
     {
-        NfsDriverConfig config = NfsDriverConfig.For("nas.local", "/media/");
-        config.Export.Should().Be("/media");
+        NfsDriverConfig config = NfsDriverConfig.For(server: "nas.local", export: "/media/");
+        config.Export.Should().Be(expected: "/media");
     }
 }
 
@@ -105,7 +105,7 @@ public class NfsExportDiscoveryTests
 // Reuses StorageBackendsFixture from the shared StorageBackends collection.
 // ============================================================================
 
-[Collection("StorageBackends")]
+[Collection(name: "StorageBackends")]
 public class NfsListDirectoriesIntegrationTests(StorageBackendsFixture fix)
 {
     private string SkipReason =>
@@ -117,10 +117,10 @@ public class NfsListDirectoriesIntegrationTests(StorageBackendsFixture fix)
     public void ListDirectories_export_root_returns_entries()
     {
         NfsStorageDriver? driver = fix.TryBuildNfsDriver();
-        Skip.If(driver is null, SkipReason);
+        Skip.If(condition: driver is null, reason: SkipReason);
         using NfsStorageDriver d = driver!;
 
-        List<(string Name, bool IsDirectory)> entries = d.ListDirectories(string.Empty);
+        List<(string Name, bool IsDirectory)> entries = d.ListDirectories(relativePath: string.Empty);
 
         // Export root may be empty in a fresh container — just assert no throw.
         entries.Should().NotBeNull();
@@ -130,27 +130,27 @@ public class NfsListDirectoriesIntegrationTests(StorageBackendsFixture fix)
     public async Task ListDirectories_hides_dot_entries()
     {
         NfsStorageDriver? driver = fix.TryBuildNfsDriver();
-        Skip.If(driver is null, SkipReason);
+        Skip.If(condition: driver is null, reason: SkipReason);
         using NfsStorageDriver d = driver!;
 
         // Create a dotfile and a regular dir to verify filtering.
         string dir = $"/listtest-{Ulid.NewUlid()}";
-        d.CreateDirectory(dir);
-        d.CreateDirectory(dir + "/.hidden");
-        d.CreateDirectory(dir + "/visible");
+        d.CreateDirectory(path: dir);
+        d.CreateDirectory(path: dir + "/.hidden");
+        d.CreateDirectory(path: dir + "/visible");
 
-        List<(string Name, bool IsDirectory)> entries = d.ListDirectories(dir);
+        List<(string Name, bool IsDirectory)> entries = d.ListDirectories(relativePath: dir);
 
-        entries.Should().NotContain(e => e.Name.StartsWith('.'));
-        entries.Should().Contain(e => e.Name == "visible");
+        entries.Should().NotContain(predicate: e => e.Name.StartsWith('.'));
+        entries.Should().Contain(predicate: e => e.Name == "visible");
 
-        d.DeleteDirectory(dir, recursive: true);
+        d.DeleteDirectory(path: dir, recursive: true);
     }
 
     [SkippableFact]
     public async Task GetExportsAsync_running_server_returns_export_list()
     {
-        Skip.If(!fix.Available, SkipReason);
+        Skip.If(condition: !fix.Available, reason: SkipReason);
         // fix.Available only proves the container started (S3/WebDAV/Samba
         // are all up) — it says nothing about NFS specifically. NfsMountable
         // is the flag the OTHER NFS integration tests in this file already
@@ -159,10 +159,10 @@ public class NfsListDirectoriesIntegrationTests(StorageBackendsFixture fix)
         // check, a CI box with Docker but no libnfs native library (or an
         // export that never became mountable) hits GetExportsAsync directly
         // and fails fast instead of skipping like its ~40 sibling tests.
-        Skip.If(!fix.NfsMountable, SkipReason);
+        Skip.If(condition: !fix.NfsMountable, reason: SkipReason);
 
         List<string>? exports = await NfsStorageDriver.GetExportsAsync(
-            StorageBackendsFixture.NfsHost,
+            server: StorageBackendsFixture.NfsHost,
             timeoutMs: 5_000
         );
 

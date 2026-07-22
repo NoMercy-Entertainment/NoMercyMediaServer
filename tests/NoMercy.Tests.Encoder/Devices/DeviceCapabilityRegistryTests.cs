@@ -26,9 +26,9 @@ public class DeviceCapabilityRegistryTests : IDisposable
     {
         _dbName = Guid.NewGuid().ToString();
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseInMemoryDatabase(_dbName)
+            .UseInMemoryDatabase(databaseName: _dbName)
             .Options;
-        _contextFactory = new TestDbContextFactory(options);
+        _contextFactory = new TestDbContextFactory(options: options);
     }
 
     public void Dispose() { }
@@ -46,34 +46,34 @@ public class DeviceCapabilityRegistryTests : IDisposable
     [Fact]
     public void Get_ReturnsNull_WhenCacheEmpty()
     {
-        DeviceCapabilityRegistry registry = new(_contextFactory);
-        DeviceCapabilities? result = registry.Get("unknown-device");
+        DeviceCapabilityRegistry registry = new(contextFactory: _contextFactory);
+        DeviceCapabilities? result = registry.Get(deviceId: "unknown-device");
         result.Should().BeNull();
     }
 
     [Fact]
     public void Set_PopulatesCache_AndGetReturnsIt()
     {
-        DeviceCapabilityRegistry registry = new(_contextFactory);
+        DeviceCapabilityRegistry registry = new(contextFactory: _contextFactory);
         DeviceCapabilities caps = MakeStereoNokiaCaps();
 
-        registry.Set("nokia-01", caps);
+        registry.Set(deviceId: "nokia-01", capabilities: caps);
 
-        DeviceCapabilities? result = registry.Get("nokia-01");
+        DeviceCapabilities? result = registry.Get(deviceId: "nokia-01");
         result.Should().NotBeNull();
-        result!.MaxAudioChannels.Should().Be(2);
-        result.RamTier.Should().Be(DeviceRamTier.LowRam);
+        result!.MaxAudioChannels.Should().Be(expected: 2);
+        result.RamTier.Should().Be(expected: DeviceRamTier.LowRam);
     }
 
     [Fact]
     public void Invalidate_RemovesFromCache()
     {
-        DeviceCapabilityRegistry registry = new(_contextFactory);
-        registry.Set("nokia-01", MakeStereoNokiaCaps());
+        DeviceCapabilityRegistry registry = new(contextFactory: _contextFactory);
+        registry.Set(deviceId: "nokia-01", capabilities: MakeStereoNokiaCaps());
 
-        registry.Invalidate("nokia-01");
+        registry.Invalidate(deviceId: "nokia-01");
 
-        registry.Get("nokia-01").Should().BeNull();
+        registry.Get(deviceId: "nokia-01").Should().BeNull();
     }
 
     [Fact]
@@ -84,34 +84,34 @@ public class DeviceCapabilityRegistryTests : IDisposable
         {
             DeviceId = "nokia-db-01",
             Type = "tv",
-            CapabilitiesJson = JsonConvert.SerializeObject(MakeStereoNokiaCaps()),
+            CapabilitiesJson = JsonConvert.SerializeObject(value: MakeStereoNokiaCaps()),
         };
-        ctx.Devices.Add(device);
+        ctx.Devices.Add(entity: device);
         await ctx.SaveChangesAsync();
 
-        DeviceCapabilityRegistry registry = new(_contextFactory);
+        DeviceCapabilityRegistry registry = new(contextFactory: _contextFactory);
 
         DeviceCapabilities? result = await registry.LoadFromDbAsync(
-            "nokia-db-01",
-            CancellationToken.None
+            deviceId: "nokia-db-01",
+            ct: CancellationToken.None
         );
 
         result.Should().NotBeNull();
-        result!.MaxAudioChannels.Should().Be(2);
+        result!.MaxAudioChannels.Should().Be(expected: 2);
 
         // Subsequent Get should hit cache — DB call already populated it
-        DeviceCapabilities? cached = registry.Get("nokia-db-01");
+        DeviceCapabilities? cached = registry.Get(deviceId: "nokia-db-01");
         cached.Should().NotBeNull();
-        cached!.MaxAudioChannels.Should().Be(2);
+        cached!.MaxAudioChannels.Should().Be(expected: 2);
     }
 
     [Fact]
     public async Task LoadFromDbAsync_ReturnsNull_WhenDeviceNotFound()
     {
-        DeviceCapabilityRegistry registry = new(_contextFactory);
+        DeviceCapabilityRegistry registry = new(contextFactory: _contextFactory);
         DeviceCapabilities? result = await registry.LoadFromDbAsync(
-            "missing-device",
-            CancellationToken.None
+            deviceId: "missing-device",
+            ct: CancellationToken.None
         );
         result.Should().BeNull();
     }
@@ -119,17 +119,17 @@ public class DeviceCapabilityRegistryTests : IDisposable
     [Fact]
     public void ConcurrentSetAndGet_DoesNotThrow()
     {
-        DeviceCapabilityRegistry registry = new(_contextFactory);
+        DeviceCapabilityRegistry registry = new(contextFactory: _contextFactory);
         DeviceCapabilities caps = MakeStereoNokiaCaps();
 
         Parallel.For(
-            0,
-            100,
-            i =>
+            fromInclusive: 0,
+            toExclusive: 100,
+            body: i =>
             {
                 string key = $"device-{i % 10}";
-                registry.Set(key, caps);
-                registry.Get(key);
+                registry.Set(deviceId: key, capabilities: caps);
+                registry.Get(deviceId: key);
             }
         );
     }
@@ -137,9 +137,9 @@ public class DeviceCapabilityRegistryTests : IDisposable
     private sealed class TestDbContextFactory(DbContextOptions<MediaContext> options)
         : IDbContextFactory<MediaContext>
     {
-        public MediaContext CreateDbContext() => new(options);
+        public MediaContext CreateDbContext() => new(options: options);
 
         public Task<MediaContext> CreateDbContextAsync(CancellationToken ct = default) =>
-            Task.FromResult(new MediaContext(options));
+            Task.FromResult(result: new MediaContext(options: options));
     }
 }

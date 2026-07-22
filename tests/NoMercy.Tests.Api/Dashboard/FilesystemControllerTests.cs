@@ -26,7 +26,7 @@ namespace NoMercy.Tests.Api.Dashboard;
 /// the host — every asserted 400 here is thrown by <c>FilesystemRepository.Mkdir</c>
 /// before it touches <c>IStorageDriver</c>.
 /// </summary>
-[Trait("Category", "DashboardFilesystem")]
+[Trait(name: "Category", value: "DashboardFilesystem")]
 public class FilesystemControllerTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly HttpClient _authed;
@@ -42,100 +42,100 @@ public class FilesystemControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task List_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.PostAsJsonAsync(
-            "/api/v1/dashboard/filesystem/ls",
-            new { folder = "" }
+            requestUri: "/api/v1/dashboard/filesystem/ls",
+            value: new { folder = "" }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task List_EmptyFolder_ReturnsOkWithNullParentAndEmptyData_WhenModerator()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/filesystem/ls",
-            new { folder = "" }
+            requestUri: "/api/v1/dashboard/filesystem/ls",
+            value: new { folder = "" }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
         JsonElement root = doc.RootElement;
 
-        root.GetProperty("status").GetString().Should().Be("ok");
-        root.GetProperty("parent").ValueKind.Should().Be(JsonValueKind.Null);
-        root.GetProperty("data").ValueKind.Should().Be(JsonValueKind.Array);
-        root.GetProperty("data").GetArrayLength().Should().Be(0);
+        root.GetProperty(propertyName: "status").GetString().Should().Be(expected: "ok");
+        root.GetProperty(propertyName: "parent").ValueKind.Should().Be(expected: JsonValueKind.Null);
+        root.GetProperty(propertyName: "data").ValueKind.Should().Be(expected: JsonValueKind.Array);
+        root.GetProperty(propertyName: "data").GetArrayLength().Should().Be(expected: 0);
     }
 
     [Fact]
     public async Task Home_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.PostAsJsonAsync(
-            "/api/v1/dashboard/filesystem/home",
-            new { }
+            requestUri: "/api/v1/dashboard/filesystem/home",
+            value: new { }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task Home_ReturnsOkWithStatusAndPath_WhenModerator()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/filesystem/home",
-            new { }
+            requestUri: "/api/v1/dashboard/filesystem/home",
+            value: new { }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
         JsonElement root = doc.RootElement;
 
-        root.GetProperty("status").GetString().Should().Be("ok");
-        root.TryGetProperty("path", out JsonElement path).Should().BeTrue();
-        path.ValueKind.Should().Be(JsonValueKind.String);
+        root.GetProperty(propertyName: "status").GetString().Should().Be(expected: "ok");
+        root.TryGetProperty(propertyName: "path", value: out JsonElement path).Should().BeTrue();
+        path.ValueKind.Should().Be(expected: JsonValueKind.String);
         path.GetString().Should().NotBeNullOrEmpty();
-        root.GetProperty("data").ValueKind.Should().Be(JsonValueKind.Array);
+        root.GetProperty(propertyName: "data").ValueKind.Should().Be(expected: JsonValueKind.Array);
     }
 
     [Fact]
     public async Task Roots_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.PostAsJsonAsync(
-            "/api/v1/dashboard/filesystem/roots",
-            new { }
+            requestUri: "/api/v1/dashboard/filesystem/roots",
+            value: new { }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task Roots_ReturnsOkWithStatusOkAndDataArray_WhenModerator()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/filesystem/roots",
-            new { }
+            requestUri: "/api/v1/dashboard/filesystem/roots",
+            value: new { }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
         JsonElement root = doc.RootElement;
 
-        root.GetProperty("status").GetString().Should().Be("ok");
-        root.GetProperty("path").GetString().Should().Be("roots");
-        root.GetProperty("parent").ValueKind.Should().Be(JsonValueKind.Null);
-        root.GetProperty("data").ValueKind.Should().Be(JsonValueKind.Array);
+        root.GetProperty(propertyName: "status").GetString().Should().Be(expected: "ok");
+        root.GetProperty(propertyName: "path").GetString().Should().Be(expected: "roots");
+        root.GetProperty(propertyName: "parent").ValueKind.Should().Be(expected: JsonValueKind.Null);
+        root.GetProperty(propertyName: "data").ValueKind.Should().Be(expected: JsonValueKind.Array);
 
-        foreach (JsonElement entry in root.GetProperty("data").EnumerateArray())
+        foreach (JsonElement entry in root.GetProperty(propertyName: "data").EnumerateArray())
         {
-            entry.TryGetProperty("path", out _).Should().BeTrue();
-            entry.TryGetProperty("full_path", out _).Should().BeTrue();
-            entry.TryGetProperty("type", out _).Should().BeTrue();
+            entry.TryGetProperty(propertyName: "path", value: out _).Should().BeTrue();
+            entry.TryGetProperty(propertyName: "full_path", value: out _).Should().BeTrue();
+            entry.TryGetProperty(propertyName: "type", value: out _).Should().BeTrue();
         }
     }
 
@@ -143,33 +143,33 @@ public class FilesystemControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task Mkdir_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.PostAsJsonAsync(
-            "/api/v1/dashboard/filesystem/mkdir",
-            new { parent = "", name = "" }
+            requestUri: "/api/v1/dashboard/filesystem/mkdir",
+            value: new { parent = "", name = "" }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task Mkdir_MissingParent_Returns400_WithoutTouchingHostFilesystem()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/filesystem/mkdir",
-            new { parent = "", name = "new-folder" }
+            requestUri: "/api/v1/dashboard/filesystem/mkdir",
+            value: new { parent = "", name = "new-folder" }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task Mkdir_MissingName_Returns400_WithoutTouchingHostFilesystem()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/filesystem/mkdir",
-            new { parent = "/tmp", name = "" }
+            requestUri: "/api/v1/dashboard/filesystem/mkdir",
+            value: new { parent = "/tmp", name = "" }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -178,10 +178,10 @@ public class FilesystemControllerTests : IClassFixture<NoMercyApiFactory>
         // '/' is invalid in Path.GetInvalidFileNameChars() on every OS (unlike ':' or '*',
         // which are Windows-only), so this never falls through to a real CreateDirectory call.
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            "/api/v1/dashboard/filesystem/mkdir",
-            new { parent = "/tmp", name = "bad/name" }
+            requestUri: "/api/v1/dashboard/filesystem/mkdir",
+            value: new { parent = "/tmp", name = "bad/name" }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
     }
 }

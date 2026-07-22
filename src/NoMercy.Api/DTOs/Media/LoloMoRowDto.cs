@@ -15,15 +15,15 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record LoloMoRowDto<T>
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty("moreLink")]
+    [JsonProperty(propertyName: "moreLink")]
     public string MoreLink { get; set; } = string.Empty;
 
-    [JsonProperty("items")]
+    [JsonProperty(propertyName: "items")]
     public IEnumerable<T> Items { get; set; } = [];
 }

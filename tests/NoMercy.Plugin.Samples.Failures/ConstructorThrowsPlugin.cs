@@ -20,12 +20,12 @@ namespace NoMercy.Plugin.Samples.Failures;
 public sealed class ConstructorThrowsPlugin : IPlugin
 {
     public ConstructorThrowsPlugin() =>
-        throw new InvalidOperationException("ConstructorThrowsPlugin: constructor boom");
+        throw new InvalidOperationException(message: "ConstructorThrowsPlugin: constructor boom");
 
     public string Name => "ConstructorThrows";
     public string Description => "Never constructed";
-    public Guid Id => Guid.Parse("11111111-0000-0000-0000-000000000001");
-    public Version Version { get; } = new(0, 1, 0);
+    public Guid Id => Guid.Parse(input: "11111111-0000-0000-0000-000000000001");
+    public Version Version { get; } = new(major: 0, minor: 1, build: 0);
 
     public void Initialize(IPluginContext context) { }
 

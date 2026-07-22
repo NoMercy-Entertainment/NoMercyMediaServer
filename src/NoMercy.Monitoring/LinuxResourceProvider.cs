@@ -15,7 +15,7 @@ using System.Runtime.Versioning;
 
 namespace NoMercy.Monitoring;
 
-[SupportedOSPlatform("linux")]
+[SupportedOSPlatform(platformName: "linux")]
 internal sealed class LinuxResourceProvider : IResourceProvider
 {
     // -----------------------------------------------------------------------
@@ -59,9 +59,9 @@ internal sealed class LinuxResourceProvider : IResourceProvider
             _gpu = [],
         };
 
-        CollectCpu(resource);
-        CollectMemory(resource);
-        CollectGpu(resource);
+        CollectCpu(resource: resource);
+        CollectMemory(resource: resource);
+        CollectGpu(resource: resource);
 
         return resource;
     }
@@ -81,25 +81,25 @@ internal sealed class LinuxResourceProvider : IResourceProvider
         }
 
         // first entry is the aggregate "cpu" line
-        CpuSnapshot? aggCurrent = current.FirstOrDefault(s => s.Label == "cpu");
-        CpuSnapshot? aggPrev = _previousSnapshots.FirstOrDefault(s => s.Label == "cpu");
+        CpuSnapshot? aggCurrent = current.FirstOrDefault(predicate: s => s.Label == "cpu");
+        CpuSnapshot? aggPrev = _previousSnapshots.FirstOrDefault(predicate: s => s.Label == "cpu");
 
         if (aggCurrent is not null && aggPrev is not null)
         {
-            resource.Cpu.Total = Math.Round(CalculatePercent(aggPrev, aggCurrent), 1);
+            resource.Cpu.Total = Math.Round(value: CalculatePercent(prev: aggPrev, curr: aggCurrent), digits: 1);
         }
 
         double max = 0;
         int coreIndex = 0;
 
         foreach (
-            CpuSnapshot curr in current.Where(s => s.Label.StartsWith("cpu") && s.Label != "cpu")
+            CpuSnapshot curr in current.Where(predicate: s => s.Label.StartsWith(value: "cpu") && s.Label != "cpu")
         )
         {
-            CpuSnapshot? prev = _previousSnapshots.FirstOrDefault(s => s.Label == curr.Label);
-            double util = prev is null ? 0 : Math.Round(CalculatePercent(prev, curr), 1);
+            CpuSnapshot? prev = _previousSnapshots.FirstOrDefault(predicate: s => s.Label == curr.Label);
+            double util = prev is null ? 0 : Math.Round(value: CalculatePercent(prev: prev, curr: curr), digits: 1);
 
-            resource.Cpu.Core.Add(new() { Index = coreIndex, Utilization = util });
+            resource.Cpu.Core.Add(item: new() { Index = coreIndex, Utilization = util });
             if (util > max)
                 max = util;
             coreIndex++;
@@ -124,26 +124,26 @@ internal sealed class LinuxResourceProvider : IResourceProvider
 
         try
         {
-            string[] lines = File.ReadAllLines("/proc/stat");
+            string[] lines = File.ReadAllLines(path: "/proc/stat");
             foreach (string line in lines)
             {
-                if (!line.StartsWith("cpu"))
+                if (!line.StartsWith(value: "cpu"))
                     break;
-                string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                string[] parts = line.Split(separator: ' ', options: StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length < 5)
                     continue;
 
                 snapshots.Add(
-                    new(
+                    item: new(
                         Label: parts[0],
-                        User: ParseLong(parts, 1),
-                        Nice: ParseLong(parts, 2),
-                        System: ParseLong(parts, 3),
-                        Idle: ParseLong(parts, 4),
-                        IoWait: ParseLong(parts, 5),
-                        Irq: ParseLong(parts, 6),
-                        SoftIrq: ParseLong(parts, 7),
-                        Steal: ParseLong(parts, 8)
+                        User: ParseLong(parts: parts, index: 1),
+                        Nice: ParseLong(parts: parts, index: 2),
+                        System: ParseLong(parts: parts, index: 3),
+                        Idle: ParseLong(parts: parts, index: 4),
+                        IoWait: ParseLong(parts: parts, index: 5),
+                        Irq: ParseLong(parts: parts, index: 6),
+                        SoftIrq: ParseLong(parts: parts, index: 7),
+                        Steal: ParseLong(parts: parts, index: 8)
                     )
                 );
             }
@@ -157,7 +157,7 @@ internal sealed class LinuxResourceProvider : IResourceProvider
     }
 
     private static long ParseLong(string[] parts, int index) =>
-        index < parts.Length && long.TryParse(parts[index], out long v) ? v : 0;
+        index < parts.Length && long.TryParse(s: parts[index], result: out long v) ? v : 0;
 
     // -----------------------------------------------------------------------
     // Memory
@@ -168,26 +168,26 @@ internal sealed class LinuxResourceProvider : IResourceProvider
         try
         {
             Dictionary<string, long> fields = [];
-            foreach (string line in File.ReadAllLines("/proc/meminfo"))
+            foreach (string line in File.ReadAllLines(path: "/proc/meminfo"))
             {
-                string[] parts = line.Split(':', StringSplitOptions.TrimEntries);
+                string[] parts = line.Split(separator: ':', options: StringSplitOptions.TrimEntries);
                 if (parts.Length < 2)
                     continue;
                 string key = parts[0];
                 // value is "N kB"
-                string[] valueParts = parts[1].Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                if (long.TryParse(valueParts[0], out long kb))
-                    fields[key] = kb;
+                string[] valueParts = parts[1].Split(separator: ' ', options: StringSplitOptions.RemoveEmptyEntries);
+                if (long.TryParse(s: valueParts[0], result: out long kb))
+                    fields[key: key] = kb;
             }
 
             const double gbFactor = 1024.0 * 1024.0; // kB → GB
-            long totalKb = fields.GetValueOrDefault("MemTotal");
-            long availableKb = fields.GetValueOrDefault("MemAvailable");
+            long totalKb = fields.GetValueOrDefault(key: "MemTotal");
+            long availableKb = fields.GetValueOrDefault(key: "MemAvailable");
             long usedKb = totalKb - availableKb;
 
-            resource.Memory.Total = Math.Round(totalKb / gbFactor, 2);
-            resource.Memory.Available = Math.Round(availableKb / gbFactor, 2);
-            resource.Memory.Use = Math.Round(usedKb / gbFactor, 2);
+            resource.Memory.Total = Math.Round(value: totalKb / gbFactor, digits: 2);
+            resource.Memory.Available = Math.Round(value: availableKb / gbFactor, digits: 2);
+            resource.Memory.Use = Math.Round(value: usedKb / gbFactor, digits: 2);
         }
         catch
         {
@@ -202,11 +202,11 @@ internal sealed class LinuxResourceProvider : IResourceProvider
     private static void CollectGpu(Resource resource)
     {
         // Try Nvidia first via nvidia-smi
-        if (TryCollectNvidiaGpu(resource))
+        if (TryCollectNvidiaGpu(resource: resource))
             return;
 
         // Try AMD via sysfs
-        TryCollectAmdGpu(resource);
+        TryCollectAmdGpu(resource: resource);
     }
 
     private static bool TryCollectNvidiaGpu(Resource resource)
@@ -228,30 +228,30 @@ internal sealed class LinuxResourceProvider : IResourceProvider
 
             proc.Start();
             string output = proc.StandardOutput.ReadToEnd();
-            proc.WaitForExit(3000);
+            proc.WaitForExit(milliseconds: 3000);
 
-            if (proc.ExitCode != 0 || string.IsNullOrWhiteSpace(output))
+            if (proc.ExitCode != 0 || string.IsNullOrWhiteSpace(value: output))
                 return false;
 
-            foreach (string line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            foreach (string line in output.Split(separator: '\n', options: StringSplitOptions.RemoveEmptyEntries))
             {
-                string[] parts = line.Split(',', StringSplitOptions.TrimEntries);
+                string[] parts = line.Split(separator: ',', options: StringSplitOptions.TrimEntries);
                 if (parts.Length < 7)
                     continue;
-                if (!int.TryParse(parts[0], out int index))
+                if (!int.TryParse(s: parts[0], result: out int index))
                     continue;
 
                 string key = $"gpu/{index}";
-                resource._gpu[key] = new()
+                resource._gpu[key: key] = new()
                 {
                     Identifier = key,
                     Name = parts[6],
-                    Core = ParseDouble(parts[1]),
-                    Memory = ParseDouble(parts[2]),
-                    Encode = ParseDouble(parts[3]),
-                    Decode = ParseDouble(parts[4]),
-                    D3D = ParseDouble(parts[1]), // map overall utilisation to D3D as well
-                    Power = ParseDouble(parts[5]),
+                    Core = ParseDouble(s: parts[1]),
+                    Memory = ParseDouble(s: parts[2]),
+                    Encode = ParseDouble(s: parts[3]),
+                    Decode = ParseDouble(s: parts[4]),
+                    D3D = ParseDouble(s: parts[1]), // map overall utilisation to D3D as well
+                    Power = ParseDouble(s: parts[5]),
                 };
             }
 
@@ -269,25 +269,25 @@ internal sealed class LinuxResourceProvider : IResourceProvider
         {
             // AMD exposes gpu_busy_percent per card under /sys/class/drm
             string[] cardPaths = Directory
-                .GetDirectories("/sys/class/drm", "card*")
-                .Where(p => !p.Contains('-')) // skip card0-eDP-1 etc.
-                .OrderBy(p => p)
+                .GetDirectories(path: "/sys/class/drm", searchPattern: "card*")
+                .Where(predicate: p => !p.Contains(value: '-')) // skip card0-eDP-1 etc.
+                .OrderBy(keySelector: p => p)
                 .ToArray();
 
             int index = 0;
             foreach (string cardPath in cardPaths)
             {
-                string busyFile = Path.Combine(cardPath, "device", "gpu_busy_percent");
-                if (!File.Exists(busyFile))
+                string busyFile = Path.Combine(path1: cardPath, path2: "device", path3: "gpu_busy_percent");
+                if (!File.Exists(path: busyFile))
                     continue;
 
-                string content = File.ReadAllText(busyFile).Trim();
-                if (!double.TryParse(content, CultureInfo.InvariantCulture, out double utilization))
+                string content = File.ReadAllText(path: busyFile).Trim();
+                if (!double.TryParse(s: content, provider: CultureInfo.InvariantCulture, result: out double utilization))
                     continue;
 
                 string key = $"gpu/{index}";
-                string amdName = ReadAmdGpuName(cardPath, index);
-                resource._gpu[key] = new()
+                string amdName = ReadAmdGpuName(cardPath: cardPath, fallbackIndex: index);
+                resource._gpu[key: key] = new()
                 {
                     Identifier = key,
                     Name = amdName,
@@ -308,11 +308,11 @@ internal sealed class LinuxResourceProvider : IResourceProvider
     {
         try
         {
-            string namePath = Path.Combine(cardPath, "device", "product_name");
-            if (File.Exists(namePath))
+            string namePath = Path.Combine(path1: cardPath, path2: "device", path3: "product_name");
+            if (File.Exists(path: namePath))
             {
-                string name = File.ReadAllText(namePath).Trim();
-                if (!string.IsNullOrWhiteSpace(name))
+                string name = File.ReadAllText(path: namePath).Trim();
+                if (!string.IsNullOrWhiteSpace(value: name))
                     return name;
             }
         }
@@ -329,5 +329,5 @@ internal sealed class LinuxResourceProvider : IResourceProvider
     // 5555 on a comma-decimal locale (nl-NL, de-DE, ...), corrupting every GPU
     // utilization/power reading on a non-en-US server.
     private static double ParseDouble(string s) =>
-        double.TryParse(s, CultureInfo.InvariantCulture, out double v) ? Math.Round(v, 1) : 0;
+        double.TryParse(s: s, provider: CultureInfo.InvariantCulture, result: out double v) ? Math.Round(value: v, digits: 1) : 0;
 }

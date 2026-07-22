@@ -14,7 +14,7 @@ using NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 namespace NoMercy.Tests.MediaProcessing.Jobs;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class SummarizeFailuresTests
 {
     [Fact]
@@ -55,16 +55,16 @@ public sealed class SummarizeFailuresTests
         ];
 
         // SummarizeFailures only receives the already-filtered failed outcomes.
-        List<EncodeTaskOutcome> failedOnly = failed.Where(o => !o.Success).ToList();
+        List<EncodeTaskOutcome> failedOnly = failed.Where(predicate: o => !o.Success).ToList();
 
         (IReadOnlyList<string> descriptors, string? lastError) = VideoEncodeJob.SummarizeFailures(
-            failedOnly
+            failedOutcomes: failedOnly
         );
 
-        descriptors.Should().HaveCount(2);
-        descriptors.Should().Contain("Video");
-        descriptors.Should().Contain("Audio");
-        lastError.Should().Be("x");
+        descriptors.Should().HaveCount(expected: 2);
+        descriptors.Should().Contain(expected: "Video");
+        descriptors.Should().Contain(expected: "Audio");
+        lastError.Should().Be(expected: "x");
     }
 
     [Fact]
@@ -95,12 +95,12 @@ public sealed class SummarizeFailuresTests
         ];
 
         (IReadOnlyList<string> descriptors, string? lastError) = VideoEncodeJob.SummarizeFailures(
-            failedOnly
+            failedOutcomes: failedOnly
         );
 
-        descriptors.Should().HaveCount(1);
-        descriptors[0].Should().Be("Video (2x)");
-        lastError.Should().Be("err1");
+        descriptors.Should().HaveCount(expected: 1);
+        descriptors[index: 0].Should().Be(expected: "Video (2x)");
+        lastError.Should().Be(expected: "err1");
     }
 
     [Fact]
@@ -121,10 +121,10 @@ public sealed class SummarizeFailuresTests
         ];
 
         (IReadOnlyList<string> descriptors, string? lastError) = VideoEncodeJob.SummarizeFailures(
-            failedOnly
+            failedOutcomes: failedOnly
         );
 
-        lastError.Should().Be("one or more rungs failed");
-        descriptors.Should().ContainSingle("Audio");
+        lastError.Should().Be(expected: "one or more rungs failed");
+        descriptors.Should().ContainSingle(because: "Audio");
     }
 }

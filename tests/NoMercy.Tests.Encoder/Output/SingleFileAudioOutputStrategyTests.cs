@@ -28,15 +28,15 @@ public class SingleFileAudioOutputStrategyTests : IDisposable
 
     public SingleFileAudioOutputStrategyTests()
     {
-        _outputDir = Path.Combine(Path.GetTempPath(), $"AudioOnly_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_outputDir);
+        _outputDir = Path.Combine(path1: Path.GetTempPath(), path2: $"AudioOnly_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: _outputDir);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(_outputDir))
-            Directory.Delete(_outputDir, recursive: true);
-        GC.SuppressFinalize(this);
+        if (Directory.Exists(path: _outputDir))
+            Directory.Delete(path: _outputDir, recursive: true);
+        GC.SuppressFinalize(obj: this);
     }
 
     // --- mp3 -----------------------------------------------------------------
@@ -44,35 +44,35 @@ public class SingleFileAudioOutputStrategyTests : IDisposable
     [Fact]
     public void Mp3_Configure_ForcesLameEncoderAndMuxer()
     {
-        Mp3OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        Mp3OutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new("/input.flac"));
+        builder.AddInput(input: new(FilePath: "/input.flac"));
 
-        strategy.ConfigureOutput(builder, Plan(OutputFormat.Mp3, "libmp3lame"), _outputDir);
+        strategy.ConfigureOutput(builder: builder, plan: Plan(format: OutputFormat.Mp3, encoder: "libmp3lame"), outputDirectory: _outputDir);
 
-        FfmpegCommand cmd = builder.Build("ffmpeg");
-        string args = string.Join(" ", cmd.Arguments);
-        args.Should().Contain("libmp3lame");
-        args.Should().Contain("-f mp3");
-        args.Should().Contain("output.mp3");
+        FfmpegCommand cmd = builder.Build(ffmpegPath: "ffmpeg");
+        string args = string.Join(separator: " ", value: cmd.Arguments);
+        args.Should().Contain(expected: "libmp3lame");
+        args.Should().Contain(expected: "-f mp3");
+        args.Should().Contain(expected: "output.mp3");
     }
 
     [Fact]
     public async Task Mp3_Finalize_RenamesToMediaTitle()
     {
-        Mp3OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
-        string sourcePath = Path.Combine(_outputDir, "output.mp3");
-        await File.WriteAllBytesAsync(sourcePath, [0xFF, 0xFB]);
+        Mp3OutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        string sourcePath = Path.Combine(path1: _outputDir, path2: "output.mp3");
+        await File.WriteAllBytesAsync(path: sourcePath, bytes: [0xFF, 0xFB]);
 
         await strategy.FinalizeAsync(
-            _outputDir,
-            Plan(OutputFormat.Mp3, "libmp3lame"),
-            "Track-01",
-            CancellationToken.None
+            outputDirectory: _outputDir,
+            plan: Plan(format: OutputFormat.Mp3, encoder: "libmp3lame"),
+            mediaTitle: "Track-01",
+            ct: CancellationToken.None
         );
 
-        File.Exists(Path.Combine(_outputDir, "Track-01.mp3")).Should().BeTrue();
-        File.Exists(Path.Combine(_outputDir, "output.mp3")).Should().BeFalse();
+        File.Exists(path: Path.Combine(path1: _outputDir, path2: "Track-01.mp3")).Should().BeTrue();
+        File.Exists(path: Path.Combine(path1: _outputDir, path2: "output.mp3")).Should().BeFalse();
     }
 
     // --- flac ----------------------------------------------------------------
@@ -80,32 +80,32 @@ public class SingleFileAudioOutputStrategyTests : IDisposable
     [Fact]
     public void Flac_Configure_ForcesFlacCodec()
     {
-        FlacOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        FlacOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new("/input.wav"));
+        builder.AddInput(input: new(FilePath: "/input.wav"));
 
-        strategy.ConfigureOutput(builder, Plan(OutputFormat.Flac, "flac"), _outputDir);
+        strategy.ConfigureOutput(builder: builder, plan: Plan(format: OutputFormat.Flac, encoder: "flac"), outputDirectory: _outputDir);
 
-        string args = string.Join(" ", builder.Build("ffmpeg").Arguments);
-        args.Should().Contain("-f flac");
-        args.Should().Contain("output.flac");
-        (args.Contains("-acodec flac") || args.Contains("-c:a flac")).Should().BeTrue();
+        string args = string.Join(separator: " ", value: builder.Build(ffmpegPath: "ffmpeg").Arguments);
+        args.Should().Contain(expected: "-f flac");
+        args.Should().Contain(expected: "output.flac");
+        (args.Contains(value: "-acodec flac") || args.Contains(value: "-c:a flac")).Should().BeTrue();
     }
 
     [Fact]
     public async Task Flac_Finalize_RenamesToMediaTitle()
     {
-        FlacOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
-        await File.WriteAllBytesAsync(Path.Combine(_outputDir, "output.flac"), [0x66, 0x4C]);
+        FlacOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        await File.WriteAllBytesAsync(path: Path.Combine(path1: _outputDir, path2: "output.flac"), bytes: [0x66, 0x4C]);
 
         await strategy.FinalizeAsync(
-            _outputDir,
-            Plan(OutputFormat.Flac, "flac"),
-            "Song",
-            CancellationToken.None
+            outputDirectory: _outputDir,
+            plan: Plan(format: OutputFormat.Flac, encoder: "flac"),
+            mediaTitle: "Song",
+            ct: CancellationToken.None
         );
 
-        File.Exists(Path.Combine(_outputDir, "Song.flac")).Should().BeTrue();
+        File.Exists(path: Path.Combine(path1: _outputDir, path2: "Song.flac")).Should().BeTrue();
     }
 
     // --- ogg -----------------------------------------------------------------
@@ -113,55 +113,55 @@ public class SingleFileAudioOutputStrategyTests : IDisposable
     [Fact]
     public void Ogg_Configure_UsesOggMuxer()
     {
-        OggOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        OggOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new("/input.wav"));
+        builder.AddInput(input: new(FilePath: "/input.wav"));
 
-        strategy.ConfigureOutput(builder, Plan(OutputFormat.Ogg, "libvorbis"), _outputDir);
+        strategy.ConfigureOutput(builder: builder, plan: Plan(format: OutputFormat.Ogg, encoder: "libvorbis"), outputDirectory: _outputDir);
 
-        string args = string.Join(" ", builder.Build("ffmpeg").Arguments);
-        args.Should().Contain("-f ogg");
-        args.Should().Contain("output.ogg");
-        args.Should().Contain("libvorbis");
+        string args = string.Join(separator: " ", value: builder.Build(ffmpegPath: "ffmpeg").Arguments);
+        args.Should().Contain(expected: "-f ogg");
+        args.Should().Contain(expected: "output.ogg");
+        args.Should().Contain(expected: "libvorbis");
     }
 
     [Fact]
     public void Ogg_Configure_PreservesPlannerCodecChoice_Opus()
     {
-        OggOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        OggOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new("/input.wav"));
+        builder.AddInput(input: new(FilePath: "/input.wav"));
 
-        strategy.ConfigureOutput(builder, Plan(OutputFormat.Ogg, "libopus"), _outputDir);
+        strategy.ConfigureOutput(builder: builder, plan: Plan(format: OutputFormat.Ogg, encoder: "libopus"), outputDirectory: _outputDir);
 
         // Unlike mp3/flac, Ogg does NOT force the codec — it accepts vorbis,
         // opus, and flac. The planner's choice has to survive the strategy.
-        string args = string.Join(" ", builder.Build("ffmpeg").Arguments);
-        args.Should().Contain("libopus");
-        args.Should().NotContain("libvorbis");
+        string args = string.Join(separator: " ", value: builder.Build(ffmpegPath: "ffmpeg").Arguments);
+        args.Should().Contain(expected: "libopus");
+        args.Should().NotContain(unexpected: "libvorbis");
     }
 
     [Fact]
     public void AudioOnly_Configure_NoVideoCodecEmitted()
     {
-        Mp3OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        Mp3OutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new("/input.flac"));
+        builder.AddInput(input: new(FilePath: "/input.flac"));
 
-        strategy.ConfigureOutput(builder, Plan(OutputFormat.Mp3, "libmp3lame"), _outputDir);
+        strategy.ConfigureOutput(builder: builder, plan: Plan(format: OutputFormat.Mp3, encoder: "libmp3lame"), outputDirectory: _outputDir);
 
-        string args = string.Join(" ", builder.Build("ffmpeg").Arguments);
+        string args = string.Join(separator: " ", value: builder.Build(ffmpegPath: "ffmpeg").Arguments);
         // Video codec flags should be absent — the output is audio-only.
-        args.Should().NotContain("libx264");
-        args.Should().NotContain("-preset");
-        args.Should().NotContain("-crf");
+        args.Should().NotContain(unexpected: "libx264");
+        args.Should().NotContain(unexpected: "-preset");
+        args.Should().NotContain(unexpected: "-crf");
     }
 
     [Fact]
     public void AudioOnly_NoSubdirectories_AreProduced()
     {
-        Mp3OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
-        strategy.GetOutputSubdirectories(Plan(OutputFormat.Mp3, "libmp3lame")).Should().BeEmpty();
+        Mp3OutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        strategy.GetOutputSubdirectories(plan: Plan(format: OutputFormat.Mp3, encoder: "libmp3lame")).Should().BeEmpty();
     }
 
     private static OutputPlan Plan(OutputFormat format, string encoder) =>

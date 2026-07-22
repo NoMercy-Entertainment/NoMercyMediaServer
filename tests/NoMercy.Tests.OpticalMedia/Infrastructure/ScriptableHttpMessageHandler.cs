@@ -25,18 +25,18 @@ internal sealed class HandlerRoute(
 )
 {
     private readonly Queue<Func<HttpRequestMessage, HttpResponseMessage>> _responses = new(
-        responses
+        collection: responses
     );
     private Func<HttpRequestMessage, HttpResponseMessage>? _last;
 
-    public bool Matches(HttpRequestMessage request) => match(request);
+    public bool Matches(HttpRequestMessage request) => match(arg: request);
 
     public HttpResponseMessage Respond(HttpRequestMessage request)
     {
         Func<HttpRequestMessage, HttpResponseMessage> respond =
             _responses.Count > 0 ? _responses.Dequeue() : _last!;
         _last = respond;
-        return respond(request);
+        return respond(arg: request);
     }
 }
 
@@ -63,15 +63,15 @@ public sealed class ScriptableHttpMessageHandler : HttpMessageHandler
         params Func<HttpRequestMessage, HttpResponseMessage>[] responses
     ) =>
         When(
-            request =>
+            match: request =>
                 request.Method == HttpMethod.Get
                 && (
                     request.RequestUri?.AbsolutePath.Contains(
-                        pathContains,
-                        StringComparison.Ordinal
+                        value: pathContains,
+                        comparisonType: StringComparison.Ordinal
                     ) ?? false
                 ),
-            responses
+            responses: responses
         );
 
     private void When(
@@ -80,7 +80,7 @@ public sealed class ScriptableHttpMessageHandler : HttpMessageHandler
     )
     {
         lock (_gate)
-            _routes.Add(new(match, responses));
+            _routes.Add(item: new(match: match, responses: responses));
     }
 
     protected override Task<HttpResponseMessage> SendAsync(
@@ -90,19 +90,19 @@ public sealed class ScriptableHttpMessageHandler : HttpMessageHandler
     {
         HandlerRoute? route;
         lock (_gate)
-            route = _routes.FirstOrDefault(r => r.Matches(request));
+            route = _routes.FirstOrDefault(predicate: r => r.Matches(request: request));
 
         if (route is null)
             return Task.FromResult(
-                new HttpResponseMessage(HttpStatusCode.NotFound)
+                result: new HttpResponseMessage(statusCode: HttpStatusCode.NotFound)
                 {
                     Content = new StringContent(
-                        $"ScriptableHttpMessageHandler: no route scripted for {request.Method} {request.RequestUri}"
+                        content: $"ScriptableHttpMessageHandler: no route scripted for {request.Method} {request.RequestUri}"
                     ),
                 }
             );
 
-        return Task.FromResult(route.Respond(request));
+        return Task.FromResult(result: route.Respond(request: request));
     }
 }
 
@@ -113,11 +113,11 @@ public static class MockResponse
         HttpStatusCode status,
         string body
     ) =>
-        _ => new HttpResponseMessage(status)
+        _ => new HttpResponseMessage(statusCode: status)
         {
-            Content = new StringContent(body, Encoding.UTF8, "application/json"),
+            Content = new StringContent(content: body, encoding: Encoding.UTF8, mediaType: "application/json"),
         };
 
     public static Func<HttpRequestMessage, HttpResponseMessage> Status(HttpStatusCode status) =>
-        _ => new HttpResponseMessage(status) { Content = new StringContent(string.Empty) };
+        _ => new HttpResponseMessage(statusCode: status) { Content = new StringContent(content: string.Empty) };
 }

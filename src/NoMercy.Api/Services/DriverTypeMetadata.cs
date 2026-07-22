@@ -127,8 +127,8 @@ public static class DriverTypeMetadata
                 if (config is null)
                     return "config is required for 'local' and must include 'rootPath'.";
 
-                string? localRoot = config["rootPath"]?.Value<string>();
-                if (string.IsNullOrWhiteSpace(localRoot))
+                string? localRoot = config[propertyName: "rootPath"]?.Value<string>();
+                if (string.IsNullOrWhiteSpace(value: localRoot))
                     return "config.rootPath must be a non-empty string for 'local'.";
 
                 return null;
@@ -137,16 +137,16 @@ public static class DriverTypeMetadata
                 if (config is null)
                     return "config is required for 'nfs' and must include 'server' and 'export'.";
 
-                string? nfsServer = config["server"]?.Value<string>();
-                string? nfsExport = config["export"]?.Value<string>();
+                string? nfsServer = config[propertyName: "server"]?.Value<string>();
+                string? nfsExport = config[propertyName: "export"]?.Value<string>();
 
-                if (string.IsNullOrWhiteSpace(nfsServer))
+                if (string.IsNullOrWhiteSpace(value: nfsServer))
                     return "config.server must be a non-empty string for 'nfs'.";
 
-                if (string.IsNullOrWhiteSpace(nfsExport))
+                if (string.IsNullOrWhiteSpace(value: nfsExport))
                     return "config.export must be a non-empty string for 'nfs'.";
 
-                int? nfsVersion = config["version"]?.Value<int?>();
+                int? nfsVersion = config[propertyName: "version"]?.Value<int?>();
                 if (nfsVersion.HasValue && nfsVersion != 3 && nfsVersion != 4)
                     return "config.version must be 3 or 4 for 'nfs'.";
 
@@ -157,19 +157,19 @@ public static class DriverTypeMetadata
                 if (config is null)
                     return $"config is required for '{driverType}' and must include 'bucket' and 'region'.";
 
-                string? bucket = config["bucket"]?.Value<string>();
-                string? region = config["region"]?.Value<string>();
+                string? bucket = config[propertyName: "bucket"]?.Value<string>();
+                string? region = config[propertyName: "region"]?.Value<string>();
 
-                if (string.IsNullOrWhiteSpace(bucket))
+                if (string.IsNullOrWhiteSpace(value: bucket))
                     return $"config.bucket must be a non-empty string for '{driverType}'.";
 
-                if (string.IsNullOrWhiteSpace(region))
+                if (string.IsNullOrWhiteSpace(value: region))
                     return $"config.region must be a non-empty string for '{driverType}'.";
 
                 if (driverType == "r2")
                 {
-                    string? endpoint = config["endpoint"]?.Value<string>();
-                    if (string.IsNullOrWhiteSpace(endpoint))
+                    string? endpoint = config[propertyName: "endpoint"]?.Value<string>();
+                    if (string.IsNullOrWhiteSpace(value: endpoint))
                         return "config.endpoint is required for 'r2' (set to your R2 endpoint URL).";
                 }
 
@@ -179,8 +179,8 @@ public static class DriverTypeMetadata
                 if (config is null)
                     return "config is required for 'webdav' and must include 'url'.";
 
-                string? webDavUrl = config["url"]?.Value<string>();
-                if (string.IsNullOrWhiteSpace(webDavUrl))
+                string? webDavUrl = config[propertyName: "url"]?.Value<string>();
+                if (string.IsNullOrWhiteSpace(value: webDavUrl))
                     return "config.url must be a non-empty string for 'webdav'.";
 
                 return null;

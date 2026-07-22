@@ -20,11 +20,11 @@ public class LivePlaylistBuilderTests
 
     private static Segment MakeSegment(int index, double startSec, double durSec) =>
         new(
-            index,
-            TimeSpan.FromSeconds(startSec),
-            TimeSpan.FromSeconds(durSec),
-            $"/tmp/{index}.ts",
-            100
+            Index: index,
+            StartTime: TimeSpan.FromSeconds(value: startSec),
+            Duration: TimeSpan.FromSeconds(value: durSec),
+            FilePath: $"/tmp/{index}.ts",
+            SizeBytes: 100
         );
 
     [Fact]
@@ -33,19 +33,19 @@ public class LivePlaylistBuilderTests
         LivePlaylistRequest request = new(
             SessionId: "s",
             Segments: [],
-            TargetSegmentDuration: TimeSpan.FromSeconds(6),
+            TargetSegmentDuration: TimeSpan.FromSeconds(seconds: 6),
             IsComplete: false,
             SegmentUrlTemplate: "/seg/{index}.ts"
         );
 
-        string playlist = _builder.Build(request);
+        string playlist = _builder.Build(request: request);
 
-        playlist.Should().Contain("#EXTM3U");
-        playlist.Should().Contain("#EXT-X-TARGETDURATION:6");
-        playlist.Should().Contain("#EXT-X-MEDIA-SEQUENCE:0");
-        playlist.Should().Contain("#EXT-X-PLAYLIST-TYPE:EVENT");
-        playlist.Should().NotContain("#EXT-X-ENDLIST");
-        playlist.Should().NotContain("#EXTINF");
+        playlist.Should().Contain(expected: "#EXTM3U");
+        playlist.Should().Contain(expected: "#EXT-X-TARGETDURATION:6");
+        playlist.Should().Contain(expected: "#EXT-X-MEDIA-SEQUENCE:0");
+        playlist.Should().Contain(expected: "#EXT-X-PLAYLIST-TYPE:EVENT");
+        playlist.Should().NotContain(unexpected: "#EXT-X-ENDLIST");
+        playlist.Should().NotContain(unexpected: "#EXTINF");
     }
 
     [Fact]
@@ -53,17 +53,17 @@ public class LivePlaylistBuilderTests
     {
         LivePlaylistRequest request = new(
             SessionId: "s",
-            Segments: [MakeSegment(0, 0, 6), MakeSegment(1, 6, 6)],
-            TargetSegmentDuration: TimeSpan.FromSeconds(6),
+            Segments: [MakeSegment(index: 0, startSec: 0, durSec: 6), MakeSegment(index: 1, startSec: 6, durSec: 6)],
+            TargetSegmentDuration: TimeSpan.FromSeconds(seconds: 6),
             IsComplete: false,
             SegmentUrlTemplate: "/seg/{index}.ts"
         );
 
-        string playlist = _builder.Build(request);
+        string playlist = _builder.Build(request: request);
 
-        playlist.Should().Contain("#EXTINF:6.000,");
-        playlist.Should().Contain("/seg/0.ts");
-        playlist.Should().Contain("/seg/1.ts");
+        playlist.Should().Contain(expected: "#EXTINF:6.000,");
+        playlist.Should().Contain(expected: "/seg/0.ts");
+        playlist.Should().Contain(expected: "/seg/1.ts");
     }
 
     [Fact]
@@ -71,17 +71,17 @@ public class LivePlaylistBuilderTests
     {
         LivePlaylistRequest request = new(
             SessionId: "s",
-            Segments: [MakeSegment(0, 0, 6)],
-            TargetSegmentDuration: TimeSpan.FromSeconds(6),
+            Segments: [MakeSegment(index: 0, startSec: 0, durSec: 6)],
+            TargetSegmentDuration: TimeSpan.FromSeconds(seconds: 6),
             IsComplete: true,
             SegmentUrlTemplate: "/seg/{index}.ts"
         );
 
-        string playlist = _builder.Build(request);
+        string playlist = _builder.Build(request: request);
 
-        playlist.Should().Contain("#EXT-X-PLAYLIST-TYPE:VOD");
-        playlist.Should().Contain("#EXT-X-ENDLIST");
-        playlist.Should().NotContain("#EXT-X-PLAYLIST-TYPE:EVENT");
+        playlist.Should().Contain(expected: "#EXT-X-PLAYLIST-TYPE:VOD");
+        playlist.Should().Contain(expected: "#EXT-X-ENDLIST");
+        playlist.Should().NotContain(unexpected: "#EXT-X-PLAYLIST-TYPE:EVENT");
     }
 
     [Fact]
@@ -89,15 +89,15 @@ public class LivePlaylistBuilderTests
     {
         LivePlaylistRequest request = new(
             SessionId: "s",
-            Segments: [MakeSegment(5, 30, 6), MakeSegment(6, 36, 6)],
-            TargetSegmentDuration: TimeSpan.FromSeconds(6),
+            Segments: [MakeSegment(index: 5, startSec: 30, durSec: 6), MakeSegment(index: 6, startSec: 36, durSec: 6)],
+            TargetSegmentDuration: TimeSpan.FromSeconds(seconds: 6),
             IsComplete: false,
             SegmentUrlTemplate: "/seg/{index}.ts"
         );
 
-        string playlist = _builder.Build(request);
+        string playlist = _builder.Build(request: request);
 
-        playlist.Should().Contain("#EXT-X-MEDIA-SEQUENCE:5");
+        playlist.Should().Contain(expected: "#EXT-X-MEDIA-SEQUENCE:5");
     }
 
     [Fact]
@@ -105,15 +105,15 @@ public class LivePlaylistBuilderTests
     {
         LivePlaylistRequest request = new(
             SessionId: "s",
-            Segments: [MakeSegment(0, 0, 9.2)],
-            TargetSegmentDuration: TimeSpan.FromSeconds(6),
+            Segments: [MakeSegment(index: 0, startSec: 0, durSec: 9.2)],
+            TargetSegmentDuration: TimeSpan.FromSeconds(seconds: 6),
             IsComplete: false,
             SegmentUrlTemplate: "/seg/{index}.ts"
         );
 
-        string playlist = _builder.Build(request);
+        string playlist = _builder.Build(request: request);
 
-        playlist.Should().Contain("#EXT-X-TARGETDURATION:10");
+        playlist.Should().Contain(expected: "#EXT-X-TARGETDURATION:10");
     }
 
     [Fact]
@@ -122,12 +122,12 @@ public class LivePlaylistBuilderTests
         LivePlaylistRequest request = new(
             SessionId: "s",
             Segments: [],
-            TargetSegmentDuration: TimeSpan.FromSeconds(6),
+            TargetSegmentDuration: TimeSpan.FromSeconds(seconds: 6),
             IsComplete: false,
             SegmentUrlTemplate: ""
         );
 
-        Action act = () => _builder.Build(request);
+        Action act = () => _builder.Build(request: request);
 
         act.Should().Throw<ArgumentException>();
     }
@@ -137,15 +137,15 @@ public class LivePlaylistBuilderTests
     {
         LivePlaylistRequest request = new(
             SessionId: "abc",
-            Segments: [MakeSegment(2, 12, 6)],
-            TargetSegmentDuration: TimeSpan.FromSeconds(6),
+            Segments: [MakeSegment(index: 2, startSec: 12, durSec: 6)],
+            TargetSegmentDuration: TimeSpan.FromSeconds(seconds: 6),
             IsComplete: false,
             SegmentUrlTemplate: "/live/{index}.ts"
         );
 
-        string playlist = _builder.Build(request);
+        string playlist = _builder.Build(request: request);
 
-        playlist.Should().Contain("/live/2.ts");
+        playlist.Should().Contain(expected: "/live/2.ts");
     }
 
     [Fact]
@@ -156,25 +156,25 @@ public class LivePlaylistBuilderTests
         // buffered here). This is what lets the client show a full-length bar.
         LivePlaylistRequest request = new(
             SessionId: "s",
-            Segments: [MakeSegment(0, 0, 6)],
-            TargetSegmentDuration: TimeSpan.FromSeconds(6),
+            Segments: [MakeSegment(index: 0, startSec: 0, durSec: 6)],
+            TargetSegmentDuration: TimeSpan.FromSeconds(seconds: 6),
             IsComplete: false,
             SegmentUrlTemplate: "/seg/{index}.ts",
-            TotalDuration: TimeSpan.FromSeconds(20)
+            TotalDuration: TimeSpan.FromSeconds(seconds: 20)
         );
 
-        string playlist = _builder.Build(request);
+        string playlist = _builder.Build(request: request);
 
-        playlist.Should().Contain("#EXT-X-PLAYLIST-TYPE:VOD");
-        playlist.Should().Contain("#EXT-X-ENDLIST");
-        playlist.Should().NotContain("#EXT-X-PLAYLIST-TYPE:EVENT");
-        playlist.Should().Contain("/seg/0.ts");
-        playlist.Should().Contain("/seg/1.ts");
-        playlist.Should().Contain("/seg/2.ts");
-        playlist.Should().Contain("/seg/3.ts");
-        playlist.Should().NotContain("/seg/4.ts");
+        playlist.Should().Contain(expected: "#EXT-X-PLAYLIST-TYPE:VOD");
+        playlist.Should().Contain(expected: "#EXT-X-ENDLIST");
+        playlist.Should().NotContain(unexpected: "#EXT-X-PLAYLIST-TYPE:EVENT");
+        playlist.Should().Contain(expected: "/seg/0.ts");
+        playlist.Should().Contain(expected: "/seg/1.ts");
+        playlist.Should().Contain(expected: "/seg/2.ts");
+        playlist.Should().Contain(expected: "/seg/3.ts");
+        playlist.Should().NotContain(unexpected: "/seg/4.ts");
         // Last segment is the 2s remainder, not a full 6s.
-        playlist.Should().Contain("#EXTINF:2.000,");
+        playlist.Should().Contain(expected: "#EXTINF:2.000,");
     }
 
     [Fact]
@@ -183,20 +183,20 @@ public class LivePlaylistBuilderTests
         CultureInfo prev = Thread.CurrentThread.CurrentCulture;
         try
         {
-            Thread.CurrentThread.CurrentCulture = new("nl-NL");
+            Thread.CurrentThread.CurrentCulture = new(name: "nl-NL");
 
             LivePlaylistRequest request = new(
                 SessionId: "s",
-                Segments: [MakeSegment(0, 0, 6.5)],
-                TargetSegmentDuration: TimeSpan.FromSeconds(6),
+                Segments: [MakeSegment(index: 0, startSec: 0, durSec: 6.5)],
+                TargetSegmentDuration: TimeSpan.FromSeconds(seconds: 6),
                 IsComplete: false,
                 SegmentUrlTemplate: "/seg/{index}.ts"
             );
 
-            string playlist = _builder.Build(request);
+            string playlist = _builder.Build(request: request);
 
-            playlist.Should().Contain("#EXTINF:6.500,");
-            playlist.Should().NotContain("6,500");
+            playlist.Should().Contain(expected: "#EXTINF:6.500,");
+            playlist.Should().NotContain(unexpected: "6,500");
         }
         finally
         {
@@ -219,15 +219,15 @@ public class LivePlaylistBuilderTests
             AudioRenditions: []
         );
 
-        string master = _builder.BuildMaster(request);
+        string master = _builder.BuildMaster(request: request);
 
-        master.Should().Contain("#EXTM3U");
-        master.Should().Contain("#EXT-X-STREAM-INF:");
-        master.Should().Contain("RESOLUTION=1920x1080");
-        master.Should().Contain("VIDEO-RANGE=SDR");
+        master.Should().Contain(expected: "#EXTM3U");
+        master.Should().Contain(expected: "#EXT-X-STREAM-INF:");
+        master.Should().Contain(expected: "RESOLUTION=1920x1080");
+        master.Should().Contain(expected: "VIDEO-RANGE=SDR");
         // The video variant is the last line so the client fetches the live media
         // playlist relative to the master's own URL.
-        master.Should().Contain("playlist.m3u8");
+        master.Should().Contain(expected: "playlist.m3u8");
     }
 
     [Fact]
@@ -240,22 +240,22 @@ public class LivePlaylistBuilderTests
             BitrateKbps: 5000,
             AudioRenditions:
             [
-                new("eng", "/2/Show/S01E01/audio_eng_aac/audio_eng_aac.m3u8", IsDefault: true),
-                new("jpn", "/2/Show/S01E01/audio_jpn_aac/audio_jpn_aac.m3u8", IsDefault: false),
+                new(Language: "eng", Uri: "/2/Show/S01E01/audio_eng_aac/audio_eng_aac.m3u8", IsDefault: true),
+                new(Language: "jpn", Uri: "/2/Show/S01E01/audio_jpn_aac/audio_jpn_aac.m3u8", IsDefault: false),
             ]
         );
 
-        string master = _builder.BuildMaster(request);
+        string master = _builder.BuildMaster(request: request);
 
-        master.Should().Contain("TYPE=AUDIO");
-        master.Should().Contain("LANGUAGE=\"eng\"");
-        master.Should().Contain("LANGUAGE=\"jpn\"");
-        master.Should().Contain("NAME=\"English\"");
-        master.Should().Contain("NAME=\"Japanese\"");
-        master.Should().Contain("URI=\"/2/Show/S01E01/audio_eng_aac/audio_eng_aac.m3u8\"");
-        master.Should().Contain("URI=\"/2/Show/S01E01/audio_jpn_aac/audio_jpn_aac.m3u8\"");
+        master.Should().Contain(expected: "TYPE=AUDIO");
+        master.Should().Contain(expected: "LANGUAGE=\"eng\"");
+        master.Should().Contain(expected: "LANGUAGE=\"jpn\"");
+        master.Should().Contain(expected: "NAME=\"English\"");
+        master.Should().Contain(expected: "NAME=\"Japanese\"");
+        master.Should().Contain(expected: "URI=\"/2/Show/S01E01/audio_eng_aac/audio_eng_aac.m3u8\"");
+        master.Should().Contain(expected: "URI=\"/2/Show/S01E01/audio_jpn_aac/audio_jpn_aac.m3u8\"");
         // The variant references the audio group so the player pairs them.
-        master.Should().Contain("AUDIO=\"audio\"");
+        master.Should().Contain(expected: "AUDIO=\"audio\"");
     }
 
     [Fact]
@@ -268,18 +268,18 @@ public class LivePlaylistBuilderTests
             BitrateKbps: 3000,
             AudioRenditions:
             [
-                new("jpn", "/a/jpn.m3u8", IsDefault: false),
-                new("eng", "/a/eng.m3u8", IsDefault: true),
+                new(Language: "jpn", Uri: "/a/jpn.m3u8", IsDefault: false),
+                new(Language: "eng", Uri: "/a/eng.m3u8", IsDefault: true),
             ]
         );
 
-        string master = _builder.BuildMaster(request);
+        string master = _builder.BuildMaster(request: request);
 
         // Exactly one DEFAULT=YES, and it is the English track even though Japanese
         // is listed first — the viewer's language opens by default.
-        System.Text.RegularExpressions.Regex.Matches(master, "DEFAULT=YES").Count.Should().Be(1);
-        string engLine = master.Split('\n').First(line => line.Contains("LANGUAGE=\"eng\""));
-        engLine.Should().Contain("DEFAULT=YES");
+        System.Text.RegularExpressions.Regex.Matches(input: master, pattern: "DEFAULT=YES").Count.Should().Be(expected: 1);
+        string engLine = master.Split(separator: '\n').First(predicate: line => line.Contains(value: "LANGUAGE=\"eng\""));
+        engLine.Should().Contain(expected: "DEFAULT=YES");
     }
 
     [Fact]
@@ -293,9 +293,9 @@ public class LivePlaylistBuilderTests
             AudioRenditions: []
         );
 
-        string master = _builder.BuildMaster(request);
+        string master = _builder.BuildMaster(request: request);
 
-        master.Should().NotContain("TYPE=AUDIO");
-        master.Should().NotContain("AUDIO=\"audio\"");
+        master.Should().NotContain(unexpected: "TYPE=AUDIO");
+        master.Should().NotContain(unexpected: "AUDIO=\"audio\"");
     }
 }

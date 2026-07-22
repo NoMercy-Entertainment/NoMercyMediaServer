@@ -15,9 +15,9 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record ProgressDto
 {
-    [JsonProperty("time")]
+    [JsonProperty(propertyName: "time")]
     public int? Time { get; set; }
 
-    [JsonProperty("date")]
+    [JsonProperty(propertyName: "date")]
     public DateTime? Date { get; set; }
 }

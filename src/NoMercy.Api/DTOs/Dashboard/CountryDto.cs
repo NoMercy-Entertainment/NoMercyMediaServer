@@ -15,9 +15,9 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record CountryDto
 {
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string? Name { get; set; }
 
-    [JsonProperty("code")]
+    [JsonProperty(propertyName: "code")]
     public string? Code { get; set; }
 }

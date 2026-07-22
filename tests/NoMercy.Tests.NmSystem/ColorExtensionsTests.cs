@@ -15,30 +15,30 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace NoMercy.Tests.NmSystem;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class ColorExtensionsTests
 {
     [Theory]
-    [InlineData(0, 0, 0, "#000000")]
-    [InlineData(255, 255, 255, "#FFFFFF")]
-    [InlineData(255, 0, 0, "#FF0000")]
-    [InlineData(0, 255, 0, "#00FF00")]
-    [InlineData(0, 0, 255, "#0000FF")]
-    [InlineData(128, 64, 192, "#8040C0")]
+    [InlineData(data: [0, 0, 0, "#000000"])]
+    [InlineData(data: [255, 255, 255, "#FFFFFF"])]
+    [InlineData(data: [255, 0, 0, "#FF0000"])]
+    [InlineData(data: [0, 255, 0, "#00FF00"])]
+    [InlineData(data: [0, 0, 255, "#0000FF"])]
+    [InlineData(data: [128, 64, 192, "#8040C0"])]
     public void ToHexString_ConvertsSdColorToHex(int red, int green, int blue, string expected)
     {
-        Color color = Color.FromArgb(red, green, blue);
+        Color color = Color.FromArgb(red: red, green: green, blue: blue);
         string result = color.ToHexString();
-        result.Should().Be(expected);
+        result.Should().Be(expected: expected);
     }
 
     [Theory]
-    [InlineData(0, 0, 0, "#000000")]
-    [InlineData(255, 255, 255, "#FFFFFF")]
-    [InlineData(255, 0, 0, "#FF0000")]
-    [InlineData(0, 255, 0, "#00FF00")]
-    [InlineData(0, 0, 255, "#0000FF")]
-    [InlineData(128, 64, 192, "#8040C0")]
+    [InlineData(data: [0, 0, 0, "#000000"])]
+    [InlineData(data: [255, 255, 255, "#FFFFFF"])]
+    [InlineData(data: [255, 0, 0, "#FF0000"])]
+    [InlineData(data: [0, 255, 0, "#00FF00"])]
+    [InlineData(data: [0, 0, 255, "#0000FF"])]
+    [InlineData(data: [128, 64, 192, "#8040C0"])]
     public void ToHexString_ConvertsImageSharpRgb24ToHex(
         byte red,
         byte green,
@@ -46,18 +46,18 @@ public class ColorExtensionsTests
         string expected
     )
     {
-        Rgb24 color = new(red, green, blue);
+        Rgb24 color = new(r: red, g: green, b: blue);
         string result = color.ToHexString();
-        result.Should().Be(expected);
+        result.Should().Be(expected: expected);
     }
 
     [Fact]
     public void ToHexString_ProducesUppercaseHexDigits()
     {
-        Color color = Color.FromArgb(171, 205, 239);
+        Color color = Color.FromArgb(red: 171, green: 205, blue: 239);
         string result = color.ToHexString();
-        result.Should().Be("#ABCDEF");
-        result.Should().StartWith("#");
-        result.Length.Should().Be(7);
+        result.Should().Be(expected: "#ABCDEF");
+        result.Should().StartWith(expected: "#");
+        result.Length.Should().Be(expected: 7);
     }
 }

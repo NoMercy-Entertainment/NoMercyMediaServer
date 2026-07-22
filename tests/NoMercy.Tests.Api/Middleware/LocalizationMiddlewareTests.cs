@@ -23,7 +23,7 @@ namespace NoMercy.Tests.Api.Middleware;
 /// request — asserting immediately after InvokeAsync is safe since nothing
 /// else mutates it between the two.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class LocalizationMiddlewareTests
 {
     private static async Task<HttpContext> InvokeAsync(string? acceptLanguage)
@@ -33,13 +33,13 @@ public class LocalizationMiddlewareTests
             context.Request.Headers.AcceptLanguage = acceptLanguage;
 
         bool nextCalled = false;
-        LocalizationMiddleware middleware = new(_ =>
+        LocalizationMiddleware middleware = new(next: _ =>
         {
             nextCalled = true;
             return Task.CompletedTask;
         });
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
         nextCalled.Should().BeTrue();
         return context;
@@ -54,72 +54,72 @@ public class LocalizationMiddlewareTests
     {
         HttpContext context = await InvokeAsync(acceptLanguage: null);
 
-        context.Request.Headers.AcceptLanguage.Should().Equal("en", "US");
+        context.Request.Headers.AcceptLanguage.Should().Equal(expected: ["en", "US"]);
     }
 
     [Fact]
     public async Task WildcardHeader_FallsBackToEnUs()
     {
-        HttpContext context = await InvokeAsync("*");
+        HttpContext context = await InvokeAsync(acceptLanguage: "*");
 
-        context.Request.Headers.AcceptLanguage.Should().Equal("en", "US");
+        context.Request.Headers.AcceptLanguage.Should().Equal(expected: ["en", "US"]);
     }
 
     [Fact]
     public async Task WhitespaceHeader_FallsBackToEnUs()
     {
-        HttpContext context = await InvokeAsync("   ");
+        HttpContext context = await InvokeAsync(acceptLanguage: "   ");
 
-        context.Request.Headers.AcceptLanguage.Should().Equal("en", "US");
+        context.Request.Headers.AcceptLanguage.Should().Equal(expected: ["en", "US"]);
     }
 
     [Fact]
     public async Task LanguageWithoutCountry_AppendsUppercasedLanguageAsCountry()
     {
-        HttpContext context = await InvokeAsync("nl");
+        HttpContext context = await InvokeAsync(acceptLanguage: "nl");
 
-        context.Request.Headers.AcceptLanguage.Should().Equal("nl", "NL");
+        context.Request.Headers.AcceptLanguage.Should().Equal(expected: ["nl", "NL"]);
     }
 
     [Fact]
     public async Task LanguageWithCountry_PassesThroughUnchanged()
     {
-        HttpContext context = await InvokeAsync("fr-CA");
+        HttpContext context = await InvokeAsync(acceptLanguage: "fr-CA");
 
-        context.Request.Headers.AcceptLanguage.Should().Equal("fr", "CA");
+        context.Request.Headers.AcceptLanguage.Should().Equal(expected: ["fr", "CA"]);
     }
 
     [Fact]
     public async Task MultipleLanguages_HighestQualityWins_EvenWhenListedSecond()
     {
-        HttpContext context = await InvokeAsync("fr;q=0.5, en;q=0.9");
+        HttpContext context = await InvokeAsync(acceptLanguage: "fr;q=0.5, en;q=0.9");
 
-        context.Request.Headers.AcceptLanguage.Should().Equal("en", "EN");
+        context.Request.Headers.AcceptLanguage.Should().Equal(expected: ["en", "EN"]);
     }
 
     [Fact]
     public async Task MultipleLanguages_NoQualityValues_FirstListedWins()
     {
-        HttpContext context = await InvokeAsync("de, es");
+        HttpContext context = await InvokeAsync(acceptLanguage: "de, es");
 
-        context.Request.Headers.AcceptLanguage.Should().Equal("de", "DE");
+        context.Request.Headers.AcceptLanguage.Should().Equal(expected: ["de", "DE"]);
     }
 
     [Fact]
     public async Task WildcardAmongRealLanguages_IsExcludedFromSelection()
     {
-        HttpContext context = await InvokeAsync("*;q=0.9, nl;q=0.1");
+        HttpContext context = await InvokeAsync(acceptLanguage: "*;q=0.9, nl;q=0.1");
 
-        context.Request.Headers.AcceptLanguage.Should().Equal("nl", "NL");
+        context.Request.Headers.AcceptLanguage.Should().Equal(expected: ["nl", "NL"]);
     }
 
     [Fact]
     public async Task MalformedQualityValue_TreatedAsDefaultWeightOne()
     {
-        HttpContext context = await InvokeAsync("nl;q=not-a-number, fr;q=0.1");
+        HttpContext context = await InvokeAsync(acceptLanguage: "nl;q=not-a-number, fr;q=0.1");
 
         // "nl"'s unparsable q defaults to weight 1.0 and must still outrank fr's 0.1.
-        context.Request.Headers.AcceptLanguage.Should().Equal("nl", "NL");
+        context.Request.Headers.AcceptLanguage.Should().Equal(expected: ["nl", "NL"]);
     }
 
     // =========================================================================
@@ -129,18 +129,18 @@ public class LocalizationMiddlewareTests
     [Fact]
     public void ParseBestLanguage_EmptyString_ReturnsEnUs()
     {
-        LocalizationMiddleware.ParseBestLanguage("").Should().Be("en-US");
+        LocalizationMiddleware.ParseBestLanguage(acceptLanguageHeader: "").Should().Be(expected: "en-US");
     }
 
     [Fact]
     public void ParseBestLanguage_TiesKeepHeaderOrder()
     {
-        LocalizationMiddleware.ParseBestLanguage("de;q=0.8, it;q=0.8").Should().Be("de");
+        LocalizationMiddleware.ParseBestLanguage(acceptLanguageHeader: "de;q=0.8, it;q=0.8").Should().Be(expected: "de");
     }
 
     [Fact]
     public void ParseBestLanguage_TrimsSurroundingWhitespace()
     {
-        LocalizationMiddleware.ParseBestLanguage("  nl  ").Should().Be("nl");
+        LocalizationMiddleware.ParseBestLanguage(acceptLanguageHeader: "  nl  ").Should().Be(expected: "nl");
     }
 }

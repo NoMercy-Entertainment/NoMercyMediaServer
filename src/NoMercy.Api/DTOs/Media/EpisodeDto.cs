@@ -22,45 +22,45 @@ namespace NoMercy.Api.DTOs.Media;
 
 public class EpisodeDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public long Id { get; set; }
 
-    [JsonProperty("episode_number")]
+    [JsonProperty(propertyName: "episode_number")]
     public long EpisodeNumber { get; set; }
 
-    [JsonProperty("season_number")]
+    [JsonProperty(propertyName: "season_number")]
     public long SeasonNumber { get; set; }
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string? Title { get; set; }
 
-    [JsonProperty("overview")]
+    [JsonProperty(propertyName: "overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty("airDate")]
+    [JsonProperty(propertyName: "airDate")]
     public DateTime? AirDate { get; set; }
 
-    [JsonProperty("still")]
+    [JsonProperty(propertyName: "still")]
     public string? Still { get; set; }
 
-    [JsonProperty("color_palette")]
+    [JsonProperty(propertyName: "color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty("progress")]
+    [JsonProperty(propertyName: "progress")]
     public object? Progress { get; set; }
 
-    [JsonProperty("available")]
+    [JsonProperty(propertyName: "available")]
     public bool Available { get; set; }
 
-    [JsonProperty("tv_id")]
+    [JsonProperty(propertyName: "tv_id")]
     public int TvId { get; set; }
 
-    [JsonProperty("translations")]
+    [JsonProperty(propertyName: "translations")]
     public IEnumerable<TranslationDto> Translations { get; set; } = [];
 
-    [JsonProperty("link")]
+    [JsonProperty(propertyName: "link")]
     public Uri Link =>
-        new($"/tv/{TvId}/watch?season={SeasonNumber}&episode={EpisodeNumber}", UriKind.Relative);
+        new(uriString: $"/tv/{TvId}/watch?season={SeasonNumber}&episode={EpisodeNumber}", uriKind: UriKind.Relative);
 
     public EpisodeDto(Episode episode)
     {
@@ -72,43 +72,43 @@ public class EpisodeDto
 
         TvId = episode.TvId;
         Id = episode.Id;
-        Title = !string.IsNullOrEmpty(title) ? title : episode.Title;
-        Overview = !string.IsNullOrEmpty(overview) ? overview : episode.Overview;
+        Title = !string.IsNullOrEmpty(value: title) ? title : episode.Title;
+        Overview = !string.IsNullOrEmpty(value: overview) ? overview : episode.Overview;
         EpisodeNumber = episode.EpisodeNumber;
         SeasonNumber = episode.SeasonNumber;
         AirDate = episode.AirDate;
         Still = episode.Still;
         ColorPalette = episode.ColorPalette;
         Available = episode.VideoFiles.Count != 0;
-        Translations = episode.Translations.Select(translation => new TranslationDto(translation));
+        Translations = episode.Translations.Select(selector: translation => new TranslationDto(translation: translation));
 
         Progress =
             userData?.UpdatedAt is not null && videoFile?.Duration is not null
                 ? (int)
                     Math.Round(
-                        (double)(100 * (userData.Time ?? 0))
-                            / (videoFile.Duration?.ToSeconds() ?? 0)
+                        a: (double)(100 * (userData.Time ?? 0))
+                           / (videoFile.Duration?.ToSeconds() ?? 0)
                     )
                 : null;
     }
 
     public EpisodeDto(int tvId, int seasonNumber, int episodeNumber, string language)
     {
-        TmdbEpisodeClient tmdbEpisodeClient = new(tvId, seasonNumber, episodeNumber);
+        TmdbEpisodeClient tmdbEpisodeClient = new(id: tvId, seasonNumber: seasonNumber, episodeNumber: episodeNumber);
         TmdbEpisodeAppends? episodeData = tmdbEpisodeClient.WithAllAppends().Result;
 
         if (episodeData is null)
             return;
 
         string? overview = episodeData
-            .Translations.Translations.FirstOrDefault(translation =>
+            .Translations.Translations.FirstOrDefault(predicate: translation =>
                 translation.Iso6391 == language
             )
             ?.Data.Overview;
 
         Id = episodeData.Id;
         Title = episodeData.Name;
-        Overview = !string.IsNullOrEmpty(overview) ? overview : episodeData.Overview;
+        Overview = !string.IsNullOrEmpty(value: overview) ? overview : episodeData.Overview;
         EpisodeNumber = episodeData.EpisodeNumber;
         SeasonNumber = episodeData.SeasonNumber;
         AirDate = episodeData.AirDate;
@@ -117,22 +117,22 @@ public class EpisodeDto
         Available = false;
 
         Translations = episodeData.Translations.Translations.Select(
-            translation => new TranslationDto(translation)
+            selector: translation => new TranslationDto(translation: translation)
         );
     }
 }
 
-public class MissingEpisodeDto(Episode episode) : EpisodeDto(episode)
+public class MissingEpisodeDto(Episode episode) : EpisodeDto(episode: episode)
 {
     private readonly Episode _episode = episode;
 
-    [JsonProperty("link")]
+    [JsonProperty(propertyName: "link")]
     public new Uri Link =>
         new(
-            $"https://www.themoviedb.org/tv/{_episode.TvId}/season/{_episode.SeasonNumber}/episode/{_episode.EpisodeNumber}",
-            UriKind.Absolute
+            uriString: $"https://www.themoviedb.org/tv/{_episode.TvId}/season/{_episode.SeasonNumber}/episode/{_episode.EpisodeNumber}",
+            uriKind: UriKind.Absolute
         );
 
-    [JsonProperty("available")]
+    [JsonProperty(propertyName: "available")]
     public new bool Available => true;
 }

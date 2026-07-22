@@ -98,11 +98,11 @@ public sealed class SetupTerminalUi : IDisposable
         {
             // Non-interactive: Docker, systemd, Windows service
             // Just log the essential info once — no terminal UI
-            Logger.Setup("=== NoMercy Setup Required ===");
-            Logger.Setup($"Open in your browser: {setupPageUrl}");
-            Logger.Setup($"Or visit:             {verificationUriComplete}");
-            Logger.Setup($"Device code:          {userCode}");
-            Logger.Setup("==============================");
+            Logger.Setup(message: "=== NoMercy Setup Required ===");
+            Logger.Setup(message: $"Open in your browser: {setupPageUrl}");
+            Logger.Setup(message: $"Or visit:             {verificationUriComplete}");
+            Logger.Setup(message: $"Device code:          {userCode}");
+            Logger.Setup(message: "==============================");
             return;
         }
 
@@ -138,7 +138,7 @@ public sealed class SetupTerminalUi : IDisposable
         try
         {
             Console.Clear();
-            Console.SetCursorPosition(0, 0);
+            Console.SetCursorPosition(left: 0, top: 0);
         }
         catch (IOException)
         {
@@ -157,9 +157,9 @@ public sealed class SetupTerminalUi : IDisposable
         };
 
         Console.WriteLine();
-        Console.WriteLine($"  {phaseLabel}");
-        if (!string.IsNullOrEmpty(detail))
-            Console.WriteLine($"  {detail}");
+        Console.WriteLine(value: $"  {phaseLabel}");
+        if (!string.IsNullOrEmpty(value: detail))
+            Console.WriteLine(value: $"  {detail}");
         Console.WriteLine();
     }
 
@@ -177,7 +177,7 @@ public sealed class SetupTerminalUi : IDisposable
         try
         {
             Console.Clear();
-            Console.SetCursorPosition(0, 0);
+            Console.SetCursorPosition(left: 0, top: 0);
         }
         catch (IOException)
         {
@@ -185,8 +185,8 @@ public sealed class SetupTerminalUi : IDisposable
         }
 
         Console.WriteLine();
-        Console.WriteLine("  Setup complete!");
-        Console.WriteLine($"  Your server is running at {serverUrl}");
+        Console.WriteLine(value: "  Setup complete!");
+        Console.WriteLine(value: $"  Your server is running at {serverUrl}");
         Console.WriteLine();
     }
 
@@ -209,7 +209,7 @@ public sealed class SetupTerminalUi : IDisposable
         try
         {
             Console.Clear();
-            Console.SetCursorPosition(0, 0);
+            Console.SetCursorPosition(left: 0, top: 0);
         }
         catch (IOException)
         {
@@ -217,46 +217,46 @@ public sealed class SetupTerminalUi : IDisposable
         }
 
         Console.WriteLine();
-        Console.WriteLine("  NoMercy MediaServer — Setup");
+        Console.WriteLine(value: "  NoMercy MediaServer — Setup");
         Console.WriteLine();
 
-        if (canDrawQr && !string.IsNullOrEmpty(_verificationUriComplete))
+        if (canDrawQr && !string.IsNullOrEmpty(value: _verificationUriComplete))
         {
-            string[] qrLines = GenerateAsciiQr(_verificationUriComplete, width);
+            string[] qrLines = GenerateAsciiQr(text: _verificationUriComplete, terminalWidth: width);
 
             if (qrLines.Length > 0)
             {
                 // Centre each QR line
                 int qrWidth = qrLines[0].Length;
-                int leftPad = Math.Max(0, (width - qrWidth) / 2);
-                string pad = new(' ', leftPad);
+                int leftPad = Math.Max(val1: 0, val2: (width - qrWidth) / 2);
+                string pad = new(c: ' ', count: leftPad);
 
                 foreach (string line in qrLines)
-                    Console.WriteLine(pad + line);
+                    Console.WriteLine(value: pad + line);
 
                 Console.WriteLine();
             }
         }
 
-        if (!string.IsNullOrEmpty(_userCode))
+        if (!string.IsNullOrEmpty(value: _userCode))
         {
-            Console.WriteLine($"  Code:  {_userCode}");
+            Console.WriteLine(value: $"  Code:  {_userCode}");
         }
 
-        if (!string.IsNullOrEmpty(_verificationUri))
+        if (!string.IsNullOrEmpty(value: _verificationUri))
         {
-            Console.WriteLine($"  Visit: {_verificationUri}");
+            Console.WriteLine(value: $"  Visit: {_verificationUri}");
         }
 
-        if (!string.IsNullOrEmpty(_setupPageUrl))
+        if (!string.IsNullOrEmpty(value: _setupPageUrl))
         {
             Console.WriteLine();
-            Console.WriteLine("  Or open the setup page in your browser:");
-            Console.WriteLine($"  {_setupPageUrl}");
+            Console.WriteLine(value: "  Or open the setup page in your browser:");
+            Console.WriteLine(value: $"  {_setupPageUrl}");
         }
 
         Console.WriteLine();
-        Console.WriteLine($"  {_statusLine}");
+        Console.WriteLine(value: $"  {_statusLine}");
         Console.WriteLine();
     }
 
@@ -270,13 +270,13 @@ public sealed class SetupTerminalUi : IDisposable
         try
         {
             using QRCodeGenerator generator = new();
-            using QRCodeData data = generator.CreateQrCode(text, QRCodeGenerator.ECCLevel.L);
+            using QRCodeData data = generator.CreateQrCode(plainText: text, eccLevel: QRCodeGenerator.ECCLevel.L);
 
             // Each module in AsciiQRCode is 2 chars wide (block chars).
             // Try module size 1 first; if it doesn't fit, skip QR entirely.
-            AsciiQRCode qrCode = new(data);
-            string raw = qrCode.GetGraphic(1);
-            string[] lines = raw.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            AsciiQRCode qrCode = new(data: data);
+            string raw = qrCode.GetGraphic(repeatPerModule: 1);
+            string[] lines = raw.Split(separator: '\n', options: StringSplitOptions.RemoveEmptyEntries);
 
             if (lines.Length == 0)
                 return [];
@@ -292,7 +292,7 @@ public sealed class SetupTerminalUi : IDisposable
         }
         catch (Exception ex)
         {
-            Logger.Setup($"QR code generation failed: {ex.Message}", LogEventLevel.Debug);
+            Logger.Setup(message: $"QR code generation failed: {ex.Message}", level: LogEventLevel.Debug);
             return [];
         }
     }
@@ -302,13 +302,13 @@ public sealed class SetupTerminalUi : IDisposable
     private void StartResizeWatcher()
     {
         _resizeWatchTask = Task.Run(
-            async () =>
+            function: async () =>
             {
                 while (!_cts.Token.IsCancellationRequested && _isActive)
                 {
                     try
                     {
-                        await Task.Delay(250, _cts.Token);
+                        await Task.Delay(millisecondsDelay: 250, cancellationToken: _cts.Token);
                     }
                     catch (OperationCanceledException)
                     {
@@ -329,7 +329,7 @@ public sealed class SetupTerminalUi : IDisposable
                     }
                 }
             },
-            _cts.Token
+            cancellationToken: _cts.Token
         );
     }
 

@@ -29,19 +29,19 @@ public class AnalyzeStageDecisionsTests
     public AnalyzeStageDecisionsTests()
     {
         _stage = new(
-            _analyzer.Object,
-            _storage.Object,
-            NullLogger<AnalyzeStage>.Instance
+            analyzer: _analyzer.Object,
+            storage: _storage.Object,
+            logger: NullLogger<AnalyzeStage>.Instance
         );
-        _context = new("test-correlation", Decisions: _log);
-        _storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(true);
+        _context = new(CorrelationId: "test-correlation", Decisions: _log);
+        _storage.Setup(expression: s => s.Exists(It.IsAny<string>())).Returns(value: true);
     }
 
     [Fact]
     public async Task DolbyVision_present_emits_dv_present_decision()
     {
         _analyzer
-            .Setup(a =>
+            .Setup(expression: a =>
                 a.AnalyzeAsync(
                     It.IsAny<string>(),
                     It.IsAny<IStorage>(),
@@ -49,75 +49,75 @@ public class AnalyzeStageDecisionsTests
                 )
             )
             .ReturnsAsync(
-                BuildMediaInfo(
-                    dolbyVision: new(7, 6, true, false, DvBlCompatibility.Hdr10)
+                value: BuildMediaInfo(
+                    dolbyVision: new(Profile: 7, Level: 6, HasRpu: true, HasEl: false, BlCompat: DvBlCompatibility.Hdr10)
                 )
             );
 
-        await _stage.ExecuteAsync("/movies/x.mkv", _context, default);
+        await _stage.ExecuteAsync(inputPath: "/movies/x.mkv", context: _context, ct: default);
 
-        _log.Snapshot().Should().Contain(d => d.Key == "analyze.dv_present");
+        _log.Snapshot().Should().Contain(predicate: d => d.Key == "analyze.dv_present");
     }
 
     [Fact]
     public async Task No_DolbyVision_does_not_emit_dv_present_decision()
     {
         _analyzer
-            .Setup(a =>
+            .Setup(expression: a =>
                 a.AnalyzeAsync(
                     It.IsAny<string>(),
                     It.IsAny<IStorage>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(BuildMediaInfo());
+            .ReturnsAsync(value: BuildMediaInfo());
 
-        await _stage.ExecuteAsync("/movies/x.mkv", _context, default);
+        await _stage.ExecuteAsync(inputPath: "/movies/x.mkv", context: _context, ct: default);
 
-        _log.Snapshot().Should().NotContain(d => d.Key == "analyze.dv_present");
+        _log.Snapshot().Should().NotContain(predicate: d => d.Key == "analyze.dv_present");
     }
 
     [Fact]
     public async Task Variable_frame_rate_emits_vfr_detected_decision()
     {
         _analyzer
-            .Setup(a =>
+            .Setup(expression: a =>
                 a.AnalyzeAsync(
                     It.IsAny<string>(),
                     It.IsAny<IStorage>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(BuildMediaInfo(realFps: 30.0, avgFps: 24.0));
+            .ReturnsAsync(value: BuildMediaInfo(realFps: 30.0, avgFps: 24.0));
 
-        await _stage.ExecuteAsync("/movies/x.mkv", _context, default);
+        await _stage.ExecuteAsync(inputPath: "/movies/x.mkv", context: _context, ct: default);
 
-        _log.Snapshot().Should().Contain(d => d.Key == "analyze.vfr_detected");
+        _log.Snapshot().Should().Contain(predicate: d => d.Key == "analyze.vfr_detected");
     }
 
     [Fact]
     public async Task Constant_frame_rate_does_not_emit_vfr_detected_decision()
     {
         _analyzer
-            .Setup(a =>
+            .Setup(expression: a =>
                 a.AnalyzeAsync(
                     It.IsAny<string>(),
                     It.IsAny<IStorage>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(BuildMediaInfo(realFps: 23.976, avgFps: 23.976));
+            .ReturnsAsync(value: BuildMediaInfo(realFps: 23.976, avgFps: 23.976));
 
-        await _stage.ExecuteAsync("/movies/x.mkv", _context, default);
+        await _stage.ExecuteAsync(inputPath: "/movies/x.mkv", context: _context, ct: default);
 
-        _log.Snapshot().Should().NotContain(d => d.Key == "analyze.vfr_detected");
+        _log.Snapshot().Should().NotContain(predicate: d => d.Key == "analyze.vfr_detected");
     }
 
     [Fact]
     public async Task Font_attachments_emit_attached_fonts_decision()
     {
         _analyzer
-            .Setup(a =>
+            .Setup(expression: a =>
                 a.AnalyzeAsync(
                     It.IsAny<string>(),
                     It.IsAny<IStorage>(),
@@ -125,30 +125,30 @@ public class AnalyzeStageDecisionsTests
                 )
             )
             .ReturnsAsync(
-                BuildMediaInfo(
+                value: BuildMediaInfo(
                     attachments:
                     [
                         new(
-                            99,
-                            "ttf",
-                            "OpenSans-Regular.ttf",
-                            "application/x-truetype-font"
+                            Index: 99,
+                            Codec: "ttf",
+                            Filename: "OpenSans-Regular.ttf",
+                            MimeType: "application/x-truetype-font"
                         ),
-                        new(100, "ttf", "OpenSans-Bold.ttf", "font/ttf"),
+                        new(Index: 100, Codec: "ttf", Filename: "OpenSans-Bold.ttf", MimeType: "font/ttf"),
                     ]
                 )
             );
 
-        await _stage.ExecuteAsync("/movies/x.mkv", _context, default);
+        await _stage.ExecuteAsync(inputPath: "/movies/x.mkv", context: _context, ct: default);
 
-        _log.Snapshot().Should().Contain(d => d.Key == "analyze.attached_fonts");
+        _log.Snapshot().Should().Contain(predicate: d => d.Key == "analyze.attached_fonts");
     }
 
     [Fact]
     public async Task Chapters_emit_chapter_count_decision()
     {
         _analyzer
-            .Setup(a =>
+            .Setup(expression: a =>
                 a.AnalyzeAsync(
                     It.IsAny<string>(),
                     It.IsAny<IStorage>(),
@@ -156,26 +156,26 @@ public class AnalyzeStageDecisionsTests
                 )
             )
             .ReturnsAsync(
-                BuildMediaInfo(
+                value: BuildMediaInfo(
                     chapters:
                     [
-                        new(TimeSpan.Zero, TimeSpan.FromMinutes(5), "Open"),
-                        new(TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(10), "Act 1"),
+                        new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(minutes: 5), Title: "Open"),
+                        new(Start: TimeSpan.FromMinutes(minutes: 5), End: TimeSpan.FromMinutes(minutes: 10), Title: "Act 1"),
                     ]
                 )
             );
 
-        await _stage.ExecuteAsync("/movies/x.mkv", _context, default);
+        await _stage.ExecuteAsync(inputPath: "/movies/x.mkv", context: _context, ct: default);
 
-        _log.Snapshot().Should().Contain(d => d.Key == "analyze.chapter_count");
+        _log.Snapshot().Should().Contain(predicate: d => d.Key == "analyze.chapter_count");
     }
 
     [Fact]
     public async Task No_decisions_emitted_when_context_has_no_sink()
     {
-        EncodingContext bare = new("no-sink");
+        EncodingContext bare = new(CorrelationId: "no-sink");
         _analyzer
-            .Setup(a =>
+            .Setup(expression: a =>
                 a.AnalyzeAsync(
                     It.IsAny<string>(),
                     It.IsAny<IStorage>(),
@@ -183,13 +183,13 @@ public class AnalyzeStageDecisionsTests
                 )
             )
             .ReturnsAsync(
-                BuildMediaInfo(
-                    dolbyVision: new(7, 6, true, false, DvBlCompatibility.Hdr10)
+                value: BuildMediaInfo(
+                    dolbyVision: new(Profile: 7, Level: 6, HasRpu: true, HasEl: false, BlCompat: DvBlCompatibility.Hdr10)
                 )
             );
 
         // Should not throw — no-op sink swallows.
-        await _stage.ExecuteAsync("/movies/x.mkv", bare, default);
+        await _stage.ExecuteAsync(inputPath: "/movies/x.mkv", context: bare, ct: default);
 
         bare.DecisionsOrNoOp.Snapshot().Should().BeEmpty();
     }
@@ -204,7 +204,7 @@ public class AnalyzeStageDecisionsTests
         new(
             FilePath: "/movies/x.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(90),
+            Duration: TimeSpan.FromMinutes(minutes: 90),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 7_200_000_000,
             VideoStreams:

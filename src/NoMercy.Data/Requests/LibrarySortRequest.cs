@@ -15,15 +15,15 @@ namespace NoMercy.Data.Requests;
 
 public class LibrarySortRequest
 {
-    [JsonProperty("libraries")]
+    [JsonProperty(propertyName: "libraries")]
     public LibrarySortRequestItem[] Libraries { get; set; } = [];
 }
 
 public class LibrarySortRequestItem
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public Ulid Id { get; set; }
 
-    [JsonProperty("order")]
+    [JsonProperty(propertyName: "order")]
     public int Order { get; set; }
 }

@@ -16,22 +16,22 @@ namespace NoMercy.Providers.TVDB.Client;
 public class TvdbUserClient : TvdbBaseClient
 {
     public TvdbUserClient(int id = 0, string language = "eng")
-        : base(id, language) { }
+        : base(id: id, language: language) { }
 
     public Task<TvdbUserResponse?> Me(bool? priority = false)
     {
-        return Get<TvdbUserResponse>("user", skipCache: true, priority: priority);
+        return Get<TvdbUserResponse>(url: "user", skipCache: true, priority: priority);
     }
 
     public Task<TvdbUserResponse?> Details(bool? priority = false)
     {
-        return Get<TvdbUserResponse>("user/" + Id, priority: priority);
+        return Get<TvdbUserResponse>(url: "user/" + Id, priority: priority);
     }
 
     public Task<TvdbUserFavoritesResponse?> Favorites(bool? priority = false)
     {
         return Get<TvdbUserFavoritesResponse>(
-            "user/" + Id + "/favorites",
+            url: "user/" + Id + "/favorites",
             skipCache: true,
             priority: priority
         );

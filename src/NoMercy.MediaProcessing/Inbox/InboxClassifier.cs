@@ -31,26 +31,26 @@ public sealed partial class InboxClassifier
 
     // SxxExx e.g. S01E01, S1E1
     private static readonly Regex SeasonEpisodePattern = new(
-        @"[Ss]\d{1,2}[Ee]\d{1,2}",
-        RegexOptions.Compiled
+        pattern: @"[Ss]\d{1,2}[Ee]\d{1,2}",
+        options: RegexOptions.Compiled
     );
 
     // NxNN e.g. 1x01, 2x12
     private static readonly Regex EpisodePrefixPattern = new(
-        @"\b\d{1,2}x\d{2}\b",
-        RegexOptions.Compiled
+        pattern: @"\b\d{1,2}x\d{2}\b",
+        options: RegexOptions.Compiled
     );
 
     // "Season N" or "Season 01" in any path segment
     private static readonly Regex SeasonFolderPattern = new(
-        @"\bSeason\s*\d+\b",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase
+        pattern: @"\bSeason\s*\d+\b",
+        options: RegexOptions.Compiled | RegexOptions.IgnoreCase
     );
 
     // "Title (Year)" movie shape — year in parens
     private static readonly Regex MovieYearPattern = new(
-        @"\((?:19|20)\d{2}\)",
-        RegexOptions.Compiled
+        pattern: @"\((?:19|20)\d{2}\)",
+        options: RegexOptions.Compiled
     );
 
     // Fansub bracket at start of FILENAME: "[Group] Title - NNN ..."
@@ -58,14 +58,14 @@ public sealed partial class InboxClassifier
     // group AND has an absolute episode number as " - NNN " (1-4 digits, for
     // long-running shows like One Piece that exceed 999 episodes).
     private static readonly Regex FansubAbsoluteEpPattern = new(
-        @"^\[[^\]]+\].*\s-\s\d{1,4}\s",
-        RegexOptions.Compiled
+        pattern: @"^\[[^\]]+\].*\s-\s\d{1,4}\s",
+        options: RegexOptions.Compiled
     );
 
-    [GeneratedRegex(@"\.NoMercy\.m3u8$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(pattern: @"\.NoMercy\.m3u8$", options: RegexOptions.IgnoreCase)]
     private static partial Regex FinishedHlsMasterPattern();
 
-    [GeneratedRegex(@"^(video_\d+x\d+(_.+)?|audio_[A-Za-z0-9_]+)$")]
+    [GeneratedRegex(pattern: @"^(video_\d+x\d+(_.+)?|audio_[A-Za-z0-9_]+)$")]
     private static partial Regex HlsLadderEntryPattern();
 
     private readonly IInboxMetadataProbe _probe;
@@ -83,12 +83,12 @@ public sealed partial class InboxClassifier
 
     public static string MediaFamilyOf(string path)
     {
-        string ext = Path.GetExtension(path).ToLowerInvariant();
+        string ext = Path.GetExtension(path: path).ToLowerInvariant();
 
-        if (AudioExtensions.Contains(ext))
+        if (AudioExtensions.Contains(value: ext))
             return "music";
 
-        if (VideoExtensions.Contains(ext))
+        if (VideoExtensions.Contains(value: ext))
             return "video";
 
         return "unknown";
@@ -96,27 +96,27 @@ public sealed partial class InboxClassifier
 
     public static string StructuralType(string path)
     {
-        string filename = Path.GetFileNameWithoutExtension(path);
+        string filename = Path.GetFileNameWithoutExtension(path: path);
 
-        if (FansubAbsoluteEpPattern.IsMatch(filename))
+        if (FansubAbsoluteEpPattern.IsMatch(input: filename))
             return "anime";
 
-        if (SeasonEpisodePattern.IsMatch(path))
+        if (SeasonEpisodePattern.IsMatch(input: path))
             return "tv";
 
-        if (EpisodePrefixPattern.IsMatch(path))
+        if (EpisodePrefixPattern.IsMatch(input: path))
             return "tv";
 
-        if (SeasonFolderPattern.IsMatch(path))
+        if (SeasonFolderPattern.IsMatch(input: path))
             return "tv";
 
         MovieDetector detector = new();
-        MovieFile info = detector.GetInfo(path);
+        MovieFile info = detector.GetInfo(filePath: path);
 
         if (info.IsSeries && (info.Season.HasValue || info.Episode.HasValue))
             return "tv";
 
-        if (MovieYearPattern.IsMatch(path))
+        if (MovieYearPattern.IsMatch(input: path))
             return "movie";
 
         return "unknown";
@@ -129,10 +129,10 @@ public sealed partial class InboxClassifier
 
         foreach (string name in siblingNames)
         {
-            if (FinishedHlsMasterPattern().IsMatch(name))
+            if (FinishedHlsMasterPattern().IsMatch(input: name))
                 hasMaster = true;
 
-            if (HlsLadderEntryPattern().IsMatch(name))
+            if (HlsLadderEntryPattern().IsMatch(input: name))
                 hasLadderEntry = true;
         }
 
@@ -149,13 +149,13 @@ public sealed partial class InboxClassifier
         CancellationToken ct
     )
     {
-        string family = MediaFamilyOf(path);
+        string family = MediaFamilyOf(path: path);
 
         if (family == "music")
-            return await ClassifyMusicAsync(path, driverId, ct);
+            return await ClassifyMusicAsync(path: path, driverId: driverId, ct: ct);
 
         if (family == "video")
-            return await ClassifyVideoAsync(path, ct);
+            return await ClassifyVideoAsync(path: path, ct: ct);
 
         return new()
         {
@@ -175,7 +175,7 @@ public sealed partial class InboxClassifier
         CancellationToken ct
     )
     {
-        InboxAudioTags? tags = await _tagReader.ReadAsync(path, driverId, ct);
+        InboxAudioTags? tags = await _tagReader.ReadAsync(path: path, driverId: driverId, ct: ct);
 
         if (tags is null)
         {
@@ -190,8 +190,8 @@ public sealed partial class InboxClassifier
         if (tags.MusicBrainzReleaseId.HasValue && tags.MusicBrainzReleaseId.Value != Guid.Empty)
         {
             CandidateMatch? candidate = await _probe.LookupMusicReleaseAsync(
-                tags.MusicBrainzReleaseId.Value,
-                ct
+                releaseId: tags.MusicBrainzReleaseId.Value,
+                ct: ct
             );
 
             if (candidate is not null)
@@ -220,14 +220,14 @@ public sealed partial class InboxClassifier
 
     private async Task<ClassificationResult> ClassifyVideoAsync(string path, CancellationToken ct)
     {
-        string structuralType = StructuralType(path);
+        string structuralType = StructuralType(path: path);
 
         // Parse title and year from path for provider search
         MovieDetector detector = new();
-        MovieFile info = detector.GetInfo(path);
-        string title = ExtractTitle(path, info);
+        MovieFile info = detector.GetInfo(filePath: path);
+        string title = ExtractTitle(path: path, info: info);
 
-        if (string.IsNullOrWhiteSpace(title))
+        if (string.IsNullOrWhiteSpace(value: title))
         {
             return new()
             {
@@ -237,13 +237,13 @@ public sealed partial class InboxClassifier
             };
         }
 
-        int? year = ExtractYear(path, info);
+        int? year = ExtractYear(path: path, info: info);
 
         // Probe both movie and tv to handle ambiguous cases
-        CandidateMatch[] movieHits = await _probe.SearchMoviesAsync(title, year, ct);
-        CandidateMatch[] tvHits = await _probe.SearchTvAsync(title, year, ct);
+        CandidateMatch[] movieHits = await _probe.SearchMoviesAsync(title: title, year: year, ct: ct);
+        CandidateMatch[] tvHits = await _probe.SearchTvAsync(title: title, year: year, ct: ct);
 
-        return FoldVideoResults(structuralType, year, movieHits, tvHits);
+        return FoldVideoResults(structuralType: structuralType, year: year, movieHits: movieHits, tvHits: tvHits);
     }
 
     private static ClassificationResult FoldVideoResults(
@@ -253,18 +253,18 @@ public sealed partial class InboxClassifier
         CandidateMatch[] tvHits
     )
     {
-        bool hasStrongMovieHit = HasStrongHit(movieHits, year);
-        bool hasStrongTvHit = HasStrongHit(tvHits, year);
+        bool hasStrongMovieHit = HasStrongHit(hits: movieHits, queriedYear: year);
+        bool hasStrongTvHit = HasStrongHit(hits: tvHits, queriedYear: year);
 
         // Conflicting strong signals → low regardless of structural type
         if (hasStrongMovieHit && hasStrongTvHit)
         {
-            CandidateMatch[] combined = [.. movieHits.Take(3), .. tvHits.Take(3)];
+            CandidateMatch[] combined = [.. movieHits.Take(count: 3), .. tvHits.Take(count: 3)];
             return new()
             {
                 DetectedType = structuralType == "unknown" ? "unknown" : structuralType,
                 Confidence = "low",
-                Candidates = RankCandidates(combined),
+                Candidates = RankCandidates(candidates: combined),
             };
         }
 
@@ -278,7 +278,7 @@ public sealed partial class InboxClassifier
                 {
                     DetectedType = "anime",
                     Confidence = "medium",
-                    Candidates = RankCandidates(tvHits),
+                    Candidates = RankCandidates(candidates: tvHits),
                 };
             }
 
@@ -286,7 +286,7 @@ public sealed partial class InboxClassifier
             {
                 DetectedType = "anime",
                 Confidence = "low",
-                Candidates = RankCandidates([.. movieHits.Take(3), .. tvHits.Take(3)]),
+                Candidates = RankCandidates(candidates: [.. movieHits.Take(count: 3), .. tvHits.Take(count: 3)]),
             };
         }
 
@@ -298,7 +298,7 @@ public sealed partial class InboxClassifier
                 {
                     DetectedType = "movie",
                     Confidence = "high",
-                    Candidates = RankCandidates(movieHits),
+                    Candidates = RankCandidates(candidates: movieHits),
                 };
             }
 
@@ -308,7 +308,7 @@ public sealed partial class InboxClassifier
                 {
                     DetectedType = "movie",
                     Confidence = "medium",
-                    Candidates = RankCandidates(movieHits),
+                    Candidates = RankCandidates(candidates: movieHits),
                 };
             }
 
@@ -328,7 +328,7 @@ public sealed partial class InboxClassifier
                 {
                     DetectedType = "tv",
                     Confidence = "high",
-                    Candidates = RankCandidates(tvHits),
+                    Candidates = RankCandidates(candidates: tvHits),
                 };
             }
 
@@ -338,7 +338,7 @@ public sealed partial class InboxClassifier
                 {
                     DetectedType = "tv",
                     Confidence = "medium",
-                    Candidates = RankCandidates(tvHits),
+                    Candidates = RankCandidates(candidates: tvHits),
                 };
             }
 
@@ -357,7 +357,7 @@ public sealed partial class InboxClassifier
             {
                 DetectedType = "movie",
                 Confidence = "medium",
-                Candidates = RankCandidates(movieHits),
+                Candidates = RankCandidates(candidates: movieHits),
             };
         }
 
@@ -367,16 +367,16 @@ public sealed partial class InboxClassifier
             {
                 DetectedType = "tv",
                 Confidence = "medium",
-                Candidates = RankCandidates(tvHits),
+                Candidates = RankCandidates(candidates: tvHits),
             };
         }
 
-        CandidateMatch[] allHits = [.. movieHits.Take(3), .. tvHits.Take(3)];
+        CandidateMatch[] allHits = [.. movieHits.Take(count: 3), .. tvHits.Take(count: 3)];
         return new()
         {
             DetectedType = "unknown",
             Confidence = "low",
-            Candidates = RankCandidates(allHits),
+            Candidates = RankCandidates(candidates: allHits),
         };
     }
 
@@ -399,7 +399,7 @@ public sealed partial class InboxClassifier
         if (
             queriedYear.HasValue
             && top.Year.HasValue
-            && Math.Abs(top.Year.Value - queriedYear.Value) > 1
+            && Math.Abs(value: top.Year.Value - queriedYear.Value) > 1
         )
             return false;
 
@@ -408,44 +408,44 @@ public sealed partial class InboxClassifier
 
     private static CandidateMatch[] RankCandidates(CandidateMatch[] candidates)
     {
-        return candidates.OrderByDescending(c => c.Score).ToArray();
+        return candidates.OrderByDescending(keySelector: c => c.Score).ToArray();
     }
 
     private static string ExtractTitle(string path, MovieFile info)
     {
-        if (!string.IsNullOrWhiteSpace(info.Title))
+        if (!string.IsNullOrWhiteSpace(value: info.Title))
             return info.Title;
 
         // Fall back: filename without extension, strip common suffixes
-        string name = Path.GetFileNameWithoutExtension(path);
+        string name = Path.GetFileNameWithoutExtension(path: path);
 
         // Strip resolution / quality tags
         name = Regex
             .Replace(
-                name,
-                @"\b(720p|1080p|2160p|4k|BluRay|WEB-DL|WEBRip|HDTV|x264|x265|HEVC|H\.?264|H\.?265|AAC|DTS|AC3)\b.*$",
-                string.Empty,
-                RegexOptions.IgnoreCase
+                input: name,
+                pattern: @"\b(720p|1080p|2160p|4k|BluRay|WEB-DL|WEBRip|HDTV|x264|x265|HEVC|H\.?264|H\.?265|AAC|DTS|AC3)\b.*$",
+                replacement: string.Empty,
+                options: RegexOptions.IgnoreCase
             )
             .Trim();
 
         // Strip year in parens at end
-        name = Regex.Replace(name, @"\s*\((?:19|20)\d{2}\)\s*$", string.Empty).Trim();
+        name = Regex.Replace(input: name, pattern: @"\s*\((?:19|20)\d{2}\)\s*$", replacement: string.Empty).Trim();
 
-        return name.Trim('.', ' ', '-', '_');
+        return name.Trim(trimChars: ['.', ' ', '-', '_']);
     }
 
     private static int? ExtractYear(string path, MovieFile info)
     {
         // MovieFile.Year is string? in MovieFileLibrary
-        if (!string.IsNullOrWhiteSpace(info.Year) && int.TryParse(info.Year, out int parsed))
+        if (!string.IsNullOrWhiteSpace(value: info.Year) && int.TryParse(s: info.Year, result: out int parsed))
             return parsed;
 
-        Match yearMatch = MovieYearPattern.Match(path);
+        Match yearMatch = MovieYearPattern.Match(input: path);
         if (!yearMatch.Success)
             return null;
 
-        string yearStr = yearMatch.Value.Trim('(', ')');
-        return int.TryParse(yearStr, out int parsedFromPath) ? parsedFromPath : null;
+        string yearStr = yearMatch.Value.Trim(trimChars: ['(', ')']);
+        return int.TryParse(s: yearStr, result: out int parsedFromPath) ? parsedFromPath : null;
     }
 }

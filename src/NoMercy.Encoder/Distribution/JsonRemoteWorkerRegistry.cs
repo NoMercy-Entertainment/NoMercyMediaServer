@@ -86,13 +86,13 @@ public class JsonRemoteWorkerRegistry : IRemoteWorkerRegistry
 
     public void Register(IRemoteWorker worker)
     {
-        _inner.Register(worker);
+        _inner.Register(worker: worker);
 
         if (worker is HttpRemoteWorker http)
         {
             ResourceBudgetSnapshot budget = http.GetAvailableBudget();
             IHardwareCapabilities caps = http.GetCapabilities();
-            _persisted[worker.WorkerId] = new(
+            _persisted[key: worker.WorkerId] = new(
                 WorkerId: worker.WorkerId,
                 BaseUrl: http.BaseUrl,
                 CpuCores: caps.CpuCores,
@@ -106,20 +106,20 @@ public class JsonRemoteWorkerRegistry : IRemoteWorkerRegistry
 
     public bool Unregister(string workerId)
     {
-        bool removed = _inner.Unregister(workerId);
+        bool removed = _inner.Unregister(workerId: workerId);
         if (removed)
         {
-            _persisted.TryRemove(workerId, out _);
+            _persisted.TryRemove(key: workerId, value: out _);
             FlushToDisk();
         }
 
         return removed;
     }
 
-    public bool Heartbeat(string workerId) => _inner.Heartbeat(workerId);
+    public bool Heartbeat(string workerId) => _inner.Heartbeat(workerId: workerId);
 
     public void RecordTaskOutcome(string workerId, bool success) =>
-        _inner.RecordTaskOutcome(workerId, success);
+        _inner.RecordTaskOutcome(workerId: workerId, success: success);
 
     public IReadOnlyList<WorkerHealthSnapshot> GetAllWorkersWithHealth() =>
         _inner.GetAllWorkersWithHealth();
@@ -128,34 +128,32 @@ public class JsonRemoteWorkerRegistry : IRemoteWorkerRegistry
 
     private void HydrateFromDisk()
     {
-        if (!_storage.Exists(_filePath))
+        if (!_storage.Exists(path: _filePath))
             return;
 
         try
         {
-            string json = Encoding.UTF8.GetString(_storage.Read(_filePath));
+            string json = Encoding.UTF8.GetString(bytes: _storage.Read(path: _filePath));
             List<PersistedWorkerEntry>? entries = JsonSerializer.Deserialize<
                 List<PersistedWorkerEntry>
-            >(json, JsonOptions);
+            >(json: json, options: JsonOptions);
 
             if (entries is null || entries.Count == 0)
                 return;
 
             _logger.LogInformation(
-                "Rehydrating {Count} worker(s) from {Path}",
-                entries.Count,
-                _filePath
+                message: "Rehydrating {Count} worker(s) from {Path}", args: [entries.Count, _filePath]
             );
 
             foreach (PersistedWorkerEntry entry in entries)
             {
                 if (
-                    string.IsNullOrWhiteSpace(entry.WorkerId)
-                    || string.IsNullOrWhiteSpace(entry.BaseUrl)
+                    string.IsNullOrWhiteSpace(value: entry.WorkerId)
+                    || string.IsNullOrWhiteSpace(value: entry.BaseUrl)
                 )
                     continue;
 
-                if (!Uri.TryCreate(entry.BaseUrl, UriKind.Absolute, out Uri? baseUri))
+                if (!Uri.TryCreate(uriString: entry.BaseUrl, uriKind: UriKind.Absolute, result: out Uri? baseUri))
                     continue;
 
                 // An HttpRemoteWorker must address an http(s) endpoint. .NET on
@@ -166,9 +164,9 @@ public class JsonRemoteWorkerRegistry : IRemoteWorkerRegistry
                     && baseUri.Scheme != Uri.UriSchemeHttps)
                     continue;
 
-                HttpClient http = _httpClientFactory.CreateClient("remote-worker");
+                HttpClient http = _httpClientFactory.CreateClient(name: "remote-worker");
                 http.BaseAddress = baseUri;
-                http.Timeout = TimeSpan.FromMinutes(10);
+                http.Timeout = TimeSpan.FromMinutes(minutes: 10);
 
                 HttpRemoteWorker worker = new(
                     workerId: entry.WorkerId,
@@ -187,22 +185,20 @@ public class JsonRemoteWorkerRegistry : IRemoteWorkerRegistry
                     logger: new NullLogger<HttpRemoteWorker>()
                 );
 
-                _inner.Register(worker);
-                _persisted[entry.WorkerId] = entry;
+                _inner.Register(worker: worker);
+                _persisted[key: entry.WorkerId] = entry;
 
                 _logger.LogDebug(
-                    "Rehydrated worker {WorkerId} at {BaseUrl}",
-                    entry.WorkerId,
-                    entry.BaseUrl
+                    message: "Rehydrated worker {WorkerId} at {BaseUrl}", args: [entry.WorkerId, entry.BaseUrl]
                 );
             }
         }
         catch (Exception ex)
         {
             _logger.LogWarning(
-                ex,
-                "Failed to rehydrate workers from {Path} — starting with empty registry",
-                _filePath
+                exception: ex,
+                message: "Failed to rehydrate workers from {Path} — starting with empty registry",
+                args: _filePath
             );
         }
     }
@@ -211,22 +207,22 @@ public class JsonRemoteWorkerRegistry : IRemoteWorkerRegistry
     {
         try
         {
-            string dir = Path.GetDirectoryName(_filePath)!;
-            _storage.CreateDirectory(dir);
+            string dir = Path.GetDirectoryName(path: _filePath)!;
+            _storage.CreateDirectory(path: dir);
 
             List<PersistedWorkerEntry> entries = _persisted.Values.ToList();
-            string json = JsonSerializer.Serialize(entries, JsonOptions);
+            string json = JsonSerializer.Serialize(value: entries, options: JsonOptions);
 
             // Atomic write: temp file in same directory + Move overwrites.
             string tmp = _filePath + ".tmp";
-            _storage.Write(tmp, Encoding.UTF8.GetBytes(json));
-            if (_storage.Exists(_filePath))
-                _storage.Delete(_filePath);
-            _storage.Move(tmp, _filePath);
+            _storage.Write(path: tmp, bytes: Encoding.UTF8.GetBytes(s: json));
+            if (_storage.Exists(path: _filePath))
+                _storage.Delete(path: _filePath);
+            _storage.Move(from: tmp, to: _filePath);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to persist workers to {Path}", _filePath);
+            _logger.LogWarning(exception: ex, message: "Failed to persist workers to {Path}", args: _filePath);
         }
     }
 

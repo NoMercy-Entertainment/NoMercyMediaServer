@@ -32,7 +32,7 @@ public class UserRepositoryUncoveredTests : IDisposable
 
     public UserRepositoryUncoveredTests()
     {
-        _connection = new("Data Source=:memory:");
+        _connection = new(connectionString: "Data Source=:memory:");
         _connection.Open();
 
         using (SqliteCommand fkOff = _connection.CreateCommand())
@@ -41,9 +41,9 @@ public class UserRepositoryUncoveredTests : IDisposable
             fkOff.ExecuteNonQuery();
         }
 
-        _options = new DbContextOptionsBuilder<MediaContext>().UseSqlite(_connection).Options;
+        _options = new DbContextOptionsBuilder<MediaContext>().UseSqlite(connection: _connection).Options;
 
-        using MediaContext ctx = new(_options);
+        using MediaContext ctx = new(options: _options);
         ctx.Database.EnsureCreated();
     }
 
@@ -54,7 +54,7 @@ public class UserRepositoryUncoveredTests : IDisposable
 
     private MediaContext OpenContext()
     {
-        return new(_options);
+        return new(options: _options);
     }
 
     private static User MakeUser(Guid id, string email)
@@ -75,12 +75,10 @@ public class UserRepositoryUncoveredTests : IDisposable
         Ulid libraryId = Ulid.NewUlid();
 
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.Users.AddRange(
-            MakeUser(withLibrary, "haslib@example.com"),
-            MakeUser(withoutLibrary, "nolib@example.com")
+        seedCtx.Users.AddRange(entities: [MakeUser(id: withLibrary, email: "haslib@example.com"), MakeUser(id: withoutLibrary, email: "nolib@example.com")]
         );
         seedCtx.Libraries.Add(
-            new()
+            entity: new()
             {
                 Id = libraryId,
                 Title = "Movies",
@@ -88,29 +86,29 @@ public class UserRepositoryUncoveredTests : IDisposable
                 Order = 1,
             }
         );
-        seedCtx.LibraryUser.Add(new(libraryId, withLibrary));
+        seedCtx.LibraryUser.Add(entity: new(libraryId: libraryId, userId: withLibrary));
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext queryCtx = OpenContext();
-        UserRepository repository = new(queryCtx, null!);
+        UserRepository repository = new(context: queryCtx, contextFactory: null!);
 
         List<User> result = await repository.GetAllWithLibrariesAsync();
 
-        result.Should().HaveCount(2);
+        result.Should().HaveCount(expected: 2);
         result
-            .Single(u => u.Id == withLibrary)
+            .Single(predicate: u => u.Id == withLibrary)
             .LibraryUser.Should()
-            .ContainSingle(lu => lu.LibraryId == libraryId);
-        result.Single(u => u.Id == withoutLibrary).LibraryUser.Should().BeEmpty();
+            .ContainSingle(predicate: lu => lu.LibraryId == libraryId);
+        result.Single(predicate: u => u.Id == withoutLibrary).LibraryUser.Should().BeEmpty();
     }
 
     [Fact]
     public async Task GetByIdAsync_UnknownId_ReturnsNull()
     {
         await using MediaContext ctx = OpenContext();
-        UserRepository repository = new(ctx, null!);
+        UserRepository repository = new(context: ctx, contextFactory: null!);
 
-        User? result = await repository.GetByIdAsync(Guid.NewGuid());
+        User? result = await repository.GetByIdAsync(userId: Guid.NewGuid());
 
         result.Should().BeNull();
     }
@@ -120,25 +118,25 @@ public class UserRepositoryUncoveredTests : IDisposable
     {
         Guid userId = Guid.NewGuid();
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.Users.Add(MakeUser(userId, "known@example.com"));
+        seedCtx.Users.Add(entity: MakeUser(id: userId, email: "known@example.com"));
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext queryCtx = OpenContext();
-        UserRepository repository = new(queryCtx, null!);
+        UserRepository repository = new(context: queryCtx, contextFactory: null!);
 
-        User? result = await repository.GetByIdAsync(userId);
+        User? result = await repository.GetByIdAsync(userId: userId);
 
         result.Should().NotBeNull();
-        result!.Email.Should().Be("known@example.com");
+        result!.Email.Should().Be(expected: "known@example.com");
     }
 
     [Fact]
     public async Task GetByIdWithLibrariesAsync_UnknownId_ReturnsNull()
     {
         await using MediaContext ctx = OpenContext();
-        UserRepository repository = new(ctx, null!);
+        UserRepository repository = new(context: ctx, contextFactory: null!);
 
-        User? result = await repository.GetByIdWithLibrariesAsync(Guid.NewGuid());
+        User? result = await repository.GetByIdWithLibrariesAsync(userId: Guid.NewGuid());
 
         result.Should().BeNull();
     }
@@ -150,9 +148,9 @@ public class UserRepositoryUncoveredTests : IDisposable
         Ulid libraryId = Ulid.NewUlid();
 
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.Users.Add(MakeUser(userId, "libs@example.com"));
+        seedCtx.Users.Add(entity: MakeUser(id: userId, email: "libs@example.com"));
         seedCtx.Libraries.Add(
-            new()
+            entity: new()
             {
                 Id = libraryId,
                 Title = "TV Shows",
@@ -160,17 +158,17 @@ public class UserRepositoryUncoveredTests : IDisposable
                 Order = 1,
             }
         );
-        seedCtx.LibraryUser.Add(new(libraryId, userId));
+        seedCtx.LibraryUser.Add(entity: new(libraryId: libraryId, userId: userId));
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext queryCtx = OpenContext();
-        UserRepository repository = new(queryCtx, null!);
+        UserRepository repository = new(context: queryCtx, contextFactory: null!);
 
-        User? result = await repository.GetByIdWithLibrariesAsync(userId);
+        User? result = await repository.GetByIdWithLibrariesAsync(userId: userId);
 
         result.Should().NotBeNull();
         result!.LibraryUser.Should().ContainSingle();
-        result.LibraryUser.Single().Library.Title.Should().Be("TV Shows");
+        result.LibraryUser.Single().Library.Title.Should().Be(expected: "TV Shows");
     }
 
     [Fact]
@@ -181,23 +179,21 @@ public class UserRepositoryUncoveredTests : IDisposable
         Ulid notificationId = Ulid.NewUlid();
 
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.Users.AddRange(
-            MakeUser(userId, "notif@example.com"),
-            MakeUser(otherUserId, "other@example.com")
+        seedCtx.Users.AddRange(entities: [MakeUser(id: userId, email: "notif@example.com"), MakeUser(id: otherUserId, email: "other@example.com")]
         );
-        seedCtx.Notifications.Add(new() { Id = notificationId });
-        seedCtx.NotificationUser.Add(new(notificationId, userId));
+        seedCtx.Notifications.Add(entity: new() { Id = notificationId });
+        seedCtx.NotificationUser.Add(entity: new(notificationId: notificationId, userId: userId));
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext queryCtx = OpenContext();
-        UserRepository repository = new(queryCtx, null!);
+        UserRepository repository = new(context: queryCtx, contextFactory: null!);
 
-        User? result = await repository.GetByIdWithNotificationsAsync(userId);
-        User? otherResult = await repository.GetByIdWithNotificationsAsync(otherUserId);
+        User? result = await repository.GetByIdWithNotificationsAsync(userId: userId);
+        User? otherResult = await repository.GetByIdWithNotificationsAsync(userId: otherUserId);
 
         result.Should().NotBeNull();
-        result!.NotificationUser.Should().ContainSingle(nu => nu.NotificationId == notificationId);
-        result.NotificationUser.Single().Notification.Id.Should().Be(notificationId);
+        result!.NotificationUser.Should().ContainSingle(predicate: nu => nu.NotificationId == notificationId);
+        result.NotificationUser.Single().Notification.Id.Should().Be(expected: notificationId);
 
         otherResult.Should().NotBeNull();
         otherResult!.NotificationUser.Should().BeEmpty();
@@ -208,14 +204,14 @@ public class UserRepositoryUncoveredTests : IDisposable
     {
         Guid userId = Guid.NewGuid();
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.Users.Add(MakeUser(userId, "exists@example.com"));
+        seedCtx.Users.Add(entity: MakeUser(id: userId, email: "exists@example.com"));
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext queryCtx = OpenContext();
-        UserRepository repository = new(queryCtx, null!);
+        UserRepository repository = new(context: queryCtx, contextFactory: null!);
 
-        (await repository.ExistsAsync(userId)).Should().BeTrue();
-        (await repository.ExistsAsync(Guid.NewGuid())).Should().BeFalse();
+        (await repository.ExistsAsync(userId: userId)).Should().BeTrue();
+        (await repository.ExistsAsync(userId: Guid.NewGuid())).Should().BeFalse();
     }
 
     [Fact]
@@ -223,15 +219,15 @@ public class UserRepositoryUncoveredTests : IDisposable
     {
         Guid userId = Guid.NewGuid();
         await using MediaContext ctx = OpenContext();
-        UserRepository repository = new(ctx, null!);
+        UserRepository repository = new(context: ctx, contextFactory: null!);
 
-        await repository.AddAsync(MakeUser(userId, "created@example.com"));
+        await repository.AddAsync(user: MakeUser(id: userId, email: "created@example.com"));
 
-        User? result = await repository.GetByIdWithLibrariesAfterAddAsync(userId);
+        User? result = await repository.GetByIdWithLibrariesAfterAddAsync(userId: userId);
 
         result.Should().NotBeNull();
-        result!.Id.Should().Be(userId);
-        result.Email.Should().Be("created@example.com");
+        result!.Id.Should().Be(expected: userId);
+        result.Email.Should().Be(expected: "created@example.com");
         result.LibraryUser.Should().BeEmpty();
     }
 
@@ -240,20 +236,20 @@ public class UserRepositoryUncoveredTests : IDisposable
     {
         Guid keep = Guid.NewGuid();
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.Users.Add(MakeUser(keep, "keep@example.com"));
+        seedCtx.Users.Add(entity: MakeUser(id: keep, email: "keep@example.com"));
         await seedCtx.SaveChangesAsync();
 
         // DeleteAsync opens its own context via the injected IDbContextFactory rather
         // than the constructor-injected one, so it needs a real factory bound to the
         // same in-memory connection/schema as the rest of the suite.
-        TestDbContextFactory factory = new(_options);
-        UserRepository repository = new(factory.CreateDbContext(), factory);
+        TestDbContextFactory factory = new(options: _options);
+        UserRepository repository = new(context: factory.CreateDbContext(), contextFactory: factory);
 
-        Func<Task> act = () => repository.DeleteAsync(Guid.NewGuid());
+        Func<Task> act = () => repository.DeleteAsync(userId: Guid.NewGuid());
         await act.Should().NotThrowAsync();
 
         await using MediaContext verifyCtx = OpenContext();
-        (await verifyCtx.Users.AnyAsync(u => u.Id == keep)).Should().BeTrue();
+        (await verifyCtx.Users.AnyAsync(predicate: u => u.Id == keep)).Should().BeTrue();
     }
 
     // Reproduces a real production 500: LibraryUser.UserId (and every sibling table that
@@ -272,9 +268,9 @@ public class UserRepositoryUncoveredTests : IDisposable
         Guid playlistId = Guid.NewGuid();
 
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.Users.Add(MakeUser(userId, "todelete@example.com"));
+        seedCtx.Users.Add(entity: MakeUser(id: userId, email: "todelete@example.com"));
         seedCtx.Libraries.Add(
-            new()
+            entity: new()
             {
                 Id = libraryId,
                 Title = "Movies",
@@ -283,7 +279,7 @@ public class UserRepositoryUncoveredTests : IDisposable
             }
         );
         seedCtx.Movies.Add(
-            new()
+            entity: new()
             {
                 Id = 900,
                 Title = "Owned Movie",
@@ -291,21 +287,21 @@ public class UserRepositoryUncoveredTests : IDisposable
                 LibraryId = libraryId,
             }
         );
-        seedCtx.LibraryUser.Add(new(libraryId, userId));
-        seedCtx.MovieUser.Add(new(900, userId));
+        seedCtx.LibraryUser.Add(entity: new(libraryId: libraryId, userId: userId));
+        seedCtx.MovieUser.Add(entity: new(movieId: 900, userId: userId));
         seedCtx.Playlists.Add(
-            new()
+            entity: new()
             {
                 Id = playlistId,
                 Name = "Owned Playlist",
                 UserId = userId,
             }
         );
-        seedCtx.PlaylistTrack.Add(new(playlistId, Guid.NewGuid()));
-        seedCtx.UserPlaylists.Add(new() { Name = "Owned UserPlaylist", UserId = userId });
-        seedCtx.MusicPlays.Add(new(userId, Guid.NewGuid()));
+        seedCtx.PlaylistTrack.Add(entity: new(playlistId: playlistId, trackId: Guid.NewGuid()));
+        seedCtx.UserPlaylists.Add(entity: new() { Name = "Owned UserPlaylist", UserId = userId });
+        seedCtx.MusicPlays.Add(entity: new(userId: userId, trackId: Guid.NewGuid()));
         seedCtx.UserData.Add(
-            new()
+            entity: new()
             {
                 Type = "movie",
                 UserId = userId,
@@ -313,7 +309,7 @@ public class UserRepositoryUncoveredTests : IDisposable
             }
         );
         seedCtx.ActivityLogs.Add(
-            new()
+            entity: new()
             {
                 Category = ActivityCategory.Connection,
                 Time = DateTime.UtcNow,
@@ -322,7 +318,7 @@ public class UserRepositoryUncoveredTests : IDisposable
             }
         );
         seedCtx.DeviceDropNotices.Add(
-            new()
+            entity: new()
             {
                 UserId = userId,
                 DeviceName = "Old TV",
@@ -331,26 +327,26 @@ public class UserRepositoryUncoveredTests : IDisposable
         );
         await seedCtx.SaveChangesAsync();
 
-        TestDbContextFactory factory = new(_options);
-        UserRepository repository = new(factory.CreateDbContext(), factory);
+        TestDbContextFactory factory = new(options: _options);
+        UserRepository repository = new(context: factory.CreateDbContext(), contextFactory: factory);
 
-        await repository.DeleteAsync(userId);
+        await repository.DeleteAsync(userId: userId);
 
         await using MediaContext verifyCtx = OpenContext();
-        (await verifyCtx.Users.AnyAsync(u => u.Id == userId)).Should().BeFalse();
-        (await verifyCtx.LibraryUser.AnyAsync(lu => lu.UserId == userId)).Should().BeFalse();
-        (await verifyCtx.MovieUser.AnyAsync(mu => mu.UserId == userId)).Should().BeFalse();
-        (await verifyCtx.Playlists.AnyAsync(p => p.UserId == userId)).Should().BeFalse();
-        (await verifyCtx.PlaylistTrack.AnyAsync(pt => pt.PlaylistId == playlistId))
+        (await verifyCtx.Users.AnyAsync(predicate: u => u.Id == userId)).Should().BeFalse();
+        (await verifyCtx.LibraryUser.AnyAsync(predicate: lu => lu.UserId == userId)).Should().BeFalse();
+        (await verifyCtx.MovieUser.AnyAsync(predicate: mu => mu.UserId == userId)).Should().BeFalse();
+        (await verifyCtx.Playlists.AnyAsync(predicate: p => p.UserId == userId)).Should().BeFalse();
+        (await verifyCtx.PlaylistTrack.AnyAsync(predicate: pt => pt.PlaylistId == playlistId))
             .Should()
             .BeFalse();
-        (await verifyCtx.UserPlaylists.AnyAsync(up => up.UserId == userId)).Should().BeFalse();
-        (await verifyCtx.MusicPlays.AnyAsync(mp => mp.UserId == userId)).Should().BeFalse();
-        (await verifyCtx.UserData.AnyAsync(ud => ud.UserId == userId)).Should().BeFalse();
-        (await verifyCtx.ActivityLogs.AnyAsync(al => al.UserId == userId)).Should().BeFalse();
-        (await verifyCtx.DeviceDropNotices.AnyAsync(dn => dn.UserId == userId)).Should().BeFalse();
+        (await verifyCtx.UserPlaylists.AnyAsync(predicate: up => up.UserId == userId)).Should().BeFalse();
+        (await verifyCtx.MusicPlays.AnyAsync(predicate: mp => mp.UserId == userId)).Should().BeFalse();
+        (await verifyCtx.UserData.AnyAsync(predicate: ud => ud.UserId == userId)).Should().BeFalse();
+        (await verifyCtx.ActivityLogs.AnyAsync(predicate: al => al.UserId == userId)).Should().BeFalse();
+        (await verifyCtx.DeviceDropNotices.AnyAsync(predicate: dn => dn.UserId == userId)).Should().BeFalse();
         // The movie itself, owned by nobody in particular, must survive the user delete.
-        (await verifyCtx.Movies.AnyAsync(m => m.Id == 900))
+        (await verifyCtx.Movies.AnyAsync(predicate: m => m.Id == 900))
             .Should()
             .BeTrue();
     }

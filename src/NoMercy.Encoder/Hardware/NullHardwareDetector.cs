@@ -16,11 +16,11 @@ public class NullHardwareDetector : IHardwareDetector
     public Task<IReadOnlyList<GpuDevice>> DetectGpusAsync(CancellationToken ct = default)
     {
         IReadOnlyList<GpuDevice> empty = [];
-        return Task.FromResult(empty);
+        return Task.FromResult(result: empty);
     }
 
     public Task<int> DetectCpuCoreCountAsync(CancellationToken ct = default)
     {
-        return Task.FromResult(Environment.ProcessorCount);
+        return Task.FromResult(result: Environment.ProcessorCount);
     }
 }

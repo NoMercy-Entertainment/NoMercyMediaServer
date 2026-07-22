@@ -27,9 +27,9 @@ public class BuiltinPresetSeederTests
     private static MediaContext NewContext()
     {
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseInMemoryDatabase($"seeder-{Ulid.NewUlid()}")
+            .UseInMemoryDatabase(databaseName: $"seeder-{Ulid.NewUlid()}")
             .Options;
-        return new(options);
+        return new(options: options);
     }
 
     [Fact]
@@ -38,16 +38,16 @@ public class BuiltinPresetSeederTests
         // First boot: the encoder_presets table is empty. The seeder inserts
         // exactly the set returned by BuiltinPresets.All() — no more, no less.
         await using MediaContext ctx = NewContext();
-        BuiltinPresetSeeder subject = new(ctx);
+        BuiltinPresetSeeder subject = new(context: ctx);
 
         await subject.SeedAsync();
 
         EncodingProfile[] expected = BuiltinPresets.All();
         List<EncodingPreset> seeded = await ctx.EncodingPresets.ToListAsync();
-        seeded.Should().HaveCount(expected.Length);
-        seeded.Should().OnlyContain(p => p.IsBuiltIn);
-        seeded.Should().OnlyContain(p => p.Source == "builtin");
-        seeded.Select(p => p.Id).Should().BeEquivalentTo(expected.Select(p => p.Id));
+        seeded.Should().HaveCount(expected: expected.Length);
+        seeded.Should().OnlyContain(predicate: p => p.IsBuiltIn);
+        seeded.Should().OnlyContain(predicate: p => p.Source == "builtin");
+        seeded.Select(selector: p => p.Id).Should().BeEquivalentTo(expectation: expected.Select(selector: p => p.Id));
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public class BuiltinPresetSeederTests
         EncodingProfile firstBuiltin = BuiltinPresets.All()[0];
 
         ctx.EncodingPresets.Add(
-            new()
+            entity: new()
             {
                 Id = firstBuiltin.Id,
                 Name = "Stale Name",
@@ -72,16 +72,16 @@ public class BuiltinPresetSeederTests
         );
         await ctx.SaveChangesAsync();
 
-        BuiltinPresetSeeder subject = new(ctx);
+        BuiltinPresetSeeder subject = new(context: ctx);
         await subject.SeedAsync();
 
-        EncodingPreset? row = await ctx.EncodingPresets.FirstOrDefaultAsync(p =>
+        EncodingPreset? row = await ctx.EncodingPresets.FirstOrDefaultAsync(predicate: p =>
             p.Id == firstBuiltin.Id
         );
         row.Should().NotBeNull();
-        row!.Name.Should().Be(firstBuiltin.Name);
-        row.Description.Should().Be(firstBuiltin.Description);
-        row.ProfileJson.Should().NotBe("{}");
+        row!.Name.Should().Be(expected: firstBuiltin.Name);
+        row.Description.Should().Be(expected: firstBuiltin.Description);
+        row.ProfileJson.Should().NotBe(unexpected: "{}");
     }
 
     [Fact]
@@ -93,7 +93,7 @@ public class BuiltinPresetSeederTests
         await using MediaContext ctx = NewContext();
         Ulid staleId = Ulid.NewUlid();
         ctx.EncodingPresets.Add(
-            new()
+            entity: new()
             {
                 Id = staleId,
                 Name = "Removed Built-in",
@@ -105,11 +105,11 @@ public class BuiltinPresetSeederTests
         );
         await ctx.SaveChangesAsync();
 
-        BuiltinPresetSeeder subject = new(ctx);
+        BuiltinPresetSeeder subject = new(context: ctx);
         await subject.SeedAsync();
 
-        bool exists = await ctx.EncodingPresets.AnyAsync(p => p.Id == staleId);
-        exists.Should().BeFalse("stale built-in rows must be pruned on every seed");
+        bool exists = await ctx.EncodingPresets.AnyAsync(predicate: p => p.Id == staleId);
+        exists.Should().BeFalse(because: "stale built-in rows must be pruned on every seed");
     }
 
     /// <summary>
@@ -126,7 +126,7 @@ public class BuiltinPresetSeederTests
         Ulid folderId = Ulid.NewUlid();
 
         ctx.EncodingPresets.Add(
-            new()
+            entity: new()
             {
                 Id = retiredId,
                 Name = "Anime HEVC 1080p 10-bit",
@@ -137,7 +137,7 @@ public class BuiltinPresetSeederTests
             }
         );
         ctx.EncodingPresetFolders.Add(
-            new()
+            entity: new()
             {
                 PresetId = retiredId,
                 FolderId = folderId,
@@ -146,20 +146,20 @@ public class BuiltinPresetSeederTests
         );
         await ctx.SaveChangesAsync();
 
-        BuiltinPresetSeeder subject = new(ctx);
+        BuiltinPresetSeeder subject = new(context: ctx);
         await subject.SeedAsync();
 
-        EncodingPreset? retired = await ctx.EncodingPresets.FirstOrDefaultAsync(p =>
+        EncodingPreset? retired = await ctx.EncodingPresets.FirstOrDefaultAsync(predicate: p =>
             p.Id == retiredId
         );
-        retired.Should().NotBeNull("a preset a folder still points at must never be deleted");
+        retired.Should().NotBeNull(because: "a preset a folder still points at must never be deleted");
         retired!.IsBuiltIn.Should().BeFalse();
-        retired.Source.Should().Be("retired-builtin");
+        retired.Source.Should().Be(expected: "retired-builtin");
 
-        bool linkSurvived = await ctx.EncodingPresetFolders.AnyAsync(link =>
+        bool linkSurvived = await ctx.EncodingPresetFolders.AnyAsync(predicate: link =>
             link.PresetId == retiredId && link.FolderId == folderId
         );
-        linkSurvived.Should().BeTrue("the folder must keep encoding exactly as configured");
+        linkSurvived.Should().BeTrue(because: "the folder must keep encoding exactly as configured");
     }
 
     [Fact]
@@ -170,7 +170,7 @@ public class BuiltinPresetSeederTests
         await using MediaContext ctx = NewContext();
         Ulid userId = Ulid.NewUlid();
         ctx.EncodingPresets.Add(
-            new()
+            entity: new()
             {
                 Id = userId,
                 Name = "My Custom",
@@ -182,12 +182,12 @@ public class BuiltinPresetSeederTests
         );
         await ctx.SaveChangesAsync();
 
-        BuiltinPresetSeeder subject = new(ctx);
+        BuiltinPresetSeeder subject = new(context: ctx);
         await subject.SeedAsync();
 
-        EncodingPreset? row = await ctx.EncodingPresets.FirstOrDefaultAsync(p => p.Id == userId);
+        EncodingPreset? row = await ctx.EncodingPresets.FirstOrDefaultAsync(predicate: p => p.Id == userId);
         row.Should().NotBeNull();
-        row!.Name.Should().Be("My Custom");
+        row!.Name.Should().Be(expected: "My Custom");
         row.IsBuiltIn.Should().BeFalse();
     }
 
@@ -196,14 +196,14 @@ public class BuiltinPresetSeederTests
     {
         // Re-running the seeder must not duplicate rows or change content.
         await using MediaContext ctx = NewContext();
-        BuiltinPresetSeeder subject = new(ctx);
+        BuiltinPresetSeeder subject = new(context: ctx);
 
         await subject.SeedAsync();
         int countAfterFirst = await ctx.EncodingPresets.CountAsync();
         await subject.SeedAsync();
         int countAfterSecond = await ctx.EncodingPresets.CountAsync();
 
-        countAfterSecond.Should().Be(countAfterFirst);
+        countAfterSecond.Should().Be(expected: countAfterFirst);
     }
 
     [Fact]
@@ -214,15 +214,15 @@ public class BuiltinPresetSeederTests
         // JSON would break the entire preset chain.
         await using MediaContext ctx = NewContext();
         EncodingProfile firstBuiltin = BuiltinPresets.All()[0];
-        BuiltinPresetSeeder subject = new(ctx);
+        BuiltinPresetSeeder subject = new(context: ctx);
 
         await subject.SeedAsync();
 
-        EncodingPreset? row = await ctx.EncodingPresets.FirstOrDefaultAsync(p =>
+        EncodingPreset? row = await ctx.EncodingPresets.FirstOrDefaultAsync(predicate: p =>
             p.Id == firstBuiltin.Id
         );
         row.Should().NotBeNull();
         row!.ProfileJson.Should().NotBeNullOrWhiteSpace();
-        row.ProfileJson.Should().Contain(firstBuiltin.Name);
+        row.ProfileJson.Should().Contain(expected: firstBuiltin.Name);
     }
 }

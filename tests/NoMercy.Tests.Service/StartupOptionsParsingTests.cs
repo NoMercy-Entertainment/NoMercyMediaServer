@@ -20,61 +20,61 @@ namespace NoMercy.Tests.Service;
 /// and crash startup, and a corrupt port row silently reverted to 7626. These pure
 /// helpers keep both decisions total and never-throwing.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class StartupOptionsParsingTests
 {
     [Theory]
-    [InlineData("Debug", LogEventLevel.Debug)]
-    [InlineData("debug", LogEventLevel.Debug)]
-    [InlineData("VERBOSE", LogEventLevel.Verbose)]
-    [InlineData("Warning", LogEventLevel.Warning)]
-    [InlineData("error", LogEventLevel.Error)]
-    [InlineData("Fatal", LogEventLevel.Fatal)]
+    [InlineData(data: ["Debug", LogEventLevel.Debug])]
+    [InlineData(data: ["debug", LogEventLevel.Debug])]
+    [InlineData(data: ["VERBOSE", LogEventLevel.Verbose])]
+    [InlineData(data: ["Warning", LogEventLevel.Warning])]
+    [InlineData(data: ["error", LogEventLevel.Error])]
+    [InlineData(data: ["Fatal", LogEventLevel.Fatal])]
     public void TryParseLogLevel_KnownLevel_ReturnsTrueAndValue(string raw, LogEventLevel expected)
     {
-        bool ok = StartupOptions.TryParseLogLevel(raw, out LogEventLevel level);
+        bool ok = StartupOptions.TryParseLogLevel(raw: raw, level: out LogEventLevel level);
 
-        Assert.True(ok);
-        Assert.Equal(expected, level);
+        Assert.True(condition: ok);
+        Assert.Equal(expected: expected, actual: level);
     }
 
     [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    [InlineData("verbse")]
-    [InlineData("trace")]
-    [InlineData("loud")]
-    [InlineData("99")]
+    [InlineData(data: null)]
+    [InlineData(data: "")]
+    [InlineData(data: "   ")]
+    [InlineData(data: "verbse")]
+    [InlineData(data: "trace")]
+    [InlineData(data: "loud")]
+    [InlineData(data: "99")]
     public void TryParseLogLevel_UnknownOrEmpty_ReturnsFalseAndFallsBackToInformation(string? raw)
     {
-        bool ok = StartupOptions.TryParseLogLevel(raw, out LogEventLevel level);
+        bool ok = StartupOptions.TryParseLogLevel(raw: raw, level: out LogEventLevel level);
 
-        Assert.False(ok);
-        Assert.Equal(LogEventLevel.Information, level);
+        Assert.False(condition: ok);
+        Assert.Equal(expected: LogEventLevel.Information, actual: level);
     }
 
     [Fact]
     public void ResolvePortFrom_CliPortSet_WinsOverDatabaseValue()
     {
-        Assert.Equal(8000, StartupOptions.ResolvePortFrom(8000, "9000", 7626));
+        Assert.Equal(expected: 8000, actual: StartupOptions.ResolvePortFrom(cliPort: 8000, dbValue: "9000", fallback: 7626));
     }
 
     [Theory]
-    [InlineData("9000", 9000)]
-    [InlineData("7700", 7700)]
+    [InlineData(data: ["9000", 9000])]
+    [InlineData(data: ["7700", 7700])]
     public void ResolvePortFrom_NoCliPort_UsesValidDatabaseValue(string dbValue, int expected)
     {
-        Assert.Equal(expected, StartupOptions.ResolvePortFrom(0, dbValue, 7626));
+        Assert.Equal(expected: expected, actual: StartupOptions.ResolvePortFrom(cliPort: 0, dbValue: dbValue, fallback: 7626));
     }
 
     [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("not-a-number")]
-    [InlineData("70000000000")]
+    [InlineData(data: null)]
+    [InlineData(data: "")]
+    [InlineData(data: "not-a-number")]
+    [InlineData(data: "70000000000")]
     public void ResolvePortFrom_NoCliPort_CorruptOrMissingDbValue_UsesFallback(string? dbValue)
     {
-        Assert.Equal(7626, StartupOptions.ResolvePortFrom(0, dbValue, 7626));
+        Assert.Equal(expected: 7626, actual: StartupOptions.ResolvePortFrom(cliPort: 0, dbValue: dbValue, fallback: 7626));
     }
 }

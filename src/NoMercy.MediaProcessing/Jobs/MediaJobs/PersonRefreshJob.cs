@@ -33,7 +33,7 @@ public class PersonRefreshJob : AbstractMediaJob
         IStorageDriver storageDriver,
         ILoggerFactory loggerFactory
     )
-        : base(storageFactory, storageDriver, loggerFactory) { }
+        : base(storageFactory: storageFactory, storageDriver: storageDriver, loggerFactory: loggerFactory) { }
 
     public override string QueueName => "import";
     public override int Priority => 5;
@@ -43,13 +43,13 @@ public class PersonRefreshJob : AbstractMediaJob
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
-        PersonRepository personRepository = new(context, LoggerFactory.CreateLogger<PersonRepository>());
+        PersonRepository personRepository = new(context: context, logger: LoggerFactory.CreateLogger<PersonRepository>());
         PersonManager personManager = new(
-            personRepository,
-            jobDispatcher,
-            LoggerFactory.CreateLogger<PersonManager>()
+            personRepository: personRepository,
+            jobDispatcher: jobDispatcher,
+            logger: LoggerFactory.CreateLogger<PersonManager>()
         );
 
-        await personManager.UpdatePersonAsync(Id);
+        await personManager.UpdatePersonAsync(personId: Id);
     }
 }

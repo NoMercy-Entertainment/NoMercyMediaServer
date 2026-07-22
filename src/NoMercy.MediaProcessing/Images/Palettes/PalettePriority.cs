@@ -55,27 +55,27 @@ public static class PalettePriority
 
     private static readonly Dictionary<string, int> EntityRank = new()
     {
-        ["movie"] = 3,
-        ["tv"] = 3,
-        ["artist"] = 3,
-        ["album"] = 3,
-        ["episode"] = 2,
-        ["track"] = 2,
-        ["season"] = 1,
-        ["person"] = 0,
-        ["collection"] = 0,
-        ["image"] = 0,
+        [key: "movie"] = 3,
+        [key: "tv"] = 3,
+        [key: "artist"] = 3,
+        [key: "album"] = 3,
+        [key: "episode"] = 2,
+        [key: "track"] = 2,
+        [key: "season"] = 1,
+        [key: "person"] = 0,
+        [key: "collection"] = 0,
+        [key: "image"] = 0,
     };
 
-    public static bool IsMain(string entityType) => MainTypes.Contains(entityType);
+    public static bool IsMain(string entityType) => MainTypes.Contains(item: entityType);
 
-    private static int RankOf(string entityType) => EntityRank.GetValueOrDefault(entityType, 0);
+    private static int RankOf(string entityType) => EntityRank.GetValueOrDefault(key: entityType, defaultValue: 0);
 
     // A live import: the entity type's UI rank decides paint order, and the
     // whole band outranks any backfill.
-    public static int ForImport(string entityType) => ImportBase + RankOf(entityType);
+    public static int ForImport(string entityType) => ImportBase + RankOf(entityType: entityType);
 
     // Backfilling the existing library: same UI-rank ordering as ForImport,
     // shifted below every live import.
-    public static int ForBackfill(string entityType) => BackfillBase + RankOf(entityType);
+    public static int ForBackfill(string entityType) => BackfillBase + RankOf(entityType: entityType);
 }

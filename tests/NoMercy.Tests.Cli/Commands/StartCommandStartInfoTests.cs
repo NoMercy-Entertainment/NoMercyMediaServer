@@ -35,85 +35,85 @@ namespace NoMercy.Tests.Cli.Commands;
 /// to this checkout, so its assertion is written to hold either way rather
 /// than assuming a specific build state.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class StartCommandStartInfoTests
 {
     private static ProcessStartInfo? CreateProductionStartInfo(bool dev) =>
         PrivateReflection.InvokeStatic<ProcessStartInfo?>(
-            typeof(StartCommand),
-            "CreateProductionStartInfo",
-            dev
+            type: typeof(StartCommand),
+            methodName: "CreateProductionStartInfo",
+            args: dev
         );
 
     private static ProcessStartInfo? CreateInstalledStartInfo(bool dev) =>
         PrivateReflection.InvokeStatic<ProcessStartInfo?>(
-            typeof(StartCommand),
-            "CreateInstalledStartInfo",
-            dev
+            type: typeof(StartCommand),
+            methodName: "CreateInstalledStartInfo",
+            args: dev
         );
 
     private static ProcessStartInfo? CreateDevBinaryStartInfo() =>
         PrivateReflection.InvokeStatic<ProcessStartInfo?>(
-            typeof(StartCommand),
-            "CreateDevBinaryStartInfo"
+            type: typeof(StartCommand),
+            methodName: "CreateDevBinaryStartInfo"
         );
 
     private static ProcessStartInfo? CreateDotnetRunStartInfo() =>
         PrivateReflection.InvokeStatic<ProcessStartInfo?>(
-            typeof(StartCommand),
-            "CreateDotnetRunStartInfo"
+            type: typeof(StartCommand),
+            methodName: "CreateDotnetRunStartInfo"
         );
 
     private static string? FindProjectDirectory(string projectName) =>
         PrivateReflection.InvokeStatic<string?>(
-            typeof(StartCommand),
-            "FindProjectDirectory",
-            projectName
+            type: typeof(StartCommand),
+            methodName: "FindProjectDirectory",
+            args: projectName
         );
 
     private static ProcessStartInfo? FindServerStartInfo(bool dev) =>
         PrivateReflection.InvokeStatic<ProcessStartInfo?>(
-            typeof(StartCommand),
-            "FindServerStartInfo",
-            dev
+            type: typeof(StartCommand),
+            methodName: "FindServerStartInfo",
+            args: dev
         );
 
     [Fact]
     public void CreateProductionStartInfo_NoInstalledExe_ReturnsNull()
     {
         string exePath = AppFiles.ServerExePath;
-        if (File.Exists(exePath))
-            File.Delete(exePath);
+        if (File.Exists(path: exePath))
+            File.Delete(path: exePath);
 
         CreateProductionStartInfo(dev: false).Should().BeNull();
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [InlineData(data: false)]
+    [InlineData(data: true)]
     public void CreateProductionStartInfo_InstalledExePresent_ReturnsStartInfo_WithDevFlagWhenRequested(
         bool dev
     )
     {
         string exePath = AppFiles.ServerExePath;
-        Directory.CreateDirectory(Path.GetDirectoryName(exePath)!);
-        File.WriteAllText(exePath, "placeholder");
+        Directory.CreateDirectory(path: Path.GetDirectoryName(path: exePath)!);
+        File.WriteAllText(path: exePath, contents: "placeholder");
 
         try
         {
-            ProcessStartInfo? startInfo = CreateProductionStartInfo(dev);
+            ProcessStartInfo? startInfo = CreateProductionStartInfo(dev: dev);
 
             startInfo.Should().NotBeNull();
-            startInfo!.FileName.Should().Be(exePath);
+            startInfo!.FileName.Should().Be(expected: exePath);
             startInfo.UseShellExecute.Should().BeFalse();
             if (dev)
-                startInfo.ArgumentList.Should().Contain("--dev");
+                startInfo.ArgumentList.Should().Contain(expected: "--dev");
             else
-                startInfo.ArgumentList.Should().NotContain("--dev");
+                startInfo.ArgumentList.Should().NotContain(unexpected: "--dev");
         }
         finally
         {
-            File.Delete(exePath);
+            File.Delete(path: exePath);
         }
     }
 
@@ -129,50 +129,40 @@ public sealed class StartCommandStartInfoTests
     [Fact]
     public void FindProjectDirectory_RealProjectName_ResolvesToSourceTree()
     {
-        string? result = FindProjectDirectory("NoMercy.Service");
+        string? result = FindProjectDirectory(projectName: "NoMercy.Service");
 
         result.Should().NotBeNull();
-        Directory.Exists(result!).Should().BeTrue();
-        Path.GetFileName(result!.TrimEnd(Path.DirectorySeparatorChar))
+        Directory.Exists(path: result!).Should().BeTrue();
+        Path.GetFileName(path: result!.TrimEnd(trimChar: Path.DirectorySeparatorChar))
             .Should()
-            .Be("NoMercy.Service");
+            .Be(expected: "NoMercy.Service");
     }
 
     [Fact]
     public void FindProjectDirectory_UnknownProjectName_ReturnsNull()
     {
-        FindProjectDirectory($"NoMercy.DoesNotExist.{Guid.NewGuid():N}").Should().BeNull();
+        FindProjectDirectory(projectName: $"NoMercy.DoesNotExist.{Guid.NewGuid():N}").Should().BeNull();
     }
 
     [Fact]
     public void CreateDevBinaryStartInfo_MatchesRealBuildOutputState()
     {
-        string? serviceDir = FindProjectDirectory("NoMercy.Service");
+        string? serviceDir = FindProjectDirectory(projectName: "NoMercy.Service");
         serviceDir.Should().NotBeNull();
 
         string net = $"net{Environment.Version.Major}.{Environment.Version.Minor}";
-        string debugPath = Path.Combine(
-            serviceDir!,
-            "bin",
-            "Debug",
-            net,
-            "NoMercyMediaServer" + Info.ExecSuffix
+        string debugPath = Path.Combine(paths: [serviceDir!, "bin", "Debug", net, "NoMercyMediaServer" + Info.ExecSuffix]
         );
-        string releasePath = Path.Combine(
-            serviceDir!,
-            "bin",
-            "Release",
-            net,
-            "NoMercyMediaServer" + Info.ExecSuffix
+        string releasePath = Path.Combine(paths: [serviceDir!, "bin", "Release", net, "NoMercyMediaServer" + Info.ExecSuffix]
         );
 
         ProcessStartInfo? result = CreateDevBinaryStartInfo();
 
-        if (File.Exists(debugPath) || File.Exists(releasePath))
+        if (File.Exists(path: debugPath) || File.Exists(path: releasePath))
         {
             result.Should().NotBeNull();
-            result!.ArgumentList.Should().Contain("--dev");
-            new[] { debugPath, releasePath }.Should().Contain(result.FileName);
+            result!.ArgumentList.Should().Contain(expected: "--dev");
+            new[] { debugPath, releasePath }.Should().Contain(expected: result.FileName);
         }
         else
         {
@@ -188,8 +178,8 @@ public sealed class StartCommandStartInfoTests
         // must fall through to whichever of the last two probes wins — never
         // null, since CreateDotnetRunStartInfo always succeeds in this repo.
         string exePath = AppFiles.ServerExePath;
-        if (File.Exists(exePath))
-            File.Delete(exePath);
+        if (File.Exists(path: exePath))
+            File.Delete(path: exePath);
 
         ProcessStartInfo? result = FindServerStartInfo(dev: false);
 
@@ -205,9 +195,9 @@ public sealed class StartCommandStartInfoTests
         ProcessStartInfo? result = CreateDotnetRunStartInfo();
 
         result.Should().NotBeNull();
-        result!.FileName.Should().Be("dotnet");
+        result!.FileName.Should().Be(expected: "dotnet");
         result
             .ArgumentList.Should()
-            .Equal("run", "--project", FindProjectDirectory("NoMercy.Service")!, "--", "--dev");
+            .Equal(expected: ["run", "--project", FindProjectDirectory(projectName: "NoMercy.Service")!, "--", "--dev"]);
     }
 }

@@ -39,11 +39,11 @@ public class ObjectOrEmptyArrayConverter<T> : JsonConverter<T?>
             case JsonToken.Null:
                 return null;
             case JsonToken.StartArray:
-                JArray.Load(reader);
+                JArray.Load(reader: reader);
                 return new();
             default:
-                JObject json = JObject.Load(reader);
-                return json.ToObject<T>(serializer);
+                JObject json = JObject.Load(reader: reader);
+                return json.ToObject<T>(jsonSerializer: serializer);
         }
     }
 

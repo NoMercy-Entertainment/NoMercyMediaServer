@@ -16,6 +16,6 @@ namespace NoMercy.Providers.TMDB.Models.Episode;
 
 public class TmdbEpisodeTranslations : TmdbSharedTranslations
 {
-    [JsonProperty("translations")]
+    [JsonProperty(propertyName: "translations")]
     public new EpisodeTranslation[] Translations { get; set; } = [];
 }

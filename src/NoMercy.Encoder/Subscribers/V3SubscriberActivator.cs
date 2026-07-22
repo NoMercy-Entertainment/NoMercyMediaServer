@@ -42,7 +42,7 @@ internal sealed class V3SubscriberActivator(
             _introDetect = services.GetRequiredService<IntroDetectSubscriber>();
             _cropDetect = services.GetRequiredService<CropDetectSubscriber>();
 
-            logger.LogInformation("V3 encoder subscribers activated (intro_detect, crop_detect)");
+            logger.LogInformation(message: "V3 encoder subscribers activated (intro_detect, crop_detect)");
         }
         catch (Exception ex)
         {
@@ -52,8 +52,8 @@ internal sealed class V3SubscriberActivator(
             // let StopHost-on-throw take the process down for an optional
             // post-encode pipeline.
             logger.LogError(
-                ex,
-                "V3 subscriber activation failed; encoder pipeline runs without them"
+                exception: ex,
+                message: "V3 subscriber activation failed; encoder pipeline runs without them"
             );
         }
         return Task.CompletedTask;

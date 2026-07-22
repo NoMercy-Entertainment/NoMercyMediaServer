@@ -65,47 +65,47 @@ public class LivePlaylistBuilder : ILivePlaylistBuilder
 {
     public string Build(LivePlaylistRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.SegmentUrlTemplate))
+        if (string.IsNullOrWhiteSpace(value: request.SegmentUrlTemplate))
         {
-            throw new ArgumentException("SegmentUrlTemplate must include {index}", nameof(request));
+            throw new ArgumentException(message: "SegmentUrlTemplate must include {index}", paramName: nameof(request));
         }
 
         if (request.TotalDuration is { } total && total > TimeSpan.Zero)
-            return BuildFullDurationVod(request, total);
+            return BuildFullDurationVod(request: request, total: total);
 
         StringBuilder sb = new();
-        int targetDurationSeconds = Math.Max(1, (int)Math.Ceiling(MaxSegmentDuration(request)));
+        int targetDurationSeconds = Math.Max(val1: 1, val2: (int)Math.Ceiling(a: MaxSegmentDuration(request: request)));
 
-        sb.AppendLine("#EXTM3U");
-        sb.AppendLine("#EXT-X-VERSION:6");
+        sb.AppendLine(value: "#EXTM3U");
+        sb.AppendLine(value: "#EXT-X-VERSION:6");
         sb.AppendLine(
-            $"#EXT-X-TARGETDURATION:{targetDurationSeconds.ToString(CultureInfo.InvariantCulture)}"
+            handler: $"#EXT-X-TARGETDURATION:{targetDurationSeconds.ToString(provider: CultureInfo.InvariantCulture)}"
         );
 
-        int mediaSequence = request.Segments.Count == 0 ? 0 : request.Segments[0].Index;
+        int mediaSequence = request.Segments.Count == 0 ? 0 : request.Segments[index: 0].Index;
         sb.AppendLine(
-            $"#EXT-X-MEDIA-SEQUENCE:{mediaSequence.ToString(CultureInfo.InvariantCulture)}"
+            handler: $"#EXT-X-MEDIA-SEQUENCE:{mediaSequence.ToString(provider: CultureInfo.InvariantCulture)}"
         );
 
         sb.AppendLine(
-            request.IsComplete ? "#EXT-X-PLAYLIST-TYPE:VOD" : "#EXT-X-PLAYLIST-TYPE:EVENT"
+            value: request.IsComplete ? "#EXT-X-PLAYLIST-TYPE:VOD" : "#EXT-X-PLAYLIST-TYPE:EVENT"
         );
 
         foreach (Segment segment in request.Segments)
         {
             double duration = segment.Duration.TotalSeconds;
-            sb.AppendLine($"#EXTINF:{duration.ToString("F3", CultureInfo.InvariantCulture)},");
+            sb.AppendLine(handler: $"#EXTINF:{duration.ToString(format: "F3", provider: CultureInfo.InvariantCulture)},");
             sb.AppendLine(
-                request.SegmentUrlTemplate.Replace(
-                    "{index}",
-                    segment.Index.ToString(CultureInfo.InvariantCulture)
+                value: request.SegmentUrlTemplate.Replace(
+                    oldValue: "{index}",
+                    newValue: segment.Index.ToString(provider: CultureInfo.InvariantCulture)
                 )
             );
         }
 
         if (request.IsComplete)
         {
-            sb.AppendLine("#EXT-X-ENDLIST");
+            sb.AppendLine(value: "#EXT-X-ENDLIST");
         }
 
         return sb.ToString();
@@ -118,35 +118,35 @@ public class LivePlaylistBuilder : ILivePlaylistBuilder
                 ? request.TargetSegmentDuration.TotalSeconds
                 : 6;
         double totalSeconds = total.TotalSeconds;
-        int segmentCount = Math.Max(1, (int)Math.Ceiling(totalSeconds / segmentDuration));
-        int targetDurationSeconds = Math.Max(1, (int)Math.Ceiling(segmentDuration));
+        int segmentCount = Math.Max(val1: 1, val2: (int)Math.Ceiling(a: totalSeconds / segmentDuration));
+        int targetDurationSeconds = Math.Max(val1: 1, val2: (int)Math.Ceiling(a: segmentDuration));
 
         StringBuilder sb = new();
-        sb.AppendLine("#EXTM3U");
-        sb.AppendLine("#EXT-X-VERSION:6");
+        sb.AppendLine(value: "#EXTM3U");
+        sb.AppendLine(value: "#EXT-X-VERSION:6");
         sb.AppendLine(
-            $"#EXT-X-TARGETDURATION:{targetDurationSeconds.ToString(CultureInfo.InvariantCulture)}"
+            handler: $"#EXT-X-TARGETDURATION:{targetDurationSeconds.ToString(provider: CultureInfo.InvariantCulture)}"
         );
-        sb.AppendLine("#EXT-X-MEDIA-SEQUENCE:0");
-        sb.AppendLine("#EXT-X-PLAYLIST-TYPE:VOD");
+        sb.AppendLine(value: "#EXT-X-MEDIA-SEQUENCE:0");
+        sb.AppendLine(value: "#EXT-X-PLAYLIST-TYPE:VOD");
 
         for (int index = 0; index < segmentCount; index++)
         {
             double start = index * segmentDuration;
-            double duration = Math.Min(segmentDuration, totalSeconds - start);
+            double duration = Math.Min(val1: segmentDuration, val2: totalSeconds - start);
             if (duration <= 0)
                 duration = segmentDuration;
 
-            sb.AppendLine($"#EXTINF:{duration.ToString("F3", CultureInfo.InvariantCulture)},");
+            sb.AppendLine(handler: $"#EXTINF:{duration.ToString(format: "F3", provider: CultureInfo.InvariantCulture)},");
             sb.AppendLine(
-                request.SegmentUrlTemplate.Replace(
-                    "{index}",
-                    index.ToString(CultureInfo.InvariantCulture)
+                value: request.SegmentUrlTemplate.Replace(
+                    oldValue: "{index}",
+                    newValue: index.ToString(provider: CultureInfo.InvariantCulture)
                 )
             );
         }
 
-        sb.AppendLine("#EXT-X-ENDLIST");
+        sb.AppendLine(value: "#EXT-X-ENDLIST");
         return sb.ToString();
     }
 
@@ -156,8 +156,8 @@ public class LivePlaylistBuilder : ILivePlaylistBuilder
         if (request.Segments.Count == 0)
             return fromTarget > 0 ? fromTarget : 6;
 
-        double longest = request.Segments.Max(s => s.Duration.TotalSeconds);
-        return Math.Max(fromTarget, longest);
+        double longest = request.Segments.Max(selector: s => s.Duration.TotalSeconds);
+        return Math.Max(val1: fromTarget, val2: longest);
     }
 
     private const string AudioGroupId = "audio";
@@ -167,17 +167,17 @@ public class LivePlaylistBuilder : ILivePlaylistBuilder
         bool hasAudioGroup = request.AudioRenditions.Count > 0;
 
         StringBuilder sb = new();
-        sb.AppendLine("#EXTM3U");
-        sb.AppendLine("#EXT-X-VERSION:6");
-        sb.AppendLine("#EXT-X-INDEPENDENT-SEGMENTS");
+        sb.AppendLine(value: "#EXTM3U");
+        sb.AppendLine(value: "#EXT-X-VERSION:6");
+        sb.AppendLine(value: "#EXT-X-INDEPENDENT-SEGMENTS");
         sb.AppendLine();
 
         foreach (LiveAudioRendition rendition in request.AudioRenditions)
         {
-            string name = Culture.EnglishLanguageName(rendition.Language);
+            string name = Culture.EnglishLanguageName(code: rendition.Language);
             sb.AppendLine(
-                $"#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"{AudioGroupId}\",LANGUAGE=\"{rendition.Language}\","
-                    + $"NAME=\"{name}\",AUTOSELECT=YES,DEFAULT={YesNo(rendition.IsDefault)},URI=\"{rendition.Uri}\""
+                handler: $"#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"{AudioGroupId}\",LANGUAGE=\"{rendition.Language}\","
+                         + $"NAME=\"{name}\",AUTOSELECT=YES,DEFAULT={YesNo(value: rendition.IsDefault)},URI=\"{rendition.Uri}\""
             );
         }
 
@@ -194,10 +194,10 @@ public class LivePlaylistBuilder : ILivePlaylistBuilder
         string audioAttr = hasAudioGroup ? $",AUDIO=\"{AudioGroupId}\"" : string.Empty;
 
         sb.AppendLine(
-            $"#EXT-X-STREAM-INF:BANDWIDTH={bandwidth.ToString(CultureInfo.InvariantCulture)},"
-                + $"RESOLUTION={request.Width}x{request.Height},VIDEO-RANGE=SDR{audioAttr}"
+            handler: $"#EXT-X-STREAM-INF:BANDWIDTH={bandwidth.ToString(provider: CultureInfo.InvariantCulture)},"
+                     + $"RESOLUTION={request.Width}x{request.Height},VIDEO-RANGE=SDR{audioAttr}"
         );
-        sb.AppendLine(request.VideoPlaylistUri);
+        sb.AppendLine(value: request.VideoPlaylistUri);
 
         return sb.ToString();
     }

@@ -30,7 +30,7 @@ public static class SubtitlePlanBuilder
         // language "full vs alt" promotion sees every track, not just the
         // ones a given profile happens to allow.
         IReadOnlyList<string> subtitleVariants = SubtitleClassifier.ResolveVariants(
-            media.SubtitleStreams
+            streams: media.SubtitleStreams
         );
         List<SubtitleOutputPlan> subtitlePlans = [];
         HashSet<int> claimedStreams = [];
@@ -39,25 +39,25 @@ public static class SubtitlePlanBuilder
             HashSet<string> allowed =
                 subProfile.AllowedLanguages.Length > 0
                     ? new HashSet<string>(
-                        subProfile.AllowedLanguages,
-                        StringComparer.OrdinalIgnoreCase
+                        collection: subProfile.AllowedLanguages,
+                        comparer: StringComparer.OrdinalIgnoreCase
                     )
                     : [];
 
             for (int si = 0; si < media.SubtitleStreams.Count; si++)
             {
-                if (claimedStreams.Contains(si))
+                if (claimedStreams.Contains(item: si))
                     continue;
 
-                SubtitleStreamInfo stream = media.SubtitleStreams[si];
+                SubtitleStreamInfo stream = media.SubtitleStreams[index: si];
                 string streamLang = stream.Language ?? "und";
 
-                if (allowed.Count > 0 && !allowed.Contains(streamLang))
+                if (allowed.Count > 0 && !allowed.Contains(item: streamLang))
                     continue;
 
-                claimedStreams.Add(si);
+                claimedStreams.Add(item: si);
                 subtitlePlans.Add(
-                    new(
+                    item: new(
                         OutputCodec: subProfile.Codec,
                         Action: subProfile.Policy == SubtitlePolicy.BurnIn
                             ? StreamAction.Transcode
@@ -67,9 +67,9 @@ public static class SubtitlePlanBuilder
                         MapLabel: $"0:s:{si}",
                         PlaylistNameTemplate: subProfile.PlaylistNameTemplate,
                         Policy: subProfile.Policy,
-                        Variant: subtitleVariants[si],
+                        Variant: subtitleVariants[index: si],
                         ExtraFlags: subProfile.CustomArguments is not null
-                            ? new Dictionary<string, string>(subProfile.CustomArguments)
+                            ? new Dictionary<string, string>(dictionary: subProfile.CustomArguments)
                             : null
                     )
                 );

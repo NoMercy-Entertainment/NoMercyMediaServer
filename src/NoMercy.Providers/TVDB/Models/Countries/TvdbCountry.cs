@@ -18,12 +18,12 @@ public class TvdbCountriesResponse : TvdbResponse<TvdbCountry[]> { }
 
 public class TvdbCountry
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("shortCode")]
+    [JsonProperty(propertyName: "shortCode")]
     public string ShortCode { get; set; } = string.Empty;
 }

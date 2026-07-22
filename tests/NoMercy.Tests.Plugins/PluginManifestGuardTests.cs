@@ -19,7 +19,7 @@ namespace NoMercy.Tests.Plugins;
 
 public class PluginManifestGuardTests
 {
-    private static readonly Guid KnownId = new("a1b2c3d4-e5f6-7890-abcd-ef1234567890");
+    private static readonly Guid KnownId = new(g: "a1b2c3d4-e5f6-7890-abcd-ef1234567890");
 
     private static string BuildJson(
         string? id = null,
@@ -37,17 +37,17 @@ public class PluginManifestGuardTests
         Dictionary<string, object?> fields = [];
 
         if (includeId)
-            fields["id"] = id ?? KnownId.ToString();
+            fields[key: "id"] = id ?? KnownId.ToString();
         if (includeName)
-            fields["name"] = name;
+            fields[key: "name"] = name;
         if (includeDescription)
-            fields["description"] = description;
+            fields[key: "description"] = description;
         if (includeVersion)
-            fields["version"] = version;
+            fields[key: "version"] = version;
         if (includeAssembly)
-            fields["assembly"] = assembly;
+            fields[key: "assembly"] = assembly;
 
-        return JsonSerializer.Serialize(fields);
+        return JsonSerializer.Serialize(value: fields);
     }
 
     [Fact]
@@ -55,9 +55,9 @@ public class PluginManifestGuardTests
     {
         string json = BuildJson(id: Guid.Empty.ToString());
 
-        Action act = () => PluginManifestParser.Parse(json);
+        Action act = () => PluginManifestParser.Parse(json: json);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*id*");
+        act.Should().Throw<InvalidOperationException>().WithMessage(expectedWildcardPattern: "*id*");
     }
 
     [Fact]
@@ -65,9 +65,9 @@ public class PluginManifestGuardTests
     {
         string json = BuildJson(id: Guid.NewGuid().ToString());
 
-        PluginManifest manifest = PluginManifestParser.Parse(json);
+        PluginManifest manifest = PluginManifestParser.Parse(json: json);
 
-        manifest.Id.Should().NotBe(Guid.Empty);
+        manifest.Id.Should().NotBe(unexpected: Guid.Empty);
     }
 
     [Fact]
@@ -75,9 +75,9 @@ public class PluginManifestGuardTests
     {
         string json = BuildJson(name: "   ");
 
-        Action act = () => PluginManifestParser.Parse(json);
+        Action act = () => PluginManifestParser.Parse(json: json);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*name*");
+        act.Should().Throw<InvalidOperationException>().WithMessage(expectedWildcardPattern: "*name*");
     }
 
     [Fact]
@@ -85,9 +85,9 @@ public class PluginManifestGuardTests
     {
         string json = BuildJson(name: "X");
 
-        PluginManifest manifest = PluginManifestParser.Parse(json);
+        PluginManifest manifest = PluginManifestParser.Parse(json: json);
 
-        manifest.Name.Should().Be("X");
+        manifest.Name.Should().Be(expected: "X");
     }
 
     [Fact]
@@ -95,9 +95,9 @@ public class PluginManifestGuardTests
     {
         string json = BuildJson(version: "   ");
 
-        Action act = () => PluginManifestParser.Parse(json);
+        Action act = () => PluginManifestParser.Parse(json: json);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*version*");
+        act.Should().Throw<InvalidOperationException>().WithMessage(expectedWildcardPattern: "*version*");
     }
 
     [Fact]
@@ -105,9 +105,9 @@ public class PluginManifestGuardTests
     {
         string json = BuildJson(version: "1.0");
 
-        PluginManifest manifest = PluginManifestParser.Parse(json);
+        PluginManifest manifest = PluginManifestParser.Parse(json: json);
 
-        manifest.Version.Should().Be("1.0");
+        manifest.Version.Should().Be(expected: "1.0");
     }
 
     [Fact]
@@ -115,9 +115,9 @@ public class PluginManifestGuardTests
     {
         string json = BuildJson(version: "alpha-1");
 
-        Action act = () => PluginManifestParser.Parse(json);
+        Action act = () => PluginManifestParser.Parse(json: json);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*version*");
+        act.Should().Throw<InvalidOperationException>().WithMessage(expectedWildcardPattern: "*version*");
     }
 
     [Fact]
@@ -125,9 +125,9 @@ public class PluginManifestGuardTests
     {
         string json = BuildJson(version: "2.3.4.5");
 
-        PluginManifest manifest = PluginManifestParser.Parse(json);
+        PluginManifest manifest = PluginManifestParser.Parse(json: json);
 
-        manifest.Version.Should().Be("2.3.4.5");
+        manifest.Version.Should().Be(expected: "2.3.4.5");
     }
 
     [Fact]
@@ -135,9 +135,9 @@ public class PluginManifestGuardTests
     {
         string json = BuildJson(description: "   ");
 
-        Action act = () => PluginManifestParser.Parse(json);
+        Action act = () => PluginManifestParser.Parse(json: json);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*description*");
+        act.Should().Throw<InvalidOperationException>().WithMessage(expectedWildcardPattern: "*description*");
     }
 
     [Fact]
@@ -145,9 +145,9 @@ public class PluginManifestGuardTests
     {
         string json = BuildJson(description: "A valid description");
 
-        PluginManifest manifest = PluginManifestParser.Parse(json);
+        PluginManifest manifest = PluginManifestParser.Parse(json: json);
 
-        manifest.Description.Should().Be("A valid description");
+        manifest.Description.Should().Be(expected: "A valid description");
     }
 
     [Fact]
@@ -155,9 +155,9 @@ public class PluginManifestGuardTests
     {
         string json = BuildJson(assembly: "\t  \t");
 
-        Action act = () => PluginManifestParser.Parse(json);
+        Action act = () => PluginManifestParser.Parse(json: json);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*assembly*");
+        act.Should().Throw<InvalidOperationException>().WithMessage(expectedWildcardPattern: "*assembly*");
     }
 
     [Fact]
@@ -165,15 +165,15 @@ public class PluginManifestGuardTests
     {
         string json = BuildJson(assembly: "Plugin.dll");
 
-        PluginManifest manifest = PluginManifestParser.Parse(json);
+        PluginManifest manifest = PluginManifestParser.Parse(json: json);
 
-        manifest.Assembly.Should().Be("Plugin.dll");
+        manifest.Assembly.Should().Be(expected: "Plugin.dll");
     }
 
     [Fact]
     public void Parse_WhitespaceOnlyJsonInput_Fires_ArgumentException()
     {
-        Action act = () => PluginManifestParser.Parse("   ");
+        Action act = () => PluginManifestParser.Parse(json: "   ");
 
         act.Should().Throw<ArgumentException>();
     }
@@ -183,10 +183,10 @@ public class PluginManifestGuardTests
     {
         string json = BuildJson();
 
-        PluginManifest manifest = PluginManifestParser.Parse(json);
+        PluginManifest manifest = PluginManifestParser.Parse(json: json);
 
-        manifest.Id.Should().Be(KnownId);
-        manifest.Name.Should().Be("ValidPlugin");
+        manifest.Id.Should().Be(expected: KnownId);
+        manifest.Name.Should().Be(expected: "ValidPlugin");
     }
 
     [Fact]
@@ -194,7 +194,7 @@ public class PluginManifestGuardTests
     {
         string json = BuildJson(includeId: false);
 
-        Action act = () => PluginManifestParser.Parse(json);
+        Action act = () => PluginManifestParser.Parse(json: json);
 
         act.Should().Throw<JsonException>();
     }
@@ -204,7 +204,7 @@ public class PluginManifestGuardTests
     {
         string json = BuildJson(includeName: false);
 
-        Action act = () => PluginManifestParser.Parse(json);
+        Action act = () => PluginManifestParser.Parse(json: json);
 
         act.Should().Throw<JsonException>();
     }
@@ -214,7 +214,7 @@ public class PluginManifestGuardTests
     {
         string json = BuildJson(includeDescription: false);
 
-        Action act = () => PluginManifestParser.Parse(json);
+        Action act = () => PluginManifestParser.Parse(json: json);
 
         act.Should().Throw<JsonException>();
     }
@@ -224,7 +224,7 @@ public class PluginManifestGuardTests
     {
         string json = BuildJson(includeAssembly: false);
 
-        Action act = () => PluginManifestParser.Parse(json);
+        Action act = () => PluginManifestParser.Parse(json: json);
 
         act.Should().Throw<JsonException>();
     }
@@ -234,9 +234,9 @@ public class PluginManifestGuardTests
     {
         string json = BuildJson();
 
-        PluginManifest manifest = PluginManifestParser.Parse(json);
+        PluginManifest manifest = PluginManifestParser.Parse(json: json);
 
-        manifest.Id.Should().NotBe(Guid.Empty);
+        manifest.Id.Should().NotBe(unexpected: Guid.Empty);
         manifest.Assembly.Should().NotBeNullOrWhiteSpace();
     }
 
@@ -274,8 +274,8 @@ public class PluginManifestGuardTests
         cataloguedRules
             .Should()
             .BeEquivalentTo(
-                testedDecisions,
-                "every rule in the catalogue must have a corresponding test; add an entry here when a new guard is added to Validate()"
+                expectation: testedDecisions,
+                because: "every rule in the catalogue must have a corresponding test; add an entry here when a new guard is added to Validate()"
             );
     }
 }

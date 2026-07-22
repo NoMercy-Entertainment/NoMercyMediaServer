@@ -32,7 +32,7 @@ public partial class LogViewerView : UserControl
 
     protected override void OnDataContextChanged(EventArgs e)
     {
-        base.OnDataContextChanged(e);
+        base.OnDataContextChanged(e: e);
 
         if (ViewModel is not null)
             ViewModel.FilteredEntries.CollectionChanged += (_, _) => ScrollToBottom();
@@ -40,10 +40,10 @@ public partial class LogViewerView : UserControl
 
     private void ScrollToBottom()
     {
-        Dispatcher.UIThread.Post(() =>
+        Dispatcher.UIThread.Post(action: () =>
         {
             if (LogList.ItemCount > 0)
-                LogList.ScrollIntoView(LogList.Items[LogList.ItemCount - 1]!);
+                LogList.ScrollIntoView(item: LogList.Items[index: LogList.ItemCount - 1]!);
         });
     }
 
@@ -60,9 +60,9 @@ public partial class LogViewerView : UserControl
 
     protected override async void OnKeyDown(KeyEventArgs e)
     {
-        base.OnKeyDown(e);
+        base.OnKeyDown(e: e);
 
-        if (e.Key == Key.C && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        if (e.Key == Key.C && e.KeyModifiers.HasFlag(flag: KeyModifiers.Control))
         {
             IList? selectedItems = LogList.SelectedItems;
 
@@ -77,17 +77,17 @@ public partial class LogViewerView : UserControl
                     continue;
 
                 sb.AppendLine(
-                    $"{entry.Time:HH:mm:ss.fff}\t{entry.Level}\t{entry.Type}\t{entry.Message}"
+                    handler: $"{entry.Time:HH:mm:ss.fff}\t{entry.Level}\t{entry.Type}\t{entry.Message}"
                 );
             }
 
             if (sb.Length > 0)
             {
-                TopLevel? topLevel = TopLevel.GetTopLevel(this);
+                TopLevel? topLevel = TopLevel.GetTopLevel(visual: this);
 
                 if (topLevel?.Clipboard is not null)
                 {
-                    await topLevel.Clipboard.SetValueAsync(DataFormat.Text, sb.ToString());
+                    await topLevel.Clipboard.SetValueAsync(format: DataFormat.Text, value: sb.ToString());
                     e.Handled = true;
                 }
             }

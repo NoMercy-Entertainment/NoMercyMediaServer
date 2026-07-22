@@ -51,9 +51,9 @@ public class PlaylistGeneratorSubtitleVariantTests
     // ── Variant display names ────────────────────────────────────────────────
 
     [Theory]
-    [InlineData("sign", "Signs & Songs")]
-    [InlineData("sdh", "SDH")]
-    [InlineData("alt", "Alt")]
+    [InlineData(data: ["sign", "Signs & Songs"])]
+    [InlineData(data: ["sdh", "SDH"])]
+    [InlineData(data: ["alt", "Alt"])]
     public void Master_playlist_subtitle_name_carries_variant_suffix(
         string variant,
         string expectedSuffix
@@ -62,29 +62,31 @@ public class PlaylistGeneratorSubtitleVariantTests
         // Picker shows "English (SDH)" — without the suffix users can't
         // distinguish multiple tracks of the same language.
         string playlist = Generate(
-            Plan([
+            plan: Plan(subs:
+            [
                 SubtitleEntry(language: "eng", variant: variant, codec: SubtitleCodecType.WebVtt),
             ])
         );
 
-        playlist.Should().Contain($"({expectedSuffix})");
+        playlist.Should().Contain(expected: $"({expectedSuffix})");
     }
 
     [Theory]
-    [InlineData("SIGN")]
-    [InlineData("Sign")]
-    [InlineData("sIgN")]
+    [InlineData(data: "SIGN")]
+    [InlineData(data: "Sign")]
+    [InlineData(data: "sIgN")]
     public void Master_playlist_subtitle_name_variant_match_is_case_insensitive(string variant)
     {
         // The variant switch uses ToLowerInvariant — any casing of "sign"
         // must map to the Signs & Songs label.
         string playlist = Generate(
-            Plan([
+            plan: Plan(subs:
+            [
                 SubtitleEntry(language: "eng", variant: variant, codec: SubtitleCodecType.WebVtt),
             ])
         );
 
-        playlist.Should().Contain("(Signs & Songs)");
+        playlist.Should().Contain(expected: "(Signs & Songs)");
     }
 
     [Fact]
@@ -93,7 +95,8 @@ public class PlaylistGeneratorSubtitleVariantTests
         // Unknown variants (e.g. "commentary") fall through to the default
         // arm and emit just the English language name with no suffix.
         string playlist = Generate(
-            Plan([
+            plan: Plan(subs:
+            [
                 SubtitleEntry(
                     language: "eng",
                     variant: "commentary",
@@ -102,8 +105,8 @@ public class PlaylistGeneratorSubtitleVariantTests
             ])
         );
 
-        playlist.Should().NotContain("(Commentary)");
-        playlist.Should().NotContain("(commentary)");
+        playlist.Should().NotContain(unexpected: "(Commentary)");
+        playlist.Should().NotContain(unexpected: "(commentary)");
     }
 
     [Fact]
@@ -111,12 +114,12 @@ public class PlaylistGeneratorSubtitleVariantTests
     {
         // Default variant "full" should also emit just the language name.
         string playlist = Generate(
-            Plan([SubtitleEntry(language: "eng", variant: "full", codec: SubtitleCodecType.WebVtt)])
+            plan: Plan(subs: [SubtitleEntry(language: "eng", variant: "full", codec: SubtitleCodecType.WebVtt)])
         );
 
         // The bare English name appears as the NAME attribute, not "English (Full)".
-        playlist.Should().NotContain("(Full)");
-        playlist.Should().NotContain("(full)");
+        playlist.Should().NotContain(unexpected: "(Full)");
+        playlist.Should().NotContain(unexpected: "(full)");
     }
 
     // ── FORCED attribute ─────────────────────────────────────────────────────
@@ -126,18 +129,19 @@ public class PlaylistGeneratorSubtitleVariantTests
     {
         // Signs & Songs auto-plays alongside foreign-language scenes.
         string playlist = Generate(
-            Plan([
+            plan: Plan(subs:
+            [
                 SubtitleEntry(language: "eng", variant: "full", codec: SubtitleCodecType.WebVtt),
                 SubtitleEntry(language: "eng", variant: "sign", codec: SubtitleCodecType.WebVtt),
             ])
         );
 
         // Two EXT-X-MEDIA lines — one FORCED=NO, one FORCED=YES.
-        int forcedNoCount = CountOccurrences(playlist, "FORCED=NO");
-        int forcedYesCount = CountOccurrences(playlist, "FORCED=YES");
+        int forcedNoCount = CountOccurrences(haystack: playlist, needle: "FORCED=NO");
+        int forcedYesCount = CountOccurrences(haystack: playlist, needle: "FORCED=YES");
 
-        forcedNoCount.Should().Be(1);
-        forcedYesCount.Should().Be(1);
+        forcedNoCount.Should().Be(expected: 1);
+        forcedYesCount.Should().Be(expected: 1);
     }
 
     [Fact]
@@ -146,11 +150,11 @@ public class PlaylistGeneratorSubtitleVariantTests
         // SDH is hearing-accessibility, not foreign-scene — it's a user
         // preference, not auto-selected.
         string playlist = Generate(
-            Plan([SubtitleEntry(language: "eng", variant: "sdh", codec: SubtitleCodecType.WebVtt)])
+            plan: Plan(subs: [SubtitleEntry(language: "eng", variant: "sdh", codec: SubtitleCodecType.WebVtt)])
         );
 
-        playlist.Should().Contain("FORCED=NO");
-        playlist.Should().NotContain("FORCED=YES");
+        playlist.Should().Contain(expected: "FORCED=NO");
+        playlist.Should().NotContain(unexpected: "FORCED=YES");
     }
 
     // ── URI scheme by codec ──────────────────────────────────────────────────
@@ -164,9 +168,9 @@ public class PlaylistGeneratorSubtitleVariantTests
             codec: SubtitleCodecType.Ass
         );
 
-        string uri = PlaylistGenerator.GetSubtitlePlaylistUri(sub);
+        string uri = PlaylistGenerator.GetSubtitlePlaylistUri(sub: sub);
 
-        uri.Should().Be("subtitles/jpn/full.ass");
+        uri.Should().Be(expected: "subtitles/jpn/full.ass");
     }
 
     [Fact]
@@ -178,9 +182,9 @@ public class PlaylistGeneratorSubtitleVariantTests
             codec: SubtitleCodecType.Srt
         );
 
-        string uri = PlaylistGenerator.GetSubtitlePlaylistUri(sub);
+        string uri = PlaylistGenerator.GetSubtitlePlaylistUri(sub: sub);
 
-        uri.Should().Be("subtitles/fre/sdh.srt");
+        uri.Should().Be(expected: "subtitles/fre/sdh.srt");
     }
 
     [Fact]
@@ -194,9 +198,9 @@ public class PlaylistGeneratorSubtitleVariantTests
             codec: SubtitleCodecType.WebVtt
         );
 
-        string uri = PlaylistGenerator.GetSubtitlePlaylistUri(sub);
+        string uri = PlaylistGenerator.GetSubtitlePlaylistUri(sub: sub);
 
-        uri.Should().Be("subtitles/eng/full.m3u8");
+        uri.Should().Be(expected: "subtitles/eng/full.m3u8");
     }
 
     [Fact]
@@ -208,9 +212,9 @@ public class PlaylistGeneratorSubtitleVariantTests
             codec: SubtitleCodecType.Srt
         );
 
-        string uri = PlaylistGenerator.GetSubtitlePlaylistUri(sub);
+        string uri = PlaylistGenerator.GetSubtitlePlaylistUri(sub: sub);
 
-        uri.Should().Be("subtitles/und/full.srt");
+        uri.Should().Be(expected: "subtitles/und/full.srt");
     }
 
     [Fact]
@@ -222,9 +226,9 @@ public class PlaylistGeneratorSubtitleVariantTests
             codec: SubtitleCodecType.WebVtt
         );
 
-        string uri = PlaylistGenerator.GetSubtitlePlaylistUri(sub);
+        string uri = PlaylistGenerator.GetSubtitlePlaylistUri(sub: sub);
 
-        uri.Should().Be("subtitles/eng/full.m3u8");
+        uri.Should().Be(expected: "subtitles/eng/full.m3u8");
     }
 
     // ── Action filter (Extract appears in master, Drop excluded) ─────────────
@@ -235,7 +239,8 @@ public class PlaylistGeneratorSubtitleVariantTests
         // Extract is the most common path (PGS bitmap subtitles → WebVTT).
         // Must surface in the master playlist alongside Copy entries.
         string playlist = Generate(
-            Plan([
+            plan: Plan(subs:
+            [
                 SubtitleEntry(
                     language: "eng",
                     variant: "full",
@@ -245,8 +250,8 @@ public class PlaylistGeneratorSubtitleVariantTests
             ])
         );
 
-        playlist.Should().Contain("TYPE=SUBTITLES");
-        playlist.Should().Contain("LANGUAGE=\"eng\"");
+        playlist.Should().Contain(expected: "TYPE=SUBTITLES");
+        playlist.Should().Contain(expected: "LANGUAGE=\"eng\"");
     }
 
     [Fact]
@@ -255,7 +260,8 @@ public class PlaylistGeneratorSubtitleVariantTests
         // Transcode is the planner saying "burn-in" or similar — not an
         // independent track for the picker.
         string playlist = Generate(
-            Plan([
+            plan: Plan(subs:
+            [
                 SubtitleEntry(
                     language: "eng",
                     variant: "full",
@@ -265,7 +271,7 @@ public class PlaylistGeneratorSubtitleVariantTests
             ])
         );
 
-        playlist.Should().NotContain("TYPE=SUBTITLES");
+        playlist.Should().NotContain(unexpected: "TYPE=SUBTITLES");
     }
 
     [Fact]
@@ -274,11 +280,11 @@ public class PlaylistGeneratorSubtitleVariantTests
         // The video variant line must signal SUBTITLES="subs" so clients
         // know to pick up the subtitle group.
         string playlist = Generate(
-            Plan([SubtitleEntry(language: "eng", variant: "full", codec: SubtitleCodecType.WebVtt)])
+            plan: Plan(subs: [SubtitleEntry(language: "eng", variant: "full", codec: SubtitleCodecType.WebVtt)])
         );
 
-        playlist.Should().Contain("SUBTITLES=\"subs\"");
-        playlist.Should().NotContain("CLOSED-CAPTIONS=NONE");
+        playlist.Should().Contain(expected: "SUBTITLES=\"subs\"");
+        playlist.Should().NotContain(unexpected: "CLOSED-CAPTIONS=NONE");
     }
 
     [Fact]
@@ -286,9 +292,9 @@ public class PlaylistGeneratorSubtitleVariantTests
     {
         // No active subtitles → stream-inf must explicitly state CLOSED-CAPTIONS=NONE
         // so hls.js doesn't try to extract CEA-608/708 from the H.264 stream.
-        string playlist = Generate(Plan(Array.Empty<SubtitleOutputPlan>()));
+        string playlist = Generate(plan: Plan(subs: Array.Empty<SubtitleOutputPlan>()));
 
-        playlist.Should().Contain("CLOSED-CAPTIONS=NONE");
+        playlist.Should().Contain(expected: "CLOSED-CAPTIONS=NONE");
     }
 
     [Fact]
@@ -300,13 +306,14 @@ public class PlaylistGeneratorSubtitleVariantTests
         // must skip the EXT-X-MEDIA subtitle entry — referencing a missing
         // m3u8 would 404 on every spec-compliant client.
         string playlist = Generate(
-            PlanWithoutChunks([
+            plan: PlanWithoutChunks(subs:
+            [
                 SubtitleEntry(language: "eng", variant: "full", codec: SubtitleCodecType.WebVtt),
             ])
         );
 
-        playlist.Should().NotContain("TYPE=SUBTITLES");
-        playlist.Should().Contain("CLOSED-CAPTIONS=NONE");
+        playlist.Should().NotContain(unexpected: "TYPE=SUBTITLES");
+        playlist.Should().Contain(expected: "CLOSED-CAPTIONS=NONE");
     }
 
     [Fact]
@@ -316,13 +323,14 @@ public class PlaylistGeneratorSubtitleVariantTests
         // the file URI and don't need a media playlist. They stay in the
         // master even when WebVTT chunking is off.
         string playlist = Generate(
-            PlanWithoutChunks([
+            plan: PlanWithoutChunks(subs:
+            [
                 SubtitleEntry(language: "jpn", variant: "full", codec: SubtitleCodecType.Ass),
             ])
         );
 
-        playlist.Should().Contain("TYPE=SUBTITLES");
-        playlist.Should().Contain("subtitles/jpn/full.ass");
+        playlist.Should().Contain(expected: "TYPE=SUBTITLES");
+        playlist.Should().Contain(expected: "subtitles/jpn/full.ass");
     }
 
     // ── ASS sidecar media playlist ───────────────────────────────────────────
@@ -337,18 +345,18 @@ public class PlaylistGeneratorSubtitleVariantTests
         );
 
         string playlist = PlaylistGenerator.GenerateAssMediaPlaylist(
-            sub,
-            "subs.jpn.full.ass",
+            sub: sub,
+            assFileName: "subs.jpn.full.ass",
             segmentDurationSeconds: 6
         );
 
-        playlist.Should().Contain("#EXTM3U");
-        playlist.Should().Contain("#EXT-X-VERSION:3");
-        playlist.Should().Contain("#EXT-X-TARGETDURATION:6");
-        playlist.Should().Contain("#EXT-X-PLAYLIST-TYPE:VOD");
-        playlist.Should().Contain("#EXTINF:6.000,");
-        playlist.Should().Contain("subs.jpn.full.ass");
-        playlist.Should().EndWith("#EXT-X-ENDLIST" + Environment.NewLine);
+        playlist.Should().Contain(expected: "#EXTM3U");
+        playlist.Should().Contain(expected: "#EXT-X-VERSION:3");
+        playlist.Should().Contain(expected: "#EXT-X-TARGETDURATION:6");
+        playlist.Should().Contain(expected: "#EXT-X-PLAYLIST-TYPE:VOD");
+        playlist.Should().Contain(expected: "#EXTINF:6.000,");
+        playlist.Should().Contain(expected: "subs.jpn.full.ass");
+        playlist.Should().EndWith(expected: "#EXT-X-ENDLIST" + Environment.NewLine);
     }
 
     // ── WebVTT segment media playlist ────────────────────────────────────────
@@ -367,42 +375,42 @@ public class PlaylistGeneratorSubtitleVariantTests
                 Index: 0,
                 Content: "WEBVTT\n",
                 StartTime: TimeSpan.Zero,
-                EndTime: TimeSpan.FromSeconds(6)
+                EndTime: TimeSpan.FromSeconds(seconds: 6)
             ),
             new(
                 Index: 1,
                 Content: "WEBVTT\n",
-                StartTime: TimeSpan.FromSeconds(6),
-                EndTime: TimeSpan.FromSeconds(12)
+                StartTime: TimeSpan.FromSeconds(seconds: 6),
+                EndTime: TimeSpan.FromSeconds(seconds: 12)
             ),
             new(
                 Index: 2,
                 Content: "WEBVTT\n",
-                StartTime: TimeSpan.FromSeconds(12),
-                EndTime: TimeSpan.FromSeconds(14.5)
+                StartTime: TimeSpan.FromSeconds(seconds: 12),
+                EndTime: TimeSpan.FromSeconds(value: 14.5)
             ),
         ];
 
         string playlist = PlaylistGenerator.GenerateSubtitleMediaPlaylist(
-            sub,
-            segments,
+            sub: sub,
+            segments: segments,
             segmentDurationSeconds: 6
         );
 
-        playlist.Should().Contain("#EXTM3U");
-        playlist.Should().Contain("#EXT-X-VERSION:3");
-        playlist.Should().Contain("#EXT-X-TARGETDURATION:6");
-        playlist.Should().Contain("#EXT-X-PLAYLIST-TYPE:VOD");
+        playlist.Should().Contain(expected: "#EXTM3U");
+        playlist.Should().Contain(expected: "#EXT-X-VERSION:3");
+        playlist.Should().Contain(expected: "#EXT-X-TARGETDURATION:6");
+        playlist.Should().Contain(expected: "#EXT-X-PLAYLIST-TYPE:VOD");
 
         // Each segment line: EXTINF + uri. 3 segments → 3 EXTINFs.
-        CountOccurrences(playlist, "#EXTINF:").Should().Be(3);
-        playlist.Should().Contain("#EXTINF:6.000,");
-        playlist.Should().Contain("#EXTINF:2.500,"); // partial last segment
+        CountOccurrences(haystack: playlist, needle: "#EXTINF:").Should().Be(expected: 3);
+        playlist.Should().Contain(expected: "#EXTINF:6.000,");
+        playlist.Should().Contain(expected: "#EXTINF:2.500,"); // partial last segment
         // Playlist lives in subtitles/eng/ — segment URIs are relative to it.
-        playlist.Should().Contain("full_00000.vtt");
-        playlist.Should().Contain("full_00001.vtt");
-        playlist.Should().Contain("full_00002.vtt");
-        playlist.Should().EndWith("#EXT-X-ENDLIST" + Environment.NewLine);
+        playlist.Should().Contain(expected: "full_00000.vtt");
+        playlist.Should().Contain(expected: "full_00001.vtt");
+        playlist.Should().Contain(expected: "full_00002.vtt");
+        playlist.Should().EndWith(expected: "#EXT-X-ENDLIST" + Environment.NewLine);
     }
 
     [Fact]
@@ -419,24 +427,24 @@ public class PlaylistGeneratorSubtitleVariantTests
                 Index: 0,
                 Content: "WEBVTT\n",
                 StartTime: TimeSpan.Zero,
-                EndTime: TimeSpan.FromSeconds(6)
+                EndTime: TimeSpan.FromSeconds(seconds: 6)
             ),
         ];
 
         string playlist = PlaylistGenerator.GenerateSubtitleMediaPlaylist(
-            sub,
-            segments,
+            sub: sub,
+            segments: segments,
             segmentDurationSeconds: 6,
             segmentUriPrefix: "subtitles"
         );
 
-        playlist.Should().Contain("subtitles/sdh_00000.vtt");
+        playlist.Should().Contain(expected: "subtitles/sdh_00000.vtt");
     }
 
     [Theory]
-    [InlineData("de-DE")]
-    [InlineData("nl-NL")]
-    [InlineData("fr-FR")]
+    [InlineData(data: "de-DE")]
+    [InlineData(data: "nl-NL")]
+    [InlineData(data: "fr-FR")]
     public void GenerateSubtitleMediaPlaylist_extinf_duration_uses_invariant_decimal(string culture)
     {
         // HLS spec requires a period as decimal separator. On comma-decimal
@@ -454,22 +462,22 @@ public class PlaylistGeneratorSubtitleVariantTests
                 Index: 0,
                 Content: "WEBVTT\n",
                 StartTime: TimeSpan.Zero,
-                EndTime: TimeSpan.FromMilliseconds(6_125)
+                EndTime: TimeSpan.FromMilliseconds(milliseconds: 6_125)
             ),
         ];
 
         System.Globalization.CultureInfo previous = Thread.CurrentThread.CurrentCulture;
         try
         {
-            Thread.CurrentThread.CurrentCulture = new(culture);
+            Thread.CurrentThread.CurrentCulture = new(name: culture);
 
             string playlist = PlaylistGenerator.GenerateSubtitleMediaPlaylist(
-                sub,
-                segments,
+                sub: sub,
+                segments: segments,
                 segmentDurationSeconds: 6
             );
 
-            playlist.Should().Contain("#EXTINF:6.125,").And.NotContain("#EXTINF:6,125");
+            playlist.Should().Contain(expected: "#EXTINF:6.125,").And.NotContain(unexpected: "#EXTINF:6,125");
         }
         finally
         {
@@ -491,17 +499,17 @@ public class PlaylistGeneratorSubtitleVariantTests
                 Index: 0,
                 Content: "WEBVTT\n",
                 StartTime: TimeSpan.Zero,
-                EndTime: TimeSpan.FromSeconds(6)
+                EndTime: TimeSpan.FromSeconds(seconds: 6)
             ),
         ];
 
         string playlist = PlaylistGenerator.GenerateSubtitleMediaPlaylist(
-            sub,
-            segments,
+            sub: sub,
+            segments: segments,
             segmentDurationSeconds: 6
         );
 
-        playlist.Should().Contain("full_00000.vtt");
+        playlist.Should().Contain(expected: "full_00000.vtt");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -543,16 +551,16 @@ public class PlaylistGeneratorSubtitleVariantTests
     private static string Generate(OutputPlan plan)
     {
         Dictionary<string, VariantMetrics> videoMetrics = plan.VideoOutputs.ToDictionary(
-            PlaylistGenerator.VideoVariantKey,
-            _ => new VariantMetrics(5_000_000, 4_500_000)
+            keySelector: PlaylistGenerator.VideoVariantKey,
+            elementSelector: _ => new VariantMetrics(PeakBandwidth: 5_000_000, AverageBandwidth: 4_500_000)
         );
         Dictionary<string, VariantMetrics> audioMetrics = plan.AudioOutputs.ToDictionary(
-            PlaylistGenerator.AudioVariantKey,
-            _ => new VariantMetrics(192_000, 180_000)
+            keySelector: PlaylistGenerator.AudioVariantKey,
+            elementSelector: _ => new VariantMetrics(PeakBandwidth: 192_000, AverageBandwidth: 180_000)
         );
 
         PlaylistGenerator generator = new();
-        return generator.GenerateMasterPlaylist(plan, MediaTitle, videoMetrics, audioMetrics);
+        return generator.GenerateMasterPlaylist(plan: plan, mediaTitle: MediaTitle, videoMetrics: videoMetrics, audioMetrics: audioMetrics);
     }
 
     private static VideoOutputPlan Video() =>
@@ -586,7 +594,7 @@ public class PlaylistGeneratorSubtitleVariantTests
     {
         int count = 0;
         int index = 0;
-        while ((index = haystack.IndexOf(needle, index, StringComparison.Ordinal)) != -1)
+        while ((index = haystack.IndexOf(value: needle, startIndex: index, comparisonType: StringComparison.Ordinal)) != -1)
         {
             count++;
             index += needle.Length;

@@ -78,7 +78,7 @@ public class BuildingBlockReplacementTests
         ) => StubCommand();
 
         public Task<int> WriteFontManifestAsync(string outputDirectory, CancellationToken ct) =>
-            Task.FromResult(0);
+            Task.FromResult(result: 0);
 
         public int CountFontAttachments(IReadOnlyList<AttachmentInfo> attachments) => 0;
 
@@ -97,7 +97,7 @@ public class BuildingBlockReplacementTests
         ) => StubCommand();
 
         public Task<int> WriteFontManifestAsync(string outputDirectory, CancellationToken ct) =>
-            Task.FromResult(0);
+            Task.FromResult(result: 0);
 
         public int CountFontAttachments(IReadOnlyList<AttachmentInfo> attachments) => 0;
 

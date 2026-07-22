@@ -21,79 +21,79 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record CollectionResponseItemDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public long Id { get; set; }
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty("overview")]
+    [JsonProperty(propertyName: "overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty("backdrop")]
+    [JsonProperty(propertyName: "backdrop")]
     public string? Backdrop { get; set; }
 
-    [JsonProperty("poster")]
+    [JsonProperty(propertyName: "poster")]
     public string? Poster { get; set; }
 
-    [JsonProperty("titleSort")]
+    [JsonProperty(propertyName: "titleSort")]
     public string? TitleSort { get; set; }
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty("media_type")]
+    [JsonProperty(propertyName: "media_type")]
     public string MediaType { get; set; } = string.Empty;
 
-    [JsonProperty("duration")]
+    [JsonProperty(propertyName: "duration")]
     public int Duration { get; set; }
 
-    [JsonProperty("color_palette")]
+    [JsonProperty(propertyName: "color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty("collection")]
+    [JsonProperty(propertyName: "collection")]
     public CollectionMovieDto[] Collection { get; set; } = [];
 
-    [JsonProperty("number_of_items")]
+    [JsonProperty(propertyName: "number_of_items")]
     public int? NumberOfItems { get; set; }
 
-    [JsonProperty("have_items")]
+    [JsonProperty(propertyName: "have_items")]
     public int? HaveItems { get; set; }
 
-    [JsonProperty("favorite")]
+    [JsonProperty(propertyName: "favorite")]
     public bool Favorite { get; set; }
 
-    [JsonProperty("watched")]
+    [JsonProperty(propertyName: "watched")]
     public bool Watched { get; set; }
 
-    [JsonProperty("genres")]
+    [JsonProperty(propertyName: "genres")]
     public GenreDto[] Genres { get; set; } = [];
 
-    [JsonProperty("total_duration")]
+    [JsonProperty(propertyName: "total_duration")]
     public int TotalDuration { get; set; }
 
-    [JsonProperty("link")]
+    [JsonProperty(propertyName: "link")]
     public Uri Link { get; set; } = null!;
 
-    [JsonProperty("keywords")]
+    [JsonProperty(propertyName: "keywords")]
     public IEnumerable<string> Keywords { get; set; } = [];
 
-    [JsonProperty("cast")]
+    [JsonProperty(propertyName: "cast")]
     public PeopleDto[] Cast { get; set; } = [];
 
-    [JsonProperty("crew")]
+    [JsonProperty(propertyName: "crew")]
     public PeopleDto[] Crew { get; set; } = [];
 
-    [JsonProperty("backdrops")]
+    [JsonProperty(propertyName: "backdrops")]
     public ImageDto[] Backdrops { get; set; } = [];
 
-    [JsonProperty("posters")]
+    [JsonProperty(propertyName: "posters")]
     public ImageDto[] Posters { get; set; } = [];
 
-    [JsonProperty("content_ratings")]
+    [JsonProperty(propertyName: "content_ratings")]
     public ContentRating[] ContentRatings { get; set; } = [];
 
-    [JsonProperty("vote_average")]
+    [JsonProperty(propertyName: "vote_average")]
     public double VoteAverage { get; set; }
 
     public CollectionResponseItemDto(Collection? collection)
@@ -105,33 +105,33 @@ public record CollectionResponseItemDto
         string? overview = collection.Translations.FirstOrDefault()?.Overview;
 
         Id = collection.Id;
-        Title = !string.IsNullOrEmpty(title) ? title : collection.Title;
-        Overview = !string.IsNullOrEmpty(overview) ? overview : collection.Overview;
+        Title = !string.IsNullOrEmpty(value: title) ? title : collection.Title;
+        Overview = !string.IsNullOrEmpty(value: overview) ? overview : collection.Overview;
         Backdrop = collection.Backdrop;
         Poster = collection.Poster;
         TitleSort = collection.TitleSort;
 
         Type = MediaTypes.CollectionMediaType;
         MediaType = MediaTypes.CollectionMediaType;
-        Link = new($"/collection/{Id}", UriKind.Relative);
+        Link = new(uriString: $"/collection/{Id}", uriKind: UriKind.Relative);
 
         ColorPalette = collection.ColorPalette;
         NumberOfItems = collection.Parts;
-        HaveItems = collection.CollectionMovies.Count(collectionMovie =>
+        HaveItems = collection.CollectionMovies.Count(predicate: collectionMovie =>
             collectionMovie.Movie.VideoFiles.Count > 0
         );
 
-        TotalDuration = collection.CollectionMovies.Sum(item => item.Movie.Runtime * 60 ?? 0);
+        TotalDuration = collection.CollectionMovies.Sum(selector: item => item.Movie.Runtime * 60 ?? 0);
 
         Favorite = collection.CollectionUser.Count != 0;
         Watched =
-            collection.CollectionMovies.Count(collectionMovie =>
+            collection.CollectionMovies.Count(predicate: collectionMovie =>
                 collectionMovie.Movie.MovieUser.Count != 0
             ) == collection.CollectionMovies.Count;
 
         Duration = (int)
             collection
-                .CollectionMovies.Select(movie =>
+                .CollectionMovies.Select(selector: movie =>
                     movie.Movie.VideoFiles.FirstOrDefault()?.Duration?.ToSeconds()
                     ?? movie.Movie.Runtime * 60
                     ?? 0
@@ -140,30 +140,30 @@ public record CollectionResponseItemDto
 
         VoteAverage =
             collection
-                .CollectionMovies.Where(movie => movie.Movie.VoteAverage != null)
-                .Select(movie => movie.Movie.VoteAverage)
+                .CollectionMovies.Where(predicate: movie => movie.Movie.VoteAverage != null)
+                .Select(selector: movie => movie.Movie.VoteAverage)
                 .Average()
             ?? 0;
 
         Keywords = collection
-            .CollectionMovies.SelectMany(movie => movie.Movie.KeywordMovies)
-            .DistinctBy(keyword => keyword.KeywordId)
-            .Select(keywordMovie => keywordMovie.Keyword.Name)
-            .OrderBy(keyword => keyword)
+            .CollectionMovies.SelectMany(selector: movie => movie.Movie.KeywordMovies)
+            .DistinctBy(keySelector: keyword => keyword.KeywordId)
+            .Select(selector: keywordMovie => keywordMovie.Keyword.Name)
+            .OrderBy(keySelector: keyword => keyword)
             .ToArray();
 
         Genres = collection
-            .CollectionMovies.SelectMany(movie => movie.Movie.GenreMovies)
-            .DistinctBy(genreMovie => genreMovie.GenreId)
-            .Select(genreMovie => new GenreDto(genreMovie))
+            .CollectionMovies.SelectMany(selector: movie => movie.Movie.GenreMovies)
+            .DistinctBy(keySelector: genreMovie => genreMovie.GenreId)
+            .Select(selector: genreMovie => new GenreDto(genreMovie: genreMovie))
             .ToArray();
 
         ContentRatings = collection
-            .CollectionMovies.SelectMany(collectionMovie =>
+            .CollectionMovies.SelectMany(selector: collectionMovie =>
                 collectionMovie.Movie.CertificationMovies
             )
-            .DistinctBy(certification => certification.Certification.Iso31661)
-            .Select(certificationMovie => new ContentRating
+            .DistinctBy(keySelector: certification => certification.Certification.Iso31661)
+            .Select(selector: certificationMovie => new ContentRating
             {
                 Rating = certificationMovie.Certification.Rating,
                 Iso31661 = certificationMovie.Certification.Iso31661,
@@ -171,36 +171,36 @@ public record CollectionResponseItemDto
             .ToArray();
 
         Collection = collection
-            .CollectionMovies.OrderBy(movie => movie.Movie.ReleaseDate)
-            .Select(movie => new CollectionMovieDto(movie.Movie))
+            .CollectionMovies.OrderBy(keySelector: movie => movie.Movie.ReleaseDate)
+            .Select(selector: movie => new CollectionMovieDto(movie: movie.Movie))
             .ToArray();
 
         Backdrops = collection
-            .CollectionMovies.SelectMany(movie => movie.Movie.Images)
-            .Where(media => media.Type == "backdrop")
-            .Select(media => new ImageDto(media))
-            .OrderByDescending(image => image.VoteAverage)
+            .CollectionMovies.SelectMany(selector: movie => movie.Movie.Images)
+            .Where(predicate: media => media.Type == "backdrop")
+            .Select(selector: media => new ImageDto(media: media))
+            .OrderByDescending(keySelector: image => image.VoteAverage)
             .ToArray();
 
         Posters = collection
-            .CollectionMovies.SelectMany(movie => movie.Movie.Images)
-            .Where(media => media.Type == "poster")
-            .Select(media => new ImageDto(media))
-            .OrderByDescending(image => image.VoteAverage)
+            .CollectionMovies.SelectMany(selector: movie => movie.Movie.Images)
+            .Where(predicate: media => media.Type == "poster")
+            .Select(selector: media => new ImageDto(media: media))
+            .OrderByDescending(keySelector: image => image.VoteAverage)
             .ToArray();
 
         Cast = collection
-            .CollectionMovies.SelectMany(movie => movie.Movie.Cast)
-            .Select(cast => new PeopleDto(cast))
-            .OrderBy(cast => cast.Order)
-            .DistinctBy(people => people.Id)
+            .CollectionMovies.SelectMany(selector: movie => movie.Movie.Cast)
+            .Select(selector: cast => new PeopleDto(cast: cast))
+            .OrderBy(keySelector: cast => cast.Order)
+            .DistinctBy(keySelector: people => people.Id)
             .ToArray();
 
         Crew = collection
-            .CollectionMovies.SelectMany(movie => movie.Movie.Crew)
-            .Select(crew => new PeopleDto(crew))
-            .OrderBy(crew => crew.Order)
-            .DistinctBy(people => people.Id)
+            .CollectionMovies.SelectMany(selector: movie => movie.Movie.Crew)
+            .Select(selector: crew => new PeopleDto(crew: crew))
+            .OrderBy(keySelector: crew => crew.Order)
+            .DistinctBy(keySelector: people => people.Id)
             .ToArray();
     }
 
@@ -214,8 +214,8 @@ public record CollectionResponseItemDto
             ?.Data.Overview;
 
         Id = tmdbCollectionAppends.Id;
-        Title = !string.IsNullOrEmpty(title) ? title : tmdbCollectionAppends.Name;
-        Overview = !string.IsNullOrEmpty(overview) ? overview : tmdbCollectionAppends.Overview;
+        Title = !string.IsNullOrEmpty(value: title) ? title : tmdbCollectionAppends.Name;
+        Overview = !string.IsNullOrEmpty(value: overview) ? overview : tmdbCollectionAppends.Overview;
         Backdrop = tmdbCollectionAppends.BackdropPath;
         Poster = tmdbCollectionAppends.PosterPath;
         TitleSort = tmdbCollectionAppends.Name.TitleSort();
@@ -225,12 +225,12 @@ public record CollectionResponseItemDto
         NumberOfItems = tmdbCollectionAppends.Parts.Length;
         HaveItems = 0;
         Favorite = false;
-        Link = new($"/collection/{Id}", UriKind.Relative);
+        Link = new(uriString: $"/collection/{Id}", uriKind: UriKind.Relative);
 
         VoteAverage =
             tmdbCollectionAppends
-                .Parts.Where(movie => movie.VoteAverage > 0)
-                .Average(movie => (double?)movie.VoteAverage)
+                .Parts.Where(predicate: movie => movie.VoteAverage > 0)
+                .Average(selector: movie => (double?)movie.VoteAverage)
             ?? 0;
 
         Keywords = [];
@@ -240,17 +240,17 @@ public record CollectionResponseItemDto
         Crew = [];
 
         Collection = tmdbCollectionAppends
-            .Parts.OrderBy(item => item.TitleSort())
-            .Select(movie => new CollectionMovieDto(movie))
+            .Parts.OrderBy(keySelector: item => item.TitleSort())
+            .Select(selector: movie => new CollectionMovieDto(tmdbMovie: movie))
             .ToArray();
 
         Backdrops = tmdbCollectionAppends
-            .Images.Backdrops.Select(media => new ImageDto(media))
-            .OrderByDescending(image => image.VoteAverage)
+            .Images.Backdrops.Select(selector: media => new ImageDto(media: media))
+            .OrderByDescending(keySelector: image => image.VoteAverage)
             .ToArray();
         Posters = tmdbCollectionAppends
-            .Images.Posters.Select(media => new ImageDto(media))
-            .OrderByDescending(image => image.VoteAverage)
+            .Images.Posters.Select(selector: media => new ImageDto(media: media))
+            .OrderByDescending(keySelector: image => image.VoteAverage)
             .ToArray();
     }
 }

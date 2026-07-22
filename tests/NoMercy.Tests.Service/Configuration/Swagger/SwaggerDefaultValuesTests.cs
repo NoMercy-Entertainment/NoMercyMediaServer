@@ -26,21 +26,21 @@ namespace NoMercy.Tests.Service.Configuration.Swagger;
 /// <see cref="ApiParameterDescription.IsRequired"/> into the emitted parameter
 /// — losing either makes the published spec lie to API consumers/codegen.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class SwaggerDefaultValuesTests
 {
     private static ApiDescription EmptyApiDescription() =>
         new() { ActionDescriptor = new ActionDescriptor() };
 
     private static OperationFilterContext Context(ApiDescription apiDescription) =>
-        new(apiDescription, null!, null!, null!, typeof(object).GetMethods()[0]);
+        new(apiDescription: apiDescription, schemaRegistry: null!, schemaRepository: null!, document: null!, methodInfo: typeof(object).GetMethods()[0]);
 
     [Fact]
     public void Apply_ResponseContentTypeNotInSupportedFormats_IsRemoved()
     {
         ApiDescription apiDescription = EmptyApiDescription();
         apiDescription.SupportedResponseTypes.Add(
-            new()
+            item: new()
             {
                 StatusCode = 200,
                 ApiResponseFormats = [new() { MediaType = "application/json" }],
@@ -51,16 +51,16 @@ public class SwaggerDefaultValuesTests
         {
             Content = new Dictionary<string, OpenApiMediaType>
             {
-                ["application/json"] = new(),
-                ["text/plain"] = new(),
+                [key: "application/json"] = new(),
+                [key: "text/plain"] = new(),
             },
         };
-        OpenApiOperation operation = new() { Responses = new() { ["200"] = response } };
+        OpenApiOperation operation = new() { Responses = new() { [key: "200"] = response } };
 
-        new SwaggerDefaultValues().Apply(operation, Context(apiDescription));
+        new SwaggerDefaultValues().Apply(operation: operation, context: Context(apiDescription: apiDescription));
 
-        Assert.Contains("application/json", response.Content.Keys);
-        Assert.DoesNotContain("text/plain", response.Content.Keys);
+        Assert.Contains(expected: "application/json", collection: response.Content.Keys);
+        Assert.DoesNotContain(expected: "text/plain", collection: response.Content.Keys);
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class SwaggerDefaultValuesTests
     {
         ApiDescription apiDescription = EmptyApiDescription();
         apiDescription.SupportedResponseTypes.Add(
-            new()
+            item: new()
             {
                 IsDefaultResponse = true,
                 ApiResponseFormats = [new() { MediaType = "application/json" }],
@@ -79,16 +79,16 @@ public class SwaggerDefaultValuesTests
         {
             Content = new Dictionary<string, OpenApiMediaType>
             {
-                ["application/json"] = new(),
-                ["application/xml"] = new(),
+                [key: "application/json"] = new(),
+                [key: "application/xml"] = new(),
             },
         };
-        OpenApiOperation operation = new() { Responses = new() { ["default"] = response } };
+        OpenApiOperation operation = new() { Responses = new() { [key: "default"] = response } };
 
-        new SwaggerDefaultValues().Apply(operation, Context(apiDescription));
+        new SwaggerDefaultValues().Apply(operation: operation, context: Context(apiDescription: apiDescription));
 
-        Assert.Contains("application/json", response.Content.Keys);
-        Assert.DoesNotContain("application/xml", response.Content.Keys);
+        Assert.Contains(expected: "application/json", collection: response.Content.Keys);
+        Assert.DoesNotContain(expected: "application/xml", collection: response.Content.Keys);
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public class SwaggerDefaultValuesTests
     {
         ApiDescription apiDescription = EmptyApiDescription();
         apiDescription.SupportedResponseTypes.Add(
-            new()
+            item: new()
             {
                 StatusCode = 404,
                 ApiResponseFormats = [new() { MediaType = "application/json" }],
@@ -104,11 +104,11 @@ public class SwaggerDefaultValuesTests
         );
         OpenApiOperation operation = new() { Responses = new() };
 
-        Exception? thrown = Record.Exception(() =>
-            new SwaggerDefaultValues().Apply(operation, Context(apiDescription))
+        Exception? thrown = Record.Exception(testCode: () =>
+            new SwaggerDefaultValues().Apply(operation: operation, context: Context(apiDescription: apiDescription))
         );
 
-        Assert.Null(thrown);
+        Assert.Null(@object: thrown);
     }
 
     [Fact]
@@ -117,11 +117,11 @@ public class SwaggerDefaultValuesTests
         ApiDescription apiDescription = EmptyApiDescription();
         OpenApiOperation operation = new() { Parameters = null };
 
-        Exception? thrown = Record.Exception(() =>
-            new SwaggerDefaultValues().Apply(operation, Context(apiDescription))
+        Exception? thrown = Record.Exception(testCode: () =>
+            new SwaggerDefaultValues().Apply(operation: operation, context: Context(apiDescription: apiDescription))
         );
 
-        Assert.Null(thrown);
+        Assert.Null(@object: thrown);
     }
 
     [Fact]
@@ -129,7 +129,7 @@ public class SwaggerDefaultValuesTests
     {
         ApiDescription apiDescription = EmptyApiDescription();
         apiDescription.ParameterDescriptions.Add(
-            new()
+            item: new()
             {
                 Name = "libraryId",
                 IsRequired = true,
@@ -147,9 +147,9 @@ public class SwaggerDefaultValuesTests
         };
         OpenApiOperation operation = new() { Parameters = [parameter] };
 
-        new SwaggerDefaultValues().Apply(operation, Context(apiDescription));
+        new SwaggerDefaultValues().Apply(operation: operation, context: Context(apiDescription: apiDescription));
 
-        Assert.True(parameter.Required);
+        Assert.True(condition: parameter.Required);
     }
 
     [Fact]
@@ -164,8 +164,8 @@ public class SwaggerDefaultValuesTests
         };
         OpenApiOperation operation = new() { Parameters = [parameter] };
 
-        new SwaggerDefaultValues().Apply(operation, Context(apiDescription));
+        new SwaggerDefaultValues().Apply(operation: operation, context: Context(apiDescription: apiDescription));
 
-        Assert.False(parameter.Required);
+        Assert.False(condition: parameter.Required);
     }
 }

@@ -174,17 +174,17 @@ public class ServerControlViewModel : INotifyPropertyChanged
     {
         _serverConnection = serverConnection;
         _processLauncher = processLauncher;
-        _installerUpdater = new(serverConnection);
+        _installerUpdater = new(serverConnection: serverConnection);
     }
 
     public async Task RefreshStatusAsync(CancellationToken cancellationToken = default)
     {
         if (!_serverConnection.IsConnected)
-            await _serverConnection.ConnectAsync(cancellationToken);
+            await _serverConnection.ConnectAsync(cancellationToken: cancellationToken);
 
         ServerStatusResponse? status = await _serverConnection.GetAsync<ServerStatusResponse>(
-            "/manage/status",
-            cancellationToken
+            path: "/manage/status",
+            cancellationToken: cancellationToken
         );
 
         if (status is null)
@@ -207,15 +207,15 @@ public class ServerControlViewModel : INotifyPropertyChanged
             _ => status.Status,
         };
 
-        ServerName = string.IsNullOrEmpty(status.ServerName) ? "--" : status.ServerName;
+        ServerName = string.IsNullOrEmpty(value: status.ServerName) ? "--" : status.ServerName;
 
-        Version = string.IsNullOrEmpty(status.Version) ? "--" : status.Version;
+        Version = string.IsNullOrEmpty(value: status.Version) ? "--" : status.Version;
 
-        Platform = string.IsNullOrEmpty(status.Platform)
+        Platform = string.IsNullOrEmpty(value: status.Platform)
             ? "--"
             : $"{status.Platform} ({status.Architecture})";
 
-        Uptime = TrayIconManager.FormatUptime(status.UptimeSeconds);
+        Uptime = TrayIconManager.FormatUptime(totalSeconds: status.UptimeSeconds);
 
         IsServerRunning = status.Status == "running";
         IsServerStopped = false;
@@ -243,11 +243,11 @@ public class ServerControlViewModel : INotifyPropertyChanged
 
         try
         {
-            bool success = await _serverConnection.PostAsync("/manage/stop");
+            bool success = await _serverConnection.PostAsync(path: "/manage/stop");
 
             ActionStatus = success ? "Stop command sent" : "Failed to send stop command";
 
-            await Task.Delay(1000);
+            await Task.Delay(millisecondsDelay: 1000);
             await RefreshStatusAsync();
         }
         finally
@@ -266,7 +266,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
 
         try
         {
-            bool stopSent = await _serverConnection.PostAsync("/manage/stop");
+            bool stopSent = await _serverConnection.PostAsync(path: "/manage/stop");
             if (!stopSent)
             {
                 ActionStatus = "Failed to send stop command";
@@ -274,19 +274,19 @@ public class ServerControlViewModel : INotifyPropertyChanged
             }
 
             ActionStatus = "Waiting for server to exit...";
-            bool exited = await _processLauncher.WaitForServerExitAsync(TimeSpan.FromSeconds(30));
+            bool exited = await _processLauncher.WaitForServerExitAsync(timeout: TimeSpan.FromSeconds(seconds: 30));
             if (!exited)
             {
                 ActionStatus = "Server did not stop gracefully — force killing...";
                 await _processLauncher.ForceKillServerAsync();
-                await Task.Delay(1000);
+                await Task.Delay(millisecondsDelay: 1000);
             }
 
             _serverConnection.IsConnected = false;
 
             ActionStatus = "Starting server...";
             string extraArgs = LauncherSettings.Load().StartupArguments;
-            bool started = await _processLauncher.StartServerAsync(extraArgs);
+            bool started = await _processLauncher.StartServerAsync(extraArguments: extraArgs);
             if (!started)
             {
                 ActionStatus = "Failed to start server";
@@ -294,7 +294,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
             }
 
             ActionStatus = "Waiting for server to come back up...";
-            await WaitForServerReadyAsync(TimeSpan.FromSeconds(30));
+            await WaitForServerReadyAsync(timeout: TimeSpan.FromSeconds(seconds: 30));
 
             ActionStatus = "Server restarted";
             await RefreshStatusAsync();
@@ -307,7 +307,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
 
     public async Task ToggleAutoStartAsync(bool enabled)
     {
-        await _serverConnection.PostAsync("/manage/autostart", new { enabled });
+        await _serverConnection.PostAsync(path: "/manage/autostart", body: new { enabled });
 
         await RefreshStatusAsync();
     }
@@ -326,30 +326,30 @@ public class ServerControlViewModel : INotifyPropertyChanged
 
         IsActionInProgress = true;
         ActionStatus = "Checking for update...";
-        LauncherLog.Info("Update started: requesting server to download update");
+        LauncherLog.Info(message: "Update started: requesting server to download update");
 
         try
         {
             (bool downloaded, string? downloadBody) = await _serverConnection.PostWithBodyAsync(
-                "/manage/update"
+                path: "/manage/update"
             );
 
-            LauncherLog.Info($"POST /manage/update => success={downloaded}, body={downloadBody}");
+            LauncherLog.Info(message: $"POST /manage/update => success={downloaded}, body={downloadBody}");
 
             if (!downloaded)
             {
-                string reason = ExtractMessage(downloadBody) ?? "Server returned an error";
-                LauncherLog.Error($"Download step failed: {reason}");
+                string reason = ExtractMessage(json: downloadBody) ?? "Server returned an error";
+                LauncherLog.Error(message: $"Download step failed: {reason}");
                 ActionStatus = $"Failed to download update: {reason}";
                 return;
             }
 
             UpdateCheckResult? result = null;
-            if (!string.IsNullOrEmpty(downloadBody))
+            if (!string.IsNullOrEmpty(value: downloadBody))
             {
                 try
                 {
-                    result = JsonConvert.DeserializeObject<UpdateCheckResult>(downloadBody);
+                    result = JsonConvert.DeserializeObject<UpdateCheckResult>(value: downloadBody);
                 }
                 catch
                 {
@@ -359,7 +359,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
 
             bool useInstaller =
                 result?.UseInstaller == true
-                && RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                && RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows)
                 && await _installerUpdater.IsInstallerDeploymentAsync();
 
             // Check for active streams/encodes before proceeding with either path
@@ -376,22 +376,22 @@ public class ServerControlViewModel : INotifyPropertyChanged
             if (activity is not null && (activity.ActiveStreams > 0 || activity.ActiveEncodes > 0))
             {
                 bool proceed = ShowActiveSessionDialog is not null
-                    ? await ShowActiveSessionDialog(activity)
+                    ? await ShowActiveSessionDialog(arg: activity)
                     : false; // no dialog registered → default to Wait
 
                 if (!proceed)
                 {
-                    LauncherLog.Info("User chose to wait — aborting update due to active sessions");
+                    LauncherLog.Info(message: "User chose to wait — aborting update due to active sessions");
                     ActionStatus = "Update deferred — active sessions in progress";
                     return;
                 }
 
-                LauncherLog.Info("User chose to interrupt — proceeding with update");
+                LauncherLog.Info(message: "User chose to interrupt — proceeding with update");
             }
 
             if (useInstaller)
             {
-                await ApplyInstallerUpdateAsync(result!.LatestVersion ?? LatestVersion);
+                await ApplyInstallerUpdateAsync(version: result!.LatestVersion ?? LatestVersion);
             }
             else
             {
@@ -400,17 +400,17 @@ public class ServerControlViewModel : INotifyPropertyChanged
         }
         catch (FileNotFoundException ex)
         {
-            LauncherLog.Error("No staged update file found", ex);
+            LauncherLog.Error(message: "No staged update file found", ex: ex);
             ActionStatus = "No staged update file found";
         }
         catch (InvalidDataException ex)
         {
-            LauncherLog.Error("Installer integrity check failed", ex);
+            LauncherLog.Error(message: "Installer integrity check failed", ex: ex);
             ActionStatus = $"Update aborted: {ex.Message}";
         }
         catch (Exception ex)
         {
-            LauncherLog.Error("Update failed", ex);
+            LauncherLog.Error(message: "Update failed", ex: ex);
             ActionStatus = $"Update failed: {ex.Message}";
         }
         finally
@@ -422,11 +422,11 @@ public class ServerControlViewModel : INotifyPropertyChanged
     // Installer path (Windows installer deployment only)
     private async Task ApplyInstallerUpdateAsync(string version)
     {
-        LauncherLog.Info($"Using installer update path for version {version}");
+        LauncherLog.Info(message: $"Using installer update path for version {version}");
 
         ActionStatus = "Downloading installer...";
 
-        Progress<double> progress = new(pct =>
+        Progress<double> progress = new(handler: pct =>
         {
             ActionStatus = $"Downloading installer... {pct:P0}";
         });
@@ -435,11 +435,11 @@ public class ServerControlViewModel : INotifyPropertyChanged
         bool autoStart = settings.AutoStart;
 
         await _installerUpdater.DoUpdateAsync(
-            version,
-            autoStart,
-            _serverConnection,
-            _processLauncher,
-            progress
+            version: version,
+            launcherAutoStart: autoStart,
+            connection: _serverConnection,
+            processLauncher: _processLauncher,
+            progress: progress
         );
 
         // DoUpdateAsync calls Environment.Exit(0) after spawning the installer,
@@ -450,62 +450,62 @@ public class ServerControlViewModel : INotifyPropertyChanged
     private async Task ApplyBinarySwapUpdateAsync()
     {
         ActionStatus = "Stopping server...";
-        LauncherLog.Info("Sending stop command");
-        bool stopSent = await _serverConnection.PostAsync("/manage/stop");
+        LauncherLog.Info(message: "Sending stop command");
+        bool stopSent = await _serverConnection.PostAsync(path: "/manage/stop");
         if (!stopSent)
         {
-            LauncherLog.Error("Failed to send stop command via IPC");
+            LauncherLog.Error(message: "Failed to send stop command via IPC");
             ActionStatus = "Failed to send stop command";
             return;
         }
 
         ActionStatus = "Waiting for server to exit...";
-        LauncherLog.Info("Waiting for server process to exit (30s timeout)");
-        bool exited = await _processLauncher.WaitForServerExitAsync(TimeSpan.FromSeconds(30));
+        LauncherLog.Info(message: "Waiting for server process to exit (30s timeout)");
+        bool exited = await _processLauncher.WaitForServerExitAsync(timeout: TimeSpan.FromSeconds(seconds: 30));
         if (!exited)
         {
-            LauncherLog.Error("Server did not exit within 30 seconds — force killing");
+            LauncherLog.Error(message: "Server did not exit within 30 seconds — force killing");
             ActionStatus = "Server did not stop gracefully — force killing...";
             await _processLauncher.ForceKillServerAsync();
-            await Task.Delay(1000);
+            await Task.Delay(millisecondsDelay: 1000);
         }
 
-        LauncherLog.Info("Server process exited");
+        LauncherLog.Info(message: "Server process exited");
         _serverConnection.IsConnected = false;
 
         ActionStatus = "Applying update...";
-        LauncherLog.Info("Applying staged update binary");
+        LauncherLog.Info(message: "Applying staged update binary");
         await _processLauncher.ApplyUpdateIfStagedAsync();
-        LauncherLog.Info("Binary replacement complete");
+        LauncherLog.Info(message: "Binary replacement complete");
 
         ActionStatus = "Starting updated server...";
         string updateExtraArgs = LauncherSettings.Load().StartupArguments;
-        LauncherLog.Info($"Starting server with args: {updateExtraArgs}");
-        bool started = await _processLauncher.StartServerAsync(updateExtraArgs);
+        LauncherLog.Info(message: $"Starting server with args: {updateExtraArgs}");
+        bool started = await _processLauncher.StartServerAsync(extraArguments: updateExtraArgs);
         if (!started)
         {
-            LauncherLog.Error("Failed to start server process after update");
+            LauncherLog.Error(message: "Failed to start server process after update");
             ActionStatus = "Failed to start server";
             return;
         }
 
         ActionStatus = "Waiting for server to come back up...";
-        LauncherLog.Info("Waiting for server to become ready (30s timeout)");
-        await WaitForServerReadyAsync(TimeSpan.FromSeconds(30));
+        LauncherLog.Info(message: "Waiting for server to become ready (30s timeout)");
+        await WaitForServerReadyAsync(timeout: TimeSpan.FromSeconds(seconds: 30));
 
-        LauncherLog.Info("Update complete");
+        LauncherLog.Info(message: "Update complete");
         ActionStatus = "Update complete";
         await RefreshStatusAsync();
     }
 
     private static string? ExtractMessage(string? json)
     {
-        if (string.IsNullOrEmpty(json))
+        if (string.IsNullOrEmpty(value: json))
             return null;
 
         try
         {
-            dynamic? obj = JsonConvert.DeserializeObject(json);
+            dynamic? obj = JsonConvert.DeserializeObject(value: json);
             return obj?.message?.ToString();
         }
         catch
@@ -527,7 +527,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
             bool launched;
 
             if (_serverConnection.IsConnected)
-                launched = await _serverConnection.PostAsync("/manage/app/start");
+                launched = await _serverConnection.PostAsync(path: "/manage/app/start");
             else
                 launched = await _processLauncher.LaunchAppAsync();
 
@@ -551,11 +551,11 @@ public class ServerControlViewModel : INotifyPropertyChanged
         try
         {
             string extraArgs = LauncherSettings.Load().StartupArguments;
-            bool started = await _processLauncher.StartServerAsync(extraArgs);
+            bool started = await _processLauncher.StartServerAsync(extraArguments: extraArgs);
 
             ActionStatus = started ? "Server process launched" : "Failed to start server";
 
-            await Task.Delay(2000);
+            await Task.Delay(millisecondsDelay: 2000);
             await RefreshStatusAsync();
         }
         finally
@@ -572,15 +572,15 @@ public class ServerControlViewModel : INotifyPropertyChanged
         CancellationToken token = _pollCts.Token;
 
         _ = Task.Run(
-            async () =>
+            function: async () =>
             {
                 while (!token.IsCancellationRequested)
                 {
-                    await RefreshStatusAsync(token);
-                    await Task.Delay(TimeSpan.FromSeconds(5), token);
+                    await RefreshStatusAsync(cancellationToken: token);
+                    await Task.Delay(delay: TimeSpan.FromSeconds(seconds: 5), cancellationToken: token);
                 }
             },
-            token
+            cancellationToken: token
         );
     }
 
@@ -593,13 +593,13 @@ public class ServerControlViewModel : INotifyPropertyChanged
 
     private async Task WaitForServerReadyAsync(TimeSpan timeout)
     {
-        using CancellationTokenSource cts = new(timeout);
+        using CancellationTokenSource cts = new(delay: timeout);
 
         while (!cts.Token.IsCancellationRequested)
         {
             try
             {
-                await _serverConnection.ConnectAsync(cts.Token);
+                await _serverConnection.ConnectAsync(cancellationToken: cts.Token);
                 if (_serverConnection.IsConnected)
                     return;
             }
@@ -614,7 +614,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
 
             try
             {
-                await Task.Delay(1000, cts.Token);
+                await Task.Delay(millisecondsDelay: 1000, cancellationToken: cts.Token);
             }
             catch (OperationCanceledException)
             {
@@ -648,6 +648,6 @@ public class ServerControlViewModel : INotifyPropertyChanged
 
     protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
-        PropertyChanged?.Invoke(this, new(propertyName));
+        PropertyChanged?.Invoke(sender: this, e: new(propertyName: propertyName));
     }
 }

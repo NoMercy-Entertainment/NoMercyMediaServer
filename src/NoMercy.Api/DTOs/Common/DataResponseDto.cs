@@ -15,6 +15,6 @@ namespace NoMercy.Api.DTOs.Common;
 
 public record DataResponseDto<T>
 {
-    [JsonProperty("data")]
+    [JsonProperty(propertyName: "data")]
     public T? Data { get; set; }
 }

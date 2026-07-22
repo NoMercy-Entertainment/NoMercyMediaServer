@@ -33,14 +33,14 @@ public class EncodeReconcilerInspectAsyncTests
         TestStorage storage = new();
 
         ExistingOutputSnapshot snapshot = await _reconciler.InspectAsync(
-            "Show/Show S01E01",
-            "preset-id",
-            storage,
-            CancellationToken.None
+            mediaRootPath: "Show/Show S01E01",
+            presetId: "preset-id",
+            destinationStorage: storage,
+            ct: CancellationToken.None
         );
 
         snapshot.BundleFiles.Should().BeEmpty();
-        snapshot.ValidOcrSidecarCount.Should().Be(0);
+        snapshot.ValidOcrSidecarCount.Should().Be(expected: 0);
         snapshot.ProfileFingerprint.Should().BeNull();
     }
 
@@ -52,34 +52,29 @@ public class EncodeReconcilerInspectAsyncTests
         TestStorage storage = new();
         const string root = "Show/Show S01E01";
         const string stem = "Show.S01E01.NoMercy";
-        storage.Seed($"{root}/web-1080p_master.m3u8", [0x01, 0x02]);
-        storage.Seed($"{root}/subtitles/{stem}.eng.full.mks", [0x01, 0x02]);
-        storage.Seed($"{root}/subtitles/{stem}.eng.full.vtt", [0x01, 0x02, 0x03]);
-        storage.Seed($"{root}/subtitles/{stem}.eng.sign.mks", [0x01, 0x02]);
-        storage.Seed($"{root}/subtitles/{stem}.eng.sign.vtt", []); // truncated — must not count
+        storage.Seed(path: $"{root}/web-1080p_master.m3u8", bytes: [0x01, 0x02]);
+        storage.Seed(path: $"{root}/subtitles/{stem}.eng.full.mks", bytes: [0x01, 0x02]);
+        storage.Seed(path: $"{root}/subtitles/{stem}.eng.full.vtt", bytes: [0x01, 0x02, 0x03]);
+        storage.Seed(path: $"{root}/subtitles/{stem}.eng.sign.mks", bytes: [0x01, 0x02]);
+        storage.Seed(path: $"{root}/subtitles/{stem}.eng.sign.vtt", bytes: []); // truncated — must not count
 
         ExistingOutputSnapshot snapshot = await _reconciler.InspectAsync(
-            root,
-            "preset-id",
-            storage,
-            CancellationToken.None
+            mediaRootPath: root,
+            presetId: "preset-id",
+            destinationStorage: storage,
+            ct: CancellationToken.None
         );
 
         snapshot
-            .BundleFiles.Select(f => f.RelativePath)
+            .BundleFiles.Select(selector: f => f.RelativePath)
             .Should()
-            .BeEquivalentTo(
-                "web-1080p_master.m3u8",
-                $"subtitles/{stem}.eng.full.mks",
-                $"subtitles/{stem}.eng.full.vtt",
-                $"subtitles/{stem}.eng.sign.mks",
-                $"subtitles/{stem}.eng.sign.vtt"
+            .BeEquivalentTo(expectation: ["web-1080p_master.m3u8", $"subtitles/{stem}.eng.full.mks", $"subtitles/{stem}.eng.full.vtt", $"subtitles/{stem}.eng.sign.mks", $"subtitles/{stem}.eng.sign.vtt"]
             );
         snapshot
             .ValidOcrSidecarCount.Should()
             .Be(
-                1,
-                "the sign track's sidecar is truncated (zero bytes) and must not count as valid"
+                expected: 1,
+                because: "the sign track's sidecar is truncated (zero bytes) and must not count as valid"
             );
     }
 
@@ -89,21 +84,21 @@ public class EncodeReconcilerInspectAsyncTests
         TestStorage storage = new();
         const string root = "Show/Show S01E01";
         MediaBlueprint blueprint = MakeBlueprint(
-            MakeEncode(presetId: "preset-id", profileFingerprint: "deadbeef")
+            encode: MakeEncode(presetId: "preset-id", profileFingerprint: "deadbeef")
         );
         storage.Seed(
-            $"{root}/{MediaBlueprintWriter.FileName}",
-            Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(blueprint))
+            path: $"{root}/{MediaBlueprintWriter.FileName}",
+            bytes: Encoding.UTF8.GetBytes(s: JsonConvert.SerializeObject(value: blueprint))
         );
 
         ExistingOutputSnapshot snapshot = await _reconciler.InspectAsync(
-            root,
-            "preset-id",
-            storage,
-            CancellationToken.None
+            mediaRootPath: root,
+            presetId: "preset-id",
+            destinationStorage: storage,
+            ct: CancellationToken.None
         );
 
-        snapshot.ProfileFingerprint.Should().Be("deadbeef");
+        snapshot.ProfileFingerprint.Should().Be(expected: "deadbeef");
     }
 
     [Fact]
@@ -114,18 +109,18 @@ public class EncodeReconcilerInspectAsyncTests
         // Blueprint carries a sibling preset's entry only — the one being
         // reconciled has never been encoded yet.
         MediaBlueprint blueprint = MakeBlueprint(
-            MakeEncode(presetId: "other-preset-id", profileFingerprint: "cafebabe")
+            encode: MakeEncode(presetId: "other-preset-id", profileFingerprint: "cafebabe")
         );
         storage.Seed(
-            $"{root}/{MediaBlueprintWriter.FileName}",
-            Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(blueprint))
+            path: $"{root}/{MediaBlueprintWriter.FileName}",
+            bytes: Encoding.UTF8.GetBytes(s: JsonConvert.SerializeObject(value: blueprint))
         );
 
         ExistingOutputSnapshot snapshot = await _reconciler.InspectAsync(
-            root,
-            "preset-id",
-            storage,
-            CancellationToken.None
+            mediaRootPath: root,
+            presetId: "preset-id",
+            destinationStorage: storage,
+            ct: CancellationToken.None
         );
 
         snapshot.ProfileFingerprint.Should().BeNull();
@@ -137,18 +132,18 @@ public class EncodeReconcilerInspectAsyncTests
         TestStorage storage = new();
         const string root = "Show/Show S01E01";
         MediaBlueprint blueprint = MakeBlueprint(
-            MakeEncode(presetId: "preset-id", profileFingerprint: null)
+            encode: MakeEncode(presetId: "preset-id", profileFingerprint: null)
         );
         storage.Seed(
-            $"{root}/{MediaBlueprintWriter.FileName}",
-            Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(blueprint))
+            path: $"{root}/{MediaBlueprintWriter.FileName}",
+            bytes: Encoding.UTF8.GetBytes(s: JsonConvert.SerializeObject(value: blueprint))
         );
 
         ExistingOutputSnapshot snapshot = await _reconciler.InspectAsync(
-            root,
-            "preset-id",
-            storage,
-            CancellationToken.None
+            mediaRootPath: root,
+            presetId: "preset-id",
+            destinationStorage: storage,
+            ct: CancellationToken.None
         );
 
         snapshot.ProfileFingerprint.Should().BeNull();

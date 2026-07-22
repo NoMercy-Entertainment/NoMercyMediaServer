@@ -20,7 +20,7 @@ namespace NoMercy.Encoder.Strategies.Audio;
 /// FLAC single-file output. Lossless archival format for music collectors.
 /// </summary>
 public class FlacStrategy(IEncoder encoder, ILogger<FlacStrategy> logger, IStorage storage)
-    : SinglePassStrategyBase(encoder, logger, storage)
+    : SinglePassStrategyBase(encoder: encoder, logger: logger, storage: storage)
 {
     public override OutputFormat Format => OutputFormat.Flac;
 }

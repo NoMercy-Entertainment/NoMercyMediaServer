@@ -28,8 +28,8 @@ namespace NoMercy.Encoder.Startup;
 /// </summary>
 public sealed class HardwareBenchmarkBackgroundService : BackgroundService
 {
-    internal static readonly TimeSpan DefaultInitialGrace = TimeSpan.FromSeconds(15);
-    internal static readonly TimeSpan DefaultBusyPollInterval = TimeSpan.FromSeconds(30);
+    internal static readonly TimeSpan DefaultInitialGrace = TimeSpan.FromSeconds(seconds: 15);
+    internal static readonly TimeSpan DefaultBusyPollInterval = TimeSpan.FromSeconds(seconds: 30);
 
     private readonly IHardwareBenchmark _benchmark;
     private readonly EncoderOptions _options;
@@ -49,14 +49,14 @@ public sealed class HardwareBenchmarkBackgroundService : BackgroundService
         IServerPhaseTracker? phaseTracker = null
     )
         : this(
-            benchmark,
-            options,
-            lifetime,
-            activityProbe,
-            logger,
-            DefaultInitialGrace,
-            DefaultBusyPollInterval,
-            phaseTracker
+            benchmark: benchmark,
+            options: options,
+            lifetime: lifetime,
+            activityProbe: activityProbe,
+            logger: logger,
+            initialGrace: DefaultInitialGrace,
+            busyPollInterval: DefaultBusyPollInterval,
+            phaseTracker: phaseTracker
         ) { }
 
     internal HardwareBenchmarkBackgroundService(
@@ -84,11 +84,11 @@ public sealed class HardwareBenchmarkBackgroundService : BackgroundService
     {
         if (!_options.AutoCalibrate)
         {
-            _logger.LogDebug("AutoCalibrate disabled — skipping benchmark");
+            _logger.LogDebug(message: "AutoCalibrate disabled — skipping benchmark");
             return;
         }
 
-        await WaitForApplicationStartedAsync(stoppingToken).ConfigureAwait(false);
+        await WaitForApplicationStartedAsync(ct: stoppingToken).ConfigureAwait(continueOnCapturedContext: false);
         if (stoppingToken.IsCancellationRequested)
             return;
 
@@ -104,8 +104,8 @@ public sealed class HardwareBenchmarkBackgroundService : BackgroundService
             try
             {
                 await _phaseTracker
-                    .WhenReachedAsync(BootStage.Binaries, stoppingToken)
-                    .ConfigureAwait(false);
+                    .WhenReachedAsync(stage: BootStage.Binaries, ct: stoppingToken)
+                    .ConfigureAwait(continueOnCapturedContext: false);
             }
             catch (OperationCanceledException)
             {
@@ -115,7 +115,7 @@ public sealed class HardwareBenchmarkBackgroundService : BackgroundService
 
         try
         {
-            await Task.Delay(_initialGrace, stoppingToken).ConfigureAwait(false);
+            await Task.Delay(delay: _initialGrace, cancellationToken: stoppingToken).ConfigureAwait(continueOnCapturedContext: false);
         }
         catch (OperationCanceledException)
         {
@@ -124,19 +124,19 @@ public sealed class HardwareBenchmarkBackgroundService : BackgroundService
 
         if (!_benchmark.NeedsRecalibration())
         {
-            _logger.LogDebug("SpeedIndex cache is fresh — skipping benchmark");
+            _logger.LogDebug(message: "SpeedIndex cache is fresh — skipping benchmark");
             return;
         }
 
         while (!stoppingToken.IsCancellationRequested && _activityProbe.IsBusy)
         {
             _logger.LogDebug(
-                "Hardware benchmark deferred — encoder busy, retry in {Seconds}s",
-                (int)_busyPollInterval.TotalSeconds
+                message: "Hardware benchmark deferred — encoder busy, retry in {Seconds}s",
+                args: (int)_busyPollInterval.TotalSeconds
             );
             try
             {
-                await Task.Delay(_busyPollInterval, stoppingToken).ConfigureAwait(false);
+                await Task.Delay(delay: _busyPollInterval, cancellationToken: stoppingToken).ConfigureAwait(continueOnCapturedContext: false);
             }
             catch (OperationCanceledException)
             {
@@ -149,22 +149,22 @@ public sealed class HardwareBenchmarkBackgroundService : BackgroundService
 
         try
         {
-            _logger.LogInformation("Starting hardware benchmark calibration");
+            _logger.LogInformation(message: "Starting hardware benchmark calibration");
             SpeedIndex result = await _benchmark
-                .CalibrateAsync(stoppingToken)
-                .ConfigureAwait(false);
+                .CalibrateAsync(ct: stoppingToken)
+                .ConfigureAwait(continueOnCapturedContext: false);
             _logger.LogInformation(
-                "Hardware benchmark finished — captured {Count} measurements",
-                result.Measurements.Count
+                message: "Hardware benchmark finished — captured {Count} measurements",
+                args: result.Measurements.Count
             );
         }
         catch (OperationCanceledException)
         {
-            _logger.LogInformation("Hardware benchmark cancelled");
+            _logger.LogInformation(message: "Hardware benchmark cancelled");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Hardware benchmark failed");
+            _logger.LogError(exception: ex, message: "Hardware benchmark failed");
         }
     }
 
@@ -173,10 +173,10 @@ public sealed class HardwareBenchmarkBackgroundService : BackgroundService
         if (_lifetime.ApplicationStarted.IsCancellationRequested)
             return;
 
-        TaskCompletionSource tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource tcs = new(creationOptions: TaskCreationOptions.RunContinuationsAsynchronously);
         await using CancellationTokenRegistration startedReg =
-            _lifetime.ApplicationStarted.Register(() => tcs.TrySetResult());
-        await using CancellationTokenRegistration cancelReg = ct.Register(() => tcs.TrySetResult());
-        await tcs.Task.ConfigureAwait(false);
+            _lifetime.ApplicationStarted.Register(callback: () => tcs.TrySetResult());
+        await using CancellationTokenRegistration cancelReg = ct.Register(callback: () => tcs.TrySetResult());
+        await tcs.Task.ConfigureAwait(continueOnCapturedContext: false);
     }
 }

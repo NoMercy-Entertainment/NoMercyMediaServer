@@ -15,42 +15,42 @@ namespace NoMercy.Plugins.Abstractions;
 
 public class PluginRepositoryEntry
 {
-    [JsonPropertyName("id")]
+    [JsonPropertyName(name: "id")]
     public required Guid Id { get; init; }
 
-    [JsonPropertyName("name")]
+    [JsonPropertyName(name: "name")]
     public required string Name { get; init; }
 
-    [JsonPropertyName("description")]
+    [JsonPropertyName(name: "description")]
     public required string Description { get; init; }
 
-    [JsonPropertyName("author")]
+    [JsonPropertyName(name: "author")]
     public string? Author { get; init; }
 
-    [JsonPropertyName("projectUrl")]
+    [JsonPropertyName(name: "projectUrl")]
     public string? ProjectUrl { get; init; }
 
-    [JsonPropertyName("versions")]
+    [JsonPropertyName(name: "versions")]
     public required List<PluginVersionEntry> Versions { get; init; }
 }
 
 public class PluginVersionEntry
 {
-    [JsonPropertyName("version")]
+    [JsonPropertyName(name: "version")]
     public required string Version { get; init; }
 
-    [JsonPropertyName("targetAbi")]
+    [JsonPropertyName(name: "targetAbi")]
     public string? TargetAbi { get; init; }
 
-    [JsonPropertyName("downloadUrl")]
+    [JsonPropertyName(name: "downloadUrl")]
     public required string DownloadUrl { get; init; }
 
-    [JsonPropertyName("checksum")]
+    [JsonPropertyName(name: "checksum")]
     public string? Checksum { get; init; }
 
-    [JsonPropertyName("changelog")]
+    [JsonPropertyName(name: "changelog")]
     public string? Changelog { get; init; }
 
-    [JsonPropertyName("timestamp")]
+    [JsonPropertyName(name: "timestamp")]
     public DateTime? Timestamp { get; init; }
 }

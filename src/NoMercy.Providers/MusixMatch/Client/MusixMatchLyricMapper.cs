@@ -40,7 +40,7 @@ public static class MusixMatchLyricMapper
             ?.Body
             ?.MusixMatchMusixMatchTrack;
         LyricLine[] mappedLines = lines
-            .Select(line => new LyricLine
+            .Select(selector: line => new LyricLine
             {
                 Text = line.Text,
                 Time = new()
@@ -53,14 +53,14 @@ public static class MusixMatchLyricMapper
             })
             .ToArray();
 
-        bool hasSynced = lines.Any(line => line.Time.Total > 0);
+        bool hasSynced = lines.Any(predicate: line => line.Time.Total > 0);
 
         return new(
-            track?.TrackName ?? string.Empty,
-            track?.ArtistName ?? string.Empty,
-            track is { TrackLength: > 0 } ? (int)track.TrackLength : null,
-            hasSynced,
-            mappedLines
+            Title: track?.TrackName ?? string.Empty,
+            Artist: track?.ArtistName ?? string.Empty,
+            DurationSeconds: track is { TrackLength: > 0 } ? (int)track.TrackLength : null,
+            HasSyncedLyrics: hasSynced,
+            Lines: mappedLines
         );
     }
 }

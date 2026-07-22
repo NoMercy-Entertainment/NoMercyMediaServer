@@ -30,28 +30,28 @@ public static class FolderRootsSeed
         IStorageDriver storageDriver
     )
     {
-        if (!storage.Exists(AppFiles.FolderRootsSeedFile))
+        if (!storage.Exists(path: AppFiles.FolderRootsSeedFile))
             return;
 
-        Logger.Setup("Adding Folder Roots", LogEventLevel.Verbose);
+        Logger.Setup(message: "Adding Folder Roots", level: LogEventLevel.Verbose);
 
         Folder[] folders =
             storage
-                .ReadAllTextAsync(AppFiles.FolderRootsSeedFile, CancellationToken.None)
+                .ReadAllTextAsync(path: AppFiles.FolderRootsSeedFile, ct: CancellationToken.None)
                 .Result.FromJson<Folder[]>()
             ?? [];
 
         try
         {
             await dbContext
-                .Folders.UpsertRange(folders)
-                .On(v => new { v.Id })
-                .WhenMatched((vs, vi) => new() { Id = vi.Id, Path = vi.Path })
+                .Folders.UpsertRange(entities: folders)
+                .On(match: v => new { v.Id })
+                .WhenMatched(updater: (vs, vi) => new() { Id = vi.Id, Path = vi.Path })
                 .RunAsync();
         }
         catch (Exception e)
         {
-            Logger.Setup(e.Message, LogEventLevel.Fatal);
+            Logger.Setup(message: e.Message, level: LogEventLevel.Fatal);
         }
 
         // Register seeded folders with the middleware so they can serve files
@@ -63,7 +63,7 @@ public static class FolderRootsSeed
         {
             try
             {
-                DynamicStaticFilesMiddleware.AddFolder(folder.Id, folder.DriverId, folder.Path);
+                DynamicStaticFilesMiddleware.AddFolder(folderId: folder.Id, driverId: folder.DriverId, subPath: folder.Path);
             }
             catch (Exception ex)
                 when (ex
@@ -74,12 +74,12 @@ public static class FolderRootsSeed
                 )
             {
                 Logger.Setup(
-                    $"[FolderRegistration] folder {folder.Id} not registered — '{folder.Path}': {ex.Message}",
-                    LogEventLevel.Warning
+                    message: $"[FolderRegistration] folder {folder.Id} not registered — '{folder.Path}': {ex.Message}",
+                    level: LogEventLevel.Warning
                 );
             }
         }
 
-        await UserCache.Current.RefreshFolderIdsAsync(dbContext);
+        await UserCache.Current.RefreshFolderIdsAsync(context: dbContext);
     }
 }

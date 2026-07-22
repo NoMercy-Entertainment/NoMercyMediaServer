@@ -25,11 +25,11 @@ public sealed class TagLibAudioMetadataWriter : IAudioMetadataWriter
     {
         ct.ThrowIfCancellationRequested();
 
-        byte[]? coverBytes = await ResolveCoverBytesAsync(metadata.CoverArt, ct);
+        byte[]? coverBytes = await ResolveCoverBytesAsync(source: metadata.CoverArt, ct: ct);
 
         ct.ThrowIfCancellationRequested();
 
-        using TagLib.File tagFile = TagLib.File.Create(filePath);
+        using TagLib.File tagFile = TagLib.File.Create(path: filePath);
         Tag tag = tagFile.Tag;
 
         tag.Title = metadata.Title;
@@ -48,7 +48,7 @@ public sealed class TagLibAudioMetadataWriter : IAudioMetadataWriter
         {
             tag.Pictures =
             [
-                new Picture(new ByteVector(coverBytes))
+                new Picture(data: new ByteVector(data: coverBytes))
                 {
                     Type = PictureType.FrontCover,
                     MimeType = "image/jpeg",
@@ -67,15 +67,15 @@ public sealed class TagLibAudioMetadataWriter : IAudioMetadataWriter
         if (source is null)
             return null;
 
-        if (source.FilePath is not null && System.IO.File.Exists(source.FilePath))
-            return await System.IO.File.ReadAllBytesAsync(source.FilePath, ct);
+        if (source.FilePath is not null && System.IO.File.Exists(path: source.FilePath))
+            return await System.IO.File.ReadAllBytesAsync(path: source.FilePath, cancellationToken: ct);
 
         if (source.Url is not null)
         {
             try
             {
                 using HttpClient httpClient = new();
-                return await httpClient.GetByteArrayAsync(source.Url, ct);
+                return await httpClient.GetByteArrayAsync(requestUri: source.Url, cancellationToken: ct);
             }
             catch
             {

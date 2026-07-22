@@ -23,82 +23,82 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record SpecialItemsDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("episode_ids")]
+    [JsonProperty(propertyName: "episode_ids")]
     public int[] EpisodeIds { get; set; }
 
-    [JsonProperty("backdrop")]
+    [JsonProperty(propertyName: "backdrop")]
     public string? Backdrop { get; set; }
 
-    [JsonProperty("favorite")]
+    [JsonProperty(propertyName: "favorite")]
     public bool Favorite { get; set; }
 
-    [JsonProperty("watched")]
+    [JsonProperty(propertyName: "watched")]
     public bool Watched { get; set; }
 
-    [JsonProperty("logo")]
+    [JsonProperty(propertyName: "logo")]
     public string? Logo { get; set; }
 
-    [JsonProperty("media_type")]
+    [JsonProperty(propertyName: "media_type")]
     public string MediaType { get; set; }
 
-    [JsonProperty("overview")]
+    [JsonProperty(propertyName: "overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty("color_palette")]
+    [JsonProperty(propertyName: "color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty("poster")]
+    [JsonProperty(propertyName: "poster")]
     public string? Poster { get; set; }
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string? Title { get; set; }
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; }
 
-    [JsonProperty("year")]
+    [JsonProperty(propertyName: "year")]
     public long Year { get; set; }
 
-    [JsonProperty("link")]
+    [JsonProperty(propertyName: "link")]
     public Uri Link { get; set; }
 
-    [JsonProperty("genres")]
+    [JsonProperty(propertyName: "genres")]
     public IEnumerable<GenreDto> Genres { get; set; }
 
-    [JsonProperty("backdrops")]
+    [JsonProperty(propertyName: "backdrops")]
     public IEnumerable<ImageDto> Backdrops { get; set; }
 
-    [JsonProperty("posters")]
+    [JsonProperty(propertyName: "posters")]
     public IEnumerable<ImageDto> Posters { get; set; }
 
-    [JsonProperty("cast")]
+    [JsonProperty(propertyName: "cast")]
     public IEnumerable<PeopleDto> Cast { get; set; }
 
-    [JsonProperty("crew")]
+    [JsonProperty(propertyName: "crew")]
     public IEnumerable<PeopleDto> Crew { get; set; }
 
-    [JsonProperty("rating")]
+    [JsonProperty(propertyName: "rating")]
     public Certification Rating { get; set; }
 
-    [JsonProperty("videoId")]
+    [JsonProperty(propertyName: "videoId")]
     public string? VideoId { get; set; }
 
-    [JsonProperty("number_of_items")]
+    [JsonProperty(propertyName: "number_of_items")]
     public int? NumberOfItems { get; set; }
 
-    [JsonProperty("have_items")]
+    [JsonProperty(propertyName: "have_items")]
     public int HaveItems { get; set; }
 
-    [JsonProperty("duration")]
+    [JsonProperty(propertyName: "duration")]
     public int Duration { get; set; }
 
-    [JsonProperty("total_duration")]
+    [JsonProperty(propertyName: "total_duration")]
     public int TotalDuration { get; set; }
 
-    [JsonProperty("vote_average")]
+    [JsonProperty(propertyName: "vote_average")]
     public double? VoteAverage { get; set; }
 
     public SpecialItemsDto(Movie movie)
@@ -110,33 +110,33 @@ public record SpecialItemsDto
 
         Backdrop = movie.Backdrop;
         // Watched = movie.Watched;
-        Logo = movie.Images.FirstOrDefault(media => media.Type == "logo")?.FilePath;
+        Logo = movie.Images.FirstOrDefault(predicate: media => media.Type == "logo")?.FilePath;
 
         Backdrops = movie
-            .Images.Where(media => media.Type == "backdrop")
-            .Take(2)
-            .Select(media => new ImageDto(media));
+            .Images.Where(predicate: media => media.Type == "backdrop")
+            .Take(count: 2)
+            .Select(selector: media => new ImageDto(media: media));
 
         Posters = movie
-            .Images.Where(media => media.Type == "poster")
-            .Take(2)
-            .Select(media => new ImageDto(media));
+            .Images.Where(predicate: media => media.Type == "poster")
+            .Take(count: 2)
+            .Select(selector: media => new ImageDto(media: media));
 
         MediaType = MediaTypes.MovieMediaType;
         ColorPalette = movie.ColorPalette;
         Poster = movie.Poster;
         Type = MediaTypes.MovieMediaType;
-        Link = new($"/movie/{Id}", UriKind.Relative);
+        Link = new(uriString: $"/movie/{Id}", uriKind: UriKind.Relative);
         Year = movie.ReleaseDate.ParseYear();
         Duration = movie.Runtime * 60 ?? 0;
 
         TotalDuration = movie.Runtime * 60 ?? 0;
 
-        Genres = movie.GenreMovies.Select(genreMovie => new GenreDto(genreMovie.Genre));
+        Genres = movie.GenreMovies.Select(selector: genreMovie => new GenreDto(genreMovie: genreMovie.Genre));
 
         Rating =
             movie
-                .CertificationMovies.Select(certificationMovie => certificationMovie.Certification)
+                .CertificationMovies.Select(selector: certificationMovie => certificationMovie.Certification)
                 .FirstOrDefault()
             ?? new Certification();
 
@@ -147,59 +147,59 @@ public record SpecialItemsDto
 
         VideoId = movie.Video;
 
-        Cast = movie.Cast.Take(15).Select(cast => new PeopleDto(cast));
+        Cast = movie.Cast.Take(count: 15).Select(selector: cast => new PeopleDto(cast: cast));
 
-        Crew = movie.Crew.Take(15).Select(crew => new PeopleDto(crew));
+        Crew = movie.Crew.Take(count: 15).Select(selector: crew => new PeopleDto(crew: crew));
     }
 
     public SpecialItemsDto(Tv tv)
     {
         Id = tv.Id;
-        EpisodeIds = tv.Episodes.Select(episode => episode.Id).ToArray();
+        EpisodeIds = tv.Episodes.Select(selector: episode => episode.Id).ToArray();
 
         Title = tv.Title;
         Overview = tv.Overview;
 
         Backdrop = tv.Backdrop;
         // Watched = tv.Watched;
-        Logo = tv.Images.FirstOrDefault(media => media.Type == "logo")?.FilePath;
+        Logo = tv.Images.FirstOrDefault(predicate: media => media.Type == "logo")?.FilePath;
 
         Backdrops = tv
-            .Images.Where(media => media.Type == "backdrop")
-            .Take(2)
-            .Select(media => new ImageDto(media));
+            .Images.Where(predicate: media => media.Type == "backdrop")
+            .Take(count: 2)
+            .Select(selector: media => new ImageDto(media: media));
 
         Posters = tv
-            .Images.Where(media => media.Type == "poster")
-            .Take(2)
-            .Select(media => new ImageDto(media));
+            .Images.Where(predicate: media => media.Type == "poster")
+            .Take(count: 2)
+            .Select(selector: media => new ImageDto(media: media));
 
         MediaType = "tv";
         ColorPalette = tv.ColorPalette;
         Poster = tv.Poster;
         Type = "tv";
-        Link = new($"/tv/{Id}", UriKind.Relative);
+        Link = new(uriString: $"/tv/{Id}", uriKind: UriKind.Relative);
         Year = tv.FirstAirDate.ParseYear();
 
         VoteAverage = tv.VoteAverage;
 
-        Genres = tv.GenreTvs.Select(genreTv => new GenreDto(genreTv.Genre));
+        Genres = tv.GenreTvs.Select(selector: genreTv => new GenreDto(genreMovie: genreTv.Genre));
 
         Rating =
-            tv.CertificationTvs.Select(certificationTv => certificationTv.Certification)
+            tv.CertificationTvs.Select(selector: certificationTv => certificationTv.Certification)
                 .FirstOrDefault()
             ?? new Certification();
 
-        NumberOfItems = tv.Episodes.Count(e => e.SeasonNumber > 0);
+        NumberOfItems = tv.Episodes.Count(predicate: e => e.SeasonNumber > 0);
         int have = tv
-            .Episodes.Where(e => e.SeasonNumber > 0)
-            .Count(episode => episode.VideoFiles.Count != 0);
+            .Episodes.Where(predicate: e => e.SeasonNumber > 0)
+            .Count(predicate: episode => episode.VideoFiles.Count != 0);
 
         HaveItems = have;
 
         Duration = tv.Duration * have * 60 ?? 0;
 
-        TotalDuration = tv.Episodes.Sum(item =>
+        TotalDuration = tv.Episodes.Sum(selector: item =>
             item.VideoFiles.FirstOrDefault()?.Duration?.ToSeconds() ?? 0
         );
 
@@ -210,9 +210,9 @@ public record SpecialItemsDto
 
         VideoId = tv.Trailer;
 
-        Cast = tv.Cast.Take(15).Select(cast => new PeopleDto(cast));
+        Cast = tv.Cast.Take(count: 15).Select(selector: cast => new PeopleDto(cast: cast));
 
-        Crew = tv.Crew.Take(15).Select(crew => new PeopleDto(crew));
+        Crew = tv.Crew.Take(count: 15).Select(selector: crew => new PeopleDto(crew: crew));
     }
 
     public SpecialItemsDto(SpecialMovieProjection movie)
@@ -224,53 +224,53 @@ public record SpecialItemsDto
         Backdrop = movie.Backdrop;
         Logo = movie.Logo;
 
-        Backdrops = movie.Backdrops.Select(i => new ImageDto
+        Backdrops = movie.Backdrops.Select(selector: i => new ImageDto
         {
             Id = i.Id,
             Src =
                 i.Site == "https://image.tmdb.org/t/p/"
-                    ? new Uri(i.FilePath!, UriKind.Relative).ToString()
-                    : new Uri($"/images/music{i.FilePath}", UriKind.Relative).ToString(),
+                    ? new Uri(uriString: i.FilePath!, uriKind: UriKind.Relative).ToString()
+                    : new Uri(uriString: $"/images/music{i.FilePath}", uriKind: UriKind.Relative).ToString(),
             Width = i.Width,
             Type = i.Type,
             Height = i.Height,
             Iso6391 = i.Iso6391,
             VoteAverage = i.VoteAverage,
             VoteCount = i.VoteCount,
-            ColorPalette = ColorPalette.FromJsonOrNull(i.ColorPalette),
+            ColorPalette = ColorPalette.FromJsonOrNull(json: i.ColorPalette),
         });
 
-        Posters = movie.Posters.Select(i => new ImageDto
+        Posters = movie.Posters.Select(selector: i => new ImageDto
         {
             Id = i.Id,
             Src =
                 i.Site == "https://image.tmdb.org/t/p/"
-                    ? new Uri(i.FilePath!, UriKind.Relative).ToString()
-                    : new Uri($"/images/music{i.FilePath}", UriKind.Relative).ToString(),
+                    ? new Uri(uriString: i.FilePath!, uriKind: UriKind.Relative).ToString()
+                    : new Uri(uriString: $"/images/music{i.FilePath}", uriKind: UriKind.Relative).ToString(),
             Width = i.Width,
             Type = i.Type,
             Height = i.Height,
             Iso6391 = i.Iso6391,
             VoteAverage = i.VoteAverage,
             VoteCount = i.VoteCount,
-            ColorPalette = ColorPalette.FromJsonOrNull(i.ColorPalette),
+            ColorPalette = ColorPalette.FromJsonOrNull(json: i.ColorPalette),
         });
 
         MediaType = MediaTypes.MovieMediaType;
-        ColorPalette = ColorPalette.FromJsonOrNull(movie.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(json: movie.ColorPalette);
         Poster = movie.Poster;
         Type = MediaTypes.MovieMediaType;
-        Link = new($"/movie/{movie.Id}", UriKind.Relative);
+        Link = new(uriString: $"/movie/{movie.Id}", uriKind: UriKind.Relative);
         Year = movie.ReleaseDate.ParseYear();
         Duration = movie.Runtime * 60 ?? 0;
         TotalDuration = movie.Runtime * 60 ?? 0;
         VoteAverage = movie.VoteAverage;
 
-        Genres = movie.Genres.Select(g => new GenreDto
+        Genres = movie.Genres.Select(selector: g => new GenreDto
         {
             Id = g.Id,
             Name = g.Name,
-            Link = new($"/genres/{g.Id}", UriKind.Relative),
+            Link = new(uriString: $"/genres/{g.Id}", uriKind: UriKind.Relative),
         });
 
         Rating = new()
@@ -283,33 +283,33 @@ public record SpecialItemsDto
         HaveItems = movie.VideoFileCount > 0 ? 1 : 0;
         VideoId = movie.Video;
 
-        Cast = movie.Cast.Select(c => new PeopleDto
+        Cast = movie.Cast.Select(selector: c => new PeopleDto
         {
             Id = c.PersonId,
             Name = c.PersonName,
             ProfilePath = c.PersonProfile,
             KnownForDepartment = c.PersonKnownForDepartment,
-            ColorPalette = ColorPalette.FromJsonOrNull(c.PersonColorPalette),
+            ColorPalette = ColorPalette.FromJsonOrNull(json: c.PersonColorPalette),
             DeathDay = c.PersonDeathDay,
             Gender = c.PersonGender,
             Character = c.Character,
             Order = c.Order,
-            Link = new($"/person/{c.PersonId}", UriKind.Relative),
+            Link = new(uriString: $"/person/{c.PersonId}", uriKind: UriKind.Relative),
             Translations = [],
         });
 
-        Crew = movie.Crew.Select(c => new PeopleDto
+        Crew = movie.Crew.Select(selector: c => new PeopleDto
         {
             Id = c.PersonId,
             Name = c.PersonName,
             ProfilePath = c.PersonProfile,
             KnownForDepartment = c.PersonKnownForDepartment,
-            ColorPalette = ColorPalette.FromJsonOrNull(c.PersonColorPalette),
+            ColorPalette = ColorPalette.FromJsonOrNull(json: c.PersonColorPalette),
             DeathDay = c.PersonDeathDay,
             Gender = c.PersonGender,
             Job = c.Task,
             Order = c.Order,
-            Link = new($"/person/{c.PersonId}", UriKind.Relative),
+            Link = new(uriString: $"/person/{c.PersonId}", uriKind: UriKind.Relative),
             Translations = [],
         });
     }
@@ -323,51 +323,51 @@ public record SpecialItemsDto
         Backdrop = tv.Backdrop;
         Logo = tv.Logo;
 
-        Backdrops = tv.Backdrops.Select(i => new ImageDto
+        Backdrops = tv.Backdrops.Select(selector: i => new ImageDto
         {
             Id = i.Id,
             Src =
                 i.Site == "https://image.tmdb.org/t/p/"
-                    ? new Uri(i.FilePath!, UriKind.Relative).ToString()
-                    : new Uri($"/images/music{i.FilePath}", UriKind.Relative).ToString(),
+                    ? new Uri(uriString: i.FilePath!, uriKind: UriKind.Relative).ToString()
+                    : new Uri(uriString: $"/images/music{i.FilePath}", uriKind: UriKind.Relative).ToString(),
             Width = i.Width,
             Type = i.Type,
             Height = i.Height,
             Iso6391 = i.Iso6391,
             VoteAverage = i.VoteAverage,
             VoteCount = i.VoteCount,
-            ColorPalette = ColorPalette.FromJsonOrNull(i.ColorPalette),
+            ColorPalette = ColorPalette.FromJsonOrNull(json: i.ColorPalette),
         });
 
-        Posters = tv.Posters.Select(i => new ImageDto
+        Posters = tv.Posters.Select(selector: i => new ImageDto
         {
             Id = i.Id,
             Src =
                 i.Site == "https://image.tmdb.org/t/p/"
-                    ? new Uri(i.FilePath!, UriKind.Relative).ToString()
-                    : new Uri($"/images/music{i.FilePath}", UriKind.Relative).ToString(),
+                    ? new Uri(uriString: i.FilePath!, uriKind: UriKind.Relative).ToString()
+                    : new Uri(uriString: $"/images/music{i.FilePath}", uriKind: UriKind.Relative).ToString(),
             Width = i.Width,
             Type = i.Type,
             Height = i.Height,
             Iso6391 = i.Iso6391,
             VoteAverage = i.VoteAverage,
             VoteCount = i.VoteCount,
-            ColorPalette = ColorPalette.FromJsonOrNull(i.ColorPalette),
+            ColorPalette = ColorPalette.FromJsonOrNull(json: i.ColorPalette),
         });
 
         MediaType = "tv";
-        ColorPalette = ColorPalette.FromJsonOrNull(tv.ColorPalette);
+        ColorPalette = ColorPalette.FromJsonOrNull(json: tv.ColorPalette);
         Poster = tv.Poster;
         Type = "tv";
-        Link = new($"/tv/{tv.Id}", UriKind.Relative);
+        Link = new(uriString: $"/tv/{tv.Id}", uriKind: UriKind.Relative);
         Year = tv.FirstAirDate.ParseYear();
         VoteAverage = tv.VoteAverage;
 
-        Genres = tv.Genres.Select(g => new GenreDto
+        Genres = tv.Genres.Select(selector: g => new GenreDto
         {
             Id = g.Id,
             Name = g.Name,
-            Link = new($"/genres/{g.Id}", UriKind.Relative),
+            Link = new(uriString: $"/genres/{g.Id}", uriKind: UriKind.Relative),
         });
 
         Rating = new()
@@ -379,36 +379,36 @@ public record SpecialItemsDto
         NumberOfItems = tv.NumberOfEpisodes;
         HaveItems = tv.HaveEpisodes;
         Duration = tv.Duration * tv.HaveEpisodes * 60 ?? 0;
-        TotalDuration = tv.EpisodeDurations.Sum(d => d?.ToSeconds() ?? 0);
+        TotalDuration = tv.EpisodeDurations.Sum(selector: d => d?.ToSeconds() ?? 0);
         VideoId = tv.Trailer;
 
-        Cast = tv.Cast.Select(c => new PeopleDto
+        Cast = tv.Cast.Select(selector: c => new PeopleDto
         {
             Id = c.PersonId,
             Name = c.PersonName,
             ProfilePath = c.PersonProfile,
             KnownForDepartment = c.PersonKnownForDepartment,
-            ColorPalette = ColorPalette.FromJsonOrNull(c.PersonColorPalette),
+            ColorPalette = ColorPalette.FromJsonOrNull(json: c.PersonColorPalette),
             DeathDay = c.PersonDeathDay,
             Gender = c.PersonGender,
             Character = c.Character,
             Order = c.Order,
-            Link = new($"/person/{c.PersonId}", UriKind.Relative),
+            Link = new(uriString: $"/person/{c.PersonId}", uriKind: UriKind.Relative),
             Translations = [],
         });
 
-        Crew = tv.Crew.Select(c => new PeopleDto
+        Crew = tv.Crew.Select(selector: c => new PeopleDto
         {
             Id = c.PersonId,
             Name = c.PersonName,
             ProfilePath = c.PersonProfile,
             KnownForDepartment = c.PersonKnownForDepartment,
-            ColorPalette = ColorPalette.FromJsonOrNull(c.PersonColorPalette),
+            ColorPalette = ColorPalette.FromJsonOrNull(json: c.PersonColorPalette),
             DeathDay = c.PersonDeathDay,
             Gender = c.PersonGender,
             Job = c.Task,
             Order = c.Order,
-            Link = new($"/person/{c.PersonId}", UriKind.Relative),
+            Link = new(uriString: $"/person/{c.PersonId}", uriKind: UriKind.Relative),
             Translations = [],
         });
     }

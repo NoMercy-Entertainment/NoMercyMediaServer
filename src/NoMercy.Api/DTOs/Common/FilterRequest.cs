@@ -15,6 +15,6 @@ namespace NoMercy.Api.DTOs.Common;
 
 public record FilterRequest
 {
-    [JsonProperty("letter")]
+    [JsonProperty(propertyName: "letter")]
     public string? Letter { get; set; } = "_";
 }

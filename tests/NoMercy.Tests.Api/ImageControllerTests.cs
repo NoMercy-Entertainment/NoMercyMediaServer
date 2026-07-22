@@ -18,12 +18,12 @@ using Xunit;
 
 namespace NoMercy.Tests.Api;
 
-[Trait("Category", "Characterization")]
+[Trait(name: "Category", value: "Characterization")]
 public class ImageControllerTests : IClassFixture<NoMercyApiFactory>, IDisposable
 {
     private readonly HttpClient _client;
     private readonly string _testTypeFolder;
-    private readonly string _testId = Guid.NewGuid().ToString("N")[..8];
+    private readonly string _testId = Guid.NewGuid().ToString(format: "N")[..8];
     private readonly string _testImageName;
     private readonly string _testSvgName;
 
@@ -35,51 +35,51 @@ public class ImageControllerTests : IClassFixture<NoMercyApiFactory>, IDisposabl
         _testImageName = $"testimage_{_testId}.png";
         _testSvgName = $"testimage_{_testId}.svg";
 
-        _testTypeFolder = Path.Join(AppFiles.ImagesPath, "testtype");
-        if (!Directory.Exists(_testTypeFolder))
-            Directory.CreateDirectory(_testTypeFolder);
+        _testTypeFolder = Path.Join(path1: AppFiles.ImagesPath, path2: "testtype");
+        if (!Directory.Exists(path: _testTypeFolder))
+            Directory.CreateDirectory(path: _testTypeFolder);
 
         // Ensure temp images directory exists
-        if (!Directory.Exists(AppFiles.TempImagesPath))
-            Directory.CreateDirectory(AppFiles.TempImagesPath);
+        if (!Directory.Exists(path: AppFiles.TempImagesPath))
+            Directory.CreateDirectory(path: AppFiles.TempImagesPath);
 
         // Create a real 200x100 PNG test image
-        using (Image<Rgba32> image = new(200, 100, new(255, 0, 0)))
+        using (Image<Rgba32> image = new(width: 200, height: 100, backgroundColor: new(r: 255, g: 0, b: 0)))
         {
-            image.SaveAsPng(Path.Join(_testTypeFolder, _testImageName));
+            image.SaveAsPng(path: Path.Join(path1: _testTypeFolder, path2: _testImageName));
         }
 
         // Create a minimal SVG test file
         File.WriteAllText(
-            Path.Join(_testTypeFolder, _testSvgName),
-            "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\"><rect fill=\"red\" width=\"100\" height=\"100\"/></svg>"
+            path: Path.Join(path1: _testTypeFolder, path2: _testSvgName),
+            contents: "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\"><rect fill=\"red\" width=\"100\" height=\"100\"/></svg>"
         );
     }
 
     public void Dispose()
     {
         // Clean up test-specific files
-        string imagePath = Path.Join(_testTypeFolder, _testImageName);
-        string svgPath = Path.Join(_testTypeFolder, _testSvgName);
+        string imagePath = Path.Join(path1: _testTypeFolder, path2: _testImageName);
+        string svgPath = Path.Join(path1: _testTypeFolder, path2: _testSvgName);
         try
         {
-            if (File.Exists(imagePath))
-                File.Delete(imagePath);
+            if (File.Exists(path: imagePath))
+                File.Delete(path: imagePath);
         }
         catch { }
         try
         {
-            if (File.Exists(svgPath))
-                File.Delete(svgPath);
+            if (File.Exists(path: svgPath))
+                File.Delete(path: svgPath);
         }
         catch { }
 
         // Clean up cached images created during tests
-        foreach (string file in Directory.GetFiles(AppFiles.TempImagesPath))
+        foreach (string file in Directory.GetFiles(path: AppFiles.TempImagesPath))
         {
             try
             {
-                File.Delete(file);
+                File.Delete(path: file);
             }
             catch
             { /* best effort */
@@ -91,17 +91,17 @@ public class ImageControllerTests : IClassFixture<NoMercyApiFactory>, IDisposabl
     public async Task Image_NoParams_ReturnsOriginalFile()
     {
         // No width, type, or quality params → emptyArguments = true → returns original
-        HttpResponseMessage response = await _client.GetAsync($"/images/testtype/{_testImageName}");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: $"/images/testtype/{_testImageName}");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
         string contentType = response.Content.Headers.ContentType!.MediaType!;
-        Assert.Equal("image/png", contentType);
+        Assert.Equal(expected: "image/png", actual: contentType);
 
         byte[] originalBytes = await File.ReadAllBytesAsync(
-            Path.Join(_testTypeFolder, _testImageName)
+            path: Path.Join(path1: _testTypeFolder, path2: _testImageName)
         );
         byte[] responseBytes = await response.Content.ReadAsByteArrayAsync();
-        Assert.Equal(originalBytes.Length, responseBytes.Length);
+        Assert.Equal(expected: originalBytes.Length, actual: responseBytes.Length);
     }
 
     [Fact]
@@ -109,17 +109,17 @@ public class ImageControllerTests : IClassFixture<NoMercyApiFactory>, IDisposabl
     {
         // Width=50 → emptyArguments = false → image processing pipeline runs
         HttpResponseMessage response = await _client.GetAsync(
-            $"/images/testtype/{_testImageName}?width=50"
+            requestUri: $"/images/testtype/{_testImageName}?width=50"
         );
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
 
         byte[] responseBytes = await response.Content.ReadAsByteArrayAsync();
-        using Image<Rgba32> resultImage = Image.Load<Rgba32>(responseBytes);
+        using Image<Rgba32> resultImage = Image.Load<Rgba32>(data: responseBytes);
 
         // Resized to width=50, aspect ratio preserved (200x100 → 50x25)
-        Assert.Equal(50, resultImage.Width);
-        Assert.Equal(25, resultImage.Height);
+        Assert.Equal(expected: 50, actual: resultImage.Width);
+        Assert.Equal(expected: 25, actual: resultImage.Height);
     }
 
     [Fact]
@@ -127,14 +127,14 @@ public class ImageControllerTests : IClassFixture<NoMercyApiFactory>, IDisposabl
     {
         // Quality=80 → emptyArguments = false → processing runs
         HttpResponseMessage response = await _client.GetAsync(
-            $"/images/testtype/{_testImageName}?quality=80"
+            requestUri: $"/images/testtype/{_testImageName}?quality=80"
         );
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
 
         byte[] responseBytes = await response.Content.ReadAsByteArrayAsync();
         // The image was processed (not the raw original) — response should be valid image data
-        Assert.True(responseBytes.Length > 0);
+        Assert.True(condition: responseBytes.Length > 0);
     }
 
     [Fact]
@@ -142,14 +142,14 @@ public class ImageControllerTests : IClassFixture<NoMercyApiFactory>, IDisposabl
     {
         // Type=png → emptyArguments = false (Type is not null) → processing runs
         HttpResponseMessage response = await _client.GetAsync(
-            $"/images/testtype/{_testImageName}?type=png&width=100"
+            requestUri: $"/images/testtype/{_testImageName}?type=png&width=100"
         );
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
 
         byte[] responseBytes = await response.Content.ReadAsByteArrayAsync();
-        using Image<Rgba32> resultImage = Image.Load<Rgba32>(responseBytes);
-        Assert.Equal(100, resultImage.Width);
+        using Image<Rgba32> resultImage = Image.Load<Rgba32>(data: responseBytes);
+        Assert.Equal(expected: 100, actual: resultImage.Width);
     }
 
     [Fact]
@@ -157,16 +157,16 @@ public class ImageControllerTests : IClassFixture<NoMercyApiFactory>, IDisposabl
     {
         // SVG files should bypass processing regardless of params
         HttpResponseMessage response = await _client.GetAsync(
-            $"/images/testtype/{_testSvgName}?width=50"
+            requestUri: $"/images/testtype/{_testSvgName}?width=50"
         );
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
 
         byte[] originalBytes = await File.ReadAllBytesAsync(
-            Path.Join(_testTypeFolder, _testSvgName)
+            path: Path.Join(path1: _testTypeFolder, path2: _testSvgName)
         );
         byte[] responseBytes = await response.Content.ReadAsByteArrayAsync();
-        Assert.Equal(originalBytes.Length, responseBytes.Length);
+        Assert.Equal(expected: originalBytes.Length, actual: responseBytes.Length);
     }
 
     [Fact]
@@ -174,37 +174,37 @@ public class ImageControllerTests : IClassFixture<NoMercyApiFactory>, IDisposabl
     {
         // First request: processes and caches
         HttpResponseMessage response1 = await _client.GetAsync(
-            $"/images/testtype/{_testImageName}?width=75"
+            requestUri: $"/images/testtype/{_testImageName}?width=75"
         );
-        Assert.Equal(HttpStatusCode.OK, response1.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response1.StatusCode);
         byte[] firstBytes = await response1.Content.ReadAsByteArrayAsync();
 
         // Second request: should serve from cache
         HttpResponseMessage response2 = await _client.GetAsync(
-            $"/images/testtype/{_testImageName}?width=75"
+            requestUri: $"/images/testtype/{_testImageName}?width=75"
         );
-        Assert.Equal(HttpStatusCode.OK, response2.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response2.StatusCode);
         byte[] secondBytes = await response2.Content.ReadAsByteArrayAsync();
 
-        Assert.Equal(firstBytes.Length, secondBytes.Length);
+        Assert.Equal(expected: firstBytes.Length, actual: secondBytes.Length);
     }
 
     [Fact]
     public async Task Image_NonExistentType_Returns404()
     {
-        HttpResponseMessage response = await _client.GetAsync("/images/nonexistent/test.png");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/images/nonexistent/test.png");
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.NotFound, actual: response.StatusCode);
     }
 
     [Fact]
     public async Task Image_NonExistentFile_Returns404()
     {
         HttpResponseMessage response = await _client.GetAsync(
-            $"/images/testtype/doesnotexist_{_testId}.png"
+            requestUri: $"/images/testtype/doesnotexist_{_testId}.png"
         );
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.NotFound, actual: response.StatusCode);
     }
 
     [Fact]
@@ -212,26 +212,26 @@ public class ImageControllerTests : IClassFixture<NoMercyApiFactory>, IDisposabl
     {
         // Explicitly set quality=100 (the default) with no width/type → emptyArguments = true
         HttpResponseMessage response = await _client.GetAsync(
-            $"/images/testtype/{_testImageName}?quality=100"
+            requestUri: $"/images/testtype/{_testImageName}?quality=100"
         );
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
 
         byte[] originalBytes = await File.ReadAllBytesAsync(
-            Path.Join(_testTypeFolder, _testImageName)
+            path: Path.Join(path1: _testTypeFolder, path2: _testImageName)
         );
         byte[] responseBytes = await response.Content.ReadAsByteArrayAsync();
-        Assert.Equal(originalBytes.Length, responseBytes.Length);
+        Assert.Equal(expected: originalBytes.Length, actual: responseBytes.Length);
     }
 
     [Fact]
     public async Task Image_CachingHeaders_AreSet()
     {
-        HttpResponseMessage response = await _client.GetAsync($"/images/testtype/{_testImageName}");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: $"/images/testtype/{_testImageName}");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.True(response.Headers.Contains("Cache-Control"));
-        Assert.Contains("public", response.Headers.GetValues("Cache-Control").First());
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
+        Assert.True(condition: response.Headers.Contains(name: "Cache-Control"));
+        Assert.Contains(expectedSubstring: "public", actualString: response.Headers.GetValues(name: "Cache-Control").First());
     }
 
     [Fact]
@@ -239,14 +239,14 @@ public class ImageControllerTests : IClassFixture<NoMercyApiFactory>, IDisposabl
     {
         // Width=100 with aspect_ratio=2.0 → 100x200
         HttpResponseMessage response = await _client.GetAsync(
-            $"/images/testtype/{_testImageName}?width=100&aspect_ratio=2.0"
+            requestUri: $"/images/testtype/{_testImageName}?width=100&aspect_ratio=2.0"
         );
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
 
         byte[] responseBytes = await response.Content.ReadAsByteArrayAsync();
-        using Image<Rgba32> resultImage = Image.Load<Rgba32>(responseBytes);
-        Assert.Equal(100, resultImage.Width);
-        Assert.Equal(200, resultImage.Height);
+        using Image<Rgba32> resultImage = Image.Load<Rgba32>(data: responseBytes);
+        Assert.Equal(expected: 100, actual: resultImage.Width);
+        Assert.Equal(expected: 200, actual: resultImage.Height);
     }
 }

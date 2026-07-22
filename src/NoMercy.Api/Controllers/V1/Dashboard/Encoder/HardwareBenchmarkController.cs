@@ -18,10 +18,10 @@ using NoMercy.Encoder.Hardware;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Encoder;
 
 [ApiController]
-[Tags("Dashboard Hardware Benchmark")]
-[ApiVersion(1.0)]
+[Tags(tags: "Dashboard Hardware Benchmark")]
+[ApiVersion(version: 1.0)]
 [Authorize]
-[Route("api/v{version:apiVersion}/dashboard/hardware/benchmark")]
+[Route(template: "api/v{version:apiVersion}/dashboard/hardware/benchmark")]
 public class HardwareBenchmarkController(IHardwareBenchmark benchmark) : BaseController
 {
     [HttpGet]
@@ -31,9 +31,9 @@ public class HardwareBenchmarkController(IHardwareBenchmark benchmark) : BaseCon
         SpeedIndex index = benchmark.GetCachedIndex();
         BenchmarkProgress? progress = benchmark.CurrentProgress;
         return Ok(
-            new
+            value: new
             {
-                measurements = index.Measurements.Select(kvp => new
+                measurements = index.Measurements.Select(selector: kvp => new
                 {
                     codec = kvp.Key.Codec.ToString(),
                     encoder = kvp.Key.Encoder,
@@ -59,11 +59,11 @@ public class HardwareBenchmarkController(IHardwareBenchmark benchmark) : BaseCon
         );
     }
 
-    [HttpPost("run")]
+    [HttpPost(template: "run")]
     [Authorize(Policy = "Owner")]
     public async Task<IActionResult> RunBenchmark(CancellationToken ct)
     {
-        SpeedIndex result = await benchmark.CalibrateAsync(ct);
-        return Ok(new { measurements = result.Measurements.Count, message = "Benchmark complete" });
+        SpeedIndex result = await benchmark.CalibrateAsync(ct: ct);
+        return Ok(value: new { measurements = result.Measurements.Count, message = "Benchmark complete" });
     }
 }

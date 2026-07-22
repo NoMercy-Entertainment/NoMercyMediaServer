@@ -22,139 +22,139 @@ public class CommandStructureTests
 
     public CommandStructureTests()
     {
-        _root = new("NoMercy MediaServer CLI");
+        _root = new(description: "NoMercy MediaServer CLI");
 
-        Option<string?> pipeOption = new("--pipe", "-p");
-        _root.Options.Add(pipeOption);
+        Option<string?> pipeOption = new(name: "--pipe", aliases: "-p");
+        _root.Options.Add(item: pipeOption);
 
         ICliClientFactory clientFactory = new CliClientFactory();
 
-        _root.Subcommands.Add(StatusCommand.Create(pipeOption, clientFactory));
-        _root.Subcommands.Add(LogsCommand.Create(pipeOption, clientFactory));
-        _root.Subcommands.Add(StopCommand.Create(pipeOption, clientFactory));
-        _root.Subcommands.Add(RestartCommand.Create(pipeOption, clientFactory));
-        _root.Subcommands.Add(ConfigCommand.Create(pipeOption, clientFactory));
-        _root.Subcommands.Add(PluginCommand.Create(pipeOption, clientFactory));
-        _root.Subcommands.Add(QueueCommand.Create(pipeOption, clientFactory));
+        _root.Subcommands.Add(item: StatusCommand.Create(pipeOption: pipeOption, clientFactory: clientFactory));
+        _root.Subcommands.Add(item: LogsCommand.Create(pipeOption: pipeOption, clientFactory: clientFactory));
+        _root.Subcommands.Add(item: StopCommand.Create(pipeOption: pipeOption, clientFactory: clientFactory));
+        _root.Subcommands.Add(item: RestartCommand.Create(pipeOption: pipeOption, clientFactory: clientFactory));
+        _root.Subcommands.Add(item: ConfigCommand.Create(pipeOption: pipeOption, clientFactory: clientFactory));
+        _root.Subcommands.Add(item: PluginCommand.Create(pipeOption: pipeOption, clientFactory: clientFactory));
+        _root.Subcommands.Add(item: QueueCommand.Create(pipeOption: pipeOption, clientFactory: clientFactory));
     }
 
     [Fact]
     public void RootCommand_HasAllExpectedSubcommands()
     {
-        List<string> names = _root.Subcommands.Select(c => c.Name).ToList();
+        List<string> names = _root.Subcommands.Select(selector: c => c.Name).ToList();
 
-        Assert.Contains("status", names);
-        Assert.Contains("logs", names);
-        Assert.Contains("stop", names);
-        Assert.Contains("restart", names);
-        Assert.Contains("config", names);
-        Assert.Contains("plugin", names);
-        Assert.Contains("queue", names);
-        Assert.Equal(7, names.Count);
+        Assert.Contains(expected: "status", collection: names);
+        Assert.Contains(expected: "logs", collection: names);
+        Assert.Contains(expected: "stop", collection: names);
+        Assert.Contains(expected: "restart", collection: names);
+        Assert.Contains(expected: "config", collection: names);
+        Assert.Contains(expected: "plugin", collection: names);
+        Assert.Contains(expected: "queue", collection: names);
+        Assert.Equal(expected: 7, actual: names.Count);
     }
 
     [Fact]
     public void StatusCommand_ParsesSuccessfully()
     {
-        ParseResult result = _root.Parse("status");
-        Assert.Empty(result.Errors);
+        ParseResult result = _root.Parse(commandLine: "status");
+        Assert.Empty(collection: result.Errors);
     }
 
     [Fact]
     public void LogsCommand_ParsesTailOption()
     {
-        ParseResult result = _root.Parse("logs --tail 50");
-        Assert.Empty(result.Errors);
+        ParseResult result = _root.Parse(commandLine: "logs --tail 50");
+        Assert.Empty(collection: result.Errors);
     }
 
     [Fact]
     public void LogsCommand_ParsesFollowOption()
     {
-        ParseResult result = _root.Parse("logs --follow");
-        Assert.Empty(result.Errors);
+        ParseResult result = _root.Parse(commandLine: "logs --follow");
+        Assert.Empty(collection: result.Errors);
     }
 
     [Fact]
     public void LogsCommand_ParsesShortAliases()
     {
-        ParseResult result = _root.Parse("logs -n 20 -f");
-        Assert.Empty(result.Errors);
+        ParseResult result = _root.Parse(commandLine: "logs -n 20 -f");
+        Assert.Empty(collection: result.Errors);
     }
 
     [Fact]
     public void LogsCommand_ParsesLevelFilter()
     {
-        ParseResult result = _root.Parse("logs --level Error,Warning");
-        Assert.Empty(result.Errors);
+        ParseResult result = _root.Parse(commandLine: "logs --level Error,Warning");
+        Assert.Empty(collection: result.Errors);
     }
 
     [Fact]
     public void LogsCommand_ParsesTypeFilter()
     {
-        ParseResult result = _root.Parse("logs --type App");
-        Assert.Empty(result.Errors);
+        ParseResult result = _root.Parse(commandLine: "logs --type App");
+        Assert.Empty(collection: result.Errors);
     }
 
     [Fact]
     public void StopCommand_ParsesSuccessfully()
     {
-        ParseResult result = _root.Parse("stop");
-        Assert.Empty(result.Errors);
+        ParseResult result = _root.Parse(commandLine: "stop");
+        Assert.Empty(collection: result.Errors);
     }
 
     [Fact]
     public void RestartCommand_ParsesSuccessfully()
     {
-        ParseResult result = _root.Parse("restart");
-        Assert.Empty(result.Errors);
+        ParseResult result = _root.Parse(commandLine: "restart");
+        Assert.Empty(collection: result.Errors);
     }
 
     [Fact]
     public void ConfigGetCommand_ParsesSuccessfully()
     {
-        ParseResult result = _root.Parse("config get");
-        Assert.Empty(result.Errors);
+        ParseResult result = _root.Parse(commandLine: "config get");
+        Assert.Empty(collection: result.Errors);
     }
 
     [Fact]
     public void ConfigSetCommand_ParsesKeyAndValue()
     {
-        ParseResult result = _root.Parse("config set server_name MyServer");
-        Assert.Empty(result.Errors);
+        ParseResult result = _root.Parse(commandLine: "config set server_name MyServer");
+        Assert.Empty(collection: result.Errors);
     }
 
     [Fact]
     public void PluginListCommand_ParsesSuccessfully()
     {
-        ParseResult result = _root.Parse("plugin list");
-        Assert.Empty(result.Errors);
+        ParseResult result = _root.Parse(commandLine: "plugin list");
+        Assert.Empty(collection: result.Errors);
     }
 
     [Fact]
     public void QueueStatusCommand_ParsesSuccessfully()
     {
-        ParseResult result = _root.Parse("queue status");
-        Assert.Empty(result.Errors);
+        ParseResult result = _root.Parse(commandLine: "queue status");
+        Assert.Empty(collection: result.Errors);
     }
 
     [Fact]
     public void GlobalPipeOption_ParsesOnAnyCommand()
     {
-        ParseResult result = _root.Parse("--pipe /tmp/test.sock status");
-        Assert.Empty(result.Errors);
+        ParseResult result = _root.Parse(commandLine: "--pipe /tmp/test.sock status");
+        Assert.Empty(collection: result.Errors);
     }
 
     [Fact]
     public void GlobalPipeOption_ParsesShortAlias()
     {
-        ParseResult result = _root.Parse("-p MyPipe status");
-        Assert.Empty(result.Errors);
+        ParseResult result = _root.Parse(commandLine: "-p MyPipe status");
+        Assert.Empty(collection: result.Errors);
     }
 
     [Fact]
     public void InvalidCommand_ProducesError()
     {
-        ParseResult result = _root.Parse("nonexistent");
-        Assert.NotEmpty(result.Errors);
+        ParseResult result = _root.Parse(commandLine: "nonexistent");
+        Assert.NotEmpty(collection: result.Errors);
     }
 }

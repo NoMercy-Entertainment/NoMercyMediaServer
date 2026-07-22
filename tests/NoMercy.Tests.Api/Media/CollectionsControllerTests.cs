@@ -17,7 +17,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Media;
 
-[Trait("Category", "MediaCollections")]
+[Trait(name: "Category", value: "MediaCollections")]
 public class CollectionsControllerTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly HttpClient _authed;
@@ -34,74 +34,74 @@ public class CollectionsControllerTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task GetCollections_ReturnsUnauthorized_WhenAnonymous()
     {
-        HttpResponseMessage response = await _unauthed.GetAsync("/api/v1/collection");
+        HttpResponseMessage response = await _unauthed.GetAsync(requestUri: "/api/v1/collection");
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task GetCollections_ReturnsOk_WhenAuthenticated()
     {
-        HttpResponseMessage response = await _authed.GetAsync("/api/v1/collection");
+        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/collection");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
     }
 
     [Fact]
     public async Task GetCollections_ReturnsEnvelopeWithDataProperty_WhenAuthenticated()
     {
-        HttpResponseMessage response = await _authed.GetAsync("/api/v1/collection");
+        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/collection");
 
         string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
 
-        doc.RootElement.TryGetProperty("data", out _)
+        doc.RootElement.TryGetProperty(propertyName: "data", value: out _)
             .Should()
-            .BeTrue("collections response envelope must contain a 'data' property");
+            .BeTrue(because: "collections response envelope must contain a 'data' property");
     }
 
     [Fact]
     public async Task GetCollections_WithTakeAndPage_ReturnsOk()
     {
-        HttpResponseMessage response = await _authed.GetAsync("/api/v1/collection?take=5&page=0");
+        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/collection?take=5&page=0");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
     }
 
     [Fact]
     public async Task GetCollection_ById_ReturnsUnauthorized_WhenAnonymous()
     {
-        HttpResponseMessage response = await _unauthed.GetAsync("/api/v1/collection/313369");
+        HttpResponseMessage response = await _unauthed.GetAsync(requestUri: "/api/v1/collection/313369");
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task GetCollection_ById_DoesNotReturn500_WhenAuthenticated()
     {
-        HttpResponseMessage response = await _authed.GetAsync("/api/v1/collection/313369");
+        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/collection/313369");
 
         ((int)response.StatusCode)
             .Should()
-            .NotBe(500, "controller must not panic — returns 200 from TMDB or 404 when not found");
+            .NotBe(unexpected: 500, because: "controller must not panic — returns 200 from TMDB or 404 when not found");
     }
 
     [Fact]
     public async Task GetCollectionAvailable_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.GetAsync(
-            "/api/v1/collection/313369/available"
+            requestUri: "/api/v1/collection/313369/available"
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task DeleteCollection_ReturnsUnauthorized_WhenAnonymous()
     {
-        HttpResponseMessage response = await _unauthed.DeleteAsync("/api/v1/collection/313369");
+        HttpResponseMessage response = await _unauthed.DeleteAsync(requestUri: "/api/v1/collection/313369");
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -111,10 +111,10 @@ public class CollectionsControllerTests : IClassFixture<NoMercyApiFactory>
         // "Moderator". SecondaryUserId (Allowed=true, Owner=false, Manage=false)
         // must now be rejected, where it previously reached the repository.
         HttpResponseMessage response = await _secondaryUser.DeleteAsync(
-            "/api/v1/collection/313369"
+            requestUri: "/api/v1/collection/313369"
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -124,8 +124,8 @@ public class CollectionsControllerTests : IClassFixture<NoMercyApiFactory>
         // delete-if-present, always returning 200, so this proves the
         // Moderator tier still reaches the repository without disturbing any
         // seeded collection other tests in this class depend on.
-        HttpResponseMessage response = await _authed.DeleteAsync("/api/v1/collection/999999999");
+        HttpResponseMessage response = await _authed.DeleteAsync(requestUri: "/api/v1/collection/999999999");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
     }
 }

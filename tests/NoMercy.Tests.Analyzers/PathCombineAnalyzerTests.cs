@@ -105,14 +105,14 @@ public sealed class PathCombineAnalyzerTests
 
         CSharpAnalyzerTest<PathCombineAnalyzer, DefaultVerifier> test = CreateTest();
         test.ExpectedDiagnostics.Add(
-            new DiagnosticResult(
-                PathCombineAnalyzer.DiagnosticId,
-                DiagnosticSeverity.Warning
-            ).WithLocation(0)
+            item: new DiagnosticResult(
+                id: PathCombineAnalyzer.DiagnosticId,
+                severity: DiagnosticSeverity.Warning
+            ).WithLocation(markupKey: 0)
         );
 
-        test.TestState.Sources.Add(("Consumer.cs", source));
-        test.TestState.Sources.Add(("StorageStub.cs", StorageStub));
+        test.TestState.Sources.Add(file: ("Consumer.cs", source));
+        test.TestState.Sources.Add(file: ("StorageStub.cs", StorageStub));
 
         await test.RunAsync();
     }
@@ -140,14 +140,14 @@ public sealed class PathCombineAnalyzerTests
 
         CSharpAnalyzerTest<PathCombineAnalyzer, DefaultVerifier> test = CreateTest();
         test.ExpectedDiagnostics.Add(
-            new DiagnosticResult(
-                PathCombineAnalyzer.DiagnosticId,
-                DiagnosticSeverity.Warning
-            ).WithLocation(0)
+            item: new DiagnosticResult(
+                id: PathCombineAnalyzer.DiagnosticId,
+                severity: DiagnosticSeverity.Warning
+            ).WithLocation(markupKey: 0)
         );
 
-        test.TestState.Sources.Add(("Consumer.cs", source));
-        test.TestState.Sources.Add(("StorageStub.cs", StorageStub));
+        test.TestState.Sources.Add(file: ("Consumer.cs", source));
+        test.TestState.Sources.Add(file: ("StorageStub.cs", StorageStub));
 
         await test.RunAsync();
     }
@@ -222,8 +222,8 @@ public sealed class PathCombineAnalyzerTests
             """;
 
         CSharpAnalyzerTest<PathCombineAnalyzer, DefaultVerifier> test = CreateTest();
-        test.TestState.Sources.Add(("LocalStorageDriver.cs", driver));
-        test.TestState.Sources.Add(("StorageStub.cs", StorageStub));
+        test.TestState.Sources.Add(file: ("LocalStorageDriver.cs", driver));
+        test.TestState.Sources.Add(file: ("StorageStub.cs", StorageStub));
 
         await test.RunAsync();
     }
@@ -253,8 +253,8 @@ public sealed class PathCombineAnalyzerTests
             """;
 
         CSharpAnalyzerTest<PathCombineAnalyzer, DefaultVerifier> test = CreateTest();
-        test.TestState.Sources.Add(("Consumer.cs", source));
-        test.TestState.Sources.Add(("StorageStub.cs", StorageStub));
+        test.TestState.Sources.Add(file: ("Consumer.cs", source));
+        test.TestState.Sources.Add(file: ("StorageStub.cs", StorageStub));
 
         await test.RunAsync();
     }
@@ -289,8 +289,8 @@ public sealed class PathCombineAnalyzerTests
             """;
 
         CSharpAnalyzerTest<PathCombineAnalyzer, DefaultVerifier> test = CreateTest();
-        test.TestState.Sources.Add(("Consumer.cs", source));
-        test.TestState.Sources.Add(("StorageStub.cs", StorageStub));
+        test.TestState.Sources.Add(file: ("Consumer.cs", source));
+        test.TestState.Sources.Add(file: ("StorageStub.cs", StorageStub));
 
         await test.RunAsync();
     }
@@ -321,14 +321,14 @@ public sealed class PathCombineAnalyzerTests
 
         CSharpAnalyzerTest<PathCombineAnalyzer, DefaultVerifier> test = CreateTest();
         test.ExpectedDiagnostics.Add(
-            new DiagnosticResult(
-                PathCombineAnalyzer.DiagnosticId,
-                DiagnosticSeverity.Warning
-            ).WithLocation(0)
+            item: new DiagnosticResult(
+                id: PathCombineAnalyzer.DiagnosticId,
+                severity: DiagnosticSeverity.Warning
+            ).WithLocation(markupKey: 0)
         );
 
-        test.TestState.Sources.Add(("Consumer.cs", source));
-        test.TestState.Sources.Add(("StorageStub.cs", StorageStub));
+        test.TestState.Sources.Add(file: ("Consumer.cs", source));
+        test.TestState.Sources.Add(file: ("StorageStub.cs", StorageStub));
 
         await test.RunAsync();
     }
@@ -362,8 +362,8 @@ public sealed class PathCombineAnalyzerTests
             """;
 
         CSharpAnalyzerTest<PathCombineAnalyzer, DefaultVerifier> test = CreateTest();
-        test.TestState.Sources.Add(("Consumer.cs", source));
-        test.TestState.Sources.Add(("StorageStub.cs", StorageStub));
+        test.TestState.Sources.Add(file: ("Consumer.cs", source));
+        test.TestState.Sources.Add(file: ("StorageStub.cs", StorageStub));
 
         await test.RunAsync();
     }
@@ -396,8 +396,8 @@ public sealed class PathCombineAnalyzerTests
             """;
 
         CSharpAnalyzerTest<PathCombineAnalyzer, DefaultVerifier> test = CreateTest();
-        test.TestState.Sources.Add(("Consumer.cs", source));
-        test.TestState.Sources.Add(("StorageStub.cs", StorageStub));
+        test.TestState.Sources.Add(file: ("Consumer.cs", source));
+        test.TestState.Sources.Add(file: ("StorageStub.cs", StorageStub));
 
         await test.RunAsync();
     }
@@ -431,8 +431,8 @@ public sealed class PathCombineAnalyzerTests
         // analyzer's symbol-resolution fallback (Symbol null, CandidateSymbols empty),
         // not the compiler diagnostics themselves.
         test.CompilerDiagnostics = CompilerDiagnostics.None;
-        test.TestState.Sources.Add(("Consumer.cs", source));
-        test.TestState.Sources.Add(("StorageStub.cs", StorageStub));
+        test.TestState.Sources.Add(file: ("Consumer.cs", source));
+        test.TestState.Sources.Add(file: ("StorageStub.cs", StorageStub));
 
         await test.RunAsync();
     }
@@ -472,8 +472,8 @@ public sealed class PathCombineAnalyzerTests
         // "SomeService" (CS0122). This exercises the CandidateSymbols fallback landing
         // on a real IMethodSymbol whose ContainingType is not System.IO.Path.
         test.CompilerDiagnostics = CompilerDiagnostics.None;
-        test.TestState.Sources.Add(("Consumer.cs", source));
-        test.TestState.Sources.Add(("StorageStub.cs", StorageStub));
+        test.TestState.Sources.Add(file: ("Consumer.cs", source));
+        test.TestState.Sources.Add(file: ("StorageStub.cs", StorageStub));
 
         await test.RunAsync();
     }
@@ -500,14 +500,14 @@ public sealed class PathCombineAnalyzerTests
         CSharpAnalyzerTest<PathCombineAnalyzer, DefaultVerifier> test = CreateTest();
         test.TestState.OutputKind = OutputKind.ConsoleApplication;
         test.ExpectedDiagnostics.Add(
-            new DiagnosticResult(
-                PathCombineAnalyzer.DiagnosticId,
-                DiagnosticSeverity.Warning
-            ).WithLocation(0)
+            item: new DiagnosticResult(
+                id: PathCombineAnalyzer.DiagnosticId,
+                severity: DiagnosticSeverity.Warning
+            ).WithLocation(markupKey: 0)
         );
 
-        test.TestState.Sources.Add(("Program.cs", source));
-        test.TestState.Sources.Add(("StorageStub.cs", StorageStub));
+        test.TestState.Sources.Add(file: ("Program.cs", source));
+        test.TestState.Sources.Add(file: ("StorageStub.cs", StorageStub));
 
         await test.RunAsync();
     }
@@ -539,14 +539,14 @@ public sealed class PathCombineAnalyzerTests
 
         CSharpAnalyzerTest<PathCombineAnalyzer, DefaultVerifier> test = CreateTest();
         test.ExpectedDiagnostics.Add(
-            new DiagnosticResult(
-                PathCombineAnalyzer.DiagnosticId,
-                DiagnosticSeverity.Warning
-            ).WithLocation(0)
+            item: new DiagnosticResult(
+                id: PathCombineAnalyzer.DiagnosticId,
+                severity: DiagnosticSeverity.Warning
+            ).WithLocation(markupKey: 0)
         );
 
-        test.TestState.Sources.Add(("LegacyPathBuilder.cs", source));
-        test.TestState.Sources.Add(("StorageStub.cs", StorageStub));
+        test.TestState.Sources.Add(file: ("LegacyPathBuilder.cs", source));
+        test.TestState.Sources.Add(file: ("StorageStub.cs", StorageStub));
 
         await test.RunAsync();
     }
@@ -583,8 +583,8 @@ public sealed class PathCombineAnalyzerTests
             """;
 
         CSharpAnalyzerTest<PathCombineAnalyzer, DefaultVerifier> test = CreateTest();
-        test.TestState.Sources.Add(("Consumer.cs", source));
-        test.TestState.Sources.Add(("Marker.cs", marker));
+        test.TestState.Sources.Add(file: ("Consumer.cs", source));
+        test.TestState.Sources.Add(file: ("Marker.cs", marker));
 
         await test.RunAsync();
     }
@@ -621,8 +621,8 @@ public sealed class PathCombineAnalyzerTests
             """;
 
         CSharpAnalyzerTest<PathCombineAnalyzer, DefaultVerifier> test = CreateTest();
-        test.TestState.Sources.Add(("Consumer.cs", source));
-        test.TestState.Sources.Add(("Marker.cs", marker));
+        test.TestState.Sources.Add(file: ("Consumer.cs", source));
+        test.TestState.Sources.Add(file: ("Marker.cs", marker));
 
         await test.RunAsync();
     }
@@ -674,8 +674,8 @@ public sealed class PathCombineAnalyzerTests
         // neither using directive matches the using-directive check either, so the
         // outcome is deterministic regardless of tie-break order between candidates.
         test.CompilerDiagnostics = CompilerDiagnostics.None;
-        test.TestState.Sources.Add(("Consumer.cs", source));
-        test.TestState.Sources.Add(("Markers.cs", markers));
+        test.TestState.Sources.Add(file: ("Consumer.cs", source));
+        test.TestState.Sources.Add(file: ("Markers.cs", markers));
 
         await test.RunAsync();
     }
@@ -708,7 +708,7 @@ public sealed class PathCombineAnalyzerTests
         // (CS0246). This exercises the sym-is-null branch of the identifier resolution
         // fallback, distinct from the invocation-symbol fallback tested elsewhere.
         test.CompilerDiagnostics = CompilerDiagnostics.None;
-        test.TestState.Sources.Add(("Consumer.cs", source));
+        test.TestState.Sources.Add(file: ("Consumer.cs", source));
 
         await test.RunAsync();
     }

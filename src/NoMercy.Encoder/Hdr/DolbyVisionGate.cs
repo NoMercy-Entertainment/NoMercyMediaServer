@@ -86,7 +86,7 @@ public static class DolbyVisionGate
         {
             string reason = "hdr_policy = AlwaysTonemap forces tonemap to SDR";
             decisions.Add(
-                new("plan", "plan.dv_stripped", reason, new { policy = "AlwaysTonemap" })
+                entry: new(Stage: "plan", Key: "plan.dv_stripped", Message: reason, Data: new { policy = "AlwaysTonemap" })
             );
             return new(Preserved: false, Reason: reason, ExtraFlags: new());
         }
@@ -102,17 +102,17 @@ public static class DolbyVisionGate
         if (!videoIsStreamCopy)
         {
             string reason = "output is re-encoded — Dolby Vision RPU survives only a stream copy";
-            decisions.Add(new("plan", "plan.dv_stripped", reason, new { reEncoded = true }));
+            decisions.Add(entry: new(Stage: "plan", Key: "plan.dv_stripped", Message: reason, Data: new { reEncoded = true }));
             return new(Preserved: false, Reason: reason, ExtraFlags: new());
         }
 
         // --- Condition 1: codec must be HEVC or AV1 --------------------------
-        if (!DvCompatibleCodecs.Contains(outputCodec))
+        if (!DvCompatibleCodecs.Contains(item: outputCodec))
         {
             string reason =
                 $"output codec '{outputCodec}' does not support Dolby Vision (HEVC or AV1 required)";
             decisions.Add(
-                new("plan", "plan.dv_stripped", reason, new { codec = outputCodec.ToString() })
+                entry: new(Stage: "plan", Key: "plan.dv_stripped", Message: reason, Data: new { codec = outputCodec.ToString() })
             );
             return new(Preserved: false, Reason: reason, ExtraFlags: new());
         }
@@ -122,27 +122,27 @@ public static class DolbyVisionGate
         {
             string reason = $"output bit_depth {outputBitDepth} below 10 — DV requires 10-bit";
             decisions.Add(
-                new("plan", "plan.dv_stripped", reason, new { bitDepth = outputBitDepth })
+                entry: new(Stage: "plan", Key: "plan.dv_stripped", Message: reason, Data: new { bitDepth = outputBitDepth })
             );
             return new(Preserved: false, Reason: reason, ExtraFlags: new());
         }
 
         // --- Condition 3: container must support DV RPU ----------------------
-        if (!DvCompatibleContainers.Contains(container))
+        if (!DvCompatibleContainers.Contains(item: container))
         {
             string reason = $"container '{container}' does not carry DV RPU";
             decisions.Add(
-                new("plan", "plan.dv_stripped", reason, new { container = container.ToString() })
+                entry: new(Stage: "plan", Key: "plan.dv_stripped", Message: reason, Data: new { container = container.ToString() })
             );
             return new(Preserved: false, Reason: reason, ExtraFlags: new());
         }
 
         // --- All four conditions pass — build container-specific extra flags --
         Dictionary<string, string> extraFlags = BuildExtraFlags(
-            source,
-            container,
-            hlsUsesFmp4Segments,
-            decisions
+            source: source,
+            container: container,
+            hlsUsesFmp4Segments: hlsUsesFmp4Segments,
+            decisions: decisions
         );
 
         // HLS + mpegts is a hard blocker — the gate strips rather than silently
@@ -152,11 +152,11 @@ public static class DolbyVisionGate
             string reason =
                 "HLS mpegts segments do not carry DV RPU — use Container.HlsFmp4 to preserve DV";
             decisions.Add(
-                new(
-                    "plan",
-                    "plan.dv_stripped",
-                    reason,
-                    new { container = "Hls", segmentType = "mpegts" }
+                entry: new(
+                    Stage: "plan",
+                    Key: "plan.dv_stripped",
+                    Message: reason,
+                    Data: new { container = "Hls", segmentType = "mpegts" }
                 )
             );
             return new(Preserved: false, Reason: reason, ExtraFlags: new());
@@ -164,11 +164,11 @@ public static class DolbyVisionGate
 
         string preserveReason = $"DV profile {source.Profile} level {source.Level} preserved";
         decisions.Add(
-            new(
-                "plan",
-                "plan.dv_preserved",
-                preserveReason,
-                new
+            entry: new(
+                Stage: "plan",
+                Key: "plan.dv_preserved",
+                Message: preserveReason,
+                Data: new
                 {
                     dvProfile = source.Profile,
                     dvLevel = source.Level,
@@ -197,14 +197,14 @@ public static class DolbyVisionGate
             case OutputFormat.Mp4:
                 // MP4 requires the dvh1 codec tag to signal DV-compatible MP4 to players.
                 // iso6 brand marks the file as ISO Base Media File Format v6 which DV demands.
-                flags["-tag:v"] = "dvh1";
-                flags["-brand"] = "iso6";
+                flags[key: "-tag:v"] = "dvh1";
+                flags[key: "-brand"] = "iso6";
                 break;
 
             case OutputFormat.Mkv:
                 // MKV carries the DV RPU natively in the HEVC/AV1 bitstream.
                 // The default disposition is fine — just mark the video track as default.
-                flags["-disposition:v"] = "default";
+                flags[key: "-disposition:v"] = "default";
                 break;
 
             case OutputFormat.Hls:
@@ -214,7 +214,7 @@ public static class DolbyVisionGate
                 if (!hlsUsesFmp4Segments)
                     return new();
 
-                flags["-hls_segment_type"] = "fmp4";
+                flags[key: "-hls_segment_type"] = "fmp4";
                 break;
         }
 

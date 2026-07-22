@@ -48,19 +48,19 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
             options.Color
             ?? (
                 !Console.IsOutputRedirected
-                && Environment.GetEnvironmentVariable("NO_COLOR") is null
+                && Environment.GetEnvironmentVariable(variable: "NO_COLOR") is null
             );
 
-        if (!string.IsNullOrEmpty(options.LogDirectory))
+        if (!string.IsNullOrEmpty(value: options.LogDirectory))
         {
-            Directory.CreateDirectory(options.LogDirectory);
+            Directory.CreateDirectory(path: options.LogDirectory);
             string runId =
-                DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture)
+                DateTime.Now.ToString(format: "yyyyMMdd-HHmmss", provider: CultureInfo.InvariantCulture)
                 + "-"
                 + Environment.ProcessId;
-            string runFile = Path.Combine(options.LogDirectory, $"run-{runId}.jsonl");
-            _file = new(runFile, append: true) { AutoFlush = true };
-            PruneRuns(options.LogDirectory, options.MaxRunFiles);
+            string runFile = Path.Combine(path1: options.LogDirectory, path2: $"run-{runId}.jsonl");
+            _file = new(path: runFile, append: true) { AutoFlush = true };
+            PruneRuns(directory: options.LogDirectory, keep: options.MaxRunFiles);
         }
 
         if (options.BridgeLegacyLogger)
@@ -76,7 +76,7 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
 
     internal IExternalScopeProvider? ScopeProvider => _scopes;
 
-    public ILogger CreateLogger(string categoryName) => new NoMercyLogger(categoryName, this);
+    public ILogger CreateLogger(string categoryName) => new NoMercyLogger(sourceContext: categoryName, provider: this);
 
     public void SetScopeProvider(IExternalScopeProvider scopeProvider) => _scopes = scopeProvider;
 
@@ -103,16 +103,16 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
         if (_file is null)
             return;
 
-        LogCategory category = LogCategories.Resolve(entry.Type);
+        LogCategory category = LogCategories.Resolve(key: entry.Type);
         LogFileLine fileLine = new()
         {
-            Timestamp = entry.Time.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture),
+            Timestamp = entry.Time.ToUniversalTime().ToString(format: "o", provider: CultureInfo.InvariantCulture),
             Type = category.Key,
             Category = category.DisplayName,
             Group = category.Group,
             Level = entry.Level,
             LevelValue = (int)entry.LogLevel,
-            Color = string.IsNullOrEmpty(entry.Color) ? category.DarkHex : entry.Color,
+            Color = string.IsNullOrEmpty(value: entry.Color) ? category.DarkHex : entry.Color,
             Message = entry.Message,
             Scope = null,
             Source = entry.Type,
@@ -122,7 +122,7 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
 
         lock (_gate)
         {
-            _file.WriteLine(JsonSerializer.Serialize(fileLine, JsonOptions));
+            _file.WriteLine(value: JsonSerializer.Serialize(value: fileLine, options: JsonOptions));
         }
     }
 
@@ -130,21 +130,21 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
     /// unified <see cref="ConsoleLineRenderer"/> so legacy and ILogger output share one format.</summary>
     private void RenderLegacyConsole(LogEntry entry)
     {
-        LogCategory category = LogCategories.Resolve(entry.Type);
+        LogCategory category = LogCategories.Resolve(key: entry.Type);
         string line = ConsoleLineRenderer.Render(
-            entry.Time.ToLocalTime(),
-            ToMelLevel(entry.LogLevel),
-            category,
-            entry.Message,
-            null,
-            _options.Theme,
-            _color,
-            _options.WidthProvider()
+            timestamp: entry.Time.ToLocalTime(),
+            level: ToMelLevel(level: entry.LogLevel),
+            category: category,
+            message: entry.Message,
+            exception: null,
+            theme: _options.Theme,
+            color: _color,
+            width: _options.WidthProvider()
         );
 
         lock (_gate)
         {
-            _output.WriteLine(line);
+            _output.WriteLine(value: line);
         }
     }
 
@@ -168,26 +168,26 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
         Exception? exception
     )
     {
-        LogCategory category = LogCategories.ResolveSource(sourceContext);
+        LogCategory category = LogCategories.ResolveSource(sourceContext: sourceContext);
         string? scope = CollectScope();
         string line = ConsoleLineRenderer.Render(
-            timestamp,
-            level,
-            category,
-            message,
-            exception,
-            _options.Theme,
-            _color,
-            _options.WidthProvider()
+            timestamp: timestamp,
+            level: level,
+            category: category,
+            message: message,
+            exception: exception,
+            theme: _options.Theme,
+            color: _color,
+            width: _options.WidthProvider()
         );
 
         LogFileLine fileLine = new()
         {
-            Timestamp = timestamp.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture),
+            Timestamp = timestamp.ToUniversalTime().ToString(format: "o", provider: CultureInfo.InvariantCulture),
             Type = category.Key,
             Category = category.DisplayName,
             Group = category.Group,
-            Level = ToSerilogLevelName(level),
+            Level = ToSerilogLevelName(level: level),
             LevelValue = (int)level,
             Color = category.DarkHex,
             Message = message,
@@ -198,26 +198,26 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
         };
 
         NoMercyLogRecord record = new(
-            timestamp,
-            level,
-            category.Key,
-            category.DisplayName,
-            message,
-            scope,
-            exception?.ToString()
+            Timestamp: timestamp,
+            Level: level,
+            CategoryKey: category.Key,
+            CategoryName: category.DisplayName,
+            Message: message,
+            Scope: scope,
+            Exception: exception?.ToString()
         );
 
         lock (_gate)
         {
-            _output.WriteLine(line);
-            _file?.WriteLine(JsonSerializer.Serialize(fileLine, JsonOptions));
+            _output.WriteLine(value: line);
+            _file?.WriteLine(value: JsonSerializer.Serialize(value: fileLine, options: JsonOptions));
         }
 
         if (_options.OnRecord is not null)
         {
             try
             {
-                _options.OnRecord(record);
+                _options.OnRecord(obj: record);
             }
             catch
             {
@@ -233,16 +233,16 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
 
         List<string> parts = new();
         _scopes.ForEachScope(
-            static (scope, state) =>
+            callback: static (scope, state) =>
             {
                 string text = scope?.ToString() ?? string.Empty;
-                if (!string.IsNullOrEmpty(text))
-                    state.Add(text);
+                if (!string.IsNullOrEmpty(value: text))
+                    state.Add(item: text);
             },
-            parts
+            state: parts
         );
 
-        return parts.Count == 0 ? null : string.Join(" ", parts);
+        return parts.Count == 0 ? null : string.Join(separator: " ", values: parts);
     }
 
     private static string ToSerilogLevelName(LogLevel level) =>
@@ -265,15 +265,15 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
         try
         {
             List<string> files = Directory
-                .GetFiles(directory, "run-*.jsonl")
-                .OrderByDescending(path => path, StringComparer.Ordinal)
+                .GetFiles(path: directory, searchPattern: "run-*.jsonl")
+                .OrderByDescending(keySelector: path => path, comparer: StringComparer.Ordinal)
                 .ToList();
 
-            foreach (string old in files.Skip(keep))
+            foreach (string old in files.Skip(count: keep))
             {
                 try
                 {
-                    File.Delete(old);
+                    File.Delete(path: old);
                 }
                 catch
                 {

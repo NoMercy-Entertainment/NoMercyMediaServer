@@ -31,7 +31,7 @@ public class LiveTranscodeHub(
     ILiveStreamingService streamingService,
     ILiveSessionPresenceTracker presenceTracker,
     ILogger<LiveTranscodeHub> logger
-) : ConnectionHub(httpContextAccessor, contextFactory, connectedClients, activityLogger)
+) : ConnectionHub(httpContextAccessor: httpContextAccessor, contextFactory: contextFactory, connectedClients: connectedClients, activityLogger: activityLogger)
 {
     public static string GroupName(string sessionId) => $"live-{sessionId}";
 
@@ -42,33 +42,29 @@ public class LiveTranscodeHub(
     /// </summary>
     public async Task SubscribeToSession(string sessionId)
     {
-        string? ownerId = sessionManager.GetOwnerUserId(sessionId);
+        string? ownerId = sessionManager.GetOwnerUserId(sessionId: sessionId);
 
         if (ownerId is null)
         {
-            logger.LogDebug("SubscribeToSession: session {SessionId} not found", sessionId);
+            logger.LogDebug(message: "SubscribeToSession: session {SessionId} not found", args: sessionId);
             return;
         }
 
         string callerId = Context.UserIdentifier ?? string.Empty;
 
-        if (!string.Equals(ownerId, callerId, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(a: ownerId, b: callerId, comparisonType: StringComparison.OrdinalIgnoreCase))
         {
             logger.LogWarning(
-                "SubscribeToSession: caller {CallerId} is not the owner of session {SessionId}",
-                callerId,
-                sessionId
+                message: "SubscribeToSession: caller {CallerId} is not the owner of session {SessionId}", args: [callerId, sessionId]
             );
             return;
         }
 
-        await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(sessionId));
-        presenceTracker.OnSubscribed(Context.ConnectionId, sessionId);
+        await Groups.AddToGroupAsync(connectionId: Context.ConnectionId, groupName: GroupName(sessionId: sessionId));
+        presenceTracker.OnSubscribed(connectionId: Context.ConnectionId, sessionId: sessionId);
 
         logger.LogDebug(
-            "Client {ConnectionId} subscribed to live session {SessionId}",
-            Context.ConnectionId,
-            sessionId
+            message: "Client {ConnectionId} subscribed to live session {SessionId}", args: [Context.ConnectionId, sessionId]
         );
     }
 
@@ -77,8 +73,8 @@ public class LiveTranscodeHub(
     /// </summary>
     public async Task UnsubscribeFromSession(string sessionId)
     {
-        presenceTracker.OnUnsubscribed(Context.ConnectionId, sessionId);
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, GroupName(sessionId));
+        presenceTracker.OnUnsubscribed(connectionId: Context.ConnectionId, sessionId: sessionId);
+        await Groups.RemoveFromGroupAsync(connectionId: Context.ConnectionId, groupName: GroupName(sessionId: sessionId));
     }
 
     /// <summary>
@@ -88,8 +84,8 @@ public class LiveTranscodeHub(
     /// </summary>
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        presenceTracker.OnConnectionClosed(Context.ConnectionId);
-        await base.OnDisconnectedAsync(exception);
+        presenceTracker.OnConnectionClosed(connectionId: Context.ConnectionId);
+        await base.OnDisconnectedAsync(exception: exception);
     }
 
     /// <summary>
@@ -98,13 +94,13 @@ public class LiveTranscodeHub(
     /// </summary>
     public void Heartbeat(string sessionId)
     {
-        if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
+        if (!streamingService.TryGetRuntime(sessionId: sessionId, runtime: out LiveRuntimeSession runtime))
             return;
 
-        string? ownerId = sessionManager.GetOwnerUserId(sessionId);
+        string? ownerId = sessionManager.GetOwnerUserId(sessionId: sessionId);
         string callerId = Context.UserIdentifier ?? string.Empty;
 
-        if (!string.Equals(ownerId, callerId, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(a: ownerId, b: callerId, comparisonType: StringComparison.OrdinalIgnoreCase))
             return;
 
         runtime.TouchLastAccess();
@@ -120,14 +116,14 @@ public class LiveTranscodeHub(
     /// </summary>
     public void ReportPlayhead(string sessionId, double currentTimeSeconds)
     {
-        if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
+        if (!streamingService.TryGetRuntime(sessionId: sessionId, runtime: out LiveRuntimeSession runtime))
             return;
 
-        if (!CallerOwnsSession(sessionId))
+        if (!CallerOwnsSession(sessionId: sessionId))
             return;
 
         runtime.Session.ReportPlaybackPosition(
-            TimeSpan.FromSeconds(Math.Max(0, currentTimeSeconds)),
+            position: TimeSpan.FromSeconds(value: Math.Max(val1: 0, val2: currentTimeSeconds)),
             authoritative: true
         );
         runtime.TouchLastAccess();
@@ -150,15 +146,15 @@ public class LiveTranscodeHub(
         double observedBandwidthKbps
     )
     {
-        if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
+        if (!streamingService.TryGetRuntime(sessionId: sessionId, runtime: out LiveRuntimeSession runtime))
             return;
 
-        if (!CallerOwnsSession(sessionId))
+        if (!CallerOwnsSession(sessionId: sessionId))
             return;
 
         runtime.Session.ReportClientBufferHealth(
-            TimeSpan.FromSeconds(Math.Max(0, bufferedSeconds)),
-            (int)Math.Max(0, observedBandwidthKbps)
+            bufferedAhead: TimeSpan.FromSeconds(value: Math.Max(val1: 0, val2: bufferedSeconds)),
+            observedBandwidthKbps: (int)Math.Max(val1: 0, val2: observedBandwidthKbps)
         );
         runtime.TouchLastAccess();
     }
@@ -169,10 +165,10 @@ public class LiveTranscodeHub(
     /// </summary>
     public void RequestPause(string sessionId)
     {
-        if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
+        if (!streamingService.TryGetRuntime(sessionId: sessionId, runtime: out LiveRuntimeSession runtime))
             return;
 
-        if (!CallerOwnsSession(sessionId))
+        if (!CallerOwnsSession(sessionId: sessionId))
             return;
 
         runtime.Session.Suspend();
@@ -184,10 +180,10 @@ public class LiveTranscodeHub(
     /// </summary>
     public void RequestResume(string sessionId)
     {
-        if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
+        if (!streamingService.TryGetRuntime(sessionId: sessionId, runtime: out LiveRuntimeSession runtime))
             return;
 
-        if (!CallerOwnsSession(sessionId))
+        if (!CallerOwnsSession(sessionId: sessionId))
             return;
 
         runtime.Session.Resume();
@@ -195,8 +191,8 @@ public class LiveTranscodeHub(
 
     private bool CallerOwnsSession(string sessionId)
     {
-        string? ownerId = sessionManager.GetOwnerUserId(sessionId);
+        string? ownerId = sessionManager.GetOwnerUserId(sessionId: sessionId);
         string callerId = Context.UserIdentifier ?? string.Empty;
-        return string.Equals(ownerId, callerId, StringComparison.OrdinalIgnoreCase);
+        return string.Equals(a: ownerId, b: callerId, comparisonType: StringComparison.OrdinalIgnoreCase);
     }
 }

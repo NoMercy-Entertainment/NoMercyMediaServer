@@ -43,38 +43,38 @@ public class PaletteBackfillState
         CancellationToken ct
     )
     {
-        int stored = await GetVersionAsync(db, ct);
+        int stored = await GetVersionAsync(db: db, ct: ct);
         if (stored >= currentVersion)
             return false;
 
-        await UpsertConfigAsync(db, CompleteKey, "false", ct);
+        await UpsertConfigAsync(db: db, key: CompleteKey, value: "false", ct: ct);
         foreach (string entityType in entityTypes)
-            await UpsertConfigAsync(db, CursorKey(entityType), "0", ct);
-        await UpsertConfigAsync(db, VersionKey, currentVersion.ToString(), ct);
+            await UpsertConfigAsync(db: db, key: CursorKey(entityType: entityType), value: "0", ct: ct);
+        await UpsertConfigAsync(db: db, key: VersionKey, value: currentVersion.ToString(), ct: ct);
         return true;
     }
 
     private static async Task<int> GetVersionAsync(AppDbContext db, CancellationToken ct)
     {
         string? value = await db
-            .Configuration.Where(c => c.Key == VersionKey)
-            .Select(c => c.Value)
-            .FirstOrDefaultAsync(ct);
-        return value is null ? 1 : int.Parse(value);
+            .Configuration.Where(predicate: c => c.Key == VersionKey)
+            .Select(selector: c => c.Value)
+            .FirstOrDefaultAsync(cancellationToken: ct);
+        return value is null ? 1 : int.Parse(s: value);
     }
 
     public static async Task<bool> IsCompleteAsync(AppDbContext db, CancellationToken ct)
     {
         string? value = await db
-            .Configuration.Where(c => c.Key == CompleteKey)
-            .Select(c => c.Value)
-            .FirstOrDefaultAsync(ct);
+            .Configuration.Where(predicate: c => c.Key == CompleteKey)
+            .Select(selector: c => c.Value)
+            .FirstOrDefaultAsync(cancellationToken: ct);
         return value == "true";
     }
 
     public static async Task SetCompleteAsync(AppDbContext db, CancellationToken ct)
     {
-        await UpsertConfigAsync(db, CompleteKey, "true", ct);
+        await UpsertConfigAsync(db: db, key: CompleteKey, value: "true", ct: ct);
     }
 
     public static async Task<long> GetCursorAsync(
@@ -83,12 +83,12 @@ public class PaletteBackfillState
         CancellationToken ct
     )
     {
-        string key = CursorKey(entityType);
+        string key = CursorKey(entityType: entityType);
         string? value = await db
-            .Configuration.Where(c => c.Key == key)
-            .Select(c => c.Value)
-            .FirstOrDefaultAsync(ct);
-        return value is null ? 0L : long.Parse(value);
+            .Configuration.Where(predicate: c => c.Key == key)
+            .Select(selector: c => c.Value)
+            .FirstOrDefaultAsync(cancellationToken: ct);
+        return value is null ? 0L : long.Parse(s: value);
     }
 
     public static async Task SetCursorAsync(
@@ -98,7 +98,7 @@ public class PaletteBackfillState
         CancellationToken ct
     )
     {
-        await UpsertConfigAsync(db, CursorKey(entityType), cursor.ToString(), ct);
+        await UpsertConfigAsync(db: db, key: CursorKey(entityType: entityType), value: cursor.ToString(), ct: ct);
     }
 
     private static async Task UpsertConfigAsync(
@@ -108,15 +108,15 @@ public class PaletteBackfillState
         CancellationToken ct
     )
     {
-        Configuration? existing = await db.Configuration.FirstOrDefaultAsync(c => c.Key == key, ct);
+        Configuration? existing = await db.Configuration.FirstOrDefaultAsync(predicate: c => c.Key == key, cancellationToken: ct);
         if (existing is null)
         {
-            db.Configuration.Add(new() { Key = key, Value = value });
+            db.Configuration.Add(entity: new() { Key = key, Value = value });
         }
         else
         {
             existing.Value = value;
         }
-        await db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(cancellationToken: ct);
     }
 }

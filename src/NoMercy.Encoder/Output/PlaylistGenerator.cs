@@ -41,11 +41,11 @@ public class PlaylistGenerator : IPlaylistGenerator
     {
         int version = 3;
         if (hasSubsGroup)
-            version = Math.Max(version, 6);
+            version = Math.Max(val1: version, val2: 6);
         if (hasFmp4)
-            version = Math.Max(version, 7);
+            version = Math.Max(val1: version, val2: 7);
         if (hasChapterDateRanges)
-            version = Math.Max(version, 8);
+            version = Math.Max(val1: version, val2: 8);
         return version;
     }
 
@@ -58,15 +58,15 @@ public class PlaylistGenerator : IPlaylistGenerator
     /// </summary>
     public static string VideoVariantKey(VideoOutputPlan video) =>
         TemplateResolver.Resolve(
-            video.PlaylistNameTemplate,
-            TemplateResolver.VideoTokens(video.Width, video.Height, video.IsHdrOutput)
+            template: video.PlaylistNameTemplate,
+            values: TemplateResolver.VideoTokens(width: video.Width, height: video.Height, isHdrOutput: video.IsHdrOutput)
         );
 
     /// <summary>The audio-variant metrics key — same rationale as <see cref="VideoVariantKey"/>.</summary>
     public static string AudioVariantKey(AudioOutputPlan audio) =>
         TemplateResolver.Resolve(
-            audio.PlaylistNameTemplate,
-            TemplateResolver.AudioTokens(audio.Language ?? "und", audio.CodecToken, audio.Channels)
+            template: audio.PlaylistNameTemplate,
+            values: TemplateResolver.AudioTokens(language: audio.Language ?? "und", codecName: audio.CodecToken, channels: audio.Channels)
         );
 
     public string GenerateMasterPlaylist(
@@ -78,29 +78,29 @@ public class PlaylistGenerator : IPlaylistGenerator
     {
         HlsPlanOptions hlsOptions = plan.HlsOptions ?? new HlsPlanOptions();
 
-        bool hasFmp4 = hlsOptions.SegmentType.Equals("fmp4", StringComparison.OrdinalIgnoreCase);
+        bool hasFmp4 = hlsOptions.SegmentType.Equals(value: "fmp4", comparisonType: StringComparison.OrdinalIgnoreCase);
         // WebVTT outputs only contribute a subs group when the slicer is
         // going to emit the m3u8 wrapper they need. With chunking off the
         // .vtt extracts still exist but there is no playable HLS playlist
         // entry to advertise — referencing the raw .vtt would 404 on
         // spec-compliant clients.
-        bool hasSubsGroup = plan.SubtitleOutputs.Any(s =>
+        bool hasSubsGroup = plan.SubtitleOutputs.Any(predicate: s =>
             s.Action is StreamAction.Extract or StreamAction.Copy
             && (s.OutputCodec is not SubtitleCodecType.WebVtt || plan.EmitSubtitleWebVttChunks)
         );
 
         bool hasChapterDateRanges = plan.Chapters is { Count: > 0 };
 
-        int version = ComputeMasterVersion(hasSubsGroup, hasFmp4, hasChapterDateRanges);
+        int version = ComputeMasterVersion(hasSubsGroup: hasSubsGroup, hasFmp4: hasFmp4, hasChapterDateRanges: hasChapterDateRanges);
 
         StringBuilder sb = new();
-        sb.AppendLine("#EXTM3U");
-        sb.AppendLine($"#EXT-X-VERSION:{version}");
+        sb.AppendLine(value: "#EXTM3U");
+        sb.AppendLine(handler: $"#EXT-X-VERSION:{version}");
 
         // Emit #EXT-X-INDEPENDENT-SEGMENTS when the option is on OR when fMP4
         // segments are used (fMP4 requires independent segments per the spec).
         if (hlsOptions.IndependentSegments || hasFmp4)
-            sb.AppendLine("#EXT-X-INDEPENDENT-SEGMENTS");
+            sb.AppendLine(value: "#EXT-X-INDEPENDENT-SEGMENTS");
 
         sb.AppendLine();
 
@@ -127,33 +127,33 @@ public class PlaylistGenerator : IPlaylistGenerator
             // key (keyed by path, NOT MapLabel, so multiple audio renditions
             // never collide on a shared label).
             Dictionary<string, string> tokens = TemplateResolver.AudioTokens(
-                audio.Language ?? "und",
-                audio.CodecToken,
-                audio.Channels
+                language: audio.Language ?? "und",
+                codecName: audio.CodecToken,
+                channels: audio.Channels
             );
 
-            string playlistResolved = TemplateResolver.Resolve(audio.PlaylistNameTemplate, tokens);
+            string playlistResolved = TemplateResolver.Resolve(template: audio.PlaylistNameTemplate, values: tokens);
 
             // Skip audio variants whose segments never materialised. The
             // analyzer returns zero bandwidth when the playlist or its
             // segments are missing on disk — listing those in the master
             // makes hls.js / VLC bail on the first variant fetch.
-            VariantMetrics audMetrics = audioMetrics.GetValueOrDefault(playlistResolved, new(0, 0));
+            VariantMetrics audMetrics = audioMetrics.GetValueOrDefault(key: playlistResolved, defaultValue: new(PeakBandwidth: 0, AverageBandwidth: 0));
             if (audMetrics.PeakBandwidth == 0)
                 continue;
 
-            string subDir = StoragePathHelpers.GetParent(playlistResolved) ?? playlistResolved;
-            string playlistFile = StoragePathHelpers.GetName(playlistResolved);
+            string subDir = StoragePathHelpers.GetParent(path: playlistResolved) ?? playlistResolved;
+            string playlistFile = StoragePathHelpers.GetName(path: playlistResolved);
 
             string uri = $"{subDir}/{playlistFile}.m3u8";
             string language = audio.Language ?? "und";
-            string displayName = GetAudioDisplayName(language);
+            string displayName = GetAudioDisplayName(language: language);
             bool isDefault = !defaultAudioEmitted;
             defaultAudioEmitted = true;
             audioGroupEmitted = true;
 
             sb.AppendLine(
-                $"#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"{audioGroupId}\",LANGUAGE=\"{language}\",AUTOSELECT=YES,DEFAULT={YesNo(isDefault)},URI=\"{uri}\",NAME=\"{displayName}\""
+                handler: $"#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"{audioGroupId}\",LANGUAGE=\"{language}\",AUTOSELECT=YES,DEFAULT={YesNo(value: isDefault)},URI=\"{uri}\",NAME=\"{displayName}\""
             );
         }
 
@@ -164,7 +164,7 @@ public class PlaylistGenerator : IPlaylistGenerator
         // WebVTT entries are filtered out when chunking is disabled — same
         // reasoning as hasSubsGroup above.
         SubtitleOutputPlan[] activeSubs = plan
-            .SubtitleOutputs.Where(s =>
+            .SubtitleOutputs.Where(predicate: s =>
                 s.Action is StreamAction.Extract or StreamAction.Copy
                 && (s.OutputCodec is not SubtitleCodecType.WebVtt || plan.EmitSubtitleWebVttChunks)
             )
@@ -175,16 +175,16 @@ public class PlaylistGenerator : IPlaylistGenerator
             foreach (SubtitleOutputPlan sub in activeSubs)
             {
                 string lang = sub.Language ?? "und";
-                string displayName = GetSubtitleDisplayName(lang, sub.Variant);
-                string subsUri = GetSubtitlePlaylistUri(sub);
+                string displayName = GetSubtitleDisplayName(language: lang, variant: sub.Variant);
+                string subsUri = GetSubtitlePlaylistUri(sub: sub);
                 bool isForced = string.Equals(
-                    sub.Variant,
-                    "sign",
-                    StringComparison.OrdinalIgnoreCase
+                    a: sub.Variant,
+                    b: "sign",
+                    comparisonType: StringComparison.OrdinalIgnoreCase
                 );
 
                 sb.AppendLine(
-                    $"#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID=\"subs\",NAME=\"{displayName}\",LANGUAGE=\"{lang}\",DEFAULT=NO,AUTOSELECT=YES,FORCED={YesNo(isForced)},URI=\"{subsUri}\""
+                    handler: $"#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID=\"subs\",NAME=\"{displayName}\",LANGUAGE=\"{lang}\",DEFAULT=NO,AUTOSELECT=YES,FORCED={YesNo(value: isForced)},URI=\"{subsUri}\""
                 );
             }
 
@@ -194,10 +194,10 @@ public class PlaylistGenerator : IPlaylistGenerator
         // Video variants with measured bandwidth
         foreach (VideoOutputPlan video in plan.VideoOutputs)
         {
-            string? videoCodecTag = GetVideoCodecTag(video);
+            string? videoCodecTag = GetVideoCodecTag(video: video);
             string? audioCodecTag =
-                plan.AudioOutputs.Length > 0 ? GetAudioCodecTag(plan.AudioOutputs[0]) : null;
-            string codecsAttr = BuildCodecsAttribute(videoCodecTag, audioCodecTag);
+                plan.AudioOutputs.Length > 0 ? GetAudioCodecTag(audio: plan.AudioOutputs[0]) : null;
+            string codecsAttr = BuildCodecsAttribute(videoCodec: videoCodecTag, audioCodec: audioCodecTag);
 
             // Resolve this variant's own playlist path up front — it is the key
             // into videoMetrics (HlsOutputStrategy stored each variant's measured
@@ -205,17 +205,17 @@ public class PlaylistGenerator : IPlaylistGenerator
             // collapses every variant onto "[v0]" and gives them all one shared
             // BANDWIDTH.
             Dictionary<string, string> tokens = TemplateResolver.VideoTokens(
-                video.Width,
-                video.Height,
-                video.IsHdrOutput
+                width: video.Width,
+                height: video.Height,
+                isHdrOutput: video.IsHdrOutput
             );
-            string playlistResolved = TemplateResolver.Resolve(video.PlaylistNameTemplate, tokens);
-            string subDir = StoragePathHelpers.GetParent(playlistResolved) ?? playlistResolved;
-            string playlistFile = StoragePathHelpers.GetName(playlistResolved);
+            string playlistResolved = TemplateResolver.Resolve(template: video.PlaylistNameTemplate, values: tokens);
+            string subDir = StoragePathHelpers.GetParent(path: playlistResolved) ?? playlistResolved;
+            string playlistFile = StoragePathHelpers.GetName(path: playlistResolved);
 
             // Use measured bandwidth. Apple requires BANDWIDTH = peak, AVERAGE-BANDWIDTH = average.
             // Combine video + audio bandwidth for the STREAM-INF (Apple spec section 4.10).
-            VariantMetrics vidMetrics = videoMetrics.GetValueOrDefault(playlistResolved, new(0, 0));
+            VariantMetrics vidMetrics = videoMetrics.GetValueOrDefault(key: playlistResolved, defaultValue: new(PeakBandwidth: 0, AverageBandwidth: 0));
 
             // Skip video variants whose segments never materialised — bundle
             // got cancelled / failed / didn't publish. Listing them in the
@@ -225,20 +225,20 @@ public class PlaylistGenerator : IPlaylistGenerator
             if (vidMetrics.PeakBandwidth == 0)
                 continue;
 
-            VariantMetrics audMetrics = new(0, 0);
+            VariantMetrics audMetrics = new(PeakBandwidth: 0, AverageBandwidth: 0);
             if (plan.AudioOutputs.Length > 0)
             {
                 AudioOutputPlan primaryAudio = plan.AudioOutputs[0];
                 Dictionary<string, string> audioTokens = TemplateResolver.AudioTokens(
-                    primaryAudio.Language ?? "und",
-                    primaryAudio.CodecToken,
-                    primaryAudio.Channels
+                    language: primaryAudio.Language ?? "und",
+                    codecName: primaryAudio.CodecToken,
+                    channels: primaryAudio.Channels
                 );
                 string audioResolved = TemplateResolver.Resolve(
-                    primaryAudio.PlaylistNameTemplate,
-                    audioTokens
+                    template: primaryAudio.PlaylistNameTemplate,
+                    values: audioTokens
                 );
-                audMetrics = audioMetrics.GetValueOrDefault(audioResolved, new(0, 0));
+                audMetrics = audioMetrics.GetValueOrDefault(key: audioResolved, defaultValue: new(PeakBandwidth: 0, AverageBandwidth: 0));
             }
 
             int peakBandwidth = vidMetrics.PeakBandwidth + audMetrics.PeakBandwidth;
@@ -250,7 +250,7 @@ public class PlaylistGenerator : IPlaylistGenerator
             // master with manifestIncompatibleCodecsError because the segments'
             // actual transfer characteristics don't match.
             string videoRange = video.IsHdrOutput ? "PQ" : "SDR";
-            string frameRate = video.FrameRate.ToString("F3", CultureInfo.InvariantCulture);
+            string frameRate = video.FrameRate.ToString(format: "F3", provider: CultureInfo.InvariantCulture);
 
             string subsAttr =
                 activeSubs.Length > 0 ? ",SUBTITLES=\"subs\"" : ",CLOSED-CAPTIONS=NONE";
@@ -261,9 +261,9 @@ public class PlaylistGenerator : IPlaylistGenerator
             string audioAttr = audioGroupEmitted ? $",AUDIO=\"{audioGroupId}\"" : string.Empty;
 
             sb.AppendLine(
-                $"#EXT-X-STREAM-INF:BANDWIDTH={peakBandwidth},AVERAGE-BANDWIDTH={avgBandwidth},RESOLUTION={video.Width}x{video.Height},FRAME-RATE={frameRate}{codecsAttr},VIDEO-RANGE={videoRange}{audioAttr}{subsAttr}"
+                handler: $"#EXT-X-STREAM-INF:BANDWIDTH={peakBandwidth},AVERAGE-BANDWIDTH={avgBandwidth},RESOLUTION={video.Width}x{video.Height},FRAME-RATE={frameRate}{codecsAttr},VIDEO-RANGE={videoRange}{audioAttr}{subsAttr}"
             );
-            sb.AppendLine($"{subDir}/{playlistFile}.m3u8");
+            sb.AppendLine(handler: $"{subDir}/{playlistFile}.m3u8");
         }
 
         // Emit EXT-X-DATERANGE chapter markers (HLS v8).
@@ -275,28 +275,28 @@ public class PlaylistGenerator : IPlaylistGenerator
 
             for (int i = 0; i < chapters.Count; i++)
             {
-                ChapterInfo chapter = chapters[i];
+                ChapterInfo chapter = chapters[index: i];
                 double startSeconds = chapter.Start.TotalSeconds;
                 double endSeconds =
                     i + 1 < chapters.Count
-                        ? chapters[i + 1].Start.TotalSeconds
+                        ? chapters[index: i + 1].Start.TotalSeconds
                         : chapter.End.TotalSeconds;
                 double durationSeconds = endSeconds - startSeconds;
 
-                DateTimeOffset startDate = epoch.AddSeconds(startSeconds);
+                DateTimeOffset startDate = epoch.AddSeconds(seconds: startSeconds);
                 string startDateIso = startDate.ToString(
-                    "yyyy-MM-ddTHH:mm:ss.fffZ",
-                    CultureInfo.InvariantCulture
+                    format: "yyyy-MM-ddTHH:mm:ss.fffZ",
+                    formatProvider: CultureInfo.InvariantCulture
                 );
                 string title = chapter.Title ?? $"Chapter {i + 1}";
-                string escapedTitle = title.Replace("\"", "\\\"");
+                string escapedTitle = title.Replace(oldValue: "\"", newValue: "\\\"");
                 string durationFormatted = durationSeconds.ToString(
-                    "F3",
-                    CultureInfo.InvariantCulture
+                    format: "F3",
+                    provider: CultureInfo.InvariantCulture
                 );
 
                 sb.AppendLine(
-                    $"#EXT-X-DATERANGE:ID=\"ch{i}\",START-DATE=\"{startDateIso}\",DURATION={durationFormatted},X-COM-NOMERCY-CHAPTER-TITLE=\"{escapedTitle}\""
+                    handler: $"#EXT-X-DATERANGE:ID=\"ch{i}\",START-DATE=\"{startDateIso}\",DURATION={durationFormatted},X-COM-NOMERCY-CHAPTER-TITLE=\"{escapedTitle}\""
                 );
             }
         }
@@ -305,21 +305,21 @@ public class PlaylistGenerator : IPlaylistGenerator
     }
 
     private static string GetAudioDisplayName(string language) =>
-        Culture.EnglishLanguageName(language);
+        Culture.EnglishLanguageName(code: language);
 
     private static string? GetVideoCodecTag(VideoOutputPlan video) =>
         HlsCodecsStringBuilder.VideoCodecString(
-            video.EncoderName,
-            video.Profile,
-            video.Level,
-            video.TenBit,
-            video.Width,
-            video.Height,
-            video.FrameRate
+            encoderName: video.EncoderName,
+            profile: video.Profile,
+            level: video.Level,
+            tenBit: video.TenBit,
+            width: video.Width,
+            height: video.Height,
+            frameRate: video.FrameRate
         );
 
     private static string? GetAudioCodecTag(AudioOutputPlan audio) =>
-        HlsCodecsStringBuilder.AudioCodecString(audio.EncoderName);
+        HlsCodecsStringBuilder.AudioCodecString(encoderName: audio.EncoderName);
 
     /// <summary>
     /// Builds the ",CODECS=&quot;...&quot;" clause (leading comma included) from
@@ -331,11 +331,11 @@ public class PlaylistGenerator : IPlaylistGenerator
     {
         List<string> parts = [];
         if (videoCodec is not null)
-            parts.Add(videoCodec);
+            parts.Add(item: videoCodec);
         if (audioCodec is not null)
-            parts.Add(audioCodec);
+            parts.Add(item: audioCodec);
 
-        return parts.Count > 0 ? $",CODECS=\"{string.Join(",", parts)}\"" : string.Empty;
+        return parts.Count > 0 ? $",CODECS=\"{string.Join(separator: ",", values: parts)}\"" : string.Empty;
     }
 
     private static string YesNo(bool value) => value ? "YES" : "NO";
@@ -346,7 +346,7 @@ public class PlaylistGenerator : IPlaylistGenerator
 
     private static string GetSubtitleDisplayName(string language, string variant = "full")
     {
-        string langName = Culture.EnglishLanguageName(language);
+        string langName = Culture.EnglishLanguageName(code: language);
 
         return variant.ToLowerInvariant() switch
         {
@@ -364,7 +364,7 @@ public class PlaylistGenerator : IPlaylistGenerator
     internal static string GetSubtitlePlaylistUri(SubtitleOutputPlan sub)
     {
         string lang = sub.Language ?? "und";
-        string variant = string.IsNullOrEmpty(sub.Variant) ? "full" : sub.Variant;
+        string variant = string.IsNullOrEmpty(value: sub.Variant) ? "full" : sub.Variant;
 
         return sub.OutputCodec switch
         {
@@ -388,29 +388,29 @@ public class PlaylistGenerator : IPlaylistGenerator
         string segmentUriPrefix = ""
     )
     {
-        string variant = string.IsNullOrEmpty(sub.Variant) ? "full" : sub.Variant;
+        string variant = string.IsNullOrEmpty(value: sub.Variant) ? "full" : sub.Variant;
 
         StringBuilder sb = new();
-        sb.AppendLine("#EXTM3U");
-        sb.AppendLine("#EXT-X-VERSION:3");
-        sb.AppendLine($"#EXT-X-TARGETDURATION:{segmentDurationSeconds}");
-        sb.AppendLine("#EXT-X-PLAYLIST-TYPE:VOD");
+        sb.AppendLine(value: "#EXTM3U");
+        sb.AppendLine(value: "#EXT-X-VERSION:3");
+        sb.AppendLine(handler: $"#EXT-X-TARGETDURATION:{segmentDurationSeconds}");
+        sb.AppendLine(value: "#EXT-X-PLAYLIST-TYPE:VOD");
 
         foreach (WebVttSegment seg in segments)
         {
             double actualDuration = (seg.EndTime - seg.StartTime).TotalSeconds;
             string segFile = $"{variant}_{seg.Index:D5}.vtt";
-            string uri = string.IsNullOrEmpty(segmentUriPrefix)
+            string uri = string.IsNullOrEmpty(value: segmentUriPrefix)
                 ? segFile
                 : $"{segmentUriPrefix}/{segFile}";
 
             sb.AppendLine(
-                $"#EXTINF:{actualDuration.ToString("F3", CultureInfo.InvariantCulture)},"
+                handler: $"#EXTINF:{actualDuration.ToString(format: "F3", provider: CultureInfo.InvariantCulture)},"
             );
-            sb.AppendLine(uri);
+            sb.AppendLine(value: uri);
         }
 
-        sb.AppendLine("#EXT-X-ENDLIST");
+        sb.AppendLine(value: "#EXT-X-ENDLIST");
         return sb.ToString();
     }
 
@@ -427,13 +427,13 @@ public class PlaylistGenerator : IPlaylistGenerator
     {
         string lang = sub.Language ?? "und";
         StringBuilder sb = new();
-        sb.AppendLine("#EXTM3U");
-        sb.AppendLine("#EXT-X-VERSION:3");
-        sb.AppendLine($"#EXT-X-TARGETDURATION:{segmentDurationSeconds}");
-        sb.AppendLine("#EXT-X-PLAYLIST-TYPE:VOD");
-        sb.AppendLine($"#EXTINF:{segmentDurationSeconds}.000,");
-        sb.AppendLine(assFileName);
-        sb.AppendLine("#EXT-X-ENDLIST");
+        sb.AppendLine(value: "#EXTM3U");
+        sb.AppendLine(value: "#EXT-X-VERSION:3");
+        sb.AppendLine(handler: $"#EXT-X-TARGETDURATION:{segmentDurationSeconds}");
+        sb.AppendLine(value: "#EXT-X-PLAYLIST-TYPE:VOD");
+        sb.AppendLine(handler: $"#EXTINF:{segmentDurationSeconds}.000,");
+        sb.AppendLine(value: assFileName);
+        sb.AppendLine(value: "#EXT-X-ENDLIST");
         return sb.ToString();
     }
 }

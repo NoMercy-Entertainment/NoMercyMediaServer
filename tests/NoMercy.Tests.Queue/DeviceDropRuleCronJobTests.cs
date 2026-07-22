@@ -33,29 +33,29 @@ namespace NoMercy.Tests.Queue;
 /// disowned for no reason). If any of these thresholds regress, a real
 /// device silently vanishes from (or lingers in) a user's picker.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class DeviceDropRuleCronJobTests : IDisposable
 {
     private readonly List<SqliteConnection> _connections = [];
 
     private IDbContextFactory<MediaContext> CreateFactory()
     {
-        SqliteConnection connection = new("DataSource=:memory:;Foreign Keys=False");
+        SqliteConnection connection = new(connectionString: "DataSource=:memory:;Foreign Keys=False");
         connection.Open();
-        _connections.Add(connection);
+        _connections.Add(item: connection);
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseSqlite(connection)
+            .UseSqlite(connection: connection)
             .Options;
 
-        using (MediaContext init = new(options))
+        using (MediaContext init = new(options: options))
         {
             init.Database.EnsureCreated();
         }
 
         Mock<IDbContextFactory<MediaContext>> mock = new();
-        mock.Setup(x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => new(options));
+        mock.Setup(expression: x => x.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(valueFunction: () => new(options: options));
         return mock.Object;
     }
 
@@ -89,16 +89,16 @@ public class DeviceDropRuleCronJobTests : IDisposable
         Guid owner = Guid.NewGuid();
         await using (MediaContext seed = await factory.CreateDbContextAsync())
         {
-            seed.Devices.Add(NewDevice(owner, "fp-1", DateTime.UtcNow.AddMinutes(-30)));
+            seed.Devices.Add(entity: NewDevice(ownerId: owner, fingerprint: "fp-1", wsConnectedAt: DateTime.UtcNow.AddMinutes(value: -30)));
             await seed.SaveChangesAsync();
         }
 
-        DeviceDropRuleCronJob job = new(factory, NullLogger<DeviceDropRuleCronJob>.Instance);
-        await job.ExecuteAsync(string.Empty);
+        DeviceDropRuleCronJob job = new(contextFactory: factory, logger: NullLogger<DeviceDropRuleCronJob>.Instance);
+        await job.ExecuteAsync(parameters: string.Empty);
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
         Device survivor = ctx.Devices.Single();
-        survivor.OwnerUserId.Should().Be(owner);
+        survivor.OwnerUserId.Should().Be(expected: owner);
         survivor.IsActive.Should().BeFalse(); // never set true by the job; unrelated to drop
         ctx.DeviceDropNotices.Should().BeEmpty();
     }
@@ -110,20 +110,20 @@ public class DeviceDropRuleCronJobTests : IDisposable
         Guid owner = Guid.NewGuid();
         await using (MediaContext seed = await factory.CreateDbContextAsync())
         {
-            seed.Devices.Add(NewDevice(owner, "fp-2", DateTime.UtcNow.AddDays(-8)));
+            seed.Devices.Add(entity: NewDevice(ownerId: owner, fingerprint: "fp-2", wsConnectedAt: DateTime.UtcNow.AddDays(value: -8)));
             await seed.SaveChangesAsync();
         }
 
-        DeviceDropRuleCronJob job = new(factory, NullLogger<DeviceDropRuleCronJob>.Instance);
-        await job.ExecuteAsync(string.Empty);
+        DeviceDropRuleCronJob job = new(contextFactory: factory, logger: NullLogger<DeviceDropRuleCronJob>.Instance);
+        await job.ExecuteAsync(parameters: string.Empty);
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
         Device dropped = ctx.Devices.Single();
         dropped.OwnerUserId.Should().BeNull();
         dropped.IsActive.Should().BeFalse();
         DeviceDropNotice notice = ctx.DeviceDropNotices.Single();
-        notice.UserId.Should().Be(owner);
-        notice.Reason.Should().Be("ttl");
+        notice.UserId.Should().Be(expected: owner);
+        notice.Reason.Should().Be(expected: "ttl");
     }
 
     [Fact]
@@ -138,17 +138,17 @@ public class DeviceDropRuleCronJobTests : IDisposable
         await using (MediaContext seed = await factory.CreateDbContextAsync())
         {
             seed.Devices.Add(
-                NewDevice(owner, "fp-3", DateTime.UtcNow.AddHours(-30), lanIp: "10.0.0.5")
+                entity: NewDevice(ownerId: owner, fingerprint: "fp-3", wsConnectedAt: DateTime.UtcNow.AddHours(value: -30), lanIp: "10.0.0.5")
             );
             await seed.SaveChangesAsync();
         }
 
-        DeviceDropRuleCronJob job = new(factory, NullLogger<DeviceDropRuleCronJob>.Instance);
-        await job.ExecuteAsync(string.Empty);
+        DeviceDropRuleCronJob job = new(contextFactory: factory, logger: NullLogger<DeviceDropRuleCronJob>.Instance);
+        await job.ExecuteAsync(parameters: string.Empty);
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
         Device survivor = ctx.Devices.Single();
-        survivor.OwnerUserId.Should().Be(owner);
+        survivor.OwnerUserId.Should().Be(expected: owner);
         ctx.DeviceDropNotices.Should().BeEmpty();
     }
 
@@ -161,11 +161,11 @@ public class DeviceDropRuleCronJobTests : IDisposable
         {
             // The stale device — same LanIp, hasn't been seen in the efuse window.
             seed.Devices.Add(
-                NewDevice(owner, "fp-old", DateTime.UtcNow.AddHours(-30), lanIp: "10.0.0.9")
+                entity: NewDevice(ownerId: owner, fingerprint: "fp-old", wsConnectedAt: DateTime.UtcNow.AddHours(value: -30), lanIp: "10.0.0.9")
             );
             // A different fingerprint reclaimed that LAN IP recently via mDNS.
             seed.Devices.Add(
-                new Device
+                entity: new Device
                 {
                     DeviceId = Guid.NewGuid().ToString(),
                     Type = "web",
@@ -177,22 +177,22 @@ public class DeviceDropRuleCronJobTests : IDisposable
                     // the occupant must have held this LAN IP since at least the
                     // e-fuse threshold, not merely "recently", so a one-off DHCP
                     // blip can't falsely disown the original device.
-                    MdnsSeenAt = DateTime.UtcNow.AddHours(-25),
+                    MdnsSeenAt = DateTime.UtcNow.AddHours(value: -25),
                 }
             );
             await seed.SaveChangesAsync();
         }
 
-        DeviceDropRuleCronJob job = new(factory, NullLogger<DeviceDropRuleCronJob>.Instance);
-        await job.ExecuteAsync(string.Empty);
+        DeviceDropRuleCronJob job = new(contextFactory: factory, logger: NullLogger<DeviceDropRuleCronJob>.Instance);
+        await job.ExecuteAsync(parameters: string.Empty);
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
-        Device stale = ctx.Devices.Single(d => d.Fingerprint == "fp-old");
+        Device stale = ctx.Devices.Single(predicate: d => d.Fingerprint == "fp-old");
         stale.OwnerUserId.Should().BeNull();
         stale.IsActive.Should().BeFalse();
         DeviceDropNotice notice = ctx.DeviceDropNotices.Single();
-        notice.Reason.Should().Be("efuse");
-        notice.UserId.Should().Be(owner);
+        notice.Reason.Should().Be(expected: "efuse");
+        notice.UserId.Should().Be(expected: owner);
     }
 
     [Fact]
@@ -202,21 +202,21 @@ public class DeviceDropRuleCronJobTests : IDisposable
         await using (MediaContext seed = await factory.CreateDbContextAsync())
         {
             seed.Devices.Add(
-                new Device
+                entity: new Device
                 {
                     DeviceId = Guid.NewGuid().ToString(),
                     Type = "web",
                     Name = "Anonymous",
                     OwnerUserId = null,
                     Fingerprint = null,
-                    WsConnectedAt = DateTime.UtcNow.AddDays(-30),
+                    WsConnectedAt = DateTime.UtcNow.AddDays(value: -30),
                 }
             );
             await seed.SaveChangesAsync();
         }
 
-        DeviceDropRuleCronJob job = new(factory, NullLogger<DeviceDropRuleCronJob>.Instance);
-        await job.ExecuteAsync(string.Empty);
+        DeviceDropRuleCronJob job = new(contextFactory: factory, logger: NullLogger<DeviceDropRuleCronJob>.Instance);
+        await job.ExecuteAsync(parameters: string.Empty);
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
         ctx.Devices.Should().ContainSingle();
@@ -231,7 +231,7 @@ public class DeviceDropRuleCronJobTests : IDisposable
         await using (MediaContext seed = await factory.CreateDbContextAsync())
         {
             seed.Devices.Add(
-                new Device
+                entity: new Device
                 {
                     DeviceId = Guid.NewGuid().ToString(),
                     Type = "web",
@@ -245,12 +245,12 @@ public class DeviceDropRuleCronJobTests : IDisposable
             await seed.SaveChangesAsync();
         }
 
-        DeviceDropRuleCronJob job = new(factory, NullLogger<DeviceDropRuleCronJob>.Instance);
-        await job.ExecuteAsync(string.Empty);
+        DeviceDropRuleCronJob job = new(contextFactory: factory, logger: NullLogger<DeviceDropRuleCronJob>.Instance);
+        await job.ExecuteAsync(parameters: string.Empty);
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
         Device survivor = ctx.Devices.Single();
-        survivor.OwnerUserId.Should().Be(owner);
+        survivor.OwnerUserId.Should().Be(expected: owner);
     }
 
     [Fact]
@@ -260,22 +260,22 @@ public class DeviceDropRuleCronJobTests : IDisposable
         Guid owner = Guid.NewGuid();
         await using (MediaContext seed = await factory.CreateDbContextAsync())
         {
-            seed.Devices.Add(NewDevice(owner, "fp-a", DateTime.UtcNow.AddDays(-10)));
-            seed.Devices.Add(NewDevice(owner, "fp-b", DateTime.UtcNow.AddDays(-9)));
+            seed.Devices.Add(entity: NewDevice(ownerId: owner, fingerprint: "fp-a", wsConnectedAt: DateTime.UtcNow.AddDays(value: -10)));
+            seed.Devices.Add(entity: NewDevice(ownerId: owner, fingerprint: "fp-b", wsConnectedAt: DateTime.UtcNow.AddDays(value: -9)));
             await seed.SaveChangesAsync();
         }
 
         Mock<IDeviceListChangeNotifier> notifier = new();
-        notifier.Setup(n => n.BroadcastChange(It.IsAny<Guid>())).Returns(Task.CompletedTask);
+        notifier.Setup(expression: n => n.BroadcastChange(It.IsAny<Guid>())).Returns(value: Task.CompletedTask);
 
         DeviceDropRuleCronJob job = new(
-            factory,
-            NullLogger<DeviceDropRuleCronJob>.Instance,
-            notifier.Object
+            contextFactory: factory,
+            logger: NullLogger<DeviceDropRuleCronJob>.Instance,
+            changeNotifier: notifier.Object
         );
-        await job.ExecuteAsync(string.Empty);
+        await job.ExecuteAsync(parameters: string.Empty);
 
-        notifier.Verify(n => n.BroadcastChange(owner), Times.Once);
+        notifier.Verify(expression: n => n.BroadcastChange(owner), times: Times.Once);
     }
 
     [Fact]
@@ -285,7 +285,7 @@ public class DeviceDropRuleCronJobTests : IDisposable
         await using (MediaContext seed = await factory.CreateDbContextAsync())
         {
             seed.Devices.Add(
-                NewDevice(Guid.NewGuid(), "fp-fresh", DateTime.UtcNow.AddMinutes(-10))
+                entity: NewDevice(ownerId: Guid.NewGuid(), fingerprint: "fp-fresh", wsConnectedAt: DateTime.UtcNow.AddMinutes(value: -10))
             );
             await seed.SaveChangesAsync();
         }
@@ -293,13 +293,13 @@ public class DeviceDropRuleCronJobTests : IDisposable
         Mock<IDeviceListChangeNotifier> notifier = new();
 
         DeviceDropRuleCronJob job = new(
-            factory,
-            NullLogger<DeviceDropRuleCronJob>.Instance,
-            notifier.Object
+            contextFactory: factory,
+            logger: NullLogger<DeviceDropRuleCronJob>.Instance,
+            changeNotifier: notifier.Object
         );
-        await job.ExecuteAsync(string.Empty);
+        await job.ExecuteAsync(parameters: string.Empty);
 
-        notifier.Verify(n => n.BroadcastChange(It.IsAny<Guid>()), Times.Never);
+        notifier.Verify(expression: n => n.BroadcastChange(It.IsAny<Guid>()), times: Times.Never);
     }
 
     [Fact]
@@ -307,15 +307,15 @@ public class DeviceDropRuleCronJobTests : IDisposable
     {
         Mock<IDbContextFactory<MediaContext>> throwingFactory = new();
         throwingFactory
-            .Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("db unavailable"));
+            .Setup(expression: f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(exception: new InvalidOperationException(message: "db unavailable"));
 
         DeviceDropRuleCronJob job = new(
-            throwingFactory.Object,
-            NullLogger<DeviceDropRuleCronJob>.Instance
+            contextFactory: throwingFactory.Object,
+            logger: NullLogger<DeviceDropRuleCronJob>.Instance
         );
 
-        Func<Task> act = () => job.ExecuteAsync(string.Empty);
+        Func<Task> act = () => job.ExecuteAsync(parameters: string.Empty);
 
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
@@ -331,7 +331,7 @@ public class DeviceDropRuleCronJobTests : IDisposable
         await using (MediaContext seed = await factory.CreateDbContextAsync())
         {
             seed.Devices.Add(
-                new Device
+                entity: new Device
                 {
                     DeviceId = Guid.NewGuid().ToString(),
                     Type = "web",
@@ -339,20 +339,20 @@ public class DeviceDropRuleCronJobTests : IDisposable
                     OwnerUserId = owner,
                     Fingerprint = "fp-mdns-only",
                     WsConnectedAt = null,
-                    MdnsSeenAt = DateTime.UtcNow.AddDays(-8),
+                    MdnsSeenAt = DateTime.UtcNow.AddDays(value: -8),
                 }
             );
             await seed.SaveChangesAsync();
         }
 
-        DeviceDropRuleCronJob job = new(factory, NullLogger<DeviceDropRuleCronJob>.Instance);
-        await job.ExecuteAsync(string.Empty);
+        DeviceDropRuleCronJob job = new(contextFactory: factory, logger: NullLogger<DeviceDropRuleCronJob>.Instance);
+        await job.ExecuteAsync(parameters: string.Empty);
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
         Device dropped = ctx.Devices.Single();
         dropped
             .OwnerUserId.Should()
-            .BeNull("an 8-day-old mDNS-only sighting must still cross the TTL threshold");
+            .BeNull(because: "an 8-day-old mDNS-only sighting must still cross the TTL threshold");
     }
 
     [Fact]
@@ -367,39 +367,39 @@ public class DeviceDropRuleCronJobTests : IDisposable
         await using (MediaContext seed = await factory.CreateDbContextAsync())
         {
             seed.Devices.Add(
-                new Device
+                entity: new Device
                 {
                     DeviceId = Guid.NewGuid().ToString(),
                     Type = "web",
                     Name = "Both Channels",
                     OwnerUserId = owner,
                     Fingerprint = "fp-both",
-                    WsConnectedAt = DateTime.UtcNow.AddDays(-8),
-                    MdnsSeenAt = DateTime.UtcNow.AddHours(-1),
+                    WsConnectedAt = DateTime.UtcNow.AddDays(value: -8),
+                    MdnsSeenAt = DateTime.UtcNow.AddHours(value: -1),
                 }
             );
             await seed.SaveChangesAsync();
         }
 
-        DeviceDropRuleCronJob job = new(factory, NullLogger<DeviceDropRuleCronJob>.Instance);
-        await job.ExecuteAsync(string.Empty);
+        DeviceDropRuleCronJob job = new(contextFactory: factory, logger: NullLogger<DeviceDropRuleCronJob>.Instance);
+        await job.ExecuteAsync(parameters: string.Empty);
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
         Device survivor = ctx.Devices.Single();
         survivor
             .OwnerUserId.Should()
-            .Be(owner, "the more recent mDNS sighting must win over the stale WS timestamp");
+            .Be(expected: owner, because: "the more recent mDNS sighting must win over the stale WS timestamp");
     }
 
     [Fact]
     public void CronExpression_IsHourly()
     {
         DeviceDropRuleCronJob job = new(
-            CreateFactory(),
-            NullLogger<DeviceDropRuleCronJob>.Instance
+            contextFactory: CreateFactory(),
+            logger: NullLogger<DeviceDropRuleCronJob>.Instance
         );
 
-        job.CronExpression.Should().Be("0 * * * *");
-        job.JobName.Should().Be("Hourly Device Drop-Rule Job");
+        job.CronExpression.Should().Be(expected: "0 * * * *");
+        job.JobName.Should().Be(expected: "Hourly Device Drop-Rule Job");
     }
 }

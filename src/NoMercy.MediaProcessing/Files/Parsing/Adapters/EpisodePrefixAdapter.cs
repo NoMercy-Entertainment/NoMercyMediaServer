@@ -24,15 +24,15 @@ public sealed class EpisodePrefixAdapter : IFilenameParseAdapter
 
     public MovieFile? TryParse(ParseContext context)
     {
-        Match match = StringExtensions.MatchEpisodePrefix().Match(context.CleanedFileName);
+        Match match = StringExtensions.MatchEpisodePrefix().Match(input: context.CleanedFileName);
         if (!match.Success)
             return null;
 
-        return new(context.Title)
+        return new(filePath: context.Title)
         {
             Title = context.FolderTitle.CleanReleaseTitle(),
-            Season = int.Parse(match.Groups[1].Value),
-            Episode = int.Parse(match.Groups[2].Value),
+            Season = int.Parse(s: match.Groups[groupnum: 1].Value),
+            Episode = int.Parse(s: match.Groups[groupnum: 2].Value),
             IsSeries = true,
             IsSuccess = true,
         };

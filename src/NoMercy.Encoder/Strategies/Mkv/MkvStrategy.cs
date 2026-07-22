@@ -27,7 +27,7 @@ namespace NoMercy.Encoder.Strategies.Mkv;
 /// encoders targeting a specific bitrate. That's a future strategy.
 /// </summary>
 public class MkvStrategy(IEncoder encoder, ILogger<MkvStrategy> logger, IStorage storage)
-    : SinglePassStrategyBase(encoder, logger, storage)
+    : SinglePassStrategyBase(encoder: encoder, logger: logger, storage: storage)
 {
     public override OutputFormat Format => OutputFormat.Mkv;
 }

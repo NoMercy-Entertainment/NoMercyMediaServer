@@ -28,7 +28,7 @@ public abstract class TmdbImageClient
     // Image downloads hit image.tmdb.org (a separate host from the API) and
     // are throttled by their own queue rather than the shared API queue.
     private static readonly Queue ImageQueue = new(
-        new()
+        options: new()
         {
             Concurrent = 50,
             Interval = 1000,
@@ -46,7 +46,7 @@ public abstract class TmdbImageClient
     private static IStorage Storage =>
         _storage
         ?? throw new InvalidOperationException(
-            "TmdbImageClient has not been initialized. Call TmdbImageClient.Initialize() at startup."
+            message: "TmdbImageClient has not been initialized. Call TmdbImageClient.Initialize() at startup."
         );
 
     public static Task<Image<Rgba32>?>? Download(
@@ -57,21 +57,21 @@ public abstract class TmdbImageClient
     {
         try
         {
-            return ImageQueue.Enqueue(Task, path, true);
+            return ImageQueue.Enqueue(task: Task, url: path, priority: true);
         }
         catch (InvalidImageContentException e)
         {
             Logger.MovieDb(
-                $"Image format error downloading image: {path} - {e.Message}",
-                LogEventLevel.Error
+                message: $"Image format error downloading image: {path} - {e.Message}",
+                level: LogEventLevel.Error
             );
             return null;
         }
         catch (ImageFormatException e)
         {
             Logger.MovieDb(
-                $"Image format error downloading image: {path} - {e.Message}",
-                LogEventLevel.Error
+                message: $"Image format error downloading image: {path} - {e.Message}",
+                level: LogEventLevel.Error
             );
             return null;
         }
@@ -88,18 +88,18 @@ public abstract class TmdbImageClient
                 // an empty file name, so filePath becomes the 'original' folder
                 // itself and WriteAsync targets the directory — "Access to the path
                 // '…/cache/images/original' is denied". Nothing to download here.
-                string fileName = path.Replace("/", "");
-                if (string.IsNullOrWhiteSpace(fileName))
+                string fileName = path.Replace(oldValue: "/", newValue: "");
+                if (string.IsNullOrWhiteSpace(value: fileName))
                     return null;
 
-                bool isSvg = path.EndsWith(".svg");
-                string folder = Path.Join(AppFiles.ImagesPath, "original");
+                bool isSvg = path.EndsWith(value: ".svg");
+                string folder = Path.Join(path1: AppFiles.ImagesPath, path2: "original");
 
                 IStorage storage = Storage;
-                await storage.CreateDirectoryAsync(folder, CancellationToken.None);
+                await storage.CreateDirectoryAsync(path: folder, ct: CancellationToken.None);
 
-                string filePath = Path.Join(folder, fileName);
-                if (await storage.ExistsAsync(filePath, CancellationToken.None))
+                string filePath = Path.Join(path1: folder, path2: fileName);
+                if (await storage.ExistsAsync(path: filePath, ct: CancellationToken.None))
                 {
                     if (isSvg)
                         return null;
@@ -109,10 +109,10 @@ public abstract class TmdbImageClient
                         if (maxDecodeSize.HasValue)
                         {
                             DecoderOptions options = new() { TargetSize = maxDecodeSize.Value };
-                            return await Image.LoadAsync<Rgba32>(options, filePath);
+                            return await Image.LoadAsync<Rgba32>(options: options, path: filePath);
                         }
 
-                        return await Image.LoadAsync<Rgba32>(filePath);
+                        return await Image.LoadAsync<Rgba32>(path: filePath);
                     }
                     catch (Exception e)
                         when (e is ImageFormatException or InvalidImageContentException)
@@ -122,17 +122,17 @@ public abstract class TmdbImageClient
                         // re-downloads a clean copy instead of failing on every
                         // scan forever.
                         Logger.MovieDb(
-                            $"Discarding undecodable cached image, re-downloading: {path} - {e.Message}",
-                            LogEventLevel.Warning
+                            message: $"Discarding undecodable cached image, re-downloading: {path} - {e.Message}",
+                            level: LogEventLevel.Warning
                         );
-                        await storage.DeleteAsync(filePath, CancellationToken.None);
+                        await storage.DeleteAsync(path: filePath, ct: CancellationToken.None);
                     }
                 }
 
-                HttpClient httpClient = HttpClientProvider.CreateClient(HttpClientNames.TmdbImage);
+                HttpClient httpClient = HttpClientProvider.CreateClient(name: HttpClientNames.TmdbImage);
 
-                string url = path.StartsWith("http") ? path : $"original{path}";
-                using HttpResponseMessage response = await httpClient.GetAsync(url);
+                string url = path.StartsWith(value: "http") ? path : $"original{path}";
+                using HttpResponseMessage response = await httpClient.GetAsync(requestUri: url);
 
                 if (!response.IsSuccessStatusCode)
                     return null;
@@ -147,10 +147,10 @@ public abstract class TmdbImageClient
                     if (maxDecodeSize.HasValue)
                     {
                         DecoderOptions options = new() { TargetSize = maxDecodeSize.Value };
-                        return Image.Load<Rgba32>(options, contentStream);
+                        return Image.Load<Rgba32>(options: options, stream: contentStream);
                     }
 
-                    return Image.Load<Rgba32>(contentStream);
+                    return Image.Load<Rgba32>(stream: contentStream);
                 }
 
                 byte[] bytes = await response.Content.ReadAsByteArrayAsync();
@@ -159,8 +159,8 @@ public abstract class TmdbImageClient
                 {
                     // SVG is not decoded (ImageSharp has no SVG decoder), but it
                     // is a valid asset — cache it as-is.
-                    if (!await storage.ExistsAsync(filePath, CancellationToken.None))
-                        await storage.WriteAsync(filePath, bytes, CancellationToken.None);
+                    if (!await storage.ExistsAsync(path: filePath, ct: CancellationToken.None))
+                        await storage.WriteAsync(path: filePath, bytes: bytes, ct: CancellationToken.None);
                     return null;
                 }
 
@@ -180,21 +180,21 @@ public abstract class TmdbImageClient
                     // download can be re-fetched cleanly next time.
                     if (decoderOptions is not null)
                     {
-                        using Image<Rgba32> probe = Image.Load<Rgba32>(decoderOptions, bytes);
+                        using Image<Rgba32> probe = Image.Load<Rgba32>(options: decoderOptions, data: bytes);
                     }
                     else
                     {
-                        using Image<Rgba32> probe = Image.Load<Rgba32>(bytes);
+                        using Image<Rgba32> probe = Image.Load<Rgba32>(data: bytes);
                     }
 
-                    if (!await storage.ExistsAsync(filePath, CancellationToken.None))
-                        await storage.WriteAsync(filePath, bytes, CancellationToken.None);
+                    if (!await storage.ExistsAsync(path: filePath, ct: CancellationToken.None))
+                        await storage.WriteAsync(path: filePath, bytes: bytes, ct: CancellationToken.None);
                 }
                 catch (Exception e)
                 {
                     Logger.MovieDb(
-                        $"Error loading image: {path} - {e.Message}",
-                        LogEventLevel.Error
+                        message: $"Error loading image: {path} - {e.Message}",
+                        level: LogEventLevel.Error
                     );
                     return null;
                 }
@@ -202,23 +202,23 @@ public abstract class TmdbImageClient
                 // Ownership transfers to the caller (who disposes it); load from
                 // the now-validated bytes.
                 if (decoderOptions is not null)
-                    return Image.Load<Rgba32>(decoderOptions, bytes);
+                    return Image.Load<Rgba32>(options: decoderOptions, data: bytes);
 
-                return Image.Load<Rgba32>(bytes);
+                return Image.Load<Rgba32>(data: bytes);
             }
             catch (InvalidImageContentException e)
             {
                 Logger.MovieDb(
-                    $"Image format error downloading image: {path} - {e.Message}",
-                    LogEventLevel.Error
+                    message: $"Image format error downloading image: {path} - {e.Message}",
+                    level: LogEventLevel.Error
                 );
                 return null;
             }
             catch (ImageFormatException e)
             {
                 Logger.MovieDb(
-                    $"Image format error downloading image: {path} - {e.Message}",
-                    LogEventLevel.Error
+                    message: $"Image format error downloading image: {path} - {e.Message}",
+                    level: LogEventLevel.Error
                 );
                 return null;
             }

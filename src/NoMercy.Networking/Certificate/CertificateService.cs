@@ -66,25 +66,25 @@ public class CertificateService : ICertificateService
     {
         using AppDbContext db = new();
         string? certPem = db
-            .Configuration.Where(c => c.Key == "ssl_certificate")
-            .Select(c => c.SecureValue)
+            .Configuration.Where(predicate: c => c.Key == "ssl_certificate")
+            .Select(selector: c => c.SecureValue)
             .FirstOrDefault();
         string? keyPem = db
-            .Configuration.Where(c => c.Key == "ssl_private_key")
-            .Select(c => c.SecureValue)
+            .Configuration.Where(predicate: c => c.Key == "ssl_private_key")
+            .Select(selector: c => c.SecureValue)
             .FirstOrDefault();
 
-        if (string.IsNullOrEmpty(certPem) || string.IsNullOrEmpty(keyPem))
+        if (string.IsNullOrEmpty(value: certPem) || string.IsNullOrEmpty(value: keyPem))
         {
             // Fallback: load from legacy PEM files (pre-DB-storage installs)
 #pragma warning disable CS0618
-            if (_driver.FileExists(AppFiles.CertFile) && _driver.FileExists(AppFiles.KeyFile))
+            if (_driver.FileExists(path: AppFiles.CertFile) && _driver.FileExists(path: AppFiles.KeyFile))
             {
-                using (StreamReader certReader = new(_driver.OpenRead(AppFiles.CertFile)))
+                using (StreamReader certReader = new(stream: _driver.OpenRead(path: AppFiles.CertFile)))
                     certPem = certReader.ReadToEnd();
-                using (StreamReader keyReader = new(_driver.OpenRead(AppFiles.KeyFile)))
+                using (StreamReader keyReader = new(stream: _driver.OpenRead(path: AppFiles.KeyFile)))
                     keyPem = keyReader.ReadToEnd();
-                _logger.LogInformation("Loading SSL certificate from legacy PEM files");
+                _logger.LogInformation(message: "Loading SSL certificate from legacy PEM files");
             }
             else
             {
@@ -95,24 +95,24 @@ public class CertificateService : ICertificateService
 
         lock (_certLock)
         {
-            using X509Certificate2 tempCert = X509Certificate2.CreateFromPem(certPem, keyPem);
-            byte[] pkcs12Data = tempCert.Export(X509ContentType.Pkcs12);
-            _cachedCertificate = X509CertificateLoader.LoadPkcs12(pkcs12Data, null);
+            using X509Certificate2 tempCert = X509Certificate2.CreateFromPem(certPem: certPem, keyPem: keyPem);
+            byte[] pkcs12Data = tempCert.Export(contentType: X509ContentType.Pkcs12);
+            _cachedCertificate = X509CertificateLoader.LoadPkcs12(data: pkcs12Data, password: null);
         }
 
-        _logger.LogInformation("Loaded SSL certificate into memory cache");
+        _logger.LogInformation(message: "Loaded SSL certificate into memory cache");
     }
 
     private void UpsertConfig(AppDbContext db, string key, string value)
     {
-        Configuration? existing = db.Configuration.FirstOrDefault(c => c.Key == key);
+        Configuration? existing = db.Configuration.FirstOrDefault(predicate: c => c.Key == key);
         if (existing != null)
         {
             existing.SecureValue = value;
         }
         else
         {
-            db.Configuration.Add(new() { Key = key, SecureValue = value });
+            db.Configuration.Add(entity: new() { Key = key, SecureValue = value });
         }
     }
 
@@ -130,9 +130,9 @@ public class CertificateService : ICertificateService
         try
         {
             string? certPem = ReadCertificatePemFromDb();
-            if (!string.IsNullOrEmpty(certPem))
+            if (!string.IsNullOrEmpty(value: certPem))
             {
-                using X509Certificate2 dbCert = X509Certificate2.CreateFromPem(certPem);
+                using X509Certificate2 dbCert = X509Certificate2.CreateFromPem(certPem: certPem);
                 return dbCert.NotAfter > DateTime.Now;
             }
         }
@@ -143,7 +143,7 @@ public class CertificateService : ICertificateService
 
         // Legacy fallback: cert files on disk (pre-DB-storage installs)
 #pragma warning disable CS0618
-        return _driver.FileExists(AppFiles.CertFile) && _driver.FileExists(AppFiles.KeyFile);
+        return _driver.FileExists(path: AppFiles.CertFile) && _driver.FileExists(path: AppFiles.KeyFile);
 #pragma warning restore CS0618
     }
 
@@ -156,8 +156,8 @@ public class CertificateService : ICertificateService
     {
         using AppDbContext db = new();
         return db
-            .Configuration.Where(c => c.Key == "ssl_certificate")
-            .Select(c => c.SecureValue)
+            .Configuration.Where(predicate: c => c.Key == "ssl_certificate")
+            .Select(selector: c => c.SecureValue)
             .FirstOrDefault();
     }
 
@@ -168,7 +168,7 @@ public class CertificateService : ICertificateService
     /// </summary>
     protected virtual Task DelayBetweenAttemptsAsync(TimeSpan delay, CancellationToken ct)
     {
-        return Task.Delay(delay, ct);
+        return Task.Delay(delay: delay, cancellationToken: ct);
     }
 
     public void KestrelConfig(KestrelServerOptions options)
@@ -191,7 +191,7 @@ public class CertificateService : ICertificateService
     {
         if (EnsureHttpsCertificate())
         {
-            listenOptions.UseHttps(HttpsConnectionAdapterOptions());
+            listenOptions.UseHttps(httpsOptions: HttpsConnectionAdapterOptions());
         }
         else
         {
@@ -238,7 +238,7 @@ public class CertificateService : ICertificateService
                         return _selfSignedCertificate;
                 }
 
-                throw new InvalidOperationException("No SSL certificate loaded");
+                throw new InvalidOperationException(message: "No SSL certificate loaded");
             },
         };
     }
@@ -280,9 +280,9 @@ public class CertificateService : ICertificateService
         catch (Exception ex)
         {
             _logger.LogError(
-                ex,
-                "Failed to generate self-signed fallback certificate — falling back to plaintext HTTP: {Message}",
-                ex.Message
+                exception: ex,
+                message: "Failed to generate self-signed fallback certificate — falling back to plaintext HTTP: {Message}",
+                args: ex.Message
             );
             return false;
         }
@@ -297,28 +297,28 @@ public class CertificateService : ICertificateService
     {
         using AppDbContext db = new();
         string? certPem = db
-            .Configuration.Where(c => c.Key == SelfSignedCertConfigKey)
-            .Select(c => c.SecureValue)
+            .Configuration.Where(predicate: c => c.Key == SelfSignedCertConfigKey)
+            .Select(selector: c => c.SecureValue)
             .FirstOrDefault();
         string? keyPem = db
-            .Configuration.Where(c => c.Key == SelfSignedKeyConfigKey)
-            .Select(c => c.SecureValue)
+            .Configuration.Where(predicate: c => c.Key == SelfSignedKeyConfigKey)
+            .Select(selector: c => c.SecureValue)
             .FirstOrDefault();
 
-        if (string.IsNullOrEmpty(certPem) || string.IsNullOrEmpty(keyPem))
+        if (string.IsNullOrEmpty(value: certPem) || string.IsNullOrEmpty(value: keyPem))
             return false;
 
-        using X509Certificate2 tempCert = X509Certificate2.CreateFromPem(certPem, keyPem);
+        using X509Certificate2 tempCert = X509Certificate2.CreateFromPem(certPem: certPem, keyPem: keyPem);
         if (tempCert.NotAfter <= DateTime.Now)
             return false;
 
         lock (_certLock)
         {
-            byte[] pkcs12Data = tempCert.Export(X509ContentType.Pkcs12);
-            _selfSignedCertificate = X509CertificateLoader.LoadPkcs12(pkcs12Data, null);
+            byte[] pkcs12Data = tempCert.Export(contentType: X509ContentType.Pkcs12);
+            _selfSignedCertificate = X509CertificateLoader.LoadPkcs12(data: pkcs12Data, password: null);
         }
 
-        _logger.LogInformation("Loaded self-signed fallback certificate from cache");
+        _logger.LogInformation(message: "Loaded self-signed fallback certificate from cache");
         return true;
     }
 
@@ -336,28 +336,28 @@ public class CertificateService : ICertificateService
         string keyPem =
             rsa?.ExportRSAPrivateKeyPem()
             ?? throw new InvalidOperationException(
-                "Generated self-signed certificate has no exportable RSA private key"
+                message: "Generated self-signed certificate has no exportable RSA private key"
             );
 
         using (AppDbContext db = new())
         {
-            UpsertConfig(db, SelfSignedCertConfigKey, certPem);
-            UpsertConfig(db, SelfSignedKeyConfigKey, keyPem);
+            UpsertConfig(db: db, key: SelfSignedCertConfigKey, value: certPem);
+            UpsertConfig(db: db, key: SelfSignedKeyConfigKey, value: keyPem);
             db.SaveChanges();
         }
 
         lock (_certLock)
         {
-            byte[] pkcs12Data = generated.Export(X509ContentType.Pkcs12);
-            _selfSignedCertificate = X509CertificateLoader.LoadPkcs12(pkcs12Data, null);
+            byte[] pkcs12Data = generated.Export(contentType: X509ContentType.Pkcs12);
+            _selfSignedCertificate = X509CertificateLoader.LoadPkcs12(data: pkcs12Data, password: null);
         }
 
         // Never log PEM/key material — only the non-secret expiry.
         _logger.LogInformation(
-            "Generated self-signed fallback certificate (expires {NotAfter:yyyy-MM-dd}) so HTTPS "
-                + "stays reachable without a Let's Encrypt cert. Direct browser access will show a "
-                + "trust warning until a real certificate is acquired.",
-            generated.NotAfter
+            message: "Generated self-signed fallback certificate (expires {NotAfter:yyyy-MM-dd}) so HTTPS "
+                     + "stays reachable without a Let's Encrypt cert. Direct browser access will show a "
+                     + "trust warning until a real certificate is acquired.",
+            args: generated.NotAfter
         );
     }
 
@@ -368,69 +368,67 @@ public class CertificateService : ICertificateService
     /// </summary>
     private X509Certificate2 BuildSelfSignedCertificate()
     {
-        using RSA rsa = RSA.Create(2048);
+        using RSA rsa = RSA.Create(keySizeInBits: 2048);
         CertificateRequest request = new(
-            $"CN=NoMercy MediaServer {Info.DeviceId}",
-            rsa,
-            HashAlgorithmName.SHA256,
-            RSASignaturePadding.Pkcs1
+            subjectName: $"CN=NoMercy MediaServer {Info.DeviceId}",
+            key: rsa,
+            hashAlgorithm: HashAlgorithmName.SHA256,
+            padding: RSASignaturePadding.Pkcs1
         );
 
         request.CertificateExtensions.Add(
-            new X509BasicConstraintsExtension(false, false, 0, false)
+            item: new X509BasicConstraintsExtension(certificateAuthority: false, hasPathLengthConstraint: false, pathLengthConstraint: 0, critical: false)
         );
         request.CertificateExtensions.Add(
-            new X509KeyUsageExtension(
-                X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment,
-                false
+            item: new X509KeyUsageExtension(
+                keyUsages: X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment,
+                critical: false
             )
         );
         request.CertificateExtensions.Add(
-            new X509EnhancedKeyUsageExtension([new("1.3.6.1.5.5.7.3.1")], false)
+            item: new X509EnhancedKeyUsageExtension(enhancedKeyUsages: [new(oid: "1.3.6.1.5.5.7.3.1")], critical: false)
         );
 
         SubjectAlternativeNameBuilder sanBuilder = new();
-        sanBuilder.AddDnsName("localhost");
-        sanBuilder.AddIpAddress(IPAddress.Loopback);
-        sanBuilder.AddIpAddress(IPAddress.IPv6Loopback);
+        sanBuilder.AddDnsName(dnsName: "localhost");
+        sanBuilder.AddIpAddress(ipAddress: IPAddress.Loopback);
+        sanBuilder.AddIpAddress(ipAddress: IPAddress.IPv6Loopback);
 
-        foreach (IPAddress address in CollectLocalIpAddresses(_networkDiscovery))
-            sanBuilder.AddIpAddress(address);
+        foreach (IPAddress address in CollectLocalIpAddresses(networkDiscovery: _networkDiscovery))
+            sanBuilder.AddIpAddress(ipAddress: address);
 
         if (_networkDiscovery is not null)
         {
-            AddDnsNameIfValid(sanBuilder, _networkDiscovery.InternalDomain);
+            AddDnsNameIfValid(sanBuilder: sanBuilder, dnsName: _networkDiscovery.InternalDomain);
 
             if (
-                !string.IsNullOrEmpty(_networkDiscovery.ExternalIp)
+                !string.IsNullOrEmpty(value: _networkDiscovery.ExternalIp)
                 && _networkDiscovery.ExternalIp != "0.0.0.0"
             )
-                AddDnsNameIfValid(sanBuilder, _networkDiscovery.ExternalDomain);
+                AddDnsNameIfValid(sanBuilder: sanBuilder, dnsName: _networkDiscovery.ExternalDomain);
         }
 
-        request.CertificateExtensions.Add(sanBuilder.Build());
+        request.CertificateExtensions.Add(item: sanBuilder.Build());
 
-        DateTimeOffset notBefore = DateTimeOffset.UtcNow.AddDays(-1);
-        DateTimeOffset notAfter = DateTimeOffset.UtcNow.AddDays(SelfSignedValidityDays);
+        DateTimeOffset notBefore = DateTimeOffset.UtcNow.AddDays(days: -1);
+        DateTimeOffset notAfter = DateTimeOffset.UtcNow.AddDays(days: SelfSignedValidityDays);
 
-        return request.CreateSelfSigned(notBefore, notAfter);
+        return request.CreateSelfSigned(notBefore: notBefore, notAfter: notAfter);
     }
 
     private void AddDnsNameIfValid(SubjectAlternativeNameBuilder sanBuilder, string? dnsName)
     {
-        if (string.IsNullOrWhiteSpace(dnsName))
+        if (string.IsNullOrWhiteSpace(value: dnsName))
             return;
 
         try
         {
-            sanBuilder.AddDnsName(dnsName);
+            sanBuilder.AddDnsName(dnsName: dnsName);
         }
         catch (Exception ex)
         {
             _logger.LogDebug(
-                "Skipping invalid SAN DNS name {DnsName} for self-signed cert: {Message}",
-                dnsName,
-                ex.Message
+                message: "Skipping invalid SAN DNS name {DnsName} for self-signed cert: {Message}", args: [dnsName, ex.Message]
             );
         }
     }
@@ -449,10 +447,10 @@ public class CertificateService : ICertificateService
 
         if (
             networkDiscovery is not null
-            && IPAddress.TryParse(networkDiscovery.InternalIp, out IPAddress? discovered)
-            && !IPAddress.IsLoopback(discovered)
+            && IPAddress.TryParse(ipString: networkDiscovery.InternalIp, address: out IPAddress? discovered)
+            && !IPAddress.IsLoopback(address: discovered)
         )
-            addresses.Add(discovered);
+            addresses.Add(item: discovered);
 
         try
         {
@@ -471,10 +469,10 @@ public class CertificateService : ICertificateService
                 {
                     if (addr.Address.AddressFamily != AddressFamily.InterNetwork)
                         continue;
-                    if (IPAddress.IsLoopback(addr.Address))
+                    if (IPAddress.IsLoopback(address: addr.Address))
                         continue;
 
-                    addresses.Add(addr.Address);
+                    addresses.Add(item: addr.Address);
                 }
             }
         }
@@ -490,24 +488,24 @@ public class CertificateService : ICertificateService
     private X509Certificate2 CombinePublicAndPrivateCerts()
     {
 #pragma warning disable CS0618 // Obsolete
-        if (!_driver.FileExists(AppFiles.CertFile))
-            throw new FileNotFoundException($"Certificate file not found: {AppFiles.CertFile}");
+        if (!_driver.FileExists(path: AppFiles.CertFile))
+            throw new FileNotFoundException(message: $"Certificate file not found: {AppFiles.CertFile}");
 
-        if (!_driver.FileExists(AppFiles.KeyFile))
-            throw new FileNotFoundException($"Private key file not found: {AppFiles.KeyFile}");
+        if (!_driver.FileExists(path: AppFiles.KeyFile))
+            throw new FileNotFoundException(message: $"Private key file not found: {AppFiles.KeyFile}");
 
         string certPem;
         string keyPem;
-        using (StreamReader certReader = new(_driver.OpenRead(AppFiles.CertFile)))
+        using (StreamReader certReader = new(stream: _driver.OpenRead(path: AppFiles.CertFile)))
             certPem = certReader.ReadToEnd();
-        using (StreamReader keyReader = new(_driver.OpenRead(AppFiles.KeyFile)))
+        using (StreamReader keyReader = new(stream: _driver.OpenRead(path: AppFiles.KeyFile)))
             keyPem = keyReader.ReadToEnd();
 #pragma warning restore CS0618
 
-        using X509Certificate2 tempCert = X509Certificate2.CreateFromPem(certPem, keyPem);
+        using X509Certificate2 tempCert = X509Certificate2.CreateFromPem(certPem: certPem, keyPem: keyPem);
 
-        byte[] pkcs12Data = tempCert.Export(X509ContentType.Pkcs12);
-        return X509CertificateLoader.LoadPkcs12(pkcs12Data, null);
+        byte[] pkcs12Data = tempCert.Export(contentType: X509ContentType.Pkcs12);
+        return X509CertificateLoader.LoadPkcs12(data: pkcs12Data, password: null);
     }
 
     // Must stay strictly below the API's renewal window (currently 14 days at
@@ -531,11 +529,11 @@ public class CertificateService : ICertificateService
             if (_cachedCertificate.NotAfter <= DateTime.Now)
                 return false; // Actually expired
 
-            if (_cachedCertificate.NotAfter < DateTime.Now.AddDays(RenewalThresholdDays))
+            if (_cachedCertificate.NotAfter < DateTime.Now.AddDays(value: RenewalThresholdDays))
             {
                 _logger.LogInformation(
-                    "SSL cert expires {NotAfter:yyyy-MM-dd} — will attempt renewal",
-                    _cachedCertificate.NotAfter
+                    message: "SSL cert expires {NotAfter:yyyy-MM-dd} — will attempt renewal",
+                    args: _cachedCertificate.NotAfter
                 );
                 return false; // Expiring soon — trigger renewal
             }
@@ -550,30 +548,30 @@ public class CertificateService : ICertificateService
     {
         if (ValidateSslCertificate())
         {
-            _logger.LogInformation("SSL Certificate is valid");
+            _logger.LogInformation(message: "SSL Certificate is valid");
             return;
         }
 
         bool hasExistingCert = HasValidCertificate();
 
         _logger.LogInformation(
-            !hasExistingCert ? "Generating SSL Certificate..." : "Renewing SSL Certificate..."
+            message: !hasExistingCert ? "Generating SSL Certificate..." : "Renewing SSL Certificate..."
         );
 
         try
         {
             string? token = accessToken;
-            if (string.IsNullOrEmpty(token))
+            if (string.IsNullOrEmpty(value: token))
             {
-                _logger.LogWarning("Skipping certificate renewal — no auth token available");
+                _logger.LogWarning(message: "Skipping certificate renewal — no auth token available");
                 return;
             }
 
-            HttpClient client = _httpClientFactory.CreateClient("cert-renewal");
-            client.BaseAddress = new(ExternalServicesConfig.Current.ApiServerBaseUrl);
-            client.Timeout = TimeSpan.FromMinutes(10);
-            client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-            client.DefaultRequestHeaders.Authorization = new("Bearer", token);
+            HttpClient client = _httpClientFactory.CreateClient(name: "cert-renewal");
+            client.BaseAddress = new(uriString: ExternalServicesConfig.Current.ApiServerBaseUrl);
+            client.Timeout = TimeSpan.FromMinutes(minutes: 10);
+            client.DefaultRequestHeaders.Accept.Add(item: new(mediaType: "application/json"));
+            client.DefaultRequestHeaders.Authorization = new(scheme: "Bearer", parameter: token);
 
             string serverUrl = $"certificate?id={Info.DeviceId}";
             if (hasExistingCert)
@@ -583,23 +581,20 @@ public class CertificateService : ICertificateService
                 try
                 {
                     CertificateDto? result = await FetchCertificate(
-                        client,
-                        serverUrl,
-                        hasExistingCert
+                        client: client,
+                        serverUrl: serverUrl,
+                        hasExistingCert: hasExistingCert
                     );
                     if (result != null)
                         return;
 
                     // null means 202 — cert not ready yet, wait and retry
                     _logger.LogInformation(
-                        "Certificate not ready, waiting {CertRetryDelaySeconds}s (attempt {Attempt}/{MaxRetries})",
-                        CertRetryDelaySeconds,
-                        attempt,
-                        maxRetries
+                        message: "Certificate not ready, waiting {CertRetryDelaySeconds}s (attempt {Attempt}/{MaxRetries})", args: [CertRetryDelaySeconds, attempt, maxRetries]
                     );
                     await DelayBetweenAttemptsAsync(
-                        TimeSpan.FromSeconds(CertRetryDelaySeconds),
-                        CancellationToken.None
+                        delay: TimeSpan.FromSeconds(seconds: CertRetryDelaySeconds),
+                        ct: CancellationToken.None
                     );
                 }
                 catch (CertificateNotDueException ex)
@@ -607,7 +602,7 @@ public class CertificateService : ICertificateService
                     // Permanent (for this attempt window): the API rejected the
                     // renewal request because the cert isn't due yet. Bail out
                     // without retrying — daily cron will try again tomorrow.
-                    _logger.LogInformation("Skipping renewal: {Message}", ex.Message);
+                    _logger.LogInformation(message: "Skipping renewal: {Message}", args: ex.Message);
                     return;
                 }
                 catch (Exception ex)
@@ -616,15 +611,11 @@ public class CertificateService : ICertificateService
                     )
                 {
                     _logger.LogInformation(
-                        "Certificate attempt failed: {Message}, retrying in {CertRetryDelaySeconds}s (attempt {Attempt}/{MaxRetries})",
-                        ex.Message,
-                        CertRetryDelaySeconds,
-                        attempt,
-                        maxRetries
+                        message: "Certificate attempt failed: {Message}, retrying in {CertRetryDelaySeconds}s (attempt {Attempt}/{MaxRetries})", args: [ex.Message, CertRetryDelaySeconds, attempt, maxRetries]
                     );
                     await DelayBetweenAttemptsAsync(
-                        TimeSpan.FromSeconds(CertRetryDelaySeconds),
-                        CancellationToken.None
+                        delay: TimeSpan.FromSeconds(seconds: CertRetryDelaySeconds),
+                        ct: CancellationToken.None
                     );
                 }
         }
@@ -633,8 +624,8 @@ public class CertificateService : ICertificateService
             // Cert exists in DB but renewal failed (Cloudflare down, network issue, etc.)
             // The existing cert is usable — don't block boot
             _logger.LogWarning(
-                "Certificate renewal failed: {Message}. Using existing certificate.",
-                ex.Message
+                message: "Certificate renewal failed: {Message}. Using existing certificate.",
+                args: ex.Message
             );
         }
     }
@@ -645,16 +636,16 @@ public class CertificateService : ICertificateService
         bool hasExistingCert
     )
     {
-        using HttpResponseMessage response = await client.GetAsync(serverUrl);
+        using HttpResponseMessage response = await client.GetAsync(requestUri: serverUrl);
 
         if (response.StatusCode == HttpStatusCode.Accepted) // 202 — cert not ready yet
         {
-            _logger.LogInformation("Certificate not ready yet (202 Accepted), will retry");
+            _logger.LogInformation(message: "Certificate not ready yet (202 Accepted), will retry");
             return null;
         }
 
         if (response.StatusCode == HttpStatusCode.GatewayTimeout)
-            throw new HttpRequestException("Gateway timeout waiting for certificate");
+            throw new HttpRequestException(message: "Gateway timeout waiting for certificate");
 
         // 400 from the renewal endpoint means the API doesn't think the cert is
         // due yet (it gates renewal at 14 days from expiry). Surface the body
@@ -663,9 +654,9 @@ public class CertificateService : ICertificateService
         if (response.StatusCode == HttpStatusCode.BadRequest)
         {
             string body = await response.Content.ReadAsStringAsync();
-            string apiMessage = ExtractApiMessage(body);
+            string apiMessage = ExtractApiMessage(body: body);
             throw new CertificateNotDueException(
-                string.IsNullOrEmpty(apiMessage)
+                message: string.IsNullOrEmpty(value: apiMessage)
                     ? "API rejected renewal with 400 Bad Request (no body)"
                     : apiMessage
             );
@@ -675,68 +666,68 @@ public class CertificateService : ICertificateService
         string content = await response.Content.ReadAsStringAsync();
         ApiResponse<CertificateResponse> data =
             content.FromJson<ApiResponse<CertificateResponse>>()
-            ?? throw new("Failed to deserialize certificate JSON");
+            ?? throw new(message: "Failed to deserialize certificate JSON");
 
         if (data.Data is null)
             throw new InvalidOperationException(
-                $"Certificate API returned no data (status: {data.Status ?? "unknown"}, message: {data.Message ?? "none"})"
+                message: $"Certificate API returned no data (status: {data.Status ?? "unknown"}, message: {data.Message ?? "none"})"
             );
 
         if (
-            string.IsNullOrEmpty(data.Data.PrivateKey)
-            || string.IsNullOrEmpty(data.Data.Certificate)
+            string.IsNullOrEmpty(value: data.Data.PrivateKey)
+            || string.IsNullOrEmpty(value: data.Data.Certificate)
         )
             throw new InvalidOperationException(
-                $"Certificate API returned incomplete data (status: {data.Status ?? "unknown"})"
+                message: $"Certificate API returned incomplete data (status: {data.Status ?? "unknown"})"
             );
 
         string certPem = $"{data.Data.Certificate}\n{data.Data.IssuerCertificate}";
         string keyPem = data.Data.PrivateKey;
-        string? caPem = string.IsNullOrEmpty(data.Data.CertificateAuthority)
+        string? caPem = string.IsNullOrEmpty(value: data.Data.CertificateAuthority)
             ? null
             : data.Data.CertificateAuthority;
 
         // Write to DB
         await using AppDbContext db = new();
-        UpsertConfig(db, "ssl_certificate", certPem);
-        UpsertConfig(db, "ssl_private_key", keyPem);
-        if (!string.IsNullOrEmpty(caPem))
-            UpsertConfig(db, "ssl_ca", caPem);
+        UpsertConfig(db: db, key: "ssl_certificate", value: certPem);
+        UpsertConfig(db: db, key: "ssl_private_key", value: keyPem);
+        if (!string.IsNullOrEmpty(value: caPem))
+            UpsertConfig(db: db, key: "ssl_ca", value: caPem);
         await db.SaveChangesAsync();
 
         // Update in-memory cache
         lock (_certLock)
         {
-            using X509Certificate2 tempCert = X509Certificate2.CreateFromPem(certPem, keyPem);
-            byte[] pkcs12Data = tempCert.Export(X509ContentType.Pkcs12);
-            _cachedCertificate = X509CertificateLoader.LoadPkcs12(pkcs12Data, null);
+            using X509Certificate2 tempCert = X509Certificate2.CreateFromPem(certPem: certPem, keyPem: keyPem);
+            byte[] pkcs12Data = tempCert.Export(contentType: X509ContentType.Pkcs12);
+            _cachedCertificate = X509CertificateLoader.LoadPkcs12(data: pkcs12Data, password: null);
         }
 
         // Keep file writes alongside DB writes for backwards compat (Task 17 removes these)
 #pragma warning disable CS0618 // Obsolete
-        if (_driver.FileExists(AppFiles.KeyFile))
-            _driver.DeleteFile(AppFiles.KeyFile);
-        if (_driver.FileExists(AppFiles.CaFile))
-            _driver.DeleteFile(AppFiles.CaFile);
-        if (_driver.FileExists(AppFiles.CertFile))
-            _driver.DeleteFile(AppFiles.CertFile);
+        if (_driver.FileExists(path: AppFiles.KeyFile))
+            _driver.DeleteFile(path: AppFiles.KeyFile);
+        if (_driver.FileExists(path: AppFiles.CaFile))
+            _driver.DeleteFile(path: AppFiles.CaFile);
+        if (_driver.FileExists(path: AppFiles.CertFile))
+            _driver.DeleteFile(path: AppFiles.CertFile);
 
-        await WriteTextAsync(AppFiles.KeyFile, keyPem);
-        await WriteTextAsync(AppFiles.CaFile, data.Data.CertificateAuthority);
-        await WriteTextAsync(AppFiles.CertFile, certPem);
+        await WriteTextAsync(path: AppFiles.KeyFile, content: keyPem);
+        await WriteTextAsync(path: AppFiles.CaFile, content: data.Data.CertificateAuthority);
+        await WriteTextAsync(path: AppFiles.CertFile, content: certPem);
 #pragma warning restore CS0618
 
         _logger.LogInformation(
-            !hasExistingCert ? "SSL Certificate created" : "SSL Certificate renewed"
+            message: !hasExistingCert ? "SSL Certificate created" : "SSL Certificate renewed"
         );
         return new();
     }
 
     private async Task WriteTextAsync(string path, string content)
     {
-        await using Stream stream = _driver.OpenWrite(path, overwrite: true);
-        await using StreamWriter writer = new(stream, Encoding.UTF8, leaveOpen: true);
-        await writer.WriteAsync(content);
+        await using Stream stream = _driver.OpenWrite(path: path, overwrite: true);
+        await using StreamWriter writer = new(stream: stream, encoding: Encoding.UTF8, leaveOpen: true);
+        await writer.WriteAsync(value: content);
         await writer.FlushAsync();
     }
 
@@ -751,7 +742,7 @@ public class CertificateService : ICertificateService
     private sealed class CertificateNotDueException : Exception
     {
         public CertificateNotDueException(string message)
-            : base(message) { }
+            : base(message: message) { }
     }
 
     /// <summary>
@@ -763,13 +754,13 @@ public class CertificateService : ICertificateService
     /// </summary>
     private string ExtractApiMessage(string body)
     {
-        if (string.IsNullOrWhiteSpace(body))
+        if (string.IsNullOrWhiteSpace(value: body))
             return string.Empty;
 
         try
         {
             ApiResponse<object>? parsed = body.FromJson<ApiResponse<object>>();
-            if (!string.IsNullOrEmpty(parsed?.Message))
+            if (!string.IsNullOrEmpty(value: parsed?.Message))
                 return parsed.Message;
         }
         catch
@@ -782,31 +773,31 @@ public class CertificateService : ICertificateService
 
     public class ApiResponse<T>
     {
-        [JsonProperty("status")]
+        [JsonProperty(propertyName: "status")]
         public string? Status { get; set; }
 
-        [JsonProperty("message")]
+        [JsonProperty(propertyName: "message")]
         public string? Message { get; set; }
 
-        [JsonProperty("data")]
+        [JsonProperty(propertyName: "data")]
         public T Data { get; set; } = default!;
     }
 
     public class CertificateResponse
     {
-        [JsonProperty("status")]
+        [JsonProperty(propertyName: "status")]
         public string Status { get; set; } = null!;
 
-        [JsonProperty("certificate")]
+        [JsonProperty(propertyName: "certificate")]
         public string Certificate { get; set; } = null!;
 
-        [JsonProperty("private_key")]
+        [JsonProperty(propertyName: "private_key")]
         public string PrivateKey { get; set; } = null!;
 
-        [JsonProperty("issuer_certificate")]
+        [JsonProperty(propertyName: "issuer_certificate")]
         public string IssuerCertificate { get; set; } = null!;
 
-        [JsonProperty("certificate_authority")]
+        [JsonProperty(propertyName: "certificate_authority")]
         public string CertificateAuthority { get; set; } = null!;
     }
 }

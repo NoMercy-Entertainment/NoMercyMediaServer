@@ -15,6 +15,6 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record PermissionsDto
 {
-    [JsonProperty("edit")]
+    [JsonProperty(propertyName: "edit")]
     public bool Edit { get; set; }
 }

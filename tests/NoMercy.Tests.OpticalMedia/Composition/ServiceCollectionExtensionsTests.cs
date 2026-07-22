@@ -42,7 +42,7 @@ namespace NoMercy.Tests.OpticalMedia.Composition;
 /// throwing, and repeated registration (<c>TryAdd*</c>) never duplicates a
 /// singleton.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class ServiceCollectionExtensionsTests
 {
     private static ServiceProvider BuildProvider()
@@ -54,16 +54,16 @@ public class ServiceCollectionExtensionsTests
         // real startup these come from ServiceConfiguration (Encoder /
         // Hosting modules). Faked here purely so every OpticalMedia service
         // can actually be constructed when resolved.
-        services.AddSingleton(Mock.Of<IHostApplicationLifetime>());
-        services.AddSingleton(Mock.Of<IServerPhaseTracker>());
+        services.AddSingleton(implementationInstance: Mock.Of<IHostApplicationLifetime>());
+        services.AddSingleton(implementationInstance: Mock.Of<IServerPhaseTracker>());
         services.AddSingleton(
-            new EncoderOptions { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" }
+            implementationInstance: new EncoderOptions { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" }
         );
-        services.AddSingleton(Mock.Of<IProcessRunner>());
-        services.AddSingleton(Mock.Of<IStorage>());
-        services.AddSingleton(Mock.Of<IStorageDriver>());
-        services.AddSingleton(Mock.Of<IMediaAnalyzer>());
-        services.AddSingleton(Mock.Of<ILiveEncoder>());
+        services.AddSingleton(implementationInstance: Mock.Of<IProcessRunner>());
+        services.AddSingleton(implementationInstance: Mock.Of<IStorage>());
+        services.AddSingleton(implementationInstance: Mock.Of<IStorageDriver>());
+        services.AddSingleton(implementationInstance: Mock.Of<IMediaAnalyzer>());
+        services.AddSingleton(implementationInstance: Mock.Of<ILiveEncoder>());
 
         services.AddNoMercyOpticalMedia();
         return services.BuildServiceProvider();
@@ -76,7 +76,7 @@ public class ServiceCollectionExtensionsTests
 
         IServiceCollection result = services.AddNoMercyOpticalMedia();
 
-        result.Should().BeSameAs(services);
+        result.Should().BeSameAs(expected: services);
     }
 
     [Fact]
@@ -90,7 +90,7 @@ public class ServiceCollectionExtensionsTests
         // On Windows this may resolve to WindowsDriveBackend (WMI) or fall
         // back to PollingDriveBackend when WMI construction fails; on every
         // other platform it is always PollingDriveBackend.
-        backend.Should().Match(b => b is WindowsDriveBackend || b is PollingDriveBackend);
+        backend.Should().Match(predicate: b => b is WindowsDriveBackend || b is PollingDriveBackend);
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public class ServiceCollectionExtensionsTests
         IDriveBackend first = provider.GetRequiredService<IDriveBackend>();
         IDriveBackend second = provider.GetRequiredService<IDriveBackend>();
 
-        first.Should().BeSameAs(second);
+        first.Should().BeSameAs(expected: second);
     }
 
     [Fact]
@@ -131,11 +131,12 @@ public class ServiceCollectionExtensionsTests
         await using ServiceProvider provider = BuildProvider();
 
         IEnumerable<IDiscSource> sources = provider.GetRequiredService<IEnumerable<IDiscSource>>();
-        List<NoMercy.NmSystem.Dto.OpticalDiscType> types = sources.Select(s => s.Type).ToList();
+        List<NoMercy.NmSystem.Dto.OpticalDiscType> types = sources.Select(selector: s => s.Type).ToList();
 
         types
             .Should()
-            .BeEquivalentTo([
+            .BeEquivalentTo(expectation:
+            [
                 NoMercy.NmSystem.Dto.OpticalDiscType.BluRay,
                 NoMercy.NmSystem.Dto.OpticalDiscType.Dvd,
                 NoMercy.NmSystem.Dto.OpticalDiscType.Cd,
@@ -149,8 +150,8 @@ public class ServiceCollectionExtensionsTests
 
         DiscSourceFactory factory = provider.GetRequiredService<DiscSourceFactory>();
 
-        factory.CreateFor(NoMercy.NmSystem.Dto.OpticalDiscType.BluRay).Should().NotBeNull();
-        factory.CreateFor(NoMercy.NmSystem.Dto.OpticalDiscType.None).Should().BeNull();
+        factory.CreateFor(type: NoMercy.NmSystem.Dto.OpticalDiscType.BluRay).Should().NotBeNull();
+        factory.CreateFor(type: NoMercy.NmSystem.Dto.OpticalDiscType.None).Should().BeNull();
     }
 
     [Fact]
@@ -162,9 +163,9 @@ public class ServiceCollectionExtensionsTests
 
         readers.Should().NotBeEmpty();
         if (OperatingSystem.IsWindows())
-            readers.Should().Contain(r => r is WindowsTocReader);
+            readers.Should().Contain(predicate: r => r is WindowsTocReader);
         else
-            readers.Should().Contain(r => r is NullTocReader);
+            readers.Should().Contain(predicate: r => r is NullTocReader);
     }
 
     [Fact]
@@ -176,8 +177,8 @@ public class ServiceCollectionExtensionsTests
         IEnumerable<IDiscIdentifier> identifiers = provider.GetRequiredService<
             IEnumerable<IDiscIdentifier>
         >();
-        identifiers.Should().Contain(i => i is VideoDiscIdentifier);
-        identifiers.Should().Contain(i => i is AudioCdIdentifier);
+        identifiers.Should().Contain(predicate: i => i is VideoDiscIdentifier);
+        identifiers.Should().Contain(predicate: i => i is AudioCdIdentifier);
         provider.GetRequiredService<DiscIdentificationService>().Should().NotBeNull();
     }
 
@@ -204,7 +205,7 @@ public class ServiceCollectionExtensionsTests
         FfmpegBluRayCapability first = provider.GetRequiredService<FfmpegBluRayCapability>();
         FfmpegBluRayCapability second = provider.GetRequiredService<FfmpegBluRayCapability>();
 
-        first.Should().BeSameAs(second);
+        first.Should().BeSameAs(expected: second);
     }
 
     [Fact]
@@ -216,7 +217,7 @@ public class ServiceCollectionExtensionsTests
             IEnumerable<IHostedService>
         >();
 
-        hosted.Should().Contain(h => h is BluRayCapabilityStartupService);
+        hosted.Should().Contain(predicate: h => h is BluRayCapabilityStartupService);
     }
 
     [Fact]
@@ -231,6 +232,6 @@ public class ServiceCollectionExtensionsTests
         await using ServiceProvider provider = services.BuildServiceProvider();
         IEnumerable<DriveLockRegistry> registries = provider.GetServices<DriveLockRegistry>();
 
-        registries.Should().HaveCount(1, "TryAddSingleton must not duplicate on repeated calls");
+        registries.Should().HaveCount(expected: 1, because: "TryAddSingleton must not duplicate on repeated calls");
     }
 }

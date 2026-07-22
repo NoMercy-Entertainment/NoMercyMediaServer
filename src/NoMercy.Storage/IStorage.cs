@@ -217,7 +217,7 @@ public interface IStorage
     /// time-limited URL the client can hit directly.
     /// </summary>
     Task<Uri?> TryGetPresignedUrlAsync(string path, TimeSpan ttl, CancellationToken ct) =>
-        Driver.TryGetPresignedUrlAsync(path, ttl, ct);
+        Driver.TryGetPresignedUrlAsync(path: path, ttl: ttl, ct: ct);
 
     /// <summary>Driver's path separator. Convenience pass-through.</summary>
     char DirectorySeparator => Driver.DirectorySeparator;
@@ -228,7 +228,7 @@ public interface IStorage
     /// into an IStorage method. <c>Path.Combine</c> uses the OS separator
     /// which is <c>'\\'</c> on Windows — violating Rule 2 of the path contract.
     /// </summary>
-    string CombinePath(string parent, string child) => Driver.CombinePath(parent, child);
+    string CombinePath(string parent, string child) => Driver.CombinePath(parent: parent, child: child);
 
     /// <summary>
     /// Returns the last segment of a storage-relative path — the storage-aware
@@ -237,10 +237,10 @@ public interface IStorage
     /// </summary>
     string GetName(string path)
     {
-        if (string.IsNullOrEmpty(path))
+        if (string.IsNullOrEmpty(value: path))
             return string.Empty;
-        string trimmed = path.TrimEnd('/');
-        int idx = trimmed.LastIndexOf('/');
+        string trimmed = path.TrimEnd(trimChar: '/');
+        int idx = trimmed.LastIndexOf(value: '/');
         return idx < 0 ? trimmed : trimmed[(idx + 1)..];
     }
 
@@ -252,14 +252,14 @@ public interface IStorage
     /// </summary>
     string? GetParent(string path)
     {
-        if (string.IsNullOrEmpty(path))
+        if (string.IsNullOrEmpty(value: path))
             return null;
-        string trimmed = path.TrimEnd('/');
-        int idx = trimmed.LastIndexOf('/');
+        string trimmed = path.TrimEnd(trimChar: '/');
+        int idx = trimmed.LastIndexOf(value: '/');
         if (idx < 0)
             return null;
         string parent = trimmed[..idx];
-        return string.IsNullOrEmpty(parent) ? null : parent;
+        return string.IsNullOrEmpty(value: parent) ? null : parent;
     }
 
     /// <summary>
@@ -269,8 +269,8 @@ public interface IStorage
     /// </summary>
     string GetNameWithoutExtension(string path)
     {
-        string name = GetName(path);
-        int dot = name.LastIndexOf('.');
+        string name = GetName(path: path);
+        int dot = name.LastIndexOf(value: '.');
         return dot < 0 ? name : name[..dot];
     }
 
@@ -289,7 +289,7 @@ public interface IStorage
     /// </remarks>
     string GetFullPath(string path) =>
         throw new NotSupportedException(
-            $"{GetType().Name} does not support GetFullPath. "
-                + "This method is only valid for LocalStorage."
+            message: $"{GetType().Name} does not support GetFullPath. "
+                     + "This method is only valid for LocalStorage."
         );
 }

@@ -39,23 +39,23 @@ public class JsonSpeedIndexStore(
     public SpeedIndex? Load()
     {
         string? path = options.SpeedIndexCachePath;
-        if (string.IsNullOrWhiteSpace(path) || !storage.Exists(path))
+        if (string.IsNullOrWhiteSpace(value: path) || !storage.Exists(path: path))
             return null;
 
         try
         {
-            string json = Encoding.UTF8.GetString(storage.Read(path));
-            SpeedIndexDto? dto = JsonConvert.DeserializeObject<SpeedIndexDto>(json);
+            string json = Encoding.UTF8.GetString(bytes: storage.Read(path: path));
+            SpeedIndexDto? dto = JsonConvert.DeserializeObject<SpeedIndexDto>(value: json);
             if (dto is null)
                 return null;
 
             Dictionary<SpeedKey, SpeedMeasurement> map = new();
             foreach (SpeedEntryDto entry in dto.Entries)
             {
-                map[new(entry.Codec, entry.Encoder, entry.Width, entry.DeviceName)] = new(
-                    entry.Fps,
-                    entry.SpeedMultiplier,
-                    entry.MeasuredAt
+                map[key: new(Codec: entry.Codec, Encoder: entry.Encoder, Width: entry.Width, DeviceName: entry.DeviceName)] = new(
+                    Fps: entry.Fps,
+                    SpeedMultiplier: entry.SpeedMultiplier,
+                    MeasuredAt: entry.MeasuredAt
                 );
             }
 
@@ -65,14 +65,14 @@ public class JsonSpeedIndexStore(
             // and trip the version-mismatch invalidation in
             // HardwareBenchmark.NeedsRecalibration on the next boot.
             _loadedSchemaVersion = dto.SchemaVersion;
-            return new(map);
+            return new(Measurements: map);
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                ex,
-                "Could not load SpeedIndex cache at {Path} — treating as empty",
-                path
+                exception: ex,
+                message: "Could not load SpeedIndex cache at {Path} — treating as empty",
+                args: path
             );
             return null;
         }
@@ -81,22 +81,22 @@ public class JsonSpeedIndexStore(
     public void Save(SpeedIndex index)
     {
         string? path = options.SpeedIndexCachePath;
-        if (string.IsNullOrWhiteSpace(path))
+        if (string.IsNullOrWhiteSpace(value: path))
         {
-            logger.LogDebug("No SpeedIndexCachePath configured — skipping save");
+            logger.LogDebug(message: "No SpeedIndexCachePath configured — skipping save");
             return;
         }
 
         try
         {
-            storage.CreateDirectory(Path.GetDirectoryName(path)!);
+            storage.CreateDirectory(path: Path.GetDirectoryName(path: path)!);
 
             DateTime now = DateTime.UtcNow;
             SpeedIndexDto dto = new(
                 CalibratedAt: now,
                 SchemaVersion: HardwareBenchmark.BenchmarkSchemaVersion,
                 Entries: index
-                    .Measurements.Select(kvp => new SpeedEntryDto(
+                    .Measurements.Select(selector: kvp => new SpeedEntryDto(
                         Codec: kvp.Key.Codec,
                         Encoder: kvp.Key.Encoder,
                         Width: kvp.Key.Width,
@@ -110,19 +110,19 @@ public class JsonSpeedIndexStore(
 
             string tmp = path + ".tmp";
             storage.Write(
-                tmp,
-                Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(dto, Formatting.Indented))
+                path: tmp,
+                bytes: Encoding.UTF8.GetBytes(s: JsonConvert.SerializeObject(value: dto, formatting: Formatting.Indented))
             );
-            if (storage.Exists(path))
-                storage.Delete(path);
-            storage.Move(tmp, path);
+            if (storage.Exists(path: path))
+                storage.Delete(path: path);
+            storage.Move(from: tmp, to: path);
 
             _lastCalibratedAt = now;
             _loadedSchemaVersion = HardwareBenchmark.BenchmarkSchemaVersion;
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Could not save SpeedIndex cache to {Path}", path);
+            logger.LogWarning(exception: ex, message: "Could not save SpeedIndex cache to {Path}", args: path);
         }
     }
 

@@ -26,10 +26,10 @@ public class ShowRepository(MediaContext context) : IShowRepository
     public async Task AddAsync(Tv tv)
     {
         await context
-            .Tvs.Upsert(tv)
-            .On(v => new { v.Id })
+            .Tvs.Upsert(entity: tv)
+            .On(match: v => new { v.Id })
             .WhenMatched(
-                (ts, ti) =>
+                updater: (ts, ti) =>
                     new()
                     {
                         Id = ti.Id,
@@ -66,19 +66,19 @@ public class ShowRepository(MediaContext context) : IShowRepository
             .RunAsync();
 
         await context
-            .Tvs.Where(t => t.Id == tv.Id)
-            .ExecuteUpdateAsync(s => s.SetProperty(t => t.CreatedAt, t => tv.CreatedAt));
+            .Tvs.Where(predicate: t => t.Id == tv.Id)
+            .ExecuteUpdateAsync(setPropertyCalls: s => s.SetProperty(propertyExpression: t => t.CreatedAt, valueExpression: t => tv.CreatedAt));
 
         await context.SaveChangesAsync();
 
         // Link any existing recommendation/similar rows that reference this show as their target
         await context
-            .Recommendations.Where(r => r.MediaId == tv.Id && r.TvToId == null)
-            .ExecuteUpdateAsync(s => s.SetProperty(r => r.TvToId, tv.Id));
+            .Recommendations.Where(predicate: r => r.MediaId == tv.Id && r.TvToId == null)
+            .ExecuteUpdateAsync(setPropertyCalls: s => s.SetProperty(propertyExpression: r => r.TvToId, valueExpression: tv.Id));
 
         await context
-            .Similar.Where(r => r.MediaId == tv.Id && r.TvToId == null)
-            .ExecuteUpdateAsync(s => s.SetProperty(r => r.TvToId, tv.Id));
+            .Similar.Where(predicate: r => r.MediaId == tv.Id && r.TvToId == null)
+            .ExecuteUpdateAsync(setPropertyCalls: s => s.SetProperty(propertyExpression: r => r.TvToId, valueExpression: tv.Id));
     }
 
     public async Task Remove(int id)
@@ -94,14 +94,14 @@ public class ShowRepository(MediaContext context) : IShowRepository
 
         try
         {
-            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF");
+            await context.Database.ExecuteSqlRawAsync(sql: "PRAGMA foreign_keys = OFF");
             try
             {
-                await context.Tvs.Where(tv => tv.Id == id).ExecuteDeleteAsync();
+                await context.Tvs.Where(predicate: tv => tv.Id == id).ExecuteDeleteAsync();
             }
             finally
             {
-                await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON");
+                await context.Database.ExecuteSqlRawAsync(sql: "PRAGMA foreign_keys = ON");
             }
         }
         finally
@@ -114,19 +114,19 @@ public class ShowRepository(MediaContext context) : IShowRepository
     public Task LinkToLibrary(Library library, Tv tv)
     {
         return context
-            .LibraryTv.Upsert(new(library.Id, tv.Id))
-            .On(v => new { v.LibraryId, v.TvId })
-            .WhenMatched((lts, lti) => new() { LibraryId = lti.LibraryId, TvId = lti.TvId })
+            .LibraryTv.Upsert(entity: new(libraryId: library.Id, tvId: tv.Id))
+            .On(match: v => new { v.LibraryId, v.TvId })
+            .WhenMatched(updater: (lts, lti) => new() { LibraryId = lti.LibraryId, TvId = lti.TvId })
             .RunAsync();
     }
 
     public Task StoreAlternativeTitles(IEnumerable<AlternativeTitle> alternativeTitles)
     {
         return context
-            .AlternativeTitles.UpsertRange(alternativeTitles.ToArray())
-            .On(a => new { a.Title, a.TvId })
+            .AlternativeTitles.UpsertRange(entities: alternativeTitles.ToArray())
+            .On(match: a => new { a.Title, a.TvId })
             .WhenMatched(
-                (ats, ati) =>
+                updater: (ats, ati) =>
                     new()
                     {
                         Title = ati.Title,
@@ -140,15 +140,15 @@ public class ShowRepository(MediaContext context) : IShowRepository
     public Task StoreTranslations(IEnumerable<Translation> translations)
     {
         return context
-            .Translations.UpsertRange(translations.ToArray())
-            .On(t => new
+            .Translations.UpsertRange(entities: translations.ToArray())
+            .On(match: t => new
             {
                 t.Iso31661,
                 t.Iso6391,
                 t.TvId,
             })
             .WhenMatched(
-                (ts, ti) =>
+                updater: (ts, ti) =>
                     new()
                     {
                         Iso31661 = ti.Iso31661,
@@ -177,30 +177,30 @@ public class ShowRepository(MediaContext context) : IShowRepository
     {
         return context
             .Certifications.AsEnumerable()
-            .Where(c =>
-                certificationCriteria.Any(cc =>
+            .Where(predicate: c =>
+                certificationCriteria.Any(predicate: cc =>
                     cc.Iso31661 == c.Iso31661 && cc.Certification == c.Rating
                 )
             )
-            .Select(c => new CertificationTv { CertificationId = c.Id, TvId = tv.Id });
+            .Select(selector: c => new CertificationTv { CertificationId = c.Id, TvId = tv.Id });
     }
 
     public Task StoreContentRatings(IEnumerable<CertificationTv> certifications)
     {
         return context
-            .CertificationTv.UpsertRange(certifications.ToArray())
-            .On(v => new { v.CertificationId, v.TvId })
-            .WhenMatched((ts, ti) => new() { CertificationId = ti.CertificationId, TvId = ti.TvId })
+            .CertificationTv.UpsertRange(entities: certifications.ToArray())
+            .On(match: v => new { v.CertificationId, v.TvId })
+            .WhenMatched(updater: (ts, ti) => new() { CertificationId = ti.CertificationId, TvId = ti.TvId })
             .RunAsync();
     }
 
     public Task StoreSimilar(IEnumerable<Similar> similar)
     {
         return context
-            .Similar.UpsertRange(similar.ToArray())
-            .On(v => new { v.MediaId, v.TvFromId })
+            .Similar.UpsertRange(entities: similar.ToArray())
+            .On(match: v => new { v.MediaId, v.TvFromId })
             .WhenMatched(
-                (ts, ti) =>
+                updater: (ts, ti) =>
                     new()
                     {
                         TvToId = ti.TvToId,
@@ -219,10 +219,10 @@ public class ShowRepository(MediaContext context) : IShowRepository
     public Task StoreRecommendations(IEnumerable<Recommendation> recommendations)
     {
         return context
-            .Recommendations.UpsertRange(recommendations.ToArray())
-            .On(v => new { v.MediaId, v.TvFromId })
+            .Recommendations.UpsertRange(entities: recommendations.ToArray())
+            .On(match: v => new { v.MediaId, v.TvFromId })
             .WhenMatched(
-                (ts, ti) =>
+                updater: (ts, ti) =>
                     new()
                     {
                         TvToId = ti.TvToId,
@@ -241,10 +241,10 @@ public class ShowRepository(MediaContext context) : IShowRepository
     public Task StoreVideos(IEnumerable<Media> videos)
     {
         return context
-            .Medias.UpsertRange(videos.ToArray())
-            .On(v => new { v.Src, v.TvId })
+            .Medias.UpsertRange(entities: videos.ToArray())
+            .On(match: v => new { v.Src, v.TvId })
             .WhenMatched(
-                (ts, ti) =>
+                updater: (ts, ti) =>
                     new()
                     {
                         Src = ti.Src,
@@ -262,10 +262,10 @@ public class ShowRepository(MediaContext context) : IShowRepository
     public Task StoreImages(IEnumerable<Image> images)
     {
         return context
-            .Images.UpsertRange(images.ToArray())
-            .On(v => new { v.FilePath, v.TvId })
+            .Images.UpsertRange(entities: images.ToArray())
+            .On(match: v => new { v.FilePath, v.TvId })
             .WhenMatched(
-                (ts, ti) =>
+                updater: (ts, ti) =>
                     new()
                     {
                         AspectRatio = ti.AspectRatio,
@@ -286,36 +286,36 @@ public class ShowRepository(MediaContext context) : IShowRepository
     public Task StoreKeywords(IEnumerable<Keyword> keywords)
     {
         return context
-            .Keywords.UpsertRange(keywords.ToArray())
-            .On(v => new { v.Id })
-            .WhenMatched((ts, ti) => new() { Id = ti.Id, Name = ti.Name })
+            .Keywords.UpsertRange(entities: keywords.ToArray())
+            .On(match: v => new { v.Id })
+            .WhenMatched(updater: (ts, ti) => new() { Id = ti.Id, Name = ti.Name })
             .RunAsync();
     }
 
     public Task LinkKeywordsToTv(IEnumerable<KeywordTv> keywordTvs)
     {
         return context
-            .KeywordTv.UpsertRange(keywordTvs.ToArray())
-            .On(v => new { v.KeywordId, v.TvId })
-            .WhenMatched((ts, ti) => new() { KeywordId = ti.KeywordId, TvId = ti.TvId })
+            .KeywordTv.UpsertRange(entities: keywordTvs.ToArray())
+            .On(match: v => new { v.KeywordId, v.TvId })
+            .WhenMatched(updater: (ts, ti) => new() { KeywordId = ti.KeywordId, TvId = ti.TvId })
             .RunAsync();
     }
 
     public Task StoreGenres(IEnumerable<GenreTv> genreTvs)
     {
         return context
-            .GenreTv.UpsertRange(genreTvs.ToArray())
-            .On(v => new { v.GenreId, v.TvId })
-            .WhenMatched((ts, ti) => new() { GenreId = ti.GenreId, TvId = ti.TvId })
+            .GenreTv.UpsertRange(entities: genreTvs.ToArray())
+            .On(match: v => new { v.GenreId, v.TvId })
+            .WhenMatched(updater: (ts, ti) => new() { GenreId = ti.GenreId, TvId = ti.TvId })
             .RunAsync();
     }
 
     public async Task StoreNetworks(IEnumerable<Network> networks)
     {
         await context
-            .Networks.UpsertRange(networks)
-            .On(n => n.Id)
-            .WhenMatched(n =>
+            .Networks.UpsertRange(entities: networks)
+            .On(match: n => n.Id)
+            .WhenMatched(updater: n =>
                 new()
                 {
                     Name = n.Name,
@@ -332,19 +332,19 @@ public class ShowRepository(MediaContext context) : IShowRepository
     public async Task StoreNetworkTvs(IEnumerable<NetworkTv> networkTvs)
     {
         await context
-            .NetworkTv.UpsertRange(networkTvs)
-            .On(nt => new { nt.NetworkId, nt.TvId })
-            .WhenMatched(nt => new() { NetworkId = nt.NetworkId, TvId = nt.TvId })
+            .NetworkTv.UpsertRange(entities: networkTvs)
+            .On(match: nt => new { nt.NetworkId, nt.TvId })
+            .WhenMatched(updater: nt => new() { NetworkId = nt.NetworkId, TvId = nt.TvId })
             .RunAsync();
     }
 
     public Task StoreCompanies(List<Company> companies)
     {
         return context
-            .Companies.UpsertRange(companies)
-            .On(v => new { v.Id })
+            .Companies.UpsertRange(entities: companies)
+            .On(match: v => new { v.Id })
             .WhenMatched(
-                (ts, ti) =>
+                updater: (ts, ti) =>
                     new()
                     {
                         Id = ti.Id,
@@ -363,19 +363,19 @@ public class ShowRepository(MediaContext context) : IShowRepository
     public Task StoreCompanyTvs(List<CompanyTv> companyTvs)
     {
         return context
-            .CompanyTv.UpsertRange(companyTvs.ToArray())
-            .On(v => new { v.CompanyId, v.TvId })
-            .WhenMatched((ts, ti) => new() { CompanyId = ti.CompanyId, TvId = ti.TvId })
+            .CompanyTv.UpsertRange(entities: companyTvs.ToArray())
+            .On(match: v => new { v.CompanyId, v.TvId })
+            .WhenMatched(updater: (ts, ti) => new() { CompanyId = ti.CompanyId, TvId = ti.TvId })
             .RunAsync();
     }
 
     public Task StoreWatchProviders(List<WatchProvider> watchProviders)
     {
         return context
-            .WatchProviders.UpsertRange(watchProviders)
-            .On(v => new { v.Id })
+            .WatchProviders.UpsertRange(entities: watchProviders)
+            .On(match: v => new { v.Id })
             .WhenMatched(
-                (ts, ti) =>
+                updater: (ts, ti) =>
                     new()
                     {
                         Id = ti.Id,
@@ -390,8 +390,8 @@ public class ShowRepository(MediaContext context) : IShowRepository
     public Task StoreWatchProviderMedias(List<WatchProviderMedia> watchProviderMedias)
     {
         return context
-            .WatchProviderMedia.UpsertRange(watchProviderMedias.ToArray())
-            .On(v => new
+            .WatchProviderMedia.UpsertRange(entities: watchProviderMedias.ToArray())
+            .On(match: v => new
             {
                 v.WatchProviderId,
                 v.CountryCode,
@@ -400,7 +400,7 @@ public class ShowRepository(MediaContext context) : IShowRepository
                 v.TvId,
             })
             .WhenMatched(
-                (ts, ti) =>
+                updater: (ts, ti) =>
                     new()
                     {
                         WatchProviderId = ti.WatchProviderId,

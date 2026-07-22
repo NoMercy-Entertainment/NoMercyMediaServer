@@ -24,72 +24,72 @@ namespace NoMercy.Tests.Launcher.Services;
 /// </summary>
 public sealed class LauncherLogTests : IDisposable
 {
-    private static string LogFilePath => Path.Combine(AppFiles.AppPath, "launcher.log");
+    private static string LogFilePath => Path.Combine(path1: AppFiles.AppPath, path2: "launcher.log");
 
     public LauncherLogTests()
     {
-        if (File.Exists(LogFilePath))
-            File.Delete(LogFilePath);
+        if (File.Exists(path: LogFilePath))
+            File.Delete(path: LogFilePath);
     }
 
     public void Dispose()
     {
-        if (File.Exists(LogFilePath))
-            File.Delete(LogFilePath);
+        if (File.Exists(path: LogFilePath))
+            File.Delete(path: LogFilePath);
     }
 
     [Fact]
     public void Info_AppendsLineWithInfoLevelAndMessage()
     {
-        LauncherLog.Info("server started");
+        LauncherLog.Info(message: "server started");
 
-        string content = File.ReadAllText(LogFilePath);
-        content.Should().Contain("[INFO] server started");
+        string content = File.ReadAllText(path: LogFilePath);
+        content.Should().Contain(expected: "[INFO] server started");
     }
 
     [Fact]
     public void Error_WithoutException_AppendsLineWithErrorLevelAndMessage()
     {
-        LauncherLog.Error("stop command failed");
+        LauncherLog.Error(message: "stop command failed");
 
-        string content = File.ReadAllText(LogFilePath);
-        content.Should().Contain("[ERROR] stop command failed");
-        content.Should().NotContain(" | ");
+        string content = File.ReadAllText(path: LogFilePath);
+        content.Should().Contain(expected: "[ERROR] stop command failed");
+        content.Should().NotContain(unexpected: " | ");
     }
 
     [Fact]
     public void Error_WithException_AppendsMessageAndExceptionDetails()
     {
-        InvalidOperationException exception = new("pipe unavailable");
+        InvalidOperationException exception = new(message: "pipe unavailable");
 
-        LauncherLog.Error("stop command failed", exception);
+        LauncherLog.Error(message: "stop command failed", ex: exception);
 
-        string content = File.ReadAllText(LogFilePath);
-        content.Should().Contain("[ERROR] stop command failed | ");
-        content.Should().Contain("InvalidOperationException");
-        content.Should().Contain("pipe unavailable");
+        string content = File.ReadAllText(path: LogFilePath);
+        content.Should().Contain(expected: "[ERROR] stop command failed | ");
+        content.Should().Contain(expected: "InvalidOperationException");
+        content.Should().Contain(expected: "pipe unavailable");
     }
 
     [Fact]
     public void MultipleCalls_AppendRatherThanOverwrite()
     {
-        LauncherLog.Info("first line");
-        LauncherLog.Info("second line");
+        LauncherLog.Info(message: "first line");
+        LauncherLog.Info(message: "second line");
 
-        string[] lines = File.ReadAllLines(LogFilePath);
-        lines.Should().HaveCount(2);
-        lines[0].Should().Contain("first line");
-        lines[1].Should().Contain("second line");
+        string[] lines = File.ReadAllLines(path: LogFilePath);
+        lines.Should().HaveCount(expected: 2);
+        lines[0].Should().Contain(expected: "first line");
+        lines[1].Should().Contain(expected: "second line");
     }
 
     [Fact]
     public void Info_PrefixesLineWithTimestamp()
     {
-        LauncherLog.Info("timestamped");
+        LauncherLog.Info(message: "timestamped");
 
-        string line = File.ReadAllLines(LogFilePath)[0];
+        string line = File.ReadAllLines(path: LogFilePath)[0];
 
         // yyyy-MM-dd HH:mm:ss — verify the literal shape, not the exact clock value.
-        line.Should().MatchRegex(@"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[INFO\] timestamped$");
+        line.Should().MatchRegex(regularExpression: @"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[INFO\] timestamped$");
     }
 }

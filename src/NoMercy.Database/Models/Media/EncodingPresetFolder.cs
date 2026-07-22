@@ -14,18 +14,18 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Media;
 
-[PrimaryKey(nameof(PresetId), nameof(FolderId))]
-[Index(nameof(FolderId))]
-[Index(nameof(PresetId), nameof(IsDefault))]
+[PrimaryKey(propertyName: nameof(PresetId), additionalPropertyNames: nameof(FolderId))]
+[Index(propertyName: nameof(FolderId))]
+[Index(propertyName: nameof(PresetId), additionalPropertyNames: nameof(IsDefault))]
 public class EncodingPresetFolder
 {
-    [JsonProperty("preset_id")]
+    [JsonProperty(propertyName: "preset_id")]
     public Ulid PresetId { get; set; }
 
-    [JsonProperty("folder_id")]
+    [JsonProperty(propertyName: "folder_id")]
     public Ulid FolderId { get; set; }
 
-    [JsonProperty("is_default")]
+    [JsonProperty(propertyName: "is_default")]
     public bool IsDefault { get; set; }
 
     public EncodingPreset? Preset { get; set; }

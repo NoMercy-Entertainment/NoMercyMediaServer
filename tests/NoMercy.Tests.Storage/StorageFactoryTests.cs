@@ -24,11 +24,11 @@ public class StorageFactoryTests
 {
     private static Mock<IStorageDriver> BackendMock()
     {
-        Mock<IStorageDriver> driver = new(MockBehavior.Loose);
+        Mock<IStorageDriver> driver = new(behavior: MockBehavior.Loose);
         driver
-            .Setup(b => b.GetFullPath(It.IsAny<string>()))
-            .Returns<string>(p => Path.GetFullPath(p));
-        driver.Setup(b => b.ResolveLinkTarget(It.IsAny<string>())).Returns((string?)null);
+            .Setup(expression: b => b.GetFullPath(It.IsAny<string>()))
+            .Returns<string>(valueFunction: p => Path.GetFullPath(path: p));
+        driver.Setup(expression: b => b.ResolveLinkTarget(It.IsAny<string>())).Returns(value: (string?)null);
         return driver;
     }
 
@@ -39,18 +39,18 @@ public class StorageFactoryTests
     )
     {
         Mock<IStorageDriver> b = driver ?? BackendMock();
-        return new(b.Object, NullLogger<StorageFactory>.Instance, resolver, credentialResolver);
+        return new(driver: b.Object, logger: NullLogger<StorageFactory>.Instance, driverConfigResolver: resolver, credentialResolver: credentialResolver);
     }
 
     [Fact]
     public void DefaultBuilders_CoverAllBuiltInDriverTypes_WithoutKeyCollisions()
     {
         List<string> keys = StorageFactory
-            .DefaultBuilders(BackendMock().Object, NullLogger<StorageFactory>.Instance, null)
-            .SelectMany(builder => builder.SupportedTypes)
+            .DefaultBuilders(driver: BackendMock().Object, logger: NullLogger<StorageFactory>.Instance, credentialResolver: null)
+            .SelectMany(selector: builder => builder.SupportedTypes)
             .ToList();
 
-        keys.Should().BeEquivalentTo(["local", "nfs", "s3", "r2", "webdav", "smb"]);
+        keys.Should().BeEquivalentTo(expectation: ["local", "nfs", "s3", "r2", "webdav", "smb"]);
         keys.Should().OnlyHaveUniqueItems();
     }
 
@@ -61,7 +61,7 @@ public class StorageFactoryTests
     )
     {
         Mock<ICredentialResolver> mock = new();
-        mock.Setup(r => r.Resolve(It.IsAny<string>())).Returns((accessKey, secretKey));
+        mock.Setup(expression: r => r.Resolve(It.IsAny<string>())).Returns(value: (accessKey, secretKey));
         return mock.Object;
     }
 
@@ -69,16 +69,16 @@ public class StorageFactoryTests
     private static IDriverConfigResolver StubResolver(string type, string? config = null)
     {
         Mock<IDriverConfigResolver> mock = new();
-        mock.Setup(r => r.Resolve(It.IsAny<Ulid>())).Returns((type, config));
+        mock.Setup(expression: r => r.Resolve(It.IsAny<Ulid>())).Returns(value: (type, config));
         return mock.Object;
     }
 
     // Helper: local resolver with a rootPath config pointing at the given directory.
     private static IDriverConfigResolver LocalResolver(string rootPath)
     {
-        string escaped = rootPath.Replace("\\", @"\\");
+        string escaped = rootPath.Replace(oldValue: "\\", newValue: @"\\");
         string json = $"{{\"rootPath\":\"{escaped}\"}}";
-        return StubResolver("local", json);
+        return StubResolver(type: "local", config: json);
     }
 
     // -----------------------------------------------------------------------
@@ -89,9 +89,9 @@ public class StorageFactoryTests
     public void For_local_returns_IStorage()
     {
         string root = Path.GetTempPath();
-        StorageFactory factory = Factory(resolver: LocalResolver(root));
+        StorageFactory factory = Factory(resolver: LocalResolver(rootPath: root));
 
-        IStorage storage = factory.For(Ulid.NewUlid(), Ulid.NewUlid(), string.Empty);
+        IStorage storage = factory.For(folderId: Ulid.NewUlid(), driverId: Ulid.NewUlid(), subPath: string.Empty);
 
         storage.Should().NotBeNull().And.BeAssignableTo<IStorage>();
     }
@@ -100,13 +100,13 @@ public class StorageFactoryTests
     public void For_local_allows_paths_under_driver_root()
     {
         string root = Path.GetTempPath();
-        StorageFactory factory = Factory(resolver: LocalResolver(root));
+        StorageFactory factory = Factory(resolver: LocalResolver(rootPath: root));
         Ulid id = Ulid.NewUlid();
 
-        IStorage storage = factory.For(id, Ulid.NewUlid(), string.Empty);
+        IStorage storage = factory.For(folderId: id, driverId: Ulid.NewUlid(), subPath: string.Empty);
 
-        string inside = Path.Combine(root, "subdir", "file.bin");
-        Action act = () => storage.Exists(inside);
+        string inside = Path.Combine(path1: root, path2: "subdir", path3: "file.bin");
+        Action act = () => storage.Exists(path: inside);
         act.Should().NotThrow<StoragePathNotAllowedException>();
     }
 
@@ -114,14 +114,14 @@ public class StorageFactoryTests
     public void For_local_rejects_paths_outside_driver_root()
     {
         Mock<IStorageDriver> driver = BackendMock();
-        string root = Path.Combine(Path.GetTempPath(), "nm-factory-test-" + Ulid.NewUlid());
-        StorageFactory factory = Factory(driver, LocalResolver(root));
+        string root = Path.Combine(path1: Path.GetTempPath(), path2: "nm-factory-test-" + Ulid.NewUlid());
+        StorageFactory factory = Factory(driver: driver, resolver: LocalResolver(rootPath: root));
         Ulid id = Ulid.NewUlid();
 
-        IStorage storage = factory.For(id, Ulid.NewUlid(), string.Empty);
+        IStorage storage = factory.For(folderId: id, driverId: Ulid.NewUlid(), subPath: string.Empty);
 
         string outside = Path.GetTempPath();
-        Action act = () => storage.Exists(outside);
+        Action act = () => storage.Exists(path: outside);
 
         act.Should().Throw<StoragePathNotAllowedException>();
     }
@@ -130,10 +130,10 @@ public class StorageFactoryTests
     public void For_local_null_config_returns_structural_only_guard()
     {
         // Null config = system-local mode (no driver-level rootPath restriction).
-        StorageFactory factory = Factory(resolver: StubResolver("local", null));
+        StorageFactory factory = Factory(resolver: StubResolver(type: "local", config: null));
         Ulid id = Ulid.NewUlid();
 
-        IStorage storage = factory.For(id, Ulid.NewUlid(), string.Empty);
+        IStorage storage = factory.For(folderId: id, driverId: Ulid.NewUlid(), subPath: string.Empty);
 
         storage.Should().NotBeNull().And.BeAssignableTo<IStorage>();
     }
@@ -143,10 +143,10 @@ public class StorageFactoryTests
     {
         // Empty rootPath = system-local mode. No ArgumentException; the factory
         // builds a guard with no allowed roots (structural checks only).
-        StorageFactory factory = Factory(resolver: StubResolver("local", "{\"rootPath\":\"\"}"));
+        StorageFactory factory = Factory(resolver: StubResolver(type: "local", config: "{\"rootPath\":\"\"}"));
         Ulid id = Ulid.NewUlid();
 
-        IStorage storage = factory.For(id, Ulid.NewUlid(), string.Empty);
+        IStorage storage = factory.For(folderId: id, driverId: Ulid.NewUlid(), subPath: string.Empty);
 
         storage.Should().NotBeNull().And.BeAssignableTo<IStorage>();
     }
@@ -158,13 +158,13 @@ public class StorageFactoryTests
         // becomes the allowed root — so the folder self-constrains.
         Mock<IStorageDriver> driver = BackendMock();
         string folderPath = Path.GetTempPath();
-        StorageFactory factory = Factory(driver, StubResolver("local", "{\"rootPath\":\"\"}"));
+        StorageFactory factory = Factory(driver: driver, resolver: StubResolver(type: "local", config: "{\"rootPath\":\"\"}"));
         Ulid id = Ulid.NewUlid();
 
-        IStorage storage = factory.For(id, Ulid.NewUlid(), folderPath);
+        IStorage storage = factory.For(folderId: id, driverId: Ulid.NewUlid(), subPath: folderPath);
 
-        string inside = Path.Combine(folderPath, "movie.mkv");
-        Action act = () => storage.Exists(inside);
+        string inside = Path.Combine(path1: folderPath, path2: "movie.mkv");
+        Action act = () => storage.Exists(path: inside);
         act.Should().NotThrow<StoragePathNotAllowedException>();
     }
 
@@ -172,11 +172,11 @@ public class StorageFactoryTests
     public void For_local_with_malformed_configJson_throws_ArgumentException()
     {
         Mock<IStorageDriver> driver = BackendMock();
-        string root = Path.Combine(Path.GetTempPath(), "nm-factory-fallback-" + Ulid.NewUlid());
-        StorageFactory factory = Factory(driver, StubResolver("local", "not-valid-json{{{"));
+        string root = Path.Combine(path1: Path.GetTempPath(), path2: "nm-factory-fallback-" + Ulid.NewUlid());
+        StorageFactory factory = Factory(driver: driver, resolver: StubResolver(type: "local", config: "not-valid-json{{{"));
         Ulid id = Ulid.NewUlid();
 
-        Action act = () => factory.For(id, Ulid.NewUlid(), root);
+        Action act = () => factory.For(folderId: id, driverId: Ulid.NewUlid(), subPath: root);
 
         act.Should().Throw<ArgumentException>();
     }
@@ -188,9 +188,9 @@ public class StorageFactoryTests
     [Fact]
     public void For_nfs_without_config_throws_ArgumentException()
     {
-        StorageFactory factory = Factory(resolver: StubResolver("nfs", null));
+        StorageFactory factory = Factory(resolver: StubResolver(type: "nfs", config: null));
 
-        Action act = () => factory.For(Ulid.NewUlid(), Ulid.NewUlid(), "/irrelevant");
+        Action act = () => factory.For(folderId: Ulid.NewUlid(), driverId: Ulid.NewUlid(), subPath: "/irrelevant");
 
         act.Should().Throw<ArgumentException>();
     }
@@ -199,9 +199,9 @@ public class StorageFactoryTests
     public void For_nfs_with_valid_config_parses_without_throwing_at_construction()
     {
         string json = """{"server":"nas.local","export":"/media"}""";
-        StorageFactory factory = Factory(resolver: StubResolver("nfs", json));
+        StorageFactory factory = Factory(resolver: StubResolver(type: "nfs", config: json));
 
-        Action act = () => factory.For(Ulid.NewUlid(), Ulid.NewUlid(), "/irrelevant");
+        Action act = () => factory.For(folderId: Ulid.NewUlid(), driverId: Ulid.NewUlid(), subPath: "/irrelevant");
 
         // Should throw DllNotFoundException (no libnfs) but NOT ArgumentException.
         act.Should().NotThrow<ArgumentException>();
@@ -212,31 +212,31 @@ public class StorageFactoryTests
     // -----------------------------------------------------------------------
 
     [Theory]
-    [InlineData("s3")]
-    [InlineData("r2")]
+    [InlineData(data: "s3")]
+    [InlineData(data: "r2")]
     public void For_s3_r2_null_config_throws_ArgumentException(string driverType)
     {
-        StorageFactory factory = Factory(resolver: StubResolver(driverType, null));
+        StorageFactory factory = Factory(resolver: StubResolver(type: driverType, config: null));
         Ulid id = Ulid.NewUlid();
 
-        Action act = () => factory.For(id, Ulid.NewUlid(), string.Empty);
+        Action act = () => factory.For(folderId: id, driverId: Ulid.NewUlid(), subPath: string.Empty);
 
         act.Should().Throw<ArgumentException>();
     }
 
     [Theory]
-    [InlineData("s3")]
+    [InlineData(data: "s3")]
     public void For_s3_valid_config_returns_RemoteStorage(string driverType)
     {
         string json =
             $"{{\"bucket\":\"test\",\"region\":\"us-east-1\",\"endpoint\":\"http://localhost:9000\"}}";
         StorageFactory factory = Factory(
-            resolver: StubResolver(driverType, json),
+            resolver: StubResolver(type: driverType, config: json),
             credentialResolver: StubCredentials()
         );
         Ulid id = Ulid.NewUlid();
 
-        IStorage storage = factory.For(id, Ulid.NewUlid(), string.Empty);
+        IStorage storage = factory.For(folderId: id, driverId: Ulid.NewUlid(), subPath: string.Empty);
 
         storage.Should().NotBeNull().And.BeOfType<RemoteStorage>();
     }
@@ -245,12 +245,12 @@ public class StorageFactoryTests
     public void For_r2_without_endpoint_throws_ArgumentException()
     {
         string json = "{\"bucket\":\"test\",\"region\":\"auto\"}";
-        StorageFactory factory = Factory(resolver: StubResolver("r2", json));
+        StorageFactory factory = Factory(resolver: StubResolver(type: "r2", config: json));
         Ulid id = Ulid.NewUlid();
 
-        Action act = () => factory.For(id, Ulid.NewUlid(), string.Empty);
+        Action act = () => factory.For(folderId: id, driverId: Ulid.NewUlid(), subPath: string.Empty);
 
-        act.Should().Throw<ArgumentException>().WithMessage("*endpoint*");
+        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*endpoint*");
     }
 
     // -----------------------------------------------------------------------
@@ -260,9 +260,9 @@ public class StorageFactoryTests
     [Fact]
     public void For_webdav_without_config_throws_ArgumentException()
     {
-        StorageFactory factory = Factory(resolver: StubResolver("webdav", null));
+        StorageFactory factory = Factory(resolver: StubResolver(type: "webdav", config: null));
 
-        Action act = () => factory.For(Ulid.NewUlid(), Ulid.NewUlid(), "/irrelevant");
+        Action act = () => factory.For(folderId: Ulid.NewUlid(), driverId: Ulid.NewUlid(), subPath: "/irrelevant");
 
         act.Should().Throw<ArgumentException>();
     }
@@ -271,20 +271,20 @@ public class StorageFactoryTests
     public void For_webdav_missing_url_throws_ArgumentException()
     {
         string json = """{"ignoreCertErrors":false}""";
-        StorageFactory factory = Factory(resolver: StubResolver("webdav", json));
+        StorageFactory factory = Factory(resolver: StubResolver(type: "webdav", config: json));
 
-        Action act = () => factory.For(Ulid.NewUlid(), Ulid.NewUlid(), "/irrelevant");
+        Action act = () => factory.For(folderId: Ulid.NewUlid(), driverId: Ulid.NewUlid(), subPath: "/irrelevant");
 
-        act.Should().Throw<ArgumentException>().WithMessage("*url*");
+        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*url*");
     }
 
     [Fact]
     public void For_webdav_valid_config_returns_RemoteStorage()
     {
         string json = """{"url":"http://dav.example.com/files/"}""";
-        StorageFactory factory = Factory(resolver: StubResolver("webdav", json));
+        StorageFactory factory = Factory(resolver: StubResolver(type: "webdav", config: json));
 
-        IStorage storage = factory.For(Ulid.NewUlid(), Ulid.NewUlid(), "/irrelevant");
+        IStorage storage = factory.For(folderId: Ulid.NewUlid(), driverId: Ulid.NewUlid(), subPath: "/irrelevant");
 
         storage.Should().NotBeNull().And.BeOfType<RemoteStorage>();
     }
@@ -296,12 +296,12 @@ public class StorageFactoryTests
     [Fact]
     public void For_unknown_type_throws_ArgumentException()
     {
-        StorageFactory factory = Factory(resolver: StubResolver("ftp"));
+        StorageFactory factory = Factory(resolver: StubResolver(type: "ftp"));
         Ulid id = Ulid.NewUlid();
 
-        Action act = () => factory.For(id, Ulid.NewUlid(), string.Empty);
+        Action act = () => factory.For(folderId: id, driverId: Ulid.NewUlid(), subPath: string.Empty);
 
-        act.Should().Throw<ArgumentException>().WithMessage("*'ftp'*");
+        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*'ftp'*");
     }
 
     // -----------------------------------------------------------------------
@@ -309,9 +309,9 @@ public class StorageFactoryTests
     // -----------------------------------------------------------------------
 
     [Theory]
-    [InlineData("nfs", "/export", "media", "/export/media")]
-    [InlineData("s3", "prefix", "sub", "prefix/sub")]
-    [InlineData("webdav", "http://host/dav/", "movies", "http://host/dav/movies")]
+    [InlineData(data: ["nfs", "/export", "media", "/export/media"])]
+    [InlineData(data: ["s3", "prefix", "sub", "prefix/sub"])]
+    [InlineData(data: ["webdav", "http://host/dav/", "movies", "http://host/dav/movies"])]
     public void JoinRoot_combines_root_and_subPath_forward_slash(
         string type,
         string root,
@@ -319,25 +319,25 @@ public class StorageFactoryTests
         string expected
     )
     {
-        string result = StorageFactory.JoinRoot(root, sub, type);
-        result.Should().Be(expected);
+        string result = StorageFactory.JoinRoot(root: root, subPath: sub, driverType: type);
+        result.Should().Be(expected: expected);
     }
 
     [Fact]
     public void JoinRoot_local_uses_OS_separator()
     {
-        string root = Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar);
+        string root = Path.GetTempPath().TrimEnd(trimChar: Path.DirectorySeparatorChar);
         string sub = "movies";
-        string result = StorageFactory.JoinRoot(root, sub, "local");
-        result.Should().Be(Path.Combine(root, sub));
+        string result = StorageFactory.JoinRoot(root: root, subPath: sub, driverType: "local");
+        result.Should().Be(expected: Path.Combine(path1: root, path2: sub));
     }
 
     [Fact]
     public void JoinRoot_empty_subPath_returns_root_unchanged()
     {
         string root = Path.GetTempPath();
-        string result = StorageFactory.JoinRoot(root, string.Empty, "local");
-        result.Should().Be(root);
+        string result = StorageFactory.JoinRoot(root: root, subPath: string.Empty, driverType: "local");
+        result.Should().Be(expected: root);
     }
 
     // -----------------------------------------------------------------------
@@ -348,71 +348,71 @@ public class StorageFactoryTests
     public void For_repeated_call_returns_same_instance()
     {
         string root = Path.GetTempPath();
-        StorageFactory factory = Factory(resolver: LocalResolver(root));
+        StorageFactory factory = Factory(resolver: LocalResolver(rootPath: root));
         Ulid id = Ulid.NewUlid();
         Ulid driverId = Ulid.NewUlid();
 
-        IStorage first = factory.For(id, driverId, string.Empty);
-        IStorage second = factory.For(id, driverId, string.Empty);
+        IStorage first = factory.For(folderId: id, driverId: driverId, subPath: string.Empty);
+        IStorage second = factory.For(folderId: id, driverId: driverId, subPath: string.Empty);
 
-        second.Should().BeSameAs(first);
+        second.Should().BeSameAs(expected: first);
     }
 
     [Fact]
     public void Invalidate_causes_next_call_to_rebuild()
     {
         string root = Path.GetTempPath();
-        StorageFactory factory = Factory(resolver: LocalResolver(root));
+        StorageFactory factory = Factory(resolver: LocalResolver(rootPath: root));
         Ulid id = Ulid.NewUlid();
         Ulid driverId = Ulid.NewUlid();
 
-        IStorage first = factory.For(id, driverId, string.Empty);
-        factory.Invalidate(id);
-        IStorage second = factory.For(id, driverId, string.Empty);
+        IStorage first = factory.For(folderId: id, driverId: driverId, subPath: string.Empty);
+        factory.Invalidate(folderId: id);
+        IStorage second = factory.For(folderId: id, driverId: driverId, subPath: string.Empty);
 
-        second.Should().NotBeSameAs(first);
+        second.Should().NotBeSameAs(unexpected: first);
     }
 
     [Fact]
     public void Invalidate_only_removes_matching_folder()
     {
         string root = Path.GetTempPath();
-        StorageFactory factory = Factory(resolver: LocalResolver(root));
+        StorageFactory factory = Factory(resolver: LocalResolver(rootPath: root));
         Ulid idA = Ulid.NewUlid();
         Ulid idB = Ulid.NewUlid();
         Ulid driverId = Ulid.NewUlid();
 
-        IStorage storageA = factory.For(idA, driverId, string.Empty);
-        IStorage storageB = factory.For(idB, driverId, string.Empty);
+        IStorage storageA = factory.For(folderId: idA, driverId: driverId, subPath: string.Empty);
+        IStorage storageB = factory.For(folderId: idB, driverId: driverId, subPath: string.Empty);
 
-        factory.Invalidate(idA);
+        factory.Invalidate(folderId: idA);
 
-        IStorage storageA2 = factory.For(idA, driverId, string.Empty);
-        IStorage storageB2 = factory.For(idB, driverId, string.Empty);
+        IStorage storageA2 = factory.For(folderId: idA, driverId: driverId, subPath: string.Empty);
+        IStorage storageB2 = factory.For(folderId: idB, driverId: driverId, subPath: string.Empty);
 
-        storageA2.Should().NotBeSameAs(storageA);
-        storageB2.Should().BeSameAs(storageB);
+        storageA2.Should().NotBeSameAs(unexpected: storageA);
+        storageB2.Should().BeSameAs(expected: storageB);
     }
 
     [Fact]
     public void InvalidateAll_clears_entire_cache()
     {
         string root = Path.GetTempPath();
-        StorageFactory factory = Factory(resolver: LocalResolver(root));
+        StorageFactory factory = Factory(resolver: LocalResolver(rootPath: root));
         Ulid idA = Ulid.NewUlid();
         Ulid idB = Ulid.NewUlid();
         Ulid driverId = Ulid.NewUlid();
 
-        IStorage a1 = factory.For(idA, driverId, string.Empty);
-        IStorage b1 = factory.For(idB, driverId, string.Empty);
+        IStorage a1 = factory.For(folderId: idA, driverId: driverId, subPath: string.Empty);
+        IStorage b1 = factory.For(folderId: idB, driverId: driverId, subPath: string.Empty);
 
         factory.InvalidateAll();
 
-        IStorage a2 = factory.For(idA, driverId, string.Empty);
-        IStorage b2 = factory.For(idB, driverId, string.Empty);
+        IStorage a2 = factory.For(folderId: idA, driverId: driverId, subPath: string.Empty);
+        IStorage b2 = factory.For(folderId: idB, driverId: driverId, subPath: string.Empty);
 
-        a2.Should().NotBeSameAs(a1);
-        b2.Should().NotBeSameAs(b1);
+        a2.Should().NotBeSameAs(unexpected: a1);
+        b2.Should().NotBeSameAs(unexpected: b1);
     }
 
     // -----------------------------------------------------------------------
@@ -424,13 +424,13 @@ public class StorageFactoryTests
     {
         Mock<IStorageDriver> driver = BackendMock();
         string configRoot = Path.GetTempPath();
-        StorageFactory factory = Factory(driver, LocalResolver(configRoot));
+        StorageFactory factory = Factory(driver: driver, resolver: LocalResolver(rootPath: configRoot));
         Ulid id = Ulid.NewUlid();
 
-        IStorage storage = factory.For(id, Ulid.NewUlid(), string.Empty);
+        IStorage storage = factory.For(folderId: id, driverId: Ulid.NewUlid(), subPath: string.Empty);
 
-        string allowed = Path.Combine(configRoot, "some", "file.bin");
-        Action act = () => storage.Exists(allowed);
+        string allowed = Path.Combine(path1: configRoot, path2: "some", path3: "file.bin");
+        Action act = () => storage.Exists(path: allowed);
         act.Should().NotThrow<StoragePathNotAllowedException>();
     }
 
@@ -449,13 +449,13 @@ public class StorageFactoryTests
     {
         Mock<IStorageDriver> driver = BackendMock();
         driver.As<IDisposable>();
-        StorageFactory factory = Factory(driver, LocalResolver(Path.GetTempPath()));
+        StorageFactory factory = Factory(driver: driver, resolver: LocalResolver(rootPath: Path.GetTempPath()));
         Ulid id = Ulid.NewUlid();
-        factory.For(id, Ulid.NewUlid(), string.Empty);
+        factory.For(folderId: id, driverId: Ulid.NewUlid(), subPath: string.Empty);
 
-        factory.Invalidate(id);
+        factory.Invalidate(folderId: id);
 
-        driver.As<IDisposable>().Verify(d => d.Dispose(), Times.Once);
+        driver.As<IDisposable>().Verify(expression: d => d.Dispose(), times: Times.Once);
     }
 
     [Fact]
@@ -465,11 +465,11 @@ public class StorageFactoryTests
         // path must check structurally and no-op, not assume every driver
         // is disposable.
         Mock<IStorageDriver> driver = BackendMock();
-        StorageFactory factory = Factory(driver, LocalResolver(Path.GetTempPath()));
+        StorageFactory factory = Factory(driver: driver, resolver: LocalResolver(rootPath: Path.GetTempPath()));
         Ulid id = Ulid.NewUlid();
-        factory.For(id, Ulid.NewUlid(), string.Empty);
+        factory.For(folderId: id, driverId: Ulid.NewUlid(), subPath: string.Empty);
 
-        Action act = () => factory.Invalidate(id);
+        Action act = () => factory.Invalidate(folderId: id);
 
         act.Should().NotThrow();
     }
@@ -479,16 +479,16 @@ public class StorageFactoryTests
     {
         Mock<IStorageDriver> driver = BackendMock();
         driver.As<IDisposable>();
-        StorageFactory factory = Factory(driver, LocalResolver(Path.GetTempPath()));
+        StorageFactory factory = Factory(driver: driver, resolver: LocalResolver(rootPath: Path.GetTempPath()));
         Ulid id = Ulid.NewUlid();
         Ulid driverId = Ulid.NewUlid();
-        IStorage first = factory.For(id, driverId, string.Empty);
+        IStorage first = factory.For(folderId: id, driverId: driverId, subPath: string.Empty);
 
-        factory.Invalidate(id);
-        IStorage second = factory.For(id, driverId, string.Empty);
+        factory.Invalidate(folderId: id);
+        IStorage second = factory.For(folderId: id, driverId: driverId, subPath: string.Empty);
 
-        second.Should().NotBeSameAs(first);
-        driver.As<IDisposable>().Verify(d => d.Dispose(), Times.Once);
+        second.Should().NotBeSameAs(unexpected: first);
+        driver.As<IDisposable>().Verify(expression: d => d.Dispose(), times: Times.Once);
     }
 
     [Fact]
@@ -496,16 +496,16 @@ public class StorageFactoryTests
     {
         Mock<IStorageDriver> driver = BackendMock();
         driver.As<IDisposable>();
-        StorageFactory factory = Factory(driver, LocalResolver(Path.GetTempPath()));
-        factory.For(Ulid.NewUlid(), Ulid.NewUlid(), string.Empty);
-        factory.For(Ulid.NewUlid(), Ulid.NewUlid(), string.Empty);
+        StorageFactory factory = Factory(driver: driver, resolver: LocalResolver(rootPath: Path.GetTempPath()));
+        factory.For(folderId: Ulid.NewUlid(), driverId: Ulid.NewUlid(), subPath: string.Empty);
+        factory.For(folderId: Ulid.NewUlid(), driverId: Ulid.NewUlid(), subPath: string.Empty);
 
         factory.InvalidateAll();
 
         // Two distinct cache entries (different folder ids) both wrap the
         // same injected local driver — every entry's Dispose() must fire,
         // not just the first one enumerated.
-        driver.As<IDisposable>().Verify(d => d.Dispose(), Times.Exactly(2));
+        driver.As<IDisposable>().Verify(expression: d => d.Dispose(), times: Times.Exactly(callCount: 2));
     }
 
     [Fact]
@@ -513,11 +513,11 @@ public class StorageFactoryTests
     {
         Mock<IStorageDriver> driver = BackendMock();
         driver.As<IDisposable>();
-        StorageFactory factory = Factory(driver, LocalResolver(Path.GetTempPath()));
-        factory.For(Ulid.NewUlid(), Ulid.NewUlid(), string.Empty);
+        StorageFactory factory = Factory(driver: driver, resolver: LocalResolver(rootPath: Path.GetTempPath()));
+        factory.For(folderId: Ulid.NewUlid(), driverId: Ulid.NewUlid(), subPath: string.Empty);
 
         factory.Dispose();
 
-        driver.As<IDisposable>().Verify(d => d.Dispose(), Times.Once);
+        driver.As<IDisposable>().Verify(expression: d => d.Dispose(), times: Times.Once);
     }
 }

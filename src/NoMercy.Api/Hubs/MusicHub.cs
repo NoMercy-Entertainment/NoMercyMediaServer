@@ -67,7 +67,7 @@ public partial class MusicHub : ConnectionHub
         MusicActiveDeviceRegistry activeDeviceRegistry,
         INetworkDiscovery? networkDiscovery = null
     )
-        : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
+        : base(httpContextAccessor: httpContextAccessor, contextFactory: contextFactory, connectedClients: connectedClients, activityLogger: activityLogger)
     {
         _logger = logger;
         _httpContextAccessor = httpContextAccessor;
@@ -89,7 +89,7 @@ public partial class MusicHub : ConnectionHub
 
     private static SemaphoreSlim GetUserLock(Guid userId)
     {
-        return CommandLocks.GetOrAdd(userId, _ => new(1, 1));
+        return CommandLocks.GetOrAdd(key: userId, valueFactory: _ => new(initialCount: 1, maxCount: 1));
     }
 
     // Rebuilds the per-device volume map carried on every broadcast so a
@@ -128,7 +128,7 @@ public partial class MusicHub : ConnectionHub
     {
         await base.OnConnectedAsync();
 
-        User? user = UserCacheService.GetUser(Context.User.UserId());
+        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
         if (user is null)
             return;
 
@@ -138,7 +138,7 @@ public partial class MusicHub : ConnectionHub
         // just throws inside the messenger.
         try
         {
-            await Task.Delay(500, Context.ConnectionAborted);
+            await Task.Delay(millisecondsDelay: 500, cancellationToken: Context.ConnectionAborted);
         }
         catch (OperationCanceledException)
         {
@@ -148,35 +148,35 @@ public partial class MusicHub : ConnectionHub
         // Send updated device list to all connected devices for this user
         List<Device> connectedDevices = await MusicDevicesAsync();
         await _clientMessenger.SendTo(
-            "ConnectedDevicesState",
-            "musicHub",
-            user.Id,
-            connectedDevices
+            name: "ConnectedDevicesState",
+            endpoint: "musicHub",
+            userId: user.Id,
+            data: connectedDevices
         );
 
-        if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
+        if (_musicPlayerStateManager.TryGetValue(userId: user.Id, state: out MusicPlayerState? playerState))
         {
-            UpdateActionsDisallows(playerState);
+            UpdateActionsDisallows(state: playerState);
 
             // A newly-connected device reports its own current volume via the
             // client_volume query param; seed/refresh device_volumes now so a
             // controller opened on another device sees this device's slider
             // immediately, without waiting for a playlist change or volume set.
-            UpdateDeviceVolumes(playerState, user.Id);
+            UpdateDeviceVolumes(state: playerState, userSub: user.Id);
 
-            await _musicPlaybackService.UpdatePlaybackState(user, playerState);
+            await _musicPlaybackService.UpdatePlaybackState(user: user, state: playerState);
         }
         else
         {
-            await _musicPlaybackService.UpdatePlaybackState(user, new());
+            await _musicPlaybackService.UpdatePlaybackState(user: user, state: new());
         }
 
-        _logger.LogDebug("Music client connected");
+        _logger.LogDebug(message: "Music client connected");
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        User? user = UserCacheService.GetUser(Context.User.UserId());
+        User? user = UserCacheService.GetUser(userId: Context.User.UserId());
         if (user == null)
             return;
 
@@ -187,8 +187,8 @@ public partial class MusicHub : ConnectionHub
         string? stoppedTitle = null;
         string? stoppedClientDeviceId = null;
 
-        if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
-            if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? state))
+        if (ConnectedClients.Clients.TryGetValue(key: Context.ConnectionId, value: out Client? client))
+            if (_musicPlayerStateManager.TryGetValue(userId: user.Id, state: out MusicPlayerState? state))
                 if (state.DeviceId == client.DeviceId)
                 {
                     // One device_id can hold several hub connections (e.g. the KMP
@@ -197,23 +197,23 @@ public partial class MusicHub : ConnectionHub
                     // survives this disconnect — otherwise tearing down one of two live
                     // connections would wrongly release a device that is still very much
                     // connected on its other socket.
-                    bool otherConnectionForDeviceSurvives = ConnectedClients.Clients.Any(kvp =>
+                    bool otherConnectionForDeviceSurvives = ConnectedClients.Clients.Any(predicate: kvp =>
                         kvp.Key != Context.ConnectionId
                         && kvp.Value.DeviceId.Equals(
-                            client.DeviceId,
-                            StringComparison.OrdinalIgnoreCase
+                            value: client.DeviceId,
+                            comparisonType: StringComparison.OrdinalIgnoreCase
                         )
                         && kvp.Value.Endpoint.Contains(
-                            "musicHub",
-                            StringComparison.OrdinalIgnoreCase
+                            value: "musicHub",
+                            comparisonType: StringComparison.OrdinalIgnoreCase
                         )
                     );
 
                     if (!otherConnectionForDeviceSurvives)
                     {
-                        _musicPlaybackService.RemoveTimer(user.Id);
+                        _musicPlaybackService.RemoveTimer(userId: user.Id);
 
-                        _musicDeviceManager.RemoveUserDevice(user.Id);
+                        _musicDeviceManager.RemoveUserDevice(userId: user.Id);
 
                         stopPlayback = true;
                         wasCurrentDevice = true;
@@ -224,37 +224,37 @@ public partial class MusicHub : ConnectionHub
                     }
                 }
 
-        await base.OnDisconnectedAsync(exception);
+        await base.OnDisconnectedAsync(exception: exception);
 
-        if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
+        if (_musicPlayerStateManager.TryGetValue(userId: user.Id, state: out MusicPlayerState? playerState))
         {
             List<Device> connectedDevices = await MusicDevicesAsync();
 
             // Send updated device list to all remaining connected devices
             await _clientMessenger.SendTo(
-                "ConnectedDevicesState",
-                "musicHub",
-                user.Id,
-                connectedDevices
+                name: "ConnectedDevicesState",
+                endpoint: "musicHub",
+                userId: user.Id,
+                data: connectedDevices
             );
 
             if (connectedDevices.Count == 0)
             {
-                _activeDeviceRegistry.Remove(user.Id);
+                _activeDeviceRegistry.Remove(userId: user.Id);
 
                 // Clean up CommandLock and player state — no connections remain for this user
-                if (CommandLocks.TryRemove(user.Id, out SemaphoreSlim? removedLock))
+                if (CommandLocks.TryRemove(key: user.Id, value: out SemaphoreSlim? removedLock))
                     removedLock.Dispose();
 
-                _musicPlayerStateManager.RemoveState(user.Id);
+                _musicPlayerStateManager.RemoveState(userId: user.Id);
                 playerState = null;
             }
             else if (stopPlayback)
             {
                 // Remove current device if it was the disconnecting device
-                if (wasCurrentDevice && !string.IsNullOrEmpty(stoppedClientDeviceId))
+                if (wasCurrentDevice && !string.IsNullOrEmpty(value: stoppedClientDeviceId))
                 {
-                    _activeDeviceRegistry.RemoveIfMatches(user.Id, stoppedClientDeviceId);
+                    _activeDeviceRegistry.RemoveIfMatches(userId: user.Id, deviceId: stoppedClientDeviceId);
                 }
 
                 // Graceful release regardless of whether the vanished device was mid-play
@@ -286,7 +286,7 @@ public partial class MusicHub : ConnectionHub
                         Next =
                             playerState.CurrentItem == null
                             || (
-                                playerState.Playlist.IndexOf(playerState.CurrentItem)
+                                playerState.Playlist.IndexOf(item: playerState.CurrentItem)
                                     >= playerState.Playlist.Count - 1
                                 && playerState.Repeat == "off"
                             ),
@@ -301,18 +301,18 @@ public partial class MusicHub : ConnectionHub
             }
         }
 
-        await _musicPlaybackService.UpdatePlaybackState(user, playerState);
+        await _musicPlaybackService.UpdatePlaybackState(user: user, state: playerState);
 
         if (stopPlayback && stoppedDeviceId != Ulid.Empty)
         {
             try
             {
                 await ActivityLogger.LogPlaybackAsync(
-                    "playback.stopped",
-                    user.Id,
-                    stoppedDeviceId,
-                    Ulid.Empty,
-                    new
+                    type: "playback.stopped",
+                    userId: user.Id,
+                    deviceId: stoppedDeviceId,
+                    mediaId: Ulid.Empty,
+                    metadata: new
                     {
                         media_type = "audio",
                         track_id = stoppedTrackId,
@@ -322,11 +322,11 @@ public partial class MusicHub : ConnectionHub
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Failed to log playback.stopped: {Message}", ex.Message);
+                _logger.LogWarning(message: "Failed to log playback.stopped: {Message}", args: ex.Message);
             }
         }
 
-        _logger.LogDebug("Music client disconnected");
+        _logger.LogDebug(message: "Music client disconnected");
     }
 
     // ── Cast-receiver helpers (Phase 0) ──────────────────────────────────────
@@ -339,7 +339,7 @@ public partial class MusicHub : ConnectionHub
         // the rare case Discovery isn't ready yet — receiver will get a working
         // URL on the next launch once Connectivity stabilizes.
         string? external = _networkDiscovery?.ExternalAddress;
-        return string.IsNullOrEmpty(external)
+        return string.IsNullOrEmpty(value: external)
             ? ExternalServicesConfig.Current.ApiBaseUrl
             : external;
     }
@@ -350,11 +350,11 @@ public partial class MusicHub : ConnectionHub
         // tag and pass it through; receiver uses it to seed i18n on first paint.
         string? header =
             _httpContextAccessor.HttpContext?.Request.Headers.AcceptLanguage.ToString();
-        if (string.IsNullOrEmpty(header))
+        if (string.IsNullOrEmpty(value: header))
             return "en-US";
 
-        string first = header.Split(',')[0].Split(';')[0].Trim();
-        return string.IsNullOrEmpty(first) ? "en-US" : first;
+        string first = header.Split(separator: ',')[0].Split(separator: ';')[0].Trim();
+        return string.IsNullOrEmpty(value: first) ? "en-US" : first;
     }
 
     private CastIntent ResolveMusicIntent(Guid userId, string targetDeviceId)
@@ -362,24 +362,24 @@ public partial class MusicHub : ConnectionHub
         // If the user has a live music player state when handing off to the TV,
         // the receiver should resume that exact list. Otherwise idle — receiver
         // shows the splash and waits for user input or a follow-up command.
-        if (!_musicPlayerStateManager.TryGetValue(userId, out MusicPlayerState? state))
+        if (!_musicPlayerStateManager.TryGetValue(userId: userId, state: out MusicPlayerState? state))
             return CastIntent.Idle();
         if (state.CurrentItem is null || state.CurrentList is null)
             return CastIntent.Idle();
 
         // CurrentList is "/music/{type}/{listId}" — split it back out.
-        string path = state.CurrentList.ToString().TrimStart('/');
-        string[] parts = path.Split('/');
+        string path = state.CurrentList.ToString().TrimStart(trimChar: '/');
+        string[] parts = path.Split(separator: '/');
         if (
             parts.Length < 3
-            || !string.Equals(parts[0], "music", StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(a: parts[0], b: "music", comparisonType: StringComparison.OrdinalIgnoreCase)
         )
             return CastIntent.Idle();
 
-        string listType = MusicPlayerStateFactory.FromRouteSegment(parts[1]);
+        string listType = MusicPlayerStateFactory.FromRouteSegment(segment: parts[1]);
         string listId = parts[2];
         string trackId = state.CurrentItem.Id.ToString();
         int? resumeAt = state.Time > 0 ? state.Time / 1000 : null;
-        return CastIntent.PlayMusic(listType, listId, trackId, resumeAt);
+        return CastIntent.PlayMusic(listType: listType, listId: listId, trackId: trackId, resumeAt: resumeAt);
     }
 }

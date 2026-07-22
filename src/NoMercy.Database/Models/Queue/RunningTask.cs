@@ -15,10 +15,10 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Queue;
 
-[PrimaryKey(nameof(Id))]
+[PrimaryKey(propertyName: nameof(Id))]
 public class RunningTask
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.None)]
-    [JsonProperty("id")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
+    [JsonProperty(propertyName: "id")]
     public required Ulid Id { get; set; } = Ulid.NewUlid();
 }

@@ -43,16 +43,16 @@ public class PlanStageStereoModeTests
 
     public PlanStageStereoModeTests()
     {
-        _hardware.Setup(h => h.HasGpu).Returns(false);
-        _hardware.Setup(h => h.CpuCores).Returns(8);
-        _hardware.Setup(h => h.Gpus).Returns([]);
-        _hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
+        _hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
+        _hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
+        _hardware.Setup(expression: h => h.Gpus).Returns(value: []);
+        _hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
         _hardware
-            .Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
-            .Returns((GpuDevice?)null);
+            .Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
+            .Returns(value: (GpuDevice?)null);
 
         _codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<IHardwareCapabilities>(),
@@ -60,7 +60,7 @@ public class PlanStageStereoModeTests
                 )
             )
             .Returns(
-                new ResolvedCodec(
+                value: new ResolvedCodec(
                     FfmpegEncoderName: "copy",
                     EncoderInfo: new(
                         FfmpegName: "copy",
@@ -68,7 +68,7 @@ public class PlanStageStereoModeTests
                         Presets: [],
                         Profiles: [],
                         Levels: [],
-                        QualityRange: new(0, 51, 23),
+                        QualityRange: new(Min: 0, Max: 51, Default: 23),
                         SupportedRateControl: [RateControlMode.Crf],
                         Supports10Bit: true,
                         SupportsHdr: true,
@@ -82,16 +82,16 @@ public class PlanStageStereoModeTests
             );
 
         _stage = new(
-            new(),
-            new(),
-            new(),
-            _codecResolver.Object,
-            _hardware.Object,
-            new TonemapSelector(),
-            _ffmpegCapabilities.Object,
-            new AbrLadderGenerator(),
-            new NoOpCropDetector(),
-            NullLogger<PlanStage>.Instance
+            graphBuilder: new(),
+            groupingStrategy: new(),
+            costEstimator: new(),
+            codecResolver: _codecResolver.Object,
+            hardware: _hardware.Object,
+            tonemapSelector: new TonemapSelector(),
+            ffmpegCapabilities: _ffmpegCapabilities.Object,
+            abrLadderGenerator: new AbrLadderGenerator(),
+            cropDetector: new NoOpCropDetector(),
+            logger: NullLogger<PlanStage>.Instance
         );
     }
 
@@ -101,19 +101,19 @@ public class PlanStageStereoModeTests
         EncodingProfile profile = BuildCopyProfile();
         MediaInfo media = BuildStereoMedia();
 
-        ValidateInput input = new(media, profile);
+        ValidateInput input = new(Media: media, Profile: profile);
         EncodingContext context = EncodingContext.Create();
-        StageResult result = await _stage.ExecuteAsync(input, context, CancellationToken.None);
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: CancellationToken.None);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
         OutputPlan plan = success.Value.OutputPlan;
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        video.ExtraFlags.Should().NotContainKey("-metadata:s:v stereo_mode");
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        video.ExtraFlags.Should().NotContainKey(unexpected: "-metadata:s:v stereo_mode");
         video
             .ExtraFlags.Should()
-            .ContainKey("-metadata:s:v")
+            .ContainKey(expected: "-metadata:s:v")
             .WhoseValue.Should()
-            .Be("stereo_mode=side_by_side_left");
+            .Be(expected: "stereo_mode=side_by_side_left");
     }
 
     private static EncodingProfile BuildCopyProfile() =>
@@ -150,7 +150,7 @@ public class PlanStageStereoModeTests
         new(
             FilePath: "/media/stereo.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(90),
+            Duration: TimeSpan.FromMinutes(minutes: 90),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 4_000_000_000,
             VideoStreams:

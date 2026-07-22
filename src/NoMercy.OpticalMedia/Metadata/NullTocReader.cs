@@ -21,5 +21,5 @@ namespace NoMercy.OpticalMedia.Metadata;
 public sealed class NullTocReader : ITocReader
 {
     public Task<DiscToc?> ReadTocAsync(string drivePath, CancellationToken ct) =>
-        Task.FromResult<DiscToc?>(null);
+        Task.FromResult<DiscToc?>(result: null);
 }

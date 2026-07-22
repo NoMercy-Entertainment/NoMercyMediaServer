@@ -28,19 +28,19 @@ public class MusicActiveDeviceRegistry
 {
     private readonly ConcurrentDictionary<Guid, Device> _current = new();
 
-    public bool TryGet(Guid userId, [NotNullWhen(true)] out Device? device)
+    public bool TryGet(Guid userId, [NotNullWhen(returnValue: true)] out Device? device)
     {
-        return _current.TryGetValue(userId, out device);
+        return _current.TryGetValue(key: userId, value: out device);
     }
 
     public void Set(Guid userId, Device device)
     {
-        _current[userId] = device;
+        _current[key: userId] = device;
     }
 
     public void Remove(Guid userId)
     {
-        _current.TryRemove(userId, out _);
+        _current.TryRemove(key: userId, value: out _);
     }
 
     /// <summary>
@@ -51,10 +51,10 @@ public class MusicActiveDeviceRegistry
     public bool RemoveIfMatches(Guid userId, string deviceId)
     {
         if (
-            _current.TryGetValue(userId, out Device? existing)
-            && existing.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase)
+            _current.TryGetValue(key: userId, value: out Device? existing)
+            && existing.DeviceId.Equals(value: deviceId, comparisonType: StringComparison.OrdinalIgnoreCase)
         )
-            return _current.TryRemove(new(userId, existing));
+            return _current.TryRemove(item: new(key: userId, value: existing));
 
         return false;
     }

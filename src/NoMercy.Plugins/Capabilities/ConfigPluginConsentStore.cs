@@ -26,26 +26,26 @@ public class ConfigPluginConsentStore(IPluginConfiguration configuration) : IPlu
     public bool Contains(Guid pluginId)
     {
         PluginConsentRecord? record = configuration.GetConfiguration<PluginConsentRecord>();
-        return record?.GrantedPluginIds.Contains(pluginId) ?? false;
+        return record?.GrantedPluginIds.Contains(item: pluginId) ?? false;
     }
 
     public void Add(Guid pluginId)
     {
         PluginConsentRecord record = configuration.GetConfiguration<PluginConsentRecord>() ?? new();
 
-        if (record.GrantedPluginIds.Contains(pluginId))
+        if (record.GrantedPluginIds.Contains(item: pluginId))
             return;
 
-        record.GrantedPluginIds.Add(pluginId);
-        configuration.SaveConfiguration(record);
+        record.GrantedPluginIds.Add(item: pluginId);
+        configuration.SaveConfiguration(configuration: record);
     }
 
     public void Remove(Guid pluginId)
     {
         PluginConsentRecord? record = configuration.GetConfiguration<PluginConsentRecord>();
-        if (record is null || !record.GrantedPluginIds.Remove(pluginId))
+        if (record is null || !record.GrantedPluginIds.Remove(item: pluginId))
             return;
 
-        configuration.SaveConfiguration(record);
+        configuration.SaveConfiguration(configuration: record);
     }
 }

@@ -31,28 +31,28 @@ public class WebDavDriverConfigParsingTests
     public void Parse_missing_url_throws()
     {
         Action act = () =>
-            WebDavDriverConfig.Parse("""{"ignoreCertErrors":false}""", Ulid.NewUlid());
-        act.Should().Throw<ArgumentException>().WithMessage("*url*");
+            WebDavDriverConfig.Parse(json: """{"ignoreCertErrors":false}""", folderId: Ulid.NewUlid());
+        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*url*");
     }
 
     [Fact]
     public void Parse_empty_url_throws()
     {
-        Action act = () => WebDavDriverConfig.Parse("""{"url":"  "}""", Ulid.NewUlid());
-        act.Should().Throw<ArgumentException>().WithMessage("*url*");
+        Action act = () => WebDavDriverConfig.Parse(json: """{"url":"  "}""", folderId: Ulid.NewUlid());
+        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*url*");
     }
 
     [Fact]
     public void Parse_null_config_throws()
     {
-        Action act = () => WebDavDriverConfig.Parse(null!, Ulid.NewUlid());
+        Action act = () => WebDavDriverConfig.Parse(json: null!, folderId: Ulid.NewUlid());
         act.Should().Throw<Exception>();
     }
 
     [Fact]
     public void Parse_malformed_json_throws_ArgumentException()
     {
-        Action act = () => WebDavDriverConfig.Parse("{bad json{{", Ulid.NewUlid());
+        Action act = () => WebDavDriverConfig.Parse(json: "{bad json{{", folderId: Ulid.NewUlid());
         act.Should().Throw<ArgumentException>();
     }
 
@@ -60,42 +60,42 @@ public class WebDavDriverConfigParsingTests
     public void Parse_invalid_timeout_throws()
     {
         string json = """{"url":"http://dav.example.com/","timeoutSeconds":0}""";
-        Action act = () => WebDavDriverConfig.Parse(json, Ulid.NewUlid());
-        act.Should().Throw<ArgumentException>().WithMessage("*timeoutSeconds*");
+        Action act = () => WebDavDriverConfig.Parse(json: json, folderId: Ulid.NewUlid());
+        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*timeoutSeconds*");
     }
 
     [Fact]
     public void Parse_minimal_config_uses_defaults()
     {
         WebDavDriverConfig config = WebDavDriverConfig.Parse(
-            """{"url":"http://dav.example.com/files/"}""",
-            Ulid.NewUlid()
+            json: """{"url":"http://dav.example.com/files/"}""",
+            folderId: Ulid.NewUlid()
         );
 
-        config.Url.Should().Be("http://dav.example.com/files/");
+        config.Url.Should().Be(expected: "http://dav.example.com/files/");
         config.Username.Should().BeNull();
         config.Password.Should().BeNull();
         config.IgnoreCertErrors.Should().BeFalse();
-        config.TimeoutSeconds.Should().Be(30);
+        config.TimeoutSeconds.Should().Be(expected: 30);
     }
 
     [Fact]
     public void Parse_url_without_trailing_slash_is_normalized()
     {
         WebDavDriverConfig config = WebDavDriverConfig.Parse(
-            """{"url":"http://dav.example.com/files"}""",
-            Ulid.NewUlid()
+            json: """{"url":"http://dav.example.com/files"}""",
+            folderId: Ulid.NewUlid()
         );
 
-        config.Url.Should().EndWith("/");
+        config.Url.Should().EndWith(expected: "/");
     }
 
     [Fact]
     public void Parse_ignoreCertErrors_defaults_to_false()
     {
         WebDavDriverConfig config = WebDavDriverConfig.Parse(
-            """{"url":"https://self-signed.example.com/"}""",
-            Ulid.NewUlid()
+            json: """{"url":"https://self-signed.example.com/"}""",
+            folderId: Ulid.NewUlid()
         );
 
         config.IgnoreCertErrors.Should().BeFalse();
@@ -105,8 +105,8 @@ public class WebDavDriverConfigParsingTests
     public void Parse_ignoreCertErrors_true_accepted()
     {
         WebDavDriverConfig config = WebDavDriverConfig.Parse(
-            """{"url":"https://self-signed.example.com/","ignoreCertErrors":true}""",
-            Ulid.NewUlid()
+            json: """{"url":"https://self-signed.example.com/","ignoreCertErrors":true}""",
+            folderId: Ulid.NewUlid()
         );
 
         config.IgnoreCertErrors.Should().BeTrue();
@@ -116,11 +116,11 @@ public class WebDavDriverConfigParsingTests
     public void Parse_custom_timeout_accepted()
     {
         WebDavDriverConfig config = WebDavDriverConfig.Parse(
-            """{"url":"http://dav.example.com/","timeoutSeconds":60}""",
-            Ulid.NewUlid()
+            json: """{"url":"http://dav.example.com/","timeoutSeconds":60}""",
+            folderId: Ulid.NewUlid()
         );
 
-        config.TimeoutSeconds.Should().Be(60);
+        config.TimeoutSeconds.Should().Be(expected: 60);
     }
 
     [Fact]
@@ -130,7 +130,7 @@ public class WebDavDriverConfigParsingTests
         string json =
             """{"url":"http://dav.example.com/","username":"alice","passwordRef":"vault/alice"}""";
 
-        WebDavDriverConfig config = WebDavDriverConfig.Parse(json, Ulid.NewUlid(), logger.Object);
+        WebDavDriverConfig config = WebDavDriverConfig.Parse(json: json, folderId: Ulid.NewUlid(), logger: logger.Object);
 
         // Legacy fields are ignored — credentials not on the config.
         config.Username.Should().BeNull();
@@ -138,7 +138,7 @@ public class WebDavDriverConfigParsingTests
 
         // Logger should have received a warning.
         logger.Verify(
-            l =>
+            expression: l =>
                 l.Log(
                     LogLevel.Warning,
                     It.IsAny<EventId>(),
@@ -146,7 +146,7 @@ public class WebDavDriverConfigParsingTests
                     null,
                     It.IsAny<Func<It.IsAnyType, Exception?, string>>()
                 ),
-            Times.Once
+            times: Times.Once
         );
     }
 
@@ -156,13 +156,13 @@ public class WebDavDriverConfigParsingTests
         Mock<ILogger> logger = new();
         string json = """{"url":"http://dav.example.com/","bearerTokenRef":"tokens/mytoken"}""";
 
-        WebDavDriverConfig config = WebDavDriverConfig.Parse(json, Ulid.NewUlid(), logger.Object);
+        WebDavDriverConfig config = WebDavDriverConfig.Parse(json: json, folderId: Ulid.NewUlid(), logger: logger.Object);
 
         config.Username.Should().BeNull();
         config.Password.Should().BeNull();
 
         logger.Verify(
-            l =>
+            expression: l =>
                 l.Log(
                     LogLevel.Warning,
                     It.IsAny<EventId>(),
@@ -170,7 +170,7 @@ public class WebDavDriverConfigParsingTests
                     null,
                     It.IsAny<Func<It.IsAnyType, Exception?, string>>()
                 ),
-            Times.Once
+            times: Times.Once
         );
     }
 
@@ -178,13 +178,13 @@ public class WebDavDriverConfigParsingTests
     public void For_helper_sets_username_and_password()
     {
         WebDavDriverConfig config = WebDavDriverConfig.For(
-            "http://dav.example.com/",
+            url: "http://dav.example.com/",
             username: "alice",
             password: "s3cr3t"
         );
 
-        config.Username.Should().Be("alice");
-        config.Password.Should().Be("s3cr3t");
+        config.Username.Should().Be(expected: "alice");
+        config.Password.Should().Be(expected: "s3cr3t");
     }
 }
 
@@ -193,36 +193,36 @@ public class WebDavStorageDriverFactoryTests
     private static StorageFactory FactoryWithConfig(string type, string? config)
     {
         Mock<IDriverConfigResolver> resolver = new();
-        resolver.Setup(r => r.Resolve(It.IsAny<Ulid>())).Returns((type, config));
-        return new(new LocalStorageDriver(), NullLogger<StorageFactory>.Instance, resolver.Object);
+        resolver.Setup(expression: r => r.Resolve(It.IsAny<Ulid>())).Returns(value: (type, config));
+        return new(driver: new LocalStorageDriver(), logger: NullLogger<StorageFactory>.Instance, driverConfigResolver: resolver.Object);
     }
 
     [Fact]
     public void For_webdav_without_config_throws_ArgumentException()
     {
-        StorageFactory factory = FactoryWithConfig("webdav", null);
+        StorageFactory factory = FactoryWithConfig(type: "webdav", config: null);
         Ulid driverId = Ulid.NewUlid();
-        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
+        Action act = () => factory.For(folderId: Ulid.NewUlid(), driverId: driverId, subPath: "/irrelevant");
         act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void For_webdav_missing_url_throws_ArgumentException()
     {
-        StorageFactory factory = FactoryWithConfig("webdav", """{"ignoreCertErrors":false}""");
+        StorageFactory factory = FactoryWithConfig(type: "webdav", config: """{"ignoreCertErrors":false}""");
         Ulid driverId = Ulid.NewUlid();
-        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
-        act.Should().Throw<ArgumentException>().WithMessage("*url*");
+        Action act = () => factory.For(folderId: Ulid.NewUlid(), driverId: driverId, subPath: "/irrelevant");
+        act.Should().Throw<ArgumentException>().WithMessage(expectedWildcardPattern: "*url*");
     }
 
     [Fact]
     public void For_webdav_valid_config_returns_RemoteStorage()
     {
         string json = """{"url":"http://dav.example.com/files/"}""";
-        StorageFactory factory = FactoryWithConfig("webdav", json);
+        StorageFactory factory = FactoryWithConfig(type: "webdav", config: json);
         Ulid driverId = Ulid.NewUlid();
 
-        IStorage storage = factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
+        IStorage storage = factory.For(folderId: Ulid.NewUlid(), driverId: driverId, subPath: "/irrelevant");
 
         storage.Should().NotBeNull().And.BeOfType<RemoteStorage>();
     }
@@ -230,9 +230,9 @@ public class WebDavStorageDriverFactoryTests
     [Fact]
     public void For_webdav_malformed_config_throws_ArgumentException()
     {
-        StorageFactory factory = FactoryWithConfig("webdav", "{{{bad json");
+        StorageFactory factory = FactoryWithConfig(type: "webdav", config: "{{{bad json");
         Ulid driverId = Ulid.NewUlid();
-        Action act = () => factory.For(Ulid.NewUlid(), driverId, "/irrelevant");
+        Action act = () => factory.For(folderId: Ulid.NewUlid(), driverId: driverId, subPath: "/irrelevant");
         act.Should().Throw<ArgumentException>();
     }
 
@@ -242,20 +242,20 @@ public class WebDavStorageDriverFactoryTests
         string json = """{"url":"http://dav.example.com/files/"}""";
 
         Mock<IDriverConfigResolver> driverResolver = new();
-        driverResolver.Setup(r => r.Resolve(It.IsAny<Ulid>())).Returns(("webdav", json));
+        driverResolver.Setup(expression: r => r.Resolve(It.IsAny<Ulid>())).Returns(value: ("webdav", json));
 
         Mock<ICredentialResolver> credResolver = new();
-        credResolver.Setup(r => r.Resolve(It.IsAny<string>())).Returns(("alice", "s3cr3t"));
+        credResolver.Setup(expression: r => r.Resolve(It.IsAny<string>())).Returns(value: ("alice", "s3cr3t"));
 
         StorageFactory factory = new(
-            new LocalStorageDriver(),
-            NullLogger<StorageFactory>.Instance,
-            driverResolver.Object,
-            credResolver.Object
+            driver: new LocalStorageDriver(),
+            logger: NullLogger<StorageFactory>.Instance,
+            driverConfigResolver: driverResolver.Object,
+            credentialResolver: credResolver.Object
         );
 
         // Construction must not throw.
-        IStorage storage = factory.For(Ulid.NewUlid(), Ulid.NewUlid(), string.Empty);
+        IStorage storage = factory.For(folderId: Ulid.NewUlid(), driverId: Ulid.NewUlid(), subPath: string.Empty);
         storage.Should().NotBeNull().And.BeOfType<RemoteStorage>();
     }
 }
@@ -266,7 +266,7 @@ public class WebDavStorageDriverFactoryTests
 // StorageBackends collection fixture and torn down after the last test.
 // ============================================================================
 
-[Collection("StorageBackends")]
+[Collection(name: "StorageBackends")]
 public class WebDavStorageDriverIntegrationTests(StorageBackendsFixture fix)
 {
     private string SkipReason => fix.StartupError ?? "storage container not available";
@@ -274,152 +274,152 @@ public class WebDavStorageDriverIntegrationTests(StorageBackendsFixture fix)
     [SkippableFact]
     public async Task RoundTrip_write_read_delete()
     {
-        Skip.If(!fix.Available, SkipReason);
+        Skip.If(condition: !fix.Available, reason: SkipReason);
 
         WebDavStorageDriver driver = fix.BuildWebDavDriver();
         string path = $"roundtrip-{Ulid.NewUlid()}.txt";
         byte[] data = "hello webdav"u8.ToArray();
 
-        await using (Stream w = driver.OpenWrite(path, overwrite: true))
-            await w.WriteAsync(data);
+        await using (Stream w = driver.OpenWrite(path: path, overwrite: true))
+            await w.WriteAsync(buffer: data);
 
-        await using Stream r = driver.OpenRead(path);
+        await using Stream r = driver.OpenRead(path: path);
         using MemoryStream ms = new();
-        await r.CopyToAsync(ms);
-        ms.ToArray().Should().Equal(data);
+        await r.CopyToAsync(destination: ms);
+        ms.ToArray().Should().Equal(elements: data);
 
-        driver.DeleteFile(path);
-        driver.FileExists(path).Should().BeFalse();
+        driver.DeleteFile(path: path);
+        driver.FileExists(path: path).Should().BeFalse();
     }
 
     [SkippableFact]
     public async Task LargeFile_write_read()
     {
-        Skip.If(!fix.Available, SkipReason);
+        Skip.If(condition: !fix.Available, reason: SkipReason);
 
         WebDavStorageDriver driver = fix.BuildWebDavDriver();
         string path = $"large-{Ulid.NewUlid()}.bin";
 
         byte[] data = new byte[12 * 1024 * 1024];
-        new Random(99).NextBytes(data);
+        new Random(Seed: 99).NextBytes(buffer: data);
 
-        await using (Stream w = driver.OpenWrite(path, overwrite: true))
-            await w.WriteAsync(data);
+        await using (Stream w = driver.OpenWrite(path: path, overwrite: true))
+            await w.WriteAsync(buffer: data);
 
-        long size = driver.GetFileSize(path);
-        size.Should().Be(data.Length);
+        long size = driver.GetFileSize(path: path);
+        size.Should().Be(expected: data.Length);
 
-        driver.DeleteFile(path);
+        driver.DeleteFile(path: path);
     }
 
     [SkippableFact]
     public async Task Mkcol_recursive_creation()
     {
-        Skip.If(!fix.Available, SkipReason);
+        Skip.If(condition: !fix.Available, reason: SkipReason);
 
         WebDavStorageDriver driver = fix.BuildWebDavDriver();
         string dir = $"a-{Ulid.NewUlid()}/b/c";
 
-        driver.CreateDirectory(dir);
-        driver.DirectoryExists(dir).Should().BeTrue();
+        driver.CreateDirectory(path: dir);
+        driver.DirectoryExists(path: dir).Should().BeTrue();
 
-        driver.DeleteDirectory($"a-{dir.Split('/')[0]}", recursive: true);
+        driver.DeleteDirectory(path: $"a-{dir.Split(separator: '/')[0]}", recursive: true);
     }
 
     [SkippableFact]
     public async Task Propfind_enumerate_with_pattern()
     {
-        Skip.If(!fix.Available, SkipReason);
+        Skip.If(condition: !fix.Available, reason: SkipReason);
 
         WebDavStorageDriver driver = fix.BuildWebDavDriver();
         string dirName = $"enum-{Ulid.NewUlid()}";
-        driver.CreateDirectory(dirName);
+        driver.CreateDirectory(path: dirName);
 
         string fileA = $"{dirName}/a.txt";
         string fileB = $"{dirName}/b.txt";
         string fileC = $"{dirName}/c.bin";
         byte[] bytes = "x"u8.ToArray();
 
-        await using (Stream w = driver.OpenWrite(fileA, overwrite: true))
-            await w.WriteAsync(bytes);
-        await using (Stream w2 = driver.OpenWrite(fileB, overwrite: true))
-            await w2.WriteAsync(bytes);
-        await using (Stream w3 = driver.OpenWrite(fileC, overwrite: true))
-            await w3.WriteAsync(bytes);
+        await using (Stream w = driver.OpenWrite(path: fileA, overwrite: true))
+            await w.WriteAsync(buffer: bytes);
+        await using (Stream w2 = driver.OpenWrite(path: fileB, overwrite: true))
+            await w2.WriteAsync(buffer: bytes);
+        await using (Stream w3 = driver.OpenWrite(path: fileC, overwrite: true))
+            await w3.WriteAsync(buffer: bytes);
 
         IEnumerable<string> entries = driver.EnumerateFileSystemEntries(
-            dirName,
-            "*.txt",
-            SearchOption.TopDirectoryOnly
+            directory: dirName,
+            searchPattern: "*.txt",
+            option: SearchOption.TopDirectoryOnly
         );
 
-        entries.Should().HaveCount(2);
+        entries.Should().HaveCount(expected: 2);
 
-        driver.DeleteDirectory(dirName, recursive: true);
+        driver.DeleteDirectory(path: dirName, recursive: true);
     }
 
     [SkippableFact]
     public async Task MoveFile_renames_resource()
     {
-        Skip.If(!fix.Available, SkipReason);
+        Skip.If(condition: !fix.Available, reason: SkipReason);
 
         WebDavStorageDriver driver = fix.BuildWebDavDriver();
         string src = $"move-src-{Ulid.NewUlid()}.txt";
         string dst = $"move-dst-{Ulid.NewUlid()}.txt";
         byte[] data = "move me"u8.ToArray();
 
-        await using (Stream w = driver.OpenWrite(src, overwrite: true))
-            await w.WriteAsync(data);
+        await using (Stream w = driver.OpenWrite(path: src, overwrite: true))
+            await w.WriteAsync(buffer: data);
 
-        driver.MoveFile(src, dst);
+        driver.MoveFile(source: src, destination: dst);
 
-        driver.FileExists(src).Should().BeFalse();
-        driver.FileExists(dst).Should().BeTrue();
+        driver.FileExists(path: src).Should().BeFalse();
+        driver.FileExists(path: dst).Should().BeTrue();
 
-        driver.DeleteFile(dst);
+        driver.DeleteFile(path: dst);
     }
 
     [SkippableFact]
     public async Task CopyFile_duplicates_resource()
     {
-        Skip.If(!fix.Available, SkipReason);
+        Skip.If(condition: !fix.Available, reason: SkipReason);
 
         WebDavStorageDriver driver = fix.BuildWebDavDriver();
         string src = $"copy-src-{Ulid.NewUlid()}.txt";
         string dst = $"copy-dst-{Ulid.NewUlid()}.txt";
         byte[] data = "copy me"u8.ToArray();
 
-        await using (Stream w = driver.OpenWrite(src, overwrite: true))
-            await w.WriteAsync(data);
+        await using (Stream w = driver.OpenWrite(path: src, overwrite: true))
+            await w.WriteAsync(buffer: data);
 
-        driver.CopyFile(src, dst, overwrite: true);
+        driver.CopyFile(source: src, destination: dst, overwrite: true);
 
-        driver.FileExists(src).Should().BeTrue();
-        driver.FileExists(dst).Should().BeTrue();
+        driver.FileExists(path: src).Should().BeTrue();
+        driver.FileExists(path: dst).Should().BeTrue();
 
-        driver.DeleteFile(src);
-        driver.DeleteFile(dst);
+        driver.DeleteFile(path: src);
+        driver.DeleteFile(path: dst);
     }
 
     [SkippableFact]
     public async Task BasicAuth_wrong_password_fails()
     {
-        Skip.If(!fix.Available, SkipReason);
+        Skip.If(condition: !fix.Available, reason: SkipReason);
 
         WebDavClient badClient = new(
-            new WebDavClientParams
+            @params: new WebDavClientParams
             {
-                BaseAddress = new(fix.WebDavBaseUrl),
-                Credentials = new NetworkCredential("testuser", "wrongpassword"),
+                BaseAddress = new(uriString: fix.WebDavBaseUrl),
+                Credentials = new NetworkCredential(userName: "testuser", password: "wrongpassword"),
             }
         );
-        WebDavStorageDriver driver = new(badClient, fix.WebDavBaseUrl);
+        WebDavStorageDriver driver = new(client: badClient, baseUrl: fix.WebDavBaseUrl);
 
         // Propfind on root with wrong creds should return an HTTP error (401/403).
         // Some servers return 401 as non-successful; the driver returns false (not exception)
         // because FileExists/DirectoryExists swallow non-success responses.
-        bool result = driver.DirectoryExists("/");
-        result.Should().BeFalse("401/403 responses should be treated as 'not found'");
+        bool result = driver.DirectoryExists(path: "/");
+        result.Should().BeFalse(because: "401/403 responses should be treated as 'not found'");
     }
 }
 
@@ -433,12 +433,12 @@ public class WebDavEnumerateContractTests
 
     private static WebDavStorageDriver BuildDriver(Mock<IWebDavClient> mockClient)
     {
-        return new(mockClient.Object, BaseUrl);
+        return new(client: mockClient.Object, baseUrl: BaseUrl);
     }
 
     private static WebDavResource MakeResource(string absoluteUri, bool isCollection)
     {
-        WebDavResource.Builder builder = new WebDavResource.Builder().WithUri(absoluteUri);
+        WebDavResource.Builder builder = new WebDavResource.Builder().WithUri(uri: absoluteUri);
         if (isCollection)
             builder.IsCollection();
         else
@@ -451,7 +451,7 @@ public class WebDavEnumerateContractTests
         IEnumerable<WebDavResource> resources
     )
     {
-        return new(statusCode, resources);
+        return new(statusCode: statusCode, resources: resources);
     }
 
     [Fact]
@@ -460,15 +460,16 @@ public class WebDavEnumerateContractTests
         Mock<IWebDavClient> mock = new();
 
         PropfindResponse enumResponse = MakePropfindResponse(
-            207,
+            statusCode: 207,
+            resources:
             [
-                MakeResource("https://nas.local/dav/", isCollection: true), // dir itself — skipped
-                MakeResource("https://nas.local/dav/folder/file.mp3", isCollection: false),
-                MakeResource("https://nas.local/dav/folder/", isCollection: true),
+                MakeResource(absoluteUri: "https://nas.local/dav/", isCollection: true), // dir itself — skipped
+                MakeResource(absoluteUri: "https://nas.local/dav/folder/file.mp3", isCollection: false),
+                MakeResource(absoluteUri: "https://nas.local/dav/folder/", isCollection: true),
             ]
         );
 
-        mock.Setup(c =>
+        mock.Setup(expression: c =>
                 c.Propfind(
                     It.Is<string>(u => u == BaseUrl),
                     It.Is<PropfindParameters>(p =>
@@ -476,17 +477,17 @@ public class WebDavEnumerateContractTests
                     )
                 )
             )
-            .ReturnsAsync(enumResponse);
+            .ReturnsAsync(value: enumResponse);
 
-        WebDavStorageDriver driver = BuildDriver(mock);
+        WebDavStorageDriver driver = BuildDriver(mockClient: mock);
 
         List<string> entries = driver
-            .EnumerateFileSystemEntries(string.Empty, "*", SearchOption.TopDirectoryOnly)
+            .EnumerateFileSystemEntries(directory: string.Empty, searchPattern: "*", option: SearchOption.TopDirectoryOnly)
             .ToList();
 
-        entries.Should().Contain("folder/file.mp3");
-        entries.Should().Contain("folder");
-        entries.Should().NotContain(e => e.StartsWith("https://"));
+        entries.Should().Contain(expected: "folder/file.mp3");
+        entries.Should().Contain(expected: "folder");
+        entries.Should().NotContain(predicate: e => e.StartsWith("https://"));
     }
 
     [Fact]
@@ -495,14 +496,15 @@ public class WebDavEnumerateContractTests
         Mock<IWebDavClient> mock = new();
 
         PropfindResponse enumResponse = MakePropfindResponse(
-            207,
+            statusCode: 207,
+            resources:
             [
-                MakeResource("https://nas.local/dav/", isCollection: true),
-                MakeResource("https://nas.local/dav/music/", isCollection: true),
+                MakeResource(absoluteUri: "https://nas.local/dav/", isCollection: true),
+                MakeResource(absoluteUri: "https://nas.local/dav/music/", isCollection: true),
             ]
         );
 
-        mock.Setup(c =>
+        mock.Setup(expression: c =>
                 c.Propfind(
                     It.Is<string>(u => u == BaseUrl),
                     It.Is<PropfindParameters>(p =>
@@ -510,33 +512,33 @@ public class WebDavEnumerateContractTests
                     )
                 )
             )
-            .ReturnsAsync(enumResponse);
+            .ReturnsAsync(value: enumResponse);
 
         // DirectoryExists calls Propfind on "https://nas.local/dav/music/" with ResourceOnly
         PropfindResponse existsResponse = MakePropfindResponse(
-            207,
-            [MakeResource("https://nas.local/dav/music/", isCollection: true)]
+            statusCode: 207,
+            resources: [MakeResource(absoluteUri: "https://nas.local/dav/music/", isCollection: true)]
         );
 
-        mock.Setup(c =>
+        mock.Setup(expression: c =>
                 c.Propfind(
                     It.Is<string>(u => u == "https://nas.local/dav/music/"),
                     It.Is<PropfindParameters>(p => p.ApplyTo == ApplyTo.Propfind.ResourceOnly)
                 )
             )
-            .ReturnsAsync(existsResponse);
+            .ReturnsAsync(value: existsResponse);
 
-        WebDavStorageDriver driver = BuildDriver(mock);
+        WebDavStorageDriver driver = BuildDriver(mockClient: mock);
 
         List<string> entries = driver
-            .EnumerateFileSystemEntries(string.Empty, "*", SearchOption.TopDirectoryOnly)
+            .EnumerateFileSystemEntries(directory: string.Empty, searchPattern: "*", option: SearchOption.TopDirectoryOnly)
             .ToList();
 
-        string dirEntry = entries.Single(e => e == "music");
-        bool exists = driver.DirectoryExists(dirEntry);
+        string dirEntry = entries.Single(predicate: e => e == "music");
+        bool exists = driver.DirectoryExists(path: dirEntry);
 
         exists
             .Should()
-            .BeTrue("round-trip from EnumerateFileSystemEntries to DirectoryExists must work");
+            .BeTrue(because: "round-trip from EnumerateFileSystemEntries to DirectoryExists must work");
     }
 }

@@ -40,16 +40,16 @@ public class PlanStageAutoLadderTests
 
     public PlanStageAutoLadderTests()
     {
-        _hardware.Setup(h => h.HasGpu).Returns(false);
-        _hardware.Setup(h => h.CpuCores).Returns(8);
-        _hardware.Setup(h => h.Gpus).Returns([]);
-        _hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
+        _hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
+        _hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
+        _hardware.Setup(expression: h => h.Gpus).Returns(value: []);
+        _hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
         _hardware
-            .Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
-            .Returns((GpuDevice?)null);
+            .Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
+            .Returns(value: (GpuDevice?)null);
 
         _codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<IHardwareCapabilities>(),
@@ -57,7 +57,7 @@ public class PlanStageAutoLadderTests
                 )
             )
             .Returns(
-                new ResolvedCodec(
+                value: new ResolvedCodec(
                     FfmpegEncoderName: "libx264",
                     EncoderInfo: new(
                         FfmpegName: "libx264",
@@ -65,7 +65,7 @@ public class PlanStageAutoLadderTests
                         Presets: ["medium"],
                         Profiles: ["high"],
                         Levels: ["4.1"],
-                        QualityRange: new(0, 51, 23),
+                        QualityRange: new(Min: 0, Max: 51, Default: 23),
                         SupportedRateControl: [RateControlMode.Crf],
                         Supports10Bit: false,
                         SupportsHdr: false,
@@ -79,16 +79,16 @@ public class PlanStageAutoLadderTests
             );
 
         _stage = new(
-            new(),
-            new(),
-            new(),
-            _codecResolver.Object,
-            _hardware.Object,
-            new TonemapSelector(),
-            new Mock<IFfmpegCapabilities>().Object,
-            new AbrLadderGenerator(),
-            new NoOpCropDetector(),
-            NullLogger<PlanStage>.Instance
+            graphBuilder: new(),
+            groupingStrategy: new(),
+            costEstimator: new(),
+            codecResolver: _codecResolver.Object,
+            hardware: _hardware.Object,
+            tonemapSelector: new TonemapSelector(),
+            ffmpegCapabilities: new Mock<IFfmpegCapabilities>().Object,
+            abrLadderGenerator: new AbrLadderGenerator(),
+            cropDetector: new NoOpCropDetector(),
+            logger: NullLogger<PlanStage>.Instance
         );
     }
 
@@ -97,39 +97,39 @@ public class PlanStageAutoLadderTests
     {
         EncodingProfile profile = BuildProfile(
             autoLadder: false,
-            rungs: [BuildVideo(1920, 1080), BuildVideo(1280, 720)]
+            rungs: [BuildVideo(width: 1920, height: 1080), BuildVideo(width: 1280, height: 720)]
         );
 
-        OutputPlan plan = await RunPlan(BuildMedia(1920, 1080), profile);
+        OutputPlan plan = await RunPlan(media: BuildMedia(width: 1920, height: 1080), profile: profile);
 
-        Assert.Equal(2, plan.VideoOutputs.Length);
-        Assert.Contains(plan.VideoOutputs, v => v.Height == 1080);
-        Assert.Contains(plan.VideoOutputs, v => v.Height == 720);
+        Assert.Equal(expected: 2, actual: plan.VideoOutputs.Length);
+        Assert.Contains(collection: plan.VideoOutputs, filter: v => v.Height == 1080);
+        Assert.Contains(collection: plan.VideoOutputs, filter: v => v.Height == 720);
     }
 
     [Fact]
     public async Task AutoLadder_On_Expand1080pReference_Produces360_480_720_1080()
     {
-        EncodingProfile profile = BuildProfile(autoLadder: true, rungs: [BuildVideo(1920, 1080)]);
+        EncodingProfile profile = BuildProfile(autoLadder: true, rungs: [BuildVideo(width: 1920, height: 1080)]);
 
-        OutputPlan plan = await RunPlan(BuildMedia(1920, 1080, bitrateKbps: 6000), profile);
+        OutputPlan plan = await RunPlan(media: BuildMedia(width: 1920, height: 1080, bitrateKbps: 6000), profile: profile);
 
-        int[] heights = plan.VideoOutputs.Select(v => v.Height).ToArray();
-        Assert.Contains(360, heights);
-        Assert.Contains(480, heights);
-        Assert.Contains(720, heights);
-        Assert.Contains(1080, heights);
+        int[] heights = plan.VideoOutputs.Select(selector: v => v.Height).ToArray();
+        Assert.Contains(expected: 360, collection: heights);
+        Assert.Contains(expected: 480, collection: heights);
+        Assert.Contains(expected: 720, collection: heights);
+        Assert.Contains(expected: 1080, collection: heights);
     }
 
     [Fact]
     public async Task AutoLadder_On_720pSource_SkipsHigherTiers()
     {
-        EncodingProfile profile = BuildProfile(autoLadder: true, rungs: [BuildVideo(1280, 720)]);
+        EncodingProfile profile = BuildProfile(autoLadder: true, rungs: [BuildVideo(width: 1280, height: 720)]);
 
-        OutputPlan plan = await RunPlan(BuildMedia(1280, 720, bitrateKbps: 3000), profile);
+        OutputPlan plan = await RunPlan(media: BuildMedia(width: 1280, height: 720, bitrateKbps: 3000), profile: profile);
 
-        Assert.All(plan.VideoOutputs, v => Assert.True(v.Height <= 720));
-        Assert.DoesNotContain(1080, plan.VideoOutputs.Select(v => v.Height));
+        Assert.All(collection: plan.VideoOutputs, action: v => Assert.True(condition: v.Height <= 720));
+        Assert.DoesNotContain(expected: 1080, collection: plan.VideoOutputs.Select(selector: v => v.Height));
     }
 
     [Fact]
@@ -139,32 +139,32 @@ public class PlanStageAutoLadderTests
         // the stage logs a warning and keeps the manual variants.
         EncodingProfile profile = BuildProfile(
             autoLadder: true,
-            rungs: [BuildVideo(1920, 1080), BuildVideo(1280, 720)]
+            rungs: [BuildVideo(width: 1920, height: 1080), BuildVideo(width: 1280, height: 720)]
         );
 
-        OutputPlan plan = await RunPlan(BuildMedia(1920, 1080), profile);
+        OutputPlan plan = await RunPlan(media: BuildMedia(width: 1920, height: 1080), profile: profile);
 
-        Assert.Equal(2, plan.VideoOutputs.Length);
+        Assert.Equal(expected: 2, actual: plan.VideoOutputs.Length);
     }
 
     [Fact]
     public async Task AutoLadder_On_AudioOnlySource_NoExpansion()
     {
-        EncodingProfile profile = BuildProfile(autoLadder: true, rungs: [BuildVideo(1920, 1080)]);
+        EncodingProfile profile = BuildProfile(autoLadder: true, rungs: [BuildVideo(width: 1920, height: 1080)]);
 
         // Source has no video streams → auto-ladder passthrough.
-        OutputPlan plan = await RunPlan(BuildAudioOnlyMedia(), profile);
+        OutputPlan plan = await RunPlan(media: BuildAudioOnlyMedia(), profile: profile);
 
-        Assert.Empty(plan.VideoOutputs);
+        Assert.Empty(collection: plan.VideoOutputs);
     }
 
     private async Task<OutputPlan> RunPlan(MediaInfo media, EncodingProfile profile)
     {
-        ValidateInput input = new(media, profile);
+        ValidateInput input = new(Media: media, Profile: profile);
         EncodingContext context = EncodingContext.Create();
-        StageResult result = await _stage.ExecuteAsync(input, context, CancellationToken.None);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: CancellationToken.None);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
         return success.Value.OutputPlan;
     }
 
@@ -172,7 +172,7 @@ public class PlanStageAutoLadderTests
         new(
             FilePath: "/media/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(90),
+            Duration: TimeSpan.FromMinutes(minutes: 90),
             OverallBitRateKbps: bitrateKbps + 500,
             FileSizeBytes: 4_000_000_000,
             VideoStreams:
@@ -201,7 +201,7 @@ public class PlanStageAutoLadderTests
         new(
             FilePath: "/media/song.flac",
             Format: "flac",
-            Duration: TimeSpan.FromMinutes(4),
+            Duration: TimeSpan.FromMinutes(minutes: 4),
             OverallBitRateKbps: 800,
             FileSizeBytes: 20_000_000,
             VideoStreams: [],
@@ -254,16 +254,16 @@ public class PlanStageAutoLadderRoutingTests
 
     private PlanStage BuildStage()
     {
-        _hardware.Setup(h => h.HasGpu).Returns(false);
-        _hardware.Setup(h => h.CpuCores).Returns(8);
-        _hardware.Setup(h => h.Gpus).Returns([]);
-        _hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
+        _hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
+        _hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
+        _hardware.Setup(expression: h => h.Gpus).Returns(value: []);
+        _hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
         _hardware
-            .Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
-            .Returns((GpuDevice?)null);
+            .Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
+            .Returns(value: (GpuDevice?)null);
 
         _codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<IHardwareCapabilities>(),
@@ -271,7 +271,7 @@ public class PlanStageAutoLadderRoutingTests
                 )
             )
             .Returns(
-                new ResolvedCodec(
+                value: new ResolvedCodec(
                     FfmpegEncoderName: "libx264",
                     EncoderInfo: new(
                         FfmpegName: "libx264",
@@ -279,7 +279,7 @@ public class PlanStageAutoLadderRoutingTests
                         Presets: ["medium"],
                         Profiles: ["high"],
                         Levels: ["4.1"],
-                        QualityRange: new(0, 51, 23),
+                        QualityRange: new(Min: 0, Max: 51, Default: 23),
                         SupportedRateControl: [RateControlMode.Crf],
                         Supports10Bit: false,
                         SupportsHdr: false,
@@ -293,16 +293,16 @@ public class PlanStageAutoLadderRoutingTests
             );
 
         return new(
-            new(),
-            new(),
-            new(),
-            _codecResolver.Object,
-            _hardware.Object,
-            new TonemapSelector(),
-            new Mock<IFfmpegCapabilities>().Object,
-            _abrGenerator.Object,
-            new NoOpCropDetector(),
-            NullLogger<PlanStage>.Instance
+            graphBuilder: new(),
+            groupingStrategy: new(),
+            costEstimator: new(),
+            codecResolver: _codecResolver.Object,
+            hardware: _hardware.Object,
+            tonemapSelector: new TonemapSelector(),
+            ffmpegCapabilities: new Mock<IFfmpegCapabilities>().Object,
+            abrLadderGenerator: _abrGenerator.Object,
+            cropDetector: new NoOpCropDetector(),
+            logger: NullLogger<PlanStage>.Instance
         );
     }
 
@@ -310,7 +310,7 @@ public class PlanStageAutoLadderRoutingTests
         new(
             FilePath: "/media/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(90),
+            Duration: TimeSpan.FromMinutes(minutes: 90),
             OverallBitRateKbps: 4500,
             FileSizeBytes: 3_000_000_000,
             VideoStreams:
@@ -337,9 +337,9 @@ public class PlanStageAutoLadderRoutingTests
 
     private static LadderRung[] ThreeKnownRungs() =>
         [
-            new(640, 360, VideoCodecType.H264, 400, 600, 800, 24.0),
-            new(1280, 720, VideoCodecType.H264, 2000, 3000, 4000, 24.0),
-            new(1920, 1080, VideoCodecType.H264, 5000, 7500, 10000, 24.0),
+            new(Width: 640, Height: 360, Codec: VideoCodecType.H264, BitrateKbps: 400, MaxBitrateKbps: 600, BufferSizeKbps: 800, Framerate: 24.0),
+            new(Width: 1280, Height: 720, Codec: VideoCodecType.H264, BitrateKbps: 2000, MaxBitrateKbps: 3000, BufferSizeKbps: 4000, Framerate: 24.0),
+            new(Width: 1920, Height: 1080, Codec: VideoCodecType.H264, BitrateKbps: 5000, MaxBitrateKbps: 7500, BufferSizeKbps: 10000, Framerate: 24.0),
         ];
 
     // ── New path (AutoConfig set) ──────────────────────────────────────────
@@ -356,7 +356,7 @@ public class PlanStageAutoLadderRoutingTests
         LadderRung[] mockedRungs = ThreeKnownRungs();
 
         _abrGenerator
-            .Setup(g =>
+            .Setup(expression: g =>
                 g.GenerateLadder(
                     It.IsAny<MediaInfo>(),
                     It.IsAny<VideoCodecType>(),
@@ -364,7 +364,7 @@ public class PlanStageAutoLadderRoutingTests
                     It.IsAny<VideoOutput?>()
                 )
             )
-            .Returns(mockedRungs);
+            .Returns(value: mockedRungs);
 
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
@@ -397,37 +397,37 @@ public class PlanStageAutoLadderRoutingTests
         );
 
         PlanStage stage = BuildStage();
-        ValidateInput input = new(Build1080pMedia(), profile);
+        ValidateInput input = new(Media: Build1080pMedia(), Profile: profile);
         EncodingContext context = EncodingContext.Create();
 
-        StageResult result = await stage.ExecuteAsync(input, context, CancellationToken.None);
+        StageResult result = await stage.ExecuteAsync(input: input, context: context, ct: CancellationToken.None);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
         OutputPlan outputPlan = success.Value.OutputPlan;
 
         // GenerateLadder called once with the expected codec + AutoConfig.
         _abrGenerator.Verify(
-            g =>
+            expression: g =>
                 g.GenerateLadder(
                     It.IsAny<MediaInfo>(),
                     VideoCodecType.H264,
                     autoConfig,
                     It.IsAny<VideoOutput?>()
                 ),
-            Times.Once
+            times: Times.Once
         );
 
         // Legacy Generate must NOT be called.
         _abrGenerator.Verify(
-            g => g.Generate(It.IsAny<MediaInfo>(), It.IsAny<VideoOutput>()),
-            Times.Never
+            expression: g => g.Generate(It.IsAny<MediaInfo>(), It.IsAny<VideoOutput>()),
+            times: Times.Never
         );
 
         // Resulting rungs must match the mocked array (by height).
-        int[] heights = outputPlan.VideoOutputs.Select(v => v.Height).ToArray();
-        Assert.Contains(360, heights);
-        Assert.Contains(720, heights);
-        Assert.Contains(1080, heights);
+        int[] heights = outputPlan.VideoOutputs.Select(selector: v => v.Height).ToArray();
+        Assert.Contains(expected: 360, collection: heights);
+        Assert.Contains(expected: 720, collection: heights);
+        Assert.Contains(expected: 1080, collection: heights);
     }
 
     // ── Legacy path (AutoConfig null) ─────────────────────────────────────
@@ -436,8 +436,9 @@ public class PlanStageAutoLadderRoutingTests
     public async Task AutoConfig_Null_CallsGenerate_NotGenerateLadder()
     {
         _abrGenerator
-            .Setup(g => g.Generate(It.IsAny<MediaInfo>(), It.IsAny<VideoOutput>()))
-            .Returns([
+            .Setup(expression: g => g.Generate(It.IsAny<MediaInfo>(), It.IsAny<VideoOutput>()))
+            .Returns(value:
+            [
                 new(
                     Policy: NoMercy.Encoder.Profiles.StreamPolicy.Transcode,
                     Codec: VideoCodecType.H264,
@@ -492,29 +493,29 @@ public class PlanStageAutoLadderRoutingTests
         );
 
         PlanStage stage = BuildStage();
-        ValidateInput input = new(Build1080pMedia(), profile);
+        ValidateInput input = new(Media: Build1080pMedia(), Profile: profile);
         EncodingContext context = EncodingContext.Create();
 
-        StageResult result = await stage.ExecuteAsync(input, context, CancellationToken.None);
+        StageResult result = await stage.ExecuteAsync(input: input, context: context, ct: CancellationToken.None);
 
-        Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
 
         // Legacy Generate called once.
         _abrGenerator.Verify(
-            g => g.Generate(It.IsAny<MediaInfo>(), It.IsAny<VideoOutput>()),
-            Times.Once
+            expression: g => g.Generate(It.IsAny<MediaInfo>(), It.IsAny<VideoOutput>()),
+            times: Times.Once
         );
 
         // New GenerateLadder must NOT be called.
         _abrGenerator.Verify(
-            g =>
+            expression: g =>
                 g.GenerateLadder(
                     It.IsAny<MediaInfo>(),
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<AutoLadderConfig>(),
                     It.IsAny<VideoOutput?>()
                 ),
-            Times.Never
+            times: Times.Never
         );
     }
 }

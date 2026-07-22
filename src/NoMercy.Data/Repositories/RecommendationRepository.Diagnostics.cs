@@ -24,64 +24,64 @@ public partial class RecommendationRepository
         CancellationToken ct = default
     )
     {
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
 
         int animeByLibraryType = await context
             .Tvs.AsNoTracking()
-            .CountAsync(t => t.Library.Type == MediaTypes.AnimeMediaType, ct);
+            .CountAsync(predicate: t => t.Library.Type == MediaTypes.AnimeMediaType, cancellationToken: ct);
 
         int animeByMediaType = await context
             .Tvs.AsNoTracking()
-            .CountAsync(t => t.MediaType == MediaTypes.AnimeMediaType, ct);
+            .CountAsync(predicate: t => t.MediaType == MediaTypes.AnimeMediaType, cancellationToken: ct);
 
         int totalRecsWithTv = await context
             .Recommendations.AsNoTracking()
-            .CountAsync(r => r.TvFromId != null, ct);
+            .CountAsync(predicate: r => r.TvFromId != null, cancellationToken: ct);
 
         int animeRecsByMediaType = await context
             .Recommendations.AsNoTracking()
             .CountAsync(
-                r =>
+                predicate: r =>
                     r.TvFromId != null
                     && context.Tvs.Any(t =>
                         t.Id == r.TvFromId && t.MediaType == MediaTypes.AnimeMediaType
                     ),
-                ct
+                cancellationToken: ct
             );
 
         int totalSimWithTv = await context
             .Similar.AsNoTracking()
-            .CountAsync(s => s.TvFromId != null, ct);
+            .CountAsync(predicate: s => s.TvFromId != null, cancellationToken: ct);
 
         int animeSimByMediaType = await context
             .Similar.AsNoTracking()
             .CountAsync(
-                s =>
+                predicate: s =>
                     s.TvFromId != null
                     && context.Tvs.Any(t =>
                         t.Id == s.TvFromId && t.MediaType == MediaTypes.AnimeMediaType
                     ),
-                ct
+                cancellationToken: ct
             );
 
         List<string> libraries = await context
             .Libraries.AsNoTracking()
-            .Select(l => l.Title + " (" + l.Type + ")")
-            .ToListAsync(ct);
+            .Select(selector: l => l.Title + " (" + l.Type + ")")
+            .ToListAsync(cancellationToken: ct);
 
         List<int> sampleAnimeIds = await context
             .Tvs.AsNoTracking()
-            .Where(t => t.MediaType == MediaTypes.AnimeMediaType)
-            .OrderBy(t => t.Id)
-            .Take(5)
-            .Select(t => t.Id)
-            .ToListAsync(ct);
+            .Where(predicate: t => t.MediaType == MediaTypes.AnimeMediaType)
+            .OrderBy(keySelector: t => t.Id)
+            .Take(count: 5)
+            .Select(selector: t => t.Id)
+            .ToListAsync(cancellationToken: ct);
 
         int sampleRecsCount =
             sampleAnimeIds.Count > 0
                 ? await context
                     .Recommendations.AsNoTracking()
-                    .CountAsync(r => sampleAnimeIds.Contains(r.TvFromId!.Value), ct)
+                    .CountAsync(predicate: r => sampleAnimeIds.Contains(r.TvFromId!.Value), cancellationToken: ct)
                 : 0;
 
         return new()

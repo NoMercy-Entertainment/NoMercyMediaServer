@@ -21,9 +21,9 @@ public class DriverRepository(MediaContext context) : IDriverRepository
     {
         return context
             .Drivers.AsNoTracking()
-            .Include(d => d.Folders)
-            .OrderBy(d => d.Name)
-            .ThenBy(d => d.Id)
+            .Include(navigationPropertyPath: d => d.Folders)
+            .OrderBy(keySelector: d => d.Name)
+            .ThenBy(keySelector: d => d.Id)
             .ToListAsync();
     }
 
@@ -31,39 +31,39 @@ public class DriverRepository(MediaContext context) : IDriverRepository
     {
         return context
             .Drivers.AsNoTracking()
-            .Include(d => d.Folders)
-            .FirstOrDefaultAsync(d => d.Id == id);
+            .Include(navigationPropertyPath: d => d.Folders)
+            .FirstOrDefaultAsync(predicate: d => d.Id == id);
     }
 
     public Task<bool> DriverExistsAsync(Ulid id)
     {
-        return context.Drivers.AnyAsync(d => d.Id == id);
+        return context.Drivers.AnyAsync(predicate: d => d.Id == id);
     }
 
     public Task<bool> NameExistsAsync(string name, Ulid? excludeId = null)
     {
-        return context.Drivers.AnyAsync(d =>
+        return context.Drivers.AnyAsync(predicate: d =>
             d.Name == name && (excludeId == null || d.Id != excludeId.Value)
         );
     }
 
     public Task<int> LibraryFolderCountAsync(Ulid driverId)
     {
-        return context.Folders.CountAsync(f =>
+        return context.Folders.CountAsync(predicate: f =>
             f.DriverId == driverId && f.FolderLibraries.Count > 0
         );
     }
 
     public async Task<Driver> CreateDriverAsync(Driver driver)
     {
-        context.Drivers.Add(driver);
+        context.Drivers.Add(entity: driver);
         await context.SaveChangesAsync();
         return driver;
     }
 
     public async Task<Driver> UpdateDriverAsync(Driver driver)
     {
-        context.Drivers.Update(driver);
+        context.Drivers.Update(entity: driver);
         await context.SaveChangesAsync();
         return driver;
     }
@@ -71,9 +71,9 @@ public class DriverRepository(MediaContext context) : IDriverRepository
     public async Task<int> DeleteDriverAsync(Driver driver)
     {
         await context
-            .Folders.Where(f => f.DriverId == driver.Id && f.FolderLibraries.Count == 0)
+            .Folders.Where(predicate: f => f.DriverId == driver.Id && f.FolderLibraries.Count == 0)
             .ExecuteDeleteAsync();
 
-        return await context.Drivers.Where(d => d.Id == driver.Id).ExecuteDeleteAsync();
+        return await context.Drivers.Where(predicate: d => d.Id == driver.Id).ExecuteDeleteAsync();
     }
 }

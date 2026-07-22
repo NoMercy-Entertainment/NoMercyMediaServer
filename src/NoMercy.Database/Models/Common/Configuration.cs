@@ -15,21 +15,21 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Common;
 
-[PrimaryKey(nameof(Id))]
-[Index(nameof(Key), IsUnique = true)]
+[PrimaryKey(propertyName: nameof(Id))]
+[Index(propertyName: nameof(Key), IsUnique = true)]
 public class Configuration : Timestamps
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    [JsonProperty("id")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.Identity)]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("key")]
+    [JsonProperty(propertyName: "key")]
     public string Key { get; set; } = string.Empty;
 
-    [JsonProperty("value")]
+    [JsonProperty(propertyName: "value")]
     public string Value { get; set; } = string.Empty;
 
-    [JsonProperty("modified_by")]
+    [JsonProperty(propertyName: "modified_by")]
     public Guid? ModifiedBy { get; set; }
 
     [JsonIgnore]

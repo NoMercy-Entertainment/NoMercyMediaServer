@@ -38,11 +38,11 @@ public sealed class ServerConnection : IDisposable
         try
         {
             Disconnect();
-            _client = new(_pipeNameOrSocketPath);
+            _client = new(pipeNameOrSocketPath: _pipeNameOrSocketPath);
 
             using HttpResponseMessage response = await _client.GetAsync(
-                "/manage/status",
-                cancellationToken
+                requestUri: "/manage/status",
+                cancellationToken: cancellationToken
             );
 
             IsConnected = response.IsSuccessStatusCode;
@@ -63,14 +63,14 @@ public sealed class ServerConnection : IDisposable
 
         try
         {
-            using HttpResponseMessage response = await _client.GetAsync(path, cancellationToken);
+            using HttpResponseMessage response = await _client.GetAsync(requestUri: path, cancellationToken: cancellationToken);
 
             if (!response.IsSuccessStatusCode)
                 return null;
 
-            string json = await response.Content.ReadAsStringAsync(cancellationToken);
+            string json = await response.Content.ReadAsStringAsync(cancellationToken: cancellationToken);
 
-            return JsonConvert.DeserializeObject<T>(json);
+            return JsonConvert.DeserializeObject<T>(value: json);
         }
         catch
         {
@@ -87,9 +87,9 @@ public sealed class ServerConnection : IDisposable
         try
         {
             using HttpResponseMessage response = await _client.PostAsync(
-                path,
-                null,
-                cancellationToken
+                requestUri: path,
+                content: null,
+                cancellationToken: cancellationToken
             );
 
             return response.IsSuccessStatusCode;
@@ -112,12 +112,12 @@ public sealed class ServerConnection : IDisposable
         try
         {
             using HttpResponseMessage response = await _client.PostAsync(
-                path,
-                null,
-                cancellationToken
+                requestUri: path,
+                content: null,
+                cancellationToken: cancellationToken
             );
 
-            string body = await response.Content.ReadAsStringAsync(cancellationToken);
+            string body = await response.Content.ReadAsStringAsync(cancellationToken: cancellationToken);
 
             return (response.IsSuccessStatusCode, body);
         }
@@ -139,12 +139,12 @@ public sealed class ServerConnection : IDisposable
 
         try
         {
-            string json = JsonConvert.SerializeObject(body);
-            using StringContent content = new(json, Encoding.UTF8, "application/json");
+            string json = JsonConvert.SerializeObject(value: body);
+            using StringContent content = new(content: json, encoding: Encoding.UTF8, mediaType: "application/json");
             using HttpResponseMessage response = await _client.PostAsync(
-                path,
-                content,
-                cancellationToken
+                requestUri: path,
+                content: content,
+                cancellationToken: cancellationToken
             );
 
             return response.IsSuccessStatusCode;
@@ -167,12 +167,12 @@ public sealed class ServerConnection : IDisposable
 
         try
         {
-            string json = JsonConvert.SerializeObject(body);
-            using StringContent content = new(json, Encoding.UTF8, "application/json");
+            string json = JsonConvert.SerializeObject(value: body);
+            using StringContent content = new(content: json, encoding: Encoding.UTF8, mediaType: "application/json");
             using HttpResponseMessage response = await _client.PutAsync(
-                path,
-                content,
-                cancellationToken
+                requestUri: path,
+                content: content,
+                cancellationToken: cancellationToken
             );
 
             return response.IsSuccessStatusCode;
@@ -201,12 +201,12 @@ public sealed class ServerConnection : IDisposable
             {
                 // Ensure server is reachable via the shared client
                 if (!IsConnected)
-                    await ConnectAsync(cancellationToken);
+                    await ConnectAsync(cancellationToken: cancellationToken);
 
                 if (!IsConnected)
                 {
-                    await Task.Delay(retryDelay, cancellationToken);
-                    retryDelay = Math.Min(retryDelay * 2, MaxRetryDelay);
+                    await Task.Delay(millisecondsDelay: retryDelay, cancellationToken: cancellationToken);
+                    retryDelay = Math.Min(val1: retryDelay * 2, val2: MaxRetryDelay);
                     continue;
                 }
 
@@ -215,20 +215,20 @@ public sealed class ServerConnection : IDisposable
                 // shared _client used for status polling / other requests.
                 streamClient = new();
                 using HttpResponseMessage response = await streamClient.GetStreamAsync(
-                    "/manage/logs/stream",
-                    cancellationToken
+                    requestUri: "/manage/logs/stream",
+                    cancellationToken: cancellationToken
                 );
                 await using Stream stream = await response.Content.ReadAsStreamAsync(
-                    cancellationToken
+                    cancellationToken: cancellationToken
                 );
-                using StreamReader reader = new(stream);
+                using StreamReader reader = new(stream: stream);
 
                 retryDelay = 1000;
                 onConnected?.Invoke();
 
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    string? line = await reader.ReadLineAsync(cancellationToken);
+                    string? line = await reader.ReadLineAsync(cancellationToken: cancellationToken);
 
                     if (line is null)
                     {
@@ -238,13 +238,13 @@ public sealed class ServerConnection : IDisposable
                         break;
                     }
 
-                    if (!line.StartsWith("data: "))
+                    if (!line.StartsWith(value: "data: "))
                         continue;
 
                     string json = line[6..];
-                    LogEntryResponse? entry = JsonConvert.DeserializeObject<LogEntryResponse>(json);
+                    LogEntryResponse? entry = JsonConvert.DeserializeObject<LogEntryResponse>(value: json);
                     if (entry is not null)
-                        onEntry(entry);
+                        onEntry(obj: entry);
                 }
             }
             catch (OperationCanceledException)
@@ -264,8 +264,8 @@ public sealed class ServerConnection : IDisposable
             if (cancellationToken.IsCancellationRequested)
                 break;
 
-            await Task.Delay(retryDelay, cancellationToken);
-            retryDelay = Math.Min(retryDelay * 2, MaxRetryDelay);
+            await Task.Delay(millisecondsDelay: retryDelay, cancellationToken: cancellationToken);
+            retryDelay = Math.Min(val1: retryDelay * 2, val2: MaxRetryDelay);
         }
     }
 

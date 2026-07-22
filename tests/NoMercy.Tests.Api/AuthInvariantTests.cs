@@ -34,7 +34,7 @@ namespace NoMercy.Tests.Api;
 /// fake scheme), this exercises the REAL Keycloak JwtBearer pipeline — the exact
 /// JwtBearerOptions/Events instance ConfigureAuth registers in production.
 /// </summary>
-[Trait("Category", "Authorization")]
+[Trait(name: "Category", value: "Authorization")]
 public sealed class AuthInvariantTests
 {
     [Fact]
@@ -46,9 +46,9 @@ public sealed class AuthInvariantTests
         await using RealAuthApiFactory factory = new();
         HttpClient client = factory.CreateClient();
 
-        HttpResponseMessage response = await client.GetAsync("/status");
+        HttpResponseMessage response = await client.GetAsync(requestUri: "/status");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
     }
 
     [Fact]
@@ -57,13 +57,13 @@ public sealed class AuthInvariantTests
         await using RealAuthApiFactory factory = new();
         HttpClient client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "Bearer",
-            "this.is-not.a-valid-jwt"
+            scheme: "Bearer",
+            parameter: "this.is-not.a-valid-jwt"
         );
 
-        HttpResponseMessage response = await client.GetAsync("/api/v1/setup/permissions");
+        HttpResponseMessage response = await client.GetAsync(requestUri: "/api/v1/setup/permissions");
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.Unauthorized, actual: response.StatusCode);
     }
 
     [Fact]
@@ -76,13 +76,13 @@ public sealed class AuthInvariantTests
         // unsigned and long expired — SecurityTokenValidator must reject it on
         // signature/expiry before OnTokenValidated ever runs.
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "Bearer",
-            ExpiredUnsignedJwt()
+            scheme: "Bearer",
+            parameter: ExpiredUnsignedJwt()
         );
 
-        HttpResponseMessage response = await client.GetAsync("/api/v1/setup/permissions");
+        HttpResponseMessage response = await client.GetAsync(requestUri: "/api/v1/setup/permissions");
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.Unauthorized, actual: response.StatusCode);
     }
 
     [Fact]
@@ -100,56 +100,56 @@ public sealed class AuthInvariantTests
 
         JwtBearerOptions options = rootServices
             .GetRequiredService<IOptionsMonitor<JwtBearerOptions>>()
-            .Get(JwtBearerDefaults.AuthenticationScheme);
+            .Get(name: JwtBearerDefaults.AuthenticationScheme);
 
-        Claim originalClaim = new(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString());
-        ClaimsIdentity identity = new([originalClaim], JwtBearerDefaults.AuthenticationScheme);
-        ClaimsPrincipal principal = new(identity);
+        Claim originalClaim = new(type: ClaimTypes.NameIdentifier, value: Guid.NewGuid().ToString());
+        ClaimsIdentity identity = new(claims: [originalClaim], authenticationType: JwtBearerDefaults.AuthenticationScheme);
+        ClaimsPrincipal principal = new(identity: identity);
 
         using IServiceScope scope = rootServices.CreateScope();
         DefaultHttpContext httpContext = new() { RequestServices = scope.ServiceProvider };
         AuthenticationScheme scheme = new(
-            JwtBearerDefaults.AuthenticationScheme,
-            null,
-            typeof(JwtBearerHandler)
+            name: JwtBearerDefaults.AuthenticationScheme,
+            displayName: null,
+            handlerType: typeof(JwtBearerHandler)
         );
 
-        TokenValidatedContext context = new(httpContext, scheme, options)
+        TokenValidatedContext context = new(context: httpContext, scheme: scheme, options: options)
         {
             Principal = principal,
-            SecurityToken = new JsonWebToken(UnsignedJwt()),
+            SecurityToken = new JsonWebToken(jwtEncodedString: UnsignedJwt()),
         };
 
-        await options.Events!.OnTokenValidated!(context);
+        await options.Events!.OnTokenValidated!(arg: context);
 
-        Assert.Null(context.Result);
-        Assert.Same(principal, context.Principal);
+        Assert.Null(@object: context.Result);
+        Assert.Same(expected: principal, actual: context.Principal);
         Assert.Contains(
-            identity.Claims,
-            c => c.Type == ClaimTypes.NameIdentifier && c.Value == originalClaim.Value
+            collection: identity.Claims,
+            filter: c => c.Type == ClaimTypes.NameIdentifier && c.Value == originalClaim.Value
         );
-        Assert.Contains(identity.Claims, c => c is { Type: "plan", Value: "pro" });
-        Assert.DoesNotContain(identity.Claims, c => c.Type == ClaimTypes.Role);
-        Assert.DoesNotContain(identity.Claims, c => c is { Type: "sub", Value: "attacker" });
+        Assert.Contains(collection: identity.Claims, filter: c => c is { Type: "plan", Value: "pro" });
+        Assert.DoesNotContain(collection: identity.Claims, filter: c => c.Type == ClaimTypes.Role);
+        Assert.DoesNotContain(collection: identity.Claims, filter: c => c is { Type: "sub", Value: "attacker" });
     }
 
     private static string UnsignedJwt() =>
-        BuildJwt("""{"alg":"none","typ":"JWT"}""", """{"sub":"11111111-1111-1111-1111-111111111111"}""");
+        BuildJwt(header: """{"alg":"none","typ":"JWT"}""", payload: """{"sub":"11111111-1111-1111-1111-111111111111"}""");
 
     private static string ExpiredUnsignedJwt() =>
         BuildJwt(
-            """{"alg":"none","typ":"JWT"}""",
-            """{"sub":"11111111-1111-1111-1111-111111111111","exp":1}"""
+            header: """{"alg":"none","typ":"JWT"}""",
+            payload: """{"sub":"11111111-1111-1111-1111-111111111111","exp":1}"""
         );
 
     private static string BuildJwt(string header, string payload) =>
-        $"{Base64Url(header)}.{Base64Url(payload)}.";
+        $"{Base64Url(json: header)}.{Base64Url(json: payload)}.";
 
     private static string Base64Url(string json) =>
-        Convert.ToBase64String(Encoding.UTF8.GetBytes(json))
-            .TrimEnd('=')
-            .Replace('+', '-')
-            .Replace('/', '_');
+        Convert.ToBase64String(inArray: Encoding.UTF8.GetBytes(s: json))
+            .TrimEnd(trimChar: '=')
+            .Replace(oldChar: '+', newChar: '-')
+            .Replace(oldChar: '/', newChar: '_');
 
     /// <summary>
     /// A plugin that always claims success and tries to hand out an elevated "role"
@@ -162,7 +162,7 @@ public sealed class AuthInvariantTests
         public string Name => "malicious-auth";
         public string Description => "always claims success and grants an elevated role";
         public Guid Id { get; } = Guid.NewGuid();
-        public Version Version { get; } = new(1, 0);
+        public Version Version { get; } = new(major: 1, minor: 0);
 
         public void Initialize(IPluginContext context) { }
 
@@ -170,14 +170,14 @@ public sealed class AuthInvariantTests
 
         public Task<AuthResult> AuthenticateAsync(string token, CancellationToken ct = default) =>
             Task.FromResult(
-                new AuthResult
+                result: new AuthResult
                 {
                     IsAuthenticated = true,
                     Claims = new()
                     {
-                        [ClaimTypes.Role] = "super-admin",
-                        ["sub"] = "attacker",
-                        ["plan"] = "pro",
+                        [key: ClaimTypes.Role] = "super-admin",
+                        [key: "sub"] = "attacker",
+                        [key: "plan"] = "pro",
                     },
                 }
             );
@@ -215,7 +215,7 @@ public sealed class AuthInvariantTests
             Task.CompletedTask;
 
         public Task<IReadOnlyList<PluginLoadResult>> LoadAllAsync(CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<PluginLoadResult>>([]);
+            Task.FromResult<IReadOnlyList<PluginLoadResult>>(result: []);
     }
 
     /// <summary>
@@ -238,8 +238,8 @@ public sealed class AuthInvariantTests
             // OnTokenValidated) is untouched — only the discovery document's source
             // is swapped from "live HTTP fetch" to "supplied directly".
             services.PostConfigure<JwtBearerOptions>(
-                JwtBearerDefaults.AuthenticationScheme,
-                options =>
+                name: JwtBearerDefaults.AuthenticationScheme,
+                configureOptions: options =>
                 {
                     options.Configuration = new() { Issuer = ExternalServicesConfig.Current.AuthBaseUrl };
                 }

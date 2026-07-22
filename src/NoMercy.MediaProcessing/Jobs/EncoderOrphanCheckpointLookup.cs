@@ -28,21 +28,21 @@ public class EncoderOrphanCheckpointLookup(
 {
     public async Task<bool> HasCheckpointAsync(string jobPayload, CancellationToken ct = default)
     {
-        string? outputDirectory = ExtractOutputDirectory(jobPayload);
-        if (string.IsNullOrEmpty(outputDirectory))
+        string? outputDirectory = ExtractOutputDirectory(payload: jobPayload);
+        if (string.IsNullOrEmpty(value: outputDirectory))
             return false;
 
         try
         {
-            JobCheckpoint? checkpoint = await checkpointStore.LoadAsync(outputDirectory, ct);
+            JobCheckpoint? checkpoint = await checkpointStore.LoadAsync(outputDirectory: outputDirectory, ct: ct);
             return checkpoint?.FailedAt is not null;
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                ex,
-                "Failed to load checkpoint for OutputDirectory={OutputDirectory}",
-                outputDirectory
+                exception: ex,
+                message: "Failed to load checkpoint for OutputDirectory={OutputDirectory}",
+                args: outputDirectory
             );
             return false;
         }
@@ -52,11 +52,11 @@ public class EncoderOrphanCheckpointLookup(
     {
         try
         {
-            using JsonDocument doc = JsonDocument.Parse(payload);
+            using JsonDocument doc = JsonDocument.Parse(json: payload);
             JsonElement root = doc.RootElement;
 
             if (
-                root.TryGetProperty("OutputDirectory", out JsonElement dirElement)
+                root.TryGetProperty(propertyName: "OutputDirectory", value: out JsonElement dirElement)
                 && dirElement.ValueKind == JsonValueKind.String
             )
             {

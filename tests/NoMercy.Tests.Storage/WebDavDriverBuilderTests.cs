@@ -24,7 +24,7 @@ namespace NoMercy.Tests.Storage;
 /// allow anonymous access, and refusing to build here would break folders
 /// that worked fine before a resolver was even wired up.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class WebDavDriverBuilderTests
 {
     private static readonly Ulid FolderId = Ulid.NewUlid();
@@ -33,24 +33,24 @@ public sealed class WebDavDriverBuilderTests
     public void Build_falls_back_to_anonymous_and_warns_when_resolver_finds_no_credentials()
     {
         Mock<ICredentialResolver> resolver = new();
-        resolver.Setup(r => r.Resolve(It.IsAny<string>())).Returns(((string, string)?)null);
+        resolver.Setup(expression: r => r.Resolve(It.IsAny<string>())).Returns(value: ((string, string)?)null);
         Mock<ILogger> logger = new();
-        WebDavDriverBuilder builder = new(logger.Object, resolver.Object);
+        WebDavDriverBuilder builder = new(logger: logger.Object, credentialResolver: resolver.Object);
 
         IStorage storage = builder.Build(
-            FolderId,
-            "webdav",
-            """{"url":"https://dav.example.com/remote.php/webdav/"}""",
+            folderId: FolderId,
+            driverType: "webdav",
+            driverConfigJson: """{"url":"https://dav.example.com/remote.php/webdav/"}""",
             subPath: ""
         );
 
         storage
             .Should()
             .BeOfType<RemoteStorage>(
-                "missing credentials must not prevent building a WebDAV driver"
+                because: "missing credentials must not prevent building a WebDAV driver"
             );
         logger.Verify(
-            l =>
+            expression: l =>
                 l.Log(
                     LogLevel.Warning,
                     It.IsAny<EventId>(),
@@ -58,20 +58,20 @@ public sealed class WebDavDriverBuilderTests
                     It.IsAny<Exception?>(),
                     It.IsAny<Func<It.IsAnyType, Exception?, string>>()
                 ),
-            Times.Once,
-            "the operator must be told credentials were not found so they know the driver is running anonymously"
+            times: Times.Once,
+            failMessage: "the operator must be told credentials were not found so they know the driver is running anonymously"
         );
     }
 
     [Fact]
     public void Build_without_a_credential_resolver_connects_anonymously()
     {
-        WebDavDriverBuilder builder = new(NullLogger.Instance, credentialResolver: null);
+        WebDavDriverBuilder builder = new(logger: NullLogger.Instance, credentialResolver: null);
 
         IStorage storage = builder.Build(
-            FolderId,
-            "webdav",
-            """{"url":"https://dav.example.com/remote.php/webdav/"}""",
+            folderId: FolderId,
+            driverType: "webdav",
+            driverConfigJson: """{"url":"https://dav.example.com/remote.php/webdav/"}""",
             subPath: ""
         );
 

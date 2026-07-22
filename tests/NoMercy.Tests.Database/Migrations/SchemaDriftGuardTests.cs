@@ -33,18 +33,18 @@ public class SchemaDriftGuardTests
     public void AppDbContext_HasNoPendingModelChanges()
     {
         DbContextOptionsBuilder<AppDbContext> builder = new();
-        builder.UseSqlite("Data Source=:memory:");
+        builder.UseSqlite(connectionString: "Data Source=:memory:");
 
-        using AppDbContext ctx = new(builder.Options);
+        using AppDbContext ctx = new(options: builder.Options);
 
         IMigrationsModelDiffer differ = ctx.GetService<IMigrationsModelDiffer>();
         IModelRuntimeInitializer initializer = ctx.GetService<IModelRuntimeInitializer>();
         ModelSnapshot? snapshot = ctx.GetService<IMigrationsAssembly>().ModelSnapshot;
 
-        Assert.NotNull(snapshot);
+        Assert.NotNull(@object: snapshot);
 
         IModel initializedSnapshotModel = initializer.Initialize(
-            snapshot.Model,
+            model: snapshot.Model,
             designTime: true,
             validationLogger: null
         );
@@ -53,25 +53,25 @@ public class SchemaDriftGuardTests
         IRelationalModel currentRelational = ctx.GetService<IDesignTimeModel>()
             .Model.GetRelationalModel();
 
-        bool hasDrift = differ.HasDifferences(snapshotRelational, currentRelational);
+        bool hasDrift = differ.HasDifferences(source: snapshotRelational, target: currentRelational);
 
         Assert.False(
-            hasDrift,
-            "AppDbContext has pending model changes not captured in a migration. Run: dotnet ef migrations add <Name> --context AppDbContext"
+            condition: hasDrift,
+            userMessage: "AppDbContext has pending model changes not captured in a migration. Run: dotnet ef migrations add <Name> --context AppDbContext"
         );
     }
 
     [Fact]
     public void AppDatabase_MigratesInIsolation_NeverCreatesMediaOrQueueTables()
     {
-        string appDbPath = Path.Combine(Path.GetTempPath(), $"nm_appdrift_{Guid.NewGuid():N}.db");
+        string appDbPath = Path.Combine(path1: Path.GetTempPath(), path2: $"nm_appdrift_{Guid.NewGuid():N}.db");
 
         try
         {
             DbContextOptionsBuilder<AppDbContext> builder = new();
-            builder.UseSqlite($"Data Source={appDbPath}");
+            builder.UseSqlite(connectionString: $"Data Source={appDbPath}");
 
-            using AppDbContext context = new(builder.Options);
+            using AppDbContext context = new(options: builder.Options);
             context.Database.Migrate();
 
             DbConnection connection = context.Database.GetDbConnection();
@@ -83,22 +83,22 @@ public class SchemaDriftGuardTests
 
             List<string> tableNames = [];
             while (reader.Read())
-                tableNames.Add(reader.GetString(0));
+                tableNames.Add(item: reader.GetString(ordinal: 0));
 
-            Assert.Contains("Configuration", tableNames);
+            Assert.Contains(expected: "Configuration", collection: tableNames);
 
-            Assert.DoesNotContain("Movies", tableNames);
-            Assert.DoesNotContain("Libraries", tableNames);
-            Assert.DoesNotContain("VideoFiles", tableNames);
-            Assert.DoesNotContain("QueueJobs", tableNames);
-            Assert.DoesNotContain("FailedJobs", tableNames);
-            Assert.DoesNotContain("CronJobs", tableNames);
+            Assert.DoesNotContain(expected: "Movies", collection: tableNames);
+            Assert.DoesNotContain(expected: "Libraries", collection: tableNames);
+            Assert.DoesNotContain(expected: "VideoFiles", collection: tableNames);
+            Assert.DoesNotContain(expected: "QueueJobs", collection: tableNames);
+            Assert.DoesNotContain(expected: "FailedJobs", collection: tableNames);
+            Assert.DoesNotContain(expected: "CronJobs", collection: tableNames);
         }
         finally
         {
             SqliteConnection.ClearAllPools();
-            if (File.Exists(appDbPath))
-                File.Delete(appDbPath);
+            if (File.Exists(path: appDbPath))
+                File.Delete(path: appDbPath);
         }
     }
 
@@ -108,8 +108,8 @@ public class SchemaDriftGuardTests
         string appDbPath = AppFiles.AppDatabase;
 
         Assert.True(
-            appDbPath.EndsWith("app.db", StringComparison.OrdinalIgnoreCase),
-            $"AppFiles.AppDatabase must resolve to a path ending in 'app.db'. Got: {appDbPath}"
+            condition: appDbPath.EndsWith(value: "app.db", comparisonType: StringComparison.OrdinalIgnoreCase),
+            userMessage: $"AppFiles.AppDatabase must resolve to a path ending in 'app.db'. Got: {appDbPath}"
         );
     }
 
@@ -120,7 +120,7 @@ public class SchemaDriftGuardTests
         string mediaDbPath = AppFiles.MediaDatabase;
         string queueDbPath = AppFiles.QueueDatabase;
 
-        Assert.NotEqual(appDbPath, mediaDbPath, StringComparer.OrdinalIgnoreCase);
-        Assert.NotEqual(appDbPath, queueDbPath, StringComparer.OrdinalIgnoreCase);
+        Assert.NotEqual(expected: appDbPath, actual: mediaDbPath, comparer: StringComparer.OrdinalIgnoreCase);
+        Assert.NotEqual(expected: appDbPath, actual: queueDbPath, comparer: StringComparer.OrdinalIgnoreCase);
     }
 }

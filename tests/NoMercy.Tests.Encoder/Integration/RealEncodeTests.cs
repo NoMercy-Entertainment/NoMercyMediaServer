@@ -36,8 +36,8 @@ using SubtitlePolicy = NoMercy.Encoder.Profiles.SubtitlePolicy;
 
 namespace NoMercy.Tests.Encoder.Integration;
 
-[Trait("Category", "Integration")]
-[Collection("RealEncode")]
+[Trait(name: "Category", value: "Integration")]
+[Collection(name: "RealEncode")]
 public class RealEncodeTests : IAsyncLifetime
 {
     private const string ForkRequiredSkipReason =
@@ -58,17 +58,17 @@ public class RealEncodeTests : IAsyncLifetime
         // system "ffmpeg" PATH would surface as "Unrecognized option
         // 'vtt_filename'" and report environment problems as code failures.
         _ffmpegPath = NoMercyFfmpegProbe.ResolveFfmpegPath();
-        _ffprobePath = NoMercyFfmpegProbe.ResolveFfprobePath(_ffmpegPath);
+        _ffprobePath = NoMercyFfmpegProbe.ResolveFfprobePath(ffmpegPath: _ffmpegPath);
         _forkSupportsSpritevtt =
-            _ffmpegPath is not null && NoMercyFfmpegProbe.SupportsSpritevtt(_ffmpegPath);
+            _ffmpegPath is not null && NoMercyFfmpegProbe.SupportsSpritevtt(ffmpegPath: _ffmpegPath);
 
         _testDir = Path.Combine(
-            Path.GetTempPath(),
-            "nomercy-encode-test-" + Guid.NewGuid().ToString("N")[..8]
+            path1: Path.GetTempPath(),
+            path2: "nomercy-encode-test-" + Guid.NewGuid().ToString(format: "N")[..8]
         );
-        Directory.CreateDirectory(_testDir);
+        Directory.CreateDirectory(path: _testDir);
 
-        _inputFile = Path.Combine(_testDir, "test-input.mp4");
+        _inputFile = Path.Combine(path1: _testDir, path2: "test-input.mp4");
 
         // Generate a 3-second test clip — short to minimize encode time. Use
         // the resolved fork binary so the clip + the encode under test agree
@@ -81,28 +81,28 @@ public class RealEncodeTests : IAsyncLifetime
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
-        psi.ArgumentList.Add("-y");
-        psi.ArgumentList.Add("-f");
-        psi.ArgumentList.Add("lavfi");
-        psi.ArgumentList.Add("-i");
-        psi.ArgumentList.Add("testsrc2=size=320x180:rate=25:duration=3");
-        psi.ArgumentList.Add("-f");
-        psi.ArgumentList.Add("lavfi");
-        psi.ArgumentList.Add("-i");
-        psi.ArgumentList.Add("sine=frequency=440:duration=3:sample_rate=44100");
-        psi.ArgumentList.Add("-c:v");
-        psi.ArgumentList.Add("libx264");
-        psi.ArgumentList.Add("-preset");
-        psi.ArgumentList.Add("ultrafast");
-        psi.ArgumentList.Add("-crf");
-        psi.ArgumentList.Add("51");
-        psi.ArgumentList.Add("-c:a");
-        psi.ArgumentList.Add("aac");
-        psi.ArgumentList.Add("-b:a");
-        psi.ArgumentList.Add("64k");
-        psi.ArgumentList.Add(_inputFile);
+        psi.ArgumentList.Add(item: "-y");
+        psi.ArgumentList.Add(item: "-f");
+        psi.ArgumentList.Add(item: "lavfi");
+        psi.ArgumentList.Add(item: "-i");
+        psi.ArgumentList.Add(item: "testsrc2=size=320x180:rate=25:duration=3");
+        psi.ArgumentList.Add(item: "-f");
+        psi.ArgumentList.Add(item: "lavfi");
+        psi.ArgumentList.Add(item: "-i");
+        psi.ArgumentList.Add(item: "sine=frequency=440:duration=3:sample_rate=44100");
+        psi.ArgumentList.Add(item: "-c:v");
+        psi.ArgumentList.Add(item: "libx264");
+        psi.ArgumentList.Add(item: "-preset");
+        psi.ArgumentList.Add(item: "ultrafast");
+        psi.ArgumentList.Add(item: "-crf");
+        psi.ArgumentList.Add(item: "51");
+        psi.ArgumentList.Add(item: "-c:a");
+        psi.ArgumentList.Add(item: "aac");
+        psi.ArgumentList.Add(item: "-b:a");
+        psi.ArgumentList.Add(item: "64k");
+        psi.ArgumentList.Add(item: _inputFile);
 
-        using Process process = Process.Start(psi)!;
+        using Process process = Process.Start(startInfo: psi)!;
         // Read both streams to prevent buffer deadlock
         Task<string> stderrTask = process.StandardError.ReadToEndAsync();
         Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
@@ -112,7 +112,7 @@ public class RealEncodeTests : IAsyncLifetime
 
         if (process.ExitCode != 0)
         {
-            throw new InvalidOperationException($"FFmpeg test clip generation failed: {stderr}");
+            throw new InvalidOperationException(message: $"FFmpeg test clip generation failed: {stderr}");
         }
 
         // Build DI — full encoder pipeline with software-only encoding for deterministic tests
@@ -120,14 +120,14 @@ public class RealEncodeTests : IAsyncLifetime
         services.AddLogging();
         // EF Core db-context factories needed by DbDriverFingerprintStore /
         // subscribers — in-memory provider keeps integration tests hermetic.
-        string suffix = Guid.NewGuid().ToString("N")[..8];
-        services.AddDbContextFactory<MediaContext>(o =>
-            o.UseInMemoryDatabase($"real-media-{suffix}")
+        string suffix = Guid.NewGuid().ToString(format: "N")[..8];
+        services.AddDbContextFactory<MediaContext>(optionsAction: o =>
+            o.UseInMemoryDatabase(databaseName: $"real-media-{suffix}")
         );
-        services.AddDbContextFactory<AppDbContext>(o =>
-            o.UseInMemoryDatabase($"real-app-{suffix}")
+        services.AddDbContextFactory<AppDbContext>(optionsAction: o =>
+            o.UseInMemoryDatabase(databaseName: $"real-app-{suffix}")
         );
-        services.AddNoMercyEncoder(opts =>
+        services.AddNoMercyEncoder(configure: opts =>
         {
             opts.FfmpegPathOverride = _ffmpegPath ?? "ffmpeg";
             opts.FfprobePathOverride = _ffprobePath ?? "ffprobe";
@@ -146,7 +146,7 @@ public class RealEncodeTests : IAsyncLifetime
         // Probe FFmpeg capabilities
         HardwareInitializationService hwInit =
             _serviceProvider.GetRequiredService<HardwareInitializationService>();
-        await hwInit.StartAsync(CancellationToken.None);
+        await hwInit.StartAsync(cancellationToken: CancellationToken.None);
     }
 
     public Task DisposeAsync()
@@ -155,8 +155,8 @@ public class RealEncodeTests : IAsyncLifetime
 
         try
         {
-            if (Directory.Exists(_testDir))
-                Directory.Delete(_testDir, recursive: true);
+            if (Directory.Exists(path: _testDir))
+                Directory.Delete(path: _testDir, recursive: true);
         }
         catch
         {
@@ -169,11 +169,11 @@ public class RealEncodeTests : IAsyncLifetime
     [SkippableFact]
     public async Task EncodeAsync_HlsProfile_ProducesPlaylistAndSegments()
     {
-        Skip.IfNot(_forkSupportsSpritevtt, ForkRequiredSkipReason);
-        using CancellationTokenSource cts = new(TimeSpan.FromMinutes(3));
+        Skip.IfNot(condition: _forkSupportsSpritevtt, reason: ForkRequiredSkipReason);
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromMinutes(minutes: 3));
 
-        string outputDir = Path.Combine(_testDir, "output");
-        Directory.CreateDirectory(outputDir);
+        string outputDir = Path.Combine(path1: _testDir, path2: "output");
+        Directory.CreateDirectory(path: outputDir);
 
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
@@ -214,7 +214,7 @@ public class RealEncodeTests : IAsyncLifetime
                     SampleRateHz: 48000,
                     AllowedLanguages: ["und"],
                     DefaultLanguage: null,
-                    Loudness: new(LoudnessMode.None),
+                    Loudness: new(Mode: LoudnessMode.None),
                     Downmix: null,
                     SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
                     PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
@@ -243,39 +243,39 @@ public class RealEncodeTests : IAsyncLifetime
         TestProgressObserver observer = new();
         IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
 
-        EncodingResult result = await encoder.EncodeAsync(request, observer, cts.Token);
+        EncodingResult result = await encoder.EncodeAsync(request: request, progress: observer, ct: cts.Token);
 
         result
             .Success.Should()
             .BeTrue(
-                $"Encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+                because: $"Encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
         result.OutputPath.Should().NotBeNullOrWhiteSpace();
-        result.Duration.Should().BeGreaterThan(TimeSpan.Zero);
+        result.Duration.Should().BeGreaterThan(expected: TimeSpan.Zero);
         result.Metrics.Should().NotBeNull();
         result.Metrics!.EncoderUsed.Should().NotBeNullOrWhiteSpace();
 
         // Verify HLS: at least one playlist and at least one segment
-        string[] playlists = Directory.GetFiles(outputDir, "*.m3u8", SearchOption.AllDirectories);
-        string[] segments = Directory.GetFiles(outputDir, "*.ts", SearchOption.AllDirectories);
+        string[] playlists = Directory.GetFiles(path: outputDir, searchPattern: "*.m3u8", searchOption: SearchOption.AllDirectories);
+        string[] segments = Directory.GetFiles(path: outputDir, searchPattern: "*.ts", searchOption: SearchOption.AllDirectories);
 
-        playlists.Should().NotBeEmpty("HLS output should contain at least one .m3u8 playlist");
-        segments.Should().NotBeEmpty("HLS output should contain at least one .ts segment");
+        playlists.Should().NotBeEmpty(because: "HLS output should contain at least one .m3u8 playlist");
+        segments.Should().NotBeEmpty(because: "HLS output should contain at least one .ts segment");
 
         // Verify progress observer received at least one callback (stage-completed at end)
         (observer.StagesStarted.Count + observer.ProgressCallCount)
             .Should()
-            .BeGreaterThan(0, "should receive at least one progress callback");
+            .BeGreaterThan(expected: 0, because: "should receive at least one progress callback");
     }
 
     [SkippableFact]
     public async Task EncodeAsync_ScalingProfile_ProducesDownscaledOutput()
     {
-        Skip.IfNot(_forkSupportsSpritevtt, ForkRequiredSkipReason);
-        using CancellationTokenSource cts = new(TimeSpan.FromMinutes(3));
+        Skip.IfNot(condition: _forkSupportsSpritevtt, reason: ForkRequiredSkipReason);
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromMinutes(minutes: 3));
 
-        string outputDir = Path.Combine(_testDir, "output-scale");
-        Directory.CreateDirectory(outputDir);
+        string outputDir = Path.Combine(path1: _testDir, path2: "output-scale");
+        Directory.CreateDirectory(path: outputDir);
 
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
@@ -312,7 +312,7 @@ public class RealEncodeTests : IAsyncLifetime
                     SampleRateHz: 48000,
                     AllowedLanguages: ["und"],
                     DefaultLanguage: null,
-                    Loudness: new(LoudnessMode.None),
+                    Loudness: new(Mode: LoudnessMode.None),
                     Downmix: null,
                     SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
                     PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
@@ -341,44 +341,44 @@ public class RealEncodeTests : IAsyncLifetime
         TestProgressObserver observer = new();
         IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
 
-        EncodingResult result = await encoder.EncodeAsync(request, observer, cts.Token);
+        EncodingResult result = await encoder.EncodeAsync(request: request, progress: observer, ct: cts.Token);
 
         result
             .Success.Should()
             .BeTrue(
-                $"Encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+                because: $"Encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
 
         // Find the video output directory (template resolves dimensions + colorrange)
-        string[] allDirs = Directory.GetDirectories(outputDir);
-        string[] allFiles = Directory.GetFiles(outputDir, "*", SearchOption.AllDirectories);
-        string[] videoDirs = Directory.GetDirectories(outputDir, "video_*");
+        string[] allDirs = Directory.GetDirectories(path: outputDir);
+        string[] allFiles = Directory.GetFiles(path: outputDir, searchPattern: "*", searchOption: SearchOption.AllDirectories);
+        string[] videoDirs = Directory.GetDirectories(path: outputDir, searchPattern: "video_*");
         videoDirs
             .Should()
             .HaveCount(
-                1,
-                $"should have exactly one video output directory. All dirs: [{string.Join(", ", allDirs.Select(Path.GetFileName))}]. All files: [{string.Join(", ", allFiles.Select(f => Path.GetRelativePath(outputDir, f)))}]"
+                expected: 1,
+                because: $"should have exactly one video output directory. All dirs: [{string.Join(separator: ", ", values: allDirs.Select(selector: Path.GetFileName))}]. All files: [{string.Join(separator: ", ", values: allFiles.Select(selector: f => Path.GetRelativePath(relativeTo: outputDir, path: f)))}]"
             );
 
         string[] playlists = Directory.GetFiles(
-            videoDirs[0],
-            "*.m3u8",
-            SearchOption.TopDirectoryOnly
+            path: videoDirs[0],
+            searchPattern: "*.m3u8",
+            searchOption: SearchOption.TopDirectoryOnly
         );
-        string[] segments = Directory.GetFiles(videoDirs[0], "*.ts", SearchOption.TopDirectoryOnly);
+        string[] segments = Directory.GetFiles(path: videoDirs[0], searchPattern: "*.ts", searchOption: SearchOption.TopDirectoryOnly);
 
-        playlists.Should().NotBeEmpty("video dir should contain a .m3u8 playlist");
-        segments.Should().NotBeEmpty("video dir should contain .ts segments");
+        playlists.Should().NotBeEmpty(because: "video dir should contain a .m3u8 playlist");
+        segments.Should().NotBeEmpty(because: "video dir should contain .ts segments");
     }
 
     [SkippableFact]
     public async Task EncodeAsync_MultiOutputProfile_ProducesMultipleVariants()
     {
-        Skip.IfNot(_forkSupportsSpritevtt, ForkRequiredSkipReason);
-        using CancellationTokenSource cts = new(TimeSpan.FromMinutes(3));
+        Skip.IfNot(condition: _forkSupportsSpritevtt, reason: ForkRequiredSkipReason);
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromMinutes(minutes: 3));
 
-        string outputDir = Path.Combine(_testDir, "output-multi");
-        Directory.CreateDirectory(outputDir);
+        string outputDir = Path.Combine(path1: _testDir, path2: "output-multi");
+        Directory.CreateDirectory(path: outputDir);
 
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
@@ -415,7 +415,7 @@ public class RealEncodeTests : IAsyncLifetime
                     SampleRateHz: 48000,
                     AllowedLanguages: ["und"],
                     DefaultLanguage: null,
-                    Loudness: new(LoudnessMode.None),
+                    Loudness: new(Mode: LoudnessMode.None),
                     Downmix: null,
                     SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
                     PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
@@ -430,8 +430,8 @@ public class RealEncodeTests : IAsyncLifetime
                 // ordering deterministic.
                 Rungs =
                 [
-                    new(160, 90, VideoCodecType.H264, 100, 200, 400, 25.0, "ultrafast"),
-                    new(320, 180, VideoCodecType.H264, 200, 400, 800, 25.0, "ultrafast"),
+                    new(Width: 160, Height: 90, Codec: VideoCodecType.H264, BitrateKbps: 100, MaxBitrateKbps: 200, BufferSizeKbps: 400, Framerate: 25.0, Preset: "ultrafast"),
+                    new(Width: 320, Height: 180, Codec: VideoCodecType.H264, BitrateKbps: 200, MaxBitrateKbps: 400, BufferSizeKbps: 800, Framerate: 25.0, Preset: "ultrafast"),
                 ],
             }
         )
@@ -456,39 +456,39 @@ public class RealEncodeTests : IAsyncLifetime
         TestProgressObserver observer = new();
         IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
 
-        EncodingResult result = await encoder.EncodeAsync(request, observer, cts.Token);
+        EncodingResult result = await encoder.EncodeAsync(request: request, progress: observer, ct: cts.Token);
 
         result
             .Success.Should()
             .BeTrue(
-                $"Encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+                because: $"Encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
 
         // Should have 2 video variant directories
-        string[] videoDirs = Directory.GetDirectories(outputDir, "video_*");
-        videoDirs.Should().HaveCount(2, "should have two video output directories");
+        string[] videoDirs = Directory.GetDirectories(path: outputDir, searchPattern: "video_*");
+        videoDirs.Should().HaveCount(expected: 2, because: "should have two video output directories");
 
         foreach (string dir in videoDirs)
         {
             Directory
-                .GetFiles(dir, "*.m3u8", SearchOption.TopDirectoryOnly)
+                .GetFiles(path: dir, searchPattern: "*.m3u8", searchOption: SearchOption.TopDirectoryOnly)
                 .Should()
-                .NotBeEmpty($"{Path.GetFileName(dir)} should contain a .m3u8 playlist");
+                .NotBeEmpty(because: $"{Path.GetFileName(path: dir)} should contain a .m3u8 playlist");
             Directory
-                .GetFiles(dir, "*.ts", SearchOption.TopDirectoryOnly)
+                .GetFiles(path: dir, searchPattern: "*.ts", searchOption: SearchOption.TopDirectoryOnly)
                 .Should()
-                .NotBeEmpty($"{Path.GetFileName(dir)} should contain .ts segments");
+                .NotBeEmpty(because: $"{Path.GetFileName(path: dir)} should contain .ts segments");
         }
     }
 
     [SkippableFact]
     public async Task EncodeAsync_ScalingProfile_ProducesCorrectResolution()
     {
-        Skip.IfNot(_forkSupportsSpritevtt, ForkRequiredSkipReason);
-        using CancellationTokenSource cts = new(TimeSpan.FromMinutes(3));
+        Skip.IfNot(condition: _forkSupportsSpritevtt, reason: ForkRequiredSkipReason);
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromMinutes(minutes: 3));
 
-        string outputDir = Path.Combine(_testDir, "output-scale-160x90");
-        Directory.CreateDirectory(outputDir);
+        string outputDir = Path.Combine(path1: _testDir, path2: "output-scale-160x90");
+        Directory.CreateDirectory(path: outputDir);
 
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
@@ -525,7 +525,7 @@ public class RealEncodeTests : IAsyncLifetime
                     SampleRateHz: 48000,
                     AllowedLanguages: ["und"],
                     DefaultLanguage: null,
-                    Loudness: new(LoudnessMode.None),
+                    Loudness: new(Mode: LoudnessMode.None),
                     Downmix: null,
                     SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
                     PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
@@ -554,43 +554,43 @@ public class RealEncodeTests : IAsyncLifetime
         TestProgressObserver observer = new();
         IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
 
-        EncodingResult result = await encoder.EncodeAsync(request, observer, cts.Token);
+        EncodingResult result = await encoder.EncodeAsync(request: request, progress: observer, ct: cts.Token);
 
         result
             .Success.Should()
             .BeTrue(
-                $"Encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+                because: $"Encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
 
         // Verify a video_160x90 (or video_160x90_sdtv) directory exists with playlist + segments
-        string[] videoDirs = Directory.GetDirectories(outputDir, "video_160x90*");
+        string[] videoDirs = Directory.GetDirectories(path: outputDir, searchPattern: "video_160x90*");
         videoDirs
             .Should()
             .HaveCount(
-                1,
-                $"should have exactly one video output directory for 160x90. Found: [{string.Join(", ", Directory.GetDirectories(outputDir).Select(Path.GetFileName))}]"
+                expected: 1,
+                because: $"should have exactly one video output directory for 160x90. Found: [{string.Join(separator: ", ", values: Directory.GetDirectories(path: outputDir).Select(selector: Path.GetFileName))}]"
             );
 
         string videoDir = videoDirs[0];
         Directory
-            .GetFiles(videoDir, "*.m3u8", SearchOption.TopDirectoryOnly)
+            .GetFiles(path: videoDir, searchPattern: "*.m3u8", searchOption: SearchOption.TopDirectoryOnly)
             .Should()
-            .NotBeEmpty("video_160x90 dir should contain a .m3u8 playlist");
+            .NotBeEmpty(because: "video_160x90 dir should contain a .m3u8 playlist");
         Directory
-            .GetFiles(videoDir, "*.ts", SearchOption.TopDirectoryOnly)
+            .GetFiles(path: videoDir, searchPattern: "*.ts", searchOption: SearchOption.TopDirectoryOnly)
             .Should()
-            .NotBeEmpty("video_160x90 dir should contain .ts segments");
+            .NotBeEmpty(because: "video_160x90 dir should contain .ts segments");
     }
 
     [SkippableFact]
     public async Task EncodeAsync_HlsTwoPassProfile_ProducesValidPlaylist()
     {
-        Skip.IfNot(_forkSupportsSpritevtt, ForkRequiredSkipReason);
+        Skip.IfNot(condition: _forkSupportsSpritevtt, reason: ForkRequiredSkipReason);
         // Two-pass encodes are slower — give them a longer timeout.
-        using CancellationTokenSource cts = new(TimeSpan.FromMinutes(5));
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromMinutes(minutes: 5));
 
-        string outputDir = Path.Combine(_testDir, "output-twopass");
-        Directory.CreateDirectory(outputDir);
+        string outputDir = Path.Combine(path1: _testDir, path2: "output-twopass");
+        Directory.CreateDirectory(path: outputDir);
 
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
@@ -627,7 +627,7 @@ public class RealEncodeTests : IAsyncLifetime
                     SampleRateHz: 48000,
                     AllowedLanguages: ["und"],
                     DefaultLanguage: null,
-                    Loudness: new(LoudnessMode.None),
+                    Loudness: new(Mode: LoudnessMode.None),
                     Downmix: null,
                     SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
                     PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
@@ -657,56 +657,56 @@ public class RealEncodeTests : IAsyncLifetime
         TestProgressObserver observer = new();
         IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
 
-        EncodingResult result = await encoder.EncodeAsync(request, observer, cts.Token);
+        EncodingResult result = await encoder.EncodeAsync(request: request, progress: observer, ct: cts.Token);
 
         result
             .Success.Should()
             .BeTrue(
-                $"Two-pass encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+                because: $"Two-pass encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
         result.OutputPath.Should().NotBeNullOrWhiteSpace();
-        result.Duration.Should().BeGreaterThan(TimeSpan.Zero);
+        result.Duration.Should().BeGreaterThan(expected: TimeSpan.Zero);
 
         // Verify HLS output: at least one playlist and at least one segment
-        string[] playlists = Directory.GetFiles(outputDir, "*.m3u8", SearchOption.AllDirectories);
-        string[] segments = Directory.GetFiles(outputDir, "*.ts", SearchOption.AllDirectories);
+        string[] playlists = Directory.GetFiles(path: outputDir, searchPattern: "*.m3u8", searchOption: SearchOption.AllDirectories);
+        string[] segments = Directory.GetFiles(path: outputDir, searchPattern: "*.ts", searchOption: SearchOption.AllDirectories);
 
         playlists
             .Should()
-            .NotBeEmpty("two-pass HLS output should contain at least one .m3u8 playlist");
-        segments.Should().NotBeEmpty("two-pass HLS output should contain at least one .ts segment");
+            .NotBeEmpty(because: "two-pass HLS output should contain at least one .m3u8 playlist");
+        segments.Should().NotBeEmpty(because: "two-pass HLS output should contain at least one .ts segment");
 
         // Verify all referenced segments actually exist on disk
         foreach (string playlist in playlists)
         {
-            string playlistDir = Path.GetDirectoryName(playlist)!;
-            string[] lines = await File.ReadAllLinesAsync(playlist, cts.Token);
-            IEnumerable<string> segmentRefs = lines.Where(l =>
-                !l.StartsWith('#') && (l.EndsWith(".ts") || l.EndsWith(".mp4"))
+            string playlistDir = Path.GetDirectoryName(path: playlist)!;
+            string[] lines = await File.ReadAllLinesAsync(path: playlist, cancellationToken: cts.Token);
+            IEnumerable<string> segmentRefs = lines.Where(predicate: l =>
+                !l.StartsWith(value: '#') && (l.EndsWith(value: ".ts") || l.EndsWith(value: ".mp4"))
             );
 
             foreach (string segRef in segmentRefs)
             {
-                string segPath = Path.IsPathRooted(segRef)
+                string segPath = Path.IsPathRooted(path: segRef)
                     ? segRef
-                    : Path.Combine(playlistDir, segRef);
-                File.Exists(segPath)
+                    : Path.Combine(path1: playlistDir, path2: segRef);
+                File.Exists(path: segPath)
                     .Should()
                     .BeTrue(
-                        $"segment '{segRef}' referenced in '{Path.GetFileName(playlist)}' should exist on disk"
+                        because: $"segment '{segRef}' referenced in '{Path.GetFileName(path: playlist)}' should exist on disk"
                     );
             }
         }
 
         // Verify pass-1 stats files are cleaned up after successful two-pass encode
-        string statsDir = Path.Combine(outputDir, ".2pass");
+        string statsDir = Path.Combine(path1: outputDir, path2: ".2pass");
         bool anyStatsRemaining =
-            Directory.Exists(statsDir)
-            && Directory.GetFiles(statsDir, "*.log", SearchOption.AllDirectories).Length > 0;
+            Directory.Exists(path: statsDir)
+            && Directory.GetFiles(path: statsDir, searchPattern: "*.log", searchOption: SearchOption.AllDirectories).Length > 0;
         anyStatsRemaining
             .Should()
             .BeFalse(
-                "pass-1 .log stats files should be deleted after a successful two-pass encode"
+                because: "pass-1 .log stats files should be deleted after a successful two-pass encode"
             );
     }
 
@@ -715,28 +715,28 @@ public class RealEncodeTests : IAsyncLifetime
     {
         IReadOnlyList<EncodingProfile> profiles = BuiltinPresets.All();
 
-        profiles.Should().NotBeEmpty("BuiltinPresets.All() must return at least one profile");
+        profiles.Should().NotBeEmpty(because: "BuiltinPresets.All() must return at least one profile");
 
         foreach (EncodingProfile profile in profiles)
         {
             // Roundtrip: serialize → deserialize
-            string json = JsonConvert.SerializeObject(profile);
-            EncodingProfile? deserialized = JsonConvert.DeserializeObject<EncodingProfile>(json);
+            string json = JsonConvert.SerializeObject(value: profile);
+            EncodingProfile? deserialized = JsonConvert.DeserializeObject<EncodingProfile>(value: json);
 
             deserialized
                 .Should()
-                .NotBeNull($"profile '{profile.Name}' should deserialize without error");
+                .NotBeNull(because: $"profile '{profile.Name}' should deserialize without error");
             deserialized!
                 .Name.Should()
                 .NotBeNullOrWhiteSpace(
-                    $"profile '{profile.Name}' should have a non-empty Name after roundtrip"
+                    because: $"profile '{profile.Name}' should have a non-empty Name after roundtrip"
                 );
 
             bool hasAudioOutput = deserialized.Audio.Length > 0;
             bool hasVideoOutput = deserialized.Video != null || deserialized.Ladder != null;
             (hasAudioOutput || hasVideoOutput)
                 .Should()
-                .BeTrue($"profile '{profile.Name}' should have at least one audio or video output");
+                .BeTrue(because: $"profile '{profile.Name}' should have at least one audio or video output");
         }
     }
 
@@ -798,31 +798,31 @@ public class RealEncodeTests : IAsyncLifetime
             Thumbnails: new(Width: 320, IntervalSeconds: 10)
         );
 
-        string json = JsonConvert.SerializeObject(original);
-        EncodingProfile? deserialized = JsonConvert.DeserializeObject<EncodingProfile>(json);
+        string json = JsonConvert.SerializeObject(value: original);
+        EncodingProfile? deserialized = JsonConvert.DeserializeObject<EncodingProfile>(value: json);
 
         deserialized.Should().NotBeNull();
-        deserialized!.Name.Should().Be(original.Name);
-        deserialized.Container.Should().Be(original.Container);
-        deserialized.SchemaVersion.Should().Be(original.SchemaVersion);
+        deserialized!.Name.Should().Be(expected: original.Name);
+        deserialized.Container.Should().Be(expected: original.Container);
+        deserialized.SchemaVersion.Should().Be(expected: original.SchemaVersion);
 
         deserialized.Video.Should().NotBeNull();
-        deserialized.Video!.Width.Should().Be(1920);
-        deserialized.Video.Height.Should().Be(1080);
-        deserialized.Video.Codec.Should().Be(VideoCodecType.H264);
+        deserialized.Video!.Width.Should().Be(expected: 1920);
+        deserialized.Video.Height.Should().Be(expected: 1080);
+        deserialized.Video.Codec.Should().Be(expected: VideoCodecType.H264);
 
-        deserialized.Audio.Should().HaveCount(original.Audio.Length);
-        deserialized.Audio[0].Codec.Should().Be(AudioCodecType.Mp3);
-        deserialized.Audio[0].BitrateKbps.Should().Be(128);
-        deserialized.Audio[0].AllowedLanguages.Should().BeEquivalentTo("eng", "und");
+        deserialized.Audio.Should().HaveCount(expected: original.Audio.Length);
+        deserialized.Audio[0].Codec.Should().Be(expected: AudioCodecType.Mp3);
+        deserialized.Audio[0].BitrateKbps.Should().Be(expected: 128);
+        deserialized.Audio[0].AllowedLanguages.Should().BeEquivalentTo(expectation: ["eng", "und"]);
 
-        deserialized.Subtitles.Should().HaveCount(original.Subtitles.Length);
-        deserialized.Subtitles[0].Codec.Should().Be(SubtitleCodecType.WebVtt);
-        deserialized.Subtitles[0].Policy.Should().Be(SubtitlePolicy.Extract);
+        deserialized.Subtitles.Should().HaveCount(expected: original.Subtitles.Length);
+        deserialized.Subtitles[0].Codec.Should().Be(expected: SubtitleCodecType.WebVtt);
+        deserialized.Subtitles[0].Policy.Should().Be(expected: SubtitlePolicy.Extract);
 
         deserialized.Thumbnails.Should().NotBeNull();
-        deserialized.Thumbnails!.Width.Should().Be(320);
-        deserialized.Thumbnails.IntervalSeconds.Should().Be(10);
+        deserialized.Thumbnails!.Width.Should().Be(expected: 320);
+        deserialized.Thumbnails.IntervalSeconds.Should().Be(expected: 10);
     }
 
     // -------------------------------------------------------------------------
@@ -840,45 +840,45 @@ public class RealEncodeTests : IAsyncLifetime
     // Generic file names — these are lavfi-generated, not real titles.
     private string ResolveOrGenerateFixture(string relativeFileName)
     {
-        string? real = ResolveRealFixture(relativeFileName);
+        string? real = ResolveRealFixture(relativeFileName: relativeFileName);
         if (real is not null)
             return real;
 
-        return GenerateSyntheticFixture(relativeFileName);
+        return GenerateSyntheticFixture(relativeFileName: relativeFileName);
     }
 
     private static string? ResolveRealFixture(string relativeFileName)
     {
-        string? envRoot = Environment.GetEnvironmentVariable("NOMERCY_TEST_FIXTURES_PATH");
-        if (!string.IsNullOrWhiteSpace(envRoot))
+        string? envRoot = Environment.GetEnvironmentVariable(variable: "NOMERCY_TEST_FIXTURES_PATH");
+        if (!string.IsNullOrWhiteSpace(value: envRoot))
         {
-            string candidate = Path.Combine(envRoot, relativeFileName);
-            if (File.Exists(candidate))
+            string candidate = Path.Combine(path1: envRoot, path2: relativeFileName);
+            if (File.Exists(path: candidate))
                 return candidate;
         }
 
         string? localAppData = Environment.GetFolderPath(
-            Environment.SpecialFolder.LocalApplicationData
+            folder: Environment.SpecialFolder.LocalApplicationData
         );
-        string? home = Environment.GetEnvironmentVariable("HOME");
+        string? home = Environment.GetEnvironmentVariable(variable: "HOME");
 
         foreach (
             string root in new[]
             {
-                !string.IsNullOrWhiteSpace(localAppData)
-                    ? Path.Combine(localAppData, "NoMercy_dev", "test-fixtures")
+                !string.IsNullOrWhiteSpace(value: localAppData)
+                    ? Path.Combine(path1: localAppData, path2: "NoMercy_dev", path3: "test-fixtures")
                     : null,
-                !string.IsNullOrWhiteSpace(localAppData)
-                    ? Path.Combine(localAppData, "NoMercy", "test-fixtures")
+                !string.IsNullOrWhiteSpace(value: localAppData)
+                    ? Path.Combine(path1: localAppData, path2: "NoMercy", path3: "test-fixtures")
                     : null,
-                !string.IsNullOrWhiteSpace(home)
-                    ? Path.Combine(home, ".local", "share", "NoMercy_dev", "test-fixtures")
+                !string.IsNullOrWhiteSpace(value: home)
+                    ? Path.Combine(paths: [home, ".local", "share", "NoMercy_dev", "test-fixtures"])
                     : null,
             }.OfType<string>()
         )
         {
-            string candidate = Path.Combine(root, relativeFileName);
-            if (File.Exists(candidate))
+            string candidate = Path.Combine(path1: root, path2: relativeFileName);
+            if (File.Exists(path: candidate))
                 return candidate;
         }
 
@@ -890,8 +890,8 @@ public class RealEncodeTests : IAsyncLifetime
     // audio-only) without depending on real media.
     private string GenerateSyntheticFixture(string relativeFileName)
     {
-        string outPath = Path.Combine(_testDir, relativeFileName);
-        if (File.Exists(outPath))
+        string outPath = Path.Combine(path1: _testDir, path2: relativeFileName);
+        if (File.Exists(path: outPath))
             return outPath;
 
         List<string> args = relativeFileName switch
@@ -969,8 +969,8 @@ public class RealEncodeTests : IAsyncLifetime
                 "flac",
             ],
             _ => throw new ArgumentOutOfRangeException(
-                nameof(relativeFileName),
-                $"No synthetic recipe for fixture '{relativeFileName}'"
+                paramName: nameof(relativeFileName),
+                message: $"No synthetic recipe for fixture '{relativeFileName}'"
             ),
         };
 
@@ -982,18 +982,18 @@ public class RealEncodeTests : IAsyncLifetime
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
-        psi.ArgumentList.Add("-y");
+        psi.ArgumentList.Add(item: "-y");
         foreach (string arg in args)
-            psi.ArgumentList.Add(arg);
-        psi.ArgumentList.Add(outPath);
+            psi.ArgumentList.Add(item: arg);
+        psi.ArgumentList.Add(item: outPath);
 
-        using Process process = Process.Start(psi)!;
+        using Process process = Process.Start(startInfo: psi)!;
         string stderr = process.StandardError.ReadToEnd();
         process.StandardOutput.ReadToEnd();
         process.WaitForExit();
         if (process.ExitCode != 0)
             throw new InvalidOperationException(
-                $"Synthetic fixture generation failed for '{relativeFileName}': {stderr}"
+                message: $"Synthetic fixture generation failed for '{relativeFileName}': {stderr}"
             );
 
         return outPath;
@@ -1002,14 +1002,14 @@ public class RealEncodeTests : IAsyncLifetime
     [SkippableFact]
     public async Task EncodeAsync_Sd480p_DarkwingDuck_ProducesPlaylistAndSegments()
     {
-        Skip.IfNot(_forkSupportsSpritevtt, ForkRequiredSkipReason);
+        Skip.IfNot(condition: _forkSupportsSpritevtt, reason: ForkRequiredSkipReason);
 
-        string fixture = ResolveOrGenerateFixture("video-sd480p.mkv");
+        string fixture = ResolveOrGenerateFixture(relativeFileName: "video-sd480p.mkv");
 
-        using CancellationTokenSource cts = new(TimeSpan.FromMinutes(10));
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromMinutes(minutes: 10));
 
-        string outputDir = Path.Combine(_testDir, "output-sd480p");
-        Directory.CreateDirectory(outputDir);
+        string outputDir = Path.Combine(path1: _testDir, path2: "output-sd480p");
+        Directory.CreateDirectory(path: outputDir);
 
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
@@ -1046,7 +1046,7 @@ public class RealEncodeTests : IAsyncLifetime
                     SampleRateHz: 48000,
                     AllowedLanguages: ["und", "eng"],
                     DefaultLanguage: null,
-                    Loudness: new(LoudnessMode.None),
+                    Loudness: new(Mode: LoudnessMode.None),
                     Downmix: null,
                     SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
                     PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
@@ -1075,43 +1075,43 @@ public class RealEncodeTests : IAsyncLifetime
         TestProgressObserver observer = new();
         IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
 
-        EncodingResult result = await encoder.EncodeAsync(request, observer, cts.Token);
+        EncodingResult result = await encoder.EncodeAsync(request: request, progress: observer, ct: cts.Token);
 
         result
             .Success.Should()
             .BeTrue(
-                $"SD 480p encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+                because: $"SD 480p encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
 
-        string[] playlists = Directory.GetFiles(outputDir, "*.m3u8", SearchOption.AllDirectories);
-        string[] segments = Directory.GetFiles(outputDir, "*.ts", SearchOption.AllDirectories);
+        string[] playlists = Directory.GetFiles(path: outputDir, searchPattern: "*.m3u8", searchOption: SearchOption.AllDirectories);
+        string[] segments = Directory.GetFiles(path: outputDir, searchPattern: "*.ts", searchOption: SearchOption.AllDirectories);
 
         playlists
             .Should()
-            .NotBeEmpty("SD 480p HLS output should contain at least one .m3u8 playlist");
-        segments.Should().NotBeEmpty("SD 480p HLS output should contain at least one .ts segment");
+            .NotBeEmpty(because: "SD 480p HLS output should contain at least one .m3u8 playlist");
+        segments.Should().NotBeEmpty(because: "SD 480p HLS output should contain at least one .ts segment");
 
         // Verify the output directory contains a video folder for the expected resolution
-        string[] videoDirs = Directory.GetDirectories(outputDir, "video_854x480*");
+        string[] videoDirs = Directory.GetDirectories(path: outputDir, searchPattern: "video_854x480*");
         videoDirs
             .Should()
             .HaveCount(
-                1,
-                $"should have exactly one video_854x480 directory. Found: [{string.Join(", ", Directory.GetDirectories(outputDir).Select(Path.GetFileName))}]"
+                expected: 1,
+                because: $"should have exactly one video_854x480 directory. Found: [{string.Join(separator: ", ", values: Directory.GetDirectories(path: outputDir).Select(selector: Path.GetFileName))}]"
             );
     }
 
     [SkippableFact]
     public async Task EncodeAsync_1080p_Anime_NoGameNoLife_ProducesPlaylistAndSegments()
     {
-        Skip.IfNot(_forkSupportsSpritevtt, ForkRequiredSkipReason);
+        Skip.IfNot(condition: _forkSupportsSpritevtt, reason: ForkRequiredSkipReason);
 
-        string fixture = ResolveOrGenerateFixture("video-1080p.mkv");
+        string fixture = ResolveOrGenerateFixture(relativeFileName: "video-1080p.mkv");
 
-        using CancellationTokenSource cts = new(TimeSpan.FromMinutes(15));
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromMinutes(minutes: 15));
 
-        string outputDir = Path.Combine(_testDir, "output-1080p-anime");
-        Directory.CreateDirectory(outputDir);
+        string outputDir = Path.Combine(path1: _testDir, path2: "output-1080p-anime");
+        Directory.CreateDirectory(path: outputDir);
 
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
@@ -1148,7 +1148,7 @@ public class RealEncodeTests : IAsyncLifetime
                     SampleRateHz: 48000,
                     AllowedLanguages: ["jpn", "und"],
                     DefaultLanguage: "jpn",
-                    Loudness: new(LoudnessMode.None),
+                    Loudness: new(Mode: LoudnessMode.None),
                     Downmix: null,
                     SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
                     PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
@@ -1177,44 +1177,44 @@ public class RealEncodeTests : IAsyncLifetime
         TestProgressObserver observer = new();
         IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
 
-        EncodingResult result = await encoder.EncodeAsync(request, observer, cts.Token);
+        EncodingResult result = await encoder.EncodeAsync(request: request, progress: observer, ct: cts.Token);
 
         result
             .Success.Should()
             .BeTrue(
-                $"1080p anime encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+                because: $"1080p anime encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
 
-        string[] playlists = Directory.GetFiles(outputDir, "*.m3u8", SearchOption.AllDirectories);
-        string[] segments = Directory.GetFiles(outputDir, "*.ts", SearchOption.AllDirectories);
+        string[] playlists = Directory.GetFiles(path: outputDir, searchPattern: "*.m3u8", searchOption: SearchOption.AllDirectories);
+        string[] segments = Directory.GetFiles(path: outputDir, searchPattern: "*.ts", searchOption: SearchOption.AllDirectories);
 
         playlists
             .Should()
-            .NotBeEmpty("1080p anime HLS output should contain at least one .m3u8 playlist");
+            .NotBeEmpty(because: "1080p anime HLS output should contain at least one .m3u8 playlist");
         segments
             .Should()
-            .NotBeEmpty("1080p anime HLS output should contain at least one .ts segment");
+            .NotBeEmpty(because: "1080p anime HLS output should contain at least one .ts segment");
 
-        string[] videoDirs = Directory.GetDirectories(outputDir, "video_1920x1080*");
+        string[] videoDirs = Directory.GetDirectories(path: outputDir, searchPattern: "video_1920x1080*");
         videoDirs
             .Should()
             .HaveCount(
-                1,
-                $"should have exactly one video_1920x1080 directory. Found: [{string.Join(", ", Directory.GetDirectories(outputDir).Select(Path.GetFileName))}]"
+                expected: 1,
+                because: $"should have exactly one video_1920x1080 directory. Found: [{string.Join(separator: ", ", values: Directory.GetDirectories(path: outputDir).Select(selector: Path.GetFileName))}]"
             );
     }
 
     [SkippableFact]
     public async Task EncodeAsync_HdrContent_ProducesTonemappedSdrPlaylist()
     {
-        Skip.IfNot(_forkSupportsSpritevtt, ForkRequiredSkipReason);
+        Skip.IfNot(condition: _forkSupportsSpritevtt, reason: ForkRequiredSkipReason);
 
-        string fixture = ResolveOrGenerateFixture("video-hdr10.mkv");
+        string fixture = ResolveOrGenerateFixture(relativeFileName: "video-hdr10.mkv");
 
-        using CancellationTokenSource cts = new(TimeSpan.FromMinutes(15));
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromMinutes(minutes: 15));
 
-        string outputDir = Path.Combine(_testDir, "output-hdr");
-        Directory.CreateDirectory(outputDir);
+        string outputDir = Path.Combine(path1: _testDir, path2: "output-hdr");
+        Directory.CreateDirectory(path: outputDir);
 
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
@@ -1251,7 +1251,7 @@ public class RealEncodeTests : IAsyncLifetime
                     SampleRateHz: 48000,
                     AllowedLanguages: ["und", "eng"],
                     DefaultLanguage: null,
-                    Loudness: new(LoudnessMode.None),
+                    Loudness: new(Mode: LoudnessMode.None),
                     Downmix: null,
                     SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
                     PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
@@ -1280,32 +1280,32 @@ public class RealEncodeTests : IAsyncLifetime
         TestProgressObserver observer = new();
         IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
 
-        EncodingResult result = await encoder.EncodeAsync(request, observer, cts.Token);
+        EncodingResult result = await encoder.EncodeAsync(request: request, progress: observer, ct: cts.Token);
 
         result
             .Success.Should()
             .BeTrue(
-                $"HDR tonemapping encode failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+                because: $"HDR tonemapping encode failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
 
-        string[] playlists = Directory.GetFiles(outputDir, "*.m3u8", SearchOption.AllDirectories);
-        string[] segments = Directory.GetFiles(outputDir, "*.ts", SearchOption.AllDirectories);
+        string[] playlists = Directory.GetFiles(path: outputDir, searchPattern: "*.m3u8", searchOption: SearchOption.AllDirectories);
+        string[] segments = Directory.GetFiles(path: outputDir, searchPattern: "*.ts", searchOption: SearchOption.AllDirectories);
 
-        playlists.Should().NotBeEmpty("HDR HLS output should contain at least one .m3u8 playlist");
-        segments.Should().NotBeEmpty("HDR HLS output should contain at least one .ts segment");
+        playlists.Should().NotBeEmpty(because: "HDR HLS output should contain at least one .m3u8 playlist");
+        segments.Should().NotBeEmpty(because: "HDR HLS output should contain at least one .ts segment");
 
         // Master playlist must declare SDR range (tonemapping was applied)
-        string? masterPlaylist = playlists.FirstOrDefault(p =>
-            Path.GetFileName(p).Equals("master.m3u8", StringComparison.OrdinalIgnoreCase)
+        string? masterPlaylist = playlists.FirstOrDefault(predicate: p =>
+            Path.GetFileName(path: p).Equals(value: "master.m3u8", comparisonType: StringComparison.OrdinalIgnoreCase)
         );
         if (masterPlaylist is not null)
         {
-            string masterContent = await File.ReadAllTextAsync(masterPlaylist, cts.Token);
+            string masterContent = await File.ReadAllTextAsync(path: masterPlaylist, cancellationToken: cts.Token);
             masterContent
                 .Should()
                 .NotContain(
-                    "VIDEO-RANGE=PQ",
-                    "tonemapping to SDR should remove HDR PQ video range from master playlist"
+                    unexpected: "VIDEO-RANGE=PQ",
+                    because: "tonemapping to SDR should remove HDR PQ video range from master playlist"
                 );
         }
     }
@@ -1313,14 +1313,14 @@ public class RealEncodeTests : IAsyncLifetime
     [SkippableFact]
     public async Task EncodeAsync_AudioOnly_ProducesAudioHlsPlaylist()
     {
-        Skip.IfNot(_forkSupportsSpritevtt, ForkRequiredSkipReason);
+        Skip.IfNot(condition: _forkSupportsSpritevtt, reason: ForkRequiredSkipReason);
 
-        string fixture = ResolveOrGenerateFixture("audio-only.flac");
+        string fixture = ResolveOrGenerateFixture(relativeFileName: "audio-only.flac");
 
-        using CancellationTokenSource cts = new(TimeSpan.FromMinutes(5));
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromMinutes(minutes: 5));
 
-        string outputDir = Path.Combine(_testDir, "output-audio-only");
-        Directory.CreateDirectory(outputDir);
+        string outputDir = Path.Combine(path1: _testDir, path2: "output-audio-only");
+        Directory.CreateDirectory(path: outputDir);
 
         EncodingProfile profile = new(
             Id: Ulid.NewUlid(),
@@ -1337,7 +1337,7 @@ public class RealEncodeTests : IAsyncLifetime
                     SampleRateHz: 48000,
                     AllowedLanguages: ["und", "eng"],
                     DefaultLanguage: null,
-                    Loudness: new(LoudnessMode.None),
+                    Loudness: new(Mode: LoudnessMode.None),
                     Downmix: null,
                     SegmentNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:",
                     PlaylistNameTemplate: ":type:_:language:_:codec:/:type:_:language:_:codec:"
@@ -1366,36 +1366,36 @@ public class RealEncodeTests : IAsyncLifetime
         TestProgressObserver observer = new();
         IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
 
-        EncodingResult result = await encoder.EncodeAsync(request, observer, cts.Token);
+        EncodingResult result = await encoder.EncodeAsync(request: request, progress: observer, ct: cts.Token);
 
         result
             .Success.Should()
             .BeTrue(
-                $"Audio-only encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+                because: $"Audio-only encoding failed: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
 
         // Audio-only: must produce audio segment directories and playlists; must NOT produce video dirs
         string[] allPlaylists = Directory.GetFiles(
-            outputDir,
-            "*.m3u8",
-            SearchOption.AllDirectories
+            path: outputDir,
+            searchPattern: "*.m3u8",
+            searchOption: SearchOption.AllDirectories
         );
-        string[] audioSegments = Directory.GetFiles(outputDir, "*.ts", SearchOption.AllDirectories);
+        string[] audioSegments = Directory.GetFiles(path: outputDir, searchPattern: "*.ts", searchOption: SearchOption.AllDirectories);
 
         allPlaylists
             .Should()
-            .NotBeEmpty("audio-only output should contain at least one .m3u8 playlist");
+            .NotBeEmpty(because: "audio-only output should contain at least one .m3u8 playlist");
         audioSegments
             .Should()
-            .NotBeEmpty("audio-only output should contain at least one .ts segment");
+            .NotBeEmpty(because: "audio-only output should contain at least one .ts segment");
 
-        string[] videoDirs = Directory.GetDirectories(outputDir, "video_*");
-        videoDirs.Should().BeEmpty("audio-only encode should not produce any video_ directories");
+        string[] videoDirs = Directory.GetDirectories(path: outputDir, searchPattern: "video_*");
+        videoDirs.Should().BeEmpty(because: "audio-only encode should not produce any video_ directories");
 
-        string[] audioDirs = Directory.GetDirectories(outputDir, "audio_*");
+        string[] audioDirs = Directory.GetDirectories(path: outputDir, searchPattern: "audio_*");
         audioDirs
             .Should()
-            .NotBeEmpty("audio-only encode should produce at least one audio_ directory");
+            .NotBeEmpty(because: "audio-only encode should produce at least one audio_ directory");
     }
 
     private sealed class TestHostLifetime : IHostApplicationLifetime
@@ -1412,7 +1412,7 @@ public class RealEncodeTests : IAsyncLifetime
         public List<string> StagesStarted { get; } = [];
         public int ProgressCallCount { get; private set; }
 
-        public void OnStageStarted(string stageName) => StagesStarted.Add(stageName);
+        public void OnStageStarted(string stageName) => StagesStarted.Add(item: stageName);
 
         public void OnProgress(EncodingProgress progress) => ProgressCallCount++;
 

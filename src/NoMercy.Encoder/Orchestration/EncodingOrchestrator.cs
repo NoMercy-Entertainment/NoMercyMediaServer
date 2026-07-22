@@ -444,13 +444,7 @@ public class EncodingOrchestrator(
         double megabits = megaBytes * 8; // megabits per second
         logger.LogInformation(
             message: "Staged source for encoding: {Backend} {MB:F0} MB in {Seconds:F1}s "
-                     + "({megaBytes:F0} MB/s, {megabits:F0} Mbps) before ffmpeg start [{Input}]", 
-                sourceStorage.Driver.BackendLabel, 
-            bytes / 1_000_000.0, 
-            seconds, 
-            megaBytes, 
-            megabits, 
-            inputPath
+                     + "({megaBytes:F0} MB/s, {megabits:F0} Mbps) before ffmpeg start [{Input}]", args: [sourceStorage.Driver.BackendLabel, bytes / 1_000_000.0, seconds, megaBytes, megabits, inputPath]
         );
     }
 

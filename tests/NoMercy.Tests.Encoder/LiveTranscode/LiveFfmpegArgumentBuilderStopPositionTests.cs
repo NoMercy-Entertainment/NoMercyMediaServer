@@ -44,25 +44,25 @@ public class LiveFfmpegArgumentBuilderStopPositionTests
         LiveRunInput baseInput = new(
             InputPath: "/media/in.mkv",
             OutputDirectory: "/tmp/live",
-            StartPosition: TimeSpan.FromSeconds(120),
+            StartPosition: TimeSpan.FromSeconds(seconds: 120),
             Quality: MakeQuality(),
             SegmentDurationSeconds: 6
         );
         LiveRunInput unbounded = baseInput with { StopPosition = null };
-        LiveRunInput bounded = baseInput with { StopPosition = TimeSpan.FromSeconds(180) };
+        LiveRunInput bounded = baseInput with { StopPosition = TimeSpan.FromSeconds(seconds: 180) };
 
-        string[] unboundedArgs = LiveFfmpegArgumentBuilder.Build(unbounded);
-        string[] boundedArgs = LiveFfmpegArgumentBuilder.Build(bounded);
+        string[] unboundedArgs = LiveFfmpegArgumentBuilder.Build(input: unbounded);
+        string[] boundedArgs = LiveFfmpegArgumentBuilder.Build(input: bounded);
 
-        unboundedArgs.Should().NotContain("-t");
+        unboundedArgs.Should().NotContain(unexpected: "-t");
 
-        int tIdx = Array.IndexOf(boundedArgs, "-t");
-        tIdx.Should().BeGreaterThanOrEqualTo(0);
+        int tIdx = Array.IndexOf(array: boundedArgs, value: "-t");
+        tIdx.Should().BeGreaterThanOrEqualTo(expected: 0);
 
         List<string> boundedWithoutDashT = [.. boundedArgs];
-        boundedWithoutDashT.RemoveRange(tIdx, 2); // "-t" and its value
+        boundedWithoutDashT.RemoveRange(index: tIdx, count: 2); // "-t" and its value
 
-        boundedWithoutDashT.Should().Equal(unboundedArgs);
+        boundedWithoutDashT.Should().Equal(expected: unboundedArgs);
     }
 
     [Fact]
@@ -73,25 +73,25 @@ public class LiveFfmpegArgumentBuilderStopPositionTests
         LiveRunInput input = new(
             InputPath: "/media/in.mkv",
             OutputDirectory: "/tmp/live",
-            StartPosition: TimeSpan.FromSeconds(120),
+            StartPosition: TimeSpan.FromSeconds(seconds: 120),
             Quality: MakeQuality(),
             SegmentDurationSeconds: 6,
-            StopPosition: TimeSpan.FromSeconds(180)
+            StopPosition: TimeSpan.FromSeconds(seconds: 180)
         );
 
-        string[] args = LiveFfmpegArgumentBuilder.Build(input);
+        string[] args = LiveFfmpegArgumentBuilder.Build(input: input);
 
-        int tIdx = Array.IndexOf(args, "-t");
-        tIdx.Should().BeGreaterThanOrEqualTo(0);
-        args[tIdx + 1].Should().Be("60.000");
+        int tIdx = Array.IndexOf(array: args, value: "-t");
+        tIdx.Should().BeGreaterThanOrEqualTo(expected: 0);
+        args[tIdx + 1].Should().Be(expected: "60.000");
 
-        int offsetIdx = Array.IndexOf(args, "-output_ts_offset");
-        offsetIdx.Should().BeGreaterThanOrEqualTo(0);
-        tIdx.Should().BeLessThan(offsetIdx, "-t must be emitted before -output_ts_offset");
+        int offsetIdx = Array.IndexOf(array: args, value: "-output_ts_offset");
+        offsetIdx.Should().BeGreaterThanOrEqualTo(expected: 0);
+        tIdx.Should().BeLessThan(expected: offsetIdx, because: "-t must be emitted before -output_ts_offset");
 
         // The absolute start index is unaffected by bounding the run.
-        int startNumberIdx = Array.IndexOf(args, "-start_number");
-        args[startNumberIdx + 1].Should().Be("20");
+        int startNumberIdx = Array.IndexOf(array: args, value: "-start_number");
+        args[startNumberIdx + 1].Should().Be(expected: "20");
     }
 
     [Fact]
@@ -103,14 +103,14 @@ public class LiveFfmpegArgumentBuilderStopPositionTests
         LiveRunInput input = new(
             InputPath: "/media/in.mkv",
             OutputDirectory: "/tmp/live",
-            StartPosition: TimeSpan.FromSeconds(60),
+            StartPosition: TimeSpan.FromSeconds(seconds: 60),
             Quality: MakeQuality(),
             SegmentDurationSeconds: 6,
-            StopPosition: TimeSpan.FromSeconds(50)
+            StopPosition: TimeSpan.FromSeconds(seconds: 50)
         );
 
-        string[] args = LiveFfmpegArgumentBuilder.Build(input);
+        string[] args = LiveFfmpegArgumentBuilder.Build(input: input);
 
-        args.Should().NotContain("-t");
+        args.Should().NotContain(unexpected: "-t");
     }
 }

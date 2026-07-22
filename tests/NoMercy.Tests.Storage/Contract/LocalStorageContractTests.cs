@@ -24,7 +24,7 @@ namespace NoMercy.Tests.Storage.Contract;
 /// involved in setup — failures here are driver fidelity failures, not setup bugs.
 /// BackendHasFile reads via System.IO for the same reason.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class LocalStorageContractTests : IStorageContractTests
 {
     private string _root = string.Empty;
@@ -32,43 +32,43 @@ public sealed class LocalStorageContractTests : IStorageContractTests
 
     protected override IStorage CreateStorage()
     {
-        _root = Path.Combine(Path.GetTempPath(), $"nm-contract-local-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_root);
+        _root = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-contract-local-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: _root);
 
         LocalStorageDriver driver = new();
-        StoragePathGuard guard = new([_root], driver);
-        _storage = new(driver, guard);
+        StoragePathGuard guard = new(allowedRoots: [_root], driver: driver);
+        _storage = new(driver: driver, guard: guard);
         return _storage;
     }
 
     protected override Task SeedFile(string relativePath, byte[] content)
     {
-        string full = ToFull(relativePath);
-        string? dir = Path.GetDirectoryName(full);
-        if (!string.IsNullOrEmpty(dir))
-            Directory.CreateDirectory(dir);
-        File.WriteAllBytes(full, content);
+        string full = ToFull(relativePath: relativePath);
+        string? dir = Path.GetDirectoryName(path: full);
+        if (!string.IsNullOrEmpty(value: dir))
+            Directory.CreateDirectory(path: dir);
+        File.WriteAllBytes(path: full, bytes: content);
         return Task.CompletedTask;
     }
 
     protected override Task SeedDirectory(string relativePath)
     {
-        Directory.CreateDirectory(ToFull(relativePath));
+        Directory.CreateDirectory(path: ToFull(relativePath: relativePath));
         return Task.CompletedTask;
     }
 
     protected override Task<bool> BackendHasFile(string relativePath)
     {
-        bool exists = File.Exists(ToFull(relativePath));
-        return Task.FromResult(exists);
+        bool exists = File.Exists(path: ToFull(relativePath: relativePath));
+        return Task.FromResult(result: exists);
     }
 
     protected override Task DisposeStorage()
     {
         try
         {
-            if (!string.IsNullOrEmpty(_root) && Directory.Exists(_root))
-                Directory.Delete(_root, recursive: true);
+            if (!string.IsNullOrEmpty(value: _root) && Directory.Exists(path: _root))
+                Directory.Delete(path: _root, recursive: true);
         }
         catch
         {
@@ -80,8 +80,8 @@ public sealed class LocalStorageContractTests : IStorageContractTests
 
     private string ToFull(string relativePath)
     {
-        string normalized = relativePath.Replace('\\', '/').TrimStart('/');
-        return Path.Combine(_root, normalized.Replace('/', Path.DirectorySeparatorChar));
+        string normalized = relativePath.Replace(oldChar: '\\', newChar: '/').TrimStart(trimChar: '/');
+        return Path.Combine(path1: _root, path2: normalized.Replace(oldChar: '/', newChar: Path.DirectorySeparatorChar));
     }
 
     // -----------------------------------------------------------------------
@@ -89,7 +89,7 @@ public sealed class LocalStorageContractTests : IStorageContractTests
     // -----------------------------------------------------------------------
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public override async Task Exists_absolute_path_is_rejected_or_returns_false()
     {
         IStorage storage = CreateStorage();
@@ -99,10 +99,10 @@ public sealed class LocalStorageContractTests : IStorageContractTests
                 ? @"C:\Windows\System32\drivers\etc\hosts"
                 : "/etc/hosts";
 
-            Func<Task> act = () => storage.ExistsAsync(absolutePath, CancellationToken.None);
+            Func<Task> act = () => storage.ExistsAsync(path: absolutePath, ct: CancellationToken.None);
             await act.Should()
                 .ThrowAsync<StoragePathNotAllowedException>(
-                    "LocalStorage with a configured root must reject any path outside that root"
+                    because: "LocalStorage with a configured root must reject any path outside that root"
                 );
         }
         finally
@@ -116,16 +116,16 @@ public sealed class LocalStorageContractTests : IStorageContractTests
     // -----------------------------------------------------------------------
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public override async Task Exists_dotdot_traversal_throws()
     {
         IStorage storage = CreateStorage();
         try
         {
-            Func<Task> act = () => storage.ExistsAsync("../escape", CancellationToken.None);
+            Func<Task> act = () => storage.ExistsAsync(path: "../escape", ct: CancellationToken.None);
             await act.Should()
                 .ThrowAsync<StoragePathNotAllowedException>(
-                    "'..' escaping the allowed root must be rejected with StoragePathNotAllowedException"
+                    because: "'..' escaping the allowed root must be rejected with StoragePathNotAllowedException"
                 );
         }
         finally
@@ -139,25 +139,25 @@ public sealed class LocalStorageContractTests : IStorageContractTests
     // -----------------------------------------------------------------------
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public async Task List_entries_are_scope_relative_and_round_trip_into_Exists()
     {
         IStorage storage = CreateStorage();
         try
         {
-            await SeedFile("movies/avatar/avatar.mkv", [0x01, 0x02]);
-            await SeedDirectory("movies/avatar");
+            await SeedFile(relativePath: "movies/avatar/avatar.mkv", content: [0x01, 0x02]);
+            await SeedDirectory(relativePath: "movies/avatar");
 
             List<StorageEntry> entries = [];
             await foreach (
                 StorageEntry e in storage.ListAsync(
-                    "movies/avatar",
-                    "*",
+                    path: "movies/avatar",
+                    pattern: "*",
                     recursive: true,
-                    CancellationToken.None
+                    ct: CancellationToken.None
                 )
             )
-                entries.Add(e);
+                entries.Add(item: e);
 
             entries.Should().NotBeEmpty();
 
@@ -165,23 +165,23 @@ public sealed class LocalStorageContractTests : IStorageContractTests
             {
                 entry
                     .Path.Should()
-                    .NotContain(":\\", "StorageEntry.Path must not contain a Windows drive letter");
+                    .NotContain(unexpected: ":\\", because: "StorageEntry.Path must not contain a Windows drive letter");
                 entry
                     .Path.Should()
-                    .NotStartWith("/", "StorageEntry.Path must not start with a leading slash");
+                    .NotStartWith(unexpected: "/", because: "StorageEntry.Path must not start with a leading slash");
                 entry
                     .Path.ToLowerInvariant()
                     .Should()
                     .NotContain(
-                        _root.ToLowerInvariant(),
-                        "StorageEntry.Path must not contain the OS root prefix"
+                        unexpected: _root.ToLowerInvariant(),
+                        because: "StorageEntry.Path must not contain the OS root prefix"
                     );
 
-                bool roundTrip = await storage.ExistsAsync(entry.Path, CancellationToken.None);
+                bool roundTrip = await storage.ExistsAsync(path: entry.Path, ct: CancellationToken.None);
                 roundTrip
                     .Should()
                     .BeTrue(
-                        $"StorageEntry.Path '{entry.Path}' returned from List must be passable back into Exists"
+                        because: $"StorageEntry.Path '{entry.Path}' returned from List must be passable back into Exists"
                     );
             }
         }
@@ -192,17 +192,17 @@ public sealed class LocalStorageContractTests : IStorageContractTests
     }
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public async Task List_sync_entries_are_scope_relative_and_round_trip_into_Exists()
     {
         IStorage storage = CreateStorage();
         try
         {
-            await SeedFile("shows/breaking-bad/s01e01.mkv", [0x03, 0x04]);
+            await SeedFile(relativePath: "shows/breaking-bad/s01e01.mkv", content: [0x03, 0x04]);
 
             IReadOnlyList<StorageEntry> entries = storage.List(
-                "shows/breaking-bad",
-                "*",
+                path: "shows/breaking-bad",
+                pattern: "*",
                 recursive: false
             );
 
@@ -212,23 +212,23 @@ public sealed class LocalStorageContractTests : IStorageContractTests
             {
                 entry
                     .Path.Should()
-                    .NotContain(":\\", "StorageEntry.Path must not contain a Windows drive letter");
+                    .NotContain(unexpected: ":\\", because: "StorageEntry.Path must not contain a Windows drive letter");
                 entry
                     .Path.Should()
-                    .NotStartWith("/", "StorageEntry.Path must not start with a leading slash");
+                    .NotStartWith(unexpected: "/", because: "StorageEntry.Path must not start with a leading slash");
                 entry
                     .Path.ToLowerInvariant()
                     .Should()
                     .NotContain(
-                        _root.ToLowerInvariant(),
-                        "StorageEntry.Path must not contain the OS root prefix"
+                        unexpected: _root.ToLowerInvariant(),
+                        because: "StorageEntry.Path must not contain the OS root prefix"
                     );
 
-                bool roundTrip = await storage.ExistsAsync(entry.Path, CancellationToken.None);
+                bool roundTrip = await storage.ExistsAsync(path: entry.Path, ct: CancellationToken.None);
                 roundTrip
                     .Should()
                     .BeTrue(
-                        $"StorageEntry.Path '{entry.Path}' returned from List (sync) must be passable back into Exists"
+                        because: $"StorageEntry.Path '{entry.Path}' returned from List (sync) must be passable back into Exists"
                     );
             }
         }
@@ -243,48 +243,48 @@ public sealed class LocalStorageContractTests : IStorageContractTests
     // -----------------------------------------------------------------------
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public void GetFullPath_scope_relative_returns_os_absolute_under_root()
     {
         IStorage storage = CreateStorage();
         try
         {
-            string result = storage.GetFullPath("movies/avatar/avatar.mkv");
+            string result = storage.GetFullPath(path: "movies/avatar/avatar.mkv");
 
-            Path.IsPathRooted(result)
+            Path.IsPathRooted(path: result)
                 .Should()
-                .BeTrue("GetFullPath must return an OS-absolute path");
+                .BeTrue(because: "GetFullPath must return an OS-absolute path");
             result
                 .ToLowerInvariant()
                 .Should()
-                .StartWith(_root.ToLowerInvariant(), "result must be under the configured root");
+                .StartWith(expected: _root.ToLowerInvariant(), because: "result must be under the configured root");
         }
         finally
         {
             _storage = null;
-            if (!string.IsNullOrEmpty(_root) && Directory.Exists(_root))
-                Directory.Delete(_root, recursive: true);
+            if (!string.IsNullOrEmpty(value: _root) && Directory.Exists(path: _root))
+                Directory.Delete(path: _root, recursive: true);
         }
     }
 
     [SkippableFact]
-    [Trait("Category", "Unit")]
+    [Trait(name: "Category", value: "Unit")]
     public void GetFullPath_dotdot_traversal_throws()
     {
         IStorage storage = CreateStorage();
         try
         {
-            Action act = () => storage.GetFullPath("../escape/secret.txt");
+            Action act = () => storage.GetFullPath(path: "../escape/secret.txt");
             act.Should()
                 .Throw<StoragePathNotAllowedException>(
-                    ".. traversal must be rejected by GetFullPath"
+                    because: ".. traversal must be rejected by GetFullPath"
                 );
         }
         finally
         {
             _storage = null;
-            if (!string.IsNullOrEmpty(_root) && Directory.Exists(_root))
-                Directory.Delete(_root, recursive: true);
+            if (!string.IsNullOrEmpty(value: _root) && Directory.Exists(path: _root))
+                Directory.Delete(path: _root, recursive: true);
         }
     }
 }

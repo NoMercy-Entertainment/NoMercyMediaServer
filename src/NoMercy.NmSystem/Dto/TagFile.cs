@@ -19,7 +19,7 @@ public class TagFile
 {
     public static TagFile Create(string path)
     {
-        using FileTag? fileTag = FileTag.Create(path);
+        using FileTag? fileTag = FileTag.Create(path: path);
         fileTag.Tag.Pictures = [];
         return new() { Tag = fileTag.Tag, Properties = fileTag.Properties };
     }

@@ -40,27 +40,27 @@ public class DashMultiVariantTwoPassTests : IDisposable
 
     public DashMultiVariantTwoPassTests()
     {
-        _outputDir = Path.Combine(Path.GetTempPath(), $"DashMultiVar_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_outputDir);
+        _outputDir = Path.Combine(path1: Path.GetTempPath(), path2: $"DashMultiVar_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: _outputDir);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(_outputDir))
-            Directory.Delete(_outputDir, recursive: true);
-        GC.SuppressFinalize(this);
+        if (Directory.Exists(path: _outputDir))
+            Directory.Delete(path: _outputDir, recursive: true);
+        GC.SuppressFinalize(obj: this);
     }
 
     [Fact]
     public async Task Encode_ThreeVariants_RunsPass1OncePerVariant()
     {
         _checkpointStore
-            .Setup(s => s.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((JobCheckpoint?)null);
+            .Setup(expression: s => s.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: (JobCheckpoint?)null);
 
         List<int> pass1Indices = [];
         _encoder
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
@@ -68,50 +68,50 @@ public class DashMultiVariantTwoPassTests : IDisposable
                 )
             )
             .ReturnsAsync(
-                (EncodingRequest req, IProgressObserver? _, CancellationToken _) =>
+                valueFunction: (EncodingRequest req, IProgressObserver? _, CancellationToken _) =>
                 {
                     if (req.Options!.Pass == EncodingPass.One)
-                        pass1Indices.Add(req.Options.Pass1VariantIndex);
+                        pass1Indices.Add(item: req.Options.Pass1VariantIndex);
                     return Success();
                 }
             );
 
         DashTwoPassStrategy strategy = BuildStrategy();
-        await strategy.EncodeAsync(BuildRequest(variantCount: 3), null, CancellationToken.None);
+        await strategy.EncodeAsync(request: BuildRequest(variantCount: 3), progress: null, ct: CancellationToken.None);
 
-        Assert.Equal(new[] { 0, 1, 2 }, pass1Indices);
+        Assert.Equal(expected: new[] { 0, 1, 2 }, actual: pass1Indices);
     }
 
     [Fact]
     public async Task Encode_ThreeVariants_RunsPass2ExactlyOnce()
     {
         _checkpointStore
-            .Setup(s => s.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((JobCheckpoint?)null);
+            .Setup(expression: s => s.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: (JobCheckpoint?)null);
         SetupSuccessfulEncoder();
 
         DashTwoPassStrategy strategy = BuildStrategy();
-        await strategy.EncodeAsync(BuildRequest(variantCount: 3), null, CancellationToken.None);
+        await strategy.EncodeAsync(request: BuildRequest(variantCount: 3), progress: null, ct: CancellationToken.None);
 
         _encoder.Verify(
-            e =>
+            expression: e =>
                 e.EncodeAsync(
                     It.Is<EncodingRequest>(r => r.Options!.Pass == EncodingPass.Two),
                     It.IsAny<IProgressObserver?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Once
+            times: Times.Once
         );
     }
 
     [Fact]
     public async Task Encode_ResumeWithAllVariantStatsPresent_SkipsPass1()
     {
-        string statsDir = Path.Combine(_outputDir, ".2pass");
-        Directory.CreateDirectory(statsDir);
-        string statsFile = Path.Combine(statsDir, "x264");
+        string statsDir = Path.Combine(path1: _outputDir, path2: ".2pass");
+        Directory.CreateDirectory(path: statsDir);
+        string statsFile = Path.Combine(path1: statsDir, path2: "x264");
         for (int i = 0; i < 3; i++)
-            await File.WriteAllTextAsync($"{statsFile}_v{i}-0.log", $"variant {i} done");
+            await File.WriteAllTextAsync(path: $"{statsFile}_v{i}-0.log", contents: $"variant {i} done");
 
         JobCheckpoint existing = new(
             JobId: "job-1",
@@ -126,52 +126,52 @@ public class DashMultiVariantTwoPassTests : IDisposable
         );
 
         _checkpointStore
-            .Setup(s => s.LoadAsync(_outputDir, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existing);
+            .Setup(expression: s => s.LoadAsync(_outputDir, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: existing);
         SetupSuccessfulEncoder();
 
         DashTwoPassStrategy strategy = BuildStrategy();
-        await strategy.EncodeAsync(BuildRequest(variantCount: 3), null, CancellationToken.None);
+        await strategy.EncodeAsync(request: BuildRequest(variantCount: 3), progress: null, ct: CancellationToken.None);
 
         _encoder.Verify(
-            e =>
+            expression: e =>
                 e.EncodeAsync(
                     It.Is<EncodingRequest>(r => r.Options!.Pass == EncodingPass.One),
                     It.IsAny<IProgressObserver?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Never
+            times: Times.Never
         );
     }
 
     private void SetupSuccessfulEncoder()
     {
         _encoder
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(Success());
+            .ReturnsAsync(value: Success());
     }
 
     private static EncodingResult Success() =>
         new(
             Success: true,
             OutputPath: "/out",
-            Duration: TimeSpan.FromSeconds(1),
+            Duration: TimeSpan.FromSeconds(seconds: 1),
             Error: null,
-            Metrics: new(1024, 2.0, 24.0, "libx264", null)
+            Metrics: new(OutputSizeBytes: 1024, AverageSpeed: 2.0, AverageFps: 24.0, EncoderUsed: "libx264", GpuUsed: null)
         );
 
     private DashTwoPassStrategy BuildStrategy() =>
         new(
-            _encoder.Object,
-            _checkpointStore.Object,
-            NullLogger<DashTwoPassStrategy>.Instance,
-            TestStorageFactory.CreateLocal()
+            encoder: _encoder.Object,
+            checkpointStore: _checkpointStore.Object,
+            logger: NullLogger<DashTwoPassStrategy>.Instance,
+            storage: TestStorageFactory.CreateLocal()
         );
 
     private EncodingRequest BuildRequest(int variantCount) =>
@@ -190,8 +190,8 @@ public class DashMultiVariantTwoPassTests : IDisposable
                 {
                     Mode = LadderMode.Manual,
                     Rungs = Enumerable
-                        .Range(0, variantCount)
-                        .Select(i => new LadderRung(
+                        .Range(start: 0, count: variantCount)
+                        .Select(selector: i => new LadderRung(
                             Width: 1920 >> i,
                             Height: 1080 >> i,
                             Codec: VideoCodecType.H264,

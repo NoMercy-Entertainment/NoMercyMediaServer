@@ -27,15 +27,15 @@ namespace NoMercy.Tests.Monitoring;
 public class GpuTests
 {
     [Theory]
-    [InlineData("gpu/0", 0)]
-    [InlineData("gpu/1", 1)]
-    [InlineData("gpu/12", 12)]
-    [InlineData("5", 5)]
+    [InlineData(data: ["gpu/0", 0])]
+    [InlineData(data: ["gpu/1", 1])]
+    [InlineData(data: ["gpu/12", 12])]
+    [InlineData(data: ["5", 5])]
     public void Index_ParsesTrailingSegment_ForRealProviderShapes(string identifier, int expected)
     {
         Gpu gpu = new() { Identifier = identifier };
 
-        gpu.Index.Should().Be(expected);
+        gpu.Index.Should().Be(expected: expected);
     }
 
     [Fact]
@@ -49,13 +49,13 @@ public class GpuTests
         Action act = () => _ = gpu.Index;
 
         act.Should().NotThrow();
-        gpu.Index.Should().Be(0);
+        gpu.Index.Should().Be(expected: 0);
     }
 
     [Theory]
-    [InlineData("gpu/")]
-    [InlineData("gpu/abc")]
-    [InlineData("not-a-number")]
+    [InlineData(data: "gpu/")]
+    [InlineData(data: "gpu/abc")]
+    [InlineData(data: "not-a-number")]
     public void Index_WithMalformedIdentifier_DoesNotThrow_ReturnsZero(string identifier)
     {
         Gpu gpu = new() { Identifier = identifier };
@@ -63,7 +63,7 @@ public class GpuTests
         Action act = () => _ = gpu.Index;
 
         act.Should().NotThrow();
-        gpu.Index.Should().Be(0);
+        gpu.Index.Should().Be(expected: 0);
     }
 
     [Fact]
@@ -81,14 +81,14 @@ public class GpuTests
             Power = 120.7,
         };
 
-        gpu.Index.Should().Be(2);
-        gpu.Name.Should().Be("NVIDIA GeForce RTX 4090");
-        gpu.D3D.Should().Be(45.5);
-        gpu.Decode.Should().Be(10.0);
-        gpu.Core.Should().Be(55.5);
-        gpu.Memory.Should().Be(33.3);
-        gpu.Encode.Should().Be(5.0);
-        gpu.Power.Should().Be(120.7);
+        gpu.Index.Should().Be(expected: 2);
+        gpu.Name.Should().Be(expected: "NVIDIA GeForce RTX 4090");
+        gpu.D3D.Should().Be(expected: 45.5);
+        gpu.Decode.Should().Be(expected: 10.0);
+        gpu.Core.Should().Be(expected: 55.5);
+        gpu.Memory.Should().Be(expected: 33.3);
+        gpu.Encode.Should().Be(expected: 5.0);
+        gpu.Power.Should().Be(expected: 120.7);
     }
 
     [Fact]
@@ -97,6 +97,6 @@ public class GpuTests
         Gpu gpu = new();
 
         gpu.Name.Should()
-            .Be(string.Empty, "a missing name must never surface as null in the API DTO");
+            .Be(expected: string.Empty, because: "a missing name must never surface as null in the API DTO");
     }
 }

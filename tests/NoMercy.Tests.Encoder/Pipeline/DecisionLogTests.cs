@@ -19,33 +19,33 @@ public class ScopedDecisionLogTests
     public void Snapshot_returns_entries_in_insertion_order()
     {
         ScopedDecisionLog log = new();
-        log.Add(new("analyze", "analyze.dv_present", "msg-1"));
+        log.Add(entry: new(Stage: "analyze", Key: "analyze.dv_present", Message: "msg-1"));
         log.Add(
-            new(
-                "plan",
-                "plan.encoder_resolved",
-                "msg-2",
-                new { encoder = "h264_nvenc" }
+            entry: new(
+                Stage: "plan",
+                Key: "plan.encoder_resolved",
+                Message: "msg-2",
+                Data: new { encoder = "h264_nvenc" }
             )
         );
 
         IReadOnlyList<DecisionLog> snapshot = log.Snapshot();
 
-        snapshot.Should().HaveCount(2);
-        snapshot[0].Stage.Should().Be("analyze");
-        snapshot[0].Key.Should().Be("analyze.dv_present");
-        snapshot[1].Stage.Should().Be("plan");
-        snapshot[1].Data.Should().NotBeNull();
+        snapshot.Should().HaveCount(expected: 2);
+        snapshot[index: 0].Stage.Should().Be(expected: "analyze");
+        snapshot[index: 0].Key.Should().Be(expected: "analyze.dv_present");
+        snapshot[index: 1].Stage.Should().Be(expected: "plan");
+        snapshot[index: 1].Data.Should().NotBeNull();
     }
 
     [Fact]
     public void Snapshot_returns_independent_copy_safe_to_iterate_during_concurrent_add()
     {
         ScopedDecisionLog log = new();
-        log.Add(new("analyze", "analyze.first", "first"));
+        log.Add(entry: new(Stage: "analyze", Key: "analyze.first", Message: "first"));
 
         IReadOnlyList<DecisionLog> snap = log.Snapshot();
-        log.Add(new("analyze", "analyze.second", "second"));
+        log.Add(entry: new(Stage: "analyze", Key: "analyze.second", Message: "second"));
 
         snap.Should().ContainSingle();
     }
@@ -55,9 +55,9 @@ public class ScopedDecisionLogTests
     {
         ScopedDecisionLog log = new();
 
-        Parallel.For(0, 1000, i => log.Add(new("test", $"test.{i}", $"entry-{i}")));
+        Parallel.For(fromInclusive: 0, toExclusive: 1000, body: i => log.Add(entry: new(Stage: "test", Key: $"test.{i}", Message: $"entry-{i}")));
 
-        log.Snapshot().Should().HaveCount(1000);
+        log.Snapshot().Should().HaveCount(expected: 1000);
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class ScopedDecisionLogTests
 
         ctx.DecisionsOrNoOp.Should().NotBeNull();
         // No-op sink swallows entries silently.
-        ctx.DecisionsOrNoOp.Add(new("test", "test.x", "ignored"));
+        ctx.DecisionsOrNoOp.Add(entry: new(Stage: "test", Key: "test.x", Message: "ignored"));
         ctx.DecisionsOrNoOp.Snapshot().Should().BeEmpty();
     }
 

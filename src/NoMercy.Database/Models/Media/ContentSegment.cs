@@ -36,33 +36,33 @@ public enum ContentSegmentType
 /// Either <see cref="EpisodeId"/> or <see cref="MovieId"/> is set, never
 /// both.
 /// </summary>
-[PrimaryKey(nameof(Id))]
-[Index(nameof(EpisodeId))]
-[Index(nameof(MovieId))]
-[Index(nameof(EpisodeId), nameof(SegmentType))]
+[PrimaryKey(propertyName: nameof(Id))]
+[Index(propertyName: nameof(EpisodeId))]
+[Index(propertyName: nameof(MovieId))]
+[Index(propertyName: nameof(EpisodeId), additionalPropertyNames: nameof(SegmentType))]
 public class ContentSegment
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.None)]
-    [JsonProperty("id")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
+    [JsonProperty(propertyName: "id")]
     public Ulid Id { get; set; } = Ulid.NewUlid();
 
-    [JsonProperty("episode_id")]
+    [JsonProperty(propertyName: "episode_id")]
     public int? EpisodeId { get; set; }
     public Episode? Episode { get; set; }
 
-    [JsonProperty("movie_id")]
+    [JsonProperty(propertyName: "movie_id")]
     public int? MovieId { get; set; }
     public Movie? Movie { get; set; }
 
-    [JsonProperty("segment_type")]
+    [JsonProperty(propertyName: "segment_type")]
     public ContentSegmentType SegmentType { get; set; }
 
     /// <summary>Segment start in seconds from the source timeline.</summary>
-    [JsonProperty("start_seconds")]
+    [JsonProperty(propertyName: "start_seconds")]
     public double StartSeconds { get; set; }
 
     /// <summary>Segment end (exclusive) in seconds.</summary>
-    [JsonProperty("end_seconds")]
+    [JsonProperty(propertyName: "end_seconds")]
     public double EndSeconds { get; set; }
 
     /// <summary>
@@ -70,20 +70,20 @@ public class ContentSegment
     /// auto-detection, "manual" for dashboard overrides, "import" for
     /// community-provided data.
     /// </summary>
-    [JsonProperty("source")]
-    [MaxLength(32)]
+    [JsonProperty(propertyName: "source")]
+    [MaxLength(length: 32)]
     public string Source { get; set; } = "detector";
 
     /// <summary>
     /// Detector confidence in [0, 1]. Always 1.0 for manual entries.
     /// Useful for filtering noisy detections in the player UI.
     /// </summary>
-    [JsonProperty("confidence")]
+    [JsonProperty(propertyName: "confidence")]
     public double Confidence { get; set; } = 1.0;
 
-    [JsonProperty("created_at")]
+    [JsonProperty(propertyName: "created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    [JsonProperty("updated_at")]
+    [JsonProperty(propertyName: "updated_at")]
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

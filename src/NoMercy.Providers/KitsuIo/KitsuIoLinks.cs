@@ -15,9 +15,9 @@ namespace NoMercy.Providers.KitsuIo;
 
 public class KitsuIoLinks
 {
-    [JsonProperty("first")]
+    [JsonProperty(propertyName: "first")]
     public Uri First { get; set; } = default!;
 
-    [JsonProperty("last")]
+    [JsonProperty(propertyName: "last")]
     public Uri Last { get; set; } = default!;
 }

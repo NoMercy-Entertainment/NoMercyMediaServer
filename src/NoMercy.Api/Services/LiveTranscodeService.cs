@@ -49,14 +49,14 @@ public class LiveTranscodeService(
 {
     // How long a segment request blocks waiting for the encoder to produce the
     // requested (on-demand) segment before giving up, and how often it rechecks.
-    private static readonly TimeSpan SegmentWaitTimeout = TimeSpan.FromSeconds(20);
-    private static readonly TimeSpan SegmentPollInterval = TimeSpan.FromMilliseconds(200);
+    private static readonly TimeSpan SegmentWaitTimeout = TimeSpan.FromSeconds(seconds: 20);
+    private static readonly TimeSpan SegmentPollInterval = TimeSpan.FromMilliseconds(milliseconds: 200);
 
     public IReadOnlyList<LiveSessionDto> ListSessions()
     {
         IReadOnlyList<LiveSessionSnapshot> snapshots = streamingService.GetActiveSessions();
         return snapshots
-            .Select(s => new LiveSessionDto(
+            .Select(selector: s => new LiveSessionDto(
                 SessionId: s.SessionId,
                 State: s.State.ToString(),
                 QualityId: s.QualityId,
@@ -80,40 +80,40 @@ public class LiveTranscodeService(
         CancellationToken ct
     )
     {
-        if (string.IsNullOrWhiteSpace(request.VideoFileId))
-            return LiveResult.BadRequest("video_file_id is required");
+        if (string.IsNullOrWhiteSpace(value: request.VideoFileId))
+            return LiveResult.BadRequest(message: "video_file_id is required");
 
         if (request.ClientCaps is null)
-            return LiveResult.BadRequest("client_caps is required");
+            return LiveResult.BadRequest(message: "client_caps is required");
 
-        if (!Ulid.TryParse(request.VideoFileId, out Ulid videoFileId))
-            return LiveResult.BadRequest("video_file_id is not a valid identifier");
+        if (!Ulid.TryParse(base32: request.VideoFileId, ulid: out Ulid videoFileId))
+            return LiveResult.BadRequest(message: "video_file_id is not a valid identifier");
 
-        await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+        await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
         AuthorizedFile? resolved = await ResolveAuthorizedFileAsync(
-            context,
-            videoFileId,
-            userId,
-            ct
+            context: context,
+            videoFileId: videoFileId,
+            userId: userId,
+            ct: ct
         );
         if (resolved is null)
-            return LiveResult.NotFound("Video file not found or you lack access");
+            return LiveResult.NotFound(message: "Video file not found or you lack access");
 
         // Reconcile accounting against the live runtimes first: a crashed FFmpeg or
         // an abandoned tab can leave a session counted against the cap after its
         // runtime is gone — the "0 active but max reached" symptom.
-        sessionManager.PruneDeadSessions(streamingService.ActiveSessionIds);
+        sessionManager.PruneDeadSessions(aliveSessionIds: streamingService.ActiveSessionIds);
 
-        if (!sessionManager.CanStartSession(userId.ToString()))
+        if (!sessionManager.CanStartSession(userId: userId.ToString()))
         {
             // Still at the cap with live sessions. Starting playback abandons the
             // previous stream without a clean stop (a reload or item switch), so
             // evict this user's stalest session to make room — the same way Plex and
             // Jellyfin supersede a replaced playback session rather than refusing.
-            await EvictStalestUserSessionAsync(userId.ToString());
+            await EvictStalestUserSessionAsync(userId: userId.ToString());
 
-            if (!sessionManager.CanStartSession(userId.ToString()))
-                return LiveResult.ServiceUnavailable("Maximum concurrent live sessions reached");
+            if (!sessionManager.CanStartSession(userId: userId.ToString()))
+                return LiveResult.ServiceUnavailable(message: "Maximum concurrent live sessions reached");
         }
 
         // The source codec is what drives the direct-play-vs-transcode decision, and
@@ -128,22 +128,22 @@ public class LiveTranscodeService(
         try
         {
             mediaInfo = await mediaAnalyzer.AnalyzeAsync(
-                resolved.InputPath,
-                resolved.ExtraInputArgs,
-                ct
+                filePath: resolved.InputPath,
+                extraInputArgs: resolved.ExtraInputArgs,
+                ct: ct
             );
         }
         catch (Exception ex)
         {
             logger.LogWarning(
-                ex,
-                "Live analyze failed for {VideoFileId}; falling back to direct-play of the static source",
-                videoFileId
+                exception: ex,
+                message: "Live analyze failed for {VideoFileId}; falling back to direct-play of the static source",
+                args: videoFileId
             );
             return DirectPlayResult(
-                videoFileId,
-                resolved.File,
-                "Source could not be analyzed; serving the original file"
+                videoFileId: videoFileId,
+                file: resolved.File,
+                reason: "Source could not be analyzed; serving the original file"
             );
         }
 
@@ -151,39 +151,36 @@ public class LiveTranscodeService(
         if (deviceId is not null)
         {
             deviceCaps =
-                capabilityRegistry.Get(deviceId)
-                ?? await capabilityRegistry.LoadFromDbAsync(deviceId, ct);
+                capabilityRegistry.Get(deviceId: deviceId)
+                ?? await capabilityRegistry.LoadFromDbAsync(deviceId: deviceId, ct: ct);
         }
 
         ClientCapabilities clientCaps = variantSelector.ApplyDeviceCaps(
-            ToClientCapabilities(request.ClientCaps),
-            deviceCaps
+            client: ToClientCapabilities(dto: request.ClientCaps),
+            deviceCaps: deviceCaps
         );
 
         if (deviceCaps is not null)
             logger.LogInformation(
-                "Live session for device {DeviceId}: caps channels={Ch} ramTier={Tier}",
-                deviceId,
-                deviceCaps.MaxAudioChannels,
-                deviceCaps.RamTier
+                message: "Live session for device {DeviceId}: caps channels={Ch} ramTier={Tier}", args: [deviceId, deviceCaps.MaxAudioChannels, deviceCaps.RamTier]
             );
 
         PlaybackDecision playbackDecision;
         try
         {
-            playbackDecision = decisionEngine.Decide(mediaInfo, clientCaps);
+            playbackDecision = decisionEngine.Decide(media: mediaInfo, client: clientCaps);
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "PlaybackDecisionEngine.Decide threw; falling back to transcode");
-            playbackDecision = new(PlaybackAction.TranscodeVideo, "Decision engine error", null);
+            logger.LogWarning(exception: ex, message: "PlaybackDecisionEngine.Decide threw; falling back to transcode");
+            playbackDecision = new(Action: PlaybackAction.TranscodeVideo, Reason: "Decision engine error", DirectStreamUrl: null);
         }
 
         if (playbackDecision.Action == PlaybackAction.DirectPlay)
             return DirectPlayResult(
-                videoFileId,
-                resolved.File,
-                "File is compatible with client capabilities"
+                videoFileId: videoFileId,
+                file: resolved.File,
+                reason: "File is compatible with client capabilities"
             );
 
         // The client picks the audio track from the episode's own language list and
@@ -198,8 +195,8 @@ public class LiveTranscodeService(
         // master playlist points the player at those renditions — instant switching,
         // no audio re-encode.
         List<LiveAudioRendition> fileRenditions = BuildAudioRenditions(
-            resolved.File,
-            preferredLanguages[0]
+            file: resolved.File,
+            preferred: preferredLanguages[index: 0]
         );
         bool useFileRenditions = fileRenditions.Count > 0;
 
@@ -209,13 +206,13 @@ public class LiveTranscodeService(
         // when the source has no renditions AND has audio streams to expose.
         bool rawMultiAudio = !useFileRenditions && mediaInfo.AudioStreams.Count > 0;
 
-        int audioStreamIndex = LiveAudioSelector.Select(mediaInfo.AudioStreams, preferredLanguages);
+        int audioStreamIndex = LiveAudioSelector.Select(audioStreams: mediaInfo.AudioStreams, preferredIso6391: preferredLanguages);
 
         LiveEncodeRequest liveRequest = new(
             InputPath: resolved.InputPath,
             CachedInfo: mediaInfo,
             Client: clientCaps,
-            StartPosition: TimeSpan.FromSeconds(Math.Max(0, request.StartTimeSeconds)),
+            StartPosition: TimeSpan.FromSeconds(value: Math.Max(val1: 0, val2: request.StartTimeSeconds)),
             PreferredQuality: request.PreferredQuality,
             ExtraInputArgs: resolved.ExtraInputArgs,
             AudioStreamIndex: audioStreamIndex,
@@ -228,24 +225,24 @@ public class LiveTranscodeService(
         ILiveSession session;
         try
         {
-            session = await liveEncoder.StartAsync(liveRequest, ct);
+            session = await liveEncoder.StartAsync(request: liveRequest, ct: ct);
         }
         catch (EncoderRuntimeException ex)
         {
-            return LiveResult.Encoder(ex.HttpStatusCode, ex.Shape);
+            return LiveResult.Encoder(statusCode: ex.HttpStatusCode, shape: ex.Shape);
         }
         catch (InvalidOperationException ex)
         {
-            return LiveResult.ServiceUnavailable(ex.Message);
+            return LiveResult.ServiceUnavailable(message: ex.Message);
         }
 
-        sessionManager.RegisterSession(session, userId.ToString());
+        sessionManager.RegisterSession(session: session, userId: userId.ToString());
 
         // Tie the self-ingest key to the session so it dies on teardown, not just
         // on its absolute-lifetime backstop. Null for local/disc sources that read
         // straight off the filesystem and never touch the HTTP serving port.
         if (resolved.IngestKey is not null)
-            ingestKeyStore.BindSession(resolved.IngestKey, session.SessionId);
+            ingestKeyStore.BindSession(key: resolved.IngestKey, sessionId: session.SessionId);
 
         // Assemble the master's audio list: the file's own renditions when it has
         // them, otherwise a per-language live audio child for a raw source. Either
@@ -255,23 +252,23 @@ public class LiveTranscodeService(
             useFileRenditions ? fileRenditions
             : rawMultiAudio
                 ? await StartAudioChildrenAsync(
-                    session.SessionId,
-                    liveRequest,
-                    mediaInfo.AudioStreams,
-                    audioStreamIndex,
-                    ct
+                    parentSessionId: session.SessionId,
+                    baseRequest: liveRequest,
+                    audioStreams: mediaInfo.AudioStreams,
+                    defaultAudioIndex: audioStreamIndex,
+                    ct: ct
                 )
             : [];
         bool useMaster = masterRenditions.Count > 0;
 
         if (useMaster)
-            streamingService.StampAudioRenditions(session.SessionId, masterRenditions);
+            streamingService.StampAudioRenditions(sessionId: session.SessionId, renditions: masterRenditions);
 
         string playlistUrl = useMaster
             ? $"/api/v1/streaming/live/sessions/{session.SessionId}/master.m3u8"
             : $"/api/v1/streaming/live/sessions/{session.SessionId}/playlist.m3u8";
         LiveQuality quality = session.CurrentQuality;
-        DateTime expiresAt = DateTime.UtcNow.AddMinutes(sessionLimits.IdleTimeoutMinutes);
+        DateTime expiresAt = DateTime.UtcNow.AddMinutes(value: sessionLimits.IdleTimeoutMinutes);
         SelectedVariantDto selectedVariant = new(
             Codec: quality.Codec.ToString(),
             Width: quality.Width,
@@ -280,7 +277,7 @@ public class LiveTranscodeService(
         );
 
         return LiveResult.Ok(
-            new StartLiveSessionResponse(session.SessionId, playlistUrl, quality.Id, quality.Label)
+            payload: new StartLiveSessionResponse(SessionId: session.SessionId, PlaylistUrl: playlistUrl, QualityId: quality.Id, QualityLabel: quality.Label)
             {
                 SelectedVariant = selectedVariant,
                 ExpiresAt = expiresAt,
@@ -290,8 +287,8 @@ public class LiveTranscodeService(
 
     public LiveResult GetMasterPlaylist(string sessionId)
     {
-        if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
-            return SessionGoneOrNotFound(sessionId);
+        if (!streamingService.TryGetRuntime(sessionId: sessionId, runtime: out LiveRuntimeSession runtime))
+            return SessionGoneOrNotFound(sessionId: sessionId);
 
         runtime.TouchLastAccess();
         LiveQuality quality = runtime.Session.CurrentQuality;
@@ -305,14 +302,14 @@ public class LiveTranscodeService(
             BitrateKbps: quality.BitrateKbps,
             AudioRenditions: runtime.AudioRenditions
         );
-        string master = playlistBuilder.BuildMaster(request);
-        return LiveResult.Ok(master);
+        string master = playlistBuilder.BuildMaster(request: request);
+        return LiveResult.Ok(payload: master);
     }
 
     public LiveResult GetPlaylist(string sessionId)
     {
-        if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
-            return SessionGoneOrNotFound(sessionId);
+        if (!streamingService.TryGetRuntime(sessionId: sessionId, runtime: out LiveRuntimeSession runtime))
+            return SessionGoneOrNotFound(sessionId: sessionId);
 
         runtime.TouchLastAccess();
         string segmentUrlTemplate =
@@ -325,8 +322,8 @@ public class LiveTranscodeService(
             SegmentUrlTemplate: segmentUrlTemplate,
             TotalDuration: runtime.CachedMediaInfo?.Duration
         );
-        string playlist = playlistBuilder.Build(request);
-        return LiveResult.Ok(playlist);
+        string playlist = playlistBuilder.Build(request: request);
+        return LiveResult.Ok(payload: playlist);
     }
 
     public async Task<LiveResult> GetSegmentAsync(
@@ -336,8 +333,8 @@ public class LiveTranscodeService(
         CancellationToken ct
     )
     {
-        if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
-            return SessionGoneOrNotFound(sessionId);
+        if (!streamingService.TryGetRuntime(sessionId: sessionId, runtime: out LiveRuntimeSession runtime))
+            return SessionGoneOrNotFound(sessionId: sessionId);
 
         // No stale-epoch gate: the client holds one cached whole-runtime VOD
         // playlist whose segment URLs are minted once. A seek repositions the
@@ -361,7 +358,7 @@ public class LiveTranscodeService(
                 ? runtime.TargetSegmentDuration.TotalSeconds
                 : 6;
         runtime.Session.ReportPlaybackPosition(
-            TimeSpan.FromSeconds(index * segmentSeconds),
+            position: TimeSpan.FromSeconds(value: index * segmentSeconds),
             authoritative: false
         );
 
@@ -378,27 +375,27 @@ public class LiveTranscodeService(
         // drainer re-indexes them — serving from disk decouples delivery from that
         // bookkeeping so a produced segment is never withheld.
         string? diskPath = runtime.ScratchDirectory is { Length: > 0 } scratch
-            ? storage.CombinePath(scratch, $"seg_{index:D5}.ts")
+            ? storage.CombinePath(parent: scratch, child: $"seg_{index:D5}.ts")
             : null;
 
-        DateTime deadline = DateTime.UtcNow.Add(SegmentWaitTimeout);
+        DateTime deadline = DateTime.UtcNow.Add(value: SegmentWaitTimeout);
         while (true)
         {
             if (
-                runtime.TryGetSegment(index, out Segment segment)
-                && storage.Exists(segment.FilePath)
+                runtime.TryGetSegment(index: index, segment: out Segment segment)
+                && storage.Exists(path: segment.FilePath)
             )
             {
                 runtime.TouchLastAccess();
-                Stream stream = storage.OpenRead(segment.FilePath);
-                return LiveResult.Ok(stream);
+                Stream stream = storage.OpenRead(path: segment.FilePath);
+                return LiveResult.Ok(payload: stream);
             }
 
-            if (diskPath is not null && storage.Exists(diskPath))
+            if (diskPath is not null && storage.Exists(path: diskPath))
             {
                 runtime.TouchLastAccess();
-                Stream stream = storage.OpenRead(diskPath);
-                return LiveResult.Ok(stream);
+                Stream stream = storage.OpenRead(path: diskPath);
+                return LiveResult.Ok(payload: stream);
             }
 
             // The client is asking for a segment the encoder has not produced. If
@@ -410,15 +407,15 @@ public class LiveTranscodeService(
                 runtime.Session.Resume();
 
             if (ct.IsCancellationRequested || DateTime.UtcNow >= deadline)
-                return LiveResult.NotFound($"Segment {index} is not ready yet");
+                return LiveResult.NotFound(message: $"Segment {index} is not ready yet");
 
             try
             {
-                await Task.Delay(SegmentPollInterval, ct);
+                await Task.Delay(delay: SegmentPollInterval, cancellationToken: ct);
             }
             catch (OperationCanceledException)
             {
-                return LiveResult.NotFound($"Segment {index} is not ready yet");
+                return LiveResult.NotFound(message: $"Segment {index} is not ready yet");
             }
 
             runtime.TouchLastAccess();
@@ -427,34 +424,34 @@ public class LiveTranscodeService(
 
     public LiveResult ReportPosition(string sessionId, ReportPositionRequest request)
     {
-        if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
-            return SessionGoneOrNotFound(sessionId);
+        if (!streamingService.TryGetRuntime(sessionId: sessionId, runtime: out LiveRuntimeSession runtime))
+            return SessionGoneOrNotFound(sessionId: sessionId);
 
-        double clampedSeconds = Math.Max(0, request.TimeSeconds);
+        double clampedSeconds = Math.Max(val1: 0, val2: request.TimeSeconds);
         runtime.Session.ReportPlaybackPosition(
-            TimeSpan.FromSeconds(clampedSeconds),
+            position: TimeSpan.FromSeconds(value: clampedSeconds),
             authoritative: true
         );
         bool isPaused = runtime.Session.State == LiveSessionState.Buffered;
-        return LiveResult.Ok(new ReportPositionResponse(clampedSeconds, isPaused));
+        return LiveResult.Ok(payload: new ReportPositionResponse(PositionSeconds: clampedSeconds, IsPaused: isPaused));
     }
 
     public LiveResult ReportBufferHealth(string sessionId, ReportBufferHealthRequest request)
     {
-        if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
-            return SessionGoneOrNotFound(sessionId);
+        if (!streamingService.TryGetRuntime(sessionId: sessionId, runtime: out LiveRuntimeSession runtime))
+            return SessionGoneOrNotFound(sessionId: sessionId);
 
-        double clampedBufferedSeconds = Math.Max(0, request.BufferedSeconds);
-        double clampedBandwidthKbps = Math.Max(0, request.ObservedBandwidthKbps);
+        double clampedBufferedSeconds = Math.Max(val1: 0, val2: request.BufferedSeconds);
+        double clampedBandwidthKbps = Math.Max(val1: 0, val2: request.ObservedBandwidthKbps);
 
         runtime.Session.ReportClientBufferHealth(
-            TimeSpan.FromSeconds(clampedBufferedSeconds),
-            (int)clampedBandwidthKbps
+            bufferedAhead: TimeSpan.FromSeconds(value: clampedBufferedSeconds),
+            observedBandwidthKbps: (int)clampedBandwidthKbps
         );
         runtime.TouchLastAccess();
 
         return LiveResult.Ok(
-            new ReportBufferHealthResponse(clampedBufferedSeconds, clampedBandwidthKbps)
+            payload: new ReportBufferHealthResponse(BufferedSeconds: clampedBufferedSeconds, ObservedBandwidthKbps: clampedBandwidthKbps)
         );
     }
 
@@ -464,44 +461,44 @@ public class LiveTranscodeService(
         CancellationToken ct
     )
     {
-        if (string.IsNullOrWhiteSpace(request.QualityId))
-            return LiveResult.BadRequest("quality_id is required");
+        if (string.IsNullOrWhiteSpace(value: request.QualityId))
+            return LiveResult.BadRequest(message: "quality_id is required");
 
-        if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
-            return SessionGoneOrNotFound(sessionId);
+        if (!streamingService.TryGetRuntime(sessionId: sessionId, runtime: out LiveRuntimeSession runtime))
+            return SessionGoneOrNotFound(sessionId: sessionId);
 
         if (runtime.CachedMediaInfo is null || runtime.ClientCapabilities is null)
             return LiveResult.ServiceUnavailable(
-                "Session context not available for quality change"
+                message: "Session context not available for quality change"
             );
 
         LiveQuality[] available = qualitySelector.GetAvailableQualities(
-            runtime.CachedMediaInfo,
-            runtime.ClientCapabilities,
-            speedIndex,
-            budget
+            input: runtime.CachedMediaInfo,
+            client: runtime.ClientCapabilities,
+            speeds: speedIndex,
+            budget: budget
         );
-        LiveQuality? newQuality = available.FirstOrDefault(q => q.Id == request.QualityId);
+        LiveQuality? newQuality = available.FirstOrDefault(predicate: q => q.Id == request.QualityId);
         if (newQuality is null)
             return LiveResult.NotFound(
-                $"Quality '{request.QualityId}' is not available for this session"
+                message: $"Quality '{request.QualityId}' is not available for this session"
             );
 
-        await runtime.Session.ChangeQualityAsync(request.QualityId, newQuality, ct);
+        await runtime.Session.ChangeQualityAsync(qualityId: request.QualityId, newQuality: newQuality, ct: ct);
         runtime.TouchLastAccess();
 
         await PushIfTransportAsync(
-                sessionId,
-                new QualityChangedMessage(
+                sessionId: sessionId,
+                message: new QualityChangedMessage(
                     NewQuality: newQuality,
                     Reason: QualityChangeReason.UserRequested,
                     SeekEpoch: runtime.CurrentEpoch
                 ),
-                ct
+                ct: ct
             )
-            .ConfigureAwait(false);
+            .ConfigureAwait(continueOnCapturedContext: false);
 
-        return LiveResult.Ok(new ChangeQualityResponse(newQuality.Id, newQuality.Label));
+        return LiveResult.Ok(payload: new ChangeQualityResponse(QualityId: newQuality.Id, QualityLabel: newQuality.Label));
     }
 
     public async Task<LiveResult> SeekAsync(
@@ -510,11 +507,11 @@ public class LiveTranscodeService(
         CancellationToken ct
     )
     {
-        if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
-            return SessionGoneOrNotFound(sessionId);
+        if (!streamingService.TryGetRuntime(sessionId: sessionId, runtime: out LiveRuntimeSession runtime))
+            return SessionGoneOrNotFound(sessionId: sessionId);
 
-        double clampedSeconds = Math.Max(0, request.PositionSeconds);
-        int targetIndex = SegmentIndexAt(runtime, clampedSeconds);
+        double clampedSeconds = Math.Max(val1: 0, val2: request.PositionSeconds);
+        int targetIndex = SegmentIndexAt(runtime: runtime, positionSeconds: clampedSeconds);
 
         // Fast seek. The target segment has already been transcoded, so the client
         // can pull it over HTTP immediately. Re-spawning ffmpeg at the target would
@@ -529,29 +526,29 @@ public class LiveTranscodeService(
         // after the first would re-encode content already sitting on disk. A target
         // that is genuinely absent — a forward jump past everything transcoded, or a
         // gap left by an earlier jump — falls through to a real re-spawn below.
-        if (SegmentAlreadyTranscoded(runtime, targetIndex))
+        if (SegmentAlreadyTranscoded(runtime: runtime, index: targetIndex))
         {
             runtime.Session.ReportPlaybackPosition(
-                TimeSpan.FromSeconds(clampedSeconds),
+                position: TimeSpan.FromSeconds(value: clampedSeconds),
                 authoritative: true
             );
             runtime.TouchLastAccess();
 
             await PushIfTransportAsync(
-                    sessionId,
-                    new SeekCompletedMessage(
+                    sessionId: sessionId,
+                    message: new SeekCompletedMessage(
                         NewPositionSeconds: clampedSeconds,
                         FirstSegmentIndex: targetIndex,
                         SeekEpoch: runtime.CurrentEpoch
                     ),
-                    ct
+                    ct: ct
                 )
-                .ConfigureAwait(false);
+                .ConfigureAwait(continueOnCapturedContext: false);
 
-            return LiveResult.Ok(new SeekResponse(clampedSeconds));
+            return LiveResult.Ok(payload: new SeekResponse(PositionSeconds: clampedSeconds));
         }
 
-        await runtime.Session.SeekAsync(TimeSpan.FromSeconds(clampedSeconds), ct);
+        await runtime.Session.SeekAsync(position: TimeSpan.FromSeconds(value: clampedSeconds), ct: ct);
         runtime.TouchLastAccess();
 
         // targetIndex, not HighestSegmentIndex + 1: the runtime buffer is no
@@ -561,17 +558,17 @@ public class LiveTranscodeService(
         // LiveGapPlanner) actually targets and the client should fetch next.
         int firstSegmentIndex = targetIndex;
         await PushIfTransportAsync(
-                sessionId,
-                new SeekCompletedMessage(
+                sessionId: sessionId,
+                message: new SeekCompletedMessage(
                     NewPositionSeconds: clampedSeconds,
                     FirstSegmentIndex: firstSegmentIndex,
                     SeekEpoch: runtime.CurrentEpoch
                 ),
-                ct
+                ct: ct
             )
-            .ConfigureAwait(false);
+            .ConfigureAwait(continueOnCapturedContext: false);
 
-        return LiveResult.Ok(new SeekResponse(clampedSeconds));
+        return LiveResult.Ok(payload: new SeekResponse(PositionSeconds: clampedSeconds));
     }
 
     // Absolute HLS segment index a wall-clock position maps to. Mirrors the
@@ -593,36 +590,36 @@ public class LiveTranscodeService(
     // when the client is guaranteed to get the segment without one.
     private bool SegmentAlreadyTranscoded(LiveRuntimeSession runtime, int index)
     {
-        if (runtime.TryGetSegment(index, out Segment buffered) && storage.Exists(buffered.FilePath))
+        if (runtime.TryGetSegment(index: index, segment: out Segment buffered) && storage.Exists(path: buffered.FilePath))
             return true;
 
         return runtime.ScratchDirectory is { Length: > 0 } scratch
-            && storage.Exists(storage.CombinePath(scratch, $"seg_{index:D5}.ts"));
+            && storage.Exists(path: storage.CombinePath(parent: scratch, child: $"seg_{index:D5}.ts"));
     }
 
     public async Task EndSessionAsync(string sessionId, CancellationToken ct)
     {
         await PushIfTransportAsync(
-                sessionId,
-                new SessionEndedMessage(Reason: SessionEndReason.ClientDisconnected),
-                ct
+                sessionId: sessionId,
+                message: new SessionEndedMessage(Reason: SessionEndReason.ClientDisconnected),
+                ct: ct
             )
-            .ConfigureAwait(false);
+            .ConfigureAwait(continueOnCapturedContext: false);
 
         // LiveStreamingService.RemoveAsync now owns the complete teardown
         // (runtime disposal + session-manager removal + tombstone) atomically,
         // so callers no longer need a separate RemoveSession call.
-        await streamingService.RemoveAsync(sessionId);
+        await streamingService.RemoveAsync(sessionId: sessionId);
 
         // Kill the file's self-ingest key the moment the session ends so no
         // spent key survives on its absolute-lifetime backstop.
-        ingestKeyStore.RevokeSession(sessionId);
+        ingestKeyStore.RevokeSession(sessionId: sessionId);
     }
 
     private LiveResult SessionGoneOrNotFound(string sessionId) =>
-        streamingService.WasRecentlyRemoved(sessionId)
-            ? LiveResult.Gone("Live session has ended or expired")
-            : LiveResult.NotFound("Live session not found");
+        streamingService.WasRecentlyRemoved(sessionId: sessionId)
+            ? LiveResult.Gone(message: "Live session has ended or expired")
+            : LiveResult.NotFound(message: "Live session not found");
 
     private async Task PushIfTransportAsync(string sessionId, object message, CancellationToken ct)
     {
@@ -631,15 +628,13 @@ public class LiveTranscodeService(
 
         try
         {
-            await transport.SendToClientAsync(sessionId, message, ct).ConfigureAwait(false);
+            await transport.SendToClientAsync(sessionId: sessionId, message: message, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
         }
         catch (Exception ex)
         {
             logger.LogDebug(
-                ex,
-                "Transport push failed for {Event} on session {SessionId}",
-                message.GetType().Name,
-                sessionId
+                exception: ex,
+                message: "Transport push failed for {Event} on session {SessionId}", args: [message.GetType().Name, sessionId]
             );
         }
     }
@@ -676,9 +671,9 @@ public class LiveTranscodeService(
     private static List<LiveAudioRendition> BuildAudioRenditions(VideoFile file, string preferred)
     {
         List<IAudio> tracks =
-            file.Metadata?.Audio?.Where(a =>
-                    !string.IsNullOrWhiteSpace(a.FileName)
-                    && a.FileName.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase)
+            file.Metadata?.Audio?.Where(predicate: a =>
+                    !string.IsNullOrWhiteSpace(value: a.FileName)
+                    && a.FileName.EndsWith(value: ".m3u8", comparisonType: StringComparison.OrdinalIgnoreCase)
                 )
                 .ToList()
             ?? [];
@@ -686,8 +681,8 @@ public class LiveTranscodeService(
         if (tracks.Count == 0)
             return [];
 
-        int defaultIndex = tracks.FindIndex(a =>
-            LiveAudioSelector.LanguageMatches(a.Language, preferred)
+        int defaultIndex = tracks.FindIndex(match: a =>
+            LiveAudioSelector.LanguageMatches(streamLanguage: a.Language, preferredIso6391: preferred)
         );
         if (defaultIndex < 0)
             defaultIndex = 0;
@@ -695,10 +690,10 @@ public class LiveTranscodeService(
         string baseFolder = $"/{file.Share}{file.Folder}";
         return tracks
             .Select(
-                (a, index) =>
+                selector: (a, index) =>
                     new LiveAudioRendition(
                         Language: a.Language,
-                        Uri: EncodeServedPath($"{baseFolder}{a.FileName}"),
+                        Uri: EncodeServedPath(path: $"{baseFolder}{a.FileName}"),
                         IsDefault: index == defaultIndex
                     )
             )
@@ -708,7 +703,7 @@ public class LiveTranscodeService(
     // Percent-encode each path segment (spaces, commas, apostrophes) while keeping
     // the '/' separators DynamicStaticFilesMiddleware splits on and unescapes.
     private static string EncodeServedPath(string path) =>
-        string.Join('/', path.Split('/').Select(Uri.EscapeDataString));
+        string.Join(separator: '/', values: path.Split(separator: '/').Select(selector: Uri.EscapeDataString));
 
     // Spawn one audio-only transcode per source language for a raw source, and
     // return the master's audio list pointing at each child's media playlist. The
@@ -735,30 +730,28 @@ public class LiveTranscodeService(
             ILiveSession child;
             try
             {
-                child = await liveEncoder.StartAudioRenditionAsync(childRequest, ct);
+                child = await liveEncoder.StartAudioRenditionAsync(request: childRequest, ct: ct);
             }
             catch (Exception ex)
             {
                 logger.LogWarning(
-                    ex,
-                    "Failed to start live audio child for stream 0:a:{Index} of session {SessionId}",
-                    index,
-                    parentSessionId
+                    exception: ex,
+                    message: "Failed to start live audio child for stream 0:a:{Index} of session {SessionId}", args: [index, parentSessionId]
                 );
                 continue;
             }
 
-            childSessionIds.Add(child.SessionId);
+            childSessionIds.Add(item: child.SessionId);
             renditions.Add(
-                new LiveAudioRendition(
-                    Language: audioStreams[index].Language ?? "und",
+                item: new LiveAudioRendition(
+                    Language: audioStreams[index: index].Language ?? "und",
                     Uri: $"/api/v1/streaming/live/sessions/{child.SessionId}/playlist.m3u8",
                     IsDefault: index == defaultAudioIndex
                 )
             );
         }
 
-        streamingService.StampChildAudioSessions(parentSessionId, childSessionIds);
+        streamingService.StampChildAudioSessions(sessionId: parentSessionId, childSessionIds: childSessionIds);
         return renditions;
     }
 
@@ -771,11 +764,11 @@ public class LiveTranscodeService(
         string? stalestId = null;
         DateTime stalestAccess = DateTime.MaxValue;
 
-        foreach (string sessionId in sessionManager.GetUserSessionIds(userId))
+        foreach (string sessionId in sessionManager.GetUserSessionIds(userId: userId))
         {
-            if (!streamingService.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
+            if (!streamingService.TryGetRuntime(sessionId: sessionId, runtime: out LiveRuntimeSession runtime))
             {
-                sessionManager.RemoveSession(sessionId);
+                sessionManager.RemoveSession(sessionId: sessionId);
                 continue;
             }
 
@@ -787,15 +780,15 @@ public class LiveTranscodeService(
         }
 
         if (stalestId is not null)
-            await streamingService.RemoveAsync(stalestId);
+            await streamingService.RemoveAsync(sessionId: stalestId);
     }
 
     private LiveResult DirectPlayResult(Ulid videoFileId, VideoFile file, string reason)
     {
-        string url = BuildServedUrl(file);
-        logger.LogInformation("Direct-play for {VideoFileId}: {Url}", videoFileId, url);
+        string url = BuildServedUrl(file: file);
+        logger.LogInformation(message: "Direct-play for {VideoFileId}: {Url}", args: [videoFileId, url]);
         return LiveResult.Ok(
-            new StartLiveSessionResponse(
+            payload: new StartLiveSessionResponse(
                 SessionId: string.Empty,
                 PlaylistUrl: string.Empty,
                 QualityId: string.Empty,
@@ -818,21 +811,21 @@ public class LiveTranscodeService(
     {
         VideoFile? file = await context
             .VideoFiles.AsNoTracking()
-            .Include(vf => vf.Metadata)
-            .FirstOrDefaultAsync(vf => vf.Id == videoFileId, ct);
+            .Include(navigationPropertyPath: vf => vf.Metadata)
+            .FirstOrDefaultAsync(predicate: vf => vf.Id == videoFileId, cancellationToken: ct);
         if (file is null)
             return null;
 
-        bool allowed = await UserHasAccessAsync(context, file, userId, ct);
+        bool allowed = await UserHasAccessAsync(context: context, file: file, userId: userId, ct: ct);
         if (!allowed)
             return null;
 
         (string inputPath, string[]? extraInputArgs, string? ingestKey) = await ResolveInputAsync(
-            context,
-            file,
-            ct
+            context: context,
+            file: file,
+            ct: ct
         );
-        return new(file, inputPath, extraInputArgs, ingestKey);
+        return new(File: file, InputPath: inputPath, ExtraInputArgs: extraInputArgs, IngestKey: ingestKey);
     }
 
     // Resolve the source to something ffprobe/ffmpeg can actually open across every
@@ -853,21 +846,21 @@ public class LiveTranscodeService(
         string? IngestKey
     )> ResolveInputAsync(MediaContext context, VideoFile file, CancellationToken ct)
     {
-        string localPath = storage.CombinePath(file.HostFolder, file.Filename);
+        string localPath = storage.CombinePath(parent: file.HostFolder, child: file.Filename);
 
-        if (!Ulid.TryParse(file.Share, out Ulid folderId))
+        if (!Ulid.TryParse(base32: file.Share, ulid: out Ulid folderId))
             return (localPath, null, null);
 
         bool folderExists = await context
             .Folders.AsNoTracking()
-            .AnyAsync(f => f.Id == folderId, ct);
+            .AnyAsync(predicate: f => f.Id == folderId, cancellationToken: ct);
         if (!folderExists)
             return (localPath, null, null);
 
-        string servedPath = BuildServedUrl(file);
-        string ingestKey = ingestKeyStore.Issue(servedPath);
+        string servedPath = BuildServedUrl(file: file);
+        string ingestKey = ingestKeyStore.Issue(servedPath: servedPath);
         int httpPort = RuntimeServerSettings.Current.InternalServerPort + 1;
-        string url = $"http://127.0.0.1:{httpPort}{EncodeServedPath(servedPath)}";
+        string url = $"http://127.0.0.1:{httpPort}{EncodeServedPath(path: servedPath)}";
         string[] headers = ["-headers", $"X-NoMercy-Ingest-Key: {ingestKey}\r\n"];
         return (url, headers, ingestKey);
     }
@@ -882,8 +875,8 @@ public class LiveTranscodeService(
         if (file.MovieId is int movieId)
         {
             bool fromMovie = await context.Movies.AnyAsync(
-                m => m.Id == movieId && m.Library.LibraryUsers.Any(u => u.UserId == userId),
-                ct
+                predicate: m => m.Id == movieId && m.Library.LibraryUsers.Any(u => u.UserId == userId),
+                cancellationToken: ct
             );
             if (fromMovie)
                 return true;
@@ -892,8 +885,8 @@ public class LiveTranscodeService(
         if (file.EpisodeId is int episodeId)
         {
             bool fromEpisode = await context.Episodes.AnyAsync(
-                e => e.Id == episodeId && e.Tv.Library.LibraryUsers.Any(u => u.UserId == userId),
-                ct
+                predicate: e => e.Id == episodeId && e.Tv.Library.LibraryUsers.Any(u => u.UserId == userId),
+                cancellationToken: ct
             );
             if (fromEpisode)
                 return true;

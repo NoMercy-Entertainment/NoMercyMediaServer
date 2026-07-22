@@ -24,7 +24,7 @@ public class CastEventHandler : IDisposable
     {
         _clientMessenger = clientMessenger;
         _subscriptions.Add(
-            eventBus.Subscribe<CastDeviceStatusChangedEvent>(OnCastDeviceStatusChanged)
+            item: eventBus.Subscribe<CastDeviceStatusChangedEvent>(handler: OnCastDeviceStatusChanged)
         );
     }
 
@@ -33,7 +33,7 @@ public class CastEventHandler : IDisposable
         CancellationToken ct
     )
     {
-        await _clientMessenger.SendToAll(@event.EventType, "castHub", @event.StatusData);
+        await _clientMessenger.SendToAll(name: @event.EventType, endpoint: "castHub", data: @event.StatusData);
     }
 
     public void Dispose()

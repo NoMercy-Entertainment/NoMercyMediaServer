@@ -26,8 +26,8 @@ public record SpeedIndex(Dictionary<SpeedKey, SpeedMeasurement> Measurements)
         string? deviceName
     )
     {
-        SpeedKey key = new(codec, encoder, width, deviceName);
-        return Measurements.GetValueOrDefault(key);
+        SpeedKey key = new(Codec: codec, Encoder: encoder, Width: width, DeviceName: deviceName);
+        return Measurements.GetValueOrDefault(key: key);
     }
 
     public double GetSpeedMultiplier(
@@ -37,7 +37,7 @@ public record SpeedIndex(Dictionary<SpeedKey, SpeedMeasurement> Measurements)
         string? deviceName
     )
     {
-        SpeedMeasurement? measurement = GetSpeed(codec, encoder, width, deviceName);
+        SpeedMeasurement? measurement = GetSpeed(codec: codec, encoder: encoder, width: width, deviceName: deviceName);
         return measurement?.SpeedMultiplier ?? 0;
     }
 }

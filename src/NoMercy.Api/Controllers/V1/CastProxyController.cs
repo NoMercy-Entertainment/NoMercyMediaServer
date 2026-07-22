@@ -32,9 +32,9 @@ namespace NoMercy.Api.Controllers.V1;
 /// Keycloak user token the phone presents and auto-pairs the owner by subject.
 /// </summary>
 [ApiController]
-[ApiVersion(1.0)]
+[ApiVersion(version: 1.0)]
 [Authorize]
-[Route("api/v{version:apiVersion}/cast")]
+[Route(template: "api/v{version:apiVersion}/cast")]
 public class CastProxyController(
     IDbContextFactory<MediaContext> contextFactory,
     IHttpClientFactory httpClientFactory,
@@ -48,43 +48,37 @@ public class CastProxyController(
     // the proxy answer 405 before the request ever reached the TV, so picking a
     // track from the web remote silently did nothing while the POST transport
     // controls (play/pause/seek) worked fine.
-    [AcceptVerbs("GET", "POST", "PUT", "PATCH", "DELETE")]
-    [Route("{deviceId}/{**path}")]
+    [AcceptVerbs(methods: ["GET", "POST", "PUT", "PATCH", "DELETE"])]
+    [Route(template: "{deviceId}/{**path}")]
     public async Task<IActionResult> Proxy(string deviceId, string path)
     {
         Guid userId = User.UserId();
         logger.LogInformation(
-            "[CastProxy] {Method} device={DeviceId} path=/{Path} user={User}",
-            Request.Method,
-            deviceId,
-            path,
-            userId
+            message: "[CastProxy] {Method} device={DeviceId} path=/{Path} user={User}", args: [Request.Method, deviceId, path, userId]
         );
 
         if (userId == Guid.Empty)
-            return UnauthenticatedResponse("No authenticated user on the cast proxy request");
+            return UnauthenticatedResponse(detail: "No authenticated user on the cast proxy request");
 
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync();
         Device? tv = await mediaContext
             .Devices.AsNoTracking()
-            .FirstOrDefaultAsync(d =>
+            .FirstOrDefaultAsync(predicate: d =>
                 d.DeviceId == deviceId && d.OwnerUserId == userId && d.Type == "tv"
             );
 
         if (tv is null)
         {
             logger.LogWarning(
-                "[CastProxy] no owned TV device '{DeviceId}' for user {User}",
-                deviceId,
-                userId
+                message: "[CastProxy] no owned TV device '{DeviceId}' for user {User}", args: [deviceId, userId]
             );
-            return NotFoundResponse($"No owned TV device '{deviceId}' found");
+            return NotFoundResponse(detail: $"No owned TV device '{deviceId}' found");
         }
 
-        if (string.IsNullOrWhiteSpace(tv.Ip))
+        if (string.IsNullOrWhiteSpace(value: tv.Ip))
         {
-            logger.LogWarning("[CastProxy] TV '{Name}' has no LAN IP", tv.Name);
-            return ServiceUnavailableResponse("Target TV has no known LAN address");
+            logger.LogWarning(message: "[CastProxy] TV '{Name}' has no LAN IP", args: tv.Name);
+            return ServiceUnavailableResponse(detail: "Target TV has no known LAN address");
         }
 
         // Transparent passthrough: the caller already includes the TV's API
@@ -92,62 +86,56 @@ public class CastProxyController(
         // than re-prefixing "/v1/" — doubling it (…/v1/v1/launch) 404s the TV.
         string query = Request.QueryString.HasValue ? Request.QueryString.Value! : string.Empty;
         string targetUrl = $"http://{tv.Ip}:{TvControlPort}/{path}{query}";
-        logger.LogInformation("[CastProxy] forwarding to {TargetUrl}", targetUrl);
+        logger.LogInformation(message: "[CastProxy] forwarding to {TargetUrl}", args: targetUrl);
 
-        using HttpRequestMessage forward = new(new HttpMethod(Request.Method), targetUrl);
+        using HttpRequestMessage forward = new(method: new HttpMethod(method: Request.Method), requestUri: targetUrl);
 
         if (Request.ContentLength is > 0)
         {
-            StreamContent content = new(Request.Body);
-            if (!string.IsNullOrEmpty(Request.ContentType))
-                content.Headers.TryAddWithoutValidation("Content-Type", Request.ContentType);
+            StreamContent content = new(content: Request.Body);
+            if (!string.IsNullOrEmpty(value: Request.ContentType))
+                content.Headers.TryAddWithoutValidation(name: "Content-Type", value: Request.ContentType);
             forward.Content = content;
         }
 
         // Forward the caller's own bearer token verbatim — the TV's /v1 accepts
         // the same Keycloak user token the phone uses; no re-mint needed.
         string? authorization = Request.Headers.Authorization.FirstOrDefault();
-        if (!string.IsNullOrEmpty(authorization))
-            forward.Headers.TryAddWithoutValidation("Authorization", authorization);
+        if (!string.IsNullOrEmpty(value: authorization))
+            forward.Headers.TryAddWithoutValidation(name: "Authorization", value: authorization);
 
         HttpClient client = httpClientFactory.CreateClient();
-        client.Timeout = TimeSpan.FromSeconds(10);
+        client.Timeout = TimeSpan.FromSeconds(seconds: 10);
 
         try
         {
             using HttpResponseMessage upstream = await client.SendAsync(
-                forward,
-                HttpCompletionOption.ResponseHeadersRead
+                request: forward,
+                completionOption: HttpCompletionOption.ResponseHeadersRead
             );
 
             byte[] body = await upstream.Content.ReadAsByteArrayAsync();
             logger.LogInformation(
-                "[CastProxy] TV {Ip} replied {Status} ({Bytes} bytes)",
-                tv.Ip,
-                (int)upstream.StatusCode,
-                body.Length
+                message: "[CastProxy] TV {Ip} replied {Status} ({Bytes} bytes)", args: [tv.Ip, (int)upstream.StatusCode, body.Length]
             );
 
             Response.StatusCode = (int)upstream.StatusCode;
             Response.ContentType =
                 upstream.Content.Headers.ContentType?.ToString() ?? "application/json";
-            await Response.Body.WriteAsync(body);
+            await Response.Body.WriteAsync(buffer: body);
             return new EmptyResult();
         }
         catch (TaskCanceledException)
         {
-            logger.LogWarning("[CastProxy] TV '{Name}' ({Ip}) timed out", tv.Name, tv.Ip);
-            return GatewayTimeoutResponse($"TV '{tv.Name}' did not respond in time");
+            logger.LogWarning(message: "[CastProxy] TV '{Name}' ({Ip}) timed out", args: [tv.Name, tv.Ip]);
+            return GatewayTimeoutResponse(detail: $"TV '{tv.Name}' did not respond in time");
         }
         catch (HttpRequestException ex)
         {
             logger.LogWarning(
-                "[CastProxy] could not reach TV '{Name}' ({Ip}): {Message}",
-                tv.Name,
-                tv.Ip,
-                ex.Message
+                message: "[CastProxy] could not reach TV '{Name}' ({Ip}): {Message}", args: [tv.Name, tv.Ip, ex.Message]
             );
-            return ServiceUnavailableResponse($"Could not reach TV '{tv.Name}': {ex.Message}");
+            return ServiceUnavailableResponse(detail: $"Could not reach TV '{tv.Name}': {ex.Message}");
         }
     }
 }

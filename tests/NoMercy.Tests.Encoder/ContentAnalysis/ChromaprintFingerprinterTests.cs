@@ -36,9 +36,9 @@ public class ChromaprintFingerprinterTests
     [Fact]
     public void ParseRawOutput_CommaSeparatedHashes_ExtractsAllValues()
     {
-        uint[] result = ChromaprintFingerprinter.ParseRawOutput("123,456,789\n");
+        uint[] result = ChromaprintFingerprinter.ParseRawOutput(stdout: "123,456,789\n");
 
-        result.Should().Equal(123u, 456u, 789u);
+        result.Should().Equal(elements: [123u, 456u, 789u]);
     }
 
     [Fact]
@@ -46,9 +46,9 @@ public class ChromaprintFingerprinterTests
     {
         // Some ffmpeg builds emit "CHROMAPRINT=1,2,3" — the parser must
         // drop everything up to and including the '=' sign.
-        uint[] result = ChromaprintFingerprinter.ParseRawOutput("CHROMAPRINT=1,2,3");
+        uint[] result = ChromaprintFingerprinter.ParseRawOutput(stdout: "CHROMAPRINT=1,2,3");
 
-        result.Should().Equal(1u, 2u, 3u);
+        result.Should().Equal(elements: [1u, 2u, 3u]);
     }
 
     [Fact]
@@ -56,22 +56,22 @@ public class ChromaprintFingerprinterTests
     {
         // Chromaprint hashes are 32-bit; signed values wrap to the high
         // bits of uint. -1 → 0xFFFFFFFF.
-        uint[] result = ChromaprintFingerprinter.ParseRawOutput("-1,-2");
+        uint[] result = ChromaprintFingerprinter.ParseRawOutput(stdout: "-1,-2");
 
-        result[0].Should().Be(0xFFFFFFFFu);
-        result[1].Should().Be(0xFFFFFFFEu);
+        result[0].Should().Be(expected: 0xFFFFFFFFu);
+        result[1].Should().Be(expected: 0xFFFFFFFEu);
     }
 
     [Fact]
     public void ParseRawOutput_Empty_ReturnsEmptyArray()
     {
-        ChromaprintFingerprinter.ParseRawOutput("").Should().BeEmpty();
+        ChromaprintFingerprinter.ParseRawOutput(stdout: "").Should().BeEmpty();
     }
 
     [Fact]
     public void ParseRawOutput_Whitespace_ReturnsEmptyArray()
     {
-        ChromaprintFingerprinter.ParseRawOutput("   \n\t").Should().BeEmpty();
+        ChromaprintFingerprinter.ParseRawOutput(stdout: "   \n\t").Should().BeEmpty();
     }
 
     [Fact]
@@ -80,7 +80,7 @@ public class ChromaprintFingerprinterTests
         string[]? captured = null;
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -89,34 +89,34 @@ public class ChromaprintFingerprinterTests
                 )
             )
             .Callback<string, string[], string?, CancellationToken>(
-                (_, args, _, _) => captured = args
+                action: (_, args, _, _) => captured = args
             )
-            .ReturnsAsync(new ProcessResult(0, "1,2,3\n", "", TimeSpan.FromMilliseconds(500)));
+            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "1,2,3\n", StdErr: "", Duration: TimeSpan.FromMilliseconds(milliseconds: 500)));
 
         ChromaprintFingerprinter fp = new(
-            _options,
-            runner.Object,
-            TestStorageFactory.CreateLocal(),
-            NullLogger<ChromaprintFingerprinter>.Instance,
-            new MediaActivityMonitor()
+            options: _options,
+            processRunner: runner.Object,
+            storage: TestStorageFactory.CreateLocal(),
+            logger: NullLogger<ChromaprintFingerprinter>.Instance,
+            activityMonitor: new MediaActivityMonitor()
         );
 
-        FingerprintWindow window = new(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(300));
+        FingerprintWindow window = new(Start: TimeSpan.FromSeconds(seconds: 10), Duration: TimeSpan.FromSeconds(seconds: 300));
         AudioFingerprint result = await fp.FingerprintAsync(
-            "/media/ep1.mkv",
-            window,
-            CancellationToken.None
+            filePath: "/media/ep1.mkv",
+            window: window,
+            ct: CancellationToken.None
         );
 
         captured.Should().NotBeNull();
-        captured!.Should().Contain("-ss");
-        captured.Should().Contain("10.000");
-        captured.Should().Contain("-t");
-        captured.Should().Contain("300.000");
-        captured.Should().Contain("-f");
-        captured.Should().Contain("chromaprint");
-        result.Hashes.Should().Equal(1u, 2u, 3u);
-        result.StartTime.Should().Be(TimeSpan.FromSeconds(10));
+        captured!.Should().Contain(expected: "-ss");
+        captured.Should().Contain(expected: "10.000");
+        captured.Should().Contain(expected: "-t");
+        captured.Should().Contain(expected: "300.000");
+        captured.Should().Contain(expected: "-f");
+        captured.Should().Contain(expected: "chromaprint");
+        result.Hashes.Should().Equal(elements: [1u, 2u, 3u]);
+        result.StartTime.Should().Be(expected: TimeSpan.FromSeconds(seconds: 10));
     }
 
     [Fact]
@@ -129,7 +129,7 @@ public class ChromaprintFingerprinterTests
         string[]? captured = null;
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -138,25 +138,25 @@ public class ChromaprintFingerprinterTests
                 )
             )
             .Callback<string, string[], string?, CancellationToken>(
-                (_, args, _, _) => captured = args
+                action: (_, args, _, _) => captured = args
             )
-            .ReturnsAsync(new ProcessResult(0, "1,2,3\n", "", TimeSpan.FromMilliseconds(500)));
+            .ReturnsAsync(value: new ProcessResult(ExitCode: 0, StdOut: "1,2,3\n", StdErr: "", Duration: TimeSpan.FromMilliseconds(milliseconds: 500)));
 
         ChromaprintFingerprinter fp = new(
-            _options,
-            runner.Object,
-            TestStorageFactory.CreateLocal(),
-            NullLogger<ChromaprintFingerprinter>.Instance,
-            new MediaActivityMonitor()
+            options: _options,
+            processRunner: runner.Object,
+            storage: TestStorageFactory.CreateLocal(),
+            logger: NullLogger<ChromaprintFingerprinter>.Instance,
+            activityMonitor: new MediaActivityMonitor()
         );
 
-        FingerprintWindow window = new(TimeSpan.FromMinutes(-4), TimeSpan.FromMinutes(4));
-        await fp.FingerprintAsync("/media/ep1.mkv", window, CancellationToken.None);
+        FingerprintWindow window = new(Start: TimeSpan.FromMinutes(minutes: -4), Duration: TimeSpan.FromMinutes(minutes: 4));
+        await fp.FingerprintAsync(filePath: "/media/ep1.mkv", window: window, ct: CancellationToken.None);
 
         captured.Should().NotBeNull();
-        captured!.Should().NotContain("-ss");
-        captured.Should().ContainInConsecutiveOrder("-sseof", "-240.000");
-        captured.Should().ContainInConsecutiveOrder("-t", "240.000");
+        captured!.Should().NotContain(unexpected: "-ss");
+        captured.Should().ContainInConsecutiveOrder(expected: ["-sseof", "-240.000"]);
+        captured.Should().ContainInConsecutiveOrder(expected: ["-t", "240.000"]);
     }
 
     [Fact]
@@ -164,7 +164,7 @@ public class ChromaprintFingerprinterTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -172,23 +172,23 @@ public class ChromaprintFingerprinterTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(new ProcessResult(1, "", "ffmpeg barfed", TimeSpan.Zero));
+            .ReturnsAsync(value: new ProcessResult(ExitCode: 1, StdOut: "", StdErr: "ffmpeg barfed", Duration: TimeSpan.Zero));
 
         ChromaprintFingerprinter fp = new(
-            _options,
-            runner.Object,
-            TestStorageFactory.CreateLocal(),
-            NullLogger<ChromaprintFingerprinter>.Instance,
-            new MediaActivityMonitor()
+            options: _options,
+            processRunner: runner.Object,
+            storage: TestStorageFactory.CreateLocal(),
+            logger: NullLogger<ChromaprintFingerprinter>.Instance,
+            activityMonitor: new MediaActivityMonitor()
         );
 
         AudioFingerprint result = await fp.FingerprintAsync(
-            "/media/ep1.mkv",
-            null,
-            CancellationToken.None
+            filePath: "/media/ep1.mkv",
+            window: null,
+            ct: CancellationToken.None
         );
 
         result.Hashes.Should().BeEmpty();
-        result.StartTime.Should().Be(TimeSpan.Zero);
+        result.StartTime.Should().Be(expected: TimeSpan.Zero);
     }
 }

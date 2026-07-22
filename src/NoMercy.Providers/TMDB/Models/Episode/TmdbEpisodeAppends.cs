@@ -16,21 +16,21 @@ namespace NoMercy.Providers.TMDB.Models.Episode;
 
 public class TmdbEpisodeAppends : TmdbEpisodeDetails
 {
-    [JsonProperty("credits")]
+    [JsonProperty(propertyName: "credits")]
     public TmdbEpisodeCredits TmdbEpisodeCredits { get; set; } = new();
 
-    [JsonProperty("changes")]
+    [JsonProperty(propertyName: "changes")]
     public TmdbEpisodeChanges Changes { get; set; } = new();
 
-    [JsonProperty("external_ids")]
+    [JsonProperty(propertyName: "external_ids")]
     public TmdbEpisodeExternalIds TmdbEpisodeExternalIds { get; set; } = new();
 
-    [JsonProperty("images")]
+    [JsonProperty(propertyName: "images")]
     public TmdbEpisodeImages TmdbEpisodeImages { get; set; } = new();
 
-    [JsonProperty("translations")]
+    [JsonProperty(propertyName: "translations")]
     public TmdbCombinedTranslations Translations { get; set; } = new();
 
-    [JsonProperty("videos")]
+    [JsonProperty(propertyName: "videos")]
     public Videos Videos { get; set; } = new();
 }

@@ -30,7 +30,7 @@ public class PeopleRepositoryTests : IDisposable
 
     public PeopleRepositoryTests()
     {
-        _connection = new("Data Source=:memory:");
+        _connection = new(connectionString: "Data Source=:memory:");
         _connection.Open();
 
         using (SqliteCommand fkOff = _connection.CreateCommand())
@@ -39,9 +39,9 @@ public class PeopleRepositoryTests : IDisposable
             fkOff.ExecuteNonQuery();
         }
 
-        _options = new DbContextOptionsBuilder<MediaContext>().UseSqlite(_connection).Options;
+        _options = new DbContextOptionsBuilder<MediaContext>().UseSqlite(connection: _connection).Options;
 
-        using MediaContext ctx = new(_options);
+        using MediaContext ctx = new(options: _options);
         ctx.Database.EnsureCreated();
     }
 
@@ -52,7 +52,7 @@ public class PeopleRepositoryTests : IDisposable
 
     private MediaContext OpenContext()
     {
-        return new(_options);
+        return new(options: _options);
     }
 
     [Fact]
@@ -63,12 +63,10 @@ public class PeopleRepositoryTests : IDisposable
         Ulid libraryId = Ulid.NewUlid();
 
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.Users.AddRange(
-            new User { Id = memberUserId, Email = "member@example.com" },
-            new User { Id = strangerUserId, Email = "stranger@example.com" }
+        seedCtx.Users.AddRange(entities: [new User { Id = memberUserId, Email = "member@example.com" }, new User { Id = strangerUserId, Email = "stranger@example.com" }]
         );
         seedCtx.Libraries.Add(
-            new()
+            entity: new()
             {
                 Id = libraryId,
                 Title = "Movies",
@@ -76,7 +74,7 @@ public class PeopleRepositoryTests : IDisposable
                 Order = 1,
             }
         );
-        seedCtx.LibraryUser.Add(new(libraryId, memberUserId));
+        seedCtx.LibraryUser.Add(entity: new(libraryId: libraryId, userId: memberUserId));
 
         Movie movie = new()
         {
@@ -85,7 +83,7 @@ public class PeopleRepositoryTests : IDisposable
             TitleSort = "movie",
             LibraryId = libraryId,
         };
-        seedCtx.Movies.Add(movie);
+        seedCtx.Movies.Add(entity: movie);
 
         Person castMember = new()
         {
@@ -94,19 +92,19 @@ public class PeopleRepositoryTests : IDisposable
             TitleSort = "cast member",
             Popularity = 5,
         };
-        seedCtx.People.Add(castMember);
-        seedCtx.Casts.Add(new() { PersonId = castMember.Id, MovieId = movie.Id });
+        seedCtx.People.Add(entity: castMember);
+        seedCtx.Casts.Add(entity: new() { PersonId = castMember.Id, MovieId = movie.Id });
 
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext queryCtx = OpenContext();
-        PeopleRepository repository = new(queryCtx);
+        PeopleRepository repository = new(context: queryCtx);
 
-        List<Person> memberResult = await repository.GetPeopleAsync(memberUserId, "en", 10);
-        List<Person> strangerResult = await repository.GetPeopleAsync(strangerUserId, "en", 10);
+        List<Person> memberResult = await repository.GetPeopleAsync(userId: memberUserId, language: "en", take: 10);
+        List<Person> strangerResult = await repository.GetPeopleAsync(userId: strangerUserId, language: "en", take: 10);
 
-        memberResult.Should().ContainSingle(p => p.Id == castMember.Id);
-        strangerResult.Should().BeEmpty("the stranger has no LibraryUser row for this library");
+        memberResult.Should().ContainSingle(predicate: p => p.Id == castMember.Id);
+        strangerResult.Should().BeEmpty(because: "the stranger has no LibraryUser row for this library");
     }
 
     [Fact]
@@ -116,9 +114,9 @@ public class PeopleRepositoryTests : IDisposable
         Ulid libraryId = Ulid.NewUlid();
 
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.Users.Add(new User { Id = userId, Email = "user@example.com" });
+        seedCtx.Users.Add(entity: new User { Id = userId, Email = "user@example.com" });
         seedCtx.Libraries.Add(
-            new()
+            entity: new()
             {
                 Id = libraryId,
                 Title = "Movies",
@@ -126,7 +124,7 @@ public class PeopleRepositoryTests : IDisposable
                 Order = 1,
             }
         );
-        seedCtx.LibraryUser.Add(new(libraryId, userId));
+        seedCtx.LibraryUser.Add(entity: new(libraryId: libraryId, userId: userId));
 
         Movie movie = new()
         {
@@ -135,7 +133,7 @@ public class PeopleRepositoryTests : IDisposable
             TitleSort = "movie",
             LibraryId = libraryId,
         };
-        seedCtx.Movies.Add(movie);
+        seedCtx.Movies.Add(entity: movie);
 
         Person person = new()
         {
@@ -144,33 +142,35 @@ public class PeopleRepositoryTests : IDisposable
             TitleSort = "actor",
             Popularity = 1,
         };
-        seedCtx.People.Add(person);
-        seedCtx.Casts.Add(new() { PersonId = person.Id, MovieId = movie.Id });
-        seedCtx.Translations.AddRange(
-            new Translation
-            {
-                PersonId = person.Id,
-                Iso6391 = "en",
-                Biography = "English bio",
-            },
-            new Translation
-            {
-                PersonId = person.Id,
-                Iso6391 = "nl",
-                Biography = "Dutch bio",
-            }
+        seedCtx.People.Add(entity: person);
+        seedCtx.Casts.Add(entity: new() { PersonId = person.Id, MovieId = movie.Id });
+        seedCtx.Translations.AddRange(entities:
+            [
+                new Translation
+                {
+                    PersonId = person.Id,
+                    Iso6391 = "en",
+                    Biography = "English bio",
+                },
+                new Translation
+                {
+                    PersonId = person.Id,
+                    Iso6391 = "nl",
+                    Biography = "Dutch bio",
+                }
+            ]
         );
 
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext queryCtx = OpenContext();
-        PeopleRepository repository = new(queryCtx);
+        PeopleRepository repository = new(context: queryCtx);
 
-        List<Person> result = await repository.GetPeopleAsync(userId, "nl", 10);
+        List<Person> result = await repository.GetPeopleAsync(userId: userId, language: "nl", take: 10);
 
         Person returned = result.Should().ContainSingle().Subject;
         returned.Translations.Should().ContainSingle();
-        returned.Translations.Single().Biography.Should().Be("Dutch bio");
+        returned.Translations.Single().Biography.Should().Be(expected: "Dutch bio");
     }
 
     [Fact]
@@ -180,9 +180,9 @@ public class PeopleRepositoryTests : IDisposable
         Ulid libraryId = Ulid.NewUlid();
 
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.Users.Add(new User { Id = userId, Email = "user@example.com" });
+        seedCtx.Users.Add(entity: new User { Id = userId, Email = "user@example.com" });
         seedCtx.Libraries.Add(
-            new()
+            entity: new()
             {
                 Id = libraryId,
                 Title = "Movies",
@@ -190,7 +190,7 @@ public class PeopleRepositoryTests : IDisposable
                 Order = 1,
             }
         );
-        seedCtx.LibraryUser.Add(new(libraryId, userId));
+        seedCtx.LibraryUser.Add(entity: new(libraryId: libraryId, userId: userId));
 
         Movie movie = new()
         {
@@ -199,7 +199,7 @@ public class PeopleRepositoryTests : IDisposable
             TitleSort = "movie",
             LibraryId = libraryId,
         };
-        seedCtx.Movies.Add(movie);
+        seedCtx.Movies.Add(entity: movie);
 
         // lowId/highId share equal popularity to isolate the ThenBy(Id) tie-break;
         // mostPopular has strictly higher popularity to isolate the primary sort.
@@ -224,26 +224,23 @@ public class PeopleRepositoryTests : IDisposable
             TitleSort = "high id",
             Popularity = 5,
         };
-        seedCtx.People.AddRange(mostPopular, lowId, highId);
-        seedCtx.Casts.AddRange(
-            new Cast { PersonId = mostPopular.Id, MovieId = movie.Id },
-            new Cast { PersonId = lowId.Id, MovieId = movie.Id },
-            new Cast { PersonId = highId.Id, MovieId = movie.Id }
+        seedCtx.People.AddRange(entities: [mostPopular, lowId, highId]);
+        seedCtx.Casts.AddRange(entities: [new Cast { PersonId = mostPopular.Id, MovieId = movie.Id }, new Cast { PersonId = lowId.Id, MovieId = movie.Id }, new Cast { PersonId = highId.Id, MovieId = movie.Id }]
         );
 
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext queryCtx = OpenContext();
-        PeopleRepository repository = new(queryCtx);
+        PeopleRepository repository = new(context: queryCtx);
 
-        List<Person> result = await repository.GetPeopleAsync(userId, "en", 10);
+        List<Person> result = await repository.GetPeopleAsync(userId: userId, language: "en", take: 10);
 
-        result.Should().HaveCount(3);
-        result[0].Id.Should().Be(mostPopular.Id, "the highest popularity must sort first");
-        result[1]
+        result.Should().HaveCount(expected: 3);
+        result[index: 0].Id.Should().Be(expected: mostPopular.Id, because: "the highest popularity must sort first");
+        result[index: 1]
             .Id.Should()
-            .Be(lowId.Id, "of equal popularity, the lower Id must win the tie-break");
-        result[2].Id.Should().Be(highId.Id);
+            .Be(expected: lowId.Id, because: "of equal popularity, the lower Id must win the tie-break");
+        result[index: 2].Id.Should().Be(expected: highId.Id);
     }
 
     [Fact]
@@ -253,9 +250,9 @@ public class PeopleRepositoryTests : IDisposable
         Ulid libraryId = Ulid.NewUlid();
 
         await using MediaContext seedCtx = OpenContext();
-        seedCtx.Users.Add(new User { Id = userId, Email = "user@example.com" });
+        seedCtx.Users.Add(entity: new User { Id = userId, Email = "user@example.com" });
         seedCtx.Libraries.Add(
-            new()
+            entity: new()
             {
                 Id = libraryId,
                 Title = "Movies",
@@ -263,7 +260,7 @@ public class PeopleRepositoryTests : IDisposable
                 Order = 1,
             }
         );
-        seedCtx.LibraryUser.Add(new(libraryId, userId));
+        seedCtx.LibraryUser.Add(entity: new(libraryId: libraryId, userId: userId));
 
         Movie movie = new()
         {
@@ -272,7 +269,7 @@ public class PeopleRepositoryTests : IDisposable
             TitleSort = "movie",
             LibraryId = libraryId,
         };
-        seedCtx.Movies.Add(movie);
+        seedCtx.Movies.Add(entity: movie);
 
         for (int i = 0; i < 5; i++)
         {
@@ -283,32 +280,32 @@ public class PeopleRepositoryTests : IDisposable
                 TitleSort = $"person {i}",
                 Popularity = 5 - i,
             };
-            seedCtx.People.Add(person);
-            seedCtx.Casts.Add(new() { PersonId = person.Id, MovieId = movie.Id });
+            seedCtx.People.Add(entity: person);
+            seedCtx.Casts.Add(entity: new() { PersonId = person.Id, MovieId = movie.Id });
         }
 
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext queryCtx = OpenContext();
-        PeopleRepository repository = new(queryCtx);
+        PeopleRepository repository = new(context: queryCtx);
 
-        List<Person> page0 = await repository.GetPeopleAsync(userId, "en", take: 2, page: 0);
-        List<Person> page1 = await repository.GetPeopleAsync(userId, "en", take: 2, page: 1);
+        List<Person> page0 = await repository.GetPeopleAsync(userId: userId, language: "en", take: 2, page: 0);
+        List<Person> page1 = await repository.GetPeopleAsync(userId: userId, language: "en", take: 2, page: 1);
 
-        page0.Should().HaveCount(2);
-        page1.Should().HaveCount(2);
-        page0.Select(p => p.Id).Should().NotIntersectWith(page1.Select(p => p.Id));
-        page0[0].Id.Should().Be(40, "most popular person comes first on page 0");
-        page1[0].Id.Should().Be(42, "page 1 starts after the first two most-popular people");
+        page0.Should().HaveCount(expected: 2);
+        page1.Should().HaveCount(expected: 2);
+        page0.Select(selector: p => p.Id).Should().NotIntersectWith(otherCollection: page1.Select(selector: p => p.Id));
+        page0[index: 0].Id.Should().Be(expected: 40, because: "most popular person comes first on page 0");
+        page1[index: 0].Id.Should().Be(expected: 42, because: "page 1 starts after the first two most-popular people");
     }
 
     [Fact]
     public async Task GetPersonWithCreditsAsync_UnknownId_ReturnsNull()
     {
         await using MediaContext ctx = OpenContext();
-        PeopleRepository repository = new(ctx);
+        PeopleRepository repository = new(context: ctx);
 
-        Person? result = await repository.GetPersonWithCreditsAsync(999);
+        Person? result = await repository.GetPersonWithCreditsAsync(id: 999);
 
         result.Should().BeNull();
     }
@@ -320,7 +317,7 @@ public class PeopleRepositoryTests : IDisposable
 
         await using MediaContext seedCtx = OpenContext();
         seedCtx.Libraries.Add(
-            new()
+            entity: new()
             {
                 Id = libraryId,
                 Title = "Movies",
@@ -343,7 +340,7 @@ public class PeopleRepositoryTests : IDisposable
             TitleSort = "crew movie",
             LibraryId = libraryId,
         };
-        seedCtx.Movies.AddRange(castMovie, crewMovie);
+        seedCtx.Movies.AddRange(entities: [castMovie, crewMovie]);
 
         Person person = new()
         {
@@ -352,20 +349,20 @@ public class PeopleRepositoryTests : IDisposable
             TitleSort = "multi credit",
             Popularity = 1,
         };
-        seedCtx.People.Add(person);
+        seedCtx.People.Add(entity: person);
 
-        seedCtx.Casts.Add(new() { PersonId = person.Id, MovieId = castMovie.Id });
-        seedCtx.Crews.Add(new() { PersonId = person.Id, MovieId = crewMovie.Id });
+        seedCtx.Casts.Add(entity: new() { PersonId = person.Id, MovieId = castMovie.Id });
+        seedCtx.Crews.Add(entity: new() { PersonId = person.Id, MovieId = crewMovie.Id });
 
         await seedCtx.SaveChangesAsync();
 
         await using MediaContext queryCtx = OpenContext();
-        PeopleRepository repository = new(queryCtx);
+        PeopleRepository repository = new(context: queryCtx);
 
-        Person? result = await repository.GetPersonWithCreditsAsync(person.Id);
+        Person? result = await repository.GetPersonWithCreditsAsync(id: person.Id);
 
         result.Should().NotBeNull();
-        result!.Casts.Should().ContainSingle(c => c.MovieId == castMovie.Id);
-        result.Crews.Should().ContainSingle(c => c.MovieId == crewMovie.Id);
+        result!.Casts.Should().ContainSingle(predicate: c => c.MovieId == castMovie.Id);
+        result.Crews.Should().ContainSingle(predicate: c => c.MovieId == crewMovie.Id);
     }
 }

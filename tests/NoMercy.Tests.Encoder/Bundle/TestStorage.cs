@@ -23,15 +23,15 @@ namespace NoMercy.Tests.Encoder.Bundle;
 internal sealed class TestStorage : IStorage
 {
     private readonly ConcurrentDictionary<string, byte[]> _files = new(
-        StringComparer.OrdinalIgnoreCase
+        comparer: StringComparer.OrdinalIgnoreCase
     );
 
     /// <summary>Test-side helper: read stored bytes back as a UTF-8 string.</summary>
     public string? ReadString(string path) =>
-        _files.TryGetValue(path, out byte[]? bytes) ? Encoding.UTF8.GetString(bytes) : null;
+        _files.TryGetValue(key: path, value: out byte[]? bytes) ? Encoding.UTF8.GetString(bytes: bytes) : null;
 
     /// <summary>Seed a file so tests can simulate on-disk state.</summary>
-    public void Seed(string path, byte[] bytes) => _files[path] = bytes;
+    public void Seed(string path, byte[] bytes) => _files[key: path] = bytes;
 
     /// <summary>Every path currently seeded/written, for assertion.</summary>
     public IReadOnlyList<string> AllPaths() => [.. _files.Keys];
@@ -42,59 +42,59 @@ internal sealed class TestStorage : IStorage
 
     public Task WriteAsync(string path, byte[] bytes, CancellationToken ct)
     {
-        _files[path] = bytes;
+        _files[key: path] = bytes;
         return Task.CompletedTask;
     }
 
     public Task<byte[]> ReadAsync(string path, CancellationToken ct)
     {
-        if (!_files.TryGetValue(path, out byte[]? bytes))
-            throw new FileNotFoundException($"TestStorage: path not found: {path}");
-        return Task.FromResult(bytes);
+        if (!_files.TryGetValue(key: path, value: out byte[]? bytes))
+            throw new FileNotFoundException(message: $"TestStorage: path not found: {path}");
+        return Task.FromResult(result: bytes);
     }
 
-    public bool Exists(string path) => _files.ContainsKey(path);
+    public bool Exists(string path) => _files.ContainsKey(key: path);
 
     public Task<bool> ExistsAsync(string path, CancellationToken ct) =>
         Task.FromResult(
-            Exists(path)
-                || _files.Keys.Any(k =>
-                    k.StartsWith(path.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase)
-                )
+            result: Exists(path: path)
+                    || _files.Keys.Any(predicate: k =>
+                        k.StartsWith(value: path.TrimEnd(trimChar: '/') + "/", comparisonType: StringComparison.OrdinalIgnoreCase)
+                    )
         );
 
     public Task<string> ReadAllTextAsync(string path, CancellationToken ct)
     {
-        if (!_files.TryGetValue(path, out byte[]? bytes))
-            throw new FileNotFoundException($"TestStorage: path not found: {path}");
-        return Task.FromResult(Encoding.UTF8.GetString(bytes));
+        if (!_files.TryGetValue(key: path, value: out byte[]? bytes))
+            throw new FileNotFoundException(message: $"TestStorage: path not found: {path}");
+        return Task.FromResult(result: Encoding.UTF8.GetString(bytes: bytes));
     }
 
     public Task WriteAllTextAsync(string path, string contents, CancellationToken ct)
     {
-        _files[path] = Encoding.UTF8.GetBytes(contents);
+        _files[key: path] = Encoding.UTF8.GetBytes(s: contents);
         return Task.CompletedTask;
     }
 
     // Overrides IStorage's default (Driver.CombinePath) — Driver throws on this
     // double, so path-joining callers need a working stand-in.
     public string CombinePath(string parent, string child) =>
-        string.IsNullOrEmpty(parent) ? child : $"{parent.TrimEnd('/')}/{child.TrimStart('/')}";
+        string.IsNullOrEmpty(value: parent) ? child : $"{parent.TrimEnd(trimChar: '/')}/{child.TrimStart(trimChar: '/')}";
 
     public IReadOnlyList<StorageEntry> List(string path, string? pattern, bool recursive)
     {
-        string prefix = string.IsNullOrEmpty(path) ? string.Empty : path.TrimEnd('/') + "/";
+        string prefix = string.IsNullOrEmpty(value: path) ? string.Empty : path.TrimEnd(trimChar: '/') + "/";
         DateTimeOffset now = DateTimeOffset.UtcNow;
         List<StorageEntry> entries = [];
         foreach (string key in _files.Keys)
         {
-            if (!key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            if (!key.StartsWith(value: prefix, comparisonType: StringComparison.OrdinalIgnoreCase))
                 continue;
             string rel = key[prefix.Length..];
-            if (!recursive && rel.Contains('/'))
+            if (!recursive && rel.Contains(value: '/'))
                 continue;
             entries.Add(
-                new(key, IsDirectory: false, SizeBytes: _files[key].Length, LastModified: now)
+                item: new(Path: key, IsDirectory: false, SizeBytes: _files[key: key].Length, LastModified: now)
             );
         }
         return entries;
@@ -112,7 +112,7 @@ internal sealed class TestStorage : IStorage
 
     public Task DeleteAsync(string path, CancellationToken ct)
     {
-        _files.TryRemove(path, out _);
+        _files.TryRemove(key: path, value: out _);
         return Task.CompletedTask;
     }
 
@@ -146,27 +146,27 @@ internal sealed class TestStorage : IStorage
     public Task<LocalPathLease> AcquireLocalPathAsync(string path, CancellationToken ct) =>
         throw new NotSupportedException();
 
-    public long SizeOrZero(string path) => _files.TryGetValue(path, out byte[]? b) ? b.Length : 0;
+    public long SizeOrZero(string path) => _files.TryGetValue(key: path, value: out byte[]? b) ? b.Length : 0;
 
     public long Size(string path) =>
-        _files.TryGetValue(path, out byte[]? b) ? b.Length : throw new FileNotFoundException(path);
+        _files.TryGetValue(key: path, value: out byte[]? b) ? b.Length : throw new FileNotFoundException(message: path);
 
     public DateTimeOffset LastModified(string path) => DateTimeOffset.UtcNow;
 
     public void CreateDirectory(string path) { }
 
-    public void Delete(string path) => _files.TryRemove(path, out _);
+    public void Delete(string path) => _files.TryRemove(key: path, value: out _);
 
     public void DeleteDirectory(string path, bool recursive) => throw new NotSupportedException();
 
     public byte[] Read(string path) =>
-        _files.TryGetValue(path, out byte[]? bytes) ? bytes : throw new FileNotFoundException(path);
+        _files.TryGetValue(key: path, value: out byte[]? bytes) ? bytes : throw new FileNotFoundException(message: path);
 
     public Stream OpenRead(string path) => throw new NotSupportedException();
 
     public Stream OpenWrite(string path, bool overwrite) => throw new NotSupportedException();
 
-    public void Write(string path, byte[] bytes) => _files[path] = bytes;
+    public void Write(string path, byte[] bytes) => _files[key: path] = bytes;
 
     public void Move(string from, string to) => throw new NotSupportedException();
 

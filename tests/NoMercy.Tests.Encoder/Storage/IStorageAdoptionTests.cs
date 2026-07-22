@@ -42,7 +42,7 @@ public class IStorageAdoptionTests
     {
         ServiceCollection services = new();
         services.AddLogging();
-        services.AddNoMercyEncoder(opts =>
+        services.AddNoMercyEncoder(configure: opts =>
         {
             opts.FfmpegPathOverride = "ffmpeg";
             opts.FfprobePathOverride = "ffprobe";
@@ -52,11 +52,11 @@ public class IStorageAdoptionTests
         // Replace IStorage with a logging decorator wrapping LocalStorage
         // (built from the same driver the encoder defaulted to).
         services.RemoveAll<IStorage>();
-        services.AddSingleton<IStorage>(sp =>
+        services.AddSingleton<IStorage>(implementationFactory: sp =>
         {
             IStorageDriver driver = sp.GetRequiredService<IStorageDriver>();
             StoragePathGuard guard = sp.GetRequiredService<StoragePathGuard>();
-            return new LoggingStorage(new LocalStorage(driver, guard));
+            return new LoggingStorage(inner: new LocalStorage(driver: driver, guard: guard));
         });
 
         ServiceProvider provider = services.BuildServiceProvider();
@@ -89,40 +89,40 @@ public class IStorageAdoptionTests
     {
         (ServiceProvider _, LoggingStorage logger) = BuildProvider();
         string tempRoot = Path.Combine(
-            Path.GetTempPath(),
-            "nm-adoption-" + Path.GetRandomFileName()
+            path1: Path.GetTempPath(),
+            path2: "nm-adoption-" + Path.GetRandomFileName()
         );
 
         try
         {
             // Exercise sync + async surface through the logger.
-            logger.CreateDirectory(tempRoot);
-            string filePath = Path.Combine(tempRoot, "smoke.bin");
-            logger.Write(filePath, [0xDE, 0xAD]);
-            logger.Exists(filePath).Should().BeTrue();
-            logger.SizeOrZero(filePath).Should().Be(2);
+            logger.CreateDirectory(path: tempRoot);
+            string filePath = Path.Combine(path1: tempRoot, path2: "smoke.bin");
+            logger.Write(path: filePath, bytes: [0xDE, 0xAD]);
+            logger.Exists(path: filePath).Should().BeTrue();
+            logger.SizeOrZero(path: filePath).Should().Be(expected: 2);
 
-            byte[] bytes = await logger.ReadAsync(filePath, CancellationToken.None);
-            bytes.Should().Equal(0xDE, 0xAD);
+            byte[] bytes = await logger.ReadAsync(path: filePath, ct: CancellationToken.None);
+            bytes.Should().Equal(elements: [0xDE, 0xAD]);
 
-            await using LocalPathLease lease = logger.AcquireLocalPath(filePath);
-            lease.Path.Should().Be(Path.GetFullPath(filePath));
+            await using LocalPathLease lease = logger.AcquireLocalPath(path: filePath);
+            lease.Path.Should().Be(expected: Path.GetFullPath(path: filePath));
 
             logger
                 .Calls.Should()
-                .Contain(c => c.StartsWith("CreateDirectory:"))
-                .And.Contain(c => c.StartsWith("Write:"))
-                .And.Contain(c => c.StartsWith("Exists:"))
-                .And.Contain(c => c.StartsWith("SizeOrZero:"))
-                .And.Contain(c => c.StartsWith("ReadAsync:"))
-                .And.Contain(c => c.StartsWith("AcquireLocalPath:"));
+                .Contain(predicate: c => c.StartsWith("CreateDirectory:"))
+                .And.Contain(predicate: c => c.StartsWith("Write:"))
+                .And.Contain(predicate: c => c.StartsWith("Exists:"))
+                .And.Contain(predicate: c => c.StartsWith("SizeOrZero:"))
+                .And.Contain(predicate: c => c.StartsWith("ReadAsync:"))
+                .And.Contain(predicate: c => c.StartsWith("AcquireLocalPath:"));
         }
         finally
         {
             try
             {
-                if (Directory.Exists(tempRoot))
-                    Directory.Delete(tempRoot, recursive: true);
+                if (Directory.Exists(path: tempRoot))
+                    Directory.Delete(path: tempRoot, recursive: true);
             }
             catch
             {

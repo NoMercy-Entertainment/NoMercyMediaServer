@@ -20,16 +20,16 @@ namespace NoMercy.Api.DTOs.Playlists;
 /// </summary>
 public record UserPlaylistSummaryDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public Guid Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("cover")]
+    [JsonProperty(propertyName: "cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty("item_count")]
+    [JsonProperty(propertyName: "item_count")]
     public int ItemCount { get; set; }
 
     public UserPlaylistSummaryDto() { }

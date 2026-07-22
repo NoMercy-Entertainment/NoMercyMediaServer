@@ -15,45 +15,45 @@ namespace NoMercy.Plugins.Abstractions;
 
 public class PluginCapabilities
 {
-    [JsonPropertyName("hooks")]
+    [JsonPropertyName(name: "hooks")]
     public List<string> Hooks { get; init; } = [];
 
-    [JsonPropertyName("network")]
+    [JsonPropertyName(name: "network")]
     public PluginNetworkCapability? Network { get; init; }
 
-    [JsonPropertyName("ui")]
+    [JsonPropertyName(name: "ui")]
     public PluginUiCapability? Ui { get; init; }
 
-    [JsonPropertyName("rest")]
+    [JsonPropertyName(name: "rest")]
     public bool Rest { get; init; }
 
-    [JsonPropertyName("ws")]
+    [JsonPropertyName(name: "ws")]
     public bool Ws { get; init; }
 }
 
 public class PluginNetworkCapability
 {
-    [JsonPropertyName("hosts")]
+    [JsonPropertyName(name: "hosts")]
     public List<string> Hosts { get; init; } = [];
 }
 
 public class PluginUiCapability
 {
-    [JsonPropertyName("mounts")]
+    [JsonPropertyName(name: "mounts")]
     public List<PluginUiMount> Mounts { get; init; } = [];
 }
 
 public class PluginUiMount
 {
-    [JsonPropertyName("section")]
+    [JsonPropertyName(name: "section")]
     public required string Section { get; init; }
 
-    [JsonPropertyName("label")]
+    [JsonPropertyName(name: "label")]
     public required string Label { get; init; }
 
-    [JsonPropertyName("icon")]
+    [JsonPropertyName(name: "icon")]
     public string? Icon { get; init; }
 
-    [JsonPropertyName("route")]
+    [JsonPropertyName(name: "route")]
     public required string Route { get; init; }
 }

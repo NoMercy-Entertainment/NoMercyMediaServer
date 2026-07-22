@@ -33,15 +33,15 @@ public class AcoustIdFingerprintClient : AcoustIdBaseClient
     {
         Dictionary<string, string?> queryParams = new()
         {
-            ["client"] = ApiKeyStore.Current.AcousticIdKey,
-            ["duration"] = fingerprintData.Duration.ToString(),
-            ["fingerprint"] = fingerprintData.Fingerprint,
+            [key: "client"] = ApiKeyStore.Current.AcousticIdKey,
+            [key: "duration"] = fingerprintData.Duration.ToString(),
+            [key: "fingerprint"] = fingerprintData.Fingerprint,
         };
 
         return GetFingerprint<AcoustIdFingerprint>(
-            "lookup?meta=" + string.Join("+", appendices),
-            queryParams,
-            priority
+            url: "lookup?meta=" + string.Join(separator: "+", value: appendices),
+            query: queryParams,
+            priority: priority
         );
     }
 
@@ -50,7 +50,7 @@ public class AcoustIdFingerprintClient : AcoustIdBaseClient
     // fingerprinted or AcoustId has no matching recordings.
     public async ValueTask<AcoustIdFingerprint?> Lookup(string? file, bool? priority = false)
     {
-        if (string.IsNullOrWhiteSpace(file))
+        if (string.IsNullOrWhiteSpace(value: file))
         {
             return null;
         }
@@ -58,16 +58,16 @@ public class AcoustIdFingerprintClient : AcoustIdBaseClient
         if (_fingerprinter is null)
         {
             throw new InvalidOperationException(
-                "AcoustIdFingerprintClient was constructed without an IAudioFingerprinter; "
-                    + "fingerprint lookup by file requires one."
+                message: "AcoustIdFingerprintClient was constructed without an IAudioFingerprinter; "
+                         + "fingerprint lookup by file requires one."
             );
         }
 
         AudioFingerprint? fingerprint = await _fingerprinter.FingerprintAsync(
-            file,
-            CancellationToken.None
+            filePath: file,
+            ct: CancellationToken.None
         );
-        if (fingerprint is null || string.IsNullOrWhiteSpace(fingerprint.Fingerprint))
+        if (fingerprint is null || string.IsNullOrWhiteSpace(value: fingerprint.Fingerprint))
         {
             return null;
         }
@@ -79,9 +79,9 @@ public class AcoustIdFingerprintClient : AcoustIdBaseClient
         };
 
         return await WithFingerprint(
-            ["recordings", "releases", "releasegroups"],
-            fingerprintData,
-            priority
+            appendices: ["recordings", "releases", "releasegroups"],
+            fingerprintData: fingerprintData,
+            priority: priority
         );
     }
 }

@@ -34,7 +34,7 @@ namespace NoMercy.Tests.Service;
 /// restore every touched static afterward so this test class cannot leak state
 /// into any other test running later in the same process.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class StartupOptionsTests : IDisposable
 {
     private static readonly string[] EnvVarNames =
@@ -71,15 +71,15 @@ public sealed class StartupOptionsTests : IDisposable
 
         foreach (string name in EnvVarNames)
         {
-            _originalEnvVars[name] = Environment.GetEnvironmentVariable(name);
-            Environment.SetEnvironmentVariable(name, null);
+            _originalEnvVars[key: name] = Environment.GetEnvironmentVariable(variable: name);
+            Environment.SetEnvironmentVariable(variable: name, value: null);
         }
     }
 
     public void Dispose()
     {
         foreach (string name in EnvVarNames)
-            Environment.SetEnvironmentVariable(name, _originalEnvVars[name]);
+            Environment.SetEnvironmentVariable(variable: name, value: _originalEnvVars[key: name]);
 
         Config.IsDev = _originalIsDev;
         Config.ManagementPipeName = _originalPipeName;
@@ -90,8 +90,8 @@ public sealed class StartupOptionsTests : IDisposable
         RuntimeServerSettings.Current.InternalServerPort = _originalInternalPort;
         RuntimeServerSettings.Current.ExternalServerPort = _originalExternalPort;
         DatabaseSeeder.ShouldSeedMarvel = _originalShouldSeedMarvel;
-        SetOverrideIp("OverrideInternalIp", null);
-        SetOverrideIp("OverrideExternalIp", null);
+        SetOverrideIp(propertyName: "OverrideInternalIp", value: null);
+        SetOverrideIp(propertyName: "OverrideExternalIp", value: null);
     }
 
     private static void EnsureAppDatabase()
@@ -102,16 +102,16 @@ public sealed class StartupOptionsTests : IDisposable
                 return;
 
             foreach (string path in AppFiles.AllPaths())
-                if (!Directory.Exists(path))
-                    Directory.CreateDirectory(path);
+                if (!Directory.Exists(path: path))
+                    Directory.CreateDirectory(path: path);
 
             ServiceCollection tokenServices = new();
             tokenServices
                 .AddDataProtection()
-                .PersistKeysToFileSystem(new(AppFiles.DataProtectionKeysDir))
-                .SetApplicationName("NoMercyMediaServer");
+                .PersistKeysToFileSystem(directory: new(path: AppFiles.DataProtectionKeysDir))
+                .SetApplicationName(applicationName: "NoMercyMediaServer");
             ServiceProvider tokenProvider = tokenServices.BuildServiceProvider();
-            TokenStore.Initialize(tokenProvider);
+            TokenStore.Initialize(serviceProvider: tokenProvider);
 
             using AppDbContext appContext = new();
             appContext.Database.EnsureCreated();
@@ -127,44 +127,44 @@ public sealed class StartupOptionsTests : IDisposable
     private static void SetOverrideIp(string propertyName, string? value)
     {
         PropertyInfo property = typeof(StartupOptions).GetProperty(
-            propertyName,
-            BindingFlags.Public | BindingFlags.Static
+            name: propertyName,
+            bindingAttr: BindingFlags.Public | BindingFlags.Static
         )!;
-        property.SetValue(null, value);
+        property.SetValue(obj: null, value: value);
     }
 
     [Theory]
-    [InlineData("1", true)]
-    [InlineData("true", true)]
-    [InlineData("True", true)]
-    [InlineData("TRUE", true)]
-    [InlineData("0", false)]
-    [InlineData("false", false)]
-    [InlineData("yes", false)]
-    [InlineData(null, false)]
+    [InlineData(data: ["1", true])]
+    [InlineData(data: ["true", true])]
+    [InlineData(data: ["True", true])]
+    [InlineData(data: ["TRUE", true])]
+    [InlineData(data: ["0", false])]
+    [InlineData(data: ["false", false])]
+    [InlineData(data: ["yes", false])]
+    [InlineData(data: [null, false])]
     public void ApplySettings_DevelopmentFromEnvVar_ParsesTruthyValuesOnly(
         string? envValue,
         bool expected
     )
     {
-        Environment.SetEnvironmentVariable("NOMERCY_DEV", envValue);
+        Environment.SetEnvironmentVariable(variable: "NOMERCY_DEV", value: envValue);
         StartupOptions options = new() { Development = false };
 
         options.ApplySettings();
 
-        Assert.Equal(expected, options.Development);
-        Assert.Equal(expected, Config.IsDev);
+        Assert.Equal(expected: expected, actual: options.Development);
+        Assert.Equal(expected: expected, actual: Config.IsDev);
     }
 
     [Fact]
     public void ApplySettings_DevelopmentAlreadyTrueViaCli_IgnoresEnvVar()
     {
-        Environment.SetEnvironmentVariable("NOMERCY_DEV", "false");
+        Environment.SetEnvironmentVariable(variable: "NOMERCY_DEV", value: "false");
         StartupOptions options = new() { Development = true };
 
         options.ApplySettings();
 
-        Assert.True(options.Development);
+        Assert.True(condition: options.Development);
     }
 
     [Fact]
@@ -174,16 +174,16 @@ public sealed class StartupOptionsTests : IDisposable
 
         options.ApplySettings();
 
-        Assert.True(Config.IsDev);
-        Assert.Equal("https://app-dev.nomercy.tv/", ExternalServicesConfig.Current.AppBaseUrl);
-        Assert.Equal("https://api-dev.nomercy.tv/", ExternalServicesConfig.Current.ApiBaseUrl);
+        Assert.True(condition: Config.IsDev);
+        Assert.Equal(expected: "https://app-dev.nomercy.tv/", actual: ExternalServicesConfig.Current.AppBaseUrl);
+        Assert.Equal(expected: "https://api-dev.nomercy.tv/", actual: ExternalServicesConfig.Current.ApiBaseUrl);
         Assert.Equal(
-            "https://api-dev.nomercy.tv/v1/server/",
-            ExternalServicesConfig.Current.ApiServerBaseUrl
+            expected: "https://api-dev.nomercy.tv/v1/server/",
+            actual: ExternalServicesConfig.Current.ApiServerBaseUrl
         );
         Assert.Equal(
-            "https://auth-dev.nomercy.tv/realms/NoMercyTV/",
-            ExternalServicesConfig.Current.AuthBaseUrl
+            expected: "https://auth-dev.nomercy.tv/realms/NoMercyTV/",
+            actual: ExternalServicesConfig.Current.AuthBaseUrl
         );
     }
 
@@ -197,35 +197,35 @@ public sealed class StartupOptionsTests : IDisposable
 
         // No "reset to production" branch exists — ApplySettings only ever
         // pushes dev URLs in, never pulls them back out.
-        Assert.Equal(beforeAuthUrl, ExternalServicesConfig.Current.AuthBaseUrl);
+        Assert.Equal(expected: beforeAuthUrl, actual: ExternalServicesConfig.Current.AuthBaseUrl);
     }
 
     [Theory]
-    [InlineData("1", true)]
-    [InlineData("true", true)]
-    [InlineData("0", false)]
+    [InlineData(data: ["1", true])]
+    [InlineData(data: ["true", true])]
+    [InlineData(data: ["0", false])]
     public void ApplySettings_ShouldSeedFromEnvVar_SetsDatabaseSeederFlag(
         string envValue,
         bool expected
     )
     {
-        Environment.SetEnvironmentVariable("NOMERCY_SEED", envValue);
+        Environment.SetEnvironmentVariable(variable: "NOMERCY_SEED", value: envValue);
         StartupOptions options = new() { ShouldSeed = false };
 
         options.ApplySettings();
 
-        Assert.Equal(expected, DatabaseSeeder.ShouldSeedMarvel);
+        Assert.Equal(expected: expected, actual: DatabaseSeeder.ShouldSeedMarvel);
     }
 
     [Fact]
     public void ApplySettings_ShouldSeedAlreadyTrueViaCli_IgnoresEnvVar()
     {
-        Environment.SetEnvironmentVariable("NOMERCY_SEED", "0");
+        Environment.SetEnvironmentVariable(variable: "NOMERCY_SEED", value: "0");
         StartupOptions options = new() { ShouldSeed = true };
 
         options.ApplySettings();
 
-        Assert.True(DatabaseSeeder.ShouldSeedMarvel);
+        Assert.True(condition: DatabaseSeeder.ShouldSeedMarvel);
     }
 
     [Fact]
@@ -235,18 +235,18 @@ public sealed class StartupOptionsTests : IDisposable
 
         options.ApplySettings();
 
-        Assert.Equal("nomercy-test-pipe", Config.ManagementPipeName);
+        Assert.Equal(expected: "nomercy-test-pipe", actual: Config.ManagementPipeName);
     }
 
     [Fact]
     public void ApplySettings_PipeNameFromEnvVar_UsedWhenCliOmitted()
     {
-        Environment.SetEnvironmentVariable("NOMERCY_PIPE_NAME", "env-pipe");
+        Environment.SetEnvironmentVariable(variable: "NOMERCY_PIPE_NAME", value: "env-pipe");
         StartupOptions options = new();
 
         options.ApplySettings();
 
-        Assert.Equal("env-pipe", Config.ManagementPipeName);
+        Assert.Equal(expected: "env-pipe", actual: Config.ManagementPipeName);
     }
 
     [Fact]
@@ -257,7 +257,7 @@ public sealed class StartupOptionsTests : IDisposable
 
         options.ApplySettings();
 
-        Assert.Equal("unchanged-pipe", Config.ManagementPipeName);
+        Assert.Equal(expected: "unchanged-pipe", actual: Config.ManagementPipeName);
     }
 
     [Fact]
@@ -267,18 +267,18 @@ public sealed class StartupOptionsTests : IDisposable
 
         options.ApplySettings();
 
-        Assert.Equal("192.168.1.50", StartupOptions.OverrideInternalIp);
+        Assert.Equal(expected: "192.168.1.50", actual: StartupOptions.OverrideInternalIp);
     }
 
     [Fact]
     public void ApplySettings_ExternalIpFromEnvVar_UsedWhenCliOmitted()
     {
-        Environment.SetEnvironmentVariable("NOMERCY_EXTERNAL_IP", "203.0.113.7");
+        Environment.SetEnvironmentVariable(variable: "NOMERCY_EXTERNAL_IP", value: "203.0.113.7");
         StartupOptions options = new();
 
         options.ApplySettings();
 
-        Assert.Equal("203.0.113.7", StartupOptions.OverrideExternalIp);
+        Assert.Equal(expected: "203.0.113.7", actual: StartupOptions.OverrideExternalIp);
     }
 
     [Fact]
@@ -288,8 +288,8 @@ public sealed class StartupOptionsTests : IDisposable
 
         options.ApplySettings();
 
-        Assert.Null(StartupOptions.OverrideInternalIp);
-        Assert.Null(StartupOptions.OverrideExternalIp);
+        Assert.Null(@object: StartupOptions.OverrideInternalIp);
+        Assert.Null(@object: StartupOptions.OverrideExternalIp);
     }
 
     [Fact]
@@ -299,38 +299,38 @@ public sealed class StartupOptionsTests : IDisposable
 
         options.ApplySettings();
 
-        Assert.Equal(8001, RuntimeServerSettings.Current.InternalServerPort);
-        Assert.Equal(8001, options.InternalPort);
+        Assert.Equal(expected: 8001, actual: RuntimeServerSettings.Current.InternalServerPort);
+        Assert.Equal(expected: 8001, actual: options.InternalPort);
     }
 
     [Fact]
     public void ApplySettings_ExternalPortFromEnvVar_UsedWhenCliOmitted()
     {
-        Environment.SetEnvironmentVariable("NOMERCY_EXTERNAL_PORT", "9002");
+        Environment.SetEnvironmentVariable(variable: "NOMERCY_EXTERNAL_PORT", value: "9002");
         StartupOptions options = new();
 
         options.ApplySettings();
 
-        Assert.Equal(9002, RuntimeServerSettings.Current.ExternalServerPort);
-        Assert.Equal(9002, options.ExternalPort);
+        Assert.Equal(expected: 9002, actual: RuntimeServerSettings.Current.ExternalServerPort);
+        Assert.Equal(expected: 9002, actual: options.ExternalPort);
     }
 
     [Fact]
     public void ApplySettings_MalformedInternalPortEnvVar_FallsBackInsteadOfThrowing()
     {
-        Environment.SetEnvironmentVariable("NOMERCY_INTERNAL_PORT", "not-a-number");
+        Environment.SetEnvironmentVariable(variable: "NOMERCY_INTERNAL_PORT", value: "not-a-number");
         StartupOptions options = new();
 
-        Exception? thrown = Record.Exception(() => options.ApplySettings());
+        Exception? thrown = Record.Exception(testCode: () => options.ApplySettings());
 
         // ApplyEnvironmentVariables leaves InternalPort at 0 (TryParse failed),
         // but ResolvePort then resolves the effective port from CLI -> DB ->
         // fallback and writes the RESOLVED value back onto options.InternalPort
         // — a malformed env var degrades to the 7626 default rather than
         // crashing startup or leaving the port unset.
-        Assert.Null(thrown);
-        Assert.Equal(7626, options.InternalPort);
-        Assert.Equal(7626, RuntimeServerSettings.Current.InternalServerPort);
+        Assert.Null(@object: thrown);
+        Assert.Equal(expected: 7626, actual: options.InternalPort);
+        Assert.Equal(expected: 7626, actual: RuntimeServerSettings.Current.InternalServerPort);
     }
 
     [Fact]
@@ -338,9 +338,9 @@ public sealed class StartupOptionsTests : IDisposable
     {
         StartupOptions options = new() { LogLevel = "not-a-real-level" };
 
-        Exception? thrown = Record.Exception(() => options.ApplySettings());
+        Exception? thrown = Record.Exception(testCode: () => options.ApplySettings());
 
-        Assert.Null(thrown);
+        Assert.Null(@object: thrown);
     }
 
     [Fact]
@@ -348,30 +348,30 @@ public sealed class StartupOptionsTests : IDisposable
     {
         StartupOptions options = new() { LogLevel = "Debug" };
 
-        Exception? thrown = Record.Exception(() => options.ApplySettings());
+        Exception? thrown = Record.Exception(testCode: () => options.ApplySettings());
 
-        Assert.Null(thrown);
+        Assert.Null(@object: thrown);
     }
 
     [Fact]
     public void ApplySettings_LogLevelAlreadyOverriddenByCli_IgnoresEnvVar()
     {
-        Environment.SetEnvironmentVariable("NOMERCY_LOG_LEVEL", "Fatal");
+        Environment.SetEnvironmentVariable(variable: "NOMERCY_LOG_LEVEL", value: "Fatal");
         StartupOptions options = new() { LogLevel = "Warning" };
 
         options.ApplySettings();
 
-        Assert.Equal("Warning", options.LogLevel);
+        Assert.Equal(expected: "Warning", actual: options.LogLevel);
     }
 
     [Fact]
     public void ApplySettings_LogLevelFromEnvVar_UsedWhenCliLeftAtDefault()
     {
-        Environment.SetEnvironmentVariable("NOMERCY_LOG_LEVEL", "  Debug  ");
+        Environment.SetEnvironmentVariable(variable: "NOMERCY_LOG_LEVEL", value: "  Debug  ");
         StartupOptions options = new();
 
         options.ApplySettings();
 
-        Assert.Equal("Debug", options.LogLevel);
+        Assert.Equal(expected: "Debug", actual: options.LogLevel);
     }
 }

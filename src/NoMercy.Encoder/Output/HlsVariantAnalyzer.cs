@@ -28,17 +28,17 @@ public class HlsVariantAnalyzer(IStorage storage) : IHlsVariantAnalyzer
     /// </summary>
     public VariantMetrics Measure(string playlistPath)
     {
-        if (!storage.Exists(playlistPath))
+        if (!storage.Exists(path: playlistPath))
         {
             // Failures here often mean BuildStage didn't write the playlist yet
             // or the path template resolved differently between plan and build.
-            return new(0, 0);
+            return new(PeakBandwidth: 0, AverageBandwidth: 0);
         }
 
-        string normalized = playlistPath.Replace('\\', '/');
-        int lastSlash = normalized.LastIndexOf('/');
+        string normalized = playlistPath.Replace(oldChar: '\\', newChar: '/');
+        int lastSlash = normalized.LastIndexOf(value: '/');
         string playlistDir = lastSlash > 0 ? playlistPath[..lastSlash] : string.Empty;
-        string[] lines = Encoding.UTF8.GetString(storage.Read(playlistPath)).Split('\n');
+        string[] lines = Encoding.UTF8.GetString(bytes: storage.Read(path: playlistPath)).Split(separator: '\n');
 
         long totalBytes = 0;
         double totalDuration = 0;
@@ -46,13 +46,13 @@ public class HlsVariantAnalyzer(IStorage storage) : IHlsVariantAnalyzer
 
         for (int i = 0; i < lines.Length; i++)
         {
-            if (!lines[i].StartsWith("#EXTINF:"))
+            if (!lines[i].StartsWith(value: "#EXTINF:"))
                 continue;
 
             // Parse segment duration from #EXTINF:6.006000,
-            string durationStr = lines[i][8..].TrimEnd(',');
+            string durationStr = lines[i][8..].TrimEnd(trimChar: ',');
             if (
-                !double.TryParse(durationStr, CultureInfo.InvariantCulture, out double segDuration)
+                !double.TryParse(s: durationStr, provider: CultureInfo.InvariantCulture, result: out double segDuration)
                 || segDuration <= 0
             )
                 continue;
@@ -62,16 +62,16 @@ public class HlsVariantAnalyzer(IStorage storage) : IHlsVariantAnalyzer
                 break;
 
             string segmentFile = lines[i + 1].Trim();
-            if (segmentFile.StartsWith('#'))
+            if (segmentFile.StartsWith(value: '#'))
                 continue;
 
-            string segmentPath = string.IsNullOrEmpty(playlistDir)
+            string segmentPath = string.IsNullOrEmpty(value: playlistDir)
                 ? segmentFile
-                : storage.CombinePath(playlistDir, segmentFile);
-            if (!storage.Exists(segmentPath))
+                : storage.CombinePath(parent: playlistDir, child: segmentFile);
+            if (!storage.Exists(path: segmentPath))
                 continue;
 
-            long segmentBytes = storage.Size(segmentPath);
+            long segmentBytes = storage.Size(path: segmentPath);
             totalBytes += segmentBytes;
             totalDuration += segDuration;
 

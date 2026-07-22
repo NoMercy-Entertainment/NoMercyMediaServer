@@ -17,7 +17,7 @@ using NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 namespace NoMercy.Tests.MediaProcessing.Jobs;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class IncompleteEncodeRecorderTests : IDisposable
 {
     private readonly SqliteConnection _connection;
@@ -27,16 +27,16 @@ public sealed class IncompleteEncodeRecorderTests : IDisposable
     public IncompleteEncodeRecorderTests()
     {
         string dbName = Guid.NewGuid().ToString();
-        _connection = new($"DataSource={dbName};Mode=Memory;Cache=Shared");
+        _connection = new(connectionString: $"DataSource={dbName};Mode=Memory;Cache=Shared");
         _connection.Open();
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
-            .UseSqlite(_connection)
+            .UseSqlite(connection: _connection)
             .Options;
 
-        _context = new(options);
+        _context = new(options: options);
         _context.Database.EnsureCreated();
-        _context.Database.ExecuteSqlRaw("PRAGMA foreign_keys = OFF;");
+        _context.Database.ExecuteSqlRaw(sql: "PRAGMA foreign_keys = OFF;");
 
         _recorder = new();
     }
@@ -53,7 +53,7 @@ public sealed class IncompleteEncodeRecorderTests : IDisposable
         string[] keys = ["video-1080p", "video-720p", "audio-aac"];
 
         await _recorder.RecordAsync(
-            _context,
+            context: _context,
             mediaId: 42L,
             folderId: "folder-abc",
             title: "Test Movie",
@@ -65,19 +65,19 @@ public sealed class IncompleteEncodeRecorderTests : IDisposable
 
         IncompleteEncode? row = await _context
             .IncompleteEncodes.AsNoTracking()
-            .FirstOrDefaultAsync(r => r.MediaId == 42L && r.FolderId == "folder-abc");
+            .FirstOrDefaultAsync(predicate: r => r.MediaId == 42L && r.FolderId == "folder-abc");
 
         row.Should().NotBeNull();
-        string[] split = row!.MissingRenditions.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        split.Should().HaveCount(3);
-        split.Should().BeEquivalentTo(keys);
+        string[] split = row!.MissingRenditions.Split(separator: '\n', options: StringSplitOptions.RemoveEmptyEntries);
+        split.Should().HaveCount(expected: 3);
+        split.Should().BeEquivalentTo(expectation: keys);
     }
 
     [Fact]
     public async Task RecordAsync_ThenClearAsync_LeavesNoRow()
     {
         await _recorder.RecordAsync(
-            _context,
+            context: _context,
             mediaId: 7L,
             folderId: "folder-xyz",
             title: "Some Show S01E01",
@@ -88,7 +88,7 @@ public sealed class IncompleteEncodeRecorderTests : IDisposable
         );
 
         await _recorder.ClearAsync(
-            _context,
+            context: _context,
             mediaId: 7L,
             folderId: "folder-xyz",
             ct: CancellationToken.None
@@ -96,7 +96,7 @@ public sealed class IncompleteEncodeRecorderTests : IDisposable
 
         IncompleteEncode? row = await _context
             .IncompleteEncodes.AsNoTracking()
-            .FirstOrDefaultAsync(r => r.MediaId == 7L && r.FolderId == "folder-xyz");
+            .FirstOrDefaultAsync(predicate: r => r.MediaId == 7L && r.FolderId == "folder-xyz");
 
         row.Should().BeNull();
     }
@@ -108,7 +108,7 @@ public sealed class IncompleteEncodeRecorderTests : IDisposable
         string[] secondKeys = ["video-480p"];
 
         await _recorder.RecordAsync(
-            _context,
+            context: _context,
             mediaId: 99L,
             folderId: "folder-dup",
             title: "Dup Movie",
@@ -119,7 +119,7 @@ public sealed class IncompleteEncodeRecorderTests : IDisposable
         );
 
         await _recorder.RecordAsync(
-            _context,
+            context: _context,
             mediaId: 99L,
             folderId: "folder-dup",
             title: "Dup Movie",
@@ -129,21 +129,21 @@ public sealed class IncompleteEncodeRecorderTests : IDisposable
             ct: CancellationToken.None
         );
 
-        int count = await _context.IncompleteEncodes.CountAsync(r =>
+        int count = await _context.IncompleteEncodes.CountAsync(predicate: r =>
             r.MediaId == 99L && r.FolderId == "folder-dup"
         );
 
         count
             .Should()
-            .Be(1, "second RecordAsync must update the existing row, not insert a duplicate");
+            .Be(expected: 1, because: "second RecordAsync must update the existing row, not insert a duplicate");
 
         IncompleteEncode? row = await _context
             .IncompleteEncodes.AsNoTracking()
-            .FirstOrDefaultAsync(r => r.MediaId == 99L && r.FolderId == "folder-dup");
+            .FirstOrDefaultAsync(predicate: r => r.MediaId == 99L && r.FolderId == "folder-dup");
 
-        row!.AttemptsMade.Should().Be(2);
-        row.LastError.Should().Be("error-2");
-        string[] split = row.MissingRenditions.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        split.Should().BeEquivalentTo(secondKeys);
+        row!.AttemptsMade.Should().Be(expected: 2);
+        row.LastError.Should().Be(expected: "error-2");
+        string[] split = row.MissingRenditions.Split(separator: '\n', options: StringSplitOptions.RemoveEmptyEntries);
+        split.Should().BeEquivalentTo(expectation: secondKeys);
     }
 }

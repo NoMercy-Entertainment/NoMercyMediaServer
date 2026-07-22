@@ -29,8 +29,8 @@ public class ThumbnailFilterResolverTests
             tonemapChain: Tonemap
         );
 
-        filter.Should().Be("format=yuvj420p,fps=1/10,scale=320:-2");
-        filter.Should().NotContain("tonemap");
+        filter.Should().Be(expected: "format=yuvj420p,fps=1/10,scale=320:-2");
+        filter.Should().NotContain(unexpected: "tonemap");
     }
 
     [Fact]
@@ -43,9 +43,9 @@ public class ThumbnailFilterResolverTests
             tonemapChain: Tonemap
         );
 
-        filter.Should().StartWith(Tonemap + ",");
-        filter.Should().EndWith("fps=1/10,scale=320:-2");
-        filter.Should().Contain("tonemap=hable", "HDR sprites must be tonemapped to SDR");
+        filter.Should().StartWith(expected: Tonemap + ",");
+        filter.Should().EndWith(expected: "fps=1/10,scale=320:-2");
+        filter.Should().Contain(expected: "tonemap=hable", because: "HDR sprites must be tonemapped to SDR");
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public class ThumbnailFilterResolverTests
             tonemapChain: null
         );
 
-        filter.Should().Contain("tonemap=hable");
-        filter.Should().EndWith("fps=1/5,scale=240:-2");
+        filter.Should().Contain(expected: "tonemap=hable");
+        filter.Should().EndWith(expected: "fps=1/5,scale=240:-2");
     }
 }

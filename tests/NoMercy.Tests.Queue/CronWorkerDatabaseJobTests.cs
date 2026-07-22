@@ -36,7 +36,7 @@ namespace NoMercy.Tests.Queue;
 /// <c>StartJobWorker</c> can't mask whether THIS method's own decision
 /// actually started the worker.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class CronWorkerDatabaseJobTests
 {
     private sealed class TestCronJobExecutor : ICronJobExecutor
@@ -55,30 +55,30 @@ public class CronWorkerDatabaseJobTests
     ) =>
         (Dictionary<string, CancellationTokenSource>)
             typeof(CronWorker)
-                .GetField("_jobCancellationTokens", BindingFlags.NonPublic | BindingFlags.Instance)!
-                .GetValue(worker)!;
+                .GetField(name: "_jobCancellationTokens", bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance)!
+                .GetValue(obj: worker)!;
 
     private static void SetRegisteredJobType(CronWorker worker, string jobType, Type executorType)
     {
         Dictionary<string, Type> registeredJobs =
             (Dictionary<string, Type>)
                 typeof(CronWorker)
-                    .GetField("_registeredJobs", BindingFlags.NonPublic | BindingFlags.Instance)!
-                    .GetValue(worker)!;
-        registeredJobs[jobType] = executorType;
+                    .GetField(name: "_registeredJobs", bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance)!
+                    .GetValue(obj: worker)!;
+        registeredJobs[key: jobType] = executorType;
     }
 
     private static void InvokeStartDatabaseJobWorkers(CronWorker worker) =>
         typeof(CronWorker)
-            .GetMethod("StartDatabaseJobWorkers", BindingFlags.NonPublic | BindingFlags.Instance)!
-            .Invoke(worker, null);
+            .GetMethod(name: "StartDatabaseJobWorkers", bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance)!
+            .Invoke(obj: worker, parameters: null);
 
     [Fact]
     public async Task StartDatabaseJobWorkers_RegisteredJobType_StartsAWorker()
     {
         TestQueueContextAdapter context = new();
         context.AddCronJob(
-            new CronJobModel
+            cronJob: new CronJobModel
             {
                 Name = "registered-db-job",
                 CronExpression = "0 0 * * *",
@@ -91,20 +91,20 @@ public class CronWorkerDatabaseJobTests
         services.AddScoped<TestCronJobExecutor>();
         await using ServiceProvider provider = services.BuildServiceProvider();
         CronWorker worker = new(
-            provider,
-            provider.GetRequiredService<ILogger<CronWorker>>(),
-            context
+            serviceProvider: provider,
+            logger: provider.GetRequiredService<ILogger<CronWorker>>(),
+            queueContext: context
         );
-        SetRegisteredJobType(worker, "registered-type", typeof(TestCronJobExecutor));
+        SetRegisteredJobType(worker: worker, jobType: "registered-type", executorType: typeof(TestCronJobExecutor));
 
-        GetJobCancellationTokens(worker).Should().BeEmpty("nothing has started a worker yet");
+        GetJobCancellationTokens(worker: worker).Should().BeEmpty(because: "nothing has started a worker yet");
 
-        InvokeStartDatabaseJobWorkers(worker);
+        InvokeStartDatabaseJobWorkers(worker: worker);
 
-        GetJobCancellationTokens(worker).Should().ContainKey("registered-type");
+        GetJobCancellationTokens(worker: worker).Should().ContainKey(expected: "registered-type");
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
-        await worker.StopAsync(cts.Token);
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
+        await worker.StopAsync(cancellationToken: cts.Token);
     }
 
     [Fact]
@@ -112,7 +112,7 @@ public class CronWorkerDatabaseJobTests
     {
         TestQueueContextAdapter context = new();
         context.AddCronJob(
-            new CronJobModel
+            cronJob: new CronJobModel
             {
                 Name = "orphaned-db-job",
                 CronExpression = "0 0 * * *",
@@ -124,21 +124,21 @@ public class CronWorkerDatabaseJobTests
         services.AddLogging();
         await using ServiceProvider provider = services.BuildServiceProvider();
         CronWorker worker = new(
-            provider,
-            provider.GetRequiredService<ILogger<CronWorker>>(),
-            context
+            serviceProvider: provider,
+            logger: provider.GetRequiredService<ILogger<CronWorker>>(),
+            queueContext: context
         );
 
-        InvokeStartDatabaseJobWorkers(worker);
+        InvokeStartDatabaseJobWorkers(worker: worker);
 
-        GetJobCancellationTokens(worker)
+        GetJobCancellationTokens(worker: worker)
             .Should()
             .BeEmpty(
-                "a DB row whose JobType was never registered this boot must not start a worker"
+                because: "a DB row whose JobType was never registered this boot must not start a worker"
             );
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
-        await worker.StopAsync(cts.Token);
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
+        await worker.StopAsync(cancellationToken: cts.Token);
     }
 
     [Fact]
@@ -149,7 +149,7 @@ public class CronWorkerDatabaseJobTests
         // JobType IS registered.
         TestQueueContextAdapter context = new();
         context.AddCronJob(
-            new CronJobModel
+            cronJob: new CronJobModel
             {
                 Name = "disabled-db-job",
                 CronExpression = "0 0 * * *",
@@ -162,19 +162,19 @@ public class CronWorkerDatabaseJobTests
         services.AddScoped<TestCronJobExecutor>();
         await using ServiceProvider provider = services.BuildServiceProvider();
         CronWorker worker = new(
-            provider,
-            provider.GetRequiredService<ILogger<CronWorker>>(),
-            context
+            serviceProvider: provider,
+            logger: provider.GetRequiredService<ILogger<CronWorker>>(),
+            queueContext: context
         );
-        SetRegisteredJobType(worker, "registered-type", typeof(TestCronJobExecutor));
+        SetRegisteredJobType(worker: worker, jobType: "registered-type", executorType: typeof(TestCronJobExecutor));
 
-        InvokeStartDatabaseJobWorkers(worker);
+        InvokeStartDatabaseJobWorkers(worker: worker);
 
-        GetJobCancellationTokens(worker)
+        GetJobCancellationTokens(worker: worker)
             .Should()
-            .BeEmpty("a disabled cron job row must never start a worker");
+            .BeEmpty(because: "a disabled cron job row must never start a worker");
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
-        await worker.StopAsync(cts.Token);
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
+        await worker.StopAsync(cancellationToken: cts.Token);
     }
 }

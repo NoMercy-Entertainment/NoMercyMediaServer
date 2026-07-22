@@ -19,10 +19,10 @@ using NoMercy.MediaProcessing.Reclaim;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 
 [ApiController]
-[Tags("Dashboard Reclaim")]
-[ApiVersion(1.0)]
+[Tags(tags: "Dashboard Reclaim")]
+[ApiVersion(version: 1.0)]
 [Authorize(Policy = "Moderator")]
-[Route("api/v{version:apiVersion}/dashboard/reclaim", Order = 10)]
+[Route(template: "api/v{version:apiVersion}/dashboard/reclaim", Order = 10)]
 public class ReclaimController(IReclaimScanService reclaimScanService) : BaseController
 {
     private const int DefaultPageSize = 100;
@@ -30,16 +30,16 @@ public class ReclaimController(IReclaimScanService reclaimScanService) : BaseCon
     private const int MaxPageSize = 500;
 
     [HttpPost]
-    [Route("scan")]
+    [Route(template: "scan")]
     public async Task<IActionResult> Scan()
     {
         if (reclaimScanService.State == ReclaimScanState.Scanning)
-            return ConflictResponse("A reclaim scan is already in progress.");
+            return ConflictResponse(detail: "A reclaim scan is already in progress.");
 
-        await reclaimScanService.StartScanAsync(HttpContext.RequestAborted);
+        await reclaimScanService.StartScanAsync(ct: HttpContext.RequestAborted);
 
         return Ok(
-            new
+            value: new
             {
                 status = reclaimScanService.State.ToString(),
                 lastScannedAt = reclaimScanService.LastScannedAt,
@@ -53,15 +53,15 @@ public class ReclaimController(IReclaimScanService reclaimScanService) : BaseCon
         [FromQuery] int pageIndex = 0
     )
     {
-        int clampedPageSize = Math.Clamp(pageSize, MinPageSize, MaxPageSize);
-        int clampedPageIndex = Math.Max(pageIndex, 0);
+        int clampedPageSize = Math.Clamp(value: pageSize, min: MinPageSize, max: MaxPageSize);
+        int clampedPageIndex = Math.Max(val1: pageIndex, val2: 0);
 
         ReclaimScanResult? latest = reclaimScanService.Latest;
 
         if (latest is null)
         {
             return Ok(
-                new
+                value: new
                 {
                     status = reclaimScanService.State.ToString(),
                     lastScannedAt = reclaimScanService.LastScannedAt,
@@ -83,13 +83,13 @@ public class ReclaimController(IReclaimScanService reclaimScanService) : BaseCon
             offset >= latest.Items.Count
                 ? []
                 : latest
-                    .Items.Skip((int)offset)
-                    .Take(clampedPageSize)
-                    .Select(item => new ReclaimableItemDto(item))
+                    .Items.Skip(count: (int)offset)
+                    .Take(count: clampedPageSize)
+                    .Select(selector: item => new ReclaimableItemDto(item: item))
                     .ToArray();
 
         return Ok(
-            new
+            value: new
             {
                 status = reclaimScanService.State.ToString(),
                 lastScannedAt = reclaimScanService.LastScannedAt,
@@ -106,56 +106,56 @@ public class ReclaimController(IReclaimScanService reclaimScanService) : BaseCon
     }
 
     [HttpDelete]
-    [Route("items/{id}")]
+    [Route(template: "items/{id}")]
     public async Task<IActionResult> DeleteItem(string id)
     {
         try
         {
             long freedBytes = await reclaimScanService.DeleteItemAsync(
-                id,
-                HttpContext.RequestAborted
+                itemId: id,
+                ct: HttpContext.RequestAborted
             );
-            return Ok(new { freedBytes });
+            return Ok(value: new { freedBytes });
         }
         catch (KeyNotFoundException)
         {
-            return NotFoundResponse($"Reclaimable item '{id}' not found.");
+            return NotFoundResponse(detail: $"Reclaimable item '{id}' not found.");
         }
         catch (InvalidOperationException ex)
         {
-            return ConflictResponse(ex.Message);
+            return ConflictResponse(detail: ex.Message);
         }
         catch (Exception ex)
         {
             return InternalServerErrorResponse(
-                $"Failed to delete reclaimable item '{id}': {ex.Message}"
+                detail: $"Failed to delete reclaimable item '{id}': {ex.Message}"
             );
         }
     }
 
     [HttpPost]
-    [Route("sweep-partials")]
+    [Route(template: "sweep-partials")]
     public async Task<IActionResult> SweepPartials()
     {
         try
         {
             (int count, long bytes) = await reclaimScanService.SweepPartialsAsync(
-                HttpContext.RequestAborted
+                ct: HttpContext.RequestAborted
             );
 
-            return Ok(new { count, bytes });
+            return Ok(value: new { count, bytes });
         }
         catch (KeyNotFoundException ex)
         {
-            return NotFoundResponse(ex.Message);
+            return NotFoundResponse(detail: ex.Message);
         }
         catch (InvalidOperationException ex)
         {
-            return ConflictResponse(ex.Message);
+            return ConflictResponse(detail: ex.Message);
         }
         catch (Exception ex)
         {
-            return InternalServerErrorResponse($"Failed to sweep partial junk: {ex.Message}");
+            return InternalServerErrorResponse(detail: $"Failed to sweep partial junk: {ex.Message}");
         }
     }
 }

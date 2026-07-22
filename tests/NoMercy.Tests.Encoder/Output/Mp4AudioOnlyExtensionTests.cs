@@ -27,23 +27,23 @@ public class Mp4AudioOnlyExtensionTests : IDisposable
 
     public Mp4AudioOnlyExtensionTests()
     {
-        _outputDir = Path.Combine(Path.GetTempPath(), $"Mp4Audio_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_outputDir);
+        _outputDir = Path.Combine(path1: Path.GetTempPath(), path2: $"Mp4Audio_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: _outputDir);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(_outputDir))
-            Directory.Delete(_outputDir, recursive: true);
-        GC.SuppressFinalize(this);
+        if (Directory.Exists(path: _outputDir))
+            Directory.Delete(path: _outputDir, recursive: true);
+        GC.SuppressFinalize(obj: this);
     }
 
     [Fact]
     public async Task Finalize_AudioOnlyPlan_RenamesToM4a()
     {
-        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
-        string sourcePath = Path.Combine(_outputDir, "output.mp4");
-        await File.WriteAllBytesAsync(sourcePath, [0x00, 0x01]);
+        Mp4OutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        string sourcePath = Path.Combine(path1: _outputDir, path2: "output.mp4");
+        await File.WriteAllBytesAsync(path: sourcePath, bytes: [0x00, 0x01]);
 
         OutputPlan audioOnly = new(
             Format: OutputFormat.Mp4,
@@ -64,18 +64,18 @@ public class Mp4AudioOnlyExtensionTests : IDisposable
             Thumbnails: null
         );
 
-        await strategy.FinalizeAsync(_outputDir, audioOnly, "Track01", CancellationToken.None);
+        await strategy.FinalizeAsync(outputDirectory: _outputDir, plan: audioOnly, mediaTitle: "Track01", ct: CancellationToken.None);
 
-        Assert.True(File.Exists(Path.Combine(_outputDir, "Track01.m4a")));
-        Assert.False(File.Exists(Path.Combine(_outputDir, "Track01.mp4")));
+        Assert.True(condition: File.Exists(path: Path.Combine(path1: _outputDir, path2: "Track01.m4a")));
+        Assert.False(condition: File.Exists(path: Path.Combine(path1: _outputDir, path2: "Track01.mp4")));
     }
 
     [Fact]
     public async Task Finalize_VideoPlan_StaysMp4()
     {
-        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
-        string sourcePath = Path.Combine(_outputDir, "output.mp4");
-        await File.WriteAllBytesAsync(sourcePath, [0x00, 0x01]);
+        Mp4OutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
+        string sourcePath = Path.Combine(path1: _outputDir, path2: "output.mp4");
+        await File.WriteAllBytesAsync(path: sourcePath, bytes: [0x00, 0x01]);
 
         OutputPlan videoPlan = new(
             Format: OutputFormat.Mp4,
@@ -101,9 +101,9 @@ public class Mp4AudioOnlyExtensionTests : IDisposable
             Thumbnails: null
         );
 
-        await strategy.FinalizeAsync(_outputDir, videoPlan, "Movie", CancellationToken.None);
+        await strategy.FinalizeAsync(outputDirectory: _outputDir, plan: videoPlan, mediaTitle: "Movie", ct: CancellationToken.None);
 
-        Assert.True(File.Exists(Path.Combine(_outputDir, "Movie.mp4")));
-        Assert.False(File.Exists(Path.Combine(_outputDir, "Movie.m4a")));
+        Assert.True(condition: File.Exists(path: Path.Combine(path1: _outputDir, path2: "Movie.mp4")));
+        Assert.False(condition: File.Exists(path: Path.Combine(path1: _outputDir, path2: "Movie.m4a")));
     }
 }

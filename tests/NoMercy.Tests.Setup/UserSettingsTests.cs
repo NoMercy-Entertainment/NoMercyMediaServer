@@ -20,7 +20,7 @@ namespace NoMercy.Tests.Setup;
 // Regression coverage for the "one bad settings row wipes ALL settings" boot
 // crash: a single malformed int in the Configuration table used to make
 // TryGetUserSettings/ApplySettings throw (or discard every other row).
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class UserSettingsTests : IDisposable
 {
     private readonly int _originalInternalPort = RuntimeServerSettings.Current.InternalServerPort;
@@ -28,18 +28,18 @@ public class UserSettingsTests : IDisposable
 
     public UserSettingsTests()
     {
-        Directory.CreateDirectory(AppFiles.DataPath);
+        Directory.CreateDirectory(path: AppFiles.DataPath);
 
         using AppDbContext context = new();
         context.Database.EnsureCreated();
-        context.Configuration.RemoveRange(context.Configuration);
+        context.Configuration.RemoveRange(entities: context.Configuration);
         context.SaveChanges();
     }
 
     public void Dispose()
     {
         using AppDbContext context = new();
-        context.Configuration.RemoveRange(context.Configuration);
+        context.Configuration.RemoveRange(entities: context.Configuration);
         context.SaveChanges();
 
         RuntimeServerSettings.Current.InternalServerPort = _originalInternalPort;
@@ -51,17 +51,17 @@ public class UserSettingsTests : IDisposable
     {
         using (AppDbContext context = new())
         {
-            context.Configuration.Add(new() { Key = "internalPort", Value = "not-a-number" });
-            context.Configuration.Add(new() { Key = "cronRunners", Value = "3" });
+            context.Configuration.Add(entity: new() { Key = "internalPort", Value = "not-a-number" });
+            context.Configuration.Add(entity: new() { Key = "cronRunners", Value = "3" });
             context.SaveChanges();
         }
 
-        bool success = UserSettings.TryGetUserSettings(out Dictionary<string, string> settings);
+        bool success = UserSettings.TryGetUserSettings(settings: out Dictionary<string, string> settings);
 
         success.Should().BeTrue();
-        settings.Should().NotContainKey("internalPort");
-        settings.Should().ContainKey("cronRunners");
-        settings["cronRunners"].Should().Be("3");
+        settings.Should().NotContainKey(unexpected: "internalPort");
+        settings.Should().ContainKey(expected: "cronRunners");
+        settings[key: "cronRunners"].Should().Be(expected: "3");
     }
 
     [Fact]
@@ -69,17 +69,17 @@ public class UserSettingsTests : IDisposable
     {
         using (AppDbContext context = new())
         {
-            context.Configuration.Add(new() { Key = "cronRunners", Value = "2" });
-            context.Configuration.Add(new() { Key = "imageRunners", Value = "5" });
+            context.Configuration.Add(entity: new() { Key = "cronRunners", Value = "2" });
+            context.Configuration.Add(entity: new() { Key = "imageRunners", Value = "5" });
             context.SaveChanges();
         }
 
-        bool success = UserSettings.TryGetUserSettings(out Dictionary<string, string> settings);
+        bool success = UserSettings.TryGetUserSettings(settings: out Dictionary<string, string> settings);
 
         success.Should().BeTrue();
-        settings.Should().HaveCount(2);
-        settings["cronRunners"].Should().Be("2");
-        settings["imageRunners"].Should().Be("5");
+        settings.Should().HaveCount(expected: 2);
+        settings[key: "cronRunners"].Should().Be(expected: "2");
+        settings[key: "imageRunners"].Should().Be(expected: "5");
     }
 
     [Fact]
@@ -89,15 +89,15 @@ public class UserSettingsTests : IDisposable
 
         Dictionary<string, string> settings = new()
         {
-            ["internalPort"] = "garbage",
-            ["cronRunners"] = "4",
+            [key: "internalPort"] = "garbage",
+            [key: "cronRunners"] = "4",
         };
 
-        Action act = () => UserSettings.ApplySettings(settings, silent: true);
+        Action act = () => UserSettings.ApplySettings(settings: settings, silent: true);
 
         act.Should().NotThrow();
-        RuntimeServerSettings.Current.InternalServerPort.Should().Be(7626);
-        RuntimeServerSettings.Current.CronWorkers.Value.Should().Be(4);
+        RuntimeServerSettings.Current.InternalServerPort.Should().Be(expected: 7626);
+        RuntimeServerSettings.Current.CronWorkers.Value.Should().Be(expected: 4);
     }
 
     [Fact]
@@ -105,11 +105,11 @@ public class UserSettingsTests : IDisposable
     {
         RuntimeServerSettings.Current.InternalServerPort = 7626;
 
-        Dictionary<string, string> settings = new() { ["internalPort"] = "8080" };
+        Dictionary<string, string> settings = new() { [key: "internalPort"] = "8080" };
 
-        UserSettings.ApplySettings(settings, silent: true);
+        UserSettings.ApplySettings(settings: settings, silent: true);
 
-        RuntimeServerSettings.Current.InternalServerPort.Should().Be(8080);
+        RuntimeServerSettings.Current.InternalServerPort.Should().Be(expected: 8080);
     }
 
     [Fact]
@@ -117,9 +117,9 @@ public class UserSettingsTests : IDisposable
     {
         RuntimeServerSettings.Current.ExternalServerPort = 7626;
 
-        UserSettings.ApplySettings(new() { ["externalPort"] = "9090" }, silent: true);
+        UserSettings.ApplySettings(settings: new() { [key: "externalPort"] = "9090" }, silent: true);
 
-        RuntimeServerSettings.Current.ExternalServerPort.Should().Be(9090);
+        RuntimeServerSettings.Current.ExternalServerPort.Should().Be(expected: 9090);
     }
 
     [Fact]
@@ -128,29 +128,29 @@ public class UserSettingsTests : IDisposable
         RuntimeServerSettings.Current.ExternalServerPort = 7626;
 
         Action act = () =>
-            UserSettings.ApplySettings(new() { ["externalPort"] = "garbage" }, silent: true);
+            UserSettings.ApplySettings(settings: new() { [key: "externalPort"] = "garbage" }, silent: true);
 
         act.Should().NotThrow();
-        RuntimeServerSettings.Current.ExternalServerPort.Should().Be(7626);
+        RuntimeServerSettings.Current.ExternalServerPort.Should().Be(expected: 7626);
     }
 
     [Theory]
-    [InlineData("libraryRunners", 7)]
-    [InlineData("importRunners", 8)]
-    [InlineData("queueRunners", 9)] // alias for importRunners
-    [InlineData("extrasRunners", 10)]
-    [InlineData("dataRunners", 11)] // alias for extrasRunners
-    [InlineData("encoderRunners", 12)]
-    [InlineData("cronRunners", 13)]
-    [InlineData("imageRunners", 14)]
-    [InlineData("fileRunners", 15)]
-    [InlineData("musicRunners", 16)]
+    [InlineData(data: ["libraryRunners", 7])]
+    [InlineData(data: ["importRunners", 8])]
+    [InlineData(data: ["queueRunners", 9])] // alias for importRunners
+    [InlineData(data: ["extrasRunners", 10])]
+    [InlineData(data: ["dataRunners", 11])] // alias for extrasRunners
+    [InlineData(data: ["encoderRunners", 12])]
+    [InlineData(data: ["cronRunners", 13])]
+    [InlineData(data: ["imageRunners", 14])]
+    [InlineData(data: ["fileRunners", 15])]
+    [InlineData(data: ["musicRunners", 16])]
     public void ApplySettings_WorkerCountSetting_UpdatesCorrespondingRuntimeWorkerCount(
         string key,
         int value
     )
     {
-        UserSettings.ApplySettings(new() { [key] = value.ToString() }, silent: true);
+        UserSettings.ApplySettings(settings: new() { [key: key] = value.ToString() }, silent: true);
 
         int actual = key switch
         {
@@ -162,10 +162,10 @@ public class UserSettingsTests : IDisposable
             "imageRunners" => RuntimeServerSettings.Current.ImageWorkers.Value,
             "fileRunners" => RuntimeServerSettings.Current.FileWorkers.Value,
             "musicRunners" => RuntimeServerSettings.Current.MusicWorkers.Value,
-            _ => throw new InvalidOperationException($"unmapped key {key}"),
+            _ => throw new InvalidOperationException(message: $"unmapped key {key}"),
         };
 
-        actual.Should().Be(value);
+        actual.Should().Be(expected: value);
     }
 
     [Fact]
@@ -173,36 +173,36 @@ public class UserSettingsTests : IDisposable
     {
         KeyValuePair<string, int> before = RuntimeServerSettings.Current.LibraryWorkers;
 
-        UserSettings.ApplySettings(new() { ["libraryRunners"] = "5" }, silent: true);
+        UserSettings.ApplySettings(settings: new() { [key: "libraryRunners"] = "5" }, silent: true);
 
-        RuntimeServerSettings.Current.LibraryWorkers.Key.Should().Be(before.Key);
-        RuntimeServerSettings.Current.LibraryWorkers.Value.Should().Be(5);
+        RuntimeServerSettings.Current.LibraryWorkers.Key.Should().Be(expected: before.Key);
+        RuntimeServerSettings.Current.LibraryWorkers.Value.Should().Be(expected: 5);
     }
 
     [Theory]
-    [InlineData("swagger", "true", true)]
-    [InlineData("swagger", "false", false)]
-    [InlineData("UseSynthesizedDns", "true", true)]
-    [InlineData("UseSynthesizedDns", "false", false)]
-    [InlineData("allowAdultContent", "true", true)]
-    [InlineData("allowAdultContent", "false", false)]
+    [InlineData(data: ["swagger", "true", true])]
+    [InlineData(data: ["swagger", "false", false])]
+    [InlineData(data: ["UseSynthesizedDns", "true", true])]
+    [InlineData(data: ["UseSynthesizedDns", "false", false])]
+    [InlineData(data: ["allowAdultContent", "true", true])]
+    [InlineData(data: ["allowAdultContent", "false", false])]
     public void ApplySettings_BooleanSetting_UpdatesCorrespondingRuntimeFlag(
         string key,
         string value,
         bool expected
     )
     {
-        UserSettings.ApplySettings(new() { [key] = value }, silent: true);
+        UserSettings.ApplySettings(settings: new() { [key: key] = value }, silent: true);
 
         bool actual = key switch
         {
             "swagger" => RuntimeServerSettings.Current.Swagger,
             "UseSynthesizedDns" => RuntimeServerSettings.Current.UseSynthesizedDns,
             "allowAdultContent" => RuntimeServerSettings.Current.AllowAdultContent!.Value,
-            _ => throw new InvalidOperationException($"unmapped key {key}"),
+            _ => throw new InvalidOperationException(message: $"unmapped key {key}"),
         };
 
-        actual.Should().Be(expected);
+        actual.Should().Be(expected: expected);
     }
 
     [Fact]
@@ -210,7 +210,7 @@ public class UserSettingsTests : IDisposable
     {
         Action act = () =>
             UserSettings.ApplySettings(
-                new() { ["someUnrecognizedFutureSetting"] = "x" },
+                settings: new() { [key: "someUnrecognizedFutureSetting"] = "x" },
                 silent: true
             );
 
@@ -226,9 +226,9 @@ public class UserSettingsTests : IDisposable
         // Upsert call entirely; if it didn't, this would still pass (idempotent write)
         // but the guard's OWN branch (false path) needs a scenario where the value is
         // identical to prove it's actually being checked, not just always executed.
-        UserSettings.ApplySettings(new() { ["internalPort"] = "7626" }, silent: true);
+        UserSettings.ApplySettings(settings: new() { [key: "internalPort"] = "7626" }, silent: true);
 
-        RuntimeServerSettings.Current.InternalServerPort.Should().Be(7626);
+        RuntimeServerSettings.Current.InternalServerPort.Should().Be(expected: 7626);
     }
 
     [Fact]
@@ -240,18 +240,18 @@ public class UserSettingsTests : IDisposable
         {
             // A stale DB value that no longer matches the in-memory runtime setting —
             // TryGetUserSettings must correct the DB row to match, not just read it back.
-            context.Configuration.Add(new() { Key = "internalPort", Value = "1234" });
+            context.Configuration.Add(entity: new() { Key = "internalPort", Value = "1234" });
             context.SaveChanges();
         }
 
-        bool success = UserSettings.TryGetUserSettings(out Dictionary<string, string> settings);
+        bool success = UserSettings.TryGetUserSettings(settings: out Dictionary<string, string> settings);
 
         success.Should().BeTrue();
-        settings["internalPort"].Should().Be("7626");
+        settings[key: "internalPort"].Should().Be(expected: "7626");
 
         using AppDbContext verify = new();
-        Configuration row = verify.Configuration.Single(c => c.Key == "internalPort");
-        row.Value.Should().Be("7626");
+        Configuration row = verify.Configuration.Single(predicate: c => c.Key == "internalPort");
+        row.Value.Should().Be(expected: "7626");
     }
 
     [Fact]
@@ -261,14 +261,14 @@ public class UserSettingsTests : IDisposable
 
         using (AppDbContext context = new())
         {
-            context.Configuration.Add(new() { Key = "externalPort", Value = "9999" });
+            context.Configuration.Add(entity: new() { Key = "externalPort", Value = "9999" });
             context.SaveChanges();
         }
 
-        bool success = UserSettings.TryGetUserSettings(out Dictionary<string, string> settings);
+        bool success = UserSettings.TryGetUserSettings(settings: out Dictionary<string, string> settings);
 
         success.Should().BeTrue();
-        settings["externalPort"].Should().Be("7626");
+        settings[key: "externalPort"].Should().Be(expected: "7626");
     }
 
     [Fact]
@@ -276,16 +276,16 @@ public class UserSettingsTests : IDisposable
     {
         using (AppDbContext context = new())
         {
-            context.Configuration.Add(new() { Key = "externalPort", Value = "not-a-number" });
-            context.Configuration.Add(new() { Key = "imageRunners", Value = "5" });
+            context.Configuration.Add(entity: new() { Key = "externalPort", Value = "not-a-number" });
+            context.Configuration.Add(entity: new() { Key = "imageRunners", Value = "5" });
             context.SaveChanges();
         }
 
-        bool success = UserSettings.TryGetUserSettings(out Dictionary<string, string> settings);
+        bool success = UserSettings.TryGetUserSettings(settings: out Dictionary<string, string> settings);
 
         success.Should().BeTrue();
-        settings.Should().NotContainKey("externalPort");
-        settings.Should().ContainKey("imageRunners");
+        settings.Should().NotContainKey(unexpected: "externalPort");
+        settings.Should().ContainKey(expected: "imageRunners");
     }
 
     [Fact]
@@ -295,26 +295,26 @@ public class UserSettingsTests : IDisposable
         // reflection so this test deterministically observes the "first dump" branch
         // regardless of whatever other tests in this process already ran.
         System.Reflection.FieldInfo? field = typeof(UserSettings).GetField(
-            "_configDumpLogged",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static
+            name: "_configDumpLogged",
+            bindingAttr: System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static
         );
         field.Should().NotBeNull();
-        field!.SetValue(null, false);
+        field!.SetValue(obj: null, value: false);
 
         Dictionary<string, string> settings = new()
         {
-            ["cronRunners"] = "2",
-            ["auth_access_token"] = "super-secret-should-be-redacted",
-            ["ssl_private_key"] = "also-secret",
-            ["some_fingerprint"] = "secret-too",
-            ["client_secret_thing"] = "and-this",
+            [key: "cronRunners"] = "2",
+            [key: "auth_access_token"] = "super-secret-should-be-redacted",
+            [key: "ssl_private_key"] = "also-secret",
+            [key: "some_fingerprint"] = "secret-too",
+            [key: "client_secret_thing"] = "and-this",
         };
 
-        Action act = () => UserSettings.ApplySettings(settings, silent: false);
+        Action act = () => UserSettings.ApplySettings(settings: settings, silent: false);
 
         act.Should().NotThrow();
         // The guard must have flipped to true — proves the dump path was taken.
-        ((bool)field.GetValue(null)!)
+        ((bool)field.GetValue(obj: null)!)
             .Should()
             .BeTrue();
     }
@@ -323,15 +323,15 @@ public class UserSettingsTests : IDisposable
     public void ApplySettings_NotSilent_SecondCall_DoesNotRedumpConfig()
     {
         System.Reflection.FieldInfo? field = typeof(UserSettings).GetField(
-            "_configDumpLogged",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static
+            name: "_configDumpLogged",
+            bindingAttr: System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static
         );
-        field!.SetValue(null, true);
+        field!.SetValue(obj: null, value: true);
 
         // With the guard already tripped, a second non-silent call must skip the dump
         // entirely (dumpConfig short-circuits to false) — still must not throw.
         Action act = () =>
-            UserSettings.ApplySettings(new() { ["cronRunners"] = "3" }, silent: false);
+            UserSettings.ApplySettings(settings: new() { [key: "cronRunners"] = "3" }, silent: false);
 
         act.Should().NotThrow();
     }
@@ -340,18 +340,18 @@ public class UserSettingsTests : IDisposable
     public void ApplySettings_NotSilent_ManySettings_RendersMultiColumnReportWithoutThrowing()
     {
         System.Reflection.FieldInfo? field = typeof(UserSettings).GetField(
-            "_configDumpLogged",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static
+            name: "_configDumpLogged",
+            bindingAttr: System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static
         );
-        field!.SetValue(null, false);
+        field!.SetValue(obj: null, value: false);
 
         // More than 3 entries (the report's column count) so the multi-row layout
         // (row/column index math) actually exercises more than a single row.
         Dictionary<string, string> settings = new();
         for (int i = 0; i < 7; i++)
-            settings[$"setting{i}"] = $"value{i}";
+            settings[key: $"setting{i}"] = $"value{i}";
 
-        Action act = () => UserSettings.ApplySettings(settings, silent: false);
+        Action act = () => UserSettings.ApplySettings(settings: settings, silent: false);
 
         act.Should().NotThrow();
     }

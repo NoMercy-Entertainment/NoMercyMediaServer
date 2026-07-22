@@ -42,45 +42,45 @@ public static partial class ServiceConfiguration
         // via ApiScopePolicy because the real token carries one space-delimited claim.
         AuthorizationPolicy apiPolicy = new AuthorizationPolicyBuilder()
             .RequireAuthenticatedUser()
-            .RequireAssertion(context => ApiScopePolicy.HasRequiredScope(context.User))
-            .RequireAssertion(context =>
+            .RequireAssertion(handler: context => ApiScopePolicy.HasRequiredScope(user: context.User))
+            .RequireAssertion(handler: context =>
             {
-                string? sub = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (!Guid.TryParse(sub, out Guid userId))
+                string? sub = context.User.FindFirstValue(claimType: ClaimTypes.NameIdentifier);
+                if (!Guid.TryParse(input: sub, result: out Guid userId))
                     return false;
 
-                return UserCache.Current.Users.Any(user => user.Id == userId);
+                return UserCache.Current.Users.Any(predicate: user => user.Id == userId);
             })
             .Build();
 
-        services.AddAuthorizationBuilder().SetDefaultPolicy(apiPolicy).AddPolicy("api", apiPolicy);
+        services.AddAuthorizationBuilder().SetDefaultPolicy(policy: apiPolicy).AddPolicy(name: "api", policy: apiPolicy);
 
         // Permission policies backed by IMediaAuthorizationPolicy so endpoints can
         // declare [Authorize(Policy = ...)] instead of imperative permission checks.
         services
             .AddAuthorizationBuilder()
             .AddPolicy(
-                "Owner",
-                policy =>
+                name: "Owner",
+                configurePolicy: policy =>
                 {
                     policy.RequireAuthenticatedUser();
-                    policy.AddRequirements(new OwnerRequirement());
+                    policy.AddRequirements(requirements: new OwnerRequirement());
                 }
             )
             .AddPolicy(
-                "Moderator",
-                policy =>
+                name: "Moderator",
+                configurePolicy: policy =>
                 {
                     policy.RequireAuthenticatedUser();
-                    policy.AddRequirements(new ModeratorRequirement());
+                    policy.AddRequirements(requirements: new ModeratorRequirement());
                 }
             )
             .AddPolicy(
-                "MediaAccess",
-                policy =>
+                name: "MediaAccess",
+                configurePolicy: policy =>
                 {
                     policy.RequireAuthenticatedUser();
-                    policy.AddRequirements(new MediaAccessRequirement());
+                    policy.AddRequirements(requirements: new MediaAccessRequirement());
                 }
             );
 
@@ -95,14 +95,14 @@ public static partial class ServiceConfiguration
 
         // Configure Authentication
         services
-            .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(options =>
+            .AddAuthentication(defaultScheme: JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(configureOptions: options =>
             {
                 options.Authority = ExternalServicesConfig.Current.AuthBaseUrl;
                 options.RequireHttpsMetadata =
                     ExternalServicesConfig.Current.AuthBaseUrl.StartsWith(
-                        "https://",
-                        StringComparison.OrdinalIgnoreCase
+                        value: "https://",
+                        comparisonType: StringComparison.OrdinalIgnoreCase
                     );
                 options.Audience = ExternalServicesConfig.Current.TokenClientId;
 
@@ -127,8 +127,8 @@ public static partial class ServiceConfiguration
                     // Add the cached key as a fallback for offline/key-rotation scenarios.
                     List<SecurityKey> keys = parameters.IssuerSigningKeys?.ToList() ?? [];
                     RsaSecurityKey? cachedKey = OfflineJwksCache.CachedSigningKey;
-                    if (cachedKey is not null && keys.All(k => k != cachedKey))
-                        keys.Add(cachedKey);
+                    if (cachedKey is not null && keys.All(predicate: k => k != cachedKey))
+                        keys.Add(item: cachedKey);
 
                     return keys;
                 };
@@ -137,17 +137,17 @@ public static partial class ServiceConfiguration
                 {
                     OnMessageReceived = context =>
                     {
-                        StringValues accessToken = context.Request.Query["access_token"];
-                        string[] result = accessToken.ToString().Split('&');
+                        StringValues accessToken = context.Request.Query[key: "access_token"];
+                        string[] result = accessToken.ToString().Split(separator: '&');
 
                         string? token =
-                            result.Length > 0 && !string.IsNullOrEmpty(result[0])
+                            result.Length > 0 && !string.IsNullOrEmpty(value: result[0])
                                 ? result[0]
                                 : null;
 
                         if (token is not null)
                         {
-                            while (token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                            while (token.StartsWith(value: "Bearer ", comparisonType: StringComparison.OrdinalIgnoreCase))
                                 token = token["Bearer ".Length..];
 
                             context.Token = token;
@@ -160,16 +160,16 @@ public static partial class ServiceConfiguration
                             if (
                                 authHeader is not null
                                 && authHeader.StartsWith(
-                                    "Bearer Bearer ",
-                                    StringComparison.OrdinalIgnoreCase
+                                    value: "Bearer Bearer ",
+                                    comparisonType: StringComparison.OrdinalIgnoreCase
                                 )
                             )
                             {
                                 string tokenFromHeader = authHeader;
                                 while (
                                     tokenFromHeader.StartsWith(
-                                        "Bearer ",
-                                        StringComparison.OrdinalIgnoreCase
+                                        value: "Bearer ",
+                                        comparisonType: StringComparison.OrdinalIgnoreCase
                                     )
                                 )
                                     tokenFromHeader = tokenFromHeader["Bearer ".Length..];
@@ -204,13 +204,13 @@ public static partial class ServiceConfiguration
 
                         string token = (context.SecurityToken as JsonWebToken)?.EncodedToken ?? string.Empty;
                         IReadOnlyList<Claim> extraClaims = await augmentor.CollectAdditionalClaimsAsync(
-                            token,
-                            context.HttpContext.RequestAborted
+                            token: token,
+                            ct: context.HttpContext.RequestAborted
                         );
 
                         foreach (Claim claim in extraClaims)
-                            if (!identity.HasClaim(claim.Type, claim.Value))
-                                identity.AddClaim(claim);
+                            if (!identity.HasClaim(type: claim.Type, value: claim.Value))
+                                identity.AddClaim(claim: claim);
                     },
                     OnAuthenticationFailed = context =>
                     {
@@ -218,59 +218,59 @@ public static partial class ServiceConfiguration
 
                         // Extract client identity from query string (sent by all hub connections)
                         string clientName =
-                            req.Query["client_name"].FirstOrDefault()
-                            ?? req.Query["custom_name"].FirstOrDefault()
+                            req.Query[key: "client_name"].FirstOrDefault()
+                            ?? req.Query[key: "custom_name"].FirstOrDefault()
                             ?? "unknown-client";
-                        string clientType = req.Query["client_type"].FirstOrDefault() ?? "unknown";
-                        string clientDevice = req.Query["client_device"].FirstOrDefault() ?? "";
-                        string clientOs = req.Query["client_os"].FirstOrDefault() ?? "";
+                        string clientType = req.Query[key: "client_type"].FirstOrDefault() ?? "unknown";
+                        string clientDevice = req.Query[key: "client_device"].FirstOrDefault() ?? "";
+                        string clientOs = req.Query[key: "client_os"].FirstOrDefault() ?? "";
                         string remoteIp =
                             context.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
                         // Build a human-readable client description
-                        string client = !string.IsNullOrEmpty(clientDevice)
+                        string client = !string.IsNullOrEmpty(value: clientDevice)
                             ? $"\"{clientName}\" ({clientDevice}, {clientOs})"
                             : $"\"{clientName}\" ({clientType})";
 
                         // Extract the hub/endpoint name from the path
                         string endpoint =
-                            req.Path.Value?.Split('/')
-                                .FirstOrDefault(s =>
-                                    s.EndsWith("Hub", StringComparison.OrdinalIgnoreCase)
+                            req.Path.Value?.Split(separator: '/')
+                                .FirstOrDefault(predicate: s =>
+                                    s.EndsWith(value: "Hub", comparisonType: StringComparison.OrdinalIgnoreCase)
                                     || s == "negotiate"
                                     || s.Length > 0
                                 )
                             ?? req.Path.Value
                             ?? "unknown";
                         // Get just the hub name from the path e.g. /videoHub/negotiate → videoHub
-                        string[] segments = (req.Path.Value ?? "").Trim('/').Split('/');
+                        string[] segments = (req.Path.Value ?? "").Trim(trimChar: '/').Split(separator: '/');
                         string hub = segments.Length > 0 ? segments[0] : "unknown";
 
                         // Try to read token claims for expiry diagnostics
                         string tokenAge = "";
                         try
                         {
-                            string? raw = req.Query["access_token"].FirstOrDefault()?.Split('&')[0];
-                            if (string.IsNullOrEmpty(raw))
+                            string? raw = req.Query[key: "access_token"].FirstOrDefault()?.Split(separator: '&')[0];
+                            if (string.IsNullOrEmpty(value: raw))
                             {
                                 // Check Authorization header
                                 string? authHeader = req.Headers.Authorization.FirstOrDefault();
                                 if (
                                     authHeader?.StartsWith(
-                                        "Bearer ",
-                                        StringComparison.OrdinalIgnoreCase
+                                        value: "Bearer ",
+                                        comparisonType: StringComparison.OrdinalIgnoreCase
                                     ) == true
                                 )
                                     raw = authHeader["Bearer ".Length..];
                             }
 
-                            if (!string.IsNullOrEmpty(raw))
+                            if (!string.IsNullOrEmpty(value: raw))
                             {
-                                if (raw.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                                if (raw.StartsWith(value: "Bearer ", comparisonType: StringComparison.OrdinalIgnoreCase))
                                     raw = raw["Bearer ".Length..];
 
                                 JwtSecurityTokenHandler handler = new();
-                                JwtSecurityToken jwt = handler.ReadJwtToken(raw);
+                                JwtSecurityToken jwt = handler.ReadJwtToken(token: raw);
                                 TimeSpan expired = DateTime.UtcNow - jwt.ValidTo;
                                 tokenAge =
                                     expired.TotalHours >= 1
@@ -294,8 +294,8 @@ public static partial class ServiceConfiguration
                         };
 
                         Logger.Auth(
-                            $"{reason} — {client} → {hub} from {remoteIp}",
-                            LogEventLevel.Warning
+                            message: $"{reason} — {client} → {hub} from {remoteIp}",
+                            level: LogEventLevel.Warning
                         );
 
                         // Activity log write removed — OnAuthenticationFailed fires for every

@@ -17,7 +17,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Music;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class ArtistResponseItemDtoTests
 {
     private static Artist BuildMinimalArtist(
@@ -46,17 +46,17 @@ public class ArtistResponseItemDtoTests
             LibraryId = libraryId ?? Ulid.NewUlid(),
         };
         foreach (Translation translation in translations ?? [])
-            artist.Translations.Add(translation);
+            artist.Translations.Add(item: translation);
         foreach (Image image in images ?? [])
-            artist.Images.Add(image);
+            artist.Images.Add(item: image);
         foreach (ArtistUser artistUser in artistUsers ?? [])
-            artist.ArtistUser.Add(artistUser);
+            artist.ArtistUser.Add(item: artistUser);
         foreach (ArtistMusicGenre genre in genres ?? [])
-            artist.ArtistMusicGenre.Add(genre);
+            artist.ArtistMusicGenre.Add(item: genre);
         foreach (AlbumArtist albumArtist in albumArtists ?? [])
-            artist.AlbumArtist.Add(albumArtist);
+            artist.AlbumArtist.Add(item: albumArtist);
         foreach (ArtistTrack artistTrack in artistTracks ?? [])
-            artist.ArtistTrack.Add(artistTrack);
+            artist.ArtistTrack.Add(item: artistTrack);
         if (colorPalette is not null)
             artist.ColorPalette = colorPalette;
 
@@ -76,7 +76,7 @@ public class ArtistResponseItemDtoTests
             Year = year,
         };
         foreach (AlbumUser albumUser in albumUsers ?? [])
-            album.AlbumUser.Add(albumUser);
+            album.AlbumUser.Add(item: albumUser);
         Artist nestedArtist = new() { Id = Guid.NewGuid(), Name = "Nested Artist" };
 
         return new()
@@ -109,10 +109,10 @@ public class ArtistResponseItemDtoTests
             Duration = "200",
         };
         foreach (TrackUser trackUser in trackUsers ?? [])
-            track.TrackUser.Add(trackUser);
+            track.TrackUser.Add(item: trackUser);
         if (linkedAlbum is not null)
             track.AlbumTrack.Add(
-                new()
+                item: new()
                 {
                     AlbumId = linkedAlbum.Id,
                     Album = linkedAlbum,
@@ -124,7 +124,7 @@ public class ArtistResponseItemDtoTests
     }
 
     private static ColorPalette? ParsePalette(Newtonsoft.Json.Linq.JToken? token) =>
-        token is null ? null : ColorPalette.FromJsonOrNull(token.ToString());
+        token is null ? null : ColorPalette.FromJsonOrNull(json: token.ToString());
 
     // =========================================================================
     // Description: translation-match branch vs fallback (line ~92)
@@ -138,9 +138,9 @@ public class ArtistResponseItemDtoTests
             description: "English bio"
         );
 
-        ArtistResponseItemDto dto = new(artist, Guid.NewGuid(), "NL");
+        ArtistResponseItemDto dto = new(artist: artist, userId: Guid.NewGuid(), country: "NL");
 
-        dto.Description.Should().Be("Vertaalde bio");
+        dto.Description.Should().Be(expected: "Vertaalde bio");
     }
 
     [Fact]
@@ -151,9 +151,9 @@ public class ArtistResponseItemDtoTests
             description: "English bio"
         );
 
-        ArtistResponseItemDto dto = new(artist, Guid.NewGuid(), "NL");
+        ArtistResponseItemDto dto = new(artist: artist, userId: Guid.NewGuid(), country: "NL");
 
-        dto.Description.Should().Be("English bio");
+        dto.Description.Should().Be(expected: "English bio");
     }
 
     // =========================================================================
@@ -167,9 +167,9 @@ public class ArtistResponseItemDtoTests
             images: [new() { Type = "background", FilePath = "/bg.jpg" }]
         );
 
-        ArtistResponseItemDto dto = new(artist, Guid.NewGuid());
+        ArtistResponseItemDto dto = new(artist: artist, userId: Guid.NewGuid());
 
-        dto.Backdrop.Should().Be("/images/music/bg.jpg");
+        dto.Backdrop.Should().Be(expected: "/images/music/bg.jpg");
     }
 
     [Fact]
@@ -179,7 +179,7 @@ public class ArtistResponseItemDtoTests
             images: [new() { Type = "thumb", FilePath = "/thumb.jpg" }]
         );
 
-        ArtistResponseItemDto dto = new(artist, Guid.NewGuid());
+        ArtistResponseItemDto dto = new(artist: artist, userId: Guid.NewGuid());
 
         dto.Backdrop.Should().BeNull();
     }
@@ -204,9 +204,9 @@ public class ArtistResponseItemDtoTests
             ]
         );
 
-        ArtistResponseItemDto dto = new(artist, Guid.NewGuid());
+        ArtistResponseItemDto dto = new(artist: artist, userId: Guid.NewGuid());
 
-        dto.Cover.Should().Be("/images/music/artist-cover.jpg");
+        dto.Cover.Should().Be(expected: "/images/music/artist-cover.jpg");
     }
 
     [Fact]
@@ -235,9 +235,9 @@ public class ArtistResponseItemDtoTests
             images: [lowVoteThumb, highVoteThumb, higherVotedPoster]
         );
 
-        ArtistResponseItemDto dto = new(artist, Guid.NewGuid());
+        ArtistResponseItemDto dto = new(artist: artist, userId: Guid.NewGuid());
 
-        dto.Cover.Should().Be("/images/music/high-thumb.jpg");
+        dto.Cover.Should().Be(expected: "/images/music/high-thumb.jpg");
     }
 
     [Fact]
@@ -245,7 +245,7 @@ public class ArtistResponseItemDtoTests
     {
         Artist artist = BuildMinimalArtist(cover: null, images: []);
 
-        ArtistResponseItemDto dto = new(artist, Guid.NewGuid());
+        ArtistResponseItemDto dto = new(artist: artist, userId: Guid.NewGuid());
 
         dto.Cover.Should().BeNull();
     }
@@ -260,9 +260,9 @@ public class ArtistResponseItemDtoTests
         ColorPalette palette = new() { Cover = new() { Dominant = "#111111" } };
         Artist artist = BuildMinimalArtist(colorPalette: palette);
 
-        ArtistResponseItemDto dto = new(artist, Guid.NewGuid());
+        ArtistResponseItemDto dto = new(artist: artist, userId: Guid.NewGuid());
 
-        ParsePalette(dto.ColorPalette)!.Cover!.Dominant.Should().Be("#111111");
+        ParsePalette(token: dto.ColorPalette)!.Cover!.Dominant.Should().Be(expected: "#111111");
     }
 
     [Fact]
@@ -277,9 +277,9 @@ public class ArtistResponseItemDtoTests
         thumb.ColorPalette = new() { Cover = new() { Dominant = "#222222" } };
         Artist artist = BuildMinimalArtist(images: [thumb], colorPalette: null);
 
-        ArtistResponseItemDto dto = new(artist, Guid.NewGuid());
+        ArtistResponseItemDto dto = new(artist: artist, userId: Guid.NewGuid());
 
-        ParsePalette(dto.ColorPalette)!.Cover!.Dominant.Should().Be("#222222");
+        ParsePalette(token: dto.ColorPalette)!.Cover!.Dominant.Should().Be(expected: "#222222");
     }
 
     // =========================================================================
@@ -289,10 +289,10 @@ public class ArtistResponseItemDtoTests
     [Fact]
     public void Ctor_FavoriteTrue_WhenArtistUserHasEntries()
     {
-        ArtistUser artistUser = new(Guid.NewGuid(), Guid.NewGuid());
+        ArtistUser artistUser = new(artistId: Guid.NewGuid(), userId: Guid.NewGuid());
         Artist artist = BuildMinimalArtist(artistUsers: [artistUser]);
 
-        ArtistResponseItemDto dto = new(artist, Guid.NewGuid());
+        ArtistResponseItemDto dto = new(artist: artist, userId: Guid.NewGuid());
 
         dto.Favorite.Should().BeTrue();
     }
@@ -302,7 +302,7 @@ public class ArtistResponseItemDtoTests
     {
         Artist artist = BuildMinimalArtist(artistUsers: []);
 
-        ArtistResponseItemDto dto = new(artist, Guid.NewGuid());
+        ArtistResponseItemDto dto = new(artist: artist, userId: Guid.NewGuid());
 
         dto.Favorite.Should().BeFalse();
     }
@@ -318,15 +318,15 @@ public class ArtistResponseItemDtoTests
         Artist artist = BuildMinimalArtist(folder: "/music/my-artist", libraryId: libraryId);
         Guid artistId = artist.Id;
 
-        ArtistResponseItemDto dto = new(artist, Guid.NewGuid());
+        ArtistResponseItemDto dto = new(artist: artist, userId: Guid.NewGuid());
 
-        dto.Id.Should().Be(artistId);
-        dto.Folder.Should().Be("/music/my-artist");
-        dto.LibraryId.Should().Be(libraryId);
-        dto.Name.Should().Be("Test Artist");
-        dto.Type.Should().Be("artist");
-        dto.Link.ToString().Should().Be($"/music/artists/{artistId}");
-        dto.Disambiguation.Should().Be("The Band");
+        dto.Id.Should().Be(expected: artistId);
+        dto.Folder.Should().Be(expected: "/music/my-artist");
+        dto.LibraryId.Should().Be(expected: libraryId);
+        dto.Name.Should().Be(expected: "Test Artist");
+        dto.Type.Should().Be(expected: "artist");
+        dto.Link.ToString().Should().Be(expected: $"/music/artists/{artistId}");
+        dto.Disambiguation.Should().Be(expected: "The Band");
     }
 
     // =========================================================================
@@ -340,9 +340,9 @@ public class ArtistResponseItemDtoTests
         ArtistMusicGenre artistGenre = new() { MusicGenreId = genre.Id, MusicGenre = genre };
         Artist artist = BuildMinimalArtist(genres: [artistGenre]);
 
-        ArtistResponseItemDto dto = new(artist, Guid.NewGuid());
+        ArtistResponseItemDto dto = new(artist: artist, userId: Guid.NewGuid());
 
-        dto.Genres.Should().ContainSingle(g => g.Name == "Rock");
+        dto.Genres.Should().ContainSingle(predicate: g => g.Name == "Rock");
     }
 
     [Fact]
@@ -357,11 +357,11 @@ public class ArtistResponseItemDtoTests
         };
         Artist artist = BuildMinimalArtist(images: [image]);
 
-        ArtistResponseItemDto dto = new(artist, Guid.NewGuid());
+        ArtistResponseItemDto dto = new(artist: artist, userId: Guid.NewGuid());
 
         dto.Images.Should().ContainSingle();
-        dto.Images.First().Type.Should().Be("poster");
-        dto.Images.First().Width.Should().Be(300);
+        dto.Images.First().Type.Should().Be(expected: "poster");
+        dto.Images.First().Width.Should().Be(expected: 300);
     }
 
     // =========================================================================
@@ -371,8 +371,8 @@ public class ArtistResponseItemDtoTests
     [Fact]
     public void Ctor_AlbumsDedupedByIdAndOrderedByYear()
     {
-        AlbumArtist newerAlbum = BuildAlbumArtist(2015, "Newer Album");
-        AlbumArtist olderAlbum = BuildAlbumArtist(2005, "Older Album");
+        AlbumArtist newerAlbum = BuildAlbumArtist(year: 2015, albumName: "Newer Album");
+        AlbumArtist olderAlbum = BuildAlbumArtist(year: 2005, albumName: "Older Album");
         AlbumArtist duplicateOfNewer = new()
         {
             AlbumId = newerAlbum.AlbumId,
@@ -384,10 +384,10 @@ public class ArtistResponseItemDtoTests
             albumArtists: [newerAlbum, olderAlbum, duplicateOfNewer]
         );
 
-        ArtistResponseItemDto dto = new(artist, Guid.NewGuid());
+        ArtistResponseItemDto dto = new(artist: artist, userId: Guid.NewGuid());
 
-        dto.Albums.Should().HaveCount(2);
-        dto.Albums.Select(album => album.Year).Should().Equal(2005, 2015);
+        dto.Albums.Should().HaveCount(expected: 2);
+        dto.Albums.Select(selector: album => album.Year).Should().Equal(elements: [2005, 2015]);
     }
 
     // =========================================================================
@@ -421,12 +421,12 @@ public class ArtistResponseItemDtoTests
         };
 
         ArtistTrack trackOnAlbumX = BuildArtistTrack(
-            artistId,
+            artistId: artistId,
             linkedAlbum: albumInLibrary,
             trackName: "Track On X"
         );
         ArtistTrack trackOnAlbumY = BuildArtistTrack(
-            artistId,
+            artistId: artistId,
             linkedAlbum: trackOnlyAlbum,
             trackName: "Track On Y"
         );
@@ -437,11 +437,11 @@ public class ArtistResponseItemDtoTests
             artistTracks: [trackOnAlbumX, trackOnAlbumY]
         );
 
-        ArtistResponseItemDto dto = new(artist, Guid.NewGuid());
+        ArtistResponseItemDto dto = new(artist: artist, userId: Guid.NewGuid());
 
-        dto.Albums.Select(album => album.Name).Should().Contain("Album X");
-        dto.Featured.Select(album => album.Name).Should().Contain("Album Y");
-        dto.Featured.Select(album => album.Name).Should().NotContain("Album X");
+        dto.Albums.Select(selector: album => album.Name).Should().Contain(expected: "Album X");
+        dto.Featured.Select(selector: album => album.Name).Should().Contain(expected: "Album Y");
+        dto.Featured.Select(selector: album => album.Name).Should().NotContain(unexpected: "Album X");
     }
 
     // =========================================================================
@@ -455,21 +455,21 @@ public class ArtistResponseItemDtoTests
         Guid otherUserId = Guid.NewGuid();
 
         AlbumArtist likedAlbumArtist = BuildAlbumArtist(
-            2018,
-            "Liked Album",
-            albumUsers: [new(Guid.NewGuid(), likedUserId)]
+            year: 2018,
+            albumName: "Liked Album",
+            albumUsers: [new(albumId: Guid.NewGuid(), userId: likedUserId)]
         );
         AlbumArtist notLikedAlbumArtist = BuildAlbumArtist(
-            2019,
-            "Not Liked Album",
-            albumUsers: [new(Guid.NewGuid(), otherUserId)]
+            year: 2019,
+            albumName: "Not Liked Album",
+            albumUsers: [new(albumId: Guid.NewGuid(), userId: otherUserId)]
         );
 
         Artist artist = BuildMinimalArtist(albumArtists: [likedAlbumArtist, notLikedAlbumArtist]);
 
-        ArtistResponseItemDto dto = new(artist, likedUserId);
+        ArtistResponseItemDto dto = new(artist: artist, userId: likedUserId);
 
-        dto.Playlists.Should().ContainSingle(album => album.Name == "Liked Album");
+        dto.Playlists.Should().ContainSingle(predicate: album => album.Name == "Liked Album");
     }
 
     [Fact]
@@ -477,9 +477,9 @@ public class ArtistResponseItemDtoTests
     {
         Guid userId = Guid.NewGuid();
         AlbumArtist sharedAlbumRowOne = BuildAlbumArtist(
-            2018,
-            "Liked Album",
-            albumUsers: [new(Guid.NewGuid(), userId)]
+            year: 2018,
+            albumName: "Liked Album",
+            albumUsers: [new(albumId: Guid.NewGuid(), userId: userId)]
         );
         AlbumArtist sharedAlbumRowTwo = new()
         {
@@ -491,7 +491,7 @@ public class ArtistResponseItemDtoTests
 
         Artist artist = BuildMinimalArtist(albumArtists: [sharedAlbumRowOne, sharedAlbumRowTwo]);
 
-        ArtistResponseItemDto dto = new(artist, userId);
+        ArtistResponseItemDto dto = new(artist: artist, userId: userId);
 
         dto.Playlists.Should().ContainSingle();
     }
@@ -508,21 +508,21 @@ public class ArtistResponseItemDtoTests
         Album albumAlpha = new() { Id = Guid.NewGuid(), Name = "Alpha Album" };
 
         ArtistTrack trackZeta = BuildArtistTrack(
-            artistId,
+            artistId: artistId,
             linkedAlbum: albumZeta,
             trackName: "Song Z",
             disc: 1,
             trackNumber: 5
         );
         ArtistTrack trackAlphaDiscTwo = BuildArtistTrack(
-            artistId,
+            artistId: artistId,
             linkedAlbum: albumAlpha,
             trackName: "Song A2",
             disc: 2,
             trackNumber: 1
         );
         ArtistTrack trackAlphaDiscOne = BuildArtistTrack(
-            artistId,
+            artistId: artistId,
             linkedAlbum: albumAlpha,
             trackName: "Song A1",
             disc: 1,
@@ -541,10 +541,10 @@ public class ArtistResponseItemDtoTests
             artistTracks: [trackZeta, trackAlphaDiscTwo, trackAlphaDiscOne, duplicateOfAlphaDiscOne]
         );
 
-        ArtistResponseItemDto dto = new(artist, Guid.NewGuid());
+        ArtistResponseItemDto dto = new(artist: artist, userId: Guid.NewGuid());
 
-        dto.Tracks.Should().HaveCount(3);
-        dto.Tracks.Select(track => track.Name).Should().Equal("Song A1", "Song A2", "Song Z");
+        dto.Tracks.Should().HaveCount(expected: 3);
+        dto.Tracks.Select(selector: track => track.Name).Should().Equal(expected: ["Song A1", "Song A2", "Song Z"]);
     }
 
     // =========================================================================
@@ -555,18 +555,18 @@ public class ArtistResponseItemDtoTests
     public void Ctor_FavoriteTracksOnlyIncludesTracksWithTrackUserEntries()
     {
         Guid artistId = Guid.NewGuid();
-        TrackUser trackUser = new(Guid.NewGuid(), Guid.NewGuid());
+        TrackUser trackUser = new(trackId: Guid.NewGuid(), userId: Guid.NewGuid());
         ArtistTrack likedTrack = BuildArtistTrack(
-            artistId,
+            artistId: artistId,
             trackUsers: [trackUser],
             trackName: "Liked Song"
         );
-        ArtistTrack notLikedTrack = BuildArtistTrack(artistId, trackName: "Not Liked Song");
+        ArtistTrack notLikedTrack = BuildArtistTrack(artistId: artistId, trackName: "Not Liked Song");
 
         Artist artist = BuildMinimalArtist(id: artistId, artistTracks: [likedTrack, notLikedTrack]);
 
-        ArtistResponseItemDto dto = new(artist, Guid.NewGuid());
+        ArtistResponseItemDto dto = new(artist: artist, userId: Guid.NewGuid());
 
-        dto.FavoriteTracks.Should().ContainSingle(track => track.Name == "Liked Song");
+        dto.FavoriteTracks.Should().ContainSingle(predicate: track => track.Name == "Liked Song");
     }
 }

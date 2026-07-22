@@ -22,7 +22,7 @@ namespace NoMercy.Tests.Repositories;
 /// accidental switch to System.Text.Json (default camelCase) — would silently
 /// drop fields. These tests pin the on-the-wire contract.
 /// </summary>
-[Trait("Category", "Regression")]
+[Trait(name: "Category", value: "Regression")]
 public class LibraryRequestDeserializationTests
 {
     [Fact]
@@ -33,16 +33,16 @@ public class LibraryRequestDeserializationTests
             + "\"realtime\":false,\"specialSeasonName\":\"Specials\",\"type\":\"movie\","
             + "\"folder_library\":[],\"subtitles\":[\"en\",\"nl\"]}";
 
-        LibraryUpdateRequest? request = JsonConvert.DeserializeObject<LibraryUpdateRequest>(json);
+        LibraryUpdateRequest? request = JsonConvert.DeserializeObject<LibraryUpdateRequest>(value: json);
 
         request.Should().NotBeNull();
-        request!.Title.Should().Be("Movies");
-        request.Image.Should().Be("/poster.jpg");
+        request!.Title.Should().Be(expected: "Movies");
+        request.Image.Should().Be(expected: "/poster.jpg");
         request.PerfectSubtitleMatch.Should().BeTrue();
         request.Realtime.Should().BeFalse();
-        request.SpecialSeasonName.Should().Be("Specials");
-        request.Type.Should().Be("movie");
-        request.Subtitles.Should().Equal("en", "nl");
+        request.SpecialSeasonName.Should().Be(expected: "Specials");
+        request.Type.Should().Be(expected: "movie");
+        request.Subtitles.Should().Equal(expected: ["en", "nl"]);
         request.FolderLibrary.Should().NotBeNull();
     }
 
@@ -51,11 +51,11 @@ public class LibraryRequestDeserializationTests
     {
         const string json = "{\"folder_library\":[{}]}";
 
-        LibraryUpdateRequest? request = JsonConvert.DeserializeObject<LibraryUpdateRequest>(json);
+        LibraryUpdateRequest? request = JsonConvert.DeserializeObject<LibraryUpdateRequest>(value: json);
 
         request.Should().NotBeNull();
         request!.FolderLibrary.Should().NotBeNull();
-        request.FolderLibrary!.Length.Should().Be(1);
+        request.FolderLibrary!.Length.Should().Be(expected: 1);
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public class LibraryRequestDeserializationTests
     {
         const string json = "{\"forceUpdate\":true,\"synchronous\":true}";
 
-        RescanLibraryRequest? request = JsonConvert.DeserializeObject<RescanLibraryRequest>(json);
+        RescanLibraryRequest? request = JsonConvert.DeserializeObject<RescanLibraryRequest>(value: json);
 
         request.Should().NotBeNull();
         request!.ForceUpdate.Should().BeTrue();

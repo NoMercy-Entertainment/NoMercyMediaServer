@@ -29,7 +29,7 @@ public class DnsSchemeResolverTests : IDisposable
         ServiceCollection services = new();
         services.AddDataProtection().UseEphemeralDataProtectionProvider();
         ServiceProvider provider = services.BuildServiceProvider();
-        TokenStore.Initialize(provider);
+        TokenStore.Initialize(serviceProvider: provider);
 
         _context = CreateFreshContext();
     }
@@ -43,78 +43,78 @@ public class DnsSchemeResolverTests : IDisposable
     [Fact]
     public void ResolveAndPersist_FreshServer_ResolvesSrvAndPersistsTrue()
     {
-        bool result = DnsSchemeResolver.ResolveAndPersist(_context);
+        bool result = DnsSchemeResolver.ResolveAndPersist(db: _context);
 
-        Assert.True(result);
-        Assert.True(RuntimeServerSettings.Current.UseSynthesizedDns);
+        Assert.True(condition: result);
+        Assert.True(condition: RuntimeServerSettings.Current.UseSynthesizedDns);
 
-        Configuration? stored = _context.Configuration.FirstOrDefault(c =>
+        Configuration? stored = _context.Configuration.FirstOrDefault(predicate: c =>
             c.Key == DnsSchemeResolver.ConfigKey
         );
-        Assert.NotNull(stored);
-        Assert.Equal("True", stored.Value);
+        Assert.NotNull(@object: stored);
+        Assert.Equal(expected: "True", actual: stored.Value);
     }
 
     [Fact]
     public void ResolveAndPersist_ExistingServerWithAuthToken_ResolvesApexAndPersistsFalse()
     {
         _context.Configuration.Add(
-            new() { Key = "auth_access_token", SecureValue = "existing-access-token" }
+            entity: new() { Key = "auth_access_token", SecureValue = "existing-access-token" }
         );
         _context.SaveChanges();
 
-        bool result = DnsSchemeResolver.ResolveAndPersist(_context);
+        bool result = DnsSchemeResolver.ResolveAndPersist(db: _context);
 
-        Assert.False(result);
-        Assert.False(RuntimeServerSettings.Current.UseSynthesizedDns);
+        Assert.False(condition: result);
+        Assert.False(condition: RuntimeServerSettings.Current.UseSynthesizedDns);
 
-        Configuration? stored = _context.Configuration.FirstOrDefault(c =>
+        Configuration? stored = _context.Configuration.FirstOrDefault(predicate: c =>
             c.Key == DnsSchemeResolver.ConfigKey
         );
-        Assert.NotNull(stored);
-        Assert.Equal("False", stored.Value);
+        Assert.NotNull(@object: stored);
+        Assert.Equal(expected: "False", actual: stored.Value);
     }
 
     [Fact]
     public void ResolveAndPersist_ExistingServerWithCertificate_ResolvesApexAndPersistsFalse()
     {
         _context.Configuration.Add(
-            new() { Key = "ssl_certificate", SecureValue = "existing-cert" }
+            entity: new() { Key = "ssl_certificate", SecureValue = "existing-cert" }
         );
-        _context.Configuration.Add(new() { Key = "ssl_private_key", SecureValue = "existing-key" });
+        _context.Configuration.Add(entity: new() { Key = "ssl_private_key", SecureValue = "existing-key" });
         _context.SaveChanges();
 
-        bool result = DnsSchemeResolver.ResolveAndPersist(_context);
+        bool result = DnsSchemeResolver.ResolveAndPersist(db: _context);
 
-        Assert.False(result);
+        Assert.False(condition: result);
 
-        Configuration? stored = _context.Configuration.FirstOrDefault(c =>
+        Configuration? stored = _context.Configuration.FirstOrDefault(predicate: c =>
             c.Key == DnsSchemeResolver.ConfigKey
         );
-        Assert.NotNull(stored);
-        Assert.Equal("False", stored.Value);
+        Assert.NotNull(@object: stored);
+        Assert.Equal(expected: "False", actual: stored.Value);
     }
 
     [Fact]
     public void ResolveAndPersist_ExplicitKeyPresent_IsHonoredUnchangedAndNeverOverridden()
     {
-        _context.Configuration.Add(new() { Key = DnsSchemeResolver.ConfigKey, Value = "True" });
+        _context.Configuration.Add(entity: new() { Key = DnsSchemeResolver.ConfigKey, Value = "True" });
         // Evidence that would otherwise decide "apex" — must not matter once the
         // key is explicit.
         _context.Configuration.Add(
-            new() { Key = "auth_access_token", SecureValue = "existing-access-token" }
+            entity: new() { Key = "auth_access_token", SecureValue = "existing-access-token" }
         );
         _context.SaveChanges();
 
-        bool result = DnsSchemeResolver.ResolveAndPersist(_context);
+        bool result = DnsSchemeResolver.ResolveAndPersist(db: _context);
 
-        Assert.True(result);
+        Assert.True(condition: result);
 
         List<Configuration> rows = _context
-            .Configuration.Where(c => c.Key == DnsSchemeResolver.ConfigKey)
+            .Configuration.Where(predicate: c => c.Key == DnsSchemeResolver.ConfigKey)
             .ToList();
-        Assert.Single(rows);
-        Assert.Equal("True", rows[0].Value);
+        Assert.Single(collection: rows);
+        Assert.Equal(expected: "True", actual: rows[index: 0].Value);
     }
 
     [Fact]
@@ -122,34 +122,34 @@ public class DnsSchemeResolverTests : IDisposable
     {
         // A user can explicitly opt a fresh install into apex — that choice must
         // survive even though the "no evidence" heuristic would otherwise pick srv.
-        _context.Configuration.Add(new() { Key = DnsSchemeResolver.ConfigKey, Value = "False" });
+        _context.Configuration.Add(entity: new() { Key = DnsSchemeResolver.ConfigKey, Value = "False" });
         _context.SaveChanges();
 
-        bool result = DnsSchemeResolver.ResolveAndPersist(_context);
+        bool result = DnsSchemeResolver.ResolveAndPersist(db: _context);
 
-        Assert.False(result);
+        Assert.False(condition: result);
     }
 
     [Fact]
     public void ResolveAndPersist_CalledTwiceOnFreshServer_IsIdempotent()
     {
-        bool first = DnsSchemeResolver.ResolveAndPersist(_context);
-        bool second = DnsSchemeResolver.ResolveAndPersist(_context);
+        bool first = DnsSchemeResolver.ResolveAndPersist(db: _context);
+        bool second = DnsSchemeResolver.ResolveAndPersist(db: _context);
 
-        Assert.Equal(first, second);
+        Assert.Equal(expected: first, actual: second);
 
         List<Configuration> rows = _context
-            .Configuration.Where(c => c.Key == DnsSchemeResolver.ConfigKey)
+            .Configuration.Where(predicate: c => c.Key == DnsSchemeResolver.ConfigKey)
             .ToList();
-        Assert.Single(rows);
+        Assert.Single(collection: rows);
     }
 
     private static AppDbContext CreateFreshContext()
     {
         DbContextOptionsBuilder<AppDbContext> optionsBuilder = new();
-        optionsBuilder.UseSqlite("Data Source=:memory:");
+        optionsBuilder.UseSqlite(connectionString: "Data Source=:memory:");
 
-        AppDbContext context = new(optionsBuilder.Options);
+        AppDbContext context = new(options: optionsBuilder.Options);
         context.Database.OpenConnection();
         context.Database.EnsureCreated();
 

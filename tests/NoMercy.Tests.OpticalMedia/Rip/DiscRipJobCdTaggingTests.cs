@@ -38,7 +38,7 @@ file sealed class TestableDiscRipJob(Folder folder, Library library) : DiscRipJo
         Ulid folderId,
         Ulid libraryId,
         CancellationToken cancellationToken
-    ) => Task.FromResult<(Folder?, Library?)>((folder, library));
+    ) => Task.FromResult<(Folder?, Library?)>(result: (folder, library));
 }
 
 /// <summary>
@@ -53,15 +53,15 @@ file sealed class TestableDiscRipJob(Folder folder, Library library) : DiscRipJo
 /// Cover Art Archive front flag to populate cover art, and never letting a
 /// release-not-found or per-track tag-write failure crash the job.
 /// </summary>
-[Collection("HttpClientProvider")]
-[Trait("Category", "Unit")]
+[Collection(name: "HttpClientProvider")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class DiscRipJobCdTaggingTests : ProviderHttpHarness
 {
     private static readonly Ulid KnownFolderId = Ulid.NewUlid();
     private static readonly Ulid KnownLibraryId = Ulid.NewUlid();
 
     public DiscRipJobCdTaggingTests()
-        : base(NoMercy.Providers.Helpers.HttpClientNames.MusicBrainz) { }
+        : base(httpClientNames: NoMercy.Providers.Helpers.HttpClientNames.MusicBrainz) { }
 
     private static RipRequest MakeCdRequest(string metadataId, int[] titleIndices) =>
         new(
@@ -102,14 +102,14 @@ public sealed class DiscRipJobCdTaggingTests : ProviderHttpHarness
         List<DiscRipResult> results = [];
         foreach (int i in trackIndices)
         {
-            string path = Path.Combine(Path.GetTempPath(), $"cdtag_{Guid.NewGuid():N}_{i:D2}.flac");
-            await File.WriteAllBytesAsync(path, []);
+            string path = Path.Combine(path1: Path.GetTempPath(), path2: $"cdtag_{Guid.NewGuid():N}_{i:D2}.flac");
+            await File.WriteAllBytesAsync(path: path, bytes: []);
             results.Add(
-                new(
+                item: new(
                     TitleIndex: i,
                     OutputPath: path,
                     Success: true,
-                    Duration: TimeSpan.FromMinutes(3),
+                    Duration: TimeSpan.FromMinutes(minutes: 3),
                     OutputSizeBytes: 20_000_000,
                     Error: null
                 )
@@ -122,20 +122,20 @@ public sealed class DiscRipJobCdTaggingTests : ProviderHttpHarness
     {
         Mock<IStorage> storage = new();
         storage
-            .Setup(s => s.GetFullPath(It.IsAny<string>()))
-            .Returns<string>(rel => hostPath + "/" + rel.TrimStart('/'));
+            .Setup(expression: s => s.GetFullPath(It.IsAny<string>()))
+            .Returns<string>(valueFunction: rel => hostPath + "/" + rel.TrimStart(trimChar: '/'));
         storage
-            .Setup(s => s.CreateDirectoryAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .Setup(expression: s => s.CreateDirectoryAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(value: Task.CompletedTask);
         storage
-            .Setup(s =>
+            .Setup(expression: s =>
                 s.OpenWriteAsync(
                     It.IsAny<string>(),
                     It.IsAny<bool>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(Stream.Null);
+            .ReturnsAsync(value: Stream.Null);
         return storage;
     }
 
@@ -148,10 +148,10 @@ public sealed class DiscRipJobCdTaggingTests : ProviderHttpHarness
     {
         Mock<IStorageFactory> factoryMock = new();
         factoryMock
-            .Setup(f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
-            .Returns(folderStorage);
+            .Setup(expression: f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
+            .Returns(value: folderStorage);
 
-        TestableDiscRipJob job = new(MakeFolder(), MakeLibrary())
+        TestableDiscRipJob job = new(folder: MakeFolder(), library: MakeLibrary())
         {
             Request = request,
             OutputDir = Path.GetTempPath(),
@@ -159,7 +159,7 @@ public sealed class DiscRipJobCdTaggingTests : ProviderHttpHarness
             TargetLibraryId = KnownLibraryId,
             TargetLibraryType = "music",
             DiscRipper = ripper,
-            IdentificationService = new([], NullLogger<DiscIdentificationService>.Instance),
+            IdentificationService = new(identifiers: [], logger: NullLogger<DiscIdentificationService>.Instance),
             StorageFactory = factoryMock.Object,
             StorageDriver = Mock.Of<IStorageDriver>(),
             DriveLockRegistry = new(),
@@ -209,28 +209,28 @@ public sealed class DiscRipJobCdTaggingTests : ProviderHttpHarness
     {
         Guid releaseId = Guid.NewGuid();
         Handler.WhenGet(
-            $"release/{releaseId}",
-            MockResponse.Json(HttpStatusCode.OK, ReleaseJson(releaseId, true))
+            pathContains: $"release/{releaseId}",
+            responses: MockResponse.Json(status: HttpStatusCode.OK, body: ReleaseJson(releaseId: releaseId, hasFrontCover: true))
         );
 
-        DiscRipResult[] ripResults = await MakeSuccessResultsWithRealFilesAsync([1, 2]);
+        DiscRipResult[] ripResults = await MakeSuccessResultsWithRealFilesAsync(trackIndices: [1, 2]);
         try
         {
             Mock<IDiscRipper> ripperMock = new();
             ripperMock
-                .Setup(r =>
+                .Setup(expression: r =>
                     r.RipAsync(
                         It.IsAny<RipRequest>(),
                         It.IsAny<string>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .ReturnsAsync(ripResults);
+                .ReturnsAsync(value: ripResults);
 
             List<AudioMetadata> tagged = [];
             Mock<IAudioMetadataWriter> tagWriterMock = new();
             tagWriterMock
-                .Setup(w =>
+                .Setup(expression: w =>
                     w.WriteTagsAsync(
                         It.IsAny<string>(),
                         It.IsAny<AudioMetadata>(),
@@ -238,53 +238,53 @@ public sealed class DiscRipJobCdTaggingTests : ProviderHttpHarness
                     )
                 )
                 .Callback<string, AudioMetadata, CancellationToken>(
-                    (_, meta, _) => tagged.Add(meta)
+                    action: (_, meta, _) => tagged.Add(item: meta)
                 )
-                .Returns(Task.CompletedTask);
+                .Returns(value: Task.CompletedTask);
 
             Mock<IEventBus> busMock = new();
             busMock
-                .Setup(b =>
+                .Setup(expression: b =>
                     b.PublishAsync(
                         It.IsAny<DriveStateChangedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .Returns(Task.CompletedTask);
+                .Returns(value: Task.CompletedTask);
             busMock
-                .Setup(b =>
+                .Setup(expression: b =>
                     b.PublishAsync(
                         It.IsAny<NoMercy.Events.FileWatcher.FileCreatedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .Returns(Task.CompletedTask);
-            EventBusProvider.Configure(busMock.Object);
+                .Returns(value: Task.CompletedTask);
+            EventBusProvider.Configure(eventBus: busMock.Object);
 
             DiscRipJob job = BuildJob(
-                MakeCdRequest(releaseId.ToString(), [1, 2]),
-                ripperMock.Object,
-                tagWriterMock.Object,
-                MakeStorageMock("/media/music").Object
+                request: MakeCdRequest(metadataId: releaseId.ToString(), titleIndices: [1, 2]),
+                ripper: ripperMock.Object,
+                tagWriter: tagWriterMock.Object,
+                folderStorage: MakeStorageMock(hostPath: "/media/music").Object
             );
 
             await job.Handle();
 
-            tagged.Should().HaveCount(2);
-            tagged[0].Title.Should().Be("First Track");
-            tagged[0].Artist.Should().Be("Track Artist");
-            tagged[0].AlbumArtist.Should().Be("Test Artist");
-            tagged[0].Album.Should().Be("Test Album");
-            tagged[0].Year.Should().Be(2015);
-            tagged[0].Genre.Should().Be("Rock");
-            tagged[0].CoverArt.Should().NotBeNull();
-            tagged[1].Title.Should().Be("Second Track");
+            tagged.Should().HaveCount(expected: 2);
+            tagged[index: 0].Title.Should().Be(expected: "First Track");
+            tagged[index: 0].Artist.Should().Be(expected: "Track Artist");
+            tagged[index: 0].AlbumArtist.Should().Be(expected: "Test Artist");
+            tagged[index: 0].Album.Should().Be(expected: "Test Album");
+            tagged[index: 0].Year.Should().Be(expected: 2015);
+            tagged[index: 0].Genre.Should().Be(expected: "Rock");
+            tagged[index: 0].CoverArt.Should().NotBeNull();
+            tagged[index: 1].Title.Should().Be(expected: "Second Track");
         }
         finally
         {
             foreach (DiscRipResult r in ripResults)
-                if (File.Exists(r.OutputPath))
-                    File.Delete(r.OutputPath);
+                if (File.Exists(path: r.OutputPath))
+                    File.Delete(path: r.OutputPath);
         }
     }
 
@@ -293,28 +293,28 @@ public sealed class DiscRipJobCdTaggingTests : ProviderHttpHarness
     {
         Guid releaseId = Guid.NewGuid();
         Handler.WhenGet(
-            $"release/{releaseId}",
-            MockResponse.Json(HttpStatusCode.OK, ReleaseJson(releaseId, false))
+            pathContains: $"release/{releaseId}",
+            responses: MockResponse.Json(status: HttpStatusCode.OK, body: ReleaseJson(releaseId: releaseId, hasFrontCover: false))
         );
 
-        DiscRipResult[] ripResults = await MakeSuccessResultsWithRealFilesAsync([1]);
+        DiscRipResult[] ripResults = await MakeSuccessResultsWithRealFilesAsync(trackIndices: [1]);
         try
         {
             Mock<IDiscRipper> ripperMock = new();
             ripperMock
-                .Setup(r =>
+                .Setup(expression: r =>
                     r.RipAsync(
                         It.IsAny<RipRequest>(),
                         It.IsAny<string>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .ReturnsAsync(ripResults);
+                .ReturnsAsync(value: ripResults);
 
             List<AudioMetadata> tagged = [];
             Mock<IAudioMetadataWriter> tagWriterMock = new();
             tagWriterMock
-                .Setup(w =>
+                .Setup(expression: w =>
                     w.WriteTagsAsync(
                         It.IsAny<string>(),
                         It.IsAny<AudioMetadata>(),
@@ -322,46 +322,46 @@ public sealed class DiscRipJobCdTaggingTests : ProviderHttpHarness
                     )
                 )
                 .Callback<string, AudioMetadata, CancellationToken>(
-                    (_, meta, _) => tagged.Add(meta)
+                    action: (_, meta, _) => tagged.Add(item: meta)
                 )
-                .Returns(Task.CompletedTask);
+                .Returns(value: Task.CompletedTask);
 
             Mock<IEventBus> busMock = new();
             busMock
-                .Setup(b =>
+                .Setup(expression: b =>
                     b.PublishAsync(
                         It.IsAny<DriveStateChangedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .Returns(Task.CompletedTask);
+                .Returns(value: Task.CompletedTask);
             busMock
-                .Setup(b =>
+                .Setup(expression: b =>
                     b.PublishAsync(
                         It.IsAny<NoMercy.Events.FileWatcher.FileCreatedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .Returns(Task.CompletedTask);
-            EventBusProvider.Configure(busMock.Object);
+                .Returns(value: Task.CompletedTask);
+            EventBusProvider.Configure(eventBus: busMock.Object);
 
             DiscRipJob job = BuildJob(
-                MakeCdRequest(releaseId.ToString(), [1]),
-                ripperMock.Object,
-                tagWriterMock.Object,
-                MakeStorageMock("/media/music").Object
+                request: MakeCdRequest(metadataId: releaseId.ToString(), titleIndices: [1]),
+                ripper: ripperMock.Object,
+                tagWriter: tagWriterMock.Object,
+                folderStorage: MakeStorageMock(hostPath: "/media/music").Object
             );
 
             await job.Handle();
 
             tagged.Should().ContainSingle();
-            tagged[0].CoverArt.Should().BeNull();
+            tagged[index: 0].CoverArt.Should().BeNull();
         }
         finally
         {
             foreach (DiscRipResult r in ripResults)
-                if (File.Exists(r.OutputPath))
-                    File.Delete(r.OutputPath);
+                if (File.Exists(path: r.OutputPath))
+                    File.Delete(path: r.OutputPath);
         }
     }
 
@@ -369,69 +369,69 @@ public sealed class DiscRipJobCdTaggingTests : ProviderHttpHarness
     public async Task Handle_CdWithMetadataId_ReleaseNotFound_SkipsTaggingWithoutThrowing()
     {
         string metadataId = Guid.NewGuid().ToString();
-        Handler.WhenGet($"release/{metadataId}", MockResponse.Status(HttpStatusCode.NotFound));
+        Handler.WhenGet(pathContains: $"release/{metadataId}", responses: MockResponse.Status(status: HttpStatusCode.NotFound));
 
-        DiscRipResult[] ripResults = await MakeSuccessResultsWithRealFilesAsync([1]);
+        DiscRipResult[] ripResults = await MakeSuccessResultsWithRealFilesAsync(trackIndices: [1]);
         try
         {
             Mock<IDiscRipper> ripperMock = new();
             ripperMock
-                .Setup(r =>
+                .Setup(expression: r =>
                     r.RipAsync(
                         It.IsAny<RipRequest>(),
                         It.IsAny<string>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .ReturnsAsync(ripResults);
+                .ReturnsAsync(value: ripResults);
 
             Mock<IAudioMetadataWriter> tagWriterMock = new();
 
             Mock<IEventBus> busMock = new();
             busMock
-                .Setup(b =>
+                .Setup(expression: b =>
                     b.PublishAsync(
                         It.IsAny<DriveStateChangedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .Returns(Task.CompletedTask);
+                .Returns(value: Task.CompletedTask);
             busMock
-                .Setup(b =>
+                .Setup(expression: b =>
                     b.PublishAsync(
                         It.IsAny<NoMercy.Events.FileWatcher.FileCreatedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .Returns(Task.CompletedTask);
-            EventBusProvider.Configure(busMock.Object);
+                .Returns(value: Task.CompletedTask);
+            EventBusProvider.Configure(eventBus: busMock.Object);
 
             DiscRipJob job = BuildJob(
-                MakeCdRequest(metadataId, [1]),
-                ripperMock.Object,
-                tagWriterMock.Object,
-                MakeStorageMock("/media/music").Object
+                request: MakeCdRequest(metadataId: metadataId, titleIndices: [1]),
+                ripper: ripperMock.Object,
+                tagWriter: tagWriterMock.Object,
+                folderStorage: MakeStorageMock(hostPath: "/media/music").Object
             );
 
-            Exception? ex = await Record.ExceptionAsync(() => job.Handle());
+            Exception? ex = await Record.ExceptionAsync(testCode: () => job.Handle());
 
             ex.Should()
-                .BeNull("a not-found release must degrade to untagged FLACs, not crash the job");
+                .BeNull(because: "a not-found release must degrade to untagged FLACs, not crash the job");
             tagWriterMock.Verify(
-                w =>
+                expression: w =>
                     w.WriteTagsAsync(
                         It.IsAny<string>(),
                         It.IsAny<AudioMetadata>(),
                         It.IsAny<CancellationToken>()
                     ),
-                Times.Never
+                times: Times.Never
             );
         }
         finally
         {
             foreach (DiscRipResult r in ripResults)
-                if (File.Exists(r.OutputPath))
-                    File.Delete(r.OutputPath);
+                if (File.Exists(path: r.OutputPath))
+                    File.Delete(path: r.OutputPath);
         }
     }
 
@@ -444,73 +444,73 @@ public sealed class DiscRipJobCdTaggingTests : ProviderHttpHarness
         // release fetch rather than the "release is null" branch below it.
         string metadataId = Guid.NewGuid().ToString();
         Handler.WhenGet(
-            $"release/{metadataId}",
-            MockResponse.Status(HttpStatusCode.InternalServerError)
+            pathContains: $"release/{metadataId}",
+            responses: MockResponse.Status(status: HttpStatusCode.InternalServerError)
         );
 
-        DiscRipResult[] ripResults = await MakeSuccessResultsWithRealFilesAsync([1]);
+        DiscRipResult[] ripResults = await MakeSuccessResultsWithRealFilesAsync(trackIndices: [1]);
         try
         {
             Mock<IDiscRipper> ripperMock = new();
             ripperMock
-                .Setup(r =>
+                .Setup(expression: r =>
                     r.RipAsync(
                         It.IsAny<RipRequest>(),
                         It.IsAny<string>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .ReturnsAsync(ripResults);
+                .ReturnsAsync(value: ripResults);
 
             Mock<IAudioMetadataWriter> tagWriterMock = new();
 
             Mock<IEventBus> busMock = new();
             busMock
-                .Setup(b =>
+                .Setup(expression: b =>
                     b.PublishAsync(
                         It.IsAny<DriveStateChangedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .Returns(Task.CompletedTask);
+                .Returns(value: Task.CompletedTask);
             busMock
-                .Setup(b =>
+                .Setup(expression: b =>
                     b.PublishAsync(
                         It.IsAny<NoMercy.Events.FileWatcher.FileCreatedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .Returns(Task.CompletedTask);
-            EventBusProvider.Configure(busMock.Object);
+                .Returns(value: Task.CompletedTask);
+            EventBusProvider.Configure(eventBus: busMock.Object);
 
             DiscRipJob job = BuildJob(
-                MakeCdRequest(metadataId, [1]),
-                ripperMock.Object,
-                tagWriterMock.Object,
-                MakeStorageMock("/media/music").Object
+                request: MakeCdRequest(metadataId: metadataId, titleIndices: [1]),
+                ripper: ripperMock.Object,
+                tagWriter: tagWriterMock.Object,
+                folderStorage: MakeStorageMock(hostPath: "/media/music").Object
             );
 
-            Exception? ex = await Record.ExceptionAsync(() => job.Handle());
+            Exception? ex = await Record.ExceptionAsync(testCode: () => job.Handle());
 
             ex.Should()
                 .BeNull(
-                    "a release-fetch failure must degrade to untagged FLACs, not crash the job"
+                    because: "a release-fetch failure must degrade to untagged FLACs, not crash the job"
                 );
             tagWriterMock.Verify(
-                w =>
+                expression: w =>
                     w.WriteTagsAsync(
                         It.IsAny<string>(),
                         It.IsAny<AudioMetadata>(),
                         It.IsAny<CancellationToken>()
                     ),
-                Times.Never
+                times: Times.Never
             );
         }
         finally
         {
             foreach (DiscRipResult r in ripResults)
-                if (File.Exists(r.OutputPath))
-                    File.Delete(r.OutputPath);
+                if (File.Exists(path: r.OutputPath))
+                    File.Delete(path: r.OutputPath);
         }
     }
 
@@ -522,28 +522,28 @@ public sealed class DiscRipJobCdTaggingTests : ProviderHttpHarness
         // the position lookup in TagCdTracksAsync should fail to find track
         // 3, falling back to "Track 03" / the album artist credit.
         Handler.WhenGet(
-            $"release/{releaseId}",
-            MockResponse.Json(HttpStatusCode.OK, ReleaseJson(releaseId, false))
+            pathContains: $"release/{releaseId}",
+            responses: MockResponse.Json(status: HttpStatusCode.OK, body: ReleaseJson(releaseId: releaseId, hasFrontCover: false))
         );
 
-        DiscRipResult[] ripResults = await MakeSuccessResultsWithRealFilesAsync([1, 2, 3]);
+        DiscRipResult[] ripResults = await MakeSuccessResultsWithRealFilesAsync(trackIndices: [1, 2, 3]);
         try
         {
             Mock<IDiscRipper> ripperMock = new();
             ripperMock
-                .Setup(r =>
+                .Setup(expression: r =>
                     r.RipAsync(
                         It.IsAny<RipRequest>(),
                         It.IsAny<string>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .ReturnsAsync(ripResults);
+                .ReturnsAsync(value: ripResults);
 
             List<AudioMetadata> tagged = [];
             Mock<IAudioMetadataWriter> tagWriterMock = new();
             tagWriterMock
-                .Setup(w =>
+                .Setup(expression: w =>
                     w.WriteTagsAsync(
                         It.IsAny<string>(),
                         It.IsAny<AudioMetadata>(),
@@ -551,47 +551,47 @@ public sealed class DiscRipJobCdTaggingTests : ProviderHttpHarness
                     )
                 )
                 .Callback<string, AudioMetadata, CancellationToken>(
-                    (_, meta, _) => tagged.Add(meta)
+                    action: (_, meta, _) => tagged.Add(item: meta)
                 )
-                .Returns(Task.CompletedTask);
+                .Returns(value: Task.CompletedTask);
 
             Mock<IEventBus> busMock = new();
             busMock
-                .Setup(b =>
+                .Setup(expression: b =>
                     b.PublishAsync(
                         It.IsAny<DriveStateChangedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .Returns(Task.CompletedTask);
+                .Returns(value: Task.CompletedTask);
             busMock
-                .Setup(b =>
+                .Setup(expression: b =>
                     b.PublishAsync(
                         It.IsAny<NoMercy.Events.FileWatcher.FileCreatedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .Returns(Task.CompletedTask);
-            EventBusProvider.Configure(busMock.Object);
+                .Returns(value: Task.CompletedTask);
+            EventBusProvider.Configure(eventBus: busMock.Object);
 
             DiscRipJob job = BuildJob(
-                MakeCdRequest(releaseId.ToString(), [1, 2, 3]),
-                ripperMock.Object,
-                tagWriterMock.Object,
-                MakeStorageMock("/media/music").Object
+                request: MakeCdRequest(metadataId: releaseId.ToString(), titleIndices: [1, 2, 3]),
+                ripper: ripperMock.Object,
+                tagWriter: tagWriterMock.Object,
+                folderStorage: MakeStorageMock(hostPath: "/media/music").Object
             );
 
             await job.Handle();
 
-            tagged.Should().HaveCount(3);
-            tagged[2].Title.Should().Be("Track 03");
-            tagged[2].Artist.Should().Be("Test Artist", "falls back to the album artist credit");
+            tagged.Should().HaveCount(expected: 3);
+            tagged[index: 2].Title.Should().Be(expected: "Track 03");
+            tagged[index: 2].Artist.Should().Be(expected: "Test Artist", because: "falls back to the album artist credit");
         }
         finally
         {
             foreach (DiscRipResult r in ripResults)
-                if (File.Exists(r.OutputPath))
-                    File.Delete(r.OutputPath);
+                if (File.Exists(path: r.OutputPath))
+                    File.Delete(path: r.OutputPath);
         }
     }
 
@@ -600,80 +600,80 @@ public sealed class DiscRipJobCdTaggingTests : ProviderHttpHarness
     {
         Guid releaseId = Guid.NewGuid();
         Handler.WhenGet(
-            $"release/{releaseId}",
-            MockResponse.Json(HttpStatusCode.OK, ReleaseJson(releaseId, false))
+            pathContains: $"release/{releaseId}",
+            responses: MockResponse.Json(status: HttpStatusCode.OK, body: ReleaseJson(releaseId: releaseId, hasFrontCover: false))
         );
 
-        DiscRipResult[] ripResults = await MakeSuccessResultsWithRealFilesAsync([1, 2]);
+        DiscRipResult[] ripResults = await MakeSuccessResultsWithRealFilesAsync(trackIndices: [1, 2]);
         try
         {
             Mock<IDiscRipper> ripperMock = new();
             ripperMock
-                .Setup(r =>
+                .Setup(expression: r =>
                     r.RipAsync(
                         It.IsAny<RipRequest>(),
                         It.IsAny<string>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .ReturnsAsync(ripResults);
+                .ReturnsAsync(value: ripResults);
 
             Mock<IAudioMetadataWriter> tagWriterMock = new();
             tagWriterMock
-                .SetupSequence(w =>
+                .SetupSequence(expression: w =>
                     w.WriteTagsAsync(
                         It.IsAny<string>(),
                         It.IsAny<AudioMetadata>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .ThrowsAsync(new InvalidOperationException("disk full"))
-                .Returns(Task.CompletedTask);
+                .ThrowsAsync(exception: new InvalidOperationException(message: "disk full"))
+                .Returns(value: Task.CompletedTask);
 
             Mock<IEventBus> busMock = new();
             busMock
-                .Setup(b =>
+                .Setup(expression: b =>
                     b.PublishAsync(
                         It.IsAny<DriveStateChangedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .Returns(Task.CompletedTask);
+                .Returns(value: Task.CompletedTask);
             busMock
-                .Setup(b =>
+                .Setup(expression: b =>
                     b.PublishAsync(
                         It.IsAny<NoMercy.Events.FileWatcher.FileCreatedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .Returns(Task.CompletedTask);
-            EventBusProvider.Configure(busMock.Object);
+                .Returns(value: Task.CompletedTask);
+            EventBusProvider.Configure(eventBus: busMock.Object);
 
             DiscRipJob job = BuildJob(
-                MakeCdRequest(releaseId.ToString(), [1, 2]),
-                ripperMock.Object,
-                tagWriterMock.Object,
-                MakeStorageMock("/media/music").Object
+                request: MakeCdRequest(metadataId: releaseId.ToString(), titleIndices: [1, 2]),
+                ripper: ripperMock.Object,
+                tagWriter: tagWriterMock.Object,
+                folderStorage: MakeStorageMock(hostPath: "/media/music").Object
             );
 
-            Exception? ex = await Record.ExceptionAsync(() => job.Handle());
+            Exception? ex = await Record.ExceptionAsync(testCode: () => job.Handle());
 
-            ex.Should().BeNull("one track's tag failure must not stop the rest from being tagged");
+            ex.Should().BeNull(because: "one track's tag failure must not stop the rest from being tagged");
             tagWriterMock.Verify(
-                w =>
+                expression: w =>
                     w.WriteTagsAsync(
                         It.IsAny<string>(),
                         It.IsAny<AudioMetadata>(),
                         It.IsAny<CancellationToken>()
                     ),
-                Times.Exactly(2)
+                times: Times.Exactly(callCount: 2)
             );
         }
         finally
         {
             foreach (DiscRipResult r in ripResults)
-                if (File.Exists(r.OutputPath))
-                    File.Delete(r.OutputPath);
+                if (File.Exists(path: r.OutputPath))
+                    File.Delete(path: r.OutputPath);
         }
     }
 
@@ -682,19 +682,19 @@ public sealed class DiscRipJobCdTaggingTests : ProviderHttpHarness
     {
         Guid releaseId = Guid.NewGuid();
         Handler.WhenGet(
-            $"release/{releaseId}",
-            MockResponse.Json(HttpStatusCode.OK, ReleaseJson(releaseId, false))
+            pathContains: $"release/{releaseId}",
+            responses: MockResponse.Json(status: HttpStatusCode.OK, body: ReleaseJson(releaseId: releaseId, hasFrontCover: false))
         );
 
-        DiscRipResult[] successFile = await MakeSuccessResultsWithRealFilesAsync([1]);
+        DiscRipResult[] successFile = await MakeSuccessResultsWithRealFilesAsync(trackIndices: [1]);
         DiscRipResult[] mixedResults =
         [
             successFile[0],
             new(
                 TitleIndex: 2,
                 OutputPath: Path.Combine(
-                    Path.GetTempPath(),
-                    $"cdtag_missing_{Guid.NewGuid():N}.flac"
+                    path1: Path.GetTempPath(),
+                    path2: $"cdtag_missing_{Guid.NewGuid():N}.flac"
                 ),
                 Success: false,
                 Duration: TimeSpan.Zero,
@@ -706,70 +706,70 @@ public sealed class DiscRipJobCdTaggingTests : ProviderHttpHarness
         {
             Mock<IDiscRipper> ripperMock = new();
             ripperMock
-                .Setup(r =>
+                .Setup(expression: r =>
                     r.RipAsync(
                         It.IsAny<RipRequest>(),
                         It.IsAny<string>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .ReturnsAsync(mixedResults);
+                .ReturnsAsync(value: mixedResults);
 
             Mock<IAudioMetadataWriter> tagWriterMock = new();
 
             Mock<IEventBus> busMock = new();
             busMock
-                .Setup(b =>
+                .Setup(expression: b =>
                     b.PublishAsync(
                         It.IsAny<DriveStateChangedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .Returns(Task.CompletedTask);
+                .Returns(value: Task.CompletedTask);
             busMock
-                .Setup(b =>
+                .Setup(expression: b =>
                     b.PublishAsync(
                         It.IsAny<NoMercy.Events.FileWatcher.FileCreatedEvent>(),
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .Returns(Task.CompletedTask);
-            EventBusProvider.Configure(busMock.Object);
+                .Returns(value: Task.CompletedTask);
+            EventBusProvider.Configure(eventBus: busMock.Object);
 
             DiscRipJob job = BuildJob(
-                MakeCdRequest(releaseId.ToString(), [1, 2]),
-                ripperMock.Object,
-                tagWriterMock.Object,
-                MakeStorageMock("/media/music").Object
+                request: MakeCdRequest(metadataId: releaseId.ToString(), titleIndices: [1, 2]),
+                ripper: ripperMock.Object,
+                tagWriter: tagWriterMock.Object,
+                folderStorage: MakeStorageMock(hostPath: "/media/music").Object
             );
 
             await job.Handle();
 
             tagWriterMock.Verify(
-                w =>
+                expression: w =>
                     w.WriteTagsAsync(
                         It.Is<string>(p => p.Contains("cdtag_missing")),
                         It.IsAny<AudioMetadata>(),
                         It.IsAny<CancellationToken>()
                     ),
-                Times.Never,
-                "the failed track must never be tagged"
+                times: Times.Never,
+                failMessage: "the failed track must never be tagged"
             );
             tagWriterMock.Verify(
-                w =>
+                expression: w =>
                     w.WriteTagsAsync(
                         It.IsAny<string>(),
                         It.IsAny<AudioMetadata>(),
                         It.IsAny<CancellationToken>()
                     ),
-                Times.Once
+                times: Times.Once
             );
         }
         finally
         {
             foreach (DiscRipResult r in mixedResults)
-                if (File.Exists(r.OutputPath))
-                    File.Delete(r.OutputPath);
+                if (File.Exists(path: r.OutputPath))
+                    File.Delete(path: r.OutputPath);
         }
     }
 }

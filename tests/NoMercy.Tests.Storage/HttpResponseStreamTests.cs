@@ -23,13 +23,13 @@ namespace NoMercy.Tests.Storage;
 /// the response — a leak here holds an HTTP connection open for every S3
 /// read the encoder or dashboard ever issues.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class HttpResponseStreamTests
 {
     private static HttpResponseStream New(byte[] content, out DisposeTrackingResponse response)
     {
-        response = new(content);
-        return new(response);
+        response = new(content: content);
+        return new(response: response);
     }
 
     /// <summary>
@@ -43,15 +43,15 @@ public sealed class HttpResponseStreamTests
         public bool WasDisposed { get; private set; }
 
         public DisposeTrackingResponse(byte[] content)
-            : base(HttpStatusCode.OK)
+            : base(statusCode: HttpStatusCode.OK)
         {
-            Content = new ByteArrayContent(content);
+            Content = new ByteArrayContent(content: content);
         }
 
         protected override void Dispose(bool disposing)
         {
             WasDisposed = true;
-            base.Dispose(disposing);
+            base.Dispose(disposing: disposing);
         }
     }
 
@@ -59,58 +59,58 @@ public sealed class HttpResponseStreamTests
     public void Read_returns_the_content_bytes()
     {
         byte[] payload = [1, 2, 3, 4];
-        HttpResponseStream stream = New(payload, out _);
+        HttpResponseStream stream = New(content: payload, response: out _);
 
         byte[] buffer = new byte[4];
-        int read = stream.Read(buffer, 0, 4);
+        int read = stream.Read(buffer: buffer, offset: 0, count: 4);
 
-        read.Should().Be(4);
-        buffer.Should().Equal(payload);
+        read.Should().Be(expected: 4);
+        buffer.Should().Equal(elements: payload);
     }
 
     [Fact]
     public void Read_span_overload_returns_the_content_bytes()
     {
         byte[] payload = [9, 8, 7];
-        HttpResponseStream stream = New(payload, out _);
+        HttpResponseStream stream = New(content: payload, response: out _);
 
         byte[] buffer = new byte[3];
-        int read = stream.Read(buffer.AsSpan());
+        int read = stream.Read(buffer: buffer.AsSpan());
 
-        read.Should().Be(3);
-        buffer.Should().Equal(payload);
+        read.Should().Be(expected: 3);
+        buffer.Should().Equal(elements: payload);
     }
 
     [Fact]
     public async Task ReadAsync_byte_array_overload_returns_the_content_bytes()
     {
         byte[] payload = [5, 6, 7];
-        HttpResponseStream stream = New(payload, out _);
+        HttpResponseStream stream = New(content: payload, response: out _);
 
         byte[] buffer = new byte[3];
-        int read = await stream.ReadAsync(buffer, 0, 3, CancellationToken.None);
+        int read = await stream.ReadAsync(buffer: buffer, offset: 0, count: 3, ct: CancellationToken.None);
 
-        read.Should().Be(3);
-        buffer.Should().Equal(payload);
+        read.Should().Be(expected: 3);
+        buffer.Should().Equal(elements: payload);
     }
 
     [Fact]
     public async Task ReadAsync_memory_overload_returns_the_content_bytes()
     {
         byte[] payload = [4, 3, 2];
-        HttpResponseStream stream = New(payload, out _);
+        HttpResponseStream stream = New(content: payload, response: out _);
 
         byte[] buffer = new byte[3];
-        int read = await stream.ReadAsync(buffer.AsMemory());
+        int read = await stream.ReadAsync(buffer: buffer.AsMemory());
 
-        read.Should().Be(3);
-        buffer.Should().Equal(payload);
+        read.Should().Be(expected: 3);
+        buffer.Should().Equal(elements: payload);
     }
 
     [Fact]
     public void CanRead_CanWrite_reflect_a_read_only_response_stream()
     {
-        HttpResponseStream stream = New([1], out _);
+        HttpResponseStream stream = New(content: [1], response: out _);
 
         stream.CanRead.Should().BeTrue();
         stream.CanWrite.Should().BeFalse();
@@ -120,45 +120,45 @@ public sealed class HttpResponseStreamTests
     public void Length_forwards_to_inner_stream()
     {
         byte[] payload = [1, 2, 3, 4, 5];
-        HttpResponseStream stream = New(payload, out _);
+        HttpResponseStream stream = New(content: payload, response: out _);
 
-        stream.Length.Should().Be(5);
+        stream.Length.Should().Be(expected: 5);
     }
 
     [Fact]
     public void Position_get_and_set_forward_to_inner_stream()
     {
         byte[] payload = [1, 2, 3, 4, 5];
-        HttpResponseStream stream = New(payload, out _);
+        HttpResponseStream stream = New(content: payload, response: out _);
 
         stream.Position = 2;
 
-        stream.Position.Should().Be(2);
+        stream.Position.Should().Be(expected: 2);
         byte[] buffer = new byte[1];
-        stream.ReadExactly(buffer, 0, 1);
-        buffer[0].Should().Be(3, "setting Position must actually move the inner stream's cursor");
+        stream.ReadExactly(buffer: buffer, offset: 0, count: 1);
+        buffer[0].Should().Be(expected: 3, because: "setting Position must actually move the inner stream's cursor");
     }
 
     [Fact]
     public void Seek_forwards_to_inner_stream()
     {
         byte[] payload = [10, 20, 30, 40];
-        HttpResponseStream stream = New(payload, out _);
+        HttpResponseStream stream = New(content: payload, response: out _);
 
-        long result = stream.Seek(2, SeekOrigin.Begin);
+        long result = stream.Seek(offset: 2, origin: SeekOrigin.Begin);
 
-        result.Should().Be(2);
+        result.Should().Be(expected: 2);
         byte[] buffer = new byte[1];
-        stream.ReadExactly(buffer, 0, 1);
-        buffer[0].Should().Be(30);
+        stream.ReadExactly(buffer: buffer, offset: 0, count: 1);
+        buffer[0].Should().Be(expected: 30);
     }
 
     [Fact]
     public void SetLength_throws_NotSupportedException()
     {
-        HttpResponseStream stream = New([1], out _);
+        HttpResponseStream stream = New(content: [1], response: out _);
 
-        Action act = () => stream.SetLength(10);
+        Action act = () => stream.SetLength(value: 10);
 
         act.Should().Throw<NotSupportedException>();
     }
@@ -166,20 +166,20 @@ public sealed class HttpResponseStreamTests
     [Fact]
     public void Write_throws_NotSupportedException()
     {
-        HttpResponseStream stream = New([1], out _);
+        HttpResponseStream stream = New(content: [1], response: out _);
 
-        Action act = () => stream.Write([1], 0, 1);
+        Action act = () => stream.Write(buffer: [1], offset: 0, count: 1);
 
-        act.Should().Throw<NotSupportedException>("an HTTP GET response body is read-only");
+        act.Should().Throw<NotSupportedException>(because: "an HTTP GET response body is read-only");
     }
 
     [Fact]
     public void Flush_and_FlushAsync_do_not_throw()
     {
-        HttpResponseStream stream = New([1], out _);
+        HttpResponseStream stream = New(content: [1], response: out _);
 
         Action act = () => stream.Flush();
-        Func<Task> asyncAct = () => stream.FlushAsync(CancellationToken.None);
+        Func<Task> asyncAct = () => stream.FlushAsync(ct: CancellationToken.None);
 
         act.Should().NotThrow();
         asyncAct.Should().NotThrowAsync();
@@ -188,21 +188,21 @@ public sealed class HttpResponseStreamTests
     [Fact]
     public void Dispose_disposes_both_the_content_stream_and_the_response()
     {
-        HttpResponseStream stream = New([1, 2, 3], out DisposeTrackingResponse response);
+        HttpResponseStream stream = New(content: [1, 2, 3], response: out DisposeTrackingResponse response);
 
         stream.Dispose();
 
         response
             .WasDisposed.Should()
             .BeTrue(
-                "Dispose must release the HttpResponseMessage, not just the content stream, or the connection leaks"
+                because: "Dispose must release the HttpResponseMessage, not just the content stream, or the connection leaks"
             );
     }
 
     [Fact]
     public async Task DisposeAsync_disposes_both_the_content_stream_and_the_response()
     {
-        HttpResponseStream stream = New([1, 2, 3], out DisposeTrackingResponse response);
+        HttpResponseStream stream = New(content: [1, 2, 3], response: out DisposeTrackingResponse response);
 
         await stream.DisposeAsync();
 

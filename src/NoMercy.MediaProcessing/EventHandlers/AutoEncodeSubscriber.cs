@@ -61,9 +61,9 @@ public class AutoEncodeSubscriber(
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _subscriptions.Add(
-            eventBus.Subscribe<MediaFilesScannedEvent>((evt, ct) => HandleAsync(evt, ct))
+            item: eventBus.Subscribe<MediaFilesScannedEvent>(handler: (evt, ct) => HandleAsync(evt: evt, ct: ct))
         );
-        logger.LogInformation("Auto-encode subscriber active");
+        logger.LogInformation(message: "Auto-encode subscriber active");
         return Task.CompletedTask;
     }
 
@@ -77,7 +77,7 @@ public class AutoEncodeSubscriber(
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Could not dispose auto-encode subscription");
+                logger.LogWarning(exception: ex, message: "Could not dispose auto-encode subscription");
             }
         }
         _subscriptions.Clear();
@@ -88,17 +88,17 @@ public class AutoEncodeSubscriber(
     {
         try
         {
-            await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
+            await using MediaContext context = await contextFactory.CreateDbContextAsync(cancellationToken: ct);
 
             Library? library = await context
                 .Libraries.AsNoTracking()
-                .FirstOrDefaultAsync(l => l.Id == evt.LibraryId, ct);
+                .FirstOrDefaultAsync(predicate: l => l.Id == evt.LibraryId, cancellationToken: ct);
 
             if (library is null)
             {
                 logger.LogDebug(
-                    "Auto-encode skipped: library {LibraryId} not found",
-                    evt.LibraryId
+                    message: "Auto-encode skipped: library {LibraryId} not found",
+                    args: evt.LibraryId
                 );
                 return;
             }
@@ -106,8 +106,8 @@ public class AutoEncodeSubscriber(
             if (!library.AutoEncodeOnScan)
             {
                 logger.LogDebug(
-                    "Auto-encode-on-scan is off for library {LibraryId}; scan skipped",
-                    evt.LibraryId
+                    message: "Auto-encode-on-scan is off for library {LibraryId}; scan skipped",
+                    args: evt.LibraryId
                 );
                 return;
             }
@@ -115,8 +115,8 @@ public class AutoEncodeSubscriber(
             if (library.EncodePresetId is null)
             {
                 logger.LogDebug(
-                    "Auto-encode-on-scan is on for library {LibraryId} but no encoding preset is assigned; scan skipped",
-                    evt.LibraryId
+                    message: "Auto-encode-on-scan is on for library {LibraryId} but no encoding preset is assigned; scan skipped",
+                    args: evt.LibraryId
                 );
                 return;
             }
@@ -124,20 +124,20 @@ public class AutoEncodeSubscriber(
             // All folders in this library that have a V2 encoding preset
             // attached — same table VideoEncodeJob resolves its presets from.
             List<Folder> folders = await context
-                .Folders.Include(f => f.EncodingPresetFolders)
-                    .ThenInclude(link => link.Preset)
-                .Include(f => f.FolderLibraries)
-                .Where(f =>
+                .Folders.Include(navigationPropertyPath: f => f.EncodingPresetFolders)
+                    .ThenInclude(navigationPropertyPath: link => link.Preset)
+                .Include(navigationPropertyPath: f => f.FolderLibraries)
+                .Where(predicate: f =>
                     f.FolderLibraries.Any(fl => fl.LibraryId == evt.LibraryId)
                     && f.EncodingPresetFolders.Any()
                 )
-                .ToListAsync(ct);
+                .ToListAsync(cancellationToken: ct);
 
             if (folders.Count == 0)
             {
                 logger.LogDebug(
-                    "No folders with encoding presets in library {LibraryId}; auto-encode skipped",
-                    evt.LibraryId
+                    message: "No folders with encoding presets in library {LibraryId}; auto-encode skipped",
+                    args: evt.LibraryId
                 );
                 return;
             }
@@ -148,14 +148,14 @@ public class AutoEncodeSubscriber(
             // publishes its output to every configured destination from a single
             // run, so we never need to encode the same content twice.
             List<VideoFile> videoFiles = await context
-                .VideoFiles.Where(vf => vf.MovieId == evt.MediaId || vf.EpisodeId == evt.MediaId)
-                .ToListAsync(ct);
+                .VideoFiles.Where(predicate: vf => vf.MovieId == evt.MediaId || vf.EpisodeId == evt.MediaId)
+                .ToListAsync(cancellationToken: ct);
 
             if (videoFiles.Count == 0)
             {
                 logger.LogDebug(
-                    "No video files yet for media {MediaId} — auto-encode skipped",
-                    evt.MediaId
+                    message: "No video files yet for media {MediaId} — auto-encode skipped",
+                    args: evt.MediaId
                 );
                 return;
             }
@@ -166,21 +166,21 @@ public class AutoEncodeSubscriber(
             // (local > nfs/smb > webdav > r2/s3) without N+1 queries.
             Dictionary<Ulid, string> driverTypeById = await context
                 .Drivers.AsNoTracking()
-                .ToDictionaryAsync(d => d.Id, d => d.Type, ct);
+                .ToDictionaryAsync(keySelector: d => d.Id, elementSelector: d => d.Type, cancellationToken: ct);
 
             foreach (
                 (VideoFile bestSource, Folder folder) in SelectSourcesToEncode(
-                    videoFiles,
-                    folders,
-                    driverTypeById
+                    videoFiles: videoFiles,
+                    folders: folders,
+                    driverTypeById: driverTypeById
                 )
             )
             {
-                if (!string.IsNullOrEmpty(bestSource.Folder) && IsAlreadyEncoded(bestSource))
+                if (!string.IsNullOrEmpty(value: bestSource.Folder) && IsAlreadyEncoded(file: bestSource))
                     continue;
 
                 string filePath =
-                    bestSource.HostFolder.TrimEnd('/') + "/" + bestSource.Filename.TrimStart('/');
+                    bestSource.HostFolder.TrimEnd(trimChar: '/') + "/" + bestSource.Filename.TrimStart(trimChar: '/');
                 VideoEncodeJob job = new()
                 {
                     LibraryId = evt.LibraryId,
@@ -189,22 +189,20 @@ public class AutoEncodeSubscriber(
                     InputFile = filePath,
                     PresetId = library.EncodePresetId.Value,
                 };
-                dispatcher.Dispatch(job, job.QueueName, job.Priority);
+                dispatcher.Dispatch(job: job, onQueue: job.QueueName, priority: job.Priority);
                 dispatched++;
             }
 
             if (dispatched > 0)
             {
                 logger.LogInformation(
-                    "Auto-encode dispatched {Count} VideoEncodeJob(s) for media {MediaId}",
-                    dispatched,
-                    evt.MediaId
+                    message: "Auto-encode dispatched {Count} VideoEncodeJob(s) for media {MediaId}", args: [dispatched, evt.MediaId]
                 );
             }
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Auto-encode handler failed for media {MediaId}", evt.MediaId);
+            logger.LogWarning(exception: ex, message: "Auto-encode handler failed for media {MediaId}", args: evt.MediaId);
         }
     }
 
@@ -223,33 +221,33 @@ public class AutoEncodeSubscriber(
     )
     {
         return videoFiles
-            .GroupBy(vf => vf.Filename)
-            .Select(group =>
+            .GroupBy(keySelector: vf => vf.Filename)
+            .Select(selector: group =>
                 group
-                    .Select(file => new
+                    .Select(selector: file => new
                     {
                         File = file,
-                        Folder = folders.FirstOrDefault(f =>
-                            !string.IsNullOrEmpty(file.HostFolder)
+                        Folder = folders.FirstOrDefault(predicate: f =>
+                            !string.IsNullOrEmpty(value: file.HostFolder)
                             && file.HostFolder.StartsWith(
-                                f.Path,
-                                StringComparison.OrdinalIgnoreCase
+                                value: f.Path,
+                                comparisonType: StringComparison.OrdinalIgnoreCase
                             )
                         ),
                     })
-                    .Where(x => x.Folder is not null)
-                    .OrderBy(x => DriverPreference(driverTypeById, x.Folder!.DriverId))
-                    .Select(x => (File: x.File, Folder: x.Folder!))
+                    .Where(predicate: x => x.Folder is not null)
+                    .OrderBy(keySelector: x => DriverPreference(typeById: driverTypeById, driverId: x.Folder!.DriverId))
+                    .Select(selector: x => (File: x.File, Folder: x.Folder!))
                     .FirstOrDefault()
             )
-            .Where(pair => pair.File is not null && pair.Folder is not null);
+            .Where(predicate: pair => pair.File is not null && pair.Folder is not null);
     }
 
     // Lower number = preferred. Picks the lowest-latency / cheapest source
     // when the same media is mounted on multiple drivers.
     internal static int DriverPreference(Dictionary<Ulid, string> typeById, Ulid driverId)
     {
-        if (!typeById.TryGetValue(driverId, out string? type))
+        if (!typeById.TryGetValue(key: driverId, value: out string? type))
             return 99;
 
         return type.ToLowerInvariant() switch
@@ -269,27 +267,27 @@ public class AutoEncodeSubscriber(
     /// </summary>
     private bool IsAlreadyEncoded(VideoFile file)
     {
-        if (string.IsNullOrEmpty(file.HostFolder))
+        if (string.IsNullOrEmpty(value: file.HostFolder))
             return false;
 
         // The encoder writes into `{HostFolder}` itself for single-file
         // outputs (mkv/mp4/m4a) or into a `{HostFolder}/*.NoMercy/` subdir
         // for HLS. Either way, any *.m3u8 / *.mp4 / *.mkv / *.m4a sibling
         // of the source is a reasonable indicator the file is encoded.
-        string sourceExt = Path.GetExtension(file.Filename).ToLowerInvariant();
+        string sourceExt = Path.GetExtension(path: file.Filename).ToLowerInvariant();
         try
         {
-            if (!storage.Exists(file.HostFolder))
+            if (!storage.Exists(path: file.HostFolder))
                 return false;
 
             // Any .NoMercy subdirectory counts as encoded.
             if (
-                storage.List(file.HostFolder, "*.NoMercy", recursive: false).Any(e => e.IsDirectory)
+                storage.List(path: file.HostFolder, pattern: "*.NoMercy", recursive: false).Any(predicate: e => e.IsDirectory)
             )
                 return true;
 
             // Any master playlist alongside counts too.
-            if (storage.List(file.HostFolder, "*.m3u8", recursive: false).Any(e => !e.IsDirectory))
+            if (storage.List(path: file.HostFolder, pattern: "*.m3u8", recursive: false).Any(predicate: e => !e.IsDirectory))
                 return true;
 
             _ = sourceExt;

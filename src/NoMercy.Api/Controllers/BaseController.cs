@@ -30,7 +30,7 @@ public class BaseController : Controller
     // controllers in tests). Both paths read the same UserCache singleton.
     protected IMediaAuthorizationPolicy AuthPolicy =>
         HttpContext?.RequestServices?.GetService<IMediaAuthorizationPolicy>()
-        ?? new MediaAuthorizationPolicy(UserCache.Current);
+        ?? new MediaAuthorizationPolicy(userCache: UserCache.Current);
 
     protected IUserCache UserCacheService =>
         HttpContext?.RequestServices?.GetService<IUserCache>() ?? UserCache.Current;
@@ -49,14 +49,9 @@ public class BaseController : Controller
         {
             ILogger? log = HttpContext
                 ?.RequestServices?.GetService<ILoggerFactory>()
-                ?.CreateLogger("NoMercy.Api.ServerError");
+                ?.CreateLogger(categoryName: "NoMercy.Api.ServerError");
             log?.LogError(
-                "[{TraceId}] {Status} returned from {Caller} for {Path}: {Detail}",
-                HttpContext?.TraceIdentifier,
-                statusCode,
-                caller,
-                HttpContext?.Request.Path.Value,
-                detail
+                message: "[{TraceId}] {Status} returned from {Caller} for {Path}: {Detail}", args: [HttpContext?.TraceIdentifier, statusCode, caller, HttpContext?.Request.Path.Value, detail]
             );
         }
 
@@ -70,7 +65,7 @@ public class BaseController : Controller
             Extensions = { { "traceId", HttpContext?.TraceIdentifier } },
         };
 
-        return StatusCode(statusCode, problemDetails);
+        return StatusCode(statusCode: statusCode, value: problemDetails);
     }
 
     protected IActionResult UnauthenticatedResponse(string detail)
@@ -301,7 +296,7 @@ public class BaseController : Controller
         List<T> newData = data.ToList();
         bool hasMore = newData.Count >= request.Take;
 
-        newData = newData.Take(request.Take).ToList();
+        newData = newData.Take(count: request.Take).ToList();
 
         PaginatedResponse<T> response = new()
         {
@@ -310,21 +305,21 @@ public class BaseController : Controller
             HasMore = hasMore,
         };
 
-        return Ok(response);
+        return Ok(value: response);
     }
 
     protected string Language()
     {
         return HttpContext
                 .Request.Headers.AcceptLanguage.FirstOrDefault()
-                ?.Split("_")
+                ?.Split(separator: "_")
                 .FirstOrDefault()
             ?? LocalizationHelper.GlobalLocalizer.TargetLanguage;
     }
 
     protected string Country()
     {
-        return HttpContext.Request.Headers["country"].FirstOrDefault()
+        return HttpContext.Request.Headers[key: "country"].FirstOrDefault()
             ?? RegionInfo.CurrentRegion.TwoLetterISORegionName;
     }
 

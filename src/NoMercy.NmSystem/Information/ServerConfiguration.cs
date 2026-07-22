@@ -30,7 +30,7 @@ public class ServerConfiguration : IServerConfiguration
     public int ExternalServerPort { get; set; } = 7626;
     public string ManagementPipeName { get; set; } = "NoMercyManagement";
     public string ManagementSocketPath =>
-        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "nomercy-management.sock");
+        Path.Combine(path1: AppDomain.CurrentDomain.BaseDirectory, path2: "nomercy-management.sock");
 
     public bool Swagger { get; set; } = true;
     public bool IsDev { get; set; }

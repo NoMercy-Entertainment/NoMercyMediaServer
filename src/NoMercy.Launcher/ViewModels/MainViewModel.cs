@@ -34,10 +34,10 @@ public class MainViewModel : INotifyPropertyChanged
 
     public MainViewModel(ServerConnection serverConnection, ServerProcessLauncher processLauncher)
     {
-        ServerControlViewModel = new(serverConnection, processLauncher);
-        SettingsViewModel = new(serverConnection);
+        ServerControlViewModel = new(serverConnection: serverConnection, processLauncher: processLauncher);
+        SettingsViewModel = new(serverConnection: serverConnection);
         StartupArgumentsViewModel = new();
-        LogViewerViewModel = new(serverConnection);
+        LogViewerViewModel = new(serverConnection: serverConnection);
 
         ServerControlViewModel.PropertyChanged += async (_, e) =>
         {
@@ -55,6 +55,6 @@ public class MainViewModel : INotifyPropertyChanged
 
     protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
-        PropertyChanged?.Invoke(this, new(propertyName));
+        PropertyChanged?.Invoke(sender: this, e: new(propertyName: propertyName));
     }
 }

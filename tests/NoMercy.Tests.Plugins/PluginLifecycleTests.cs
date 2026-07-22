@@ -24,37 +24,37 @@ public class PluginLifecycleTests
             Id = Guid.NewGuid(),
             Name = "TestPlugin",
             Description = "Test",
-            Version = new(1, 0, 0),
+            Version = new(major: 1, minor: 0, build: 0),
             Status = status,
         };
     }
 
     [Theory]
-    [InlineData(PluginStatus.Active, PluginStatus.Disabled)]
-    [InlineData(PluginStatus.Active, PluginStatus.Malfunctioned)]
-    [InlineData(PluginStatus.Active, PluginStatus.Deleted)]
-    [InlineData(PluginStatus.Disabled, PluginStatus.Active)]
-    [InlineData(PluginStatus.Disabled, PluginStatus.Deleted)]
-    [InlineData(PluginStatus.Malfunctioned, PluginStatus.Active)]
-    [InlineData(PluginStatus.Malfunctioned, PluginStatus.Disabled)]
-    [InlineData(PluginStatus.Malfunctioned, PluginStatus.Deleted)]
+    [InlineData(data: [PluginStatus.Active, PluginStatus.Disabled])]
+    [InlineData(data: [PluginStatus.Active, PluginStatus.Malfunctioned])]
+    [InlineData(data: [PluginStatus.Active, PluginStatus.Deleted])]
+    [InlineData(data: [PluginStatus.Disabled, PluginStatus.Active])]
+    [InlineData(data: [PluginStatus.Disabled, PluginStatus.Deleted])]
+    [InlineData(data: [PluginStatus.Malfunctioned, PluginStatus.Active])]
+    [InlineData(data: [PluginStatus.Malfunctioned, PluginStatus.Disabled])]
+    [InlineData(data: [PluginStatus.Malfunctioned, PluginStatus.Deleted])]
     public void CanTransition_AllowedTransitions_ReturnsTrue(PluginStatus from, PluginStatus to)
     {
-        bool result = PluginLifecycle.CanTransition(from, to);
+        bool result = PluginLifecycle.CanTransition(from: from, to: to);
 
         result.Should().BeTrue();
     }
 
     [Theory]
-    [InlineData(PluginStatus.Deleted, PluginStatus.Active)]
-    [InlineData(PluginStatus.Deleted, PluginStatus.Disabled)]
-    [InlineData(PluginStatus.Deleted, PluginStatus.Malfunctioned)]
-    [InlineData(PluginStatus.Disabled, PluginStatus.Malfunctioned)]
-    [InlineData(PluginStatus.Active, PluginStatus.Active)]
-    [InlineData(PluginStatus.Disabled, PluginStatus.Disabled)]
+    [InlineData(data: [PluginStatus.Deleted, PluginStatus.Active])]
+    [InlineData(data: [PluginStatus.Deleted, PluginStatus.Disabled])]
+    [InlineData(data: [PluginStatus.Deleted, PluginStatus.Malfunctioned])]
+    [InlineData(data: [PluginStatus.Disabled, PluginStatus.Malfunctioned])]
+    [InlineData(data: [PluginStatus.Active, PluginStatus.Active])]
+    [InlineData(data: [PluginStatus.Disabled, PluginStatus.Disabled])]
     public void CanTransition_ForbiddenTransitions_ReturnsFalse(PluginStatus from, PluginStatus to)
     {
-        bool result = PluginLifecycle.CanTransition(from, to);
+        bool result = PluginLifecycle.CanTransition(from: from, to: to);
 
         result.Should().BeFalse();
     }
@@ -69,7 +69,7 @@ public class PluginLifecycleTests
         // for, rather than throwing or defaulting to permissive.
         PluginStatus unknownStatus = (PluginStatus)999;
 
-        bool result = PluginLifecycle.CanTransition(unknownStatus, PluginStatus.Active);
+        bool result = PluginLifecycle.CanTransition(from: unknownStatus, to: PluginStatus.Active);
 
         result.Should().BeFalse();
     }
@@ -77,27 +77,27 @@ public class PluginLifecycleTests
     [Fact]
     public void Transition_ValidTransition_UpdatesStatus()
     {
-        PluginInfo info = CreatePluginInfo(PluginStatus.Active);
+        PluginInfo info = CreatePluginInfo(status: PluginStatus.Active);
 
-        PluginLifecycle.Transition(info, PluginStatus.Disabled);
+        PluginLifecycle.Transition(info: info, newStatus: PluginStatus.Disabled);
 
-        info.Status.Should().Be(PluginStatus.Disabled);
+        info.Status.Should().Be(expected: PluginStatus.Disabled);
     }
 
     [Fact]
     public void Transition_InvalidTransition_ThrowsInvalidOperation()
     {
-        PluginInfo info = CreatePluginInfo(PluginStatus.Deleted);
+        PluginInfo info = CreatePluginInfo(status: PluginStatus.Deleted);
 
-        Action act = () => PluginLifecycle.Transition(info, PluginStatus.Active);
+        Action act = () => PluginLifecycle.Transition(info: info, newStatus: PluginStatus.Active);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*Deleted*Active*");
+        act.Should().Throw<InvalidOperationException>().WithMessage(expectedWildcardPattern: "*Deleted*Active*");
     }
 
     [Fact]
     public void Transition_NullInfo_ThrowsArgumentNullException()
     {
-        Action act = () => PluginLifecycle.Transition(null!, PluginStatus.Active);
+        Action act = () => PluginLifecycle.Transition(info: null!, newStatus: PluginStatus.Active);
 
         act.Should().Throw<ArgumentNullException>();
     }
@@ -105,39 +105,39 @@ public class PluginLifecycleTests
     [Fact]
     public void Transition_ActiveToMalfunctioned_Succeeds()
     {
-        PluginInfo info = CreatePluginInfo(PluginStatus.Active);
+        PluginInfo info = CreatePluginInfo(status: PluginStatus.Active);
 
-        PluginLifecycle.Transition(info, PluginStatus.Malfunctioned);
+        PluginLifecycle.Transition(info: info, newStatus: PluginStatus.Malfunctioned);
 
-        info.Status.Should().Be(PluginStatus.Malfunctioned);
+        info.Status.Should().Be(expected: PluginStatus.Malfunctioned);
     }
 
     [Fact]
     public void Transition_MalfunctionedToActive_Succeeds()
     {
-        PluginInfo info = CreatePluginInfo(PluginStatus.Malfunctioned);
+        PluginInfo info = CreatePluginInfo(status: PluginStatus.Malfunctioned);
 
-        PluginLifecycle.Transition(info, PluginStatus.Active);
+        PluginLifecycle.Transition(info: info, newStatus: PluginStatus.Active);
 
-        info.Status.Should().Be(PluginStatus.Active);
+        info.Status.Should().Be(expected: PluginStatus.Active);
     }
 
     [Fact]
     public void Transition_MalfunctionedToDisabled_Succeeds()
     {
-        PluginInfo info = CreatePluginInfo(PluginStatus.Malfunctioned);
+        PluginInfo info = CreatePluginInfo(status: PluginStatus.Malfunctioned);
 
-        PluginLifecycle.Transition(info, PluginStatus.Disabled);
+        PluginLifecycle.Transition(info: info, newStatus: PluginStatus.Disabled);
 
-        info.Status.Should().Be(PluginStatus.Disabled);
+        info.Status.Should().Be(expected: PluginStatus.Disabled);
     }
 
     [Fact]
     public void Transition_DisabledToMalfunctioned_Fails()
     {
-        PluginInfo info = CreatePluginInfo(PluginStatus.Disabled);
+        PluginInfo info = CreatePluginInfo(status: PluginStatus.Disabled);
 
-        Action act = () => PluginLifecycle.Transition(info, PluginStatus.Malfunctioned);
+        Action act = () => PluginLifecycle.Transition(info: info, newStatus: PluginStatus.Malfunctioned);
 
         act.Should().Throw<InvalidOperationException>();
     }
@@ -145,29 +145,29 @@ public class PluginLifecycleTests
     [Fact]
     public void Transition_FullLifecycle_ActiveToDisabledToActiveToDeleted()
     {
-        PluginInfo info = CreatePluginInfo(PluginStatus.Active);
+        PluginInfo info = CreatePluginInfo(status: PluginStatus.Active);
 
-        PluginLifecycle.Transition(info, PluginStatus.Disabled);
-        info.Status.Should().Be(PluginStatus.Disabled);
+        PluginLifecycle.Transition(info: info, newStatus: PluginStatus.Disabled);
+        info.Status.Should().Be(expected: PluginStatus.Disabled);
 
-        PluginLifecycle.Transition(info, PluginStatus.Active);
-        info.Status.Should().Be(PluginStatus.Active);
+        PluginLifecycle.Transition(info: info, newStatus: PluginStatus.Active);
+        info.Status.Should().Be(expected: PluginStatus.Active);
 
-        PluginLifecycle.Transition(info, PluginStatus.Deleted);
-        info.Status.Should().Be(PluginStatus.Deleted);
+        PluginLifecycle.Transition(info: info, newStatus: PluginStatus.Deleted);
+        info.Status.Should().Be(expected: PluginStatus.Deleted);
     }
 
     [Fact]
     public void Transition_DeletedIsTerminal_CannotTransitionToAnything()
     {
-        PluginInfo info = CreatePluginInfo(PluginStatus.Deleted);
+        PluginInfo info = CreatePluginInfo(status: PluginStatus.Deleted);
 
         foreach (PluginStatus status in Enum.GetValues<PluginStatus>())
         {
             PluginLifecycle
-                .CanTransition(PluginStatus.Deleted, status)
+                .CanTransition(from: PluginStatus.Deleted, to: status)
                 .Should()
-                .BeFalse($"Deleted should not transition to {status}");
+                .BeFalse(because: $"Deleted should not transition to {status}");
         }
     }
 }

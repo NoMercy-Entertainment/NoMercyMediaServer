@@ -30,7 +30,7 @@ public class TmdbDiscMatcherDurationTests
             runtimeMin: 162
         );
 
-        score.Should().BeApproximately(1.0, precision: 0.0001);
+        score.Should().BeApproximately(expectedValue: 1.0, precision: 0.0001);
     }
 
     [Fact]
@@ -44,7 +44,7 @@ public class TmdbDiscMatcherDurationTests
             runtimeMin: null
         );
 
-        score.Should().BeApproximately(1.0, precision: 0.0001);
+        score.Should().BeApproximately(expectedValue: 1.0, precision: 0.0001);
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class TmdbDiscMatcherDurationTests
             runtimeMin: 162
         );
 
-        exactMatch.Should().BeApproximately(1.0, precision: 0.0001);
+        exactMatch.Should().BeApproximately(expectedValue: 1.0, precision: 0.0001);
     }
 
     [Fact]
@@ -82,7 +82,7 @@ public class TmdbDiscMatcherDurationTests
             runtimeMin: 45
         );
 
-        scoreA.Should().BeGreaterThan(scoreB);
+        scoreA.Should().BeGreaterThan(expected: scoreB);
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public class TmdbDiscMatcherDurationTests
             runtimeMin: 162
         );
 
-        highRankScore.Should().BeLessThan(rank0Score);
+        highRankScore.Should().BeLessThan(expected: rank0Score);
     }
 
     [Fact]
@@ -118,7 +118,7 @@ public class TmdbDiscMatcherDurationTests
             runtimeMin: 30
         );
 
-        score.Should().BeApproximately(0.6, precision: 0.0001);
+        score.Should().BeApproximately(expectedValue: 0.6, precision: 0.0001);
     }
 
     // ── DiscInfo.MainTitleDurationSec ─────────────────────────────────────────
@@ -134,10 +134,10 @@ public class TmdbDiscMatcherDurationTests
             DiscLabel: "TEST",
             Titles: [mainTitle, longTitle],
             AudioTracks: null,
-            TotalDuration: TimeSpan.FromSeconds(16200)
+            TotalDuration: TimeSpan.FromSeconds(seconds: 16200)
         );
 
-        info.MainTitleDurationSec.Should().Be(7200);
+        info.MainTitleDurationSec.Should().Be(expected: 7200);
     }
 
     [Fact]
@@ -151,10 +151,10 @@ public class TmdbDiscMatcherDurationTests
             DiscLabel: "TEST",
             Titles: [shortTitle, longTitle],
             AudioTracks: null,
-            TotalDuration: TimeSpan.FromSeconds(7260)
+            TotalDuration: TimeSpan.FromSeconds(seconds: 7260)
         );
 
-        info.MainTitleDurationSec.Should().Be(7200);
+        info.MainTitleDurationSec.Should().Be(expected: 7200);
     }
 
     [Fact]
@@ -168,14 +168,14 @@ public class TmdbDiscMatcherDurationTests
             TotalDuration: TimeSpan.Zero
         );
 
-        info.MainTitleDurationSec.Should().Be(0);
+        info.MainTitleDurationSec.Should().Be(expected: 0);
     }
 
     private static DiscTitle MakeTitle(int index, double durationSec, bool isMainFeature) =>
         new(
             Index: index,
             Name: $"Title {index}",
-            Duration: TimeSpan.FromSeconds(durationSec),
+            Duration: TimeSpan.FromSeconds(value: durationSec),
             VideoStreams: [],
             AudioStreams: [],
             Subtitles: [],

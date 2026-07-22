@@ -77,14 +77,14 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
         string? secretKey = null
     )
     {
-        if (string.IsNullOrWhiteSpace(bucket))
-            throw new ArgumentException("bucket must not be empty", nameof(bucket));
-        if (string.IsNullOrWhiteSpace(region))
-            throw new ArgumentException("region must not be empty", nameof(region));
+        if (string.IsNullOrWhiteSpace(value: bucket))
+            throw new ArgumentException(message: "bucket must not be empty", paramName: nameof(bucket));
+        if (string.IsNullOrWhiteSpace(value: region))
+            throw new ArgumentException(message: "region must not be empty", paramName: nameof(region));
 
         _bucket = bucket;
-        _prefix = string.IsNullOrWhiteSpace(prefix) ? string.Empty : prefix.TrimEnd('/') + "/";
-        _endpoint = string.IsNullOrWhiteSpace(endpoint) ? null : endpoint;
+        _prefix = string.IsNullOrWhiteSpace(value: prefix) ? string.Empty : prefix.TrimEnd(trimChar: '/') + "/";
+        _endpoint = string.IsNullOrWhiteSpace(value: endpoint) ? null : endpoint;
         _region = region;
         _accessKey = accessKey;
         _secretKey = secretKey;
@@ -92,7 +92,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
         // Build SDK client only when we have credentials or an endpoint — used
         // only for CopyObject / DeleteObjects batch operations.
         AmazonS3Config config;
-        if (!string.IsNullOrWhiteSpace(endpoint))
+        if (!string.IsNullOrWhiteSpace(value: endpoint))
         {
             config = new()
             {
@@ -103,13 +103,13 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
         }
         else
         {
-            config = new() { RegionEndpoint = RegionEndpoint.GetBySystemName(region) };
+            config = new() { RegionEndpoint = RegionEndpoint.GetBySystemName(systemName: region) };
         }
 
         _client =
             accessKey is not null && secretKey is not null
-                ? new AmazonS3Client(new BasicAWSCredentials(accessKey, secretKey), config)
-                : new AmazonS3Client(config);
+                ? new AmazonS3Client(credentials: new BasicAWSCredentials(accessKey: accessKey, secretKey: secretKey), clientConfig: config)
+                : new AmazonS3Client(config: config);
     }
 
     /// <summary>
@@ -120,9 +120,9 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
     /// </summary>
     internal S3StorageDriver(IAmazonS3 client, string bucket, string? prefix = null)
     {
-        _client = client ?? throw new ArgumentNullException(nameof(client));
-        _bucket = bucket ?? throw new ArgumentNullException(nameof(bucket));
-        _prefix = string.IsNullOrWhiteSpace(prefix) ? string.Empty : prefix.TrimEnd('/') + "/";
+        _client = client ?? throw new ArgumentNullException(paramName: nameof(client));
+        _bucket = bucket ?? throw new ArgumentNullException(paramName: nameof(bucket));
+        _prefix = string.IsNullOrWhiteSpace(value: prefix) ? string.Empty : prefix.TrimEnd(trimChar: '/') + "/";
     }
 
     // -----------------------------------------------------------------------
@@ -131,18 +131,18 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
 
     private string ToKey(string path)
     {
-        string normalized = path.TrimStart('/').TrimStart('\\').Replace('\\', '/');
+        string normalized = path.TrimStart(trimChar: '/').TrimStart(trimChar: '\\').Replace(oldChar: '\\', newChar: '/');
         // Path Contract Rule 2: collapse consecutive separators. MinIO
         // returns HTTP 400 InvalidArgument on keys with "//"; canonicalize
         // before sending. Public S3 silently maps "//" to "/" but we'd lose
         // the round-trip property if we relied on that.
-        while (normalized.Contains("//"))
-            normalized = normalized.Replace("//", "/");
+        while (normalized.Contains(value: "//"))
+            normalized = normalized.Replace(oldValue: "//", newValue: "/");
         return _prefix + normalized;
     }
 
     private string FromKey(string key) =>
-        string.IsNullOrEmpty(_prefix) ? key : key.Substring(_prefix.Length);
+        string.IsNullOrEmpty(value: _prefix) ? key : key.Substring(startIndex: _prefix.Length);
 
     // -----------------------------------------------------------------------
     // Raw-SigV4 HTTP helpers
@@ -156,39 +156,39 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
     /// </summary>
     private Uri ObjectUrl(string key) =>
         new(
-            _endpoint!.TrimEnd('/')
-                + "/"
-                + Uri.EscapeDataString(_bucket)
-                + "/"
-                + S3SigV4.EscapeKey(key)
+            uriString: _endpoint!.TrimEnd(trimChar: '/')
+                       + "/"
+                       + Uri.EscapeDataString(stringToEscape: _bucket)
+                       + "/"
+                       + S3SigV4.EscapeKey(key: key)
         );
 
     private HttpRequestMessage SignedRequest(HttpMethod method, string key, string canonicalQs = "")
     {
         (string authHeader, string amzDate) = S3SigV4.SignHeaderRequest(
-            method.Method,
-            _endpoint!,
-            _bucket,
-            key,
-            canonicalQs,
-            _region!,
-            _accessKey!,
-            _secretKey!,
-            DateTime.UtcNow
+            method: method.Method,
+            endpoint: _endpoint!,
+            bucket: _bucket,
+            key: key,
+            canonicalQueryString: canonicalQs,
+            region: _region!,
+            accessKey: _accessKey!,
+            secretKey: _secretKey!,
+            utcNow: DateTime.UtcNow
         );
 
-        string host = S3SigV4.HostFromEndpoint(_endpoint!);
+        string host = S3SigV4.HostFromEndpoint(endpoint: _endpoint!);
         const string payloadHash =
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
-        Uri uri = string.IsNullOrEmpty(canonicalQs)
-            ? ObjectUrl(key)
-            : new(ObjectUrl(key).ToString() + "?" + canonicalQs);
+        Uri uri = string.IsNullOrEmpty(value: canonicalQs)
+            ? ObjectUrl(key: key)
+            : new(uriString: ObjectUrl(key: key).ToString() + "?" + canonicalQs);
 
-        HttpRequestMessage req = new(method, uri);
-        req.Headers.TryAddWithoutValidation("Authorization", authHeader);
-        req.Headers.TryAddWithoutValidation("x-amz-content-sha256", payloadHash);
-        req.Headers.TryAddWithoutValidation("x-amz-date", amzDate);
+        HttpRequestMessage req = new(method: method, requestUri: uri);
+        req.Headers.TryAddWithoutValidation(name: "Authorization", value: authHeader);
+        req.Headers.TryAddWithoutValidation(name: "x-amz-content-sha256", value: payloadHash);
+        req.Headers.TryAddWithoutValidation(name: "x-amz-date", value: amzDate);
         req.Headers.Host = host;
         return req;
     }
@@ -199,12 +199,12 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
 
     public bool FileExists(string path)
     {
-        string key = ToKey(path);
+        string key = ToKey(path: path);
 
         if (HasRawCredentials)
         {
-            using HttpRequestMessage req = SignedRequest(HttpMethod.Head, key);
-            using HttpResponseMessage res = Http.Send(req);
+            using HttpRequestMessage req = SignedRequest(method: HttpMethod.Head, key: key);
+            using HttpResponseMessage res = Http.Send(request: req);
             if (res.StatusCode == HttpStatusCode.NotFound)
                 return false;
             res.EnsureSuccessStatusCode();
@@ -215,7 +215,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
         try
         {
             GetObjectMetadataRequest request = new() { BucketName = _bucket, Key = key };
-            _client!.GetObjectMetadataAsync(request).GetAwaiter().GetResult();
+            _client!.GetObjectMetadataAsync(request: request).GetAwaiter().GetResult();
             return true;
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
@@ -226,7 +226,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
 
     public bool DirectoryExists(string path)
     {
-        string prefix = ToKey(path).TrimEnd('/') + "/";
+        string prefix = ToKey(path: path).TrimEnd(trimChar: '/') + "/";
 
         if (HasRawCredentials)
         {
@@ -235,15 +235,15 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
             // empty directory created via CreateDirectory (which writes just a
             // "prefix/" marker object) needs a direct HEAD on the marker too.
             IEnumerable<(string key, bool isDir)> page = ListOnePage(
-                prefix,
+                prefix: prefix,
                 delimiter: "/",
                 maxKeys: 1
             );
             if (page.Any())
                 return true;
 
-            using HttpRequestMessage marker = SignedRequest(HttpMethod.Head, prefix);
-            using HttpResponseMessage markerRes = Http.Send(marker);
+            using HttpRequestMessage marker = SignedRequest(method: HttpMethod.Head, key: prefix);
+            using HttpResponseMessage markerRes = Http.Send(request: marker);
             return markerRes.IsSuccessStatusCode;
         }
 
@@ -254,7 +254,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
             MaxKeys = 1,
         };
         ListObjectsV2Response response = _client!
-            .ListObjectsV2Async(request)
+            .ListObjectsV2Async(request: request)
             .GetAwaiter()
             .GetResult();
         return response.S3Objects.Count > 0 || response.CommonPrefixes.Count > 0;
@@ -262,12 +262,12 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
 
     public long GetFileSize(string path)
     {
-        string key = ToKey(path);
+        string key = ToKey(path: path);
 
         if (HasRawCredentials)
         {
-            using HttpRequestMessage req = SignedRequest(HttpMethod.Head, key);
-            using HttpResponseMessage res = Http.Send(req);
+            using HttpRequestMessage req = SignedRequest(method: HttpMethod.Head, key: key);
+            using HttpResponseMessage res = Http.Send(request: req);
             if (res.StatusCode == HttpStatusCode.NotFound)
                 return 0L;
             res.EnsureSuccessStatusCode();
@@ -276,7 +276,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
 
         GetObjectMetadataRequest request = new() { BucketName = _bucket, Key = key };
         GetObjectMetadataResponse response = _client!
-            .GetObjectMetadataAsync(request)
+            .GetObjectMetadataAsync(request: request)
             .GetAwaiter()
             .GetResult();
         return response.ContentLength;
@@ -284,12 +284,12 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
 
     public DateTime GetLastWriteTimeUtc(string path)
     {
-        string key = ToKey(path);
+        string key = ToKey(path: path);
 
         if (HasRawCredentials)
         {
-            using HttpRequestMessage req = SignedRequest(HttpMethod.Head, key);
-            using HttpResponseMessage res = Http.Send(req);
+            using HttpRequestMessage req = SignedRequest(method: HttpMethod.Head, key: key);
+            using HttpResponseMessage res = Http.Send(request: req);
             if (res.StatusCode == HttpStatusCode.NotFound)
                 return DateTime.UtcNow;
             res.EnsureSuccessStatusCode();
@@ -299,16 +299,16 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
 
         GetObjectMetadataRequest request = new() { BucketName = _bucket, Key = key };
         GetObjectMetadataResponse response = _client!
-            .GetObjectMetadataAsync(request)
+            .GetObjectMetadataAsync(request: request)
             .GetAwaiter()
             .GetResult();
         return response.LastModified?.ToUniversalTime() ?? DateTime.UtcNow;
     }
 
     // S3 does not expose ctime or atime.
-    public DateTime GetCreationTimeUtc(string path) => GetLastWriteTimeUtc(path);
+    public DateTime GetCreationTimeUtc(string path) => GetLastWriteTimeUtc(path: path);
 
-    public DateTime GetLastAccessTimeUtc(string path) => GetLastWriteTimeUtc(path);
+    public DateTime GetLastAccessTimeUtc(string path) => GetLastWriteTimeUtc(path: path);
 
     // -----------------------------------------------------------------------
     // IStorageDriver — read
@@ -316,20 +316,20 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
 
     public Stream OpenRead(string path)
     {
-        string key = ToKey(path);
+        string key = ToKey(path: path);
 
         if (HasRawCredentials)
         {
-            HttpRequestMessage req = SignedRequest(HttpMethod.Get, key);
+            HttpRequestMessage req = SignedRequest(method: HttpMethod.Get, key: key);
             // ResponseHeadersRead: body is not buffered — stream owned by caller.
-            HttpResponseMessage res = Http.Send(req, HttpCompletionOption.ResponseHeadersRead);
+            HttpResponseMessage res = Http.Send(request: req, completionOption: HttpCompletionOption.ResponseHeadersRead);
             res.EnsureSuccessStatusCode();
             // Wrap so the HttpResponseMessage is disposed when the stream is closed.
-            return new HttpResponseStream(res);
+            return new HttpResponseStream(response: res);
         }
 
         GetObjectRequest request = new() { BucketName = _bucket, Key = key };
-        GetObjectResponse response = _client!.GetObjectAsync(request).GetAwaiter().GetResult();
+        GetObjectResponse response = _client!.GetObjectAsync(request: request).GetAwaiter().GetResult();
         return response.ResponseStream;
     }
 
@@ -339,25 +339,25 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
 
     public Stream OpenWrite(string path, bool overwrite)
     {
-        if (!overwrite && FileExists(path))
+        if (!overwrite && FileExists(path: path))
             throw new IOException(
-                $"Cannot write to '{path}': the key already exists and overwrite is false."
+                message: $"Cannot write to '{path}': the key already exists and overwrite is false."
             );
 
-        string key = ToKey(path);
+        string key = ToKey(path: path);
         if (_endpoint is null || _accessKey is null || _secretKey is null)
             throw new InvalidOperationException(
-                "S3WriteStream requires an explicit endpoint + accessKey + secretKey. "
-                    + "OpenWrite is currently not supported on the default-credential-chain path."
+                message: "S3WriteStream requires an explicit endpoint + accessKey + secretKey. "
+                         + "OpenWrite is currently not supported on the default-credential-chain path."
             );
         return new S3WriteStream(
-            _client!,
-            _bucket,
-            key,
-            _endpoint,
-            _region!,
-            _accessKey,
-            _secretKey,
+            _: _client!,
+            bucket: _bucket,
+            key: key,
+            endpoint: _endpoint,
+            region: _region!,
+            accessKey: _accessKey,
+            secretKey: _secretKey,
             partSize: StreamPartSize
         );
     }
@@ -368,50 +368,50 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
 
     public void DeleteFile(string path)
     {
-        string key = ToKey(path);
+        string key = ToKey(path: path);
 
         if (HasRawCredentials)
         {
-            using HttpRequestMessage req = SignedRequest(HttpMethod.Delete, key);
-            using HttpResponseMessage res = Http.Send(req);
+            using HttpRequestMessage req = SignedRequest(method: HttpMethod.Delete, key: key);
+            using HttpResponseMessage res = Http.Send(request: req);
             if (res.StatusCode != HttpStatusCode.NoContent && res.StatusCode != HttpStatusCode.OK)
                 res.EnsureSuccessStatusCode();
             return;
         }
 
         DeleteObjectRequest request = new() { BucketName = _bucket, Key = key };
-        _client!.DeleteObjectAsync(request).GetAwaiter().GetResult();
+        _client!.DeleteObjectAsync(request: request).GetAwaiter().GetResult();
     }
 
     public void DeleteDirectory(string path, bool recursive)
     {
         if (!recursive)
         {
-            string key = ToKey(path).TrimEnd('/') + "/";
+            string key = ToKey(path: path).TrimEnd(trimChar: '/') + "/";
             if (HasRawCredentials)
             {
                 using HttpRequestMessage req = SignedRequest(
-                    HttpMethod.Delete,
-                    key.TrimEnd('/') + "/"
+                    method: HttpMethod.Delete,
+                    key: key.TrimEnd(trimChar: '/') + "/"
                 );
-                using HttpResponseMessage res = Http.Send(req);
+                using HttpResponseMessage res = Http.Send(request: req);
                 return;
             }
             DeleteObjectRequest request = new() { BucketName = _bucket, Key = key };
-            _client!.DeleteObjectAsync(request).GetAwaiter().GetResult();
+            _client!.DeleteObjectAsync(request: request).GetAwaiter().GetResult();
             return;
         }
 
-        string prefix = ToKey(path).TrimEnd('/') + "/";
+        string prefix = ToKey(path: path).TrimEnd(trimChar: '/') + "/";
         string? continuationToken = null;
 
         do
         {
             IReadOnlyList<string> keys = ListPageKeys(
-                prefix,
+                prefix: prefix,
                 delimiter: null,
-                continuationToken,
-                out continuationToken
+                continuationToken: continuationToken,
+                nextContinuationToken: out continuationToken
             );
 
             if (keys.Count == 0)
@@ -421,9 +421,9 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
             DeleteObjectsRequest deleteRequest = new()
             {
                 BucketName = _bucket,
-                Objects = keys.Select(k => new KeyVersion { Key = k }).ToList(),
+                Objects = keys.Select(selector: k => new KeyVersion { Key = k }).ToList(),
             };
-            _client!.DeleteObjectsAsync(deleteRequest).GetAwaiter().GetResult();
+            _client!.DeleteObjectsAsync(request: deleteRequest).GetAwaiter().GetResult();
         } while (continuationToken is not null);
     }
 
@@ -433,14 +433,14 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
 
     public void CreateDirectory(string path)
     {
-        string key = ToKey(path).TrimEnd('/') + "/";
+        string key = ToKey(path: path).TrimEnd(trimChar: '/') + "/";
         PutObjectRequest request = new()
         {
             BucketName = _bucket,
             Key = key,
             ContentBody = string.Empty,
         };
-        _client!.PutObjectAsync(request).GetAwaiter().GetResult();
+        _client!.PutObjectAsync(request: request).GetAwaiter().GetResult();
     }
 
     // -----------------------------------------------------------------------
@@ -452,49 +452,49 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
         CopyObjectRequest copyRequest = new()
         {
             SourceBucket = _bucket,
-            SourceKey = ToKey(source),
+            SourceKey = ToKey(path: source),
             DestinationBucket = _bucket,
-            DestinationKey = ToKey(destination),
+            DestinationKey = ToKey(path: destination),
         };
-        _client!.CopyObjectAsync(copyRequest).GetAwaiter().GetResult();
-        DeleteFile(source);
+        _client!.CopyObjectAsync(request: copyRequest).GetAwaiter().GetResult();
+        DeleteFile(path: source);
     }
 
     public void CopyFile(string source, string destination, bool overwrite)
     {
-        if (!overwrite && FileExists(destination))
+        if (!overwrite && FileExists(path: destination))
             throw new IOException(
-                $"Cannot copy to '{destination}': the key already exists and overwrite is false."
+                message: $"Cannot copy to '{destination}': the key already exists and overwrite is false."
             );
 
         CopyObjectRequest request = new()
         {
             SourceBucket = _bucket,
-            SourceKey = ToKey(source),
+            SourceKey = ToKey(path: source),
             DestinationBucket = _bucket,
-            DestinationKey = ToKey(destination),
+            DestinationKey = ToKey(path: destination),
         };
-        _client!.CopyObjectAsync(request).GetAwaiter().GetResult();
+        _client!.CopyObjectAsync(request: request).GetAwaiter().GetResult();
     }
 
     public void MoveDirectory(string source, string destination)
     {
-        string srcPrefix = ToKey(source).TrimEnd('/') + "/";
-        string dstPrefix = ToKey(destination).TrimEnd('/') + "/";
+        string srcPrefix = ToKey(path: source).TrimEnd(trimChar: '/') + "/";
+        string dstPrefix = ToKey(path: destination).TrimEnd(trimChar: '/') + "/";
         string? continuationToken = null;
 
         do
         {
             IReadOnlyList<string> keys = ListPageKeys(
-                srcPrefix,
+                prefix: srcPrefix,
                 delimiter: null,
-                continuationToken,
-                out continuationToken
+                continuationToken: continuationToken,
+                nextContinuationToken: out continuationToken
             );
 
             foreach (string key in keys)
             {
-                string newKey = dstPrefix + key.Substring(srcPrefix.Length);
+                string newKey = dstPrefix + key.Substring(startIndex: srcPrefix.Length);
                 CopyObjectRequest copyRequest = new()
                 {
                     SourceBucket = _bucket,
@@ -502,7 +502,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                     DestinationBucket = _bucket,
                     DestinationKey = newKey,
                 };
-                _client!.CopyObjectAsync(copyRequest).GetAwaiter().GetResult();
+                _client!.CopyObjectAsync(request: copyRequest).GetAwaiter().GetResult();
             }
 
             if (keys.Count > 0)
@@ -510,9 +510,9 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                 DeleteObjectsRequest deleteRequest = new()
                 {
                     BucketName = _bucket,
-                    Objects = keys.Select(k => new KeyVersion { Key = k }).ToList(),
+                    Objects = keys.Select(selector: k => new KeyVersion { Key = k }).ToList(),
                 };
-                _client!.DeleteObjectsAsync(deleteRequest).GetAwaiter().GetResult();
+                _client!.DeleteObjectsAsync(request: deleteRequest).GetAwaiter().GetResult();
             }
         } while (continuationToken is not null);
     }
@@ -527,16 +527,16 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
         SearchOption option
     )
     {
-        string prefix = ToKey(directory).TrimEnd('/');
-        if (!string.IsNullOrEmpty(prefix))
+        string prefix = ToKey(path: directory).TrimEnd(trimChar: '/');
+        if (!string.IsNullOrEmpty(value: prefix))
             prefix += "/";
 
         bool recursive = option == SearchOption.AllDirectories;
 
         if (HasRawCredentials)
-            return EnumerateRaw(prefix, searchPattern, recursive);
+            return EnumerateRaw(prefix: prefix, searchPattern: searchPattern, recursive: recursive);
 
-        return EnumerateSdk(prefix, searchPattern, recursive);
+        return EnumerateSdk(prefix: prefix, searchPattern: searchPattern, recursive: recursive);
     }
 
     private IEnumerable<string> EnumerateRaw(string prefix, string searchPattern, bool recursive)
@@ -547,31 +547,31 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
         do
         {
             (List<string> files, List<string> dirs, string? next) = ListPageRaw(
-                prefix,
+                prefix: prefix,
                 delimiter: recursive ? null : "/",
-                continuationToken
+                continuationToken: continuationToken
             );
 
             foreach (string key in files)
             {
-                string relPath = FromKey(key);
-                string fileName = relPath.Contains('/')
-                    ? relPath.Substring(relPath.LastIndexOf('/') + 1)
+                string relPath = FromKey(key: key);
+                string fileName = relPath.Contains(value: '/')
+                    ? relPath.Substring(startIndex: relPath.LastIndexOf(value: '/') + 1)
                     : relPath;
-                if (StoragePatternMatcher.Matches(fileName, searchPattern))
-                    results.Add(relPath);
+                if (StoragePatternMatcher.Matches(name: fileName, pattern: searchPattern))
+                    results.Add(item: relPath);
             }
 
             if (!recursive)
             {
                 foreach (string commonPrefix in dirs)
                 {
-                    string relPath = FromKey(commonPrefix.TrimEnd('/'));
-                    string dirName = relPath.Contains('/')
-                        ? relPath.Substring(relPath.LastIndexOf('/') + 1)
+                    string relPath = FromKey(key: commonPrefix.TrimEnd(trimChar: '/'));
+                    string dirName = relPath.Contains(value: '/')
+                        ? relPath.Substring(startIndex: relPath.LastIndexOf(value: '/') + 1)
                         : relPath;
-                    if (StoragePatternMatcher.Matches(dirName, searchPattern))
-                        results.Add(relPath);
+                    if (StoragePatternMatcher.Matches(name: dirName, pattern: searchPattern))
+                        results.Add(item: relPath);
                 }
             }
 
@@ -600,35 +600,35 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                 request.Delimiter = "/";
 
             ListObjectsV2Response response = _client!
-                .ListObjectsV2Async(request)
+                .ListObjectsV2Async(request: request)
                 .GetAwaiter()
                 .GetResult();
 
             foreach (S3Object obj in response.S3Objects)
             {
-                if (obj.Key.EndsWith("/", StringComparison.Ordinal))
+                if (obj.Key.EndsWith(value: "/", comparisonType: StringComparison.Ordinal))
                     continue;
 
-                string relPath = FromKey(obj.Key);
-                string fileName = relPath.Contains('/')
-                    ? relPath.Substring(relPath.LastIndexOf('/') + 1)
+                string relPath = FromKey(key: obj.Key);
+                string fileName = relPath.Contains(value: '/')
+                    ? relPath.Substring(startIndex: relPath.LastIndexOf(value: '/') + 1)
                     : relPath;
 
-                if (StoragePatternMatcher.Matches(fileName, searchPattern))
-                    results.Add(relPath);
+                if (StoragePatternMatcher.Matches(name: fileName, pattern: searchPattern))
+                    results.Add(item: relPath);
             }
 
             if (!recursive)
             {
                 foreach (string commonPrefix in response.CommonPrefixes)
                 {
-                    string relPath = FromKey(commonPrefix.TrimEnd('/'));
-                    string dirName = relPath.Contains('/')
-                        ? relPath.Substring(relPath.LastIndexOf('/') + 1)
+                    string relPath = FromKey(key: commonPrefix.TrimEnd(trimChar: '/'));
+                    string dirName = relPath.Contains(value: '/')
+                        ? relPath.Substring(startIndex: relPath.LastIndexOf(value: '/') + 1)
                         : relPath;
 
-                    if (StoragePatternMatcher.Matches(dirName, searchPattern))
-                        results.Add(relPath);
+                    if (StoragePatternMatcher.Matches(name: dirName, pattern: searchPattern))
+                        results.Add(item: relPath);
                 }
             }
 
@@ -651,15 +651,15 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
         SearchOption option
     )
     {
-        string prefix = ToKey(directory).TrimEnd('/');
-        if (!string.IsNullOrEmpty(prefix))
+        string prefix = ToKey(path: directory).TrimEnd(trimChar: '/');
+        if (!string.IsNullOrEmpty(value: prefix))
             prefix += "/";
 
         bool recursive = option == SearchOption.AllDirectories;
 
         return HasRawCredentials
-            ? EnumerateEntriesRaw(prefix, searchPattern, recursive)
-            : EnumerateEntriesSdk(prefix, searchPattern, recursive);
+            ? EnumerateEntriesRaw(prefix: prefix, searchPattern: searchPattern, recursive: recursive)
+            : EnumerateEntriesSdk(prefix: prefix, searchPattern: searchPattern, recursive: recursive);
     }
 
     private IEnumerable<StorageEntryInfo> EnumerateEntriesSdk(
@@ -685,26 +685,26 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                 request.Delimiter = "/";
 
             ListObjectsV2Response response = _client!
-                .ListObjectsV2Async(request)
+                .ListObjectsV2Async(request: request)
                 .GetAwaiter()
                 .GetResult();
 
             foreach (S3Object obj in response.S3Objects)
             {
-                if (obj.Key.EndsWith("/", StringComparison.Ordinal))
+                if (obj.Key.EndsWith(value: "/", comparisonType: StringComparison.Ordinal))
                     continue;
 
-                string relPath = FromKey(obj.Key);
-                string fileName = relPath.Contains('/')
-                    ? relPath.Substring(relPath.LastIndexOf('/') + 1)
+                string relPath = FromKey(key: obj.Key);
+                string fileName = relPath.Contains(value: '/')
+                    ? relPath.Substring(startIndex: relPath.LastIndexOf(value: '/') + 1)
                     : relPath;
 
-                if (!StoragePatternMatcher.Matches(fileName, searchPattern))
+                if (!StoragePatternMatcher.Matches(name: fileName, pattern: searchPattern))
                     continue;
 
                 results.Add(
-                    new(
-                        relPath,
+                    item: new(
+                        Path: relPath,
                         IsDirectory: false,
                         Size: obj.Size ?? 0L,
                         LastWriteUtc: obj.LastModified is DateTime lm
@@ -718,14 +718,14 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
             {
                 foreach (string commonPrefix in response.CommonPrefixes)
                 {
-                    string relPath = FromKey(commonPrefix.TrimEnd('/'));
-                    string dirName = relPath.Contains('/')
-                        ? relPath.Substring(relPath.LastIndexOf('/') + 1)
+                    string relPath = FromKey(key: commonPrefix.TrimEnd(trimChar: '/'));
+                    string dirName = relPath.Contains(value: '/')
+                        ? relPath.Substring(startIndex: relPath.LastIndexOf(value: '/') + 1)
                         : relPath;
 
-                    if (StoragePatternMatcher.Matches(dirName, searchPattern))
+                    if (StoragePatternMatcher.Matches(name: dirName, pattern: searchPattern))
                         results.Add(
-                            new(relPath, IsDirectory: true, Size: 0L, LastWriteUtc: DateTime.UtcNow)
+                            item: new(Path: relPath, IsDirectory: true, Size: 0L, LastWriteUtc: DateTime.UtcNow)
                         );
                 }
             }
@@ -752,17 +752,17 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                 List<(string Key, long Size, DateTime LastModified)> files,
                 List<string> dirs,
                 string? next
-            ) = ListPageRawWithMeta(prefix, delimiter: recursive ? null : "/", continuationToken);
+            ) = ListPageRawWithMeta(prefix: prefix, delimiter: recursive ? null : "/", continuationToken: continuationToken);
 
             foreach ((string key, long size, DateTime lastModified) in files)
             {
-                string relPath = FromKey(key);
-                string fileName = relPath.Contains('/')
-                    ? relPath.Substring(relPath.LastIndexOf('/') + 1)
+                string relPath = FromKey(key: key);
+                string fileName = relPath.Contains(value: '/')
+                    ? relPath.Substring(startIndex: relPath.LastIndexOf(value: '/') + 1)
                     : relPath;
-                if (StoragePatternMatcher.Matches(fileName, searchPattern))
+                if (StoragePatternMatcher.Matches(name: fileName, pattern: searchPattern))
                     results.Add(
-                        new(relPath, IsDirectory: false, Size: size, LastWriteUtc: lastModified)
+                        item: new(Path: relPath, IsDirectory: false, Size: size, LastWriteUtc: lastModified)
                     );
             }
 
@@ -770,13 +770,13 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
             {
                 foreach (string commonPrefix in dirs)
                 {
-                    string relPath = FromKey(commonPrefix.TrimEnd('/'));
-                    string dirName = relPath.Contains('/')
-                        ? relPath.Substring(relPath.LastIndexOf('/') + 1)
+                    string relPath = FromKey(key: commonPrefix.TrimEnd(trimChar: '/'));
+                    string dirName = relPath.Contains(value: '/')
+                        ? relPath.Substring(startIndex: relPath.LastIndexOf(value: '/') + 1)
                         : relPath;
-                    if (StoragePatternMatcher.Matches(dirName, searchPattern))
+                    if (StoragePatternMatcher.Matches(name: dirName, pattern: searchPattern))
                         results.Add(
-                            new(relPath, IsDirectory: true, Size: 0L, LastWriteUtc: DateTime.UtcNow)
+                            item: new(Path: relPath, IsDirectory: true, Size: 0L, LastWriteUtc: DateTime.UtcNow)
                         );
                 }
             }
@@ -793,8 +793,8 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
 
     public string GetFullPath(string path)
     {
-        string normalized = path.Replace('\\', '/').Trim('/');
-        return string.IsNullOrEmpty(_prefix) ? normalized : _prefix.TrimEnd('/') + "/" + normalized;
+        string normalized = path.Replace(oldChar: '\\', newChar: '/').Trim(trimChar: '/');
+        return string.IsNullOrEmpty(value: _prefix) ? normalized : _prefix.TrimEnd(trimChar: '/') + "/" + normalized;
     }
 
     public string? ResolveLinkTarget(string path) => null;
@@ -814,20 +814,20 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
     public Task<Uri?> TryGetPresignedUrlAsync(string path, TimeSpan ttl, CancellationToken ct)
     {
         if (!HasRawCredentials)
-            return Task.FromResult<Uri?>(null);
+            return Task.FromResult<Uri?>(result: null);
 
-        string key = ToKey(path);
+        string key = ToKey(path: path);
         Uri url = S3SigV4.BuildPresignedGetUrl(
-            _endpoint!,
-            _bucket,
-            key,
-            _region!,
-            _accessKey!,
-            _secretKey!,
-            ttl,
-            DateTime.UtcNow
+            endpoint: _endpoint!,
+            bucket: _bucket,
+            key: key,
+            region: _region!,
+            accessKey: _accessKey!,
+            secretKey: _secretKey!,
+            ttl: ttl,
+            utcNow: DateTime.UtcNow
         );
-        return Task.FromResult<Uri?>(url);
+        return Task.FromResult<Uri?>(result: url);
     }
 
     // -----------------------------------------------------------------------
@@ -845,53 +845,53 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
     )
     {
         StringBuilder qs = new();
-        qs.Append("list-type=2");
-        if (!string.IsNullOrEmpty(prefix))
-            qs.Append("&prefix=").Append(Uri.EscapeDataString(prefix));
-        if (!string.IsNullOrEmpty(delimiter))
-            qs.Append("&delimiter=").Append(Uri.EscapeDataString(delimiter));
-        qs.Append("&max-keys=1000");
-        if (!string.IsNullOrEmpty(continuationToken))
-            qs.Append("&continuation-token=").Append(Uri.EscapeDataString(continuationToken));
+        qs.Append(value: "list-type=2");
+        if (!string.IsNullOrEmpty(value: prefix))
+            qs.Append(value: "&prefix=").Append(value: Uri.EscapeDataString(stringToEscape: prefix));
+        if (!string.IsNullOrEmpty(value: delimiter))
+            qs.Append(value: "&delimiter=").Append(value: Uri.EscapeDataString(stringToEscape: delimiter));
+        qs.Append(value: "&max-keys=1000");
+        if (!string.IsNullOrEmpty(value: continuationToken))
+            qs.Append(value: "&continuation-token=").Append(value: Uri.EscapeDataString(stringToEscape: continuationToken));
 
-        string canonicalQs = BuildSortedQueryString(qs.ToString());
+        string canonicalQs = BuildSortedQueryString(rawQs: qs.ToString());
 
         (string authHeader, string amzDate) = S3SigV4.SignHeaderRequest(
-            "GET",
-            _endpoint!,
-            _bucket,
-            string.Empty,
-            canonicalQs,
-            _region!,
-            _accessKey!,
-            _secretKey!,
-            DateTime.UtcNow
+            method: "GET",
+            endpoint: _endpoint!,
+            bucket: _bucket,
+            key: string.Empty,
+            canonicalQueryString: canonicalQs,
+            region: _region!,
+            accessKey: _accessKey!,
+            secretKey: _secretKey!,
+            utcNow: DateTime.UtcNow
         );
 
         // List endpoint: endpoint/bucket/?list-type=2&...
         string listUrl =
-            _endpoint!.TrimEnd('/') + "/" + Uri.EscapeDataString(_bucket) + "/?" + canonicalQs;
+            _endpoint!.TrimEnd(trimChar: '/') + "/" + Uri.EscapeDataString(stringToEscape: _bucket) + "/?" + canonicalQs;
 
-        using HttpRequestMessage req = new(HttpMethod.Get, listUrl);
-        req.Headers.TryAddWithoutValidation("Authorization", authHeader);
+        using HttpRequestMessage req = new(method: HttpMethod.Get, requestUri: listUrl);
+        req.Headers.TryAddWithoutValidation(name: "Authorization", value: authHeader);
         req.Headers.TryAddWithoutValidation(
-            "x-amz-content-sha256",
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            name: "x-amz-content-sha256",
+            value: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         );
-        req.Headers.TryAddWithoutValidation("x-amz-date", amzDate);
-        req.Headers.Host = S3SigV4.HostFromEndpoint(_endpoint!);
+        req.Headers.TryAddWithoutValidation(name: "x-amz-date", value: amzDate);
+        req.Headers.Host = S3SigV4.HostFromEndpoint(endpoint: _endpoint!);
 
-        using HttpResponseMessage res = Http.Send(req);
+        using HttpResponseMessage res = Http.Send(request: req);
         if (!res.IsSuccessStatusCode)
         {
             string body = res.Content.ReadAsStringAsync().GetAwaiter().GetResult();
             throw new IOException(
-                $"S3 LIST '{listUrl}' failed: HTTP {(int)res.StatusCode} {res.ReasonPhrase}; body: {body}"
+                message: $"S3 LIST '{listUrl}' failed: HTTP {(int)res.StatusCode} {res.ReasonPhrase}; body: {body}"
             );
         }
 
         string xml = res.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-        return ParseListXml(xml);
+        return ParseListXml(xml: xml);
     }
 
     /// <summary>
@@ -914,7 +914,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                 Delimiter = delimiter,
             };
             ListObjectsV2Response response = _client!
-                .ListObjectsV2Async(request)
+                .ListObjectsV2Async(request: request)
                 .GetAwaiter()
                 .GetResult();
 
@@ -926,50 +926,50 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
         }
 
         StringBuilder qs = new();
-        qs.Append("list-type=2");
-        if (!string.IsNullOrEmpty(prefix))
-            qs.Append("&prefix=").Append(Uri.EscapeDataString(prefix));
-        if (!string.IsNullOrEmpty(delimiter))
-            qs.Append("&delimiter=").Append(Uri.EscapeDataString(delimiter));
-        qs.Append($"&max-keys={maxKeys}");
+        qs.Append(value: "list-type=2");
+        if (!string.IsNullOrEmpty(value: prefix))
+            qs.Append(value: "&prefix=").Append(value: Uri.EscapeDataString(stringToEscape: prefix));
+        if (!string.IsNullOrEmpty(value: delimiter))
+            qs.Append(value: "&delimiter=").Append(value: Uri.EscapeDataString(stringToEscape: delimiter));
+        qs.Append(handler: $"&max-keys={maxKeys}");
 
-        string canonicalQs = BuildSortedQueryString(qs.ToString());
+        string canonicalQs = BuildSortedQueryString(rawQs: qs.ToString());
 
         (string authHeader, string amzDate) = S3SigV4.SignHeaderRequest(
-            "GET",
-            _endpoint!,
-            _bucket,
-            string.Empty,
-            canonicalQs,
-            _region!,
-            _accessKey!,
-            _secretKey!,
-            DateTime.UtcNow
+            method: "GET",
+            endpoint: _endpoint!,
+            bucket: _bucket,
+            key: string.Empty,
+            canonicalQueryString: canonicalQs,
+            region: _region!,
+            accessKey: _accessKey!,
+            secretKey: _secretKey!,
+            utcNow: DateTime.UtcNow
         );
 
         string listUrl =
-            _endpoint!.TrimEnd('/') + "/" + Uri.EscapeDataString(_bucket) + "/?" + canonicalQs;
+            _endpoint!.TrimEnd(trimChar: '/') + "/" + Uri.EscapeDataString(stringToEscape: _bucket) + "/?" + canonicalQs;
 
-        using HttpRequestMessage req = new(HttpMethod.Get, listUrl);
-        req.Headers.TryAddWithoutValidation("Authorization", authHeader);
+        using HttpRequestMessage req = new(method: HttpMethod.Get, requestUri: listUrl);
+        req.Headers.TryAddWithoutValidation(name: "Authorization", value: authHeader);
         req.Headers.TryAddWithoutValidation(
-            "x-amz-content-sha256",
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            name: "x-amz-content-sha256",
+            value: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         );
-        req.Headers.TryAddWithoutValidation("x-amz-date", amzDate);
-        req.Headers.Host = S3SigV4.HostFromEndpoint(_endpoint!);
+        req.Headers.TryAddWithoutValidation(name: "x-amz-date", value: amzDate);
+        req.Headers.Host = S3SigV4.HostFromEndpoint(endpoint: _endpoint!);
 
-        using HttpResponseMessage res = Http.Send(req);
+        using HttpResponseMessage res = Http.Send(request: req);
         if (!res.IsSuccessStatusCode)
         {
             string body = res.Content.ReadAsStringAsync().GetAwaiter().GetResult();
             throw new IOException(
-                $"S3 LIST '{listUrl}' failed: HTTP {(int)res.StatusCode} {res.ReasonPhrase}; body: {body}"
+                message: $"S3 LIST '{listUrl}' failed: HTTP {(int)res.StatusCode} {res.ReasonPhrase}; body: {body}"
             );
         }
 
         string xml = res.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-        (List<string> files, List<string> dirs, _) = ParseListXml(xml);
+        (List<string> files, List<string> dirs, _) = ParseListXml(xml: xml);
 
         foreach (string k in files)
             yield return (k, false);
@@ -998,15 +998,15 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                 ContinuationToken = continuationToken,
             };
             ListObjectsV2Response response = _client!
-                .ListObjectsV2Async(request)
+                .ListObjectsV2Async(request: request)
                 .GetAwaiter()
                 .GetResult();
             nextContinuationToken =
                 response.IsTruncated == true ? response.NextContinuationToken : null;
-            return response.S3Objects.Select(o => o.Key).ToList();
+            return response.S3Objects.Select(selector: o => o.Key).ToList();
         }
 
-        (List<string> files, _, string? next) = ListPageRaw(prefix, delimiter, continuationToken);
+        (List<string> files, _, string? next) = ListPageRaw(prefix: prefix, delimiter: delimiter, continuationToken: continuationToken);
         nextContinuationToken = next;
         return files;
     }
@@ -1017,20 +1017,20 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
 
     private static (List<string> Files, List<string> Dirs, string? Next) ParseListXml(string xml)
     {
-        XDocument doc = XDocument.Parse(xml);
+        XDocument doc = XDocument.Parse(text: xml);
         XNamespace ns = "http://s3.amazonaws.com/doc/2006-03-01/";
 
-        List<string> files = doc.Descendants(ns + "Contents")
-            .Select(e => e.Element(ns + "Key")?.Value ?? string.Empty)
-            .Where(k => !string.IsNullOrEmpty(k) && !k.EndsWith("/", StringComparison.Ordinal))
+        List<string> files = doc.Descendants(name: ns + "Contents")
+            .Select(selector: e => e.Element(name: ns + "Key")?.Value ?? string.Empty)
+            .Where(predicate: k => !string.IsNullOrEmpty(value: k) && !k.EndsWith(value: "/", comparisonType: StringComparison.Ordinal))
             .ToList();
 
-        List<string> dirs = doc.Descendants(ns + "CommonPrefixes")
-            .Select(e => e.Element(ns + "Prefix")?.Value ?? string.Empty)
-            .Where(p => !string.IsNullOrEmpty(p))
+        List<string> dirs = doc.Descendants(name: ns + "CommonPrefixes")
+            .Select(selector: e => e.Element(name: ns + "Prefix")?.Value ?? string.Empty)
+            .Where(predicate: p => !string.IsNullOrEmpty(value: p))
             .ToList();
 
-        string? next = doc.Descendants(ns + "NextContinuationToken").FirstOrDefault()?.Value;
+        string? next = doc.Descendants(name: ns + "NextContinuationToken").FirstOrDefault()?.Value;
 
         return (files, dirs, next);
     }
@@ -1042,52 +1042,52 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
     ) ListPageRawWithMeta(string prefix, string? delimiter, string? continuationToken)
     {
         StringBuilder qs = new();
-        qs.Append("list-type=2");
-        if (!string.IsNullOrEmpty(prefix))
-            qs.Append("&prefix=").Append(Uri.EscapeDataString(prefix));
-        if (!string.IsNullOrEmpty(delimiter))
-            qs.Append("&delimiter=").Append(Uri.EscapeDataString(delimiter));
-        qs.Append("&max-keys=1000");
-        if (!string.IsNullOrEmpty(continuationToken))
-            qs.Append("&continuation-token=").Append(Uri.EscapeDataString(continuationToken));
+        qs.Append(value: "list-type=2");
+        if (!string.IsNullOrEmpty(value: prefix))
+            qs.Append(value: "&prefix=").Append(value: Uri.EscapeDataString(stringToEscape: prefix));
+        if (!string.IsNullOrEmpty(value: delimiter))
+            qs.Append(value: "&delimiter=").Append(value: Uri.EscapeDataString(stringToEscape: delimiter));
+        qs.Append(value: "&max-keys=1000");
+        if (!string.IsNullOrEmpty(value: continuationToken))
+            qs.Append(value: "&continuation-token=").Append(value: Uri.EscapeDataString(stringToEscape: continuationToken));
 
-        string canonicalQs = BuildSortedQueryString(qs.ToString());
+        string canonicalQs = BuildSortedQueryString(rawQs: qs.ToString());
 
         (string authHeader, string amzDate) = S3SigV4.SignHeaderRequest(
-            "GET",
-            _endpoint!,
-            _bucket,
-            string.Empty,
-            canonicalQs,
-            _region!,
-            _accessKey!,
-            _secretKey!,
-            DateTime.UtcNow
+            method: "GET",
+            endpoint: _endpoint!,
+            bucket: _bucket,
+            key: string.Empty,
+            canonicalQueryString: canonicalQs,
+            region: _region!,
+            accessKey: _accessKey!,
+            secretKey: _secretKey!,
+            utcNow: DateTime.UtcNow
         );
 
         string listUrl =
-            _endpoint!.TrimEnd('/') + "/" + Uri.EscapeDataString(_bucket) + "/?" + canonicalQs;
+            _endpoint!.TrimEnd(trimChar: '/') + "/" + Uri.EscapeDataString(stringToEscape: _bucket) + "/?" + canonicalQs;
 
-        using HttpRequestMessage req = new(HttpMethod.Get, listUrl);
-        req.Headers.TryAddWithoutValidation("Authorization", authHeader);
+        using HttpRequestMessage req = new(method: HttpMethod.Get, requestUri: listUrl);
+        req.Headers.TryAddWithoutValidation(name: "Authorization", value: authHeader);
         req.Headers.TryAddWithoutValidation(
-            "x-amz-content-sha256",
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            name: "x-amz-content-sha256",
+            value: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         );
-        req.Headers.TryAddWithoutValidation("x-amz-date", amzDate);
-        req.Headers.Host = S3SigV4.HostFromEndpoint(_endpoint!);
+        req.Headers.TryAddWithoutValidation(name: "x-amz-date", value: amzDate);
+        req.Headers.Host = S3SigV4.HostFromEndpoint(endpoint: _endpoint!);
 
-        using HttpResponseMessage res = Http.Send(req);
+        using HttpResponseMessage res = Http.Send(request: req);
         if (!res.IsSuccessStatusCode)
         {
             string body = res.Content.ReadAsStringAsync().GetAwaiter().GetResult();
             throw new IOException(
-                $"S3 LIST '{listUrl}' failed: HTTP {(int)res.StatusCode} {res.ReasonPhrase}; body: {body}"
+                message: $"S3 LIST '{listUrl}' failed: HTTP {(int)res.StatusCode} {res.ReasonPhrase}; body: {body}"
             );
         }
 
         string xml = res.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-        return ParseListXmlWithMeta(xml);
+        return ParseListXmlWithMeta(xml: xml);
     }
 
     private static (
@@ -1096,36 +1096,36 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
         string? Next
     ) ParseListXmlWithMeta(string xml)
     {
-        XDocument doc = XDocument.Parse(xml);
+        XDocument doc = XDocument.Parse(text: xml);
         XNamespace ns = "http://s3.amazonaws.com/doc/2006-03-01/";
 
         List<(string, long, DateTime)> files = [];
-        foreach (XElement e in doc.Descendants(ns + "Contents"))
+        foreach (XElement e in doc.Descendants(name: ns + "Contents"))
         {
-            string key = e.Element(ns + "Key")?.Value ?? string.Empty;
-            if (string.IsNullOrEmpty(key) || key.EndsWith("/", StringComparison.Ordinal))
+            string key = e.Element(name: ns + "Key")?.Value ?? string.Empty;
+            if (string.IsNullOrEmpty(value: key) || key.EndsWith(value: "/", comparisonType: StringComparison.Ordinal))
                 continue;
 
-            long size = long.TryParse(e.Element(ns + "Size")?.Value, out long s) ? s : 0L;
+            long size = long.TryParse(s: e.Element(name: ns + "Size")?.Value, result: out long s) ? s : 0L;
             DateTime lastModified = DateTime.TryParse(
-                e.Element(ns + "LastModified")?.Value,
-                System.Globalization.CultureInfo.InvariantCulture,
-                System.Globalization.DateTimeStyles.AssumeUniversal
-                    | System.Globalization.DateTimeStyles.AdjustToUniversal,
-                out DateTime lm
+                s: e.Element(name: ns + "LastModified")?.Value,
+                provider: System.Globalization.CultureInfo.InvariantCulture,
+                styles: System.Globalization.DateTimeStyles.AssumeUniversal
+                        | System.Globalization.DateTimeStyles.AdjustToUniversal,
+                result: out DateTime lm
             )
                 ? lm
                 : DateTime.UtcNow;
 
-            files.Add((key, size, lastModified));
+            files.Add(item: (key, size, lastModified));
         }
 
-        List<string> dirs = doc.Descendants(ns + "CommonPrefixes")
-            .Select(e => e.Element(ns + "Prefix")?.Value ?? string.Empty)
-            .Where(p => !string.IsNullOrEmpty(p))
+        List<string> dirs = doc.Descendants(name: ns + "CommonPrefixes")
+            .Select(selector: e => e.Element(name: ns + "Prefix")?.Value ?? string.Empty)
+            .Where(predicate: p => !string.IsNullOrEmpty(value: p))
             .ToList();
 
-        string? next = doc.Descendants(ns + "NextContinuationToken").FirstOrDefault()?.Value;
+        string? next = doc.Descendants(name: ns + "NextContinuationToken").FirstOrDefault()?.Value;
 
         return (files, dirs, next);
     }
@@ -1141,9 +1141,9 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
     private static string BuildSortedQueryString(string rawQs)
     {
         IEnumerable<string> parts = rawQs
-            .Split('&', StringSplitOptions.RemoveEmptyEntries)
-            .OrderBy(p => p, StringComparer.Ordinal);
-        return string.Join("&", parts);
+            .Split(separator: '&', options: StringSplitOptions.RemoveEmptyEntries)
+            .OrderBy(keySelector: p => p, comparer: StringComparer.Ordinal);
+        return string.Join(separator: "&", values: parts);
     }
 
     // -----------------------------------------------------------------------

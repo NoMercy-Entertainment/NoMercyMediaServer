@@ -18,45 +18,45 @@ namespace NoMercy.Api.DTOs.Music;
 
 public record ReleaseGroupDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public Guid Id { get; set; }
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string Title { get; set; }
 
-    [JsonProperty("description")]
+    [JsonProperty(propertyName: "description")]
     public string? Description { get; set; }
 
-    [JsonProperty("cover")]
+    [JsonProperty(propertyName: "cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty("color_palette")]
+    [JsonProperty(propertyName: "color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty("library_id")]
+    [JsonProperty(propertyName: "library_id")]
     public Ulid? LibraryId { get; set; }
 
-    [JsonProperty("origin")]
+    [JsonProperty(propertyName: "origin")]
     public Guid Origin { get; set; }
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; }
 
-    [JsonProperty("year")]
+    [JsonProperty(propertyName: "year")]
     public int Year { get; set; }
 
-    [JsonProperty("link")]
+    [JsonProperty(propertyName: "link")]
     public Uri Link { get; set; }
 
     public ReleaseGroupDto(AlbumReleaseGroup artistReleaseGroup, string country)
     {
         string? description = artistReleaseGroup
-            .ReleaseGroup.Translations.FirstOrDefault(translation =>
+            .ReleaseGroup.Translations.FirstOrDefault(predicate: translation =>
                 translation.Iso31661 == country
             )
             ?.Description;
 
-        Description = !string.IsNullOrEmpty(description)
+        Description = !string.IsNullOrEmpty(value: description)
             ? description
             : artistReleaseGroup.ReleaseGroup.Description;
 
@@ -64,13 +64,13 @@ public record ReleaseGroupDto
         Title = artistReleaseGroup.ReleaseGroup.Title;
         Cover = artistReleaseGroup.ReleaseGroup.Cover;
         Cover = Cover is not null
-            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
+            ? new Uri(uriString: $"/images/music{Cover}", uriKind: UriKind.Relative).ToString()
             : null;
         ColorPalette = artistReleaseGroup.ReleaseGroup.ColorPalette;
         LibraryId = artistReleaseGroup.ReleaseGroup.LibraryId;
         Origin = Info.DeviceId;
         Type = "release_groups";
         Year = artistReleaseGroup.ReleaseGroup.Year;
-        Link = new($"/music/release_groups/{Id}", UriKind.Relative);
+        Link = new(uriString: $"/music/release_groups/{Id}", uriKind: UriKind.Relative);
     }
 }

@@ -59,19 +59,19 @@ public class WhisperTranscriberTests
     {
         EncoderOptions options = new() { FfmpegPathOverride = FfmpegPath, WhisperModelPath = null };
         WhisperTranscriber transcriber = new(
-            options,
-            Mock.Of<IProcessRunner>(),
-            Mock.Of<IStorage>(),
-            NullLogger<WhisperTranscriber>.Instance
+            options: options,
+            processRunner: Mock.Of<IProcessRunner>(),
+            storage: Mock.Of<IStorage>(),
+            logger: NullLogger<WhisperTranscriber>.Instance
         );
 
         await transcriber
-            .Invoking(t =>
-                t.TranscribeAsync(InputPath, 0, "eng", options_: null, progress: null, ct: default)
+            .Invoking(action: t =>
+                t.TranscribeAsync(inputPath: InputPath, audioStreamIndex: 0, language: "eng", options_: null, progress: null, ct: default)
             )
             .Should()
             .ThrowAsync<InvalidOperationException>()
-            .WithMessage("*WhisperModelPath is not configured*");
+            .WithMessage(expectedWildcardPattern: "*WhisperModelPath is not configured*");
     }
 
     [Fact]
@@ -83,22 +83,22 @@ public class WhisperTranscriberTests
             WhisperModelPath = ModelPath,
         };
         Mock<IStorage> storage = new();
-        storage.Setup(s => s.Exists(ModelPath)).Returns(false);
+        storage.Setup(expression: s => s.Exists(ModelPath)).Returns(value: false);
 
         WhisperTranscriber transcriber = new(
-            options,
-            Mock.Of<IProcessRunner>(),
-            storage.Object,
-            NullLogger<WhisperTranscriber>.Instance
+            options: options,
+            processRunner: Mock.Of<IProcessRunner>(),
+            storage: storage.Object,
+            logger: NullLogger<WhisperTranscriber>.Instance
         );
 
         await transcriber
-            .Invoking(t =>
-                t.TranscribeAsync(InputPath, 0, "eng", options_: null, progress: null, ct: default)
+            .Invoking(action: t =>
+                t.TranscribeAsync(inputPath: InputPath, audioStreamIndex: 0, language: "eng", options_: null, progress: null, ct: default)
             )
             .Should()
             .ThrowAsync<FileNotFoundException>()
-            .WithMessage("*Whisper model not found*");
+            .WithMessage(expectedWildcardPattern: "*Whisper model not found*");
     }
 
     [Fact]
@@ -111,29 +111,29 @@ public class WhisperTranscriberTests
             FfmpegPathOverride = FfmpegPath,
             WhisperModelPath = ModelPath,
         };
-        Mock<IStorage> storage = StorageMock(overridePath);
+        Mock<IStorage> storage = StorageMock(modelPath: overridePath);
         Mock<IProcessRunner> processRunner = SuccessProcess();
-        InMemoryStream(storage, GetExpectedOutputPath("eng"), srtContent: "");
+        InMemoryStream(storage: storage, path: GetExpectedOutputPath(language: "eng"), srtContent: "");
 
         WhisperTranscriber transcriber = new(
-            options,
-            processRunner.Object,
-            storage.Object,
-            NullLogger<WhisperTranscriber>.Instance
+            options: options,
+            processRunner: processRunner.Object,
+            storage: storage.Object,
+            logger: NullLogger<WhisperTranscriber>.Instance
         );
 
         await transcriber.TranscribeAsync(
-            InputPath,
-            0,
-            "eng",
+            inputPath: InputPath,
+            audioStreamIndex: 0,
+            language: "eng",
             options_: new(ModelPath: overridePath),
             progress: null,
             ct: default
         );
 
         // Verify Exists was called with the OVERRIDE, not the default path.
-        storage.Verify(s => s.Exists(overridePath), Times.AtLeastOnce);
-        storage.Verify(s => s.Exists(ModelPath), Times.Never);
+        storage.Verify(expression: s => s.Exists(overridePath), times: Times.AtLeastOnce);
+        storage.Verify(expression: s => s.Exists(ModelPath), times: Times.Never);
     }
 
     // ── Filter arg construction ──────────────────────────────────────────────
@@ -146,17 +146,17 @@ public class WhisperTranscriberTests
             FfmpegPathOverride = FfmpegPath,
             WhisperModelPath = ModelPath,
         };
-        Mock<IStorage> storage = StorageMock(ModelPath);
+        Mock<IStorage> storage = StorageMock(modelPath: ModelPath);
         InMemoryStream(
-            storage,
-            GetExpectedOutputPath("eng"),
+            storage: storage,
+            path: GetExpectedOutputPath(language: "eng"),
             srtContent: "1\n00:00:01,000 --> 00:00:02,000\nhi\n"
         );
 
         string[]? capturedArgs = null;
         Mock<IProcessRunner> processRunner = new();
         processRunner
-            .Setup(p =>
+            .Setup(expression: p =>
                 p.RunAsync(
                     FfmpegPath,
                     It.IsAny<string[]>(),
@@ -165,41 +165,41 @@ public class WhisperTranscriberTests
                 )
             )
             .Callback<string, string[], string?, CancellationToken>(
-                (_, args, _, _) => capturedArgs = args
+                action: (_, args, _, _) => capturedArgs = args
             )
             .ReturnsAsync(
-                new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
+                value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
             );
 
         WhisperTranscriber transcriber = new(
-            options,
-            processRunner.Object,
-            storage.Object,
-            NullLogger<WhisperTranscriber>.Instance
+            options: options,
+            processRunner: processRunner.Object,
+            storage: storage.Object,
+            logger: NullLogger<WhisperTranscriber>.Instance
         );
 
         await transcriber.TranscribeAsync(
-            InputPath,
-            3,
-            "fre",
+            inputPath: InputPath,
+            audioStreamIndex: 3,
+            language: "fre",
             options_: null,
             progress: null,
             ct: default
         );
 
         capturedArgs.Should().NotBeNull();
-        capturedArgs!.Should().ContainInOrder("-i", InputPath);
-        capturedArgs.Should().ContainInOrder("-map", "0:a:3"); // streamIndex 3
-        capturedArgs.Should().Contain("-vn"); // discard video
-        capturedArgs.Should().ContainInOrder("-f", "null"); // discard ffmpeg's own output
-        int afIndex = Array.IndexOf(capturedArgs, "-af");
-        afIndex.Should().BeGreaterThan(-1);
+        capturedArgs!.Should().ContainInOrder(expected: ["-i", InputPath]);
+        capturedArgs.Should().ContainInOrder(expected: ["-map", "0:a:3"]); // streamIndex 3
+        capturedArgs.Should().Contain(expected: "-vn"); // discard video
+        capturedArgs.Should().ContainInOrder(expected: ["-f", "null"]); // discard ffmpeg's own output
+        int afIndex = Array.IndexOf(array: capturedArgs, value: "-af");
+        afIndex.Should().BeGreaterThan(expected: -1);
         string filter = capturedArgs[afIndex + 1];
-        filter.Should().Contain("whisper=model=");
-        filter.Should().Contain(":language=fre");
-        filter.Should().Contain(":queue=3");
-        filter.Should().Contain(":format=srt");
-        filter.Should().NotContain("translate"); // default off
+        filter.Should().Contain(expected: "whisper=model=");
+        filter.Should().Contain(expected: ":language=fre");
+        filter.Should().Contain(expected: ":queue=3");
+        filter.Should().Contain(expected: ":format=srt");
+        filter.Should().NotContain(unexpected: "translate"); // default off
     }
 
     [Fact]
@@ -210,13 +210,13 @@ public class WhisperTranscriberTests
             FfmpegPathOverride = FfmpegPath,
             WhisperModelPath = ModelPath,
         };
-        Mock<IStorage> storage = StorageMock(ModelPath);
-        InMemoryStream(storage, GetExpectedOutputPath("jpn"), srtContent: "");
+        Mock<IStorage> storage = StorageMock(modelPath: ModelPath);
+        InMemoryStream(storage: storage, path: GetExpectedOutputPath(language: "jpn"), srtContent: "");
 
         string[]? capturedArgs = null;
         Mock<IProcessRunner> processRunner = new();
         processRunner
-            .Setup(p =>
+            .Setup(expression: p =>
                 p.RunAsync(
                     FfmpegPath,
                     It.IsAny<string[]>(),
@@ -225,31 +225,31 @@ public class WhisperTranscriberTests
                 )
             )
             .Callback<string, string[], string?, CancellationToken>(
-                (_, args, _, _) => capturedArgs = args
+                action: (_, args, _, _) => capturedArgs = args
             )
             .ReturnsAsync(
-                new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
+                value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
             );
 
         WhisperTranscriber transcriber = new(
-            options,
-            processRunner.Object,
-            storage.Object,
-            NullLogger<WhisperTranscriber>.Instance
+            options: options,
+            processRunner: processRunner.Object,
+            storage: storage.Object,
+            logger: NullLogger<WhisperTranscriber>.Instance
         );
 
         await transcriber.TranscribeAsync(
-            InputPath,
-            0,
-            "jpn",
+            inputPath: InputPath,
+            audioStreamIndex: 0,
+            language: "jpn",
             options_: new(ModelPath: ModelPath, TranslateToEnglish: true),
             progress: null,
             ct: default
         );
 
-        int afIndex = Array.IndexOf(capturedArgs!, "-af");
+        int afIndex = Array.IndexOf(array: capturedArgs!, value: "-af");
         string filter = capturedArgs![afIndex + 1];
-        filter.Should().Contain(":translate=1");
+        filter.Should().Contain(expected: ":translate=1");
     }
 
     // ── Path escaping ────────────────────────────────────────────────────────
@@ -265,13 +265,13 @@ public class WhisperTranscriberTests
             FfmpegPathOverride = FfmpegPath,
             WhisperModelPath = windowsModelPath,
         };
-        Mock<IStorage> storage = StorageMock(windowsModelPath);
-        InMemoryStream(storage, GetExpectedOutputPath("eng"), srtContent: "");
+        Mock<IStorage> storage = StorageMock(modelPath: windowsModelPath);
+        InMemoryStream(storage: storage, path: GetExpectedOutputPath(language: "eng"), srtContent: "");
 
         string[]? capturedArgs = null;
         Mock<IProcessRunner> processRunner = new();
         processRunner
-            .Setup(p =>
+            .Setup(expression: p =>
                 p.RunAsync(
                     FfmpegPath,
                     It.IsAny<string[]>(),
@@ -280,32 +280,32 @@ public class WhisperTranscriberTests
                 )
             )
             .Callback<string, string[], string?, CancellationToken>(
-                (_, args, _, _) => capturedArgs = args
+                action: (_, args, _, _) => capturedArgs = args
             )
             .ReturnsAsync(
-                new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
+                value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
             );
 
         WhisperTranscriber transcriber = new(
-            options,
-            processRunner.Object,
-            storage.Object,
-            NullLogger<WhisperTranscriber>.Instance
+            options: options,
+            processRunner: processRunner.Object,
+            storage: storage.Object,
+            logger: NullLogger<WhisperTranscriber>.Instance
         );
 
         await transcriber.TranscribeAsync(
-            InputPath,
-            0,
-            "eng",
+            inputPath: InputPath,
+            audioStreamIndex: 0,
+            language: "eng",
             options_: null,
             progress: null,
             ct: default
         );
 
-        int afIndex = Array.IndexOf(capturedArgs!, "-af");
+        int afIndex = Array.IndexOf(array: capturedArgs!, value: "-af");
         string filter = capturedArgs![afIndex + 1];
-        filter.Should().NotContain(@"\models"); // backslash gone
-        filter.Should().Contain("/models/"); // forward slashes present
+        filter.Should().NotContain(unexpected: @"\models"); // backslash gone
+        filter.Should().Contain(expected: "/models/"); // forward slashes present
     }
 
     [Fact]
@@ -319,13 +319,13 @@ public class WhisperTranscriberTests
             FfmpegPathOverride = FfmpegPath,
             WhisperModelPath = windowsModelPath,
         };
-        Mock<IStorage> storage = StorageMock(windowsModelPath);
-        InMemoryStream(storage, GetExpectedOutputPath("eng"), srtContent: "");
+        Mock<IStorage> storage = StorageMock(modelPath: windowsModelPath);
+        InMemoryStream(storage: storage, path: GetExpectedOutputPath(language: "eng"), srtContent: "");
 
         string[]? capturedArgs = null;
         Mock<IProcessRunner> processRunner = new();
         processRunner
-            .Setup(p =>
+            .Setup(expression: p =>
                 p.RunAsync(
                     FfmpegPath,
                     It.IsAny<string[]>(),
@@ -334,31 +334,31 @@ public class WhisperTranscriberTests
                 )
             )
             .Callback<string, string[], string?, CancellationToken>(
-                (_, args, _, _) => capturedArgs = args
+                action: (_, args, _, _) => capturedArgs = args
             )
             .ReturnsAsync(
-                new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
+                value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
             );
 
         WhisperTranscriber transcriber = new(
-            options,
-            processRunner.Object,
-            storage.Object,
-            NullLogger<WhisperTranscriber>.Instance
+            options: options,
+            processRunner: processRunner.Object,
+            storage: storage.Object,
+            logger: NullLogger<WhisperTranscriber>.Instance
         );
 
         await transcriber.TranscribeAsync(
-            InputPath,
-            0,
-            "eng",
+            inputPath: InputPath,
+            audioStreamIndex: 0,
+            language: "eng",
             options_: null,
             progress: null,
             ct: default
         );
 
-        int afIndex = Array.IndexOf(capturedArgs!, "-af");
+        int afIndex = Array.IndexOf(array: capturedArgs!, value: "-af");
         string filter = capturedArgs![afIndex + 1];
-        filter.Should().Contain(@"C\:/models"); // drive-letter colon escaped
+        filter.Should().Contain(expected: @"C\:/models"); // drive-letter colon escaped
     }
 
     // ── Process failure surfacing ────────────────────────────────────────────
@@ -371,10 +371,10 @@ public class WhisperTranscriberTests
             FfmpegPathOverride = FfmpegPath,
             WhisperModelPath = ModelPath,
         };
-        Mock<IStorage> storage = StorageMock(ModelPath);
+        Mock<IStorage> storage = StorageMock(modelPath: ModelPath);
         Mock<IProcessRunner> processRunner = new();
         processRunner
-            .Setup(p =>
+            .Setup(expression: p =>
                 p.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -383,7 +383,7 @@ public class WhisperTranscriberTests
                 )
             )
             .ReturnsAsync(
-                new ProcessResult(
+                value: new ProcessResult(
                     ExitCode: 137,
                     StdOut: "",
                     StdErr: "killed",
@@ -392,19 +392,19 @@ public class WhisperTranscriberTests
             );
 
         WhisperTranscriber transcriber = new(
-            options,
-            processRunner.Object,
-            storage.Object,
-            NullLogger<WhisperTranscriber>.Instance
+            options: options,
+            processRunner: processRunner.Object,
+            storage: storage.Object,
+            logger: NullLogger<WhisperTranscriber>.Instance
         );
 
         await transcriber
-            .Invoking(t =>
-                t.TranscribeAsync(InputPath, 0, "eng", options_: null, progress: null, ct: default)
+            .Invoking(action: t =>
+                t.TranscribeAsync(inputPath: InputPath, audioStreamIndex: 0, language: "eng", options_: null, progress: null, ct: default)
             )
             .Should()
             .ThrowAsync<InvalidOperationException>()
-            .WithMessage("*exited with code 137*");
+            .WithMessage(expectedWildcardPattern: "*exited with code 137*");
     }
 
     [Fact]
@@ -419,27 +419,27 @@ public class WhisperTranscriberTests
             WhisperModelPath = ModelPath,
         };
         Mock<IStorage> storage = new();
-        storage.Setup(s => s.Exists(ModelPath)).Returns(true);
-        storage.Setup(s => s.Exists(It.Is<string>(p => p.EndsWith(".srt")))).Returns(false);
+        storage.Setup(expression: s => s.Exists(ModelPath)).Returns(value: true);
+        storage.Setup(expression: s => s.Exists(It.Is<string>(p => p.EndsWith(".srt")))).Returns(value: false);
         storage
-            .Setup(s => s.AcquireLocalPath(It.IsAny<string>()))
-            .Returns<string>(p => new(p));
+            .Setup(expression: s => s.AcquireLocalPath(It.IsAny<string>()))
+            .Returns<string>(valueFunction: p => new(path: p));
         Mock<IProcessRunner> processRunner = SuccessProcess();
 
         WhisperTranscriber transcriber = new(
-            options,
-            processRunner.Object,
-            storage.Object,
-            NullLogger<WhisperTranscriber>.Instance
+            options: options,
+            processRunner: processRunner.Object,
+            storage: storage.Object,
+            logger: NullLogger<WhisperTranscriber>.Instance
         );
 
         await transcriber
-            .Invoking(t =>
-                t.TranscribeAsync(InputPath, 0, "eng", options_: null, progress: null, ct: default)
+            .Invoking(action: t =>
+                t.TranscribeAsync(inputPath: InputPath, audioStreamIndex: 0, language: "eng", options_: null, progress: null, ct: default)
             )
             .Should()
             .ThrowAsync<InvalidOperationException>()
-            .WithMessage("*produced no output*");
+            .WithMessage(expectedWildcardPattern: "*produced no output*");
     }
 
     // ── Cue counting + return shape ──────────────────────────────────────────
@@ -461,71 +461,71 @@ public class WhisperTranscriberTests
             00:00:04,000 --> 00:00:05,000
             line three
             """;
-        string outputPath = GetExpectedOutputPath("eng");
+        string outputPath = GetExpectedOutputPath(language: "eng");
 
         EncoderOptions options = new()
         {
             FfmpegPathOverride = FfmpegPath,
             WhisperModelPath = ModelPath,
         };
-        Mock<IStorage> storage = StorageMock(ModelPath);
-        InMemoryStream(storage, outputPath, srtContent: srt);
+        Mock<IStorage> storage = StorageMock(modelPath: ModelPath);
+        InMemoryStream(storage: storage, path: outputPath, srtContent: srt);
         Mock<IProcessRunner> processRunner = SuccessProcess();
 
         WhisperTranscriber transcriber = new(
-            options,
-            processRunner.Object,
-            storage.Object,
-            NullLogger<WhisperTranscriber>.Instance
+            options: options,
+            processRunner: processRunner.Object,
+            storage: storage.Object,
+            logger: NullLogger<WhisperTranscriber>.Instance
         );
 
         SubtitleTrack track = await transcriber.TranscribeAsync(
-            InputPath,
-            0,
-            "eng",
+            inputPath: InputPath,
+            audioStreamIndex: 0,
+            language: "eng",
             options_: null,
             progress: null,
             ct: default
         );
 
-        track.FilePath.Should().Be(outputPath);
-        track.Language.Should().Be("eng");
-        track.Format.Should().Be(SubtitleCodecType.Srt);
-        track.CueCount.Should().Be(3);
+        track.FilePath.Should().Be(expected: outputPath);
+        track.Language.Should().Be(expected: "eng");
+        track.Format.Should().Be(expected: SubtitleCodecType.Srt);
+        track.CueCount.Should().Be(expected: 3);
     }
 
     [Fact]
     public async Task Returns_zero_cues_when_srt_has_no_timing_markers()
     {
         const string emptySrt = "no markers here\n";
-        string outputPath = GetExpectedOutputPath("eng");
+        string outputPath = GetExpectedOutputPath(language: "eng");
 
         EncoderOptions options = new()
         {
             FfmpegPathOverride = FfmpegPath,
             WhisperModelPath = ModelPath,
         };
-        Mock<IStorage> storage = StorageMock(ModelPath);
-        InMemoryStream(storage, outputPath, srtContent: emptySrt);
+        Mock<IStorage> storage = StorageMock(modelPath: ModelPath);
+        InMemoryStream(storage: storage, path: outputPath, srtContent: emptySrt);
         Mock<IProcessRunner> processRunner = SuccessProcess();
 
         WhisperTranscriber transcriber = new(
-            options,
-            processRunner.Object,
-            storage.Object,
-            NullLogger<WhisperTranscriber>.Instance
+            options: options,
+            processRunner: processRunner.Object,
+            storage: storage.Object,
+            logger: NullLogger<WhisperTranscriber>.Instance
         );
 
         SubtitleTrack track = await transcriber.TranscribeAsync(
-            InputPath,
-            0,
-            "eng",
+            inputPath: InputPath,
+            audioStreamIndex: 0,
+            language: "eng",
             options_: null,
             progress: null,
             ct: default
         );
 
-        track.CueCount.Should().Be(0);
+        track.CueCount.Should().Be(expected: 0);
     }
 
     // ── Progress observer wiring ─────────────────────────────────────────────
@@ -538,35 +538,35 @@ public class WhisperTranscriberTests
             FfmpegPathOverride = FfmpegPath,
             WhisperModelPath = ModelPath,
         };
-        Mock<IStorage> storage = StorageMock(ModelPath);
-        InMemoryStream(storage, GetExpectedOutputPath("eng"), srtContent: "");
+        Mock<IStorage> storage = StorageMock(modelPath: ModelPath);
+        InMemoryStream(storage: storage, path: GetExpectedOutputPath(language: "eng"), srtContent: "");
         Mock<IProcessRunner> processRunner = SuccessProcess();
         Mock<IProgressObserver> progress = new();
 
         WhisperTranscriber transcriber = new(
-            options,
-            processRunner.Object,
-            storage.Object,
-            NullLogger<WhisperTranscriber>.Instance
+            options: options,
+            processRunner: processRunner.Object,
+            storage: storage.Object,
+            logger: NullLogger<WhisperTranscriber>.Instance
         );
 
         await transcriber.TranscribeAsync(
-            InputPath,
-            0,
-            "eng",
+            inputPath: InputPath,
+            audioStreamIndex: 0,
+            language: "eng",
             options_: null,
             progress: progress.Object,
             ct: default
         );
 
         progress.Verify(
-            p => p.OnStageStarted(It.Is<string>(s => s.Contains("Whisper") && s.Contains("eng"))),
-            Times.Once
+            expression: p => p.OnStageStarted(It.Is<string>(s => s.Contains("Whisper") && s.Contains("eng"))),
+            times: Times.Once
         );
         progress.Verify(
-            p =>
+            expression: p =>
                 p.OnStageCompleted(It.Is<string>(s => s.Contains("Whisper")), It.IsAny<TimeSpan>()),
-            Times.Once
+            times: Times.Once
         );
     }
 
@@ -574,19 +574,19 @@ public class WhisperTranscriberTests
 
     private static string GetExpectedOutputPath(string language)
     {
-        string outputDir = Path.GetDirectoryName(InputPath)!;
-        string outputName = $"{Path.GetFileNameWithoutExtension(InputPath)}.{language}.whisper";
-        return Path.Combine(outputDir, $"{outputName}.srt");
+        string outputDir = Path.GetDirectoryName(path: InputPath)!;
+        string outputName = $"{Path.GetFileNameWithoutExtension(path: InputPath)}.{language}.whisper";
+        return Path.Combine(path1: outputDir, path2: $"{outputName}.srt");
     }
 
     private static Mock<IStorage> StorageMock(string modelPath)
     {
         Mock<IStorage> storage = new();
-        storage.Setup(s => s.Exists(modelPath)).Returns(true);
-        storage.Setup(s => s.Exists(It.Is<string>(p => p.EndsWith(".srt")))).Returns(true);
+        storage.Setup(expression: s => s.Exists(modelPath)).Returns(value: true);
+        storage.Setup(expression: s => s.Exists(It.Is<string>(p => p.EndsWith(".srt")))).Returns(value: true);
         storage
-            .Setup(s => s.AcquireLocalPath(It.IsAny<string>()))
-            .Returns<string>(p => new(p));
+            .Setup(expression: s => s.AcquireLocalPath(It.IsAny<string>()))
+            .Returns<string>(valueFunction: p => new(path: p));
         return storage;
     }
 
@@ -594,7 +594,7 @@ public class WhisperTranscriberTests
     {
         Mock<IProcessRunner> processRunner = new();
         processRunner
-            .Setup(p =>
+            .Setup(expression: p =>
                 p.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -603,7 +603,7 @@ public class WhisperTranscriberTests
                 )
             )
             .ReturnsAsync(
-                new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
+                value: new ProcessResult(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero)
             );
         return processRunner;
     }
@@ -613,7 +613,7 @@ public class WhisperTranscriberTests
         // Path.Combine separator varies by OS — mock by suffix instead of exact path
         // so the test passes regardless of host.
         storage
-            .Setup(s => s.OpenRead(It.Is<string>(p => p.EndsWith(".srt"))))
-            .Returns(() => new MemoryStream(Encoding.UTF8.GetBytes(srtContent)));
+            .Setup(expression: s => s.OpenRead(It.Is<string>(p => p.EndsWith(".srt"))))
+            .Returns(valueFunction: () => new MemoryStream(buffer: Encoding.UTF8.GetBytes(s: srtContent)));
     }
 }

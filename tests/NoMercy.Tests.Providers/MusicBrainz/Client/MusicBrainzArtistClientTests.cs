@@ -17,11 +17,11 @@ using NoMercy.Tests.Providers.Infrastructure;
 
 namespace NoMercy.Tests.Providers.MusicBrainz.Client;
 
-[Collection("HttpClientProvider")]
+[Collection(name: "HttpClientProvider")]
 public sealed class MusicBrainzArtistClientTests : ProviderHttpHarness
 {
     public MusicBrainzArtistClientTests()
-        : base(HttpClientNames.MusicBrainz) { }
+        : base(httpClientNames: HttpClientNames.MusicBrainz) { }
 
     [Fact]
     public async Task WithAllAppends_BuildsIncAndFmtQuery_AndMapsAppends()
@@ -39,26 +39,26 @@ public sealed class MusicBrainzArtistClientTests : ProviderHttpHarness
             Name = "Boards of Canada",
             Gender = "unknown",
         };
-        Handler.WhenGet($"artist/{artistId}", MockResponse.Json(HttpStatusCode.OK, body));
+        Handler.WhenGet(pathContains: $"artist/{artistId}", responses: MockResponse.Json(status: HttpStatusCode.OK, body: body));
 
-        using MusicBrainzArtistClient client = new(artistId);
+        using MusicBrainzArtistClient client = new(id: artistId);
 
         MusicBrainzArtistAppends? result = await client.WithAllAppends();
 
         result.Should().NotBeNull();
-        result!.Id.Should().Be(artistId);
-        result.Name.Should().Be("Boards of Canada");
+        result!.Id.Should().Be(expected: artistId);
+        result.Name.Should().Be(expected: "Boards of Canada");
 
         CapturedRequest request = Handler
             .Requests.Should()
-            .ContainSingle(r => r.Path.Contains($"artist/{artistId}"))
+            .ContainSingle(predicate: r => r.Path.Contains($"artist/{artistId}"))
             .Which;
-        request.Query.Should().ContainKey("fmt").WhoseValue.Should().Be("json");
+        request.Query.Should().ContainKey(expected: "fmt").WhoseValue.Should().Be(expected: "json");
         request
             .Query.Should()
-            .ContainKey("inc")
+            .ContainKey(expected: "inc")
             .WhoseValue.Should()
-            .Be("genres+recordings+releases+release-groups+works");
+            .Be(expected: "genres+recordings+releases+release-groups+works");
     }
 
     [Fact]
@@ -72,27 +72,27 @@ public sealed class MusicBrainzArtistClientTests : ProviderHttpHarness
         // on-disk CacheController cache (keyed by full URL incl. query).
         string query = $"Boards of Canada {Guid.NewGuid():N}";
         MusicBrainzArtistAppends body = new() { Id = Guid.NewGuid(), Name = query };
-        Handler.WhenGet("artist", MockResponse.Json(HttpStatusCode.OK, body));
+        Handler.WhenGet(pathContains: "artist", responses: MockResponse.Json(status: HttpStatusCode.OK, body: body));
 
         using MusicBrainzArtistClient client = new();
-        MusicBrainzArtistAppends? result = await client.SearchArtists(query);
+        MusicBrainzArtistAppends? result = await client.SearchArtists(query: query);
 
         result.Should().NotBeNull();
-        result!.Name.Should().Be(query);
+        result!.Name.Should().Be(expected: query);
 
         CapturedRequest request = Handler.Requests.Should().ContainSingle().Which;
-        request.Path.Should().Be("/ws/2/artist");
-        request.Query.Should().ContainKey("query").WhoseValue.Should().Be(query);
-        request.Query.Should().ContainKey("fmt").WhoseValue.Should().Be("json");
+        request.Path.Should().Be(expected: "/ws/2/artist");
+        request.Query.Should().ContainKey(expected: "query").WhoseValue.Should().Be(expected: query);
+        request.Query.Should().ContainKey(expected: "fmt").WhoseValue.Should().Be(expected: "json");
     }
 
     [Fact]
     public async Task WithAppends_UnknownMbid_ReturnsNull()
     {
         Guid unknownId = Guid.NewGuid();
-        Handler.WhenGet($"artist/{unknownId}", MockResponse.Status(HttpStatusCode.NotFound));
+        Handler.WhenGet(pathContains: $"artist/{unknownId}", responses: MockResponse.Status(status: HttpStatusCode.NotFound));
 
-        using MusicBrainzArtistClient client = new(unknownId);
+        using MusicBrainzArtistClient client = new(id: unknownId);
         MusicBrainzArtistAppends? result = await client.WithAllAppends();
 
         result.Should().BeNull();

@@ -21,7 +21,7 @@ namespace NoMercy.Data.Activity;
 public class ActivityLogger : IActivityLogger
 {
     private const int MaxRetries = 3;
-    private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(seconds: 1);
 
     private readonly IDbContextFactory<MediaContext> _contextFactory;
     private readonly ILogger<ActivityLogger> _logger;
@@ -48,7 +48,7 @@ public class ActivityLogger : IActivityLogger
         CancellationToken ct = default
     ) =>
         WriteAsync(
-            new()
+            row: new()
             {
                 Category = ActivityCategory.Auth,
                 Type = type,
@@ -57,9 +57,9 @@ public class ActivityLogger : IActivityLogger
                 DeviceId = deviceId,
                 Success = success,
                 ErrorCode = errorCode,
-                Metadata = Serialize(metadata),
+                Metadata = Serialize(metadata: metadata),
             },
-            ct
+            ct: ct
         );
 
     public Task LogConnectionAsync(
@@ -69,7 +69,7 @@ public class ActivityLogger : IActivityLogger
         CancellationToken ct = default
     ) =>
         WriteAsync(
-            new()
+            row: new()
             {
                 Category = ActivityCategory.Connection,
                 Type = type,
@@ -77,7 +77,7 @@ public class ActivityLogger : IActivityLogger
                 UserId = userId,
                 DeviceId = deviceId,
             },
-            ct
+            ct: ct
         );
 
     public Task LogPlaybackAsync(
@@ -89,7 +89,7 @@ public class ActivityLogger : IActivityLogger
         CancellationToken ct = default
     ) =>
         WriteAsync(
-            new()
+            row: new()
             {
                 Category = ActivityCategory.Playback,
                 Type = type,
@@ -97,9 +97,9 @@ public class ActivityLogger : IActivityLogger
                 UserId = userId,
                 DeviceId = deviceId,
                 MediaId = mediaId,
-                Metadata = Serialize(metadata),
+                Metadata = Serialize(metadata: metadata),
             },
-            ct
+            ct: ct
         );
 
     public Task LogConfigurationAsync(
@@ -112,7 +112,7 @@ public class ActivityLogger : IActivityLogger
         CancellationToken ct = default
     ) =>
         WriteAsync(
-            new()
+            row: new()
             {
                 Category = ActivityCategory.Configuration,
                 Type = type,
@@ -120,7 +120,7 @@ public class ActivityLogger : IActivityLogger
                 UserId = userId,
                 DeviceId = deviceId,
                 Metadata = Serialize(
-                    new
+                    metadata: new
                     {
                         key = configKey,
                         old_value = oldValue,
@@ -128,7 +128,7 @@ public class ActivityLogger : IActivityLogger
                     }
                 ),
             },
-            ct
+            ct: ct
         );
 
     public Task LogFailureAsync(
@@ -142,7 +142,7 @@ public class ActivityLogger : IActivityLogger
         CancellationToken ct = default
     ) =>
         WriteAsync(
-            new()
+            row: new()
             {
                 Category = ActivityCategory.Failure,
                 Type = type,
@@ -152,9 +152,9 @@ public class ActivityLogger : IActivityLogger
                 MediaId = mediaId,
                 Success = false,
                 ErrorCode = errorCode,
-                Metadata = Serialize(new { message, extra = metadata }),
+                Metadata = Serialize(metadata: new { message, extra = metadata }),
             },
-            ct
+            ct: ct
         );
 
     private async Task WriteAsync(ActivityLog row, CancellationToken ct)
@@ -166,10 +166,7 @@ public class ActivityLogger : IActivityLogger
         if (row.DeviceId == Ulid.Empty || row.UserId == Guid.Empty)
         {
             _logger.LogDebug(
-                "Skipping activity log {Type}: missing DeviceId or UserId (device={DeviceId}, user={UserId})",
-                row.Type,
-                row.DeviceId,
-                row.UserId
+                message: "Skipping activity log {Type}: missing DeviceId or UserId (device={DeviceId}, user={UserId})", args: [row.Type, row.DeviceId, row.UserId]
             );
             return;
         }
@@ -178,10 +175,10 @@ public class ActivityLogger : IActivityLogger
         {
             try
             {
-                await using MediaContext ctx = await _contextFactory.CreateDbContextAsync(ct);
-                await ctx.ActivityLogs.AddAsync(row, ct);
-                await ctx.SaveChangesAsync(ct);
-                BroadcastSafe(row);
+                await using MediaContext ctx = await _contextFactory.CreateDbContextAsync(cancellationToken: ct);
+                await ctx.ActivityLogs.AddAsync(entity: row, cancellationToken: ct);
+                await ctx.SaveChangesAsync(cancellationToken: ct);
+                BroadcastSafe(row: row);
                 return;
             }
             catch (Exception ex) when (attempt < MaxRetries)
@@ -190,21 +187,14 @@ public class ActivityLogger : IActivityLogger
                 // shows up in the structured-log JSON; the @x exception field is
                 // dropped by the upstream enricher pipeline.
                 _logger.LogWarning(
-                    "Activity log write failed (attempt {Attempt}/{Max}) for {Type}: {ErrorChain}; retrying",
-                    attempt,
-                    MaxRetries,
-                    row.Type,
-                    FlattenError(ex)
+                    message: "Activity log write failed (attempt {Attempt}/{Max}) for {Type}: {ErrorChain}; retrying", args: [attempt, MaxRetries, row.Type, FlattenError(ex: ex)]
                 );
-                await Task.Delay(RetryDelay, ct);
+                await Task.Delay(delay: RetryDelay, cancellationToken: ct);
             }
             catch (Exception ex)
             {
                 _logger.LogError(
-                    "Activity log write failed after {Max} attempts; dropping row {Type}: {ErrorChain}",
-                    MaxRetries,
-                    row.Type,
-                    FlattenError(ex)
+                    message: "Activity log write failed after {Max} attempts; dropping row {Type}: {ErrorChain}", args: [MaxRetries, row.Type, FlattenError(ex: ex)]
                 );
                 return;
             }
@@ -218,11 +208,11 @@ public class ActivityLogger : IActivityLogger
 
         try
         {
-            _ = _hubBroadcaster.BroadcastAsync(row);
+            _ = _hubBroadcaster.BroadcastAsync(row: row);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Activity hub broadcast failed for {Type}", row.Type);
+            _logger.LogWarning(exception: ex, message: "Activity hub broadcast failed for {Type}", args: row.Type);
         }
     }
 
@@ -233,8 +223,8 @@ public class ActivityLogger : IActivityLogger
         while (current is not null)
         {
             if (sb.Length > 0)
-                sb.Append(" -> ");
-            sb.Append(current.GetType().Name).Append(": ").Append(current.Message);
+                sb.Append(value: " -> ");
+            sb.Append(value: current.GetType().Name).Append(value: ": ").Append(value: current.Message);
             current = current.InnerException;
         }
         return sb.ToString();
@@ -244,6 +234,6 @@ public class ActivityLogger : IActivityLogger
     {
         if (metadata is null)
             return null;
-        return JsonConvert.SerializeObject(metadata);
+        return JsonConvert.SerializeObject(value: metadata);
     }
 }

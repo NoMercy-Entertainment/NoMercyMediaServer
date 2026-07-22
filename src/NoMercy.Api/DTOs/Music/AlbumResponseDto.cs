@@ -15,6 +15,6 @@ namespace NoMercy.Api.DTOs.Music;
 
 public record AlbumResponseDto
 {
-    [JsonProperty("data")]
+    [JsonProperty(propertyName: "data")]
     public AlbumResponseItemDto? Data { get; set; }
 }

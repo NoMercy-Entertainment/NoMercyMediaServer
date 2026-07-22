@@ -20,16 +20,16 @@ namespace NoMercy.Plugin.Samples.Failures;
 // throwing into the nested disposeEx catch.
 public sealed class InitializeThrowsDisposeSucceedsPlugin : IPlugin
 {
-    public static readonly Guid FixedId = Guid.Parse("44444444-0000-0000-0000-000000000004");
+    public static readonly Guid FixedId = Guid.Parse(input: "44444444-0000-0000-0000-000000000004");
 
     public string Name => "InitializeThrowsDisposeSucceeds";
     public string Description => "Constructs fine, Initialize throws, Dispose succeeds";
     public Guid Id => FixedId;
-    public Version Version { get; } = new(0, 1, 0);
+    public Version Version { get; } = new(major: 0, minor: 1, build: 0);
 
     public void Initialize(IPluginContext context) =>
         throw new InvalidOperationException(
-            "InitializeThrowsDisposeSucceedsPlugin: initialize boom"
+            message: "InitializeThrowsDisposeSucceedsPlugin: initialize boom"
         );
 
     public void Dispose() { }

@@ -14,31 +14,31 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.TvShows;
 
-[PrimaryKey(nameof(Id))]
-[Index(nameof(SpecialId), nameof(EpisodeId), IsUnique = true)]
-[Index(nameof(SpecialId), nameof(MovieId), IsUnique = true)]
+[PrimaryKey(propertyName: nameof(Id))]
+[Index(propertyName: nameof(SpecialId), additionalPropertyNames: nameof(EpisodeId), IsUnique = true)]
+[Index(propertyName: nameof(SpecialId), additionalPropertyNames: nameof(MovieId), IsUnique = true)]
 public class SpecialItem
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("order")]
+    [JsonProperty(propertyName: "order")]
     public int Order { get; set; }
 
-    [JsonProperty("special_id")]
+    [JsonProperty(propertyName: "special_id")]
     public Ulid SpecialId { get; set; }
 
-    [JsonProperty("special")]
+    [JsonProperty(propertyName: "special")]
     public Special Special { get; set; } = null!;
 
-    [JsonProperty("episode_id")]
+    [JsonProperty(propertyName: "episode_id")]
     public int? EpisodeId { get; set; }
     public Episode? Episode { get; set; }
 
-    [JsonProperty("movie_id")]
+    [JsonProperty(propertyName: "movie_id")]
     public int? MovieId { get; set; }
     public Movie? Movie { get; set; }
 
-    [JsonProperty("user_data")]
+    [JsonProperty(propertyName: "user_data")]
     public ICollection<UserData> UserData { get; set; } = [];
 }

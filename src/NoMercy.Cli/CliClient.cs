@@ -20,28 +20,28 @@ internal sealed class CliClient : ICliClient
 
     public CliClient(string? pipeNameOrSocketPath = null)
     {
-        _client = new(pipeNameOrSocketPath);
+        _client = new(pipeNameOrSocketPath: pipeNameOrSocketPath);
     }
 
     public async Task<T?> GetAsync<T>(string path, CancellationToken cancellationToken = default)
         where T : class
     {
-        using HttpResponseMessage response = await _client.GetAsync(path, cancellationToken);
+        using HttpResponseMessage response = await _client.GetAsync(requestUri: path, cancellationToken: cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
-            string body = await response.Content.ReadAsStringAsync(cancellationToken);
+            string body = await response.Content.ReadAsStringAsync(cancellationToken: cancellationToken);
             await Console.Error.WriteLineAsync(
-                $"Error: {(int)response.StatusCode} {response.ReasonPhrase}"
+                value: $"Error: {(int)response.StatusCode} {response.ReasonPhrase}"
             );
-            if (!string.IsNullOrWhiteSpace(body))
-                await Console.Error.WriteLineAsync(body);
+            if (!string.IsNullOrWhiteSpace(value: body))
+                await Console.Error.WriteLineAsync(value: body);
             return null;
         }
 
-        string json = await response.Content.ReadAsStringAsync(cancellationToken);
+        string json = await response.Content.ReadAsStringAsync(cancellationToken: cancellationToken);
 
-        return JsonConvert.DeserializeObject<T>(json);
+        return JsonConvert.DeserializeObject<T>(value: json);
     }
 
     public async Task<string?> GetRawAsync(
@@ -49,17 +49,17 @@ internal sealed class CliClient : ICliClient
         CancellationToken cancellationToken = default
     )
     {
-        using HttpResponseMessage response = await _client.GetAsync(path, cancellationToken);
+        using HttpResponseMessage response = await _client.GetAsync(requestUri: path, cancellationToken: cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
             await Console.Error.WriteLineAsync(
-                $"Error: {(int)response.StatusCode} {response.ReasonPhrase}"
+                value: $"Error: {(int)response.StatusCode} {response.ReasonPhrase}"
             );
             return null;
         }
 
-        return await response.Content.ReadAsStringAsync(cancellationToken);
+        return await response.Content.ReadAsStringAsync(cancellationToken: cancellationToken);
     }
 
     public async Task<bool> PostAsync(
@@ -69,20 +69,20 @@ internal sealed class CliClient : ICliClient
     )
     {
         using HttpResponseMessage response = await _client.PostAsync(
-            path,
-            content,
-            cancellationToken
+            requestUri: path,
+            content: content,
+            cancellationToken: cancellationToken
         );
 
         if (response.IsSuccessStatusCode)
             return true;
 
-        string body = await response.Content.ReadAsStringAsync(cancellationToken);
+        string body = await response.Content.ReadAsStringAsync(cancellationToken: cancellationToken);
         await Console.Error.WriteLineAsync(
-            $"Error: {(int)response.StatusCode} {response.ReasonPhrase}"
+            value: $"Error: {(int)response.StatusCode} {response.ReasonPhrase}"
         );
-        if (!string.IsNullOrWhiteSpace(body))
-            await Console.Error.WriteLineAsync(body);
+        if (!string.IsNullOrWhiteSpace(value: body))
+            await Console.Error.WriteLineAsync(value: body);
 
         return false;
     }
@@ -95,25 +95,25 @@ internal sealed class CliClient : ICliClient
         where T : class
     {
         using HttpResponseMessage response = await _client.PostAsync(
-            path,
-            content,
-            cancellationToken
+            requestUri: path,
+            content: content,
+            cancellationToken: cancellationToken
         );
 
         if (!response.IsSuccessStatusCode)
         {
-            string body = await response.Content.ReadAsStringAsync(cancellationToken);
+            string body = await response.Content.ReadAsStringAsync(cancellationToken: cancellationToken);
             await Console.Error.WriteLineAsync(
-                $"Error: {(int)response.StatusCode} {response.ReasonPhrase}"
+                value: $"Error: {(int)response.StatusCode} {response.ReasonPhrase}"
             );
-            if (!string.IsNullOrWhiteSpace(body))
-                await Console.Error.WriteLineAsync(body);
+            if (!string.IsNullOrWhiteSpace(value: body))
+                await Console.Error.WriteLineAsync(value: body);
             return null;
         }
 
-        string json = await response.Content.ReadAsStringAsync(cancellationToken);
+        string json = await response.Content.ReadAsStringAsync(cancellationToken: cancellationToken);
 
-        return JsonConvert.DeserializeObject<T>(json);
+        return JsonConvert.DeserializeObject<T>(value: json);
     }
 
     public async Task<bool> PutAsync(
@@ -123,20 +123,20 @@ internal sealed class CliClient : ICliClient
     )
     {
         using HttpResponseMessage response = await _client.PutAsync(
-            path,
-            content,
-            cancellationToken
+            requestUri: path,
+            content: content,
+            cancellationToken: cancellationToken
         );
 
         if (response.IsSuccessStatusCode)
             return true;
 
-        string body = await response.Content.ReadAsStringAsync(cancellationToken);
+        string body = await response.Content.ReadAsStringAsync(cancellationToken: cancellationToken);
         await Console.Error.WriteLineAsync(
-            $"Error: {(int)response.StatusCode} {response.ReasonPhrase}"
+            value: $"Error: {(int)response.StatusCode} {response.ReasonPhrase}"
         );
-        if (!string.IsNullOrWhiteSpace(body))
-            await Console.Error.WriteLineAsync(body);
+        if (!string.IsNullOrWhiteSpace(value: body))
+            await Console.Error.WriteLineAsync(value: body);
 
         return false;
     }

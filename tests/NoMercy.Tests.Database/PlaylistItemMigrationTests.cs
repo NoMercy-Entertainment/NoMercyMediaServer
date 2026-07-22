@@ -34,8 +34,8 @@ public class PlaylistItemMigrationTests : IDisposable
     public PlaylistItemMigrationTests()
     {
         _dbPath = Path.Combine(
-            Path.GetTempPath(),
-            $"nm_playlistitem_migration_{Guid.NewGuid():N}.db"
+            path1: Path.GetTempPath(),
+            path2: $"nm_playlistitem_migration_{Guid.NewGuid():N}.db"
         );
     }
 
@@ -43,9 +43,9 @@ public class PlaylistItemMigrationTests : IDisposable
     public void FreshDatabase_MigratesCleanly_AndCreatesPlaylistItemsAndUserPlaylistsTables()
     {
         DbContextOptionsBuilder<MediaContext> builder = new();
-        builder.UseSqlite($"Data Source={_dbPath}");
+        builder.UseSqlite(connectionString: $"Data Source={_dbPath}");
 
-        using MediaContext context = new(builder.Options);
+        using MediaContext context = new(options: builder.Options);
         context.Database.Migrate();
 
         DbConnection connection = context.Database.GetDbConnection();
@@ -58,9 +58,9 @@ public class PlaylistItemMigrationTests : IDisposable
             using DbDataReader reader = tableCmd.ExecuteReader();
             List<string> tableNames = [];
             while (reader.Read())
-                tableNames.Add(reader.GetString(0));
+                tableNames.Add(item: reader.GetString(ordinal: 0));
 
-            Assert.Equal(["PlaylistItems", "UserPlaylists"], tableNames);
+            Assert.Equal(expected: ["PlaylistItems", "UserPlaylists"], actual: tableNames);
         }
     }
 
@@ -68,9 +68,9 @@ public class PlaylistItemMigrationTests : IDisposable
     public void FreshDatabase_PlaylistItems_HasExpectedForeignKeys_NoTrackFk()
     {
         DbContextOptionsBuilder<MediaContext> builder = new();
-        builder.UseSqlite($"Data Source={_dbPath}");
+        builder.UseSqlite(connectionString: $"Data Source={_dbPath}");
 
-        using MediaContext context = new(builder.Options);
+        using MediaContext context = new(options: builder.Options);
         context.Database.Migrate();
 
         DbConnection connection = context.Database.GetDbConnection();
@@ -83,32 +83,32 @@ public class PlaylistItemMigrationTests : IDisposable
             using DbDataReader reader = fkCmd.ExecuteReader();
             while (reader.Read())
             {
-                string table = reader.GetString(reader.GetOrdinal("table"));
-                string from = reader.GetString(reader.GetOrdinal("from"));
-                string onDelete = reader.GetString(reader.GetOrdinal("on_delete"));
-                foreignKeysByColumn[from] = (table, onDelete);
+                string table = reader.GetString(ordinal: reader.GetOrdinal(name: "table"));
+                string from = reader.GetString(ordinal: reader.GetOrdinal(name: "from"));
+                string onDelete = reader.GetString(ordinal: reader.GetOrdinal(name: "on_delete"));
+                foreignKeysByColumn[key: from] = (table, onDelete);
             }
         }
 
-        Assert.Equal(5, foreignKeysByColumn.Count);
+        Assert.Equal(expected: 5, actual: foreignKeysByColumn.Count);
 
-        Assert.Equal(("UserPlaylists", "CASCADE"), foreignKeysByColumn["UserPlaylistId"]);
-        Assert.Equal(("Movies", "CASCADE"), foreignKeysByColumn["MovieId"]);
-        Assert.Equal(("Tvs", "CASCADE"), foreignKeysByColumn["TvId"]);
-        Assert.Equal(("Episodes", "CASCADE"), foreignKeysByColumn["EpisodeId"]);
-        Assert.Equal(("Specials", "RESTRICT"), foreignKeysByColumn["SpecialId"]);
+        Assert.Equal(expected: ("UserPlaylists", "CASCADE"), actual: foreignKeysByColumn[key: "UserPlaylistId"]);
+        Assert.Equal(expected: ("Movies", "CASCADE"), actual: foreignKeysByColumn[key: "MovieId"]);
+        Assert.Equal(expected: ("Tvs", "CASCADE"), actual: foreignKeysByColumn[key: "TvId"]);
+        Assert.Equal(expected: ("Episodes", "CASCADE"), actual: foreignKeysByColumn[key: "EpisodeId"]);
+        Assert.Equal(expected: ("Specials", "RESTRICT"), actual: foreignKeysByColumn[key: "SpecialId"]);
 
-        Assert.DoesNotContain("TrackId", foreignKeysByColumn.Keys);
-        Assert.DoesNotContain("PlaylistId", foreignKeysByColumn.Keys);
+        Assert.DoesNotContain(expected: "TrackId", collection: foreignKeysByColumn.Keys);
+        Assert.DoesNotContain(expected: "PlaylistId", collection: foreignKeysByColumn.Keys);
     }
 
     [Fact]
     public void FreshDatabase_PlaylistItems_HasExpectedIndexes_NoTrackIndex()
     {
         DbContextOptionsBuilder<MediaContext> builder = new();
-        builder.UseSqlite($"Data Source={_dbPath}");
+        builder.UseSqlite(connectionString: $"Data Source={_dbPath}");
 
-        using MediaContext context = new(builder.Options);
+        using MediaContext context = new(options: builder.Options);
         context.Database.Migrate();
 
         DbConnection connection = context.Database.GetDbConnection();
@@ -120,26 +120,26 @@ public class PlaylistItemMigrationTests : IDisposable
             indexCmd.CommandText = "PRAGMA index_list('PlaylistItems');";
             using DbDataReader reader = indexCmd.ExecuteReader();
             while (reader.Read())
-                indexNames.Add(reader.GetString(reader.GetOrdinal("name")));
+                indexNames.Add(item: reader.GetString(ordinal: reader.GetOrdinal(name: "name")));
         }
 
-        Assert.Contains("IX_PlaylistItems_UserPlaylistId_Order", indexNames);
-        Assert.Contains("IX_PlaylistItems_MovieId", indexNames);
-        Assert.Contains("IX_PlaylistItems_TvId", indexNames);
-        Assert.Contains("IX_PlaylistItems_EpisodeId", indexNames);
-        Assert.Contains("IX_PlaylistItems_SpecialId", indexNames);
+        Assert.Contains(expected: "IX_PlaylistItems_UserPlaylistId_Order", collection: indexNames);
+        Assert.Contains(expected: "IX_PlaylistItems_MovieId", collection: indexNames);
+        Assert.Contains(expected: "IX_PlaylistItems_TvId", collection: indexNames);
+        Assert.Contains(expected: "IX_PlaylistItems_EpisodeId", collection: indexNames);
+        Assert.Contains(expected: "IX_PlaylistItems_SpecialId", collection: indexNames);
 
-        Assert.DoesNotContain("IX_PlaylistItems_TrackId", indexNames);
-        Assert.DoesNotContain("IX_PlaylistItems_PlaylistId_Order", indexNames);
+        Assert.DoesNotContain(expected: "IX_PlaylistItems_TrackId", collection: indexNames);
+        Assert.DoesNotContain(expected: "IX_PlaylistItems_PlaylistId_Order", collection: indexNames);
     }
 
     [Fact]
     public void FreshDatabase_UserPlaylists_HasExpectedShape_SeparateFromMusicPlaylists()
     {
         DbContextOptionsBuilder<MediaContext> builder = new();
-        builder.UseSqlite($"Data Source={_dbPath}");
+        builder.UseSqlite(connectionString: $"Data Source={_dbPath}");
 
-        using MediaContext context = new(builder.Options);
+        using MediaContext context = new(options: builder.Options);
         context.Database.Migrate();
 
         DbConnection connection = context.Database.GetDbConnection();
@@ -152,7 +152,7 @@ public class PlaylistItemMigrationTests : IDisposable
             tableCmd.CommandText =
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='Playlists';";
             object? tableName = tableCmd.ExecuteScalar();
-            Assert.Equal("Playlists", tableName);
+            Assert.Equal(expected: "Playlists", actual: tableName);
         }
 
         Dictionary<string, (string Table, string OnDelete)> foreignKeysByColumn = new();
@@ -162,15 +162,15 @@ public class PlaylistItemMigrationTests : IDisposable
             using DbDataReader reader = fkCmd.ExecuteReader();
             while (reader.Read())
             {
-                string table = reader.GetString(reader.GetOrdinal("table"));
-                string from = reader.GetString(reader.GetOrdinal("from"));
-                string onDelete = reader.GetString(reader.GetOrdinal("on_delete"));
-                foreignKeysByColumn[from] = (table, onDelete);
+                string table = reader.GetString(ordinal: reader.GetOrdinal(name: "table"));
+                string from = reader.GetString(ordinal: reader.GetOrdinal(name: "from"));
+                string onDelete = reader.GetString(ordinal: reader.GetOrdinal(name: "on_delete"));
+                foreignKeysByColumn[key: from] = (table, onDelete);
             }
         }
 
-        Assert.Single(foreignKeysByColumn);
-        Assert.Equal(("Users", "RESTRICT"), foreignKeysByColumn["UserId"]);
+        Assert.Single(collection: foreignKeysByColumn);
+        Assert.Equal(expected: ("Users", "RESTRICT"), actual: foreignKeysByColumn[key: "UserId"]);
 
         List<string> indexNames = [];
         using (DbCommand indexCmd = connection.CreateCommand())
@@ -178,10 +178,10 @@ public class PlaylistItemMigrationTests : IDisposable
             indexCmd.CommandText = "PRAGMA index_list('UserPlaylists');";
             using DbDataReader reader = indexCmd.ExecuteReader();
             while (reader.Read())
-                indexNames.Add(reader.GetString(reader.GetOrdinal("name")));
+                indexNames.Add(item: reader.GetString(ordinal: reader.GetOrdinal(name: "name")));
         }
 
-        Assert.Contains("IX_UserPlaylists_UserId", indexNames);
+        Assert.Contains(expected: "IX_UserPlaylists_UserId", collection: indexNames);
     }
 
     public void Dispose()
@@ -192,8 +192,8 @@ public class PlaylistItemMigrationTests : IDisposable
         // "process cannot access the file" unless the pool is cleared first.
         SqliteConnection.ClearAllPools();
 
-        if (File.Exists(_dbPath))
-            File.Delete(_dbPath);
-        GC.SuppressFinalize(this);
+        if (File.Exists(path: _dbPath))
+            File.Delete(path: _dbPath);
+        GC.SuppressFinalize(obj: this);
     }
 }

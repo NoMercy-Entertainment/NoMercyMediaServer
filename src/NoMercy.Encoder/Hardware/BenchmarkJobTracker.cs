@@ -46,7 +46,7 @@ public sealed class BenchmarkJobTracker(
     // hardware probe and they race writing the same SpeedIndex cache file. One
     // calibration runs at a time; the rest queue behind the semaphore in call
     // order.
-    private readonly SemaphoreSlim _calibrationGate = new(1, 1);
+    private readonly SemaphoreSlim _calibrationGate = new(initialCount: 1, maxCount: 1);
 
     public BenchmarkJobStatus Start(
         IReadOnlyList<Codecs.VideoCodecType> codecs,
@@ -54,7 +54,7 @@ public sealed class BenchmarkJobTracker(
     )
     {
         string jobId = Ulid.NewUlid().ToString();
-        List<string> codecNames = codecs.Select(c => c.ToString()).ToList();
+        List<string> codecNames = codecs.Select(selector: c => c.ToString()).ToList();
 
         BenchmarkJobStatus initial = new(
             JobId: jobId,
@@ -67,18 +67,18 @@ public sealed class BenchmarkJobTracker(
             Error: null
         );
 
-        _jobs[jobId] = initial;
+        _jobs[key: jobId] = initial;
         TrimHistory();
 
         // Fire-and-forget — do NOT await; caller gets the job id immediately.
-        _ = Task.Run(async () => await RunAsync(jobId, codecNames, resolutions));
+        _ = Task.Run(function: async () => await RunAsync(jobId: jobId, codecNames: codecNames, resolutions: resolutions));
 
         return initial;
     }
 
     public BenchmarkJobStatus? Get(string jobId)
     {
-        _jobs.TryGetValue(jobId, out BenchmarkJobStatus? status);
+        _jobs.TryGetValue(key: jobId, value: out BenchmarkJobStatus? status);
         return status;
     }
 
@@ -86,8 +86,8 @@ public sealed class BenchmarkJobTracker(
 
     private void TrimHistory()
     {
-        foreach (string jobId in EvictionCandidates(_jobs.Values, MaxRetainedJobs))
-            _jobs.TryRemove(jobId, out _);
+        foreach (string jobId in EvictionCandidates(jobs: _jobs.Values, maxRetained: MaxRetainedJobs))
+            _jobs.TryRemove(key: jobId, value: out _);
     }
 
     /// <summary>
@@ -103,10 +103,10 @@ public sealed class BenchmarkJobTracker(
         if (jobs.Count <= maxRetained)
             return [];
 
-        return jobs.Where(job => job.CompletedAt is not null)
-            .OrderBy(job => job.CompletedAt)
-            .Take(jobs.Count - maxRetained)
-            .Select(job => job.JobId)
+        return jobs.Where(predicate: job => job.CompletedAt is not null)
+            .OrderBy(keySelector: job => job.CompletedAt)
+            .Take(count: jobs.Count - maxRetained)
+            .Select(selector: job => job.JobId)
             .ToList();
     }
 
@@ -120,19 +120,19 @@ public sealed class BenchmarkJobTracker(
 
         try
         {
-            await _calibrationGate.WaitAsync(shutdownToken).ConfigureAwait(false);
+            await _calibrationGate.WaitAsync(cancellationToken: shutdownToken).ConfigureAwait(continueOnCapturedContext: false);
         }
         catch (OperationCanceledException)
         {
-            _jobs[jobId] = _jobs[jobId] with
+            _jobs[key: jobId] = _jobs[key: jobId] with
             {
                 Status = "cancelled",
                 CompletedAt = DateTime.UtcNow,
             };
 
             logger.LogInformation(
-                "Benchmark job {JobId} cancelled before it could start (host shutting down)",
-                jobId
+                message: "Benchmark job {JobId} cancelled before it could start (host shutting down)",
+                args: jobId
             );
             return;
         }
@@ -140,14 +140,12 @@ public sealed class BenchmarkJobTracker(
         try
         {
             logger.LogInformation(
-                "Benchmark job {JobId} started (requested codecs: [{Codecs}])",
-                jobId,
-                string.Join(", ", codecNames.Count > 0 ? codecNames : ["all"])
+                message: "Benchmark job {JobId} started (requested codecs: [{Codecs}])", args: [jobId, string.Join(separator: ", ", values: codecNames.Count > 0 ? codecNames : ["all"])]
             );
 
-            SpeedIndex result = await benchmark.CalibrateAsync(shutdownToken);
+            SpeedIndex result = await benchmark.CalibrateAsync(ct: shutdownToken);
 
-            _jobs[jobId] = _jobs[jobId] with
+            _jobs[key: jobId] = _jobs[key: jobId] with
             {
                 Status = "completed",
                 CompletedAt = DateTime.UtcNow,
@@ -155,31 +153,29 @@ public sealed class BenchmarkJobTracker(
             };
 
             logger.LogInformation(
-                "Benchmark job {JobId} completed — {Count} measurements",
-                jobId,
-                result.Measurements.Count
+                message: "Benchmark job {JobId} completed — {Count} measurements", args: [jobId, result.Measurements.Count]
             );
         }
         catch (OperationCanceledException)
         {
-            _jobs[jobId] = _jobs[jobId] with
+            _jobs[key: jobId] = _jobs[key: jobId] with
             {
                 Status = "cancelled",
                 CompletedAt = DateTime.UtcNow,
             };
 
-            logger.LogInformation("Benchmark job {JobId} was cancelled", jobId);
+            logger.LogInformation(message: "Benchmark job {JobId} was cancelled", args: jobId);
         }
         catch (Exception ex)
         {
-            _jobs[jobId] = _jobs[jobId] with
+            _jobs[key: jobId] = _jobs[key: jobId] with
             {
                 Status = "failed",
                 CompletedAt = DateTime.UtcNow,
                 Error = ex.Message,
             };
 
-            logger.LogError(ex, "Benchmark job {JobId} failed", jobId);
+            logger.LogError(exception: ex, message: "Benchmark job {JobId} failed", args: jobId);
         }
         finally
         {

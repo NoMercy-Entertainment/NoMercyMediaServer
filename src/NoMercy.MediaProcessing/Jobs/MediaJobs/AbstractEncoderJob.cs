@@ -43,7 +43,7 @@ public abstract class AbstractEncoderJob : IShouldQueue, IJobStorageInjector
     public ILoggerFactory LoggerFactory { get; set; } = null!;
 
     [JsonIgnore]
-    protected ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
+    protected ILogger Log => field ??= LoggerFactory.CreateLogger(type: GetType());
 
     public abstract string QueueName { get; }
     public abstract int Priority { get; }

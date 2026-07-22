@@ -35,7 +35,7 @@ public class EncoderOptionsTests
 
         act.Should()
             .Throw<InvalidOperationException>()
-            .WithMessage("*AddNoMercyEncoder*", "message must point the caller at the DI helper");
+            .WithMessage(expectedWildcardPattern: "*AddNoMercyEncoder*", because: "message must point the caller at the DI helper");
     }
 
     [Fact]
@@ -53,7 +53,7 @@ public class EncoderOptionsTests
     {
         EncoderOptions options = new() { FfmpegPathOverride = "/opt/ffmpeg/bin/ffmpeg" };
 
-        options.FfmpegPath.Should().Be("/opt/ffmpeg/bin/ffmpeg");
+        options.FfmpegPath.Should().Be(expected: "/opt/ffmpeg/bin/ffmpeg");
     }
 
     [Fact]
@@ -61,7 +61,7 @@ public class EncoderOptionsTests
     {
         EncoderOptions options = new() { FfprobePathOverride = "/opt/ffmpeg/bin/ffprobe" };
 
-        options.FfprobePath.Should().Be("/opt/ffmpeg/bin/ffprobe");
+        options.FfprobePath.Should().Be(expected: "/opt/ffmpeg/bin/ffprobe");
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public class EncoderOptionsTests
 
         // Live scratch defaults to the app's managed transcode cache, not the
         // system temp directory.
-        resolved.Should().Be(NmSystem.Information.AppFiles.TranscodePath);
+        resolved.Should().Be(expected: NmSystem.Information.AppFiles.TranscodePath);
     }
 
     [Fact]
@@ -81,7 +81,7 @@ public class EncoderOptionsTests
     {
         EncoderOptions options = new() { LiveTranscodeCachePath = "/custom/live-cache" };
 
-        options.ResolvedLiveTranscodeCachePath.Should().Be("/custom/live-cache");
+        options.ResolvedLiveTranscodeCachePath.Should().Be(expected: "/custom/live-cache");
     }
 
     [Fact]
@@ -94,7 +94,7 @@ public class EncoderOptionsTests
         options.NotificationWebhookUrls.Should().NotBeNull();
         options.NotificationWebhookUrls.Should().BeEmpty();
 
-        options.NotificationWebhookUrls.Add("https://example.com/hook");
+        options.NotificationWebhookUrls.Add(item: "https://example.com/hook");
         options.NotificationWebhookUrls.Should().ContainSingle();
     }
 
@@ -105,7 +105,7 @@ public class EncoderOptionsTests
         // value drives Live sessions (OutputPlan has its own 6s default
         // for file encodes — different use case).
         EncoderOptions options = new();
-        options.DefaultSegmentDurationSeconds.Should().Be(4);
+        options.DefaultSegmentDurationSeconds.Should().Be(expected: 4);
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public class EncoderOptionsTests
         // means the "suspend" and "resume" states overlap and the live
         // session thrashes between them.
         EncoderOptions options = new();
-        options.MinBufferAheadSeconds.Should().BeLessThan(options.MaxBufferAheadSeconds);
+        options.MinBufferAheadSeconds.Should().BeLessThan(expected: options.MaxBufferAheadSeconds);
     }
 
     [Fact]
@@ -204,8 +204,8 @@ public class EncoderOptionsTests
         // leak persistence across machine reinstalls.
         EncoderOptions options = new();
 
-        options.WorkerRegistryPath.Should().Contain("NoMercy");
-        options.WorkerRegistryPath.Should().Contain("distribution");
-        options.WorkerRegistryPath.Should().EndWith("workers.json");
+        options.WorkerRegistryPath.Should().Contain(expected: "NoMercy");
+        options.WorkerRegistryPath.Should().Contain(expected: "distribution");
+        options.WorkerRegistryPath.Should().EndWith(expected: "workers.json");
     }
 }

@@ -28,8 +28,8 @@ namespace NoMercy.Tests.Storage.Contract;
 ///   - Seed helpers use raw HTTP (MKCOL / PUT) and PROPFIND to verify, bypassing
 ///     the driver under test.
 /// </summary>
-[Collection("StorageBackends")]
-[Trait("Category", "Integration")]
+[Collection(name: "StorageBackends")]
+[Trait(name: "Category", value: "Integration")]
 public sealed class WebDavStorageContractTests(StorageBackendsFixture fixture)
     : IStorageContractTests
 {
@@ -39,12 +39,12 @@ public sealed class WebDavStorageContractTests(StorageBackendsFixture fixture)
         HttpClientHandler handler = new()
         {
             Credentials = new NetworkCredential(
-                StorageBackendsFixture.WebDavUser,
-                StorageBackendsFixture.WebDavPassword
+                userName: StorageBackendsFixture.WebDavUser,
+                password: StorageBackendsFixture.WebDavPassword
             ),
             PreAuthenticate = true,
         };
-        return new(handler, disposeHandler: true);
+        return new(handler: handler, disposeHandler: true);
     }
 
     // -----------------------------------------------------------------------
@@ -53,9 +53,9 @@ public sealed class WebDavStorageContractTests(StorageBackendsFixture fixture)
 
     protected override IStorage CreateStorage()
     {
-        Skip.If(!fixture.Available, fixture.StartupError ?? "storage container not available");
+        Skip.If(condition: !fixture.Available, reason: fixture.StartupError ?? "storage container not available");
 
-        return new RemoteStorage(fixture.BuildWebDavDriver());
+        return new RemoteStorage(driver: fixture.BuildWebDavDriver());
     }
 
     /// <summary>
@@ -64,15 +64,15 @@ public sealed class WebDavStorageContractTests(StorageBackendsFixture fixture)
     protected override async Task SeedFile(string relativePath, byte[] content)
     {
         // Ensure parent directories exist.
-        string normalized = relativePath.TrimStart('/');
-        string? parent = Path.GetDirectoryName(normalized)?.Replace('\\', '/');
-        if (!string.IsNullOrEmpty(parent))
-            await SeedDirectory(parent);
+        string normalized = relativePath.TrimStart(trimChar: '/');
+        string? parent = Path.GetDirectoryName(path: normalized)?.Replace(oldChar: '\\', newChar: '/');
+        if (!string.IsNullOrEmpty(value: parent))
+            await SeedDirectory(relativePath: parent);
 
         using HttpClient rawHttp = BuildRawHttp();
         string url = fixture.WebDavBaseUrl + normalized;
-        using ByteArrayContent body = new(content);
-        HttpResponseMessage response = await rawHttp.PutAsync(url, body);
+        using ByteArrayContent body = new(content: content);
+        HttpResponseMessage response = await rawHttp.PutAsync(requestUri: url, content: body);
         response.EnsureSuccessStatusCode();
     }
 
@@ -83,17 +83,17 @@ public sealed class WebDavStorageContractTests(StorageBackendsFixture fixture)
     protected override async Task SeedDirectory(string relativePath)
     {
         using HttpClient rawHttp = BuildRawHttp();
-        string normalized = relativePath.TrimStart('/').TrimEnd('/');
-        string[] segments = normalized.Split('/');
+        string normalized = relativePath.TrimStart(trimChar: '/').TrimEnd(trimChar: '/');
+        string[] segments = normalized.Split(separator: '/');
         string accumulated = string.Empty;
 
         foreach (string segment in segments)
         {
-            accumulated = string.IsNullOrEmpty(accumulated) ? segment : accumulated + "/" + segment;
+            accumulated = string.IsNullOrEmpty(value: accumulated) ? segment : accumulated + "/" + segment;
 
             string url = fixture.WebDavBaseUrl + accumulated + "/";
-            using HttpRequestMessage mkcol = new(new("MKCOL"), url);
-            HttpResponseMessage response = await rawHttp.SendAsync(mkcol);
+            using HttpRequestMessage mkcol = new(method: new(method: "MKCOL"), requestUri: url);
+            HttpResponseMessage response = await rawHttp.SendAsync(request: mkcol);
 
             if (
                 !response.IsSuccessStatusCode
@@ -110,10 +110,10 @@ public sealed class WebDavStorageContractTests(StorageBackendsFixture fixture)
     protected override async Task<bool> BackendHasFile(string relativePath)
     {
         using HttpClient rawHttp = BuildRawHttp();
-        string url = fixture.WebDavBaseUrl + relativePath.TrimStart('/');
-        using HttpRequestMessage propfind = new(new("PROPFIND"), url);
-        propfind.Headers.Add("Depth", "0");
-        HttpResponseMessage response = await rawHttp.SendAsync(propfind);
+        string url = fixture.WebDavBaseUrl + relativePath.TrimStart(trimChar: '/');
+        using HttpRequestMessage propfind = new(method: new(method: "PROPFIND"), requestUri: url);
+        propfind.Headers.Add(name: "Depth", value: "0");
+        HttpResponseMessage response = await rawHttp.SendAsync(request: propfind);
         return response.StatusCode == HttpStatusCode.MultiStatus;
     }
 
@@ -131,9 +131,9 @@ public sealed class WebDavStorageContractTests(StorageBackendsFixture fixture)
 
             // Enumerate top-level resources and DELETE each. Recursive deletes
             // on collections take the whole subtree.
-            using HttpRequestMessage propfind = new(new("PROPFIND"), fixture.WebDavBaseUrl);
-            propfind.Headers.Add("Depth", "1");
-            HttpResponseMessage list = await rawHttp.SendAsync(propfind);
+            using HttpRequestMessage propfind = new(method: new(method: "PROPFIND"), requestUri: fixture.WebDavBaseUrl);
+            propfind.Headers.Add(name: "Depth", value: "1");
+            HttpResponseMessage list = await rawHttp.SendAsync(request: propfind);
             if (list.StatusCode != HttpStatusCode.MultiStatus)
                 return;
 
@@ -141,21 +141,21 @@ public sealed class WebDavStorageContractTests(StorageBackendsFixture fixture)
             // Crude href extraction — good enough for this fixture.
             System.Text.RegularExpressions.MatchCollection matches =
                 System.Text.RegularExpressions.Regex.Matches(
-                    body,
-                    "<D:href>([^<]+)</D:href>",
-                    System.Text.RegularExpressions.RegexOptions.IgnoreCase
+                    input: body,
+                    pattern: "<D:href>([^<]+)</D:href>",
+                    options: System.Text.RegularExpressions.RegexOptions.IgnoreCase
                 );
 
             foreach (System.Text.RegularExpressions.Match m in matches)
             {
-                string href = m.Groups[1].Value;
+                string href = m.Groups[groupnum: 1].Value;
                 // Skip the root itself.
-                Uri full = new(new(fixture.WebDavBaseUrl), href);
-                if (full.AbsoluteUri.TrimEnd('/') == fixture.WebDavBaseUrl.TrimEnd('/'))
+                Uri full = new(baseUri: new(uriString: fixture.WebDavBaseUrl), relativeUri: href);
+                if (full.AbsoluteUri.TrimEnd(trimChar: '/') == fixture.WebDavBaseUrl.TrimEnd(trimChar: '/'))
                     continue;
 
-                using HttpRequestMessage del = new(HttpMethod.Delete, full);
-                _ = await rawHttp.SendAsync(del);
+                using HttpRequestMessage del = new(method: HttpMethod.Delete, requestUri: full);
+                _ = await rawHttp.SendAsync(request: del);
             }
         }
         catch
@@ -179,30 +179,30 @@ public sealed class WebDavStorageContractTests(StorageBackendsFixture fixture)
     // This test is expected to FAIL until the driver normalises paths.
     // Named distinctly to avoid xUnit1024 (test method name conflict with base class).
     [SkippableFact]
-    [Trait("Category", "Integration")]
+    [Trait(name: "Category", value: "Integration")]
     public async Task WebDav_double_slash_is_known_failure_requires_driver_normalisation()
     {
-        Skip.If(!fixture.Available, fixture.StartupError ?? "storage container not available");
+        Skip.If(condition: !fixture.Available, reason: fixture.StartupError ?? "storage container not available");
 
         IStorage storage = CreateStorage();
         try
         {
             byte[] data = new byte[] { 0x01, 0x02 };
-            await SeedFile("foo/bar.bin", data);
+            await SeedFile(relativePath: "foo/bar.bin", content: data);
 
-            bool withSingle = await storage.ExistsAsync("foo/bar.bin", CancellationToken.None);
+            bool withSingle = await storage.ExistsAsync(path: "foo/bar.bin", ct: CancellationToken.None);
 
             // KNOWN FAILURE: WebDavStorageDriver does not collapse double slashes.
             // "foo//bar.bin" is a different WebDAV URL from "foo/bar.bin".
             // Driver fix needed: normalise consecutive slashes before URL construction.
-            bool withDouble = await storage.ExistsAsync("foo//bar.bin", CancellationToken.None);
+            bool withDouble = await storage.ExistsAsync(path: "foo//bar.bin", ct: CancellationToken.None);
 
             withSingle.Should().BeTrue();
             withDouble
                 .Should()
                 .Be(
-                    withSingle,
-                    "KNOWN FAILURE: WebDavStorageDriver does not collapse double slashes — driver fix needed"
+                    expected: withSingle,
+                    because: "KNOWN FAILURE: WebDavStorageDriver does not collapse double slashes — driver fix needed"
                 );
         }
         finally

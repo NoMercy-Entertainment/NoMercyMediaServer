@@ -15,6 +15,6 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record TranslationsDto
 {
-    [JsonProperty("translations")]
+    [JsonProperty(propertyName: "translations")]
     public TranslationDto[] TranslationsTranslations { get; set; } = [];
 }

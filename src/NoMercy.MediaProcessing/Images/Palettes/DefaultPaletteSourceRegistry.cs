@@ -20,7 +20,8 @@ namespace NoMercy.MediaProcessing.Images.Palettes;
 /// </summary>
 public static class DefaultPaletteSourceRegistry
 {
-    private static readonly PaletteSourceRegistry _instance = new([
+    private static readonly PaletteSourceRegistry _instance = new(sources:
+    [
         new MoviePaletteSource(),
         new TvPaletteSource(),
         new SeasonPaletteSource(),

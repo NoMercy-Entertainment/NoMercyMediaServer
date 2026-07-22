@@ -17,13 +17,13 @@ namespace NoMercy.Tests.Repositories.Infrastructure;
 public class TestMediaContext : MediaContext
 {
     public TestMediaContext(DbContextOptions<MediaContext> options)
-        : base(options) { }
+        : base(options: options) { }
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {
         if (!options.IsConfigured)
         {
-            base.OnConfiguring(options);
+            base.OnConfiguring(options: options);
         }
     }
 }

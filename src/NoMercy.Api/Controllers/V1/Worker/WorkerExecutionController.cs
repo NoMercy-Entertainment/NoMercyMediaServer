@@ -34,10 +34,10 @@ namespace NoMercy.Api.Controllers.V1.Worker;
 /// are meant to be explicit opt-in, not ambient.
 /// </summary>
 [ApiController]
-[Tags("Worker Execution")]
-[ApiVersion(1.0)]
+[Tags(tags: "Worker Execution")]
+[ApiVersion(version: 1.0)]
 [AllowAnonymous]
-[Route("api/v{version:apiVersion}/worker")]
+[Route(template: "api/v{version:apiVersion}/worker")]
 public class WorkerExecutionController(
     LocalWorkerDispatcher localDispatcher,
     ITaskSerializer serializer,
@@ -45,33 +45,33 @@ public class WorkerExecutionController(
     EncoderOptions encoderOptions
 ) : BaseController
 {
-    [HttpPost("tasks")]
-    [HttpPost("execute-task")]
+    [HttpPost(template: "tasks")]
+    [HttpPost(template: "execute-task")]
     public async Task<IActionResult> ExecuteTask(CancellationToken ct)
     {
         if (!encoderOptions.IsDistributedEncodingEnabled)
             return ServiceUnavailableResponse(
-                "Distributed encoding is not enabled on this worker. "
-                    + "Set DistributedEncodingSigningKey in EncoderOptions and restart."
+                detail: "Distributed encoding is not enabled on this worker. "
+                        + "Set DistributedEncodingSigningKey in EncoderOptions and restart."
             );
 
         // Read the raw body — the payload is a signed JSON envelope.
         string payload;
-        using (StreamReader reader = new(Request.Body))
-            payload = await reader.ReadToEndAsync(ct);
+        using (StreamReader reader = new(stream: Request.Body))
+            payload = await reader.ReadToEndAsync(cancellationToken: ct);
 
-        if (string.IsNullOrWhiteSpace(payload))
-            return BadRequestResponse("Empty request body");
+        if (string.IsNullOrWhiteSpace(value: payload))
+            return BadRequestResponse(detail: "Empty request body");
 
         byte[] signingKey = encoderOptions.GetDistributedEncodingSigningKey();
         WorkerInputResolution resolution = await inputResolver.ResolveAsync(
-            payload,
-            signingKey,
-            ct
+            payload: payload,
+            signingKey: signingKey,
+            ct: ct
         );
 
         if (resolution.Task is null)
-            return UnauthenticatedResponse("Task payload failed HMAC verification or expired");
+            return UnauthenticatedResponse(detail: "Task payload failed HMAC verification or expired");
 
         EncodeTask task = resolution.Task;
 
@@ -84,13 +84,13 @@ public class WorkerExecutionController(
                 Duration: TimeSpan.Zero,
                 Error: $"Source fetch failed: {resolution.SourceFetchError}"
             );
-            return Content(serializer.SerializeResult(failedFetch, signingKey), "application/json");
+            return Content(content: serializer.SerializeResult(result: failedFetch, signingKey: signingKey), contentType: "application/json");
         }
 
         EncodeTask effectiveTask = resolution.EffectiveTask ?? task;
         try
         {
-            DispatchResult[] results = await localDispatcher.DispatchAsync([effectiveTask], ct);
+            DispatchResult[] results = await localDispatcher.DispatchAsync(tasks: [effectiveTask], ct: ct);
             DispatchResult result =
                 results.Length > 0
                     ? results[0]
@@ -101,14 +101,14 @@ public class WorkerExecutionController(
                         Duration: TimeSpan.Zero,
                         Error: "Local dispatcher returned no result"
                     );
-            string signedResponse = serializer.SerializeResult(result, signingKey);
-            return Content(signedResponse, "application/json");
+            string signedResponse = serializer.SerializeResult(result: result, signingKey: signingKey);
+            return Content(content: signedResponse, contentType: "application/json");
         }
         finally
         {
             // Always release the cached source — the encode is either done
             // or failed. Next retry will re-fetch if needed.
-            await inputResolver.ReleaseAsync(task);
+            await inputResolver.ReleaseAsync(task: task);
         }
     }
 }

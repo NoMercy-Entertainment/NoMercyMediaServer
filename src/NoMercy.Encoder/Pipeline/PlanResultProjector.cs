@@ -34,18 +34,18 @@ public class PlanResultProjector : IPlanResultProjector
     /// </summary>
     public PlanResult FromExecutionPlan(ExecutionPlan plan, EncodingContext context)
     {
-        ArgumentNullException.ThrowIfNull(plan);
-        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(argument: plan);
+        ArgumentNullException.ThrowIfNull(argument: context);
 
         OutputPlan output = plan.OutputPlan;
-        string strategy = BuildStrategyLabel(output);
+        string strategy = BuildStrategyLabel(output: output);
 
-        List<VariantPlan> variants = BuildVariants(output);
-        List<SubtitlePlan> subtitles = BuildSubtitles(output);
+        List<VariantPlan> variants = BuildVariants(output: output);
+        List<SubtitlePlan> subtitles = BuildSubtitles(output: output);
         HardwareBindings hardware = new(PrimaryGpu: null, DecoderHandle: null);
         IReadOnlyList<DecisionLog> decisions = context.DecisionsOrNoOp.Snapshot();
 
-        return new(strategy, variants, subtitles, hardware, decisions);
+        return new(Strategy: strategy, Variants: variants, Subtitles: subtitles, HardwareBindings: hardware, DecisionsLog: decisions);
     }
 
     // ------------------------------------------------------------------
@@ -73,7 +73,7 @@ public class PlanResultProjector : IPlanResultProjector
             VideoOutputPlan v = output.VideoOutputs[i];
             string variantId = $"v{i}_{v.Width}x{v.Height}";
 
-            RateControl rateControl = ResolveRateControl(v);
+            RateControl rateControl = ResolveRateControl(v: v);
 
             VideoTarget video = new(
                 Codec: v.EncoderName,
@@ -98,7 +98,7 @@ public class PlanResultProjector : IPlanResultProjector
             {
                 AudioOutputPlan a = output.AudioOutputs[ai];
                 audio.Add(
-                    new(
+                    item: new(
                         SourceIndex: ai,
                         Codec: a.EncoderName,
                         Channels: a.Channels,
@@ -109,7 +109,7 @@ public class PlanResultProjector : IPlanResultProjector
             }
 
             variants.Add(
-                new(
+                item: new(
                     VariantId: variantId,
                     Video: video,
                     Audio: audio,
@@ -136,12 +136,12 @@ public class PlanResultProjector : IPlanResultProjector
         }
 
         if (hasCrf)
-            return new RateControl.Crf(v.Crf);
+            return new RateControl.Crf(Value: v.Crf);
 
         // Pure bitrate: use 1.2× as max and 2× as buffer (reasonable defaults
         // until Phase 3 populates explicit max/buf from the profile).
         int abr = v.BitrateKbps;
-        return new RateControl.Abr(abr, (int)(abr * 1.2), abr * 2);
+        return new RateControl.Abr(BitrateKbps: abr, MaxKbps: (int)(abr * 1.2), BufKbps: abr * 2);
     }
 
     private static List<SubtitlePlan> BuildSubtitles(OutputPlan output)
@@ -159,7 +159,7 @@ public class PlanResultProjector : IPlanResultProjector
             };
 
             subtitles.Add(
-                new(
+                item: new(
                     SourceIndex: s.SourceIndex,
                     Codec: s.OutputCodec.ToString(),
                     Language: s.Language,

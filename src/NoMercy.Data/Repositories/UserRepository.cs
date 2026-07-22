@@ -24,59 +24,59 @@ public class UserRepository(MediaContext context, IDbContextFactory<MediaContext
     {
         return context
             .Users.AsNoTracking()
-            .Include(user => user.LibraryUser)
-                .ThenInclude(libraryUser => libraryUser.Library)
+            .Include(navigationPropertyPath: user => user.LibraryUser)
+                .ThenInclude(navigationPropertyPath: libraryUser => libraryUser.Library)
             .ToListAsync();
     }
 
     public Task<User?> GetByIdAsync(Guid userId)
     {
-        return context.Users.AsNoTracking().FirstOrDefaultAsync(user => user.Id == userId);
+        return context.Users.AsNoTracking().FirstOrDefaultAsync(predicate: user => user.Id == userId);
     }
 
     public Task<User?> GetByIdWithLibrariesAsync(Guid userId)
     {
         return context
             .Users.AsNoTracking()
-            .Include(user => user.LibraryUser)
-                .ThenInclude(libraryUser => libraryUser.Library)
-            .FirstOrDefaultAsync(user => user.Id == userId);
+            .Include(navigationPropertyPath: user => user.LibraryUser)
+                .ThenInclude(navigationPropertyPath: libraryUser => libraryUser.Library)
+            .FirstOrDefaultAsync(predicate: user => user.Id == userId);
     }
 
     public Task<User?> GetByIdWithNotificationsAsync(Guid userId)
     {
         return context
             .Users.AsNoTracking()
-            .Where(user => user.Id == userId)
-            .Include(user => user.LibraryUser)
-            .Include(user => user.NotificationUser)
-                .ThenInclude(notificationUser => notificationUser.Notification)
-            .FirstOrDefaultAsync(user => user.Id == userId);
+            .Where(predicate: user => user.Id == userId)
+            .Include(navigationPropertyPath: user => user.LibraryUser)
+            .Include(navigationPropertyPath: user => user.NotificationUser)
+                .ThenInclude(navigationPropertyPath: notificationUser => notificationUser.Notification)
+            .FirstOrDefaultAsync(predicate: user => user.Id == userId);
     }
 
     public Task<bool> ExistsAsync(Guid userId)
     {
-        return context.Users.AnyAsync(user => user.Id == userId);
+        return context.Users.AnyAsync(predicate: user => user.Id == userId);
     }
 
     public async Task AddAsync(User user)
     {
-        context.Users.Add(user);
+        context.Users.Add(entity: user);
         await context.SaveChangesAsync();
     }
 
     public Task<User?> GetByIdWithLibrariesAfterAddAsync(Guid userId)
     {
         return context
-            .Users.Include(user => user.LibraryUser)
-            .FirstOrDefaultAsync(user => user.Id == userId);
+            .Users.Include(navigationPropertyPath: user => user.LibraryUser)
+            .FirstOrDefaultAsync(predicate: user => user.Id == userId);
     }
 
     public async Task DeleteAsync(Guid userId)
     {
         await using MediaContext deleteContext = await contextFactory.CreateDbContextAsync();
 
-        bool exists = await deleteContext.Users.AnyAsync(user => user.Id == userId);
+        bool exists = await deleteContext.Users.AnyAsync(predicate: user => user.Id == userId);
         if (!exists)
             return;
 
@@ -95,31 +95,31 @@ public class UserRepository(MediaContext context, IDbContextFactory<MediaContext
         // PlaylistTrack -> Playlist is itself Restrict, so it has to go before the user's
         // Playlist rows can be removed.
         await deleteContext
-            .PlaylistTrack.Where(pt =>
+            .PlaylistTrack.Where(predicate: pt =>
                 deleteContext.Playlists.Any(p => p.Id == pt.PlaylistId && p.UserId == userId)
             )
             .ExecuteDeleteAsync();
 
-        await deleteContext.LibraryUser.Where(lu => lu.UserId == userId).ExecuteDeleteAsync();
-        await deleteContext.MovieUser.Where(mu => mu.UserId == userId).ExecuteDeleteAsync();
-        await deleteContext.TvUser.Where(tu => tu.UserId == userId).ExecuteDeleteAsync();
-        await deleteContext.CollectionUser.Where(cu => cu.UserId == userId).ExecuteDeleteAsync();
-        await deleteContext.SpecialUser.Where(su => su.UserId == userId).ExecuteDeleteAsync();
-        await deleteContext.NotificationUser.Where(nu => nu.UserId == userId).ExecuteDeleteAsync();
-        await deleteContext.AlbumUser.Where(au => au.UserId == userId).ExecuteDeleteAsync();
-        await deleteContext.ArtistUser.Where(au => au.UserId == userId).ExecuteDeleteAsync();
-        await deleteContext.TrackUser.Where(tu => tu.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.LibraryUser.Where(predicate: lu => lu.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.MovieUser.Where(predicate: mu => mu.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.TvUser.Where(predicate: tu => tu.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.CollectionUser.Where(predicate: cu => cu.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.SpecialUser.Where(predicate: su => su.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.NotificationUser.Where(predicate: nu => nu.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.AlbumUser.Where(predicate: au => au.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.ArtistUser.Where(predicate: au => au.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.TrackUser.Where(predicate: tu => tu.UserId == userId).ExecuteDeleteAsync();
         await deleteContext
-            .PlaybackPreferences.Where(pp => pp.UserId == userId)
+            .PlaybackPreferences.Where(predicate: pp => pp.UserId == userId)
             .ExecuteDeleteAsync();
-        await deleteContext.MusicPlays.Where(mp => mp.UserId == userId).ExecuteDeleteAsync();
-        await deleteContext.UserData.Where(ud => ud.UserId == userId).ExecuteDeleteAsync();
-        await deleteContext.ActivityLogs.Where(al => al.UserId == userId).ExecuteDeleteAsync();
-        await deleteContext.DeviceDropNotices.Where(dn => dn.UserId == userId).ExecuteDeleteAsync();
-        await deleteContext.UserPlaylists.Where(up => up.UserId == userId).ExecuteDeleteAsync();
-        await deleteContext.Playlists.Where(p => p.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.MusicPlays.Where(predicate: mp => mp.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.UserData.Where(predicate: ud => ud.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.ActivityLogs.Where(predicate: al => al.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.DeviceDropNotices.Where(predicate: dn => dn.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.UserPlaylists.Where(predicate: up => up.UserId == userId).ExecuteDeleteAsync();
+        await deleteContext.Playlists.Where(predicate: p => p.UserId == userId).ExecuteDeleteAsync();
 
-        await deleteContext.Users.Where(user => user.Id == userId).ExecuteDeleteAsync();
+        await deleteContext.Users.Where(predicate: user => user.Id == userId).ExecuteDeleteAsync();
 
         await transaction.CommitAsync();
     }
@@ -138,8 +138,8 @@ public class UserRepository(MediaContext context, IDbContextFactory<MediaContext
         await using MediaContext permContext = await contextFactory.CreateDbContextAsync();
 
         User? user = await permContext
-            .Users.Include(user => user.LibraryUser)
-            .FirstOrDefaultAsync(user => user.Id == targetUserId);
+            .Users.Include(navigationPropertyPath: user => user.LibraryUser)
+            .FirstOrDefaultAsync(predicate: user => user.Id == targetUserId);
 
         if (user is null)
             return;
@@ -155,7 +155,7 @@ public class UserRepository(MediaContext context, IDbContextFactory<MediaContext
         user.LibraryUser.Clear();
 
         foreach (Ulid libraryId in libraryIds)
-            user.LibraryUser.Add(new() { LibraryId = libraryId, UserId = targetUserId });
+            user.LibraryUser.Add(item: new() { LibraryId = libraryId, UserId = targetUserId });
 
         await permContext.SaveChangesAsync();
     }

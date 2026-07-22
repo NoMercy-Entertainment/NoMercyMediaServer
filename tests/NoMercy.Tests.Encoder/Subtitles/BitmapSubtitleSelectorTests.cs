@@ -46,14 +46,14 @@ public class BitmapSubtitleSelectorTests
         // and zero OCR sidecars.
         List<SubtitleStreamInfo> streams =
         [
-            Sub(3, "hdmv_pgs_subtitle"),
-            Sub(4, "hdmv_pgs_subtitle"),
+            Sub(absoluteIndex: 3, codec: "hdmv_pgs_subtitle"),
+            Sub(absoluteIndex: 4, codec: "hdmv_pgs_subtitle"),
         ];
 
-        IReadOnlyList<BitmapSubtitleRef> selected = BitmapSubtitleSelector.Select(streams);
+        IReadOnlyList<BitmapSubtitleRef> selected = BitmapSubtitleSelector.Select(subtitleStreams: streams);
 
-        selected.Select(entry => entry.SubtitleIndex).Should().Equal(0, 1);
-        selected.Select(entry => entry.Stream.Index).Should().Equal(3, 4);
+        selected.Select(selector: entry => entry.SubtitleIndex).Should().Equal(elements: [0, 1]);
+        selected.Select(selector: entry => entry.Stream.Index).Should().Equal(elements: [3, 4]);
     }
 
     [Fact]
@@ -62,37 +62,37 @@ public class BitmapSubtitleSelectorTests
         // A text track ahead of the bitmap one: the PGS stream is subtitle 1.
         // Indexing the FILTERED list instead would yield 0 and OCR the ASS
         // track's slot — the subtle variant of the same bug.
-        List<SubtitleStreamInfo> streams = [Sub(2, "ass"), Sub(3, "hdmv_pgs_subtitle")];
+        List<SubtitleStreamInfo> streams = [Sub(absoluteIndex: 2, codec: "ass"), Sub(absoluteIndex: 3, codec: "hdmv_pgs_subtitle")];
 
-        IReadOnlyList<BitmapSubtitleRef> selected = BitmapSubtitleSelector.Select(streams);
+        IReadOnlyList<BitmapSubtitleRef> selected = BitmapSubtitleSelector.Select(subtitleStreams: streams);
 
-        selected.Should().HaveCount(1);
-        selected[0].SubtitleIndex.Should().Be(1);
-        selected[0].Stream.Codec.Should().Be("hdmv_pgs_subtitle");
+        selected.Should().HaveCount(expected: 1);
+        selected[index: 0].SubtitleIndex.Should().Be(expected: 1);
+        selected[index: 0].Stream.Codec.Should().Be(expected: "hdmv_pgs_subtitle");
     }
 
     [Fact]
     public void Select_SkipsTextSubtitles()
     {
-        List<SubtitleStreamInfo> streams = [Sub(2, "subrip"), Sub(3, "ass"), Sub(4, "mov_text")];
+        List<SubtitleStreamInfo> streams = [Sub(absoluteIndex: 2, codec: "subrip"), Sub(absoluteIndex: 3, codec: "ass"), Sub(absoluteIndex: 4, codec: "mov_text")];
 
-        BitmapSubtitleSelector.Select(streams).Should().BeEmpty();
+        BitmapSubtitleSelector.Select(subtitleStreams: streams).Should().BeEmpty();
     }
 
     [Theory]
-    [InlineData("hdmv_pgs_subtitle")]
-    [InlineData("pgs")]
-    [InlineData("dvd_subtitle")]
-    [InlineData("vobsub")]
-    [InlineData("dvb_subtitle")]
+    [InlineData(data: "hdmv_pgs_subtitle")]
+    [InlineData(data: "pgs")]
+    [InlineData(data: "dvd_subtitle")]
+    [InlineData(data: "vobsub")]
+    [InlineData(data: "dvb_subtitle")]
     public void Select_RecognisesEveryBitmapCodecAlias(string codec)
     {
-        BitmapSubtitleSelector.Select([Sub(3, codec)]).Should().HaveCount(1);
+        BitmapSubtitleSelector.Select(subtitleStreams: [Sub(absoluteIndex: 3, codec: codec)]).Should().HaveCount(expected: 1);
     }
 
     [Fact]
     public void Select_NoSubtitleStreams_ReturnsEmpty()
     {
-        BitmapSubtitleSelector.Select([]).Should().BeEmpty();
+        BitmapSubtitleSelector.Select(subtitleStreams: []).Should().BeEmpty();
     }
 }

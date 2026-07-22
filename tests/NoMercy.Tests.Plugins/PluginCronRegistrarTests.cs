@@ -37,11 +37,11 @@ public class PluginCronRegistrarTests
     private static List<CronJobModel> GetCodeDefinedJobs(CronWorker cronWorker)
     {
         FieldInfo field = typeof(CronWorker).GetField(
-            "_codeDefinedJobs",
-            BindingFlags.NonPublic | BindingFlags.Instance
+            name: "_codeDefinedJobs",
+            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
         )!;
 
-        return (List<CronJobModel>)field.GetValue(cronWorker)!;
+        return (List<CronJobModel>)field.GetValue(obj: cronWorker)!;
     }
 
     private static CronWorker BuildCronWorker()
@@ -51,19 +51,19 @@ public class PluginCronRegistrarTests
         ServiceProvider provider = services.BuildServiceProvider();
 
         return new(
-            provider,
-            provider.GetRequiredService<ILogger<CronWorker>>(),
-            Mock.Of<IQueueContext>()
+            serviceProvider: provider,
+            logger: provider.GetRequiredService<ILogger<CronWorker>>(),
+            queueContext: Mock.Of<IQueueContext>()
         );
     }
 
     [Fact]
     public async Task RegisterAll_PluginDeclaringScheduledTaskHook_RegistersItOnCronWorker()
     {
-        FakeScheduledTaskPlugin plugin = new("*/5 * * * *");
-        FakePluginManager manager = FakePluginManager.WithScheduledTask(plugin, declaresHook: true);
+        FakeScheduledTaskPlugin plugin = new(cronExpression: "*/5 * * * *");
+        FakePluginManager manager = FakePluginManager.WithScheduledTask(plugin: plugin, declaresHook: true);
         CronWorker cronWorker = BuildCronWorker();
-        PluginCronRegistrar registrar = new(manager, cronWorker);
+        PluginCronRegistrar registrar = new(pluginManager: manager, cronWorker: cronWorker);
 
         registrar.RegisterAll();
 
@@ -71,31 +71,31 @@ public class PluginCronRegistrarTests
         // RegisterExecutor sets from it) is "plugin:{plugin.Id}" — the registrar
         // itself never touches JobType, so this also pins that the executor
         // adapter's naming convention reached CronWorker unchanged.
-        GetCodeDefinedJobs(cronWorker)
+        GetCodeDefinedJobs(cronWorker: cronWorker)
             .Should()
-            .ContainSingle(job => job.JobType == $"plugin:{plugin.Id}");
+            .ContainSingle(predicate: job => job.JobType == $"plugin:{plugin.Id}");
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
-        await cronWorker.StopAsync(cts.Token);
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
+        await cronWorker.StopAsync(cancellationToken: cts.Token);
     }
 
     [Fact]
     public async Task RegisterAll_PluginWithoutScheduledTaskHook_IsSkipped()
     {
-        FakeScheduledTaskPlugin plugin = new("0 * * * *");
+        FakeScheduledTaskPlugin plugin = new(cronExpression: "0 * * * *");
         FakePluginManager manager = FakePluginManager.WithScheduledTask(
-            plugin,
+            plugin: plugin,
             declaresHook: false
         );
         CronWorker cronWorker = BuildCronWorker();
-        PluginCronRegistrar registrar = new(manager, cronWorker);
+        PluginCronRegistrar registrar = new(pluginManager: manager, cronWorker: cronWorker);
 
         registrar.RegisterAll();
 
-        GetCodeDefinedJobs(cronWorker).Should().BeEmpty();
+        GetCodeDefinedJobs(cronWorker: cronWorker).Should().BeEmpty();
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
-        await cronWorker.StopAsync(cts.Token);
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
+        await cronWorker.StopAsync(cancellationToken: cts.Token);
     }
 
     [Fact]
@@ -105,18 +105,18 @@ public class PluginCronRegistrarTests
         // a plugin returned by the former with no matching entry in the latter
         // must fall back to null capabilities (`?.Capabilities`) rather than
         // throw, and null capabilities never declares the scheduledTask hook.
-        FakeScheduledTaskPlugin plugin = new("*/10 * * * *");
-        FakePluginManager manager = FakePluginManager.WithScheduledTaskNotInInstalledList(plugin);
+        FakeScheduledTaskPlugin plugin = new(cronExpression: "*/10 * * * *");
+        FakePluginManager manager = FakePluginManager.WithScheduledTaskNotInInstalledList(plugin: plugin);
         CronWorker cronWorker = BuildCronWorker();
-        PluginCronRegistrar registrar = new(manager, cronWorker);
+        PluginCronRegistrar registrar = new(pluginManager: manager, cronWorker: cronWorker);
 
         Action act = () => registrar.RegisterAll();
 
         act.Should().NotThrow();
-        GetCodeDefinedJobs(cronWorker).Should().BeEmpty();
+        GetCodeDefinedJobs(cronWorker: cronWorker).Should().BeEmpty();
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
-        await cronWorker.StopAsync(cts.Token);
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
+        await cronWorker.StopAsync(cancellationToken: cts.Token);
     }
 
     [Fact]
@@ -124,15 +124,15 @@ public class PluginCronRegistrarTests
     {
         FakePluginManager manager = FakePluginManager.Empty();
         CronWorker cronWorker = BuildCronWorker();
-        PluginCronRegistrar registrar = new(manager, cronWorker);
+        PluginCronRegistrar registrar = new(pluginManager: manager, cronWorker: cronWorker);
 
         Action act = () => registrar.RegisterAll();
 
         act.Should().NotThrow();
-        GetCodeDefinedJobs(cronWorker).Should().BeEmpty();
+        GetCodeDefinedJobs(cronWorker: cronWorker).Should().BeEmpty();
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
-        await cronWorker.StopAsync(cts.Token);
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromSeconds(seconds: 5));
+        await cronWorker.StopAsync(cancellationToken: cts.Token);
     }
 
     private sealed class FakeScheduledTaskPlugin(string cronExpression) : IScheduledTaskPlugin
@@ -140,7 +140,7 @@ public class PluginCronRegistrarTests
         public string Name => "fake-scheduled";
         public string Description => "d";
         public Guid Id { get; } = Guid.NewGuid();
-        public Version Version { get; } = new(1, 0);
+        public Version Version { get; } = new(major: 1, minor: 0);
         public string CronExpression => cronExpression;
 
         public void Initialize(IPluginContext context) { }
@@ -163,8 +163,8 @@ public class PluginCronRegistrarTests
         )
         {
             FakePluginManager manager = new();
-            manager._plugins.Add(plugin);
-            manager._capabilities[plugin.Id] = declaresHook
+            manager._plugins.Add(item: plugin);
+            manager._capabilities[key: plugin.Id] = declaresHook
                 ? new() { Hooks = [PluginHookCapability.ScheduledTask] }
                 : new() { Hooks = [] };
             return manager;
@@ -177,21 +177,21 @@ public class PluginCronRegistrarTests
         )
         {
             FakePluginManager manager = new();
-            manager._plugins.Add(plugin);
+            manager._plugins.Add(item: plugin);
             return manager;
         }
 
         public IReadOnlyList<PluginInfo> GetInstalledPlugins() =>
             _plugins
-                .Where(plugin => _capabilities.ContainsKey(plugin.Id))
-                .Select(plugin => new PluginInfo
+                .Where(predicate: plugin => _capabilities.ContainsKey(key: plugin.Id))
+                .Select(selector: plugin => new PluginInfo
                 {
                     Id = plugin.Id,
                     Name = plugin.Name,
                     Description = plugin.Description,
                     Version = plugin.Version,
                     Status = PluginStatus.Active,
-                    Capabilities = _capabilities[plugin.Id],
+                    Capabilities = _capabilities[key: plugin.Id],
                 })
                 .ToList();
 
@@ -211,6 +211,6 @@ public class PluginCronRegistrarTests
             Task.CompletedTask;
 
         public Task<IReadOnlyList<PluginLoadResult>> LoadAllAsync(CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<PluginLoadResult>>([]);
+            Task.FromResult<IReadOnlyList<PluginLoadResult>>(result: []);
     }
 }

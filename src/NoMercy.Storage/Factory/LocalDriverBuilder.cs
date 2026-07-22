@@ -29,43 +29,43 @@ public sealed class LocalDriverBuilder : IStorageDriverBuilder
         // System-local driver: empty config or empty rootPath means no driver-level
         // root restriction. The folder's own subPath becomes the allowed root so
         // each folder constrains itself without needing a per-driver rootPath.
-        if (string.IsNullOrWhiteSpace(driverConfigJson))
+        if (string.IsNullOrWhiteSpace(value: driverConfigJson))
         {
-            StoragePathGuard openGuard = BuildLocalGuardFromSubPath(subPath, _driver);
-            return new LocalStorage(_driver, openGuard);
+            StoragePathGuard openGuard = BuildLocalGuardFromSubPath(subPath: subPath, driver: _driver);
+            return new LocalStorage(driver: _driver, guard: openGuard);
         }
 
         LocalDriverConfig? config;
         try
         {
             config = JsonSerializer.Deserialize<LocalDriverConfig>(
-                driverConfigJson,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                json: driverConfigJson,
+                options: new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
             );
         }
         catch (JsonException ex)
         {
             throw new ArgumentException(
-                $"Failed to parse driver_config for folder {folderId} (type=local): {ex.Message}",
-                nameof(driverConfigJson),
-                ex
+                message: $"Failed to parse driver_config for folder {folderId} (type=local): {ex.Message}",
+                paramName: nameof(driverConfigJson),
+                innerException: ex
             );
         }
 
         // Empty rootPath = system-local mode: folder subPath is the effective root.
-        if (config is null || string.IsNullOrWhiteSpace(config.RootPath))
+        if (config is null || string.IsNullOrWhiteSpace(value: config.RootPath))
         {
-            StoragePathGuard openGuard = BuildLocalGuardFromSubPath(subPath, _driver);
-            return new LocalStorage(_driver, openGuard);
+            StoragePathGuard openGuard = BuildLocalGuardFromSubPath(subPath: subPath, driver: _driver);
+            return new LocalStorage(driver: _driver, guard: openGuard);
         }
 
         // Incorporate the folder sub-path so callers can pass paths relative
         // to the storage root (consistent with NFS/S3/WebDAV behaviour).
-        string allowedRoot = string.IsNullOrEmpty(subPath)
+        string allowedRoot = string.IsNullOrEmpty(value: subPath)
             ? config.RootPath
-            : JoinRoot(config.RootPath, subPath, "local");
-        StoragePathGuard guard = new([allowedRoot], _driver);
-        return new LocalStorage(_driver, guard);
+            : JoinRoot(root: config.RootPath, subPath: subPath, driverType: "local");
+        StoragePathGuard guard = new(allowedRoots: [allowedRoot], driver: _driver);
+        return new LocalStorage(driver: _driver, guard: guard);
     }
 
     /// <summary>
@@ -80,9 +80,9 @@ public sealed class LocalDriverBuilder : IStorageDriverBuilder
         IStorageDriver driver
     )
     {
-        if (string.IsNullOrWhiteSpace(subPath))
-            return new([], driver);
+        if (string.IsNullOrWhiteSpace(value: subPath))
+            return new(allowedRoots: [], driver: driver);
 
-        return new([subPath], driver);
+        return new(allowedRoots: [subPath], driver: driver);
     }
 }

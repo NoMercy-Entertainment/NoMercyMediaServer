@@ -36,25 +36,25 @@ public class DbDriverFingerprintStoreTests : IDisposable
 
     public DbDriverFingerprintStoreTests()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), "db-fp-test-" + Ulid.NewUlid());
-        Directory.CreateDirectory(_tempDir);
+        _tempDir = Path.Combine(path1: Path.GetTempPath(), path2: "db-fp-test-" + Ulid.NewUlid());
+        Directory.CreateDirectory(path: _tempDir);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempDir))
-            Directory.Delete(_tempDir, recursive: true);
+        if (Directory.Exists(path: _tempDir))
+            Directory.Delete(path: _tempDir, recursive: true);
     }
 
     private static IDbContextFactory<AppDbContext> InMemoryFactory(string dbName)
     {
         DbContextOptions<AppDbContext> opts = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(dbName)
+            .UseInMemoryDatabase(databaseName: dbName)
             .Options;
 
         Mock<IDbContextFactory<AppDbContext>> mock = new();
-        mock.Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => new(opts));
+        mock.Setup(expression: f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(valueFunction: () => new(options: opts));
         return mock.Object;
     }
 
@@ -65,24 +65,24 @@ public class DbDriverFingerprintStoreTests : IDisposable
     {
         EncoderOptions opts = new()
         {
-            SpeedIndexCachePath = Path.Combine(_tempDir, "speed_index.json"),
+            SpeedIndexCachePath = Path.Combine(path1: _tempDir, path2: "speed_index.json"),
         };
         return new(
-            opts,
-            NullLogger<DbDriverFingerprintStore>.Instance,
-            storage ?? Mock.Of<IStorage>(),
-            factory
+            options: opts,
+            logger: NullLogger<DbDriverFingerprintStore>.Instance,
+            storage: storage ?? Mock.Of<IStorage>(),
+            contextFactory: factory
         );
     }
 
     [Fact]
     public async Task LoadHashAsync_NoRow_NoLegacyFile_ReturnsNull()
     {
-        IDbContextFactory<AppDbContext> factory = InMemoryFactory("load-null-" + Ulid.NewUlid());
+        IDbContextFactory<AppDbContext> factory = InMemoryFactory(dbName: "load-null-" + Ulid.NewUlid());
         Mock<IStorage> storage = new();
-        storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(false);
+        storage.Setup(expression: s => s.Exists(It.IsAny<string>())).Returns(value: false);
 
-        DbDriverFingerprintStore store = BuildStore(factory, storage.Object);
+        DbDriverFingerprintStore store = BuildStore(factory: factory, storage: storage.Object);
         string? hash = await store.LoadHashAsync();
 
         hash.Should().BeNull();
@@ -91,26 +91,26 @@ public class DbDriverFingerprintStoreTests : IDisposable
     [Fact]
     public async Task SaveHashAsync_ThenLoad_RoundTrips()
     {
-        IDbContextFactory<AppDbContext> factory = InMemoryFactory("rt-" + Ulid.NewUlid());
-        DbDriverFingerprintStore store = BuildStore(factory);
+        IDbContextFactory<AppDbContext> factory = InMemoryFactory(dbName: "rt-" + Ulid.NewUlid());
+        DbDriverFingerprintStore store = BuildStore(factory: factory);
 
-        await store.SaveHashAsync("sha256:test-hash");
+        await store.SaveHashAsync(hash: "sha256:test-hash");
         string? loaded = await store.LoadHashAsync();
 
-        loaded.Should().Be("sha256:test-hash");
+        loaded.Should().Be(expected: "sha256:test-hash");
     }
 
     [Fact]
     public async Task SaveHashAsync_Twice_LatestValueWins()
     {
-        IDbContextFactory<AppDbContext> factory = InMemoryFactory("overwrite-" + Ulid.NewUlid());
-        DbDriverFingerprintStore store = BuildStore(factory);
+        IDbContextFactory<AppDbContext> factory = InMemoryFactory(dbName: "overwrite-" + Ulid.NewUlid());
+        DbDriverFingerprintStore store = BuildStore(factory: factory);
 
-        await store.SaveHashAsync("first");
-        await store.SaveHashAsync("second");
+        await store.SaveHashAsync(hash: "first");
+        await store.SaveHashAsync(hash: "second");
         string? loaded = await store.LoadHashAsync();
 
-        loaded.Should().Be("second");
+        loaded.Should().Be(expected: "second");
     }
 
     [Fact]
@@ -118,82 +118,82 @@ public class DbDriverFingerprintStoreTests : IDisposable
     {
         // No DB row, but legacy file present — store should import the JSON,
         // persist it to AppDbContext.Configuration, then delete the file.
-        IDbContextFactory<AppDbContext> factory = InMemoryFactory("legacy-" + Ulid.NewUlid());
-        string legacyPath = Path.Combine(_tempDir, "driver_fingerprint.json");
+        IDbContextFactory<AppDbContext> factory = InMemoryFactory(dbName: "legacy-" + Ulid.NewUlid());
+        string legacyPath = Path.Combine(path1: _tempDir, path2: "driver_fingerprint.json");
         byte[] legacyContent = Encoding.UTF8.GetBytes(
-            JsonConvert.SerializeObject(new { hash = "legacy-hash-from-file" })
+            s: JsonConvert.SerializeObject(value: new { hash = "legacy-hash-from-file" })
         );
 
         Mock<IStorage> storage = new();
-        storage.Setup(s => s.Exists(legacyPath)).Returns(true);
-        storage.Setup(s => s.Read(legacyPath)).Returns(legacyContent);
-        storage.Setup(s => s.Delete(legacyPath));
+        storage.Setup(expression: s => s.Exists(legacyPath)).Returns(value: true);
+        storage.Setup(expression: s => s.Read(legacyPath)).Returns(value: legacyContent);
+        storage.Setup(expression: s => s.Delete(legacyPath));
 
-        DbDriverFingerprintStore store = BuildStore(factory, storage.Object);
+        DbDriverFingerprintStore store = BuildStore(factory: factory, storage: storage.Object);
         string? hash = await store.LoadHashAsync();
 
-        hash.Should().Be("legacy-hash-from-file");
+        hash.Should().Be(expected: "legacy-hash-from-file");
         // Legacy file must be deleted after successful import.
-        storage.Verify(s => s.Delete(legacyPath), Times.Once);
+        storage.Verify(expression: s => s.Delete(legacyPath), times: Times.Once);
     }
 
     [Fact]
     public async Task LoadHashAsync_LegacyJsonImported_PersistsToDb()
     {
         IDbContextFactory<AppDbContext> factory = InMemoryFactory(
-            "legacy-persist-" + Ulid.NewUlid()
+            dbName: "legacy-persist-" + Ulid.NewUlid()
         );
-        string legacyPath = Path.Combine(_tempDir, "driver_fingerprint.json");
+        string legacyPath = Path.Combine(path1: _tempDir, path2: "driver_fingerprint.json");
         byte[] legacyContent = Encoding.UTF8.GetBytes(
-            JsonConvert.SerializeObject(new { hash = "persisted-from-legacy" })
+            s: JsonConvert.SerializeObject(value: new { hash = "persisted-from-legacy" })
         );
 
         Mock<IStorage> storage = new();
-        storage.Setup(s => s.Exists(legacyPath)).Returns(true);
-        storage.Setup(s => s.Read(legacyPath)).Returns(legacyContent);
+        storage.Setup(expression: s => s.Exists(legacyPath)).Returns(value: true);
+        storage.Setup(expression: s => s.Read(legacyPath)).Returns(value: legacyContent);
 
-        DbDriverFingerprintStore store = BuildStore(factory, storage.Object);
+        DbDriverFingerprintStore store = BuildStore(factory: factory, storage: storage.Object);
         await store.LoadHashAsync();
 
         // Subsequent load should hit the DB row, not the file.
         Mock<IStorage> noLegacy = new();
-        noLegacy.Setup(s => s.Exists(legacyPath)).Returns(false);
-        DbDriverFingerprintStore fresh = BuildStore(factory, noLegacy.Object);
+        noLegacy.Setup(expression: s => s.Exists(legacyPath)).Returns(value: false);
+        DbDriverFingerprintStore fresh = BuildStore(factory: factory, storage: noLegacy.Object);
         string? second = await fresh.LoadHashAsync();
 
-        second.Should().Be("persisted-from-legacy");
+        second.Should().Be(expected: "persisted-from-legacy");
     }
 
     [Fact]
     public async Task LoadHashAsync_CorruptLegacyJson_ReturnsNull()
     {
-        IDbContextFactory<AppDbContext> factory = InMemoryFactory("corrupt-" + Ulid.NewUlid());
-        string legacyPath = Path.Combine(_tempDir, "driver_fingerprint.json");
+        IDbContextFactory<AppDbContext> factory = InMemoryFactory(dbName: "corrupt-" + Ulid.NewUlid());
+        string legacyPath = Path.Combine(path1: _tempDir, path2: "driver_fingerprint.json");
 
         Mock<IStorage> storage = new();
-        storage.Setup(s => s.Exists(legacyPath)).Returns(true);
-        storage.Setup(s => s.Read(legacyPath)).Returns(Encoding.UTF8.GetBytes("{ not valid"));
+        storage.Setup(expression: s => s.Exists(legacyPath)).Returns(value: true);
+        storage.Setup(expression: s => s.Read(legacyPath)).Returns(value: Encoding.UTF8.GetBytes(s: "{ not valid"));
 
-        DbDriverFingerprintStore store = BuildStore(factory, storage.Object);
+        DbDriverFingerprintStore store = BuildStore(factory: factory, storage: storage.Object);
         string? hash = await store.LoadHashAsync();
 
         hash.Should().BeNull();
         // Corrupt file is NOT deleted — operator can inspect.
-        storage.Verify(s => s.Delete(It.IsAny<string>()), Times.Never);
+        storage.Verify(expression: s => s.Delete(It.IsAny<string>()), times: Times.Never);
     }
 
     [Fact]
     public async Task LoadHashAsync_LegacyJsonEmptyHash_ReturnsNull()
     {
-        IDbContextFactory<AppDbContext> factory = InMemoryFactory("empty-" + Ulid.NewUlid());
-        string legacyPath = Path.Combine(_tempDir, "driver_fingerprint.json");
-        byte[] content = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new { hash = "" }));
+        IDbContextFactory<AppDbContext> factory = InMemoryFactory(dbName: "empty-" + Ulid.NewUlid());
+        string legacyPath = Path.Combine(path1: _tempDir, path2: "driver_fingerprint.json");
+        byte[] content = Encoding.UTF8.GetBytes(s: JsonConvert.SerializeObject(value: new { hash = "" }));
 
         Mock<IStorage> storage = new();
-        storage.Setup(s => s.Exists(legacyPath)).Returns(true);
-        storage.Setup(s => s.Read(legacyPath)).Returns(content);
+        storage.Setup(expression: s => s.Exists(legacyPath)).Returns(value: true);
+        storage.Setup(expression: s => s.Read(legacyPath)).Returns(value: content);
 
-        DbDriverFingerprintStore store = BuildStore(factory, storage.Object);
+        DbDriverFingerprintStore store = BuildStore(factory: factory, storage: storage.Object);
         string? hash = await store.LoadHashAsync();
 
         hash.Should().BeNull();
@@ -204,15 +204,15 @@ public class DbDriverFingerprintStoreTests : IDisposable
     {
         // When a DB row exists, the legacy file isn't even consulted —
         // verify Exists/Read are never called.
-        IDbContextFactory<AppDbContext> factory = InMemoryFactory("skip-legacy-" + Ulid.NewUlid());
-        DbDriverFingerprintStore writer = BuildStore(factory);
-        await writer.SaveHashAsync("db-row-hash");
+        IDbContextFactory<AppDbContext> factory = InMemoryFactory(dbName: "skip-legacy-" + Ulid.NewUlid());
+        DbDriverFingerprintStore writer = BuildStore(factory: factory);
+        await writer.SaveHashAsync(hash: "db-row-hash");
 
-        Mock<IStorage> storage = new(MockBehavior.Strict);
-        DbDriverFingerprintStore reader = BuildStore(factory, storage.Object);
+        Mock<IStorage> storage = new(behavior: MockBehavior.Strict);
+        DbDriverFingerprintStore reader = BuildStore(factory: factory, storage: storage.Object);
         string? hash = await reader.LoadHashAsync();
 
-        hash.Should().Be("db-row-hash");
+        hash.Should().Be(expected: "db-row-hash");
         // Strict mock: any unexpected call fails the test, so the legacy
         // path being skipped is implicitly verified.
     }

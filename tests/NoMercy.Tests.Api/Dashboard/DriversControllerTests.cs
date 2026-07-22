@@ -26,7 +26,7 @@ namespace NoMercy.Tests.Api.Dashboard;
 // a moderator nor an owner. Mutations are exercised only for their auth pair
 // and validation short-circuit paths (never their success path) so no real
 // Driver row or credential is ever written by this suite.
-[Trait("Category", "DashboardDrivers")]
+[Trait(name: "Category", value: "DashboardDrivers")]
 public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
 {
     private const string BaseUrl = "/api/v1/dashboard/drivers";
@@ -47,111 +47,111 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Index_ReturnsUnauthorized_WhenAnonymous()
     {
-        HttpResponseMessage response = await _unauthed.GetAsync(BaseUrl);
+        HttpResponseMessage response = await _unauthed.GetAsync(requestUri: BaseUrl);
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task Index_ReturnsForbidden_WhenSecondaryUserNotModerator()
     {
-        HttpResponseMessage response = await _secondaryUser.GetAsync(BaseUrl);
+        HttpResponseMessage response = await _secondaryUser.GetAsync(requestUri: BaseUrl);
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task Index_ReturnsArrayIncludingSeededSystemDriver_WhenAuthenticated()
     {
-        HttpResponseMessage response = await _authed.GetAsync(BaseUrl);
+        HttpResponseMessage response = await _authed.GetAsync(requestUri: BaseUrl);
         string body = await response.Content.ReadAsStringAsync();
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK, because: body);
 
-        using JsonDocument doc = JsonDocument.Parse(body);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
         doc.RootElement.ValueKind.Should()
-            .Be(JsonValueKind.Array, "Index returns a raw array, not a data envelope");
+            .Be(expected: JsonValueKind.Array, because: "Index returns a raw array, not a data envelope");
 
         JsonElement systemDriver = doc
             .RootElement.EnumerateArray()
-            .First(e => e.GetProperty("id").GetString() == SystemLocalId);
+            .First(predicate: e => e.GetProperty(propertyName: "id").GetString() == SystemLocalId);
 
-        systemDriver.GetProperty("type").GetString().Should().Be("local");
-        systemDriver.GetProperty("is_system").GetBoolean().Should().BeTrue();
+        systemDriver.GetProperty(propertyName: "type").GetString().Should().Be(expected: "local");
+        systemDriver.GetProperty(propertyName: "is_system").GetBoolean().Should().BeTrue();
         systemDriver
-            .TryGetProperty("credentials_configured", out JsonElement credsConfigured)
+            .TryGetProperty(propertyName: "credentials_configured", value: out JsonElement credsConfigured)
             .Should()
             .BeTrue();
         credsConfigured.GetBoolean().Should().BeFalse();
-        systemDriver.TryGetProperty("folder_count", out _).Should().BeTrue();
-        systemDriver.TryGetProperty("created_at", out _).Should().BeTrue();
-        systemDriver.TryGetProperty("updated_at", out _).Should().BeTrue();
+        systemDriver.TryGetProperty(propertyName: "folder_count", value: out _).Should().BeTrue();
+        systemDriver.TryGetProperty(propertyName: "created_at", value: out _).Should().BeTrue();
+        systemDriver.TryGetProperty(propertyName: "updated_at", value: out _).Should().BeTrue();
     }
 
     [Fact]
     public async Task GetTypes_ReturnsUnauthorized_WhenAnonymous()
     {
-        HttpResponseMessage response = await _unauthed.GetAsync($"{BaseUrl}/types");
+        HttpResponseMessage response = await _unauthed.GetAsync(requestUri: $"{BaseUrl}/types");
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task GetTypes_ReturnsForbidden_WhenSecondaryUserNotModerator()
     {
-        HttpResponseMessage response = await _secondaryUser.GetAsync($"{BaseUrl}/types");
+        HttpResponseMessage response = await _secondaryUser.GetAsync(requestUri: $"{BaseUrl}/types");
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task GetTypes_ReturnsAllFiveDriverTypeEntries_WhenAuthenticated()
     {
-        HttpResponseMessage response = await _authed.GetAsync($"{BaseUrl}/types");
+        HttpResponseMessage response = await _authed.GetAsync(requestUri: $"{BaseUrl}/types");
         string body = await response.Content.ReadAsStringAsync();
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK, because: body);
 
-        using JsonDocument doc = JsonDocument.Parse(body);
-        doc.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
-        doc.RootElement.GetArrayLength().Should().Be(5);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
+        doc.RootElement.ValueKind.Should().Be(expected: JsonValueKind.Array);
+        doc.RootElement.GetArrayLength().Should().Be(expected: 5);
 
         string[] types = doc
             .RootElement.EnumerateArray()
-            .Select(e => e.GetProperty("type").GetString()!)
+            .Select(selector: e => e.GetProperty(propertyName: "type").GetString()!)
             .ToArray();
 
-        types.Should().BeEquivalentTo(["local", "nfs", "s3", "r2", "webdav"]);
+        types.Should().BeEquivalentTo(expectation: ["local", "nfs", "s3", "r2", "webdav"]);
     }
 
     [Fact]
     public async Task Show_ReturnsUnauthorized_WhenAnonymous()
     {
-        HttpResponseMessage response = await _unauthed.GetAsync($"{BaseUrl}/{SystemLocalId}");
+        HttpResponseMessage response = await _unauthed.GetAsync(requestUri: $"{BaseUrl}/{SystemLocalId}");
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task Show_ReturnsForbidden_WhenSecondaryUserNotModerator()
     {
-        HttpResponseMessage response = await _secondaryUser.GetAsync($"{BaseUrl}/{SystemLocalId}");
+        HttpResponseMessage response = await _secondaryUser.GetAsync(requestUri: $"{BaseUrl}/{SystemLocalId}");
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task Show_ReturnsSystemLocalDriverEnvelope_WhenAuthenticated()
     {
-        HttpResponseMessage response = await _authed.GetAsync($"{BaseUrl}/{SystemLocalId}");
+        HttpResponseMessage response = await _authed.GetAsync(requestUri: $"{BaseUrl}/{SystemLocalId}");
         string body = await response.Content.ReadAsStringAsync();
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK, because: body);
 
-        using JsonDocument doc = JsonDocument.Parse(body);
-        doc.RootElement.GetProperty("id").GetString().Should().Be(SystemLocalId);
-        doc.RootElement.GetProperty("type").GetString().Should().Be("local");
-        doc.RootElement.GetProperty("is_system").GetBoolean().Should().BeTrue();
+        using JsonDocument doc = JsonDocument.Parse(json: body);
+        doc.RootElement.GetProperty(propertyName: "id").GetString().Should().Be(expected: SystemLocalId);
+        doc.RootElement.GetProperty(propertyName: "type").GetString().Should().Be(expected: "local");
+        doc.RootElement.GetProperty(propertyName: "is_system").GetBoolean().Should().BeTrue();
     }
 
     [Fact]
@@ -159,89 +159,89 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
     {
         Ulid unknownId = Ulid.NewUlid();
 
-        HttpResponseMessage response = await _authed.GetAsync($"{BaseUrl}/{unknownId}");
+        HttpResponseMessage response = await _authed.GetAsync(requestUri: $"{BaseUrl}/{unknownId}");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.NotFound);
     }
 
     [Fact]
     public async Task GetSystemLocalId_ReturnsUnauthorized_WhenAnonymous()
     {
-        HttpResponseMessage response = await _unauthed.GetAsync($"{BaseUrl}/system-local");
+        HttpResponseMessage response = await _unauthed.GetAsync(requestUri: $"{BaseUrl}/system-local");
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task GetSystemLocalId_ReturnsForbidden_WhenSecondaryUserNotModerator()
     {
-        HttpResponseMessage response = await _secondaryUser.GetAsync($"{BaseUrl}/system-local");
+        HttpResponseMessage response = await _secondaryUser.GetAsync(requestUri: $"{BaseUrl}/system-local");
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task GetSystemLocalId_ReturnsStableSystemDriverId_WhenAuthenticated()
     {
-        HttpResponseMessage response = await _authed.GetAsync($"{BaseUrl}/system-local");
+        HttpResponseMessage response = await _authed.GetAsync(requestUri: $"{BaseUrl}/system-local");
         string body = await response.Content.ReadAsStringAsync();
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK, because: body);
 
-        using JsonDocument doc = JsonDocument.Parse(body);
-        doc.RootElement.GetProperty("id").GetString().Should().Be(SystemLocalId);
+        using JsonDocument doc = JsonDocument.Parse(json: body);
+        doc.RootElement.GetProperty(propertyName: "id").GetString().Should().Be(expected: SystemLocalId);
     }
 
     [Fact]
     public async Task Create_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.PostAsJsonAsync(
-            BaseUrl,
-            new { name = "contract-test-driver", type = "local" }
+            requestUri: BaseUrl,
+            value: new { name = "contract-test-driver", type = "local" }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task Create_ReturnsForbidden_WhenSecondaryUserNotOwner()
     {
         HttpResponseMessage response = await _secondaryUser.PostAsJsonAsync(
-            BaseUrl,
-            new { name = "contract-test-driver", type = "local" }
+            requestUri: BaseUrl,
+            value: new { name = "contract-test-driver", type = "local" }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task Create_ReturnsBadRequest_WhenTypeInvalid()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            BaseUrl,
-            new { name = "contract-test-driver", type = "ftp" }
+            requestUri: BaseUrl,
+            value: new { name = "contract-test-driver", type = "ftp" }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task Create_ReturnsBadRequest_WhenLocalConfigMissingRootPath()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            BaseUrl,
-            new { name = "contract-test-driver", type = "local" }
+            requestUri: BaseUrl,
+            value: new { name = "contract-test-driver", type = "local" }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task Create_ReturnsBadRequest_WhenNameMissing()
     {
         HttpResponseMessage response = await _authed.PostAsJsonAsync(
-            BaseUrl,
-            new
+            requestUri: BaseUrl,
+            value: new
             {
                 name = "",
                 type = "local",
@@ -249,29 +249,29 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
             }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task Update_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.PutAsJsonAsync(
-            $"{BaseUrl}/{SystemLocalId}",
-            new { name = "renamed" }
+            requestUri: $"{BaseUrl}/{SystemLocalId}",
+            value: new { name = "renamed" }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task Update_ReturnsForbidden_WhenSecondaryUserNotOwner()
     {
         HttpResponseMessage response = await _secondaryUser.PutAsJsonAsync(
-            $"{BaseUrl}/{SystemLocalId}",
-            new { name = "renamed" }
+            requestUri: $"{BaseUrl}/{SystemLocalId}",
+            value: new { name = "renamed" }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -280,44 +280,44 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
         Ulid unknownId = Ulid.NewUlid();
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            $"{BaseUrl}/{unknownId}",
-            new { name = "renamed" }
+            requestUri: $"{BaseUrl}/{unknownId}",
+            value: new { name = "renamed" }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.NotFound);
     }
 
     [Fact]
     public async Task Update_ReturnsConflict_WhenTargetingBuiltInSystemLocalDriver()
     {
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            $"{BaseUrl}/{SystemLocalId}",
-            new { name = "renamed" }
+            requestUri: $"{BaseUrl}/{SystemLocalId}",
+            value: new { name = "renamed" }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.Conflict);
     }
 
     [Fact]
     public async Task UpdateCredentials_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.PutAsJsonAsync(
-            $"{BaseUrl}/{SystemLocalId}/credentials",
-            new { access_key = "ak", secret_key = "sk" }
+            requestUri: $"{BaseUrl}/{SystemLocalId}/credentials",
+            value: new { access_key = "ak", secret_key = "sk" }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task UpdateCredentials_ReturnsForbidden_WhenSecondaryUserNotOwner()
     {
         HttpResponseMessage response = await _secondaryUser.PutAsJsonAsync(
-            $"{BaseUrl}/{SystemLocalId}/credentials",
-            new { access_key = "ak", secret_key = "sk" }
+            requestUri: $"{BaseUrl}/{SystemLocalId}/credentials",
+            value: new { access_key = "ak", secret_key = "sk" }
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -326,11 +326,11 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
         Ulid unknownId = Ulid.NewUlid();
 
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            $"{BaseUrl}/{unknownId}/credentials",
-            new { access_key = "ak", secret_key = "sk" }
+            requestUri: $"{BaseUrl}/{unknownId}/credentials",
+            value: new { access_key = "ak", secret_key = "sk" }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -339,29 +339,29 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
         // Blank credentials short-circuit BEFORE CredentialManager.SetCredentials is
         // called, so this exercises validation only — no real credential is written.
         HttpResponseMessage response = await _authed.PutAsJsonAsync(
-            $"{BaseUrl}/{SystemLocalId}/credentials",
-            new { access_key = "", secret_key = "" }
+            requestUri: $"{BaseUrl}/{SystemLocalId}/credentials",
+            value: new { access_key = "", secret_key = "" }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task Delete_ReturnsUnauthorized_WhenAnonymous()
     {
-        HttpResponseMessage response = await _unauthed.DeleteAsync($"{BaseUrl}/{SystemLocalId}");
+        HttpResponseMessage response = await _unauthed.DeleteAsync(requestUri: $"{BaseUrl}/{SystemLocalId}");
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
     public async Task Delete_ReturnsForbidden_WhenSecondaryUserNotOwner()
     {
         HttpResponseMessage response = await _secondaryUser.DeleteAsync(
-            $"{BaseUrl}/{SystemLocalId}"
+            requestUri: $"{BaseUrl}/{SystemLocalId}"
         );
 
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden);
+        response.StatusCode.Should().BeOneOf(validValues: [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -369,9 +369,9 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
     {
         // The system-local guard fires before any repository lookup or delete —
         // no real row is ever touched by this assertion.
-        HttpResponseMessage response = await _authed.DeleteAsync($"{BaseUrl}/{SystemLocalId}");
+        HttpResponseMessage response = await _authed.DeleteAsync(requestUri: $"{BaseUrl}/{SystemLocalId}");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.Conflict);
     }
 
     [Fact]
@@ -379,8 +379,8 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
     {
         Ulid unknownId = Ulid.NewUlid();
 
-        HttpResponseMessage response = await _authed.DeleteAsync($"{BaseUrl}/{unknownId}");
+        HttpResponseMessage response = await _authed.DeleteAsync(requestUri: $"{BaseUrl}/{unknownId}");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(expected: HttpStatusCode.NotFound);
     }
 }

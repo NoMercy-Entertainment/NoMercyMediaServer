@@ -34,8 +34,8 @@ public sealed partial class SpecialsAdapter : IFilenameParseAdapter
     public int Order => 40;
 
     [GeneratedRegex(
-        @"(?<![A-Za-z0-9])(?:(?<word>specials?|extras?)|(?<anime>ova|ona|oad|ncop|nced|sp))(?:[\s\.\-_]*(?<num>\d{1,3}))?(?![A-Za-z0-9])",
-        RegexOptions.IgnoreCase)]
+        pattern: @"(?<![A-Za-z0-9])(?:(?<word>specials?|extras?)|(?<anime>ova|ona|oad|ncop|nced|sp))(?:[\s\.\-_]*(?<num>\d{1,3}))?(?![A-Za-z0-9])",
+        options: RegexOptions.IgnoreCase)]
     private static partial Regex SpecialMarker();
 
     public MovieFile? TryParse(ParseContext context)
@@ -46,21 +46,21 @@ public sealed partial class SpecialsAdapter : IFilenameParseAdapter
         )
             return null;
 
-        Match match = SpecialMarker().Match(context.CleanedFileName);
+        Match match = SpecialMarker().Match(input: context.CleanedFileName);
         if (!match.Success)
             return null;
 
         string title = context
             .CleanedFileName[..match.Index]
-            .Replace('.', ' ')
-            .Replace('_', ' ')
-            .TrimEnd('-', ' ')
+            .Replace(oldChar: '.', newChar: ' ')
+            .Replace(oldChar: '_', newChar: ' ')
+            .TrimEnd(trimChars: ['-', ' '])
             .Trim()
             .CleanSeriesTitle();
 
-        bool isWordMarker = match.Groups["word"].Success;
+        bool isWordMarker = match.Groups[groupname: "word"].Success;
 
-        if (string.IsNullOrWhiteSpace(title) || title.Length <= 1)
+        if (string.IsNullOrWhiteSpace(value: title) || title.Length <= 1)
         {
             // Word markers double as real show titles; only the unambiguous anime
             // markers may borrow the folder name when the file has no leading title.
@@ -69,14 +69,14 @@ public sealed partial class SpecialsAdapter : IFilenameParseAdapter
             title = context.FolderTitle;
         }
 
-        if (string.IsNullOrWhiteSpace(title) || title.Length <= 1)
+        if (string.IsNullOrWhiteSpace(value: title) || title.Length <= 1)
             return null;
 
-        int episode = match.Groups["num"].Success
-            ? int.Parse(match.Groups["num"].Value)
+        int episode = match.Groups[groupname: "num"].Success
+            ? int.Parse(s: match.Groups[groupname: "num"].Value)
             : 1;
 
-        return new(context.Title)
+        return new(filePath: context.Title)
         {
             Title = title,
             Season = 0,

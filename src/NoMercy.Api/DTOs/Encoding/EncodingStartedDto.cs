@@ -14,18 +14,18 @@ namespace NoMercy.Api.DTOs.Encoding;
 
 public record EncodingStartedDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("input_path")]
+    [JsonProperty(propertyName: "input_path")]
     public string InputPath { get; set; } = string.Empty;
 
-    [JsonProperty("output_path")]
+    [JsonProperty(propertyName: "output_path")]
     public string OutputPath { get; set; } = string.Empty;
 
-    [JsonProperty("profile_name")]
+    [JsonProperty(propertyName: "profile_name")]
     public string ProfileName { get; set; } = string.Empty;
 
-    [JsonProperty("timestamp")]
+    [JsonProperty(propertyName: "timestamp")]
     public DateTime Timestamp { get; set; }
 }

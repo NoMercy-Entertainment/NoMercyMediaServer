@@ -38,7 +38,7 @@ public abstract class SinglePassStrategyBase(IEncoder encoder, ILogger logger, I
     public EncodeMode EncodeMode => EncodeMode.SinglePass;
 
     public virtual DecomposedTask[] Decompose(OutputPlan plan, string groupTag) =>
-        [IEncodingStrategy.WholeTask(groupTag)];
+        [IEncodingStrategy.WholeTask(groupTag: groupTag)];
 
     public async Task<EncodingResult> EncodeAsync(
         EncodingRequest request,
@@ -60,13 +60,13 @@ public abstract class SinglePassStrategyBase(IEncoder encoder, ILogger logger, I
 
         try
         {
-            EncodingResult result = await encoder.EncodeAsync(request, progress, ct);
+            EncodingResult result = await encoder.EncodeAsync(request: request, progress: progress, ct: ct);
 
             if (!result.Success && !isPerTaskRun)
             {
                 DeletePartialOutput(
-                    request.OutputDirectory,
-                    effectiveStorage,
+                    outputDirectory: request.OutputDirectory,
+                    stor: effectiveStorage,
                     preserveCheckpoint: true
                 );
             }
@@ -78,8 +78,8 @@ public abstract class SinglePassStrategyBase(IEncoder encoder, ILogger logger, I
             if (!isPerTaskRun)
             {
                 DeletePartialOutput(
-                    request.OutputDirectory,
-                    effectiveStorage,
+                    outputDirectory: request.OutputDirectory,
+                    stor: effectiveStorage,
                     preserveCheckpoint: false
                 );
             }
@@ -91,32 +91,32 @@ public abstract class SinglePassStrategyBase(IEncoder encoder, ILogger logger, I
     {
         try
         {
-            if (!stor.Exists(outputDirectory))
+            if (!stor.Exists(path: outputDirectory))
                 return;
 
             foreach (
-                StorageEntry entry in stor.List(outputDirectory, "*", recursive: true)
-                    .Where(entry => !entry.IsDirectory)
-                    .Where(entry =>
+                StorageEntry entry in stor.List(path: outputDirectory, pattern: "*", recursive: true)
+                    .Where(predicate: entry => !entry.IsDirectory)
+                    .Where(predicate: entry =>
                         !preserveCheckpoint
-                        || !Path.GetFileName(entry.Path)
+                        || !Path.GetFileName(path: entry.Path)
                             .Equals(
-                                CheckpointFileNames.FileName,
-                                StringComparison.OrdinalIgnoreCase
+                                value: CheckpointFileNames.FileName,
+                                comparisonType: StringComparison.OrdinalIgnoreCase
                             )
                     )
             )
             {
                 try
                 {
-                    stor.Delete(entry.Path);
+                    stor.Delete(path: entry.Path);
                 }
                 catch (Exception ex)
                 {
                     logger.LogWarning(
-                        ex,
-                        "Failed to delete partial output file {File} after crash",
-                        entry.Path
+                        exception: ex,
+                        message: "Failed to delete partial output file {File} after crash",
+                        args: entry.Path
                     );
                 }
             }
@@ -124,9 +124,9 @@ public abstract class SinglePassStrategyBase(IEncoder encoder, ILogger logger, I
         catch (Exception ex)
         {
             logger.LogWarning(
-                ex,
-                "Failed to enumerate partial output for deletion after crash in {OutputDirectory}",
-                outputDirectory
+                exception: ex,
+                message: "Failed to enumerate partial output for deletion after crash in {OutputDirectory}",
+                args: outputDirectory
             );
         }
     }

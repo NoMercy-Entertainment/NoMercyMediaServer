@@ -91,7 +91,7 @@ public abstract class TmdbTestBase : IDisposable
         string language = "en-US"
     )
     {
-        return new(movieId, null, () => MockDataProvider.MockMovieAppendsResponse(), language);
+        return new(id: movieId, appendices: null, mockAppendsProvider: () => MockDataProvider.MockMovieAppendsResponse(), language: language);
     }
 
     /// <summary>
@@ -106,7 +106,7 @@ public abstract class TmdbTestBase : IDisposable
         string language = "en-US"
     )
     {
-        return new(movieId, null, null, language);
+        return new(id: movieId, appendices: null, mockAppendsProvider: null, language: language);
     }
 
     /// <summary>
@@ -140,7 +140,7 @@ public abstract class TmdbTestBase : IDisposable
         string language = "en-US"
     )
     {
-        return new(tvId, null, language);
+        return new(id: tvId, appendices: null, language: language);
     }
 
     /// <summary>
@@ -155,7 +155,7 @@ public abstract class TmdbTestBase : IDisposable
         string language = "en-US"
     )
     {
-        return new(tvId, null, language);
+        return new(id: tvId, appendices: null, language: language);
     }
 
     public virtual void Dispose()
@@ -164,6 +164,6 @@ public abstract class TmdbTestBase : IDisposable
             return;
 
         Disposed = true;
-        GC.SuppressFinalize(this);
+        GC.SuppressFinalize(obj: this);
     }
 }

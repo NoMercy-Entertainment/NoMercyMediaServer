@@ -19,13 +19,13 @@ public static class SqliteQueueContextFactory
     public static IQueueContext Create(string databasePath)
     {
         DbContextOptions<QueueDbContext> options = new DbContextOptionsBuilder<QueueDbContext>()
-            .UseSqlite($"Data Source={databasePath}; Pooling=True; Foreign Keys=True;")
-            .AddInterceptors(new SqliteQueueConnectionInterceptor())
+            .UseSqlite(connectionString: $"Data Source={databasePath}; Pooling=True; Foreign Keys=True;")
+            .AddInterceptors(interceptors: new SqliteQueueConnectionInterceptor())
             .Options;
 
-        QueueDbContext dbContext = new(options);
+        QueueDbContext dbContext = new(options: options);
         dbContext.Database.EnsureCreated();
 
-        return new SqliteQueueContext(dbContext);
+        return new SqliteQueueContext(context: dbContext);
     }
 }

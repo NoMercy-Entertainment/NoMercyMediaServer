@@ -37,22 +37,22 @@ public class EncodingPresetRepository(MediaContext context) : IEncodingPresetRep
 
         IQueryable<EncodingPreset> query = context.EncodingPresets.AsNoTracking();
 
-        if (!string.IsNullOrWhiteSpace(tagFilter))
+        if (!string.IsNullOrWhiteSpace(value: tagFilter))
         {
             // Tags are stored as a comma-separated string (see model). Matching
             // on substring is fine for now — the tag list is small and the
             // column isn't indexed anyway. If the preset library grows past
             // a few hundred entries we'd normalize into a join table.
             string normalized = tagFilter.Trim().ToLower();
-            query = query.Where(p => p.Tags != null && p.Tags.ToLower().Contains(normalized));
+            query = query.Where(predicate: p => p.Tags != null && p.Tags.ToLower().Contains(normalized));
         }
 
         return query
-            .OrderBy(p => p.IsBuiltIn ? 0 : 1)
-            .ThenBy(p => p.Name)
-            .ThenBy(p => p.Id)
-            .Skip(pageIndex * pageSize)
-            .Take(pageSize)
+            .OrderBy(keySelector: p => p.IsBuiltIn ? 0 : 1)
+            .ThenBy(keySelector: p => p.Name)
+            .ThenBy(keySelector: p => p.Id)
+            .Skip(count: pageIndex * pageSize)
+            .Take(count: pageSize)
             .ToListAsync();
     }
 
@@ -60,41 +60,41 @@ public class EncodingPresetRepository(MediaContext context) : IEncodingPresetRep
     {
         List<string?> rows = await context
             .EncodingPresets.AsNoTracking()
-            .Where(p => p.Tags != null && p.Tags != "")
-            .Select(p => p.Tags)
+            .Where(predicate: p => p.Tags != null && p.Tags != "")
+            .Select(selector: p => p.Tags)
             .ToListAsync();
 
-        HashSet<string> tags = new(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> tags = new(comparer: StringComparer.OrdinalIgnoreCase);
         foreach (string? row in rows)
         {
-            if (string.IsNullOrWhiteSpace(row))
+            if (string.IsNullOrWhiteSpace(value: row))
                 continue;
 
-            foreach (string tag in row.Split(',', StringSplitOptions.RemoveEmptyEntries))
-                tags.Add(tag.Trim());
+            foreach (string tag in row.Split(separator: ',', options: StringSplitOptions.RemoveEmptyEntries))
+                tags.Add(item: tag.Trim());
         }
 
-        return tags.OrderBy(t => t).ToList();
+        return tags.OrderBy(keySelector: t => t).ToList();
     }
 
     public Task<EncodingPreset?> GetByIdAsync(Ulid id) =>
-        context.EncodingPresets.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
+        context.EncodingPresets.AsNoTracking().FirstOrDefaultAsync(predicate: p => p.Id == id);
 
     public Task<EncodingPreset?> GetByNameAsync(string name) =>
-        context.EncodingPresets.AsNoTracking().FirstOrDefaultAsync(p => p.Name == name);
+        context.EncodingPresets.AsNoTracking().FirstOrDefaultAsync(predicate: p => p.Name == name);
 
     public async Task<EncodingPreset> CreateAsync(EncodingPreset preset)
     {
         preset.CreatedAt = DateTime.UtcNow;
         preset.UpdatedAt = preset.CreatedAt;
-        context.EncodingPresets.Add(preset);
+        context.EncodingPresets.Add(entity: preset);
         await context.SaveChangesAsync();
         return preset;
     }
 
     public async Task<EncodingPreset?> UpdateAsync(Ulid id, Action<EncodingPreset> apply)
     {
-        EncodingPreset? existing = await context.EncodingPresets.FirstOrDefaultAsync(p =>
+        EncodingPreset? existing = await context.EncodingPresets.FirstOrDefaultAsync(predicate: p =>
             p.Id == id
         );
         if (existing is null)
@@ -102,10 +102,10 @@ public class EncodingPresetRepository(MediaContext context) : IEncodingPresetRep
 
         if (existing.IsBuiltIn)
             throw new InvalidOperationException(
-                "Built-in presets cannot be modified in place — clone and edit instead."
+                message: "Built-in presets cannot be modified in place — clone and edit instead."
             );
 
-        apply(existing);
+        apply(obj: existing);
         existing.UpdatedAt = DateTime.UtcNow;
         await context.SaveChangesAsync();
         return existing;
@@ -113,16 +113,16 @@ public class EncodingPresetRepository(MediaContext context) : IEncodingPresetRep
 
     public async Task<bool> DeleteAsync(Ulid id)
     {
-        EncodingPreset? existing = await context.EncodingPresets.FirstOrDefaultAsync(p =>
+        EncodingPreset? existing = await context.EncodingPresets.FirstOrDefaultAsync(predicate: p =>
             p.Id == id
         );
         if (existing is null)
             return false;
 
         if (existing.IsBuiltIn)
-            throw new InvalidOperationException("Built-in presets cannot be deleted.");
+            throw new InvalidOperationException(message: "Built-in presets cannot be deleted.");
 
-        context.EncodingPresets.Remove(existing);
+        context.EncodingPresets.Remove(entity: existing);
         await context.SaveChangesAsync();
         return true;
     }

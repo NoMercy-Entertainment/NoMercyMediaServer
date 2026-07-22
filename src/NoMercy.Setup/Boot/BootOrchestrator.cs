@@ -62,13 +62,13 @@ public class BootOrchestrator
     {
         // Phase 1: Essential tasks (blocking, no network)
         // Uses Start.cs as shim until Task 17 inlines task definitions
-        Logger.Setup("Phase 1: Running essential tasks...");
+        Logger.Setup(message: "Phase 1: Running essential tasks...");
         await Start.InitEssential();
 
-        await _apiKeyLoader.LoadKeys(ct);
+        await _apiKeyLoader.LoadKeys(ct: ct);
 
         // Initialize TokenStore before any DB access that touches SecureValue
-        TokenStore.Initialize(services);
+        TokenStore.Initialize(serviceProvider: services);
 
         // Load SSL certificate into memory cache (from DB or legacy PEM files)
         try
@@ -77,18 +77,18 @@ public class BootOrchestrator
         }
         catch (Exception ex)
         {
-            Logger.Setup($"Certificate pre-load skipped: {ex.Message}", LogEventLevel.Verbose);
+            Logger.Setup(message: $"Certificate pre-load skipped: {ex.Message}", level: LogEventLevel.Verbose);
         }
 
         // Phase 2: Authentication
-        Logger.Setup("Phase 2: Authentication...");
+        Logger.Setup(message: "Phase 2: Authentication...");
         await CheckKeycloakReachabilityAsync();
         bool authSucceeded = await _authManager.InitializeAsync();
 
         if (authSucceeded)
         {
             NmSystem.Lifecycle.ServerPhaseTracker.Current?.MarkComplete(
-                NmSystem.Lifecycle.BootStage.Auth
+                stage: NmSystem.Lifecycle.BootStage.Auth
             );
 
             bool isRegistered = _certificateService.HasValidCertificate();
@@ -97,24 +97,24 @@ public class BootOrchestrator
             if (isRegistered)
             {
                 NmSystem.Lifecycle.ServerPhaseTracker.Current?.MarkComplete(
-                    NmSystem.Lifecycle.BootStage.Registered
+                    stage: NmSystem.Lifecycle.BootStage.Registered
                 );
             }
             else
             {
                 // Phase 3: Registration (blocking on first boot)
-                await RunRegistrationAsync(ct);
+                await RunRegistrationAsync(ct: ct);
             }
 
             // Phase 4: Background tasks (non-blocking)
-            _authManager.ScheduleBackgroundRefresh(ct);
-            _ = RunBackgroundTasksAsync(ct);
+            _authManager.ScheduleBackgroundRefresh(ct: ct);
+            _ = RunBackgroundTasksAsync(ct: ct);
 
             return false; // No setup mode needed
         }
 
         // Auth failed — enter setup mode
-        Logger.Setup("Interactive authentication required — entering setup mode");
+        Logger.Setup(message: "Interactive authentication required — entering setup mode");
         return true;
     }
 
@@ -125,27 +125,27 @@ public class BootOrchestrator
     /// </summary>
     public async Task<bool> RunPostAuthAsync(CancellationToken ct)
     {
-        Logger.Setup("Waiting for authentication to complete...");
+        Logger.Setup(message: "Waiting for authentication to complete...");
 
         while (!_setupState.IsAuthenticated && !ct.IsCancellationRequested)
         {
-            await _setupState.WaitForChangeAsync(ct);
+            await _setupState.WaitForChangeAsync(cancellationToken: ct);
         }
 
         if (ct.IsCancellationRequested)
             return false;
 
-        Logger.Setup("Authentication complete — running registration...");
+        Logger.Setup(message: "Authentication complete — running registration...");
         NmSystem.Lifecycle.ServerPhaseTracker.Current?.MarkComplete(
-            NmSystem.Lifecycle.BootStage.Auth
+            stage: NmSystem.Lifecycle.BootStage.Auth
         );
 
         // Phase 3: Registration + Certificate
-        bool certAcquired = await RunRegistrationAsync(ct);
+        bool certAcquired = await RunRegistrationAsync(ct: ct);
 
         // Phase 4: Background tasks
-        _authManager.ScheduleBackgroundRefresh(ct);
-        _ = RunBackgroundTasksAsync(ct);
+        _authManager.ScheduleBackgroundRefresh(ct: ct);
+        _ = RunBackgroundTasksAsync(ct: ct);
 
         return certAcquired;
     }
@@ -160,7 +160,7 @@ public class BootOrchestrator
         if (AuthManager.IsDesktopEnvironment())
             return;
 
-        Logger.Setup("Headless environment detected — starting device code flow");
+        Logger.Setup(message: "Headless environment detected — starting device code flow");
 
         try
         {
@@ -169,28 +169,28 @@ public class BootOrchestrator
 
             using HttpClient client = new();
             List<KeyValuePair<string, string>> body = AuthManager.BuildDeviceCodeRequestBody(
-                ExternalServicesConfig.Current.TokenClientId
+                clientId: ExternalServicesConfig.Current.TokenClientId
             );
 
             using HttpResponseMessage response = await client.PostAsync(
-                deviceEndpoint,
-                new FormUrlEncodedContent(body)
+                requestUri: deviceEndpoint,
+                content: new FormUrlEncodedContent(nameValueCollection: body)
             );
 
             if (!response.IsSuccessStatusCode)
             {
-                Logger.Setup("Device code request failed", LogEventLevel.Warning);
+                Logger.Setup(message: "Device code request failed", level: LogEventLevel.Warning);
                 return;
             }
 
             string json = await response.Content.ReadAsStringAsync();
             DeviceAuthResponse? deviceResponse = JsonConvert.DeserializeObject<DeviceAuthResponse>(
-                json
+                value: json
             );
 
             if (deviceResponse is null)
             {
-                Logger.Setup("Device code response could not be parsed", LogEventLevel.Warning);
+                Logger.Setup(message: "Device code response could not be parsed", level: LogEventLevel.Warning);
                 return;
             }
 
@@ -199,20 +199,20 @@ public class BootOrchestrator
             string deviceCode = deviceResponse.DeviceCode;
             int interval = deviceResponse.Interval > 0 ? deviceResponse.Interval : 5;
 
-            if (!string.IsNullOrEmpty(verificationUri))
+            if (!string.IsNullOrEmpty(value: verificationUri))
             {
                 SetupTerminalUi ui = new();
-                ui.Show(verificationUri, deviceResponse.VerificationUri, userCode, "");
+                ui.Show(verificationUriComplete: verificationUri, verificationUri: deviceResponse.VerificationUri, userCode: userCode, setupPageUrl: "");
             }
 
-            if (!string.IsNullOrEmpty(deviceCode))
+            if (!string.IsNullOrEmpty(value: deviceCode))
             {
-                await PollDeviceGrant(deviceCode, interval, ct);
+                await PollDeviceGrant(deviceCode: deviceCode, interval: interval, ct: ct);
             }
         }
         catch (Exception ex)
         {
-            Logger.Setup($"Device code flow error: {ex.Message}", LogEventLevel.Warning);
+            Logger.Setup(message: $"Device code flow error: {ex.Message}", level: LogEventLevel.Warning);
         }
     }
 
@@ -228,20 +228,20 @@ public class BootOrchestrator
         try
         {
             using HttpClient client = new();
-            client.Timeout = TimeSpan.FromSeconds(10);
+            client.Timeout = TimeSpan.FromSeconds(seconds: 10);
             client.WithNoMercyUserAgent();
 
-            using HttpResponseMessage response = await client.GetAsync(wellKnown);
+            using HttpResponseMessage response = await client.GetAsync(requestUri: wellKnown);
 
             if (response.IsSuccessStatusCode)
             {
-                Logger.Setup($"Keycloak reachable at {ExternalServicesConfig.Current.AuthBaseUrl}");
+                Logger.Setup(message: $"Keycloak reachable at {ExternalServicesConfig.Current.AuthBaseUrl}");
             }
             else
             {
                 Logger.Setup(
-                    $"Keycloak returned {(int)response.StatusCode} from {wellKnown} — auth may degrade",
-                    LogEventLevel.Warning
+                    message: $"Keycloak returned {(int)response.StatusCode} from {wellKnown} — auth may degrade",
+                    level: LogEventLevel.Warning
                 );
             }
         }
@@ -252,17 +252,17 @@ public class BootOrchestrator
             if (hasCachedKey)
             {
                 Logger.Setup(
-                    $"Keycloak unreachable ({ex.Message}) — offline JWKS cache is present; JWT validation will use cached keys",
-                    LogEventLevel.Warning
+                    message: $"Keycloak unreachable ({ex.Message}) — offline JWKS cache is present; JWT validation will use cached keys",
+                    level: LogEventLevel.Warning
                 );
             }
             else
             {
                 Logger.Setup(
-                    $"BOOT FAILURE: Keycloak unreachable at {ExternalServicesConfig.Current.AuthBaseUrl} and no cached JWKS key found. "
-                        + $"Cause: {ex.Message}. "
-                        + $"The server cannot validate JWTs. Complete setup at /setup or ensure Keycloak is reachable before restarting.",
-                    LogEventLevel.Error
+                    message: $"BOOT FAILURE: Keycloak unreachable at {ExternalServicesConfig.Current.AuthBaseUrl} and no cached JWKS key found. "
+                             + $"Cause: {ex.Message}. "
+                             + $"The server cannot validate JWTs. Complete setup at /setup or ensure Keycloak is reachable before restarting.",
+                    level: LogEventLevel.Error
                 );
             }
         }
@@ -272,42 +272,42 @@ public class BootOrchestrator
     {
         try
         {
-            _setupState.TransitionTo(SetupPhase.Registering);
-            _setupState.SetPhaseDetail("Registering server with NoMercy...");
+            _setupState.TransitionTo(targetPhase: SetupPhase.Registering);
+            _setupState.SetPhaseDetail(detail: "Registering server with NoMercy...");
 
             await _serverRegistrationService.Init();
 
-            _setupState.TransitionTo(SetupPhase.Registered);
-            _setupState.SetPhaseDetail("Acquiring SSL certificate...");
+            _setupState.TransitionTo(targetPhase: SetupPhase.Registered);
+            _setupState.SetPhaseDetail(detail: "Acquiring SSL certificate...");
 
             bool hasCert = _certificateService.HasValidCertificate();
 
             if (hasCert)
-                _setupState.TransitionTo(SetupPhase.CertificateAcquired);
+                _setupState.TransitionTo(targetPhase: SetupPhase.CertificateAcquired);
 
-            _setupState.TransitionTo(SetupPhase.Complete);
-            Logger.Setup("Registration and certificate setup complete");
+            _setupState.TransitionTo(targetPhase: SetupPhase.Complete);
+            Logger.Setup(message: "Registration and certificate setup complete");
 
             NmSystem.Lifecycle.ServerPhaseTracker.Current?.MarkComplete(
-                NmSystem.Lifecycle.BootStage.Registered
+                stage: NmSystem.Lifecycle.BootStage.Registered
             );
 
             return hasCert;
         }
         catch (Exception ex)
         {
-            _setupState.SetError($"Registration failed: {ex.Message}");
-            Logger.Setup($"Registration failed: {ex.Message}", LogEventLevel.Error);
+            _setupState.SetError(message: $"Registration failed: {ex.Message}");
+            Logger.Setup(message: $"Registration failed: {ex.Message}", level: LogEventLevel.Error);
 
             // Don't block — DegradedModeRecovery will retry. Mark Registered as
             // complete so workers don't block forever on a known-degraded boot —
             // partial functionality beats no functionality, and the recovery loop
             // will quietly retry registration in the background.
             NmSystem.Lifecycle.ServerPhaseTracker.Current?.MarkComplete(
-                NmSystem.Lifecycle.BootStage.Registered
+                stage: NmSystem.Lifecycle.BootStage.Registered
             );
 
-            _setupState.TransitionTo(SetupPhase.Complete);
+            _setupState.TransitionTo(targetPhase: SetupPhase.Complete);
             return false;
         }
     }
@@ -316,12 +316,12 @@ public class BootOrchestrator
     {
         try
         {
-            Logger.Setup("Phase 4: Starting background tasks...");
-            await Start.InitRemaining(_degradedModeRecovery, _authTokenStore.AccessToken);
+            Logger.Setup(message: "Phase 4: Starting background tasks...");
+            await Start.InitRemaining(recovery: _degradedModeRecovery, accessToken: _authTokenStore.AccessToken);
         }
         catch (Exception ex)
         {
-            Logger.Setup($"Background tasks error: {ex.Message}", LogEventLevel.Warning);
+            Logger.Setup(message: $"Background tasks error: {ex.Message}", level: LogEventLevel.Warning);
         }
     }
 
@@ -332,41 +332,41 @@ public class BootOrchestrator
 
         while (!ct.IsCancellationRequested && !_setupState.IsAuthenticated)
         {
-            await Task.Delay(TimeSpan.FromSeconds(interval), ct);
+            await Task.Delay(delay: TimeSpan.FromSeconds(seconds: interval), cancellationToken: ct);
 
             try
             {
                 using HttpClient client = new();
                 List<KeyValuePair<string, string>> body = AuthManager.BuildDeviceTokenBody(
-                    ExternalServicesConfig.Current.TokenClientId,
-                    deviceCode
+                    clientId: ExternalServicesConfig.Current.TokenClientId,
+                    deviceCode: deviceCode
                 );
 
                 using HttpResponseMessage response = await client.PostAsync(
-                    tokenEndpoint,
-                    new FormUrlEncodedContent(body)
+                    requestUri: tokenEndpoint,
+                    content: new FormUrlEncodedContent(nameValueCollection: body)
                 );
 
                 string json = await response.Content.ReadAsStringAsync();
 
                 if (response.IsSuccessStatusCode)
                 {
-                    AuthResponse? tokens = JsonConvert.DeserializeObject<AuthResponse>(json);
+                    AuthResponse? tokens = JsonConvert.DeserializeObject<AuthResponse>(value: json);
                     if (tokens?.AccessToken != null)
                     {
-                        await _authManager.StoreTokensAsync(tokens);
-                        _setupState.TransitionTo(SetupPhase.Authenticating);
-                        _setupState.TransitionTo(SetupPhase.Authenticated);
-                        Logger.Setup("Device code authentication successful");
+                        await _authManager.StoreTokensAsync(tokens: tokens);
+                        _setupState.TransitionTo(targetPhase: SetupPhase.Authenticating);
+                        _setupState.TransitionTo(targetPhase: SetupPhase.Authenticated);
+                        Logger.Setup(message: "Device code authentication successful");
                         return;
                     }
                 }
 
-                dynamic? error = JsonConvert.DeserializeObject(json);
+                dynamic? error = JsonConvert.DeserializeObject(value: json);
                 string? errorCode = error?.error?.ToString();
                 if (errorCode is "expired_token" or "access_denied")
                 {
-                    Logger.Setup($"Device code flow ended: {errorCode}");
+                    Logger.Setup(message: $"Device code flow ended: {errorCode}");
                     return;
                 }
             }
@@ -376,7 +376,7 @@ public class BootOrchestrator
             }
             catch (Exception ex)
             {
-                Logger.Setup($"Device poll error: {ex.Message}", LogEventLevel.Warning);
+                Logger.Setup(message: $"Device poll error: {ex.Message}", level: LogEventLevel.Warning);
             }
         }
     }

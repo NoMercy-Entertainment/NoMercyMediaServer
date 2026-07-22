@@ -22,7 +22,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Middleware;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class EncoderRuntimeExceptionMiddlewareTests
 {
     /// <summary>
@@ -32,13 +32,13 @@ public class EncoderRuntimeExceptionMiddlewareTests
     private static HttpClient BuildClient(RequestDelegate terminal)
     {
         IHost host = new HostBuilder()
-            .ConfigureWebHost(web =>
+            .ConfigureWebHost(configure: web =>
             {
                 web.UseTestServer();
-                web.Configure(app =>
+                web.Configure(configureApp: app =>
                 {
                     app.UseMiddleware<EncoderRuntimeExceptionMiddleware>();
-                    app.Run(terminal);
+                    app.Run(handler: terminal);
                 });
             })
             .Build();
@@ -50,34 +50,34 @@ public class EncoderRuntimeExceptionMiddlewareTests
     [Fact]
     public async Task GpuCapacityExhausted_returns_409_with_correct_id()
     {
-        HttpClient client = BuildClient(_ =>
-            throw RuntimeErrors.GpuCapacityExhausted("RTX 4090", 3)
+        HttpClient client = BuildClient(terminal: _ =>
+            throw RuntimeErrors.GpuCapacityExhausted(gpu: "RTX 4090", sessions: 3)
         );
 
-        HttpResponseMessage response = await client.GetAsync("/");
+        HttpResponseMessage response = await client.GetAsync(requestUri: "/");
 
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
-        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(expected: HttpStatusCode.Conflict, actual: response.StatusCode);
+        Assert.Equal(expected: "application/json", actual: response.Content.Headers.ContentType?.MediaType);
 
         string content = await response.Content.ReadAsStringAsync();
-        JsonDocument json = JsonDocument.Parse(content);
+        JsonDocument json = JsonDocument.Parse(json: content);
 
-        Assert.Equal("gpu_capacity_exhausted", json.RootElement.GetProperty("id").GetString());
+        Assert.Equal(expected: "gpu_capacity_exhausted", actual: json.RootElement.GetProperty(propertyName: "id").GetString());
     }
 
     [Fact]
     public async Task SourceNotAccessible_returns_404_with_correct_id()
     {
-        HttpClient client = BuildClient(_ => throw RuntimeErrors.SourceNotAccessible("/x.mkv"));
+        HttpClient client = BuildClient(terminal: _ => throw RuntimeErrors.SourceNotAccessible(path: "/x.mkv"));
 
-        HttpResponseMessage response = await client.GetAsync("/");
+        HttpResponseMessage response = await client.GetAsync(requestUri: "/");
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.NotFound, actual: response.StatusCode);
 
         string content = await response.Content.ReadAsStringAsync();
-        JsonDocument json = JsonDocument.Parse(content);
+        JsonDocument json = JsonDocument.Parse(json: content);
 
-        Assert.Equal("source.not_accessible", json.RootElement.GetProperty("id").GetString());
+        Assert.Equal(expected: "source.not_accessible", actual: json.RootElement.GetProperty(propertyName: "id").GetString());
     }
 
     [Fact]
@@ -87,14 +87,14 @@ public class EncoderRuntimeExceptionMiddlewareTests
         // upward. TestServer re-throws them at the HttpClient boundary, so
         // we assert the exception escapes (rather than being swallowed and
         // serialised as an EncoderErrorShape).
-        HttpClient client = BuildClient(_ =>
-            throw new InvalidOperationException("something unrelated")
+        HttpClient client = BuildClient(terminal: _ =>
+            throw new InvalidOperationException(message: "something unrelated")
         );
 
-        InvalidOperationException thrown = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            client.GetAsync("/")
+        InvalidOperationException thrown = await Assert.ThrowsAsync<InvalidOperationException>(testCode: () =>
+            client.GetAsync(requestUri: "/")
         );
 
-        Assert.Equal("something unrelated", thrown.Message);
+        Assert.Equal(expected: "something unrelated", actual: thrown.Message);
     }
 }

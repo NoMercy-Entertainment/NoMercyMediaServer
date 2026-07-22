@@ -18,7 +18,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Networking;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class CloudflareTunnelStrategyTests
 {
     private static CloudflareTunnelStrategy BuildStrategy(
@@ -26,29 +26,29 @@ public sealed class CloudflareTunnelStrategyTests
         Func<Task>? checkAvailability = null
     )
     {
-        return new(NullLogger<CloudflareTunnelStrategy>.Instance, status, checkAvailability);
+        return new(logger: NullLogger<CloudflareTunnelStrategy>.Instance, connectivityStatus: status, checkTunnelAvailability: checkAvailability);
     }
 
     [Fact]
     public async Task TryEstablishAsync_WhenTokenIsNull_ReturnsFalse()
     {
         ConnectivityStatus status = new() { CloudflareTunnelToken = null };
-        CloudflareTunnelStrategy strategy = BuildStrategy(status);
+        CloudflareTunnelStrategy strategy = BuildStrategy(status: status);
 
-        bool result = await strategy.TryEstablishAsync(CancellationToken.None);
+        bool result = await strategy.TryEstablishAsync(ct: CancellationToken.None);
 
-        Assert.False(result);
+        Assert.False(condition: result);
     }
 
     [Fact]
     public async Task TryEstablishAsync_WhenTokenIsEmpty_ReturnsFalse()
     {
         ConnectivityStatus status = new() { CloudflareTunnelToken = string.Empty };
-        CloudflareTunnelStrategy strategy = BuildStrategy(status);
+        CloudflareTunnelStrategy strategy = BuildStrategy(status: status);
 
-        bool result = await strategy.TryEstablishAsync(CancellationToken.None);
+        bool result = await strategy.TryEstablishAsync(ct: CancellationToken.None);
 
-        Assert.False(result);
+        Assert.False(condition: result);
     }
 
     [Fact]
@@ -59,11 +59,11 @@ public sealed class CloudflareTunnelStrategyTests
             CloudflareTunnelToken = null,
             NatStatus = NatStatus.None,
         };
-        CloudflareTunnelStrategy strategy = BuildStrategy(status);
+        CloudflareTunnelStrategy strategy = BuildStrategy(status: status);
 
-        await strategy.TryEstablishAsync(CancellationToken.None);
+        await strategy.TryEstablishAsync(ct: CancellationToken.None);
 
-        Assert.NotEqual(NatStatus.Tunneled, status.NatStatus);
+        Assert.NotEqual(expected: NatStatus.Tunneled, actual: status.NatStatus);
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public sealed class CloudflareTunnelStrategyTests
         bool called = false;
         ConnectivityStatus status = new() { CloudflareTunnelToken = null };
         CloudflareTunnelStrategy strategy = BuildStrategy(
-            status,
+            status: status,
             checkAvailability: () =>
             {
                 called = true;
@@ -80,20 +80,20 @@ public sealed class CloudflareTunnelStrategyTests
             }
         );
 
-        await strategy.TryEstablishAsync(CancellationToken.None);
+        await strategy.TryEstablishAsync(ct: CancellationToken.None);
 
-        Assert.True(called);
+        Assert.True(condition: called);
     }
 
     [Fact]
     public async Task TryEstablishAsync_WhenTokenSet_ButBinaryMissing_ReturnsFalse()
     {
         ConnectivityStatus status = new() { CloudflareTunnelToken = "dummy-tunnel-token" };
-        CloudflareTunnelStrategy strategy = BuildStrategy(status);
+        CloudflareTunnelStrategy strategy = BuildStrategy(status: status);
 
-        bool result = await strategy.TryEstablishAsync(CancellationToken.None);
+        bool result = await strategy.TryEstablishAsync(ct: CancellationToken.None);
 
-        Assert.False(result);
+        Assert.False(condition: result);
     }
 
     [Fact]
@@ -104,48 +104,48 @@ public sealed class CloudflareTunnelStrategyTests
             CloudflareTunnelToken = "dummy-token",
             NatStatus = NatStatus.None,
         };
-        CloudflareTunnelStrategy strategy = BuildStrategy(status);
+        CloudflareTunnelStrategy strategy = BuildStrategy(status: status);
 
-        await strategy.TryEstablishAsync(CancellationToken.None);
+        await strategy.TryEstablishAsync(ct: CancellationToken.None);
 
-        Assert.NotEqual(NatStatus.Tunneled, status.NatStatus);
+        Assert.NotEqual(expected: NatStatus.Tunneled, actual: status.NatStatus);
     }
 
     [Fact]
     public void Priority_IsThree()
     {
-        CloudflareTunnelStrategy strategy = BuildStrategy(new());
+        CloudflareTunnelStrategy strategy = BuildStrategy(status: new());
 
-        Assert.Equal(3, strategy.Priority);
+        Assert.Equal(expected: 3, actual: strategy.Priority);
     }
 
     [Fact]
     public void Type_IsCloudflareTunnel()
     {
-        CloudflareTunnelStrategy strategy = BuildStrategy(new());
+        CloudflareTunnelStrategy strategy = BuildStrategy(status: new());
 
-        Assert.Equal(ConnectivityType.CloudflareTunnel, strategy.Type);
+        Assert.Equal(expected: ConnectivityType.CloudflareTunnel, actual: strategy.Type);
     }
 
     [Fact]
     public void TeardownAsync_WhenNothingStarted_DoesNotThrow()
     {
         ConnectivityStatus status = new() { CloudflareTunnelToken = null };
-        CloudflareTunnelStrategy strategy = BuildStrategy(status);
+        CloudflareTunnelStrategy strategy = BuildStrategy(status: status);
 
-        Exception? ex = Record.Exception(() => strategy.TeardownAsync().GetAwaiter().GetResult());
+        Exception? ex = Record.Exception(testCode: () => strategy.TeardownAsync().GetAwaiter().GetResult());
 
-        Assert.Null(ex);
+        Assert.Null(@object: ex);
     }
 
     [Fact]
     public void Dispose_WhenNothingStarted_DoesNotThrow()
     {
-        CloudflareTunnelStrategy strategy = BuildStrategy(new());
+        CloudflareTunnelStrategy strategy = BuildStrategy(status: new());
 
-        Exception? ex = Record.Exception(strategy.Dispose);
+        Exception? ex = Record.Exception(testCode: strategy.Dispose);
 
-        Assert.Null(ex);
+        Assert.Null(@object: ex);
     }
 
     [Fact]
@@ -154,26 +154,26 @@ public sealed class CloudflareTunnelStrategyTests
         // The _disposed guard must make the second Dispose() a no-op — this
         // proves the guard exists (a regression here would double-run
         // StopTunnel/dispose the already-disposed Process on the second call).
-        CloudflareTunnelStrategy strategy = BuildStrategy(new());
+        CloudflareTunnelStrategy strategy = BuildStrategy(status: new());
 
-        Exception? ex = Record.Exception(() =>
+        Exception? ex = Record.Exception(testCode: () =>
         {
             strategy.Dispose();
             strategy.Dispose();
         });
 
-        Assert.Null(ex);
+        Assert.Null(@object: ex);
     }
 
     [Fact]
     public async Task TeardownAsync_AfterDispose_DoesNotThrow()
     {
-        CloudflareTunnelStrategy strategy = BuildStrategy(new());
+        CloudflareTunnelStrategy strategy = BuildStrategy(status: new());
         strategy.Dispose();
 
-        Exception? ex = await Record.ExceptionAsync(strategy.TeardownAsync);
+        Exception? ex = await Record.ExceptionAsync(testCode: strategy.TeardownAsync);
 
-        Assert.Null(ex);
+        Assert.Null(@object: ex);
     }
 
     [Fact]
@@ -185,12 +185,12 @@ public sealed class CloudflareTunnelStrategyTests
         // the connectivity manager relies on to log the real cause.
         ConnectivityStatus status = new() { CloudflareTunnelToken = "token" };
         CloudflareTunnelStrategy strategy = BuildStrategy(
-            status,
-            checkAvailability: () => throw new InvalidOperationException("gate check failed")
+            status: status,
+            checkAvailability: () => throw new InvalidOperationException(message: "gate check failed")
         );
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            strategy.TryEstablishAsync(CancellationToken.None)
+        await Assert.ThrowsAsync<InvalidOperationException>(testCode: () =>
+            strategy.TryEstablishAsync(ct: CancellationToken.None)
         );
     }
 }

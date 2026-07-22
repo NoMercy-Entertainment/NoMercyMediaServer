@@ -18,7 +18,7 @@ using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class AdultContentFilterTests : IDisposable
 {
     private const int AdultMovieId = 9_999_001;
@@ -35,18 +35,18 @@ public class AdultContentFilterTests : IDisposable
     {
         RuntimeServerSettings.Current.AllowAdultContent = _originalAllowAdult;
         _context.Dispose();
-        GC.SuppressFinalize(this);
+        GC.SuppressFinalize(obj: this);
     }
 
     [Theory]
-    [InlineData(null, false)]
-    [InlineData(false, false)]
-    [InlineData(true, true)]
+    [InlineData(data: [null, false])]
+    [InlineData(data: [false, false])]
+    [InlineData(data: [true, true])]
     public void ShowAdultContent_TreatsNullAndFalseAsHidden(bool? configured, bool expected)
     {
         RuntimeServerSettings.Current.AllowAdultContent = configured;
 
-        Assert.Equal(expected, RuntimeServerSettings.Current.ShowAdultContent);
+        Assert.Equal(expected: expected, actual: RuntimeServerSettings.Current.ShowAdultContent);
     }
 
     [Fact]
@@ -57,8 +57,8 @@ public class AdultContentFilterTests : IDisposable
 
         List<Movie> visible = await _context.Movies.ToListAsync();
 
-        Assert.DoesNotContain(visible, movie => movie.Id == AdultMovieId);
-        Assert.Contains(visible, movie => movie.Id == 129); // seeded non-adult
+        Assert.DoesNotContain(collection: visible, filter: movie => movie.Id == AdultMovieId);
+        Assert.Contains(collection: visible, filter: movie => movie.Id == 129); // seeded non-adult
     }
 
     [Fact]
@@ -69,7 +69,7 @@ public class AdultContentFilterTests : IDisposable
 
         List<Movie> visible = await _context.Movies.ToListAsync();
 
-        Assert.Contains(visible, movie => movie.Id == AdultMovieId);
+        Assert.Contains(collection: visible, filter: movie => movie.Id == AdultMovieId);
     }
 
     [Fact]
@@ -78,15 +78,15 @@ public class AdultContentFilterTests : IDisposable
         RuntimeServerSettings.Current.AllowAdultContent = false;
         AddAdultMovie();
 
-        Movie? viaFilter = await _context.Movies.FirstOrDefaultAsync(movie =>
+        Movie? viaFilter = await _context.Movies.FirstOrDefaultAsync(predicate: movie =>
             movie.Id == AdultMovieId
         );
         Movie? viaBypass = await _context
             .Movies.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(movie => movie.Id == AdultMovieId);
+            .FirstOrDefaultAsync(predicate: movie => movie.Id == AdultMovieId);
 
-        Assert.Null(viaFilter);
-        Assert.NotNull(viaBypass);
+        Assert.Null(@object: viaFilter);
+        Assert.NotNull(@object: viaBypass);
     }
 
     [Fact]
@@ -94,7 +94,7 @@ public class AdultContentFilterTests : IDisposable
     {
         RuntimeServerSettings.Current.AllowAdultContent = false;
         _context.People.Add(
-            new()
+            entity: new()
             {
                 Id = 11,
                 Name = "Clean Actor",
@@ -102,7 +102,7 @@ public class AdultContentFilterTests : IDisposable
             }
         );
         _context.People.Add(
-            new()
+            entity: new()
             {
                 Id = 12,
                 Name = "Adult Performer",
@@ -113,14 +113,14 @@ public class AdultContentFilterTests : IDisposable
 
         List<Person> visible = await _context.People.ToListAsync();
 
-        Assert.Contains(visible, person => person.Id == 11);
-        Assert.DoesNotContain(visible, person => person.Id == 12);
+        Assert.Contains(collection: visible, filter: person => person.Id == 11);
+        Assert.DoesNotContain(collection: visible, filter: person => person.Id == 12);
     }
 
     private void AddAdultMovie()
     {
         _context.Movies.Add(
-            new()
+            entity: new()
             {
                 Id = AdultMovieId,
                 Title = "Explicit Title",

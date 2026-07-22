@@ -24,22 +24,22 @@ public class StoragePathHelpersTests
     // ── GetName ────────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData("a/b/c.mkv", "c.mkv")]
-    [InlineData("just-a-name.mkv", "just-a-name.mkv")]
-    [InlineData("a/b/", "b")]
-    [InlineData("a/", "a")]
-    [InlineData("/leading/file", "file")]
+    [InlineData(data: ["a/b/c.mkv", "c.mkv"])]
+    [InlineData(data: ["just-a-name.mkv", "just-a-name.mkv"])]
+    [InlineData(data: ["a/b/", "b"])]
+    [InlineData(data: ["a/", "a"])]
+    [InlineData(data: ["/leading/file", "file"])]
     public void GetName_ReturnsLastSegment(string input, string expected)
     {
-        StoragePathHelpers.GetName(input).Should().Be(expected);
+        StoragePathHelpers.GetName(path: input).Should().Be(expected: expected);
     }
 
     [Theory]
-    [InlineData("")]
-    [InlineData(null)]
+    [InlineData(data: "")]
+    [InlineData(data: null)]
     public void GetName_EmptyOrNull_ReturnsEmpty(string? input)
     {
-        StoragePathHelpers.GetName(input!).Should().Be(string.Empty);
+        StoragePathHelpers.GetName(path: input!).Should().Be(expected: string.Empty);
     }
 
     [Fact]
@@ -53,48 +53,48 @@ public class StoragePathHelpersTests
         // "/track.mp3" (RecordingManager.Store, MusicLogic.StoreTrack) before
         // those call sites normalized backslashes to '/' first.
         string uncPath = "\\\\192.168.2.120\\mnt\\vault\\Media\\track.mp3";
-        StoragePathHelpers.GetName(uncPath).Should().Be(uncPath);
-        StoragePathHelpers.GetName(uncPath.Replace('\\', '/')).Should().Be("track.mp3");
+        StoragePathHelpers.GetName(path: uncPath).Should().Be(expected: uncPath);
+        StoragePathHelpers.GetName(path: uncPath.Replace(oldChar: '\\', newChar: '/')).Should().Be(expected: "track.mp3");
     }
 
     // ── GetParent ──────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData("a/b/c.mkv", "a/b")]
-    [InlineData("a/b", "a")]
-    [InlineData("a/b/c/", "a/b")]
+    [InlineData(data: ["a/b/c.mkv", "a/b"])]
+    [InlineData(data: ["a/b", "a"])]
+    [InlineData(data: ["a/b/c/", "a/b"])]
     public void GetParent_ReturnsParentSegment(string input, string expected)
     {
-        StoragePathHelpers.GetParent(input).Should().Be(expected);
+        StoragePathHelpers.GetParent(path: input).Should().Be(expected: expected);
     }
 
     [Theory]
-    [InlineData("solo.mkv")]
-    [InlineData("solo")]
-    [InlineData("")]
+    [InlineData(data: "solo.mkv")]
+    [InlineData(data: "solo")]
+    [InlineData(data: "")]
     public void GetParent_NoParent_ReturnsNull(string input)
     {
-        StoragePathHelpers.GetParent(input).Should().BeNull();
+        StoragePathHelpers.GetParent(path: input).Should().BeNull();
     }
 
     [Fact]
     public void GetParent_TrailingSlashIsTrimmedBeforeSplit()
     {
         // "a/" trims to "a" — no parent.
-        StoragePathHelpers.GetParent("a/").Should().BeNull();
+        StoragePathHelpers.GetParent(path: "a/").Should().BeNull();
     }
 
     // ── GetNameWithoutExtension ────────────────────────────────────────────
 
     [Theory]
-    [InlineData("a/b/c.mkv", "c")]
-    [InlineData("c.mkv", "c")]
-    [InlineData("multi.dot.name.mkv", "multi.dot.name")]
-    [InlineData("noext", "noext")]
-    [InlineData("a/b/noext", "noext")]
+    [InlineData(data: ["a/b/c.mkv", "c"])]
+    [InlineData(data: ["c.mkv", "c"])]
+    [InlineData(data: ["multi.dot.name.mkv", "multi.dot.name"])]
+    [InlineData(data: ["noext", "noext"])]
+    [InlineData(data: ["a/b/noext", "noext"])]
     public void GetNameWithoutExtension_StripsLastDotSegment(string input, string expected)
     {
-        StoragePathHelpers.GetNameWithoutExtension(input).Should().Be(expected);
+        StoragePathHelpers.GetNameWithoutExtension(path: input).Should().Be(expected: expected);
     }
 
     [Fact]
@@ -105,33 +105,33 @@ public class StoragePathHelpersTests
         // map to empty. Consumers should not rely on this for hidden-file
         // semantics — IStorage paths are forward-slash relative, not
         // POSIX-flavored.
-        StoragePathHelpers.GetNameWithoutExtension(".bashrc").Should().BeEmpty();
+        StoragePathHelpers.GetNameWithoutExtension(path: ".bashrc").Should().BeEmpty();
     }
 
     // ── Combine ────────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData("a", "b", "a/b")]
-    [InlineData("a/", "b", "a/b")]
-    [InlineData("a", "/b", "a/b")]
-    [InlineData("a/", "/b", "a/b")]
-    [InlineData("a/b", "c/d", "a/b/c/d")]
+    [InlineData(data: ["a", "b", "a/b"])]
+    [InlineData(data: ["a/", "b", "a/b"])]
+    [InlineData(data: ["a", "/b", "a/b"])]
+    [InlineData(data: ["a/", "/b", "a/b"])]
+    [InlineData(data: ["a/b", "c/d", "a/b/c/d"])]
     public void Combine_JoinsWithSingleSlash(string parent, string child, string expected)
     {
-        StoragePathHelpers.Combine(parent, child).Should().Be(expected);
+        StoragePathHelpers.Combine(parent: parent, child: child).Should().Be(expected: expected);
     }
 
     [Theory]
-    [InlineData("", "child", "child")]
-    [InlineData("parent", "", "parent")]
-    [InlineData("", "", "")]
+    [InlineData(data: ["", "child", "child"])]
+    [InlineData(data: ["parent", "", "parent"])]
+    [InlineData(data: ["", "", ""])]
     public void Combine_EmptyOperand_ReturnsOtherUnchanged(
         string parent,
         string child,
         string expected
     )
     {
-        StoragePathHelpers.Combine(parent, child).Should().Be(expected);
+        StoragePathHelpers.Combine(parent: parent, child: child).Should().Be(expected: expected);
     }
 
     [Fact]
@@ -141,8 +141,8 @@ public class StoragePathHelpersTests
         // child must not survive the join. The helper is the safety net
         // when something accidentally hands a Windows-flavored fragment
         // into a storage-relative path.
-        StoragePathHelpers.Combine("a\\", "b").Should().Be("a/b");
-        StoragePathHelpers.Combine("a", "\\b").Should().Be("a/b");
-        StoragePathHelpers.Combine("a\\", "\\b").Should().Be("a/b");
+        StoragePathHelpers.Combine(parent: "a\\", child: "b").Should().Be(expected: "a/b");
+        StoragePathHelpers.Combine(parent: "a", child: "\\b").Should().Be(expected: "a/b");
+        StoragePathHelpers.Combine(parent: "a\\", child: "\\b").Should().Be(expected: "a/b");
     }
 }

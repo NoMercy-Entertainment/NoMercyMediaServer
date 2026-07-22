@@ -26,7 +26,7 @@ namespace NoMercy.Tests.Launcher.ViewModels;
 /// </summary>
 public sealed class LogViewerViewModelFilterTests
 {
-    private static LogViewerViewModel CreateViewModel() => new(new ServerConnection());
+    private static LogViewerViewModel CreateViewModel() => new(serverConnection: new ServerConnection());
 
     private static LogEntryResponse Entry(string type, string message, string level) =>
         new()
@@ -43,32 +43,32 @@ public sealed class LogViewerViewModelFilterTests
     public void NoFilters_AllEntriesPassThrough()
     {
         LogViewerViewModel viewModel = CreateViewModel();
-        viewModel.LogEntries.Add(Entry("Server", "listening on 7626", "Information"));
-        viewModel.LogEntries.Add(Entry("Encoder", "job finished", "Debug"));
+        viewModel.LogEntries.Add(item: Entry(type: "Server", message: "listening on 7626", level: "Information"));
+        viewModel.LogEntries.Add(item: Entry(type: "Encoder", message: "job finished", level: "Debug"));
 
         viewModel.ClearFilters();
 
-        viewModel.FilteredEntries.Should().HaveCount(2);
+        viewModel.FilteredEntries.Should().HaveCount(expected: 2);
     }
 
     [Fact]
     public void SelectedLevel_FiltersToMatchingLevelOnly()
     {
         LogViewerViewModel viewModel = CreateViewModel();
-        viewModel.LogEntries.Add(Entry("Server", "listening", "Information"));
-        viewModel.LogEntries.Add(Entry("Encoder", "boom", "Error"));
+        viewModel.LogEntries.Add(item: Entry(type: "Server", message: "listening", level: "Information"));
+        viewModel.LogEntries.Add(item: Entry(type: "Encoder", message: "boom", level: "Error"));
 
         viewModel.SelectedLevel = "Error";
 
         viewModel.FilteredEntries.Should().ContainSingle();
-        viewModel.FilteredEntries[0].Message.Should().Be("boom");
+        viewModel.FilteredEntries[index: 0].Message.Should().Be(expected: "boom");
     }
 
     [Fact]
     public void SelectedLevel_IsCaseInsensitive()
     {
         LogViewerViewModel viewModel = CreateViewModel();
-        viewModel.LogEntries.Add(Entry("Server", "listening", "information"));
+        viewModel.LogEntries.Add(item: Entry(type: "Server", message: "listening", level: "information"));
 
         viewModel.SelectedLevel = "Information";
 
@@ -79,8 +79,8 @@ public sealed class LogViewerViewModelFilterTests
     public void SearchText_MatchesMessageCaseInsensitively()
     {
         LogViewerViewModel viewModel = CreateViewModel();
-        viewModel.LogEntries.Add(Entry("Server", "Listening on port 7626", "Information"));
-        viewModel.LogEntries.Add(Entry("Server", "unrelated line", "Information"));
+        viewModel.LogEntries.Add(item: Entry(type: "Server", message: "Listening on port 7626", level: "Information"));
+        viewModel.LogEntries.Add(item: Entry(type: "Server", message: "unrelated line", level: "Information"));
 
         viewModel.SearchText = "listening";
 
@@ -91,42 +91,42 @@ public sealed class LogViewerViewModelFilterTests
     public void SearchText_MatchesEntryTypeWhenMessageDoesNotMatch()
     {
         LogViewerViewModel viewModel = CreateViewModel();
-        viewModel.LogEntries.Add(Entry("Encoder", "unrelated message", "Information"));
-        viewModel.LogEntries.Add(Entry("Server", "different message", "Information"));
+        viewModel.LogEntries.Add(item: Entry(type: "Encoder", message: "unrelated message", level: "Information"));
+        viewModel.LogEntries.Add(item: Entry(type: "Server", message: "different message", level: "Information"));
 
         viewModel.SearchText = "encoder";
 
         viewModel.FilteredEntries.Should().ContainSingle();
-        viewModel.FilteredEntries[0].Type.Should().Be("Encoder");
+        viewModel.FilteredEntries[index: 0].Type.Should().Be(expected: "Encoder");
     }
 
     [Fact]
     public void SearchTextAndLevel_CombineAsAnd()
     {
         LogViewerViewModel viewModel = CreateViewModel();
-        viewModel.LogEntries.Add(Entry("Server", "listening now", "Information"));
-        viewModel.LogEntries.Add(Entry("Server", "listening now", "Error"));
-        viewModel.LogEntries.Add(Entry("Encoder", "encoding now", "Information"));
+        viewModel.LogEntries.Add(item: Entry(type: "Server", message: "listening now", level: "Information"));
+        viewModel.LogEntries.Add(item: Entry(type: "Server", message: "listening now", level: "Error"));
+        viewModel.LogEntries.Add(item: Entry(type: "Encoder", message: "encoding now", level: "Information"));
 
         viewModel.SelectedLevel = "Information";
         viewModel.SearchText = "listening";
 
         viewModel.FilteredEntries.Should().ContainSingle();
-        viewModel.FilteredEntries[0].Type.Should().Be("Server");
+        viewModel.FilteredEntries[index: 0].Type.Should().Be(expected: "Server");
     }
 
     [Fact]
     public void ClearFilters_ResetsSearchTextAndLevelToAll()
     {
         LogViewerViewModel viewModel = CreateViewModel();
-        viewModel.LogEntries.Add(Entry("Server", "listening", "Error"));
+        viewModel.LogEntries.Add(item: Entry(type: "Server", message: "listening", level: "Error"));
         viewModel.SelectedLevel = "Error";
         viewModel.SearchText = "listening";
 
         viewModel.ClearFilters();
 
-        viewModel.SearchText.Should().Be(string.Empty);
-        viewModel.SelectedLevel.Should().Be("All");
+        viewModel.SearchText.Should().Be(expected: string.Empty);
+        viewModel.SelectedLevel.Should().Be(expected: "All");
         viewModel.FilteredEntries.Should().ContainSingle();
     }
 
@@ -134,7 +134,7 @@ public sealed class LogViewerViewModelFilterTests
     public void WhitespaceOnlySearchText_TreatedAsNoFilter()
     {
         LogViewerViewModel viewModel = CreateViewModel();
-        viewModel.LogEntries.Add(Entry("Server", "anything", "Information"));
+        viewModel.LogEntries.Add(item: Entry(type: "Server", message: "anything", level: "Information"));
 
         viewModel.SearchText = "   ";
 

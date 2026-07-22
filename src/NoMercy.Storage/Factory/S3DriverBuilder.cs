@@ -37,58 +37,58 @@ public sealed class S3DriverBuilder : IStorageDriverBuilder
         string subPath
     )
     {
-        if (string.IsNullOrWhiteSpace(driverConfigJson))
+        if (string.IsNullOrWhiteSpace(value: driverConfigJson))
             throw new ArgumentException(
-                $"driver_config is required for '{driverType}' (folder {folderId}).",
-                nameof(driverConfigJson)
+                message: $"driver_config is required for '{driverType}' (folder {folderId}).",
+                paramName: nameof(driverConfigJson)
             );
 
         S3DriverConfig? config;
         try
         {
             config = JsonSerializer.Deserialize<S3DriverConfig>(
-                driverConfigJson,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                json: driverConfigJson,
+                options: new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
             );
         }
         catch (JsonException ex)
         {
             throw new ArgumentException(
-                $"Failed to parse driver_config for folder {folderId} (type={driverType}): {ex.Message}",
-                nameof(driverConfigJson),
-                ex
+                message: $"Failed to parse driver_config for folder {folderId} (type={driverType}): {ex.Message}",
+                paramName: nameof(driverConfigJson),
+                innerException: ex
             );
         }
 
         if (config is null)
             throw new ArgumentException(
-                $"driver_config deserialized to null for folder {folderId} (type={driverType}).",
-                nameof(driverConfigJson)
+                message: $"driver_config deserialized to null for folder {folderId} (type={driverType}).",
+                paramName: nameof(driverConfigJson)
             );
 
-        if (string.IsNullOrWhiteSpace(config.Bucket))
+        if (string.IsNullOrWhiteSpace(value: config.Bucket))
             throw new ArgumentException(
-                $"driver_config.bucket is required for '{driverType}' (folder {folderId}).",
-                nameof(driverConfigJson)
+                message: $"driver_config.bucket is required for '{driverType}' (folder {folderId}).",
+                paramName: nameof(driverConfigJson)
             );
 
-        if (string.IsNullOrWhiteSpace(config.Region))
+        if (string.IsNullOrWhiteSpace(value: config.Region))
             throw new ArgumentException(
-                $"driver_config.region is required for '{driverType}' (folder {folderId}).",
-                nameof(driverConfigJson)
+                message: $"driver_config.region is required for '{driverType}' (folder {folderId}).",
+                paramName: nameof(driverConfigJson)
             );
 
-        if (driverType == "r2" && string.IsNullOrWhiteSpace(config.Endpoint))
+        if (driverType == "r2" && string.IsNullOrWhiteSpace(value: config.Endpoint))
             throw new ArgumentException(
-                $"driver_config.endpoint is required for 'r2' (folder {folderId}). "
-                    + "Set it to your account's R2 endpoint URL.",
-                nameof(driverConfigJson)
+                message: $"driver_config.endpoint is required for 'r2' (folder {folderId}). "
+                         + "Set it to your account's R2 endpoint URL.",
+                paramName: nameof(driverConfigJson)
             );
 
         // Combine driver prefix with folder sub-path.
-        string effectivePrefix = string.IsNullOrEmpty(subPath)
+        string effectivePrefix = string.IsNullOrEmpty(value: subPath)
             ? (config.Prefix ?? string.Empty)
-            : JoinRoot(config.Prefix ?? string.Empty, subPath, driverType);
+            : JoinRoot(root: config.Prefix ?? string.Empty, subPath: subPath, driverType: driverType);
 
         string? accessKey = null;
         string? secretKey = null;
@@ -103,40 +103,31 @@ public sealed class S3DriverBuilder : IStorageDriverBuilder
         {
             (string AccessKey, string SecretKey)? creds = null;
 
-            if (!string.IsNullOrWhiteSpace(config.CredentialsRef))
+            if (!string.IsNullOrWhiteSpace(value: config.CredentialsRef))
             {
-                creds = _credentialResolver.Resolve(config.CredentialsRef);
+                creds = _credentialResolver.Resolve(credentialsRef: config.CredentialsRef);
                 if (creds is null)
                 {
                     _logger.LogWarning(
-                        "credentials_ref '{CredentialsRef}' not found in secrets store for folder {FolderId}; trying driver:{FallbackKey} fallback",
-                        config.CredentialsRef,
-                        folderId,
-                        $"driver:{folderId}"
+                        message: "credentials_ref '{CredentialsRef}' not found in secrets store for folder {FolderId}; trying driver:{FallbackKey} fallback", args: [config.CredentialsRef, folderId, $"driver:{folderId}"]
                     );
                 }
             }
 
-            creds ??= _credentialResolver.Resolve($"driver:{folderId}");
+            creds ??= _credentialResolver.Resolve(credentialsRef: $"driver:{folderId}");
 
             if (creds is not null)
             {
                 accessKey = creds.Value.AccessKey;
                 secretKey = creds.Value.SecretKey;
                 _logger.LogInformation(
-                    "S3/R2 cred resolved for folder {FolderId}: accessKey starts with '{AkPrefix}' len={AkLen}, secret len={SkLen}",
-                    folderId,
-                    accessKey.Length >= 4 ? accessKey.Substring(0, 4) : accessKey,
-                    accessKey.Length,
-                    secretKey.Length
+                    message: "S3/R2 cred resolved for folder {FolderId}: accessKey starts with '{AkPrefix}' len={AkLen}, secret len={SkLen}", args: [folderId, accessKey.Length >= 4 ? accessKey.Substring(startIndex: 0, length: 4) : accessKey, accessKey.Length, secretKey.Length]
                 );
             }
             else
             {
                 _logger.LogWarning(
-                    "No credentials found in store for {DriverType} driver (folder {FolderId}); falling back to default credential chain",
-                    driverType,
-                    folderId
+                    message: "No credentials found in store for {DriverType} driver (folder {FolderId}); falling back to default credential chain", args: [driverType, folderId]
                 );
             }
         }
@@ -147,24 +138,24 @@ public sealed class S3DriverBuilder : IStorageDriverBuilder
         // names the fix instead of letting the SDK throw "Credential access
         // key has length 0" / "Unable to get IAM credentials from EC2 IMDS"
         // deep inside the signing path.
-        bool emptyOrNullAccess = string.IsNullOrEmpty(accessKey);
-        bool emptyOrNullSecret = string.IsNullOrEmpty(secretKey);
+        bool emptyOrNullAccess = string.IsNullOrEmpty(value: accessKey);
+        bool emptyOrNullSecret = string.IsNullOrEmpty(value: secretKey);
         if (emptyOrNullAccess || emptyOrNullSecret)
             throw new ArgumentException(
-                $"{driverType} driver (folder {folderId}) has no credentials configured. "
-                    + "Open the driver in the dashboard and set access key + secret key.",
-                nameof(driverConfigJson)
+                message: $"{driverType} driver (folder {folderId}) has no credentials configured. "
+                         + "Open the driver in the dashboard and set access key + secret key.",
+                paramName: nameof(driverConfigJson)
             );
 
         S3StorageDriver s3Driver = new(
-            config.Bucket,
-            config.Region,
-            effectivePrefix,
-            config.Endpoint,
-            accessKey,
-            secretKey
+            bucket: config.Bucket,
+            region: config.Region,
+            prefix: effectivePrefix,
+            endpoint: config.Endpoint,
+            accessKey: accessKey,
+            secretKey: secretKey
         );
 
-        return new RemoteStorage(s3Driver);
+        return new RemoteStorage(driver: s3Driver);
     }
 }

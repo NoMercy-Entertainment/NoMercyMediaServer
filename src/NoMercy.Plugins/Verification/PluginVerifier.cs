@@ -18,7 +18,8 @@ public class PluginVerifier : IPluginVerifier
     private readonly List<IPluginVerificationStage> _stages;
 
     public PluginVerifier()
-        : this([
+        : this(stages:
+        [
             new AbiVerificationStage(),
             new ChecksumVerificationStage(),
             new SignatureVerificationStage(),
@@ -47,12 +48,12 @@ public class PluginVerifier : IPluginVerifier
 
         foreach (IPluginVerificationStage stage in _stages)
         {
-            (PluginStageOutcome outcome, string? message) = stage.Evaluate(context);
+            (PluginStageOutcome outcome, string? message) = stage.Evaluate(context: context);
 
             if (outcome == PluginStageOutcome.Trust)
                 trusted = true;
             else if (outcome == PluginStageOutcome.Fail && stage.Enforced)
-                failures.Add(message ?? $"{stage.Name} stage failed.");
+                failures.Add(item: message ?? $"{stage.Name} stage failed.");
         }
 
         return new()

@@ -25,7 +25,7 @@ public class App : Application
 
     public override void Initialize()
     {
-        AvaloniaXamlLoader.Load(this);
+        AvaloniaXamlLoader.Load(obj: this);
     }
 
     public override void OnFrameworkInitializationCompleted()
@@ -38,11 +38,11 @@ public class App : Application
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
             _trayIconManager = new(
-                _serverConnection,
-                _processLauncher,
-                desktop,
-                Program.ShowOnStartup,
-                Program.IsDev
+                serverConnection: _serverConnection,
+                processLauncher: _processLauncher,
+                lifetime: desktop,
+                showOnStartup: Program.ShowOnStartup,
+                isDev: Program.IsDev
             );
             _trayIconManager.Initialize();
         }

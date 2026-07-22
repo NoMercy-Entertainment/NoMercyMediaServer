@@ -34,13 +34,13 @@ public class PluginProfileOverride(IPluginManager pluginManager) : IProfileOverr
 {
     public EncodingProfile Apply(EncodingProfile configured, EncoderMediaInfo media)
     {
-        MediaInfo pluginMedia = ToPluginMediaInfo(media);
+        MediaInfo pluginMedia = ToPluginMediaInfo(media: media);
 
         foreach (IEncoderPlugin plugin in pluginManager.GetPluginsOfType<IEncoderPlugin>())
         {
-            PluginProfile? pluginProfile = plugin.GetProfile(pluginMedia);
+            PluginProfile? pluginProfile = plugin.GetProfile(info: pluginMedia);
             if (pluginProfile is not null)
-                return ToEncodingProfile(pluginProfile);
+                return ToEncodingProfile(profile: pluginProfile);
         }
 
         return configured;
@@ -49,9 +49,9 @@ public class PluginProfileOverride(IPluginManager pluginManager) : IProfileOverr
     private static MediaInfo ToPluginMediaInfo(EncoderMediaInfo media)
     {
         Encoder.Analysis.VideoStreamInfo? video =
-            media.VideoStreams.Count > 0 ? media.VideoStreams[0] : null;
+            media.VideoStreams.Count > 0 ? media.VideoStreams[index: 0] : null;
         Encoder.Analysis.AudioStreamInfo? audio =
-            media.AudioStreams.Count > 0 ? media.AudioStreams[0] : null;
+            media.AudioStreams.Count > 0 ? media.AudioStreams[index: 0] : null;
 
         return new()
         {
@@ -69,14 +69,14 @@ public class PluginProfileOverride(IPluginManager pluginManager) : IProfileOverr
     private static EncodingProfile ToEncodingProfile(PluginProfile profile)
     {
         VideoCodecType videoCodec =
-            CodecFamilyClassifier.ClassifyVideo(profile.VideoCodec) ?? VideoCodecType.H264;
+            CodecFamilyClassifier.ClassifyVideo(encoderName: profile.VideoCodec) ?? VideoCodecType.H264;
         AudioCodecType audioCodec =
-            CodecFamilyClassifier.ClassifyAudio(profile.AudioCodec) ?? AudioCodecType.Aac;
+            CodecFamilyClassifier.ClassifyAudio(encoderName: profile.AudioCodec) ?? AudioCodecType.Aac;
 
         return new(
             Id: Ulid.NewUlid(),
             Name: profile.Name,
-            Container: ParseContainer(profile.Container),
+            Container: ParseContainer(container: profile.Container),
             Video: new(
                 Policy: Encoder.Profiles.StreamPolicy.Transcode,
                 Codec: videoCodec,
@@ -100,7 +100,7 @@ public class PluginProfileOverride(IPluginManager pluginManager) : IProfileOverr
                 SegmentNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
                 PlaylistNameTemplate: ":type:_:framesize:_:colorrange:/:type:_:framesize:_:colorrange:",
                 CustomArguments: profile.ExtraParameters.Count > 0
-                    ? new Dictionary<string, string>(profile.ExtraParameters)
+                    ? new Dictionary<string, string>(dictionary: profile.ExtraParameters)
                     : null
             ),
             Audio:

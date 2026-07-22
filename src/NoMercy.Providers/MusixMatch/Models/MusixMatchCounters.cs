@@ -15,78 +15,78 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class MusixMatchCounters
 {
-    [JsonProperty("track_translation")]
+    [JsonProperty(propertyName: "track_translation")]
     public int TrackTranslation;
 
-    [JsonProperty("lyrics_missing")]
+    [JsonProperty(propertyName: "lyrics_missing")]
     public int LyricsMissing;
 
-    [JsonProperty("lyrics_ok")]
+    [JsonProperty(propertyName: "lyrics_ok")]
     public int LyricsOk;
 
-    [JsonProperty("lyrics_ko")]
+    [JsonProperty(propertyName: "lyrics_ko")]
     public int LyricsKo;
 
-    [JsonProperty("lyrics_changed")]
+    [JsonProperty(propertyName: "lyrics_changed")]
     public int LyricsChanged;
 
-    [JsonProperty("vote_bonuses")]
+    [JsonProperty(propertyName: "vote_bonuses")]
     public int VoteBonuses;
 
-    [JsonProperty("translation_ok")]
+    [JsonProperty(propertyName: "translation_ok")]
     public int TranslationOk;
 
-    [JsonProperty("track_influencer_bonus_moderator_vote")]
+    [JsonProperty(propertyName: "track_influencer_bonus_moderator_vote")]
     public int TrackInfluencerBonusModeratorVote;
 
-    [JsonProperty("lyrics_favourite_added")]
+    [JsonProperty(propertyName: "lyrics_favourite_added")]
     public int LyricsFavouriteAdded;
 
-    [JsonProperty("lyrics_ai_phrases_not_related_no")]
+    [JsonProperty(propertyName: "lyrics_ai_phrases_not_related_no")]
     public int LyricsAiPhrasesNotRelatedNo;
 
-    [JsonProperty("lyrics_report_contain_mistakes")]
+    [JsonProperty(propertyName: "lyrics_report_contain_mistakes")]
     public int LyricsReportContainMistakes;
 
-    [JsonProperty("lyrics_subtitle_added")]
+    [JsonProperty(propertyName: "lyrics_subtitle_added")]
     public int LyricsSubtitleAdded;
 
-    [JsonProperty("lyrics_music_id")]
+    [JsonProperty(propertyName: "lyrics_music_id")]
     public int LyricsMusicId;
 
-    [JsonProperty("lyrics_ai_phrases_not_related_yes")]
+    [JsonProperty(propertyName: "lyrics_ai_phrases_not_related_yes")]
     public int LyricsAiPhrasesNotRelatedYes;
 
-    [JsonProperty("lyrics_report_incomplete_lyrics")]
+    [JsonProperty(propertyName: "lyrics_report_incomplete_lyrics")]
     public int LyricsReportIncompleteLyrics;
 
-    [JsonProperty("lyrics_ai_phrases_not_related_skip")]
+    [JsonProperty(propertyName: "lyrics_ai_phrases_not_related_skip")]
     public int LyricsAiPhrasesNotRelatedSkip;
 
-    [JsonProperty("lyrics_report_completely_wrong")]
+    [JsonProperty(propertyName: "lyrics_report_completely_wrong")]
     public int LyricsReportCompletelyWrong;
 
-    [JsonProperty("lyrics_implicitly_ok")]
+    [JsonProperty(propertyName: "lyrics_implicitly_ok")]
     public int LyricsImplicitlyOk;
 
-    [JsonProperty("vote_maluses")]
+    [JsonProperty(propertyName: "vote_maluses")]
     public int VoteMaluses;
 
-    [JsonProperty("lyrics_richsync_added")]
+    [JsonProperty(propertyName: "lyrics_richsync_added")]
     public int LyricsRichsyncAdded;
 
-    [JsonProperty("lyrics_ranking_change")]
+    [JsonProperty(propertyName: "lyrics_ranking_change")]
     public int LyricsRankingChange;
 
-    [JsonProperty("lyrics_ai_mood_analysis_v3_value")]
+    [JsonProperty(propertyName: "lyrics_ai_mood_analysis_v3_value")]
     public int LyricsAiMoodAnalysisV3Value;
 
-    [JsonProperty("lyrics_ai_ugc_language")]
+    [JsonProperty(propertyName: "lyrics_ai_ugc_language")]
     public int LyricsAiUgcLanguage;
 
-    [JsonProperty("track_structure")]
+    [JsonProperty(propertyName: "track_structure")]
     public int TrackStructure;
 
-    [JsonProperty("track_complete_metadata")]
+    [JsonProperty(propertyName: "track_complete_metadata")]
     public int TrackCompleteMetadata;
 }

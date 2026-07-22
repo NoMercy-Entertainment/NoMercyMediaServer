@@ -18,12 +18,12 @@ public class MusixMatchTrackSearchParameters
         KeyValuePair<string, string>
     > StrategyDecryptions = new()
     {
-        [MusixMatchSortStrategy.TrackRatingAsc] = new("s_track_rating", "asc"),
-        [MusixMatchSortStrategy.TrackRatingDesc] = new("s_track_rating", "desc"),
-        [MusixMatchSortStrategy.ArtistRatingAsc] = new("s_artist_rating", "asc"),
-        [MusixMatchSortStrategy.ArtistRatingDesc] = new("s_artist_rating", "desc"),
-        [MusixMatchSortStrategy.ReleaseDateAsc] = new("s_track_release_date", "asc"),
-        [MusixMatchSortStrategy.ReleaseDateDesc] = new("s_track_release_date", "desc"),
+        [key: MusixMatchSortStrategy.TrackRatingAsc] = new(key: "s_track_rating", value: "asc"),
+        [key: MusixMatchSortStrategy.TrackRatingDesc] = new(key: "s_track_rating", value: "desc"),
+        [key: MusixMatchSortStrategy.ArtistRatingAsc] = new(key: "s_artist_rating", value: "asc"),
+        [key: MusixMatchSortStrategy.ArtistRatingDesc] = new(key: "s_artist_rating", value: "desc"),
+        [key: MusixMatchSortStrategy.ReleaseDateAsc] = new(key: "s_track_release_date", value: "asc"),
+        [key: MusixMatchSortStrategy.ReleaseDateDesc] = new(key: "s_track_release_date", value: "desc"),
     };
 
     public string? Query { get; set; }

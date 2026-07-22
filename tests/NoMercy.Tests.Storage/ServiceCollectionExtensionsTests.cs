@@ -35,9 +35,9 @@ public class ServiceCollectionExtensionsTests
     public void AddNoMercyStorage_applies_options_callback()
     {
         ServiceCollection services = new();
-        string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "nm-svc-test-root"));
+        string root = Path.GetFullPath(path: Path.Combine(path1: Path.GetTempPath(), path2: "nm-svc-test-root"));
 
-        services.AddNoMercyStorage(opts => opts.AllowedRoots.Add(root));
+        services.AddNoMercyStorage(configure: opts => opts.AllowedRoots.Add(item: root));
 
         ServiceProvider provider = services.BuildServiceProvider();
         StoragePathGuard guard = provider.GetRequiredService<StoragePathGuard>();
@@ -51,7 +51,7 @@ public class ServiceCollectionExtensionsTests
     {
         ServiceCollection services = new();
         services.AddNoMercyStorage();
-        services.AddNoMercyStorage(opts => opts.AllowedRoots.Add("/should-be-ignored"));
+        services.AddNoMercyStorage(configure: opts => opts.AllowedRoots.Add(item: "/should-be-ignored"));
 
         ServiceProvider provider = services.BuildServiceProvider();
 

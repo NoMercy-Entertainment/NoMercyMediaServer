@@ -13,48 +13,48 @@ using System.Xml.Serialization;
 
 namespace NoMercy.Providers.OpenSubtitles.Models;
 
-[XmlRoot("methodResponse", IsNullable = false)]
+[XmlRoot(elementName: "methodResponse", IsNullable = false)]
 public class LoginResponse
 {
-    [XmlElement("params", IsNullable = false)]
+    [XmlElement(elementName: "params", IsNullable = false)]
     public LoginResponseParams? Params { get; set; }
 }
 
 public class LoginResponseParams
 {
-    [XmlElement("param", IsNullable = false)]
+    [XmlElement(elementName: "param", IsNullable = false)]
     public LoginResponseParam? Param { get; set; }
 }
 
 public class LoginResponseParam
 {
-    [XmlElement("value", IsNullable = false)]
+    [XmlElement(elementName: "value", IsNullable = false)]
     public LoginResponseValue? Value { get; set; }
 }
 
 public class LoginResponseValue
 {
-    [XmlElement("string", IsNullable = true)]
+    [XmlElement(elementName: "string", IsNullable = true)]
     public string? String { get; set; }
 
-    [XmlElement("double", IsNullable = true)]
+    [XmlElement(elementName: "double", IsNullable = true)]
     public double? Double { get; set; }
 
-    [XmlElement("struct", IsNullable = true)]
+    [XmlElement(elementName: "struct", IsNullable = true)]
     public LoginResponseStruct? Struct { get; set; }
 }
 
 public class LoginResponseMember
 {
-    [XmlElement("name", IsNullable = true)]
+    [XmlElement(elementName: "name", IsNullable = true)]
     public string? Name { get; set; }
 
-    [XmlElement("value", IsNullable = true)]
+    [XmlElement(elementName: "value", IsNullable = true)]
     public LoginResponseValue? Value { get; set; }
 }
 
 public class LoginResponseStruct
 {
-    [XmlElement("member", IsNullable = true)]
+    [XmlElement(elementName: "member", IsNullable = true)]
     public List<LoginResponseMember> Member { get; set; } = [];
 }

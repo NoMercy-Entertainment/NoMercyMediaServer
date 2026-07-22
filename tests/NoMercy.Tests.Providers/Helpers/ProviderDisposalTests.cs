@@ -15,7 +15,7 @@ using NoMercy.Providers.OpenSubtitles.Client;
 
 namespace NoMercy.Tests.Providers.Helpers;
 
-[Collection("HttpClientProvider")]
+[Collection(name: "HttpClientProvider")]
 public class ProviderDisposalTests : IDisposable
 {
     private readonly ServiceProvider _serviceProvider;
@@ -23,11 +23,11 @@ public class ProviderDisposalTests : IDisposable
     public ProviderDisposalTests()
     {
         ServiceCollection services = new();
-        services.AddHttpClient(HttpClientNames.OpenSubtitles);
-        services.AddHttpClient(HttpClientNames.General);
+        services.AddHttpClient(name: HttpClientNames.OpenSubtitles);
+        services.AddHttpClient(name: HttpClientNames.General);
 
         _serviceProvider = services.BuildServiceProvider();
-        HttpClientProvider.Initialize(_serviceProvider.GetRequiredService<IHttpClientFactory>());
+        HttpClientProvider.Initialize(factory: _serviceProvider.GetRequiredService<IHttpClientFactory>());
     }
 
     public void Dispose()

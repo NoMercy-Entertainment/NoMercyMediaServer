@@ -29,9 +29,9 @@ public class EventBaseTests
         TestEvent event1 = new();
         TestEvent event2 = new();
 
-        event1.EventId.Should().NotBe(Guid.Empty);
-        event2.EventId.Should().NotBe(Guid.Empty);
-        event1.EventId.Should().NotBe(event2.EventId);
+        event1.EventId.Should().NotBe(unexpected: Guid.Empty);
+        event2.EventId.Should().NotBe(unexpected: Guid.Empty);
+        event1.EventId.Should().NotBe(unexpected: event2.EventId);
     }
 
     [Fact]
@@ -41,8 +41,8 @@ public class EventBaseTests
         TestEvent testEvent = new();
         DateTime after = DateTime.UtcNow;
 
-        testEvent.Timestamp.Should().BeOnOrAfter(before);
-        testEvent.Timestamp.Should().BeOnOrBefore(after);
+        testEvent.Timestamp.Should().BeOnOrAfter(expected: before);
+        testEvent.Timestamp.Should().BeOnOrBefore(expected: after);
     }
 
     [Fact]
@@ -51,9 +51,9 @@ public class EventBaseTests
         TestEvent testEvent = new();
 
         IEvent asInterface = testEvent;
-        asInterface.EventId.Should().Be(testEvent.EventId);
-        asInterface.Timestamp.Should().Be(testEvent.Timestamp);
-        asInterface.Source.Should().Be("TestSource");
+        asInterface.EventId.Should().Be(expected: testEvent.EventId);
+        asInterface.Timestamp.Should().Be(expected: testEvent.Timestamp);
+        asInterface.Source.Should().Be(expected: "TestSource");
     }
 
     [Fact]
@@ -61,8 +61,8 @@ public class EventBaseTests
     {
         TestEvent testEvent = new() { Payload = "test-data" };
 
-        testEvent.Payload.Should().Be("test-data");
-        testEvent.Source.Should().Be("TestSource");
-        testEvent.EventId.Should().NotBe(Guid.Empty);
+        testEvent.Payload.Should().Be(expected: "test-data");
+        testEvent.Source.Should().Be(expected: "TestSource");
+        testEvent.EventId.Should().NotBe(unexpected: Guid.Empty);
     }
 }

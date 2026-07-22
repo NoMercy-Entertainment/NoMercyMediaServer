@@ -22,40 +22,40 @@ namespace NoMercy.Tests.Api;
 /// FromRouteSegment must round-trip so IsSamePlaylist detection and the
 /// cast-handoff CastIntent.PlayMusic list_type never regress.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class MusicPlayerStateFactoryRouteSegmentTests
 {
     [Theory]
-    [InlineData("album", "albums")]
-    [InlineData("artist", "artists")]
-    [InlineData("playlist", "playlists")]
-    [InlineData("track", "tracks")]
-    [InlineData("genre", "genres")]
+    [InlineData(data: ["album", "albums"])]
+    [InlineData(data: ["artist", "artists"])]
+    [InlineData(data: ["playlist", "playlists"])]
+    [InlineData(data: ["track", "tracks"])]
+    [InlineData(data: ["genre", "genres"])]
     public void ToRouteSegment_MapsTypeToExpectedSegment(string type, string expectedSegment)
     {
-        MusicPlayerStateFactory.ToRouteSegment(type).Should().Be(expectedSegment);
+        MusicPlayerStateFactory.ToRouteSegment(type: type).Should().Be(expected: expectedSegment);
     }
 
     [Theory]
-    [InlineData("albums", "album")]
-    [InlineData("artists", "artist")]
-    [InlineData("playlists", "playlist")]
-    [InlineData("tracks", "track")]
-    [InlineData("genres", "genre")]
+    [InlineData(data: ["albums", "album"])]
+    [InlineData(data: ["artists", "artist"])]
+    [InlineData(data: ["playlists", "playlist"])]
+    [InlineData(data: ["tracks", "track"])]
+    [InlineData(data: ["genres", "genre"])]
     public void FromRouteSegment_MapsSegmentToExpectedType(string segment, string expectedType)
     {
-        MusicPlayerStateFactory.FromRouteSegment(segment).Should().Be(expectedType);
+        MusicPlayerStateFactory.FromRouteSegment(segment: segment).Should().Be(expected: expectedType);
     }
 
     [Theory]
-    [InlineData("album")]
-    [InlineData("artist")]
-    [InlineData("playlist")]
-    [InlineData("track")]
-    [InlineData("genre")]
+    [InlineData(data: "album")]
+    [InlineData(data: "artist")]
+    [InlineData(data: "playlist")]
+    [InlineData(data: "track")]
+    [InlineData(data: "genre")]
     public void ToRouteSegment_ThenFromRouteSegment_RoundTripsToOriginalType(string type)
     {
-        string segment = MusicPlayerStateFactory.ToRouteSegment(type);
-        MusicPlayerStateFactory.FromRouteSegment(segment).Should().Be(type);
+        string segment = MusicPlayerStateFactory.ToRouteSegment(type: type);
+        MusicPlayerStateFactory.FromRouteSegment(segment: segment).Should().Be(expected: type);
     }
 }

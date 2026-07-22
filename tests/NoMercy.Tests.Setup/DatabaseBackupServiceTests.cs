@@ -14,7 +14,7 @@ using NoMercy.Service.Seeds;
 
 namespace NoMercy.Tests.Setup;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class DatabaseBackupServiceTests : IDisposable
 {
     private readonly string _tempDir;
@@ -24,9 +24,9 @@ public sealed class DatabaseBackupServiceTests : IDisposable
 
     public DatabaseBackupServiceTests()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"nm_backup_test_{Guid.NewGuid():N}");
-        _backupDir = Path.Combine(_tempDir, "backups");
-        Directory.CreateDirectory(_tempDir);
+        _tempDir = Path.Combine(path1: Path.GetTempPath(), path2: $"nm_backup_test_{Guid.NewGuid():N}");
+        _backupDir = Path.Combine(path1: _tempDir, path2: "backups");
+        Directory.CreateDirectory(path: _tempDir);
 
         _originalBackupRoot = DatabaseBackupService.BackupRoot;
         _originalRetainCount = DatabaseBackupService.RetainCount;
@@ -39,8 +39,8 @@ public sealed class DatabaseBackupServiceTests : IDisposable
         DatabaseBackupService.BackupRoot = _originalBackupRoot;
         DatabaseBackupService.RetainCount = _originalRetainCount;
 
-        if (Directory.Exists(_tempDir))
-            Directory.Delete(_tempDir, recursive: true);
+        if (Directory.Exists(path: _tempDir))
+            Directory.Delete(path: _tempDir, recursive: true);
     }
 
     // A real SQLite database, not a text file: the service copies through
@@ -48,8 +48,8 @@ public sealed class DatabaseBackupServiceTests : IDisposable
     // database header.
     private string CreateFakeDb(string name = "media.db")
     {
-        string path = Path.Combine(_tempDir, name);
-        using SqliteConnection connection = new($"Data Source={path}; Pooling=False;");
+        string path = Path.Combine(path1: _tempDir, path2: name);
+        using SqliteConnection connection = new(connectionString: $"Data Source={path}; Pooling=False;");
         connection.Open();
         using SqliteCommand seed = connection.CreateCommand();
         seed.CommandText =
@@ -63,146 +63,146 @@ public sealed class DatabaseBackupServiceTests : IDisposable
     {
         string dbPath = CreateFakeDb();
 
-        bool result = DatabaseBackupService.BackupBeforeMigration(dbPath, pendingMigrationCount: 0);
+        bool result = DatabaseBackupService.BackupBeforeMigration(dbPath: dbPath, pendingMigrationCount: 0);
 
-        Assert.False(result);
-        Assert.False(Directory.Exists(_backupDir));
+        Assert.False(condition: result);
+        Assert.False(condition: Directory.Exists(path: _backupDir));
     }
 
     [Fact]
     public void BackupBeforeMigration_DbDoesNotExist_SkipsBackup()
     {
-        string nonExistentPath = Path.Combine(_tempDir, "nonexistent.db");
+        string nonExistentPath = Path.Combine(path1: _tempDir, path2: "nonexistent.db");
 
         bool result = DatabaseBackupService.BackupBeforeMigration(
-            nonExistentPath,
+            dbPath: nonExistentPath,
             pendingMigrationCount: 3
         );
 
-        Assert.False(result);
-        Assert.False(Directory.Exists(_backupDir));
+        Assert.False(condition: result);
+        Assert.False(condition: Directory.Exists(path: _backupDir));
     }
 
     [Fact]
     public void BackupBeforeMigration_PendingMigrations_CreatesBackupFile()
     {
-        string dbPath = CreateFakeDb("media.db");
+        string dbPath = CreateFakeDb(name: "media.db");
 
-        bool result = DatabaseBackupService.BackupBeforeMigration(dbPath, pendingMigrationCount: 2);
+        bool result = DatabaseBackupService.BackupBeforeMigration(dbPath: dbPath, pendingMigrationCount: 2);
 
-        Assert.True(result);
-        Assert.True(Directory.Exists(_backupDir));
+        Assert.True(condition: result);
+        Assert.True(condition: Directory.Exists(path: _backupDir));
 
-        string[] backups = Directory.GetFiles(_backupDir, "media.*.db");
-        Assert.Single(backups);
+        string[] backups = Directory.GetFiles(path: _backupDir, searchPattern: "media.*.db");
+        Assert.Single(collection: backups);
     }
 
     [Fact]
     public void BackupBeforeMigration_BackupContentMatchesSource()
     {
-        string dbPath = CreateFakeDb("media.db");
+        string dbPath = CreateFakeDb(name: "media.db");
 
-        DatabaseBackupService.BackupBeforeMigration(dbPath, pendingMigrationCount: 1);
+        DatabaseBackupService.BackupBeforeMigration(dbPath: dbPath, pendingMigrationCount: 1);
 
-        string[] backups = Directory.GetFiles(_backupDir, "media.*.db");
-        using SqliteConnection backup = new($"Data Source={backups[0]}; Pooling=False;");
+        string[] backups = Directory.GetFiles(path: _backupDir, searchPattern: "media.*.db");
+        using SqliteConnection backup = new(connectionString: $"Data Source={backups[0]}; Pooling=False;");
         backup.Open();
         using SqliteCommand query = backup.CreateCommand();
         query.CommandText = "SELECT content FROM marker;";
-        Assert.Equal("fake sqlite content", (string?)query.ExecuteScalar());
+        Assert.Equal(expected: "fake sqlite content", actual: (string?)query.ExecuteScalar());
     }
 
     [Fact]
     public void BackupBeforeMigration_BackupFileNameContainsTimestamp()
     {
-        string dbPath = CreateFakeDb("queue.db");
+        string dbPath = CreateFakeDb(name: "queue.db");
 
-        DatabaseBackupService.BackupBeforeMigration(dbPath, pendingMigrationCount: 1);
+        DatabaseBackupService.BackupBeforeMigration(dbPath: dbPath, pendingMigrationCount: 1);
 
-        string[] backups = Directory.GetFiles(_backupDir, "queue.*.db");
-        string fileName = Path.GetFileName(backups[0]);
+        string[] backups = Directory.GetFiles(path: _backupDir, searchPattern: "queue.*.db");
+        string fileName = Path.GetFileName(path: backups[0]);
 
         // Pattern: queue.<yyyyMMddHHmmss>.db — 14-digit timestamp between dots
-        string[] parts = fileName.Split('.');
-        Assert.Equal(3, parts.Length);
-        Assert.Equal("queue", parts[0]);
-        Assert.Equal("db", parts[2]);
-        Assert.Equal(14, parts[1].Length);
-        Assert.True(long.TryParse(parts[1], out _), "Timestamp portion must be numeric");
+        string[] parts = fileName.Split(separator: '.');
+        Assert.Equal(expected: 3, actual: parts.Length);
+        Assert.Equal(expected: "queue", actual: parts[0]);
+        Assert.Equal(expected: "db", actual: parts[2]);
+        Assert.Equal(expected: 14, actual: parts[1].Length);
+        Assert.True(condition: long.TryParse(s: parts[1], result: out _), userMessage: "Timestamp portion must be numeric");
     }
 
     [Fact]
     public void BackupBeforeMigration_ExceedsRetainCount_PrunesOldest()
     {
         DatabaseBackupService.RetainCount = 3;
-        string dbPath = CreateFakeDb("app.db");
+        string dbPath = CreateFakeDb(name: "app.db");
 
         // Seed four existing backup files with ascending timestamps
-        Directory.CreateDirectory(_backupDir);
+        Directory.CreateDirectory(path: _backupDir);
         for (int index = 1; index <= 4; index++)
         {
-            string fake = Path.Combine(_backupDir, $"app.2026010100000{index}.db");
-            File.WriteAllText(fake, "old backup");
+            string fake = Path.Combine(path1: _backupDir, path2: $"app.2026010100000{index}.db");
+            File.WriteAllText(path: fake, contents: "old backup");
         }
 
-        DatabaseBackupService.BackupBeforeMigration(dbPath, pendingMigrationCount: 1);
+        DatabaseBackupService.BackupBeforeMigration(dbPath: dbPath, pendingMigrationCount: 1);
 
-        string[] remaining = Directory.GetFiles(_backupDir, "app.*.db");
-        Assert.Equal(3, remaining.Length);
+        string[] remaining = Directory.GetFiles(path: _backupDir, searchPattern: "app.*.db");
+        Assert.Equal(expected: 3, actual: remaining.Length);
 
         // The oldest (lowest timestamp) must have been deleted
-        string[] fileNames = remaining.Select(Path.GetFileName).ToArray()!;
-        Assert.DoesNotContain("app.20260101000001.db", fileNames);
+        string[] fileNames = remaining.Select(selector: Path.GetFileName).ToArray()!;
+        Assert.DoesNotContain(expected: "app.20260101000001.db", collection: fileNames);
     }
 
     [Fact]
     public void BackupBeforeMigration_BelowRetainCount_KeepsAll()
     {
         DatabaseBackupService.RetainCount = 5;
-        string dbPath = CreateFakeDb("media.db");
+        string dbPath = CreateFakeDb(name: "media.db");
 
         // Seed two existing backup files
-        Directory.CreateDirectory(_backupDir);
-        File.WriteAllText(Path.Combine(_backupDir, "media.20260101000001.db"), "old");
-        File.WriteAllText(Path.Combine(_backupDir, "media.20260101000002.db"), "old");
+        Directory.CreateDirectory(path: _backupDir);
+        File.WriteAllText(path: Path.Combine(path1: _backupDir, path2: "media.20260101000001.db"), contents: "old");
+        File.WriteAllText(path: Path.Combine(path1: _backupDir, path2: "media.20260101000002.db"), contents: "old");
 
-        DatabaseBackupService.BackupBeforeMigration(dbPath, pendingMigrationCount: 1);
+        DatabaseBackupService.BackupBeforeMigration(dbPath: dbPath, pendingMigrationCount: 1);
 
-        string[] remaining = Directory.GetFiles(_backupDir, "media.*.db");
-        Assert.Equal(3, remaining.Length);
+        string[] remaining = Directory.GetFiles(path: _backupDir, searchPattern: "media.*.db");
+        Assert.Equal(expected: 3, actual: remaining.Length);
     }
 
     [Fact]
     public void BackupBeforeMigration_MultipleDbNames_PrunesIndependently()
     {
         DatabaseBackupService.RetainCount = 2;
-        string mediaDb = CreateFakeDb("media.db");
-        string queueDb = CreateFakeDb("queue.db");
+        string mediaDb = CreateFakeDb(name: "media.db");
+        string queueDb = CreateFakeDb(name: "queue.db");
 
-        Directory.CreateDirectory(_backupDir);
+        Directory.CreateDirectory(path: _backupDir);
         for (int index = 1; index <= 3; index++)
         {
-            File.WriteAllText(Path.Combine(_backupDir, $"media.2026010100000{index}.db"), "old");
-            File.WriteAllText(Path.Combine(_backupDir, $"queue.2026010100000{index}.db"), "old");
+            File.WriteAllText(path: Path.Combine(path1: _backupDir, path2: $"media.2026010100000{index}.db"), contents: "old");
+            File.WriteAllText(path: Path.Combine(path1: _backupDir, path2: $"queue.2026010100000{index}.db"), contents: "old");
         }
 
-        DatabaseBackupService.BackupBeforeMigration(mediaDb, pendingMigrationCount: 1);
-        DatabaseBackupService.BackupBeforeMigration(queueDb, pendingMigrationCount: 1);
+        DatabaseBackupService.BackupBeforeMigration(dbPath: mediaDb, pendingMigrationCount: 1);
+        DatabaseBackupService.BackupBeforeMigration(dbPath: queueDb, pendingMigrationCount: 1);
 
-        string[] mediaBackups = Directory.GetFiles(_backupDir, "media.*.db");
-        string[] queueBackups = Directory.GetFiles(_backupDir, "queue.*.db");
+        string[] mediaBackups = Directory.GetFiles(path: _backupDir, searchPattern: "media.*.db");
+        string[] queueBackups = Directory.GetFiles(path: _backupDir, searchPattern: "queue.*.db");
 
-        Assert.Equal(2, mediaBackups.Length);
-        Assert.Equal(2, queueBackups.Length);
+        Assert.Equal(expected: 2, actual: mediaBackups.Length);
+        Assert.Equal(expected: 2, actual: queueBackups.Length);
     }
 
     [Fact]
     public void BackupBeforeMigration_WalResidentUncheckpointedRow_IsIncludedInBackup()
     {
-        string dbPath = Path.Combine(_tempDir, "wal-media.db");
+        string dbPath = Path.Combine(path1: _tempDir, path2: "wal-media.db");
         string[] backups;
 
-        using (SqliteConnection walConnection = new($"Data Source={dbPath}"))
+        using (SqliteConnection walConnection = new(connectionString: $"Data Source={dbPath}"))
         {
             walConnection.Open();
             using (SqliteCommand walMode = walConnection.CreateCommand())
@@ -222,22 +222,22 @@ public sealed class DatabaseBackupServiceTests : IDisposable
                 insert.ExecuteNonQuery();
             }
 
-            Assert.True(File.Exists(dbPath + "-wal"));
+            Assert.True(condition: File.Exists(path: dbPath + "-wal"));
 
             bool backedUp = DatabaseBackupService.BackupBeforeMigration(
-                dbPath,
+                dbPath: dbPath,
                 pendingMigrationCount: 1
             );
 
-            Assert.True(backedUp);
-            backups = Directory.GetFiles(_backupDir, "wal-media.*.db");
-            Assert.Single(backups);
+            Assert.True(condition: backedUp);
+            backups = Directory.GetFiles(path: _backupDir, searchPattern: "wal-media.*.db");
+            Assert.Single(collection: backups);
         }
 
         SqliteConnection.ClearAllPools();
 
         object? value;
-        using (SqliteConnection verifyConnection = new($"Data Source={backups[0]}"))
+        using (SqliteConnection verifyConnection = new(connectionString: $"Data Source={backups[0]}"))
         {
             verifyConnection.Open();
             using SqliteCommand select = verifyConnection.CreateCommand();
@@ -247,19 +247,19 @@ public sealed class DatabaseBackupServiceTests : IDisposable
 
         SqliteConnection.ClearAllPools();
 
-        Assert.Equal("wal-resident-row", value);
+        Assert.Equal(expected: "wal-resident-row", actual: value);
     }
 
     [Fact]
     public void BackupBeforeMigration_InvalidBackupRoot_ReturnsFalseWithoutThrowing()
     {
         DatabaseBackupService.BackupRoot = "\0invalid\0path";
-        string dbPath = CreateFakeDb("media.db");
+        string dbPath = CreateFakeDb(name: "media.db");
 
-        bool result = DatabaseBackupService.BackupBeforeMigration(dbPath, pendingMigrationCount: 1);
+        bool result = DatabaseBackupService.BackupBeforeMigration(dbPath: dbPath, pendingMigrationCount: 1);
 
         // Must not throw — failure is non-fatal
-        Assert.False(result);
+        Assert.False(condition: result);
     }
 
     // ── BackupNow (unconditional — used by the daily backup cron job) ────────
@@ -267,42 +267,42 @@ public sealed class DatabaseBackupServiceTests : IDisposable
     [Fact]
     public void BackupNow_DbExists_CreatesBackupFileRegardlessOfMigrations()
     {
-        string dbPath = CreateFakeDb("media.db");
+        string dbPath = CreateFakeDb(name: "media.db");
 
-        bool result = DatabaseBackupService.BackupNow(dbPath, "daily scheduled backup");
+        bool result = DatabaseBackupService.BackupNow(dbPath: dbPath, reason: "daily scheduled backup");
 
-        Assert.True(result);
-        string[] backups = Directory.GetFiles(_backupDir, "media.*.db");
-        Assert.Single(backups);
+        Assert.True(condition: result);
+        string[] backups = Directory.GetFiles(path: _backupDir, searchPattern: "media.*.db");
+        Assert.Single(collection: backups);
     }
 
     [Fact]
     public void BackupNow_DbDoesNotExist_ReturnsFalseWithoutThrowing()
     {
-        string nonExistentPath = Path.Combine(_tempDir, "nonexistent.db");
+        string nonExistentPath = Path.Combine(path1: _tempDir, path2: "nonexistent.db");
 
-        bool result = DatabaseBackupService.BackupNow(nonExistentPath, "daily scheduled backup");
+        bool result = DatabaseBackupService.BackupNow(dbPath: nonExistentPath, reason: "daily scheduled backup");
 
-        Assert.False(result);
-        Assert.False(Directory.Exists(_backupDir));
+        Assert.False(condition: result);
+        Assert.False(condition: Directory.Exists(path: _backupDir));
     }
 
     [Fact]
     public void BackupNow_RespectsRetainCountAcrossRepeatedCalls()
     {
         DatabaseBackupService.RetainCount = 2;
-        string dbPath = CreateFakeDb("media.db");
+        string dbPath = CreateFakeDb(name: "media.db");
 
-        Directory.CreateDirectory(_backupDir);
+        Directory.CreateDirectory(path: _backupDir);
         for (int index = 1; index <= 3; index++)
             File.WriteAllText(
-                Path.Combine(_backupDir, $"media.2026010100000{index}.db"),
-                "old backup"
+                path: Path.Combine(path1: _backupDir, path2: $"media.2026010100000{index}.db"),
+                contents: "old backup"
             );
 
-        DatabaseBackupService.BackupNow(dbPath, "daily scheduled backup");
+        DatabaseBackupService.BackupNow(dbPath: dbPath, reason: "daily scheduled backup");
 
-        string[] remaining = Directory.GetFiles(_backupDir, "media.*.db");
-        Assert.Equal(2, remaining.Length);
+        string[] remaining = Directory.GetFiles(path: _backupDir, searchPattern: "media.*.db");
+        Assert.Equal(expected: 2, actual: remaining.Length);
     }
 }

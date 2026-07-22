@@ -25,17 +25,17 @@ namespace NoMercy.Tests.Encoder.Execution;
 /// suspend/resume call and lets Process.Dispose() own closing the handle
 /// exactly once, instead of also calling NtClose manually.
 /// </summary>
-[SupportedOSPlatform("windows")]
+[SupportedOSPlatform(platformName: "windows")]
 public class WindowsProcessSuspenderTests
 {
     [SkippableFact]
     public void Suspend_UnknownProcessId_DoesNotThrow()
     {
-        Skip.IfNot(OperatingSystem.IsWindows(), "WindowsProcessSuspender is Windows-only");
+        Skip.IfNot(condition: OperatingSystem.IsWindows(), reason: "WindowsProcessSuspender is Windows-only");
 
         WindowsProcessSuspender suspender = new();
 
-        Action act = () => suspender.Suspend(int.MaxValue);
+        Action act = () => suspender.Suspend(processId: int.MaxValue);
 
         act.Should().NotThrow();
     }
@@ -43,11 +43,11 @@ public class WindowsProcessSuspenderTests
     [SkippableFact]
     public void Resume_UnknownProcessId_DoesNotThrow()
     {
-        Skip.IfNot(OperatingSystem.IsWindows(), "WindowsProcessSuspender is Windows-only");
+        Skip.IfNot(condition: OperatingSystem.IsWindows(), reason: "WindowsProcessSuspender is Windows-only");
 
         WindowsProcessSuspender suspender = new();
 
-        Action act = () => suspender.Resume(int.MaxValue);
+        Action act = () => suspender.Resume(processId: int.MaxValue);
 
         act.Should().NotThrow();
     }
@@ -55,14 +55,14 @@ public class WindowsProcessSuspenderTests
     [SkippableFact]
     public void Suspend_Resume_RealProcess_UnderConcurrentGcPressure_DoesNotThrowAndProcessSurvives()
     {
-        Skip.IfNot(OperatingSystem.IsWindows(), "WindowsProcessSuspender is Windows-only");
+        Skip.IfNot(condition: OperatingSystem.IsWindows(), reason: "WindowsProcessSuspender is Windows-only");
 
         // ping, not timeout.exe — timeout.exe checks for an interactive
         // console and exits immediately under redirected I/O (CreateNoWindow),
         // which would make the process exit on its own mid-test regardless of
         // suspend/resume.
         using Process target = Process.Start(
-            new ProcessStartInfo
+            startInfo: new ProcessStartInfo
             {
                 FileName = "cmd.exe",
                 Arguments = "/c ping -n 31 127.0.0.1 >nul",
@@ -79,7 +79,7 @@ public class WindowsProcessSuspenderTests
             // Aggressive concurrent GC is exactly the condition the old bug
             // needed: collect the Process wrapper between NtOpenProcess
             // returning its handle and the Nt*Process call using it.
-            Task gcPressureTask = Task.Run(() =>
+            Task gcPressureTask = Task.Run(action: () =>
             {
                 while (!stopGcPressure.IsCancellationRequested)
                 {
@@ -92,20 +92,20 @@ public class WindowsProcessSuspenderTests
             {
                 for (int i = 0; i < 25; i++)
                 {
-                    suspender.Suspend(target.Id);
-                    suspender.Resume(target.Id);
+                    suspender.Suspend(processId: target.Id);
+                    suspender.Resume(processId: target.Id);
                 }
             };
 
             act.Should().NotThrow();
 
             stopGcPressure.Cancel();
-            gcPressureTask.Wait(TimeSpan.FromSeconds(5));
+            gcPressureTask.Wait(timeout: TimeSpan.FromSeconds(seconds: 5));
 
             target.Refresh();
             target
                 .HasExited.Should()
-                .BeFalse("suspend/resume cycling must not kill or corrupt the target process");
+                .BeFalse(because: "suspend/resume cycling must not kill or corrupt the target process");
         }
         finally
         {

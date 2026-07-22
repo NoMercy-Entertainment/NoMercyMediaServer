@@ -17,28 +17,28 @@ namespace NoMercy.Api.DTOs.Media;
 
 public class WatchProviderDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public Ulid Id { get; set; }
 
-    [JsonProperty("provider_id")]
+    [JsonProperty(propertyName: "provider_id")]
     public int WatchProviderId { get; set; }
 
-    [JsonProperty("country_code")]
+    [JsonProperty(propertyName: "country_code")]
     public string CountryCode { get; set; } = string.Empty;
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string ProviderType { get; set; } = string.Empty; // "flatrate", "buy", "rent", "ads", "free"
 
-    [JsonProperty("link")]
+    [JsonProperty(propertyName: "link")]
     public string? Link { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("logo")]
+    [JsonProperty(propertyName: "logo")]
     public string? LogoPath { get; set; }
 
-    [JsonProperty("display_priority")]
+    [JsonProperty(propertyName: "display_priority")]
     public int DisplayPriority { get; set; }
 
     public WatchProviderDto() { }

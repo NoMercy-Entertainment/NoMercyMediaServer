@@ -15,6 +15,6 @@ namespace NoMercy.Providers.TMDB.Models.TV;
 
 public class TmdbTvContentRatings
 {
-    [JsonProperty("results")]
+    [JsonProperty(propertyName: "results")]
     public TmdbTvContentRating[] Results { get; set; } = [];
 }

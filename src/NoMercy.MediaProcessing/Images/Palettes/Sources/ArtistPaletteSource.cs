@@ -28,11 +28,11 @@ public class ArtistPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        Guid id = Guid.Parse(entityId);
+        Guid id = Guid.Parse(input: entityId);
         return await db
-            .Artists.Where(a => a.Id == id)
-            .Select(a => a._colorPalette)
-            .FirstOrDefaultAsync(ct);
+            .Artists.Where(predicate: a => a.Id == id)
+            .Select(selector: a => a._colorPalette)
+            .FirstOrDefaultAsync(cancellationToken: ct);
     }
 
     public async Task<PaletteResult> GenerateAsync(
@@ -41,22 +41,23 @@ public class ArtistPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        Guid id = Guid.Parse(entityId);
-        Artist? artist = await db.Artists.FirstOrDefaultAsync(a => a.Id == id, ct);
+        Guid id = Guid.Parse(input: entityId);
+        Artist? artist = await db.Artists.FirstOrDefaultAsync(predicate: a => a.Id == id, cancellationToken: ct);
         if (artist is null)
             return PaletteResult.NoImage();
         if (artist.Cover is null)
             return PaletteResult.NoImage();
 
         string filePath = AppFiles.MusicImagesPath + artist.Cover;
-        if (!File.Exists(filePath))
+        if (!File.Exists(path: filePath))
             return PaletteResult.NoImage();
 
-        using Image<Rgba32> image = await Image.LoadAsync<Rgba32>(filePath, ct);
-        string json = BaseImageManager.GenerateColorPalette([
+        using Image<Rgba32> image = await Image.LoadAsync<Rgba32>(path: filePath, cancellationToken: ct);
+        string json = BaseImageManager.GenerateColorPalette(items:
+        [
             new() { Key = "cover", ImageData = image },
         ]);
-        return PaletteResult.Success(json);
+        return PaletteResult.Success(json: json);
     }
 
     public async Task PersistAsync(
@@ -66,9 +67,9 @@ public class ArtistPaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        Guid id = Guid.Parse(entityId);
+        Guid id = Guid.Parse(input: entityId);
         await db
-            .Artists.Where(a => a.Id == id)
-            .ExecuteUpdateAsync(s => s.SetProperty(a => a._colorPalette, json), ct);
+            .Artists.Where(predicate: a => a.Id == id)
+            .ExecuteUpdateAsync(setPropertyCalls: s => s.SetProperty(propertyExpression: a => a._colorPalette, valueExpression: json), cancellationToken: ct);
     }
 }

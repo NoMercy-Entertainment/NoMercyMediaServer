@@ -17,94 +17,94 @@ namespace NoMercy.Tests.MediaProcessing.Jobs;
 /// DISP-04: Audit test verifying that Process.Start, File.OpenWrite/OpenRead/Create
 /// results are properly disposed in cold paths.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public partial class ColdPathDisposalAuditTests
 {
     [Fact]
     public void Source_ProcessStart_HasUsingOrDispose()
     {
         string srcDir = FindSrcDirectory();
-        string[] csFiles = Directory.GetFiles(srcDir, "*.cs", SearchOption.AllDirectories);
+        string[] csFiles = Directory.GetFiles(path: srcDir, searchPattern: "*.cs", searchOption: SearchOption.AllDirectories);
 
         List<string> violations = [];
 
         foreach (string file in csFiles)
         {
-            string content = File.ReadAllText(file);
-            string[] lines = content.Split('\n');
+            string content = File.ReadAllText(path: file);
+            string[] lines = content.Split(separator: '\n');
 
             for (int i = 0; i < lines.Length; i++)
             {
                 string trimmed = lines[i].Trim();
-                if (trimmed.StartsWith("//") || trimmed.StartsWith("*"))
+                if (trimmed.StartsWith(value: "//") || trimmed.StartsWith(value: "*"))
                     continue;
 
-                if (!ProcessStartStaticPattern().IsMatch(trimmed))
+                if (!ProcessStartStaticPattern().IsMatch(input: trimmed))
                     continue;
 
                 // Allow: lines with 'using' keyword
-                if (trimmed.Contains("using "))
+                if (trimmed.Contains(value: "using "))
                     continue;
 
                 // Allow: lines that call .Dispose() inline
-                if (trimmed.Contains(".Dispose()"))
+                if (trimmed.Contains(value: ".Dispose()"))
                     continue;
 
                 // Allow: lines that call ?.Dispose() inline
-                if (trimmed.Contains("?.Dispose()"))
+                if (trimmed.Contains(value: "?.Dispose()"))
                     continue;
 
                 // Allow: instance .Start() calls on managed process objects (not static factory)
-                if (InstanceStartPattern().IsMatch(trimmed))
+                if (InstanceStartPattern().IsMatch(input: trimmed))
                     continue;
 
                 // Allow: test files
-                string relative = Path.GetRelativePath(srcDir, file);
-                if (relative.Contains("Test"))
+                string relative = Path.GetRelativePath(relativeTo: srcDir, path: file);
+                if (relative.Contains(value: "Test"))
                     continue;
 
-                violations.Add($"{relative}:{i + 1} — {trimmed}");
+                violations.Add(item: $"{relative}:{i + 1} — {trimmed}");
             }
         }
 
-        Assert.Empty(violations);
+        Assert.Empty(collection: violations);
     }
 
     [Fact]
     public void Source_FileOpenWrite_HasUsing()
     {
         string srcDir = FindSrcDirectory();
-        string[] csFiles = Directory.GetFiles(srcDir, "*.cs", SearchOption.AllDirectories);
+        string[] csFiles = Directory.GetFiles(path: srcDir, searchPattern: "*.cs", searchOption: SearchOption.AllDirectories);
 
         List<string> violations = [];
 
         foreach (string file in csFiles)
         {
-            string content = File.ReadAllText(file);
-            string[] lines = content.Split('\n');
+            string content = File.ReadAllText(path: file);
+            string[] lines = content.Split(separator: '\n');
 
             for (int i = 0; i < lines.Length; i++)
             {
                 string trimmed = lines[i].Trim();
-                if (trimmed.StartsWith("//") || trimmed.StartsWith("*"))
+                if (trimmed.StartsWith(value: "//") || trimmed.StartsWith(value: "*"))
                     continue;
 
-                if (!FileOpenPattern().IsMatch(trimmed))
+                if (!FileOpenPattern().IsMatch(input: trimmed))
                     continue;
 
                 // Allow: lines with 'using' keyword
-                if (trimmed.Contains("using "))
+                if (trimmed.Contains(value: "using "))
                     continue;
 
-                string relative = Path.GetRelativePath(srcDir, file);
-                if (relative.Contains("Test"))
+                string relative = Path.GetRelativePath(relativeTo: srcDir, path: file);
+                if (relative.Contains(value: "Test"))
                     continue;
 
-                violations.Add($"{relative}:{i + 1} — {trimmed}");
+                violations.Add(item: $"{relative}:{i + 1} — {trimmed}");
             }
         }
 
-        Assert.Empty(violations);
+        Assert.Empty(collection: violations);
     }
 
     private static string FindSrcDirectory()
@@ -112,26 +112,26 @@ public partial class ColdPathDisposalAuditTests
         string? dir = AppDomain.CurrentDomain.BaseDirectory;
         while (dir != null)
         {
-            string candidate = Path.Combine(dir, "src");
-            if (Directory.Exists(candidate))
+            string candidate = Path.Combine(path1: dir, path2: "src");
+            if (Directory.Exists(path: candidate))
                 return candidate;
 
-            dir = Directory.GetParent(dir)?.FullName;
+            dir = Directory.GetParent(path: dir)?.FullName;
         }
 
         string fallback = "/workspaces/NoMercyMediaServer/src";
-        if (Directory.Exists(fallback))
+        if (Directory.Exists(path: fallback))
             return fallback;
 
-        throw new DirectoryNotFoundException("Could not find src/ directory");
+        throw new DirectoryNotFoundException(message: "Could not find src/ directory");
     }
 
-    [GeneratedRegex(@"Process\.Start\([""n]")]
+    [GeneratedRegex(pattern: @"Process\.Start\([""n]")]
     private static partial Regex ProcessStartStaticPattern();
 
-    [GeneratedRegex(@"_\w+\.Start\(\)")]
+    [GeneratedRegex(pattern: @"_\w+\.Start\(\)")]
     private static partial Regex InstanceStartPattern();
 
-    [GeneratedRegex(@"(?<!\w)File\.(OpenWrite|OpenRead|Create)\(")]
+    [GeneratedRegex(pattern: @"(?<!\w)File\.(OpenWrite|OpenRead|Create)\(")]
     private static partial Regex FileOpenPattern();
 }

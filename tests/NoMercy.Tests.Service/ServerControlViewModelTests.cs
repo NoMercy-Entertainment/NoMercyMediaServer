@@ -18,27 +18,27 @@ namespace NoMercy.Tests.Service;
 public class ServerControlViewModelTests
 {
     [Theory]
-    [InlineData("running", "Running")]
-    [InlineData("starting", "Starting")]
-    [InlineData("Disconnected", "Disconnected")]
-    [InlineData("unknown", "unknown")]
+    [InlineData(data: ["running", "Running"])]
+    [InlineData(data: ["starting", "Starting"])]
+    [InlineData(data: ["Disconnected", "Disconnected"])]
+    [InlineData(data: ["unknown", "unknown"])]
     public void FormatStatusDisplay_ReturnsExpectedLabel(string input, string expected)
     {
-        string result = ServerControlViewModel.FormatStatusDisplay(input);
-        Assert.Equal(expected, result);
+        string result = ServerControlViewModel.FormatStatusDisplay(status: input);
+        Assert.Equal(expected: expected, actual: result);
     }
 
     [Theory]
-    [InlineData("running", "#22C55E")]
-    [InlineData("Running", "#22C55E")]
-    [InlineData("starting", "#EAB308")]
-    [InlineData("Starting", "#EAB308")]
-    [InlineData("Disconnected", "#EF4444")]
-    [InlineData("unknown", "#EF4444")]
+    [InlineData(data: ["running", "#22C55E"])]
+    [InlineData(data: ["Running", "#22C55E"])]
+    [InlineData(data: ["starting", "#EAB308"])]
+    [InlineData(data: ["Starting", "#EAB308"])]
+    [InlineData(data: ["Disconnected", "#EF4444"])]
+    [InlineData(data: ["unknown", "#EF4444"])]
     public void GetStatusColor_ReturnsExpectedColor(string input, string expected)
     {
-        string result = ServerControlViewModel.GetStatusColor(input);
-        Assert.Equal(expected, result);
+        string result = ServerControlViewModel.GetStatusColor(status: input);
+        Assert.Equal(expected: expected, actual: result);
     }
 
     [Fact]
@@ -47,17 +47,17 @@ public class ServerControlViewModelTests
         ServerConnection connection = new();
 
         ServerProcessLauncher launcher = new();
-        ServerControlViewModel viewModel = new(connection, launcher);
+        ServerControlViewModel viewModel = new(serverConnection: connection, processLauncher: launcher);
 
-        Assert.Equal("Disconnected", viewModel.ServerStatus);
-        Assert.Equal("--", viewModel.ServerName);
-        Assert.Equal("--", viewModel.Version);
-        Assert.Equal("--", viewModel.Platform);
-        Assert.Equal("--", viewModel.Uptime);
-        Assert.False(viewModel.IsServerRunning);
-        Assert.False(viewModel.IsActionInProgress);
-        Assert.Equal(string.Empty, viewModel.ActionStatus);
-        Assert.Equal("#EF4444", viewModel.StatusColor);
+        Assert.Equal(expected: "Disconnected", actual: viewModel.ServerStatus);
+        Assert.Equal(expected: "--", actual: viewModel.ServerName);
+        Assert.Equal(expected: "--", actual: viewModel.Version);
+        Assert.Equal(expected: "--", actual: viewModel.Platform);
+        Assert.Equal(expected: "--", actual: viewModel.Uptime);
+        Assert.False(condition: viewModel.IsServerRunning);
+        Assert.False(condition: viewModel.IsActionInProgress);
+        Assert.Equal(expected: string.Empty, actual: viewModel.ActionStatus);
+        Assert.Equal(expected: "#EF4444", actual: viewModel.StatusColor);
 
         connection.Dispose();
     }
@@ -67,13 +67,13 @@ public class ServerControlViewModelTests
     {
         ServerConnection connection = new();
         ServerProcessLauncher launcher = new();
-        ServerControlViewModel viewModel = new(connection, launcher);
+        ServerControlViewModel viewModel = new(serverConnection: connection, processLauncher: launcher);
         List<string> changedProperties = [];
 
         viewModel.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is not null)
-                changedProperties.Add(e.PropertyName);
+                changedProperties.Add(item: e.PropertyName);
         };
 
         viewModel.ServerStatus = "Running";
@@ -81,10 +81,10 @@ public class ServerControlViewModelTests
         viewModel.IsServerRunning = true;
         viewModel.ActionStatus = "Working...";
 
-        Assert.Contains("ServerStatus", changedProperties);
-        Assert.Contains("ServerName", changedProperties);
-        Assert.Contains("IsServerRunning", changedProperties);
-        Assert.Contains("ActionStatus", changedProperties);
+        Assert.Contains(expected: "ServerStatus", collection: changedProperties);
+        Assert.Contains(expected: "ServerName", collection: changedProperties);
+        Assert.Contains(expected: "IsServerRunning", collection: changedProperties);
+        Assert.Contains(expected: "ActionStatus", collection: changedProperties);
 
         connection.Dispose();
     }
@@ -94,13 +94,13 @@ public class ServerControlViewModelTests
     {
         ServerConnection connection = new();
         ServerProcessLauncher launcher = new();
-        ServerControlViewModel viewModel = new(connection, launcher);
+        ServerControlViewModel viewModel = new(serverConnection: connection, processLauncher: launcher);
         List<string> changedProperties = [];
 
         viewModel.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is not null)
-                changedProperties.Add(e.PropertyName);
+                changedProperties.Add(item: e.PropertyName);
         };
 
         viewModel.Version = "2.0.0";
@@ -109,11 +109,11 @@ public class ServerControlViewModelTests
         viewModel.IsActionInProgress = true;
         viewModel.StatusColor = "#22C55E";
 
-        Assert.Contains("Version", changedProperties);
-        Assert.Contains("Platform", changedProperties);
-        Assert.Contains("Uptime", changedProperties);
-        Assert.Contains("IsActionInProgress", changedProperties);
-        Assert.Contains("StatusColor", changedProperties);
+        Assert.Contains(expected: "Version", collection: changedProperties);
+        Assert.Contains(expected: "Platform", collection: changedProperties);
+        Assert.Contains(expected: "Uptime", collection: changedProperties);
+        Assert.Contains(expected: "IsActionInProgress", collection: changedProperties);
+        Assert.Contains(expected: "StatusColor", collection: changedProperties);
 
         connection.Dispose();
     }
@@ -123,19 +123,19 @@ public class ServerControlViewModelTests
     {
         // A unique pipe name no server can be listening on — the machine-global
         // default pipe would answer when a live dev server runs on this box.
-        ServerConnection connection = new($"nomercy-test-{Guid.NewGuid():N}");
+        ServerConnection connection = new(pipeNameOrSocketPath: $"nomercy-test-{Guid.NewGuid():N}");
         ServerProcessLauncher launcher = new();
-        ServerControlViewModel viewModel = new(connection, launcher);
+        ServerControlViewModel viewModel = new(serverConnection: connection, processLauncher: launcher);
 
         await viewModel.RefreshStatusAsync();
 
-        Assert.Equal("Disconnected", viewModel.ServerStatus);
-        Assert.Equal("--", viewModel.ServerName);
-        Assert.Equal("--", viewModel.Version);
-        Assert.Equal("--", viewModel.Platform);
-        Assert.Equal("--", viewModel.Uptime);
-        Assert.False(viewModel.IsServerRunning);
-        Assert.Equal("#EF4444", viewModel.StatusColor);
+        Assert.Equal(expected: "Disconnected", actual: viewModel.ServerStatus);
+        Assert.Equal(expected: "--", actual: viewModel.ServerName);
+        Assert.Equal(expected: "--", actual: viewModel.Version);
+        Assert.Equal(expected: "--", actual: viewModel.Platform);
+        Assert.Equal(expected: "--", actual: viewModel.Uptime);
+        Assert.False(condition: viewModel.IsServerRunning);
+        Assert.Equal(expected: "#EF4444", actual: viewModel.StatusColor);
 
         connection.Dispose();
     }
@@ -145,7 +145,7 @@ public class ServerControlViewModelTests
     {
         ServerConnection connection = new();
         ServerProcessLauncher launcher = new();
-        ServerControlViewModel viewModel = new(connection, launcher);
+        ServerControlViewModel viewModel = new(serverConnection: connection, processLauncher: launcher);
 
         viewModel.StartPolling();
         viewModel.StopPolling();
@@ -158,7 +158,7 @@ public class ServerControlViewModelTests
     {
         ServerConnection connection = new();
         ServerProcessLauncher launcher = new();
-        ServerControlViewModel viewModel = new(connection, launcher);
+        ServerControlViewModel viewModel = new(serverConnection: connection, processLauncher: launcher);
 
         viewModel.StopPolling();
 
@@ -170,7 +170,7 @@ public class ServerControlViewModelTests
     {
         ServerConnection connection = new();
         ServerProcessLauncher launcher = new();
-        ServerControlViewModel viewModel = new(connection, launcher);
+        ServerControlViewModel viewModel = new(serverConnection: connection, processLauncher: launcher);
 
         viewModel.StartPolling();
         viewModel.StartPolling();

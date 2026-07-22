@@ -26,11 +26,11 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// suite, which exercises the client against the real TMDB API for behavioral
 /// smoke coverage but never asserts on the outgoing request itself.
 /// </summary>
-[Collection("HttpClientProvider")]
+[Collection(name: "HttpClientProvider")]
 public sealed class TmdbMovieClientHarnessTests : ProviderHttpHarness
 {
     public TmdbMovieClientHarnessTests()
-        : base(HttpClientNames.Tmdb) { }
+        : base(httpClientNames: HttpClientNames.Tmdb) { }
 
     [Fact]
     public async Task Details_WithPriority_SendsAuthHeaderAndCallerLanguage()
@@ -44,18 +44,18 @@ public sealed class TmdbMovieClientHarnessTests : ProviderHttpHarness
         TestApiKeyStore.Instance.TmdbToken = "tmdb-test-token";
         const int movieId = 900_001;
         TmdbMovieDetails body = TmdbMovieMockData.GetSampleMovieDetails();
-        Handler.WhenGet($"movie/{movieId}", MockResponse.Json(HttpStatusCode.OK, body));
+        Handler.WhenGet(pathContains: $"movie/{movieId}", responses: MockResponse.Json(status: HttpStatusCode.OK, body: body));
 
-        using TmdbMovieClient client = new(movieId, language: "nl-NL");
+        using TmdbMovieClient client = new(id: movieId, language: "nl-NL");
         TmdbMovieDetails? result = await client.Details(priority: true);
 
         result.Should().NotBeNull();
-        result!.Title.Should().Be("The Dark Knight");
+        result!.Title.Should().Be(expected: "The Dark Knight");
 
         CapturedRequest request = Handler.Requests.Should().ContainSingle().Which;
-        request.Path.Should().Be($"/3/movie/{movieId}");
-        request.HeaderValue("Authorization").Should().Be("Bearer tmdb-test-token");
-        request.Query.Should().ContainKey("language").WhoseValue.Should().Be("nl-NL,null");
+        request.Path.Should().Be(expected: $"/3/movie/{movieId}");
+        request.HeaderValue(name: "Authorization").Should().Be(expected: "Bearer tmdb-test-token");
+        request.Query.Should().ContainKey(expected: "language").WhoseValue.Should().Be(expected: "nl-NL,null");
     }
 
     [Fact]
@@ -66,21 +66,21 @@ public sealed class TmdbMovieClientHarnessTests : ProviderHttpHarness
         // background/bulk-fill request to wait on translation availability.
         TestApiKeyStore.Instance.TmdbToken = "tmdb-test-token";
         const int movieId = 900_002;
-        TmdbMovieDetails body = TmdbMovieMockData.GenerateMovieWithId(movieId);
-        Handler.WhenGet($"movie/{movieId}", MockResponse.Json(HttpStatusCode.OK, body));
+        TmdbMovieDetails body = TmdbMovieMockData.GenerateMovieWithId(id: movieId);
+        Handler.WhenGet(pathContains: $"movie/{movieId}", responses: MockResponse.Json(status: HttpStatusCode.OK, body: body));
 
-        using TmdbMovieClient client = new(movieId, language: "nl-NL");
+        using TmdbMovieClient client = new(id: movieId, language: "nl-NL");
         TmdbMovieDetails? result = await client.Details();
 
         result.Should().NotBeNull();
 
         CapturedRequest request = Handler.Requests.Should().ContainSingle().Which;
-        request.Query.Should().ContainKey("language").WhoseValue.Should().Be(string.Empty);
+        request.Query.Should().ContainKey(expected: "language").WhoseValue.Should().Be(expected: string.Empty);
     }
 
     [Theory]
-    [InlineData(true, "true")]
-    [InlineData(false, "false")]
+    [InlineData(data: [true, "true"])]
+    [InlineData(data: [false, "false"])]
     public async Task Details_ReflectsAdultContentSetting_InIncludeAdultQuery(
         bool allowAdultContent,
         string expectedQueryValue
@@ -91,18 +91,18 @@ public sealed class TmdbMovieClientHarnessTests : ProviderHttpHarness
         try
         {
             int movieId = allowAdultContent ? 900_003 : 900_004;
-            TmdbMovieDetails body = TmdbMovieMockData.GenerateMovieWithId(movieId);
-            Handler.WhenGet($"movie/{movieId}", MockResponse.Json(HttpStatusCode.OK, body));
+            TmdbMovieDetails body = TmdbMovieMockData.GenerateMovieWithId(id: movieId);
+            Handler.WhenGet(pathContains: $"movie/{movieId}", responses: MockResponse.Json(status: HttpStatusCode.OK, body: body));
 
-            using TmdbMovieClient client = new(movieId);
+            using TmdbMovieClient client = new(id: movieId);
             await client.Details();
 
             CapturedRequest request = Handler.Requests.Should().ContainSingle().Which;
             request
                 .Query.Should()
-                .ContainKey("include_adult")
+                .ContainKey(expected: "include_adult")
                 .WhoseValue.Should()
-                .Be(expectedQueryValue);
+                .Be(expected: expectedQueryValue);
         }
         finally
         {
@@ -119,9 +119,9 @@ public sealed class TmdbMovieClientHarnessTests : ProviderHttpHarness
         TestApiKeyStore.Instance.TmdbToken = "tmdb-test-token";
         const int movieId = 900_005;
         TmdbMovieAppends body = TmdbMovieMockData.GetSampleMovieAppends();
-        Handler.WhenGet($"movie/{movieId}", MockResponse.Json(HttpStatusCode.OK, body));
+        Handler.WhenGet(pathContains: $"movie/{movieId}", responses: MockResponse.Json(status: HttpStatusCode.OK, body: body));
 
-        using TmdbMovieClient client = new(movieId);
+        using TmdbMovieClient client = new(id: movieId);
         TmdbMovieAppends? result = await client.WithAllAppends();
 
         result.Should().NotBeNull();
@@ -130,11 +130,11 @@ public sealed class TmdbMovieClientHarnessTests : ProviderHttpHarness
         CapturedRequest request = Handler.Requests.Should().ContainSingle().Which;
         request
             .Query.Should()
-            .ContainKey("append_to_response")
+            .ContainKey(expected: "append_to_response")
             .WhoseValue.Should()
             .Be(
-                "alternative_titles,release_dates,changes,credits,keywords,recommendations,"
-                    + "similar,translations,external_ids,videos,images,watch/providers"
+                expected: "alternative_titles,release_dates,changes,credits,keywords,recommendations,"
+                          + "similar,translations,external_ids,videos,images,watch/providers"
             );
     }
 
@@ -143,9 +143,9 @@ public sealed class TmdbMovieClientHarnessTests : ProviderHttpHarness
     {
         TestApiKeyStore.Instance.TmdbToken = "tmdb-test-token";
         const int unknownId = 999_999_999;
-        Handler.WhenGet($"movie/{unknownId}", MockResponse.Status(HttpStatusCode.NotFound));
+        Handler.WhenGet(pathContains: $"movie/{unknownId}", responses: MockResponse.Status(status: HttpStatusCode.NotFound));
 
-        using TmdbMovieClient client = new(unknownId);
+        using TmdbMovieClient client = new(id: unknownId);
         TmdbMovieDetails? result = await client.Details();
 
         result.Should().BeNull();
@@ -158,18 +158,16 @@ public sealed class TmdbMovieClientHarnessTests : ProviderHttpHarness
         // caller ever sees a failure.
         TestApiKeyStore.Instance.TmdbToken = "tmdb-test-token";
         const int movieId = 900_006;
-        TmdbMovieDetails body = TmdbMovieMockData.GenerateMovieWithId(movieId);
+        TmdbMovieDetails body = TmdbMovieMockData.GenerateMovieWithId(id: movieId);
         Handler.WhenGet(
-            $"movie/{movieId}",
-            MockResponse.Status(HttpStatusCode.ServiceUnavailable),
-            MockResponse.Json(HttpStatusCode.OK, body)
+            pathContains: $"movie/{movieId}", responses: [MockResponse.Status(status: HttpStatusCode.ServiceUnavailable), MockResponse.Json(status: HttpStatusCode.OK, body: body)]
         );
 
-        using TmdbMovieClient client = new(movieId);
+        using TmdbMovieClient client = new(id: movieId);
         TmdbMovieDetails? result = await client.Details();
 
         result.Should().NotBeNull();
-        Handler.RequestCountFor($"movie/{movieId}").Should().Be(2);
+        Handler.RequestCountFor(pathContains: $"movie/{movieId}").Should().Be(expected: 2);
     }
 
     [Fact]
@@ -181,12 +179,12 @@ public sealed class TmdbMovieClientHarnessTests : ProviderHttpHarness
         // exhausted, TMDB degrades to null instead of throwing.
         TestApiKeyStore.Instance.TmdbToken = "tmdb-test-token";
         const int movieId = 900_007;
-        Handler.WhenGet($"movie/{movieId}", MockResponse.Status(HttpStatusCode.ServiceUnavailable));
+        Handler.WhenGet(pathContains: $"movie/{movieId}", responses: MockResponse.Status(status: HttpStatusCode.ServiceUnavailable));
 
-        using TmdbMovieClient client = new(movieId);
+        using TmdbMovieClient client = new(id: movieId);
         TmdbMovieDetails? result = await client.Details();
 
         result.Should().BeNull();
-        Handler.RequestCountFor($"movie/{movieId}").Should().Be(4); // 1 initial + 3 retries
+        Handler.RequestCountFor(pathContains: $"movie/{movieId}").Should().Be(expected: 4); // 1 initial + 3 retries
     }
 }

@@ -15,33 +15,33 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class MusicBrainzArtist
 {
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("type-id")]
+    [JsonProperty(propertyName: "type-id")]
     public Guid? TypeId { get; set; }
 
-    [JsonProperty("disambiguation")]
+    [JsonProperty(propertyName: "disambiguation")]
     public string? Disambiguation { get; set; }
 
-    [JsonProperty("sort-name")]
+    [JsonProperty(propertyName: "sort-name")]
     public string SortName { get; set; } = string.Empty;
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string? Type { get; set; }
 
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public Guid Id { get; set; }
 
-    [JsonProperty("tags")]
+    [JsonProperty(propertyName: "tags")]
     public MusicBrainzTag[] Tags { get; set; } = [];
 
-    [JsonProperty("genres")]
+    [JsonProperty(propertyName: "genres")]
     public MusicBrainzGenreDetails[] Genres { get; set; } = [];
 
-    [JsonProperty("iso-3166-1-codes")]
+    [JsonProperty(propertyName: "iso-3166-1-codes")]
     public string[] Iso31661Codes { get; set; } = [];
 
-    [JsonProperty("iso-3166-2-codes")]
+    [JsonProperty(propertyName: "iso-3166-2-codes")]
     public string[] Iso31662Codes { get; set; } = [];
 }

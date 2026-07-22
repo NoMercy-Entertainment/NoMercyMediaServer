@@ -24,7 +24,7 @@ namespace NoMercy.Tests.Storage;
 /// errors propagate, and Dispose always closes the handle and disposes the
 /// session even when CloseFile fails.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class SmbWriteStreamTests
 {
     private static SmbSession NewSession(Mock<ISMBFileStore> store) =>
@@ -43,7 +43,7 @@ public sealed class SmbWriteStreamTests
         Mock<ISMBFileStore> store = new();
         List<byte[]> capturedChunks = [];
         store
-            .Setup(s =>
+            .Setup(expression: s =>
                 s.WriteFile(
                     out It.Ref<int>.IsAny,
                     It.IsAny<object>(),
@@ -52,23 +52,23 @@ public sealed class SmbWriteStreamTests
                 )
             )
             .Returns(
-                (InvokeWriteFile)(
+                valueFunction: (InvokeWriteFile)(
                     (out int written, object _, long _, byte[] data) =>
                     {
-                        capturedChunks.Add(data);
+                        capturedChunks.Add(item: data);
                         written = data.Length;
                         return NTStatus.STATUS_SUCCESS;
                     }
                 )
             );
-        SmbSession session = NewSession(store);
-        using SmbWriteStream stream = new(session, new object(), "/out.bin", chunkSize: 1024);
+        SmbSession session = NewSession(store: store);
+        using SmbWriteStream stream = new(session: session, handle: new object(), path: "/out.bin", chunkSize: 1024);
         byte[] payload = [1, 2, 3, 4, 5];
 
-        stream.Write(payload, 0, payload.Length);
+        stream.Write(buffer: payload, offset: 0, count: payload.Length);
 
-        capturedChunks.Should().HaveCount(1);
-        capturedChunks[0].Should().Equal(payload);
+        capturedChunks.Should().HaveCount(expected: 1);
+        capturedChunks[index: 0].Should().Equal(elements: payload);
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public sealed class SmbWriteStreamTests
         Mock<ISMBFileStore> store = new();
         List<byte[]> capturedChunks = [];
         store
-            .Setup(s =>
+            .Setup(expression: s =>
                 s.WriteFile(
                     out It.Ref<int>.IsAny,
                     It.IsAny<object>(),
@@ -86,23 +86,23 @@ public sealed class SmbWriteStreamTests
                 )
             )
             .Returns(
-                (InvokeWriteFile)(
+                valueFunction: (InvokeWriteFile)(
                     (out int written, object _, long _, byte[] data) =>
                     {
-                        capturedChunks.Add(data);
+                        capturedChunks.Add(item: data);
                         written = data.Length;
                         return NTStatus.STATUS_SUCCESS;
                     }
                 )
             );
-        SmbSession session = NewSession(store);
-        using SmbWriteStream stream = new(session, new object(), "/out.bin", chunkSize: 3);
+        SmbSession session = NewSession(store: store);
+        using SmbWriteStream stream = new(session: session, handle: new object(), path: "/out.bin", chunkSize: 3);
         byte[] payload = [1, 2, 3, 4, 5, 6, 7];
 
-        stream.Write(payload, 0, payload.Length);
+        stream.Write(buffer: payload, offset: 0, count: payload.Length);
 
-        capturedChunks.Should().HaveCount(3, "7 bytes at chunkSize=3 must split into 3+3+1");
-        capturedChunks.SelectMany(c => c).Should().Equal(payload);
+        capturedChunks.Should().HaveCount(expected: 3, because: "7 bytes at chunkSize=3 must split into 3+3+1");
+        capturedChunks.SelectMany(selector: c => c).Should().Equal(elements: payload);
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public sealed class SmbWriteStreamTests
         Mock<ISMBFileStore> store = new();
         List<(long offset, byte[] data)> calls = [];
         store
-            .Setup(s =>
+            .Setup(expression: s =>
                 s.WriteFile(
                     out It.Ref<int>.IsAny,
                     It.IsAny<object>(),
@@ -123,30 +123,30 @@ public sealed class SmbWriteStreamTests
                 )
             )
             .Returns(
-                (InvokeWriteFile)(
+                valueFunction: (InvokeWriteFile)(
                     (out int written, object _, long offset, byte[] data) =>
                     {
-                        calls.Add((offset, data));
+                        calls.Add(item: (offset, data));
                         // Server only accepts the first 2 bytes of whatever it's handed.
-                        written = Math.Min(2, data.Length);
+                        written = Math.Min(val1: 2, val2: data.Length);
                         return NTStatus.STATUS_SUCCESS;
                     }
                 )
             );
-        SmbSession session = NewSession(store);
-        using SmbWriteStream stream = new(session, new object(), "/out.bin", chunkSize: 100);
+        SmbSession session = NewSession(store: store);
+        using SmbWriteStream stream = new(session: session, handle: new object(), path: "/out.bin", chunkSize: 100);
         byte[] payload = [1, 2, 3, 4, 5];
 
-        stream.Write(payload, 0, payload.Length);
+        stream.Write(buffer: payload, offset: 0, count: payload.Length);
 
         calls
             .Should()
-            .HaveCount(3, "5 bytes at 2-bytes-accepted-per-call must take 3 calls (2+2+1)");
-        calls[0].offset.Should().Be(0);
-        calls[1]
+            .HaveCount(expected: 3, because: "5 bytes at 2-bytes-accepted-per-call must take 3 calls (2+2+1)");
+        calls[index: 0].offset.Should().Be(expected: 0);
+        calls[index: 1]
             .offset.Should()
-            .Be(2, "the offset must advance by exactly what the server actually wrote");
-        calls[2].offset.Should().Be(4);
+            .Be(expected: 2, because: "the offset must advance by exactly what the server actually wrote");
+        calls[index: 2].offset.Should().Be(expected: 4);
     }
 
     [Fact]
@@ -155,7 +155,7 @@ public sealed class SmbWriteStreamTests
         Mock<ISMBFileStore> store = new();
         byte[]? captured = null;
         store
-            .Setup(s =>
+            .Setup(expression: s =>
                 s.WriteFile(
                     out It.Ref<int>.IsAny,
                     It.IsAny<object>(),
@@ -164,7 +164,7 @@ public sealed class SmbWriteStreamTests
                 )
             )
             .Returns(
-                (InvokeWriteFile)(
+                valueFunction: (InvokeWriteFile)(
                     (out int written, object _, long _, byte[] data) =>
                     {
                         captured = data;
@@ -173,12 +173,12 @@ public sealed class SmbWriteStreamTests
                     }
                 )
             );
-        SmbSession session = NewSession(store);
-        using SmbWriteStream stream = new(session, new object(), "/out.bin");
+        SmbSession session = NewSession(store: store);
+        using SmbWriteStream stream = new(session: session, handle: new object(), path: "/out.bin");
 
-        stream.Write(new ReadOnlySpan<byte>([9, 8, 7]));
+        stream.Write(buffer: new ReadOnlySpan<byte>(array: [9, 8, 7]));
 
-        captured.Should().Equal(9, 8, 7);
+        captured.Should().Equal(elements: [9, 8, 7]);
     }
 
     [Fact]
@@ -186,7 +186,7 @@ public sealed class SmbWriteStreamTests
     {
         Mock<ISMBFileStore> store = new();
         store
-            .Setup(s =>
+            .Setup(expression: s =>
                 s.WriteFile(
                     out It.Ref<int>.IsAny,
                     It.IsAny<object>(),
@@ -195,7 +195,7 @@ public sealed class SmbWriteStreamTests
                 )
             )
             .Returns(
-                (InvokeWriteFile)(
+                valueFunction: (InvokeWriteFile)(
                     (out int written, object _, long _, byte[] data) =>
                     {
                         written = data.Length;
@@ -203,15 +203,15 @@ public sealed class SmbWriteStreamTests
                     }
                 )
             );
-        SmbSession session = NewSession(store);
-        using SmbWriteStream stream = new(session, new object(), "/out.bin");
+        SmbSession session = NewSession(store: store);
+        using SmbWriteStream stream = new(session: session, handle: new object(), path: "/out.bin");
 
-        await stream.WriteAsync([1, 2, 3], 0, 3, CancellationToken.None);
-        stream.Position.Should().Be(3);
+        await stream.WriteAsync(buffer: [1, 2, 3], offset: 0, count: 3, ct: CancellationToken.None);
+        stream.Position.Should().Be(expected: 3);
 
         using CancellationTokenSource cts = new();
         cts.Cancel();
-        Func<Task> act = () => stream.WriteAsync([1], 0, 1, cts.Token);
+        Func<Task> act = () => stream.WriteAsync(buffer: [1], offset: 0, count: 1, ct: cts.Token);
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
@@ -220,7 +220,7 @@ public sealed class SmbWriteStreamTests
     {
         Mock<ISMBFileStore> store = new();
         store
-            .Setup(s =>
+            .Setup(expression: s =>
                 s.WriteFile(
                     out It.Ref<int>.IsAny,
                     It.IsAny<object>(),
@@ -229,7 +229,7 @@ public sealed class SmbWriteStreamTests
                 )
             )
             .Returns(
-                (InvokeWriteFile)(
+                valueFunction: (InvokeWriteFile)(
                     (out int written, object _, long _, byte[] data) =>
                     {
                         written = data.Length;
@@ -237,15 +237,15 @@ public sealed class SmbWriteStreamTests
                     }
                 )
             );
-        SmbSession session = NewSession(store);
-        using SmbWriteStream stream = new(session, new object(), "/out.bin");
+        SmbSession session = NewSession(store: store);
+        using SmbWriteStream stream = new(session: session, handle: new object(), path: "/out.bin");
 
-        await stream.WriteAsync(new byte[] { 4, 5 }.AsMemory());
-        stream.Position.Should().Be(2);
+        await stream.WriteAsync(buffer: new byte[] { 4, 5 }.AsMemory());
+        stream.Position.Should().Be(expected: 2);
 
         using CancellationTokenSource cts = new();
         cts.Cancel();
-        Func<Task> act = async () => await stream.WriteAsync(new byte[1].AsMemory(), cts.Token);
+        Func<Task> act = async () => await stream.WriteAsync(buffer: new byte[1].AsMemory(), ct: cts.Token);
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
@@ -254,7 +254,7 @@ public sealed class SmbWriteStreamTests
     {
         Mock<ISMBFileStore> store = new();
         store
-            .Setup(s =>
+            .Setup(expression: s =>
                 s.WriteFile(
                     out It.Ref<int>.IsAny,
                     It.IsAny<object>(),
@@ -263,7 +263,7 @@ public sealed class SmbWriteStreamTests
                 )
             )
             .Returns(
-                (InvokeWriteFile)(
+                valueFunction: (InvokeWriteFile)(
                     (out int written, object _, long _, byte[] _) =>
                     {
                         written = 0;
@@ -271,29 +271,29 @@ public sealed class SmbWriteStreamTests
                     }
                 )
             );
-        SmbSession session = NewSession(store);
-        using SmbWriteStream stream = new(session, new object(), "/out.bin");
+        SmbSession session = NewSession(store: store);
+        using SmbWriteStream stream = new(session: session, handle: new object(), path: "/out.bin");
 
-        Action act = () => stream.Write([1, 2, 3], 0, 3);
+        Action act = () => stream.Write(buffer: [1, 2, 3], offset: 0, count: 3);
 
-        act.Should().Throw<IOException>().WithMessage("*STATUS_DISK_FULL*");
+        act.Should().Throw<IOException>().WithMessage(expectedWildcardPattern: "*STATUS_DISK_FULL*");
     }
 
     [Fact]
     public void Capability_flags_and_unsupported_members_match_a_forward_only_write_stream()
     {
         Mock<ISMBFileStore> store = new();
-        SmbSession session = NewSession(store);
-        using SmbWriteStream stream = new(session, new object(), "/out.bin");
+        SmbSession session = NewSession(store: store);
+        using SmbWriteStream stream = new(session: session, handle: new object(), path: "/out.bin");
 
         stream.CanRead.Should().BeFalse();
         stream.CanSeek.Should().BeFalse();
         stream.CanWrite.Should().BeTrue();
 
         ((Action)(() => stream.Position = 0)).Should().Throw<NotSupportedException>();
-        ((Action)(() => stream.Seek(0, SeekOrigin.Begin))).Should().Throw<NotSupportedException>();
-        ((Action)(() => stream.SetLength(1))).Should().Throw<NotSupportedException>();
-        ((Action)(() => _ = stream.Read(new byte[1], 0, 1)))
+        ((Action)(() => stream.Seek(offset: 0, origin: SeekOrigin.Begin))).Should().Throw<NotSupportedException>();
+        ((Action)(() => stream.SetLength(value: 1))).Should().Throw<NotSupportedException>();
+        ((Action)(() => _ = stream.Read(buffer: new byte[1], offset: 0, count: 1)))
             .Should()
             .Throw<NotSupportedException>();
         ((Action)(() => stream.Flush())).Should().NotThrow();
@@ -304,7 +304,7 @@ public sealed class SmbWriteStreamTests
     {
         Mock<ISMBFileStore> store = new();
         store
-            .Setup(s =>
+            .Setup(expression: s =>
                 s.WriteFile(
                     out It.Ref<int>.IsAny,
                     It.IsAny<object>(),
@@ -313,7 +313,7 @@ public sealed class SmbWriteStreamTests
                 )
             )
             .Returns(
-                (InvokeWriteFile)(
+                valueFunction: (InvokeWriteFile)(
                     (out int written, object _, long _, byte[] data) =>
                     {
                         written = data.Length;
@@ -321,47 +321,47 @@ public sealed class SmbWriteStreamTests
                     }
                 )
             );
-        SmbSession session = NewSession(store);
-        using SmbWriteStream stream = new(session, new object(), "/out.bin");
+        SmbSession session = NewSession(store: store);
+        using SmbWriteStream stream = new(session: session, handle: new object(), path: "/out.bin");
 
-        stream.Write([1, 2, 3], 0, 3);
+        stream.Write(buffer: [1, 2, 3], offset: 0, count: 3);
 
-        stream.Length.Should().Be(3);
-        stream.Position.Should().Be(3);
+        stream.Length.Should().Be(expected: 3);
+        stream.Position.Should().Be(expected: 3);
     }
 
     [Fact]
     public void Dispose_closes_the_handle_and_disposes_the_session()
     {
         Mock<ISMBFileStore> store = new();
-        store.Setup(s => s.CloseFile(It.IsAny<object>())).Returns(NTStatus.STATUS_SUCCESS);
-        store.Setup(s => s.Disconnect()).Returns(NTStatus.STATUS_SUCCESS);
-        SmbSession session = NewSession(store);
+        store.Setup(expression: s => s.CloseFile(It.IsAny<object>())).Returns(value: NTStatus.STATUS_SUCCESS);
+        store.Setup(expression: s => s.Disconnect()).Returns(value: NTStatus.STATUS_SUCCESS);
+        SmbSession session = NewSession(store: store);
         object handle = new();
-        SmbWriteStream stream = new(session, handle, "/out.bin");
+        SmbWriteStream stream = new(session: session, handle: handle, path: "/out.bin");
 
         stream.Dispose();
 
-        store.Verify(s => s.CloseFile(handle), Times.Once);
-        store.Verify(s => s.Disconnect(), Times.Once);
+        store.Verify(expression: s => s.CloseFile(handle), times: Times.Once);
+        store.Verify(expression: s => s.Disconnect(), times: Times.Once);
     }
 
     [Fact]
     public void Dispose_disposes_the_session_even_when_CloseFile_throws()
     {
         Mock<ISMBFileStore> store = new();
-        store.Setup(s => s.CloseFile(It.IsAny<object>())).Throws<InvalidOperationException>();
-        store.Setup(s => s.Disconnect()).Returns(NTStatus.STATUS_SUCCESS);
-        SmbSession session = NewSession(store);
-        SmbWriteStream stream = new(session, new object(), "/out.bin");
+        store.Setup(expression: s => s.CloseFile(It.IsAny<object>())).Throws<InvalidOperationException>();
+        store.Setup(expression: s => s.Disconnect()).Returns(value: NTStatus.STATUS_SUCCESS);
+        SmbSession session = NewSession(store: store);
+        SmbWriteStream stream = new(session: session, handle: new object(), path: "/out.bin");
 
         Action act = () => stream.Dispose();
 
         act.Should().Throw<InvalidOperationException>();
         store.Verify(
-            s => s.Disconnect(),
-            Times.Once,
-            "session teardown must still run via `finally`"
+            expression: s => s.Disconnect(),
+            times: Times.Once,
+            failMessage: "session teardown must still run via `finally`"
         );
     }
 
@@ -369,14 +369,14 @@ public sealed class SmbWriteStreamTests
     public void Dispose_is_idempotent()
     {
         Mock<ISMBFileStore> store = new();
-        store.Setup(s => s.CloseFile(It.IsAny<object>())).Returns(NTStatus.STATUS_SUCCESS);
-        store.Setup(s => s.Disconnect()).Returns(NTStatus.STATUS_SUCCESS);
-        SmbSession session = NewSession(store);
-        SmbWriteStream stream = new(session, new object(), "/out.bin");
+        store.Setup(expression: s => s.CloseFile(It.IsAny<object>())).Returns(value: NTStatus.STATUS_SUCCESS);
+        store.Setup(expression: s => s.Disconnect()).Returns(value: NTStatus.STATUS_SUCCESS);
+        SmbSession session = NewSession(store: store);
+        SmbWriteStream stream = new(session: session, handle: new object(), path: "/out.bin");
 
         stream.Dispose();
         stream.Dispose();
 
-        store.Verify(s => s.CloseFile(It.IsAny<object>()), Times.Once);
+        store.Verify(expression: s => s.CloseFile(It.IsAny<object>()), times: Times.Once);
     }
 }

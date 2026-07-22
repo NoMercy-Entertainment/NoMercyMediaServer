@@ -23,49 +23,49 @@ namespace NoMercy.Api.DTOs.Media;
 
 public class NmGenreCardDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public dynamic? Id { get; set; }
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string? Title { get; set; }
 
-    [JsonProperty("titleSort")]
+    [JsonProperty(propertyName: "titleSort")]
     public string? TitleSort { get; set; }
 
-    [JsonProperty("overview")]
+    [JsonProperty(propertyName: "overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty("link")]
+    [JsonProperty(propertyName: "link")]
     public Uri Link { get; set; } = null!;
 
-    [JsonProperty("rating")]
+    [JsonProperty(propertyName: "rating")]
     public RatingClass? Rating { get; set; }
 
-    [JsonProperty("year")]
+    [JsonProperty(propertyName: "year")]
     public int? Year { get; set; }
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string? Type { get; set; }
 
-    [JsonProperty("backdrop")]
+    [JsonProperty(propertyName: "backdrop")]
     public string? Backdrop { get; set; }
 
-    [JsonProperty("poster")]
+    [JsonProperty(propertyName: "poster")]
     public string? Poster { get; set; }
 
-    [JsonProperty("logo")]
+    [JsonProperty(propertyName: "logo")]
     public string? Logo { get; set; }
 
-    [JsonProperty("color_palette")]
+    [JsonProperty(propertyName: "color_palette")]
     public ColorPalette? ColorPalette { get; set; }
 
-    [JsonProperty("content_ratings")]
+    [JsonProperty(propertyName: "content_ratings")]
     public IEnumerable<ContentRating> ContentRatings { get; set; } = [];
 
-    [JsonProperty("have_items")]
+    [JsonProperty(propertyName: "have_items")]
     public int? HaveItems { get; set; }
 
-    [JsonProperty("number_of_items")]
+    [JsonProperty(propertyName: "number_of_items")]
     public int? NumberOfItems { get; set; }
 
     public NmGenreCardDto()
@@ -79,27 +79,27 @@ public class NmGenreCardDto
         string? overview = movie.Translations.FirstOrDefault()?.Overview;
 
         Id = movie.Id;
-        Title = !string.IsNullOrEmpty(title) ? title : movie.Title;
-        Overview = !string.IsNullOrEmpty(overview) ? overview : movie.Overview;
+        Title = !string.IsNullOrEmpty(value: title) ? title : movie.Title;
+        Overview = !string.IsNullOrEmpty(value: overview) ? overview : movie.Overview;
         Poster = movie.Poster;
         Backdrop = movie.Backdrop;
-        Logo = movie.Images.FirstOrDefault(image => image.Type == "logo")?.FilePath;
-        TitleSort = movie.Title.TitleSort(movie.ReleaseDate);
+        Logo = movie.Images.FirstOrDefault(predicate: image => image.Type == "logo")?.FilePath;
+        TitleSort = movie.Title.TitleSort(date: movie.ReleaseDate);
         Year = movie.ReleaseDate.ParseYear();
 
         Type = "genre";
-        Link = new($"/movie/{Id}", UriKind.Relative);
+        Link = new(uriString: $"/movie/{Id}", uriKind: UriKind.Relative);
         NumberOfItems = 1;
-        HaveItems = movie.VideoFiles.Count(v => v.Folder != null);
+        HaveItems = movie.VideoFiles.Count(predicate: v => v.Folder != null);
 
         ColorPalette = movie.ColorPalette;
 
         ContentRatings = movie
-            .CertificationMovies.Where(certificationMovie =>
+            .CertificationMovies.Where(predicate: certificationMovie =>
                 certificationMovie.Certification.Iso31661 == "US"
                 || certificationMovie.Certification.Iso31661 == country
             )
-            .Select(certificationMovie => new ContentRating
+            .Select(selector: certificationMovie => new ContentRating
             {
                 Rating = certificationMovie.Certification.Rating,
                 Iso31661 = certificationMovie.Certification.Iso31661,
@@ -112,27 +112,27 @@ public class NmGenreCardDto
         string? overview = tv.Translations.FirstOrDefault()?.Overview;
 
         Id = tv.Id;
-        Title = !string.IsNullOrEmpty(title) ? title : tv.Title;
-        Overview = !string.IsNullOrEmpty(overview) ? overview : tv.Overview;
+        Title = !string.IsNullOrEmpty(value: title) ? title : tv.Title;
+        Overview = !string.IsNullOrEmpty(value: overview) ? overview : tv.Overview;
         Poster = tv.Poster;
         Backdrop = tv.Backdrop;
-        Logo = tv.Images.FirstOrDefault(image => image.Type == "logo")?.FilePath;
-        TitleSort = tv.Title.TitleSort(tv.FirstAirDate);
+        Logo = tv.Images.FirstOrDefault(predicate: image => image.Type == "logo")?.FilePath;
+        TitleSort = tv.Title.TitleSort(date: tv.FirstAirDate);
         Year = tv.FirstAirDate.ParseYear();
 
         Type = "genre";
-        Link = new($"/tv/{Id}", UriKind.Relative);
+        Link = new(uriString: $"/tv/{Id}", uriKind: UriKind.Relative);
         NumberOfItems = tv.NumberOfEpisodes;
-        HaveItems = tv.Episodes.Count(episode => episode.VideoFiles.Any(v => v.Folder != null));
+        HaveItems = tv.Episodes.Count(predicate: episode => episode.VideoFiles.Any(predicate: v => v.Folder != null));
 
         ColorPalette = tv.ColorPalette;
 
         ContentRatings = tv
-            .CertificationTvs.Where(certificationMovie =>
+            .CertificationTvs.Where(predicate: certificationMovie =>
                 certificationMovie.Certification.Iso31661 == "US"
                 || certificationMovie.Certification.Iso31661 == country
             )
-            .Select(certificationTv => new ContentRating
+            .Select(selector: certificationTv => new ContentRating
             {
                 Rating = certificationTv.Certification.Rating,
                 Iso31661 = certificationTv.Certification.Iso31661,
@@ -145,36 +145,36 @@ public class NmGenreCardDto
         string? overview = collection.Translations.FirstOrDefault()?.Overview;
 
         Id = collection.Id;
-        Title = !string.IsNullOrEmpty(title) ? title : collection.Title;
-        Overview = !string.IsNullOrEmpty(overview) ? overview : collection.Overview;
+        Title = !string.IsNullOrEmpty(value: title) ? title : collection.Title;
+        Overview = !string.IsNullOrEmpty(value: overview) ? overview : collection.Overview;
         Poster = collection.Poster;
         Backdrop = collection.Backdrop;
-        Logo = collection.Images.FirstOrDefault(image => image.Type == "logo")?.FilePath;
+        Logo = collection.Images.FirstOrDefault(predicate: image => image.Type == "logo")?.FilePath;
         TitleSort = collection.Title.TitleSort(
-            collection.CollectionMovies.MinBy(movie => movie.Movie.ReleaseDate)?.Movie.ReleaseDate
+            date: collection.CollectionMovies.MinBy(keySelector: movie => movie.Movie.ReleaseDate)?.Movie.ReleaseDate
         );
         Year = collection
-            .CollectionMovies.MinBy(movie => movie.Movie.ReleaseDate)
+            .CollectionMovies.MinBy(keySelector: movie => movie.Movie.ReleaseDate)
             ?.Movie.ReleaseDate.ParseYear();
 
         Type = "genre";
-        Link = new($"/collection/{Id}", UriKind.Relative);
+        Link = new(uriString: $"/collection/{Id}", uriKind: UriKind.Relative);
         NumberOfItems = collection.CollectionMovies.Count;
-        HaveItems = collection.CollectionMovies.Count(movie =>
-            movie.Movie.VideoFiles.Any(v => v.Folder != null)
+        HaveItems = collection.CollectionMovies.Count(predicate: movie =>
+            movie.Movie.VideoFiles.Any(predicate: v => v.Folder != null)
         );
 
         ColorPalette = collection.ColorPalette;
 
         ContentRatings = collection
-            .CollectionMovies.SelectMany(collectionMovie =>
+            .CollectionMovies.SelectMany(selector: collectionMovie =>
                 collectionMovie.Movie.CertificationMovies
             )
-            .Where(certificationMovie =>
+            .Where(predicate: certificationMovie =>
                 certificationMovie.Certification.Iso31661 == "US"
                 || certificationMovie.Certification.Iso31661 == country
             )
-            .Select(certificationMovie => new ContentRating
+            .Select(selector: certificationMovie => new ContentRating
             {
                 Rating = certificationMovie.Certification.Rating,
                 Iso31661 = certificationMovie.Certification.Iso31661,
@@ -191,38 +191,38 @@ public class NmGenreCardDto
         Logo = special.Logo;
         TitleSort = special.Title.TitleSort();
         Year =
-            special.Items.MinBy(movie => movie.Movie?.ReleaseDate)?.Movie?.ReleaseDate.ParseYear()
+            special.Items.MinBy(keySelector: movie => movie.Movie?.ReleaseDate)?.Movie?.ReleaseDate.ParseYear()
             ?? special
-                .Items.Select(tv => tv.Episode?.Tv)
+                .Items.Select(selector: tv => tv.Episode?.Tv)
                 .FirstOrDefault()
                 ?.FirstAirDate.ParseYear();
 
         Type = "genre";
-        Link = new($"/specials/{Id}", UriKind.Relative);
+        Link = new(uriString: $"/specials/{Id}", uriKind: UriKind.Relative);
 
         NumberOfItems = special.Items.Count;
 
         int haveMovies = special
-            .Items.Select(item => item.Movie)
-            .Count(movie => movie is not null && movie.VideoFiles.Count != 0);
+            .Items.Select(selector: item => item.Movie)
+            .Count(predicate: movie => movie is not null && movie.VideoFiles.Count != 0);
 
         int haveEpisodes = special
-            .Items.Select(item => item.Episode)
-            .Count(movie => movie is not null && movie.VideoFiles.Count != 0);
+            .Items.Select(selector: item => item.Episode)
+            .Count(predicate: movie => movie is not null && movie.VideoFiles.Count != 0);
 
         HaveItems = haveMovies + haveEpisodes;
 
         ColorPalette = special.ColorPalette;
 
         ContentRatings = special
-            .Items.SelectMany(item =>
+            .Items.SelectMany(selector: item =>
                 item.Movie?.CertificationMovies ?? Enumerable.Empty<CertificationMovie>()
             )
-            .Where(certificationMovie =>
+            .Where(predicate: certificationMovie =>
                 certificationMovie.Certification.Iso31661 == "US"
                 || certificationMovie.Certification.Iso31661 == country
             )
-            .Select(certificationMovie => new ContentRating
+            .Select(selector: certificationMovie => new ContentRating
             {
                 Rating = certificationMovie.Certification.Rating,
                 Iso31661 = certificationMovie.Certification.Iso31661,
@@ -236,14 +236,14 @@ public class NmGenreCardDto
         TitleSort = genre.Name;
 
         Type = "genre";
-        Link = new($"/genres/{genre.Id}", UriKind.Relative);
+        Link = new(uriString: $"/genres/{genre.Id}", uriKind: UriKind.Relative);
         NumberOfItems = genre.GenreMovies.Count + genre.GenreTvShows.Count;
         HaveItems =
-            genre.GenreMovies.Count(genreMovie =>
-                genreMovie.Movie.VideoFiles.Any(v => v.Folder != null)
+            genre.GenreMovies.Count(predicate: genreMovie =>
+                genreMovie.Movie.VideoFiles.Any(predicate: v => v.Folder != null)
             )
-            + genre.GenreTvShows.Count(genreTv =>
-                genreTv.Tv.Episodes.Any(episode => episode.VideoFiles.Any(v => v.Folder != null))
+            + genre.GenreTvShows.Count(predicate: genreTv =>
+                genreTv.Tv.Episodes.Any(predicate: episode => episode.VideoFiles.Any(predicate: v => v.Folder != null))
             );
     }
 
@@ -254,7 +254,7 @@ public class NmGenreCardDto
         TitleSort = genre.Name.TitleSort();
 
         Type = "genre";
-        Link = new($"/music/genres/{genre.Id}", UriKind.Relative);
+        Link = new(uriString: $"/music/genres/{genre.Id}", uriKind: UriKind.Relative);
         NumberOfItems = genre.MusicGenreTracks.Count;
         HaveItems = genre.MusicGenreTracks.Count;
     }
@@ -266,7 +266,7 @@ public class NmGenreCardDto
         TitleSort = genre.Name.TitleSort();
 
         Type = "genre";
-        Link = new($"/music/genres/{genre.Id}", UriKind.Relative);
+        Link = new(uriString: $"/music/genres/{genre.Id}", uriKind: UriKind.Relative);
         NumberOfItems = genre.TrackCount;
         HaveItems = genre.TrackCount;
     }

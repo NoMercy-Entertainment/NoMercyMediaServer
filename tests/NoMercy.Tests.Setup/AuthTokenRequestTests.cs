@@ -17,7 +17,7 @@ public class AuthTokenRequestTests
 {
     private static Dictionary<string, string> ToDictionary(List<KeyValuePair<string, string>> body)
     {
-        return body.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        return body.ToDictionary(keySelector: kvp => kvp.Key, elementSelector: kvp => kvp.Value);
     }
 
     // --- Authorization Code Body ---
@@ -26,48 +26,48 @@ public class AuthTokenRequestTests
     public void AuthCodeBody_DoesNotContainClientSecret()
     {
         List<KeyValuePair<string, string>> body = AuthManager.BuildAuthorizationCodeBody(
-            "my-client",
-            "auth-code-123",
-            "http://localhost:7626/sso-callback",
-            "verifier123"
+            clientId: "my-client",
+            code: "auth-code-123",
+            redirectUri: "http://localhost:7626/sso-callback",
+            codeVerifier: "verifier123"
         );
 
-        Dictionary<string, string> dict = ToDictionary(body);
-        Assert.DoesNotContain("client_secret", dict.Keys);
+        Dictionary<string, string> dict = ToDictionary(body: body);
+        Assert.DoesNotContain(expected: "client_secret", collection: dict.Keys);
     }
 
     [Fact]
     public void AuthCodeBody_ContainsCodeVerifier()
     {
         List<KeyValuePair<string, string>> body = AuthManager.BuildAuthorizationCodeBody(
-            "my-client",
-            "auth-code-123",
-            "http://localhost:7626/sso-callback",
-            "verifier123"
+            clientId: "my-client",
+            code: "auth-code-123",
+            redirectUri: "http://localhost:7626/sso-callback",
+            codeVerifier: "verifier123"
         );
 
-        Dictionary<string, string> dict = ToDictionary(body);
-        Assert.Equal("verifier123", dict["code_verifier"]);
+        Dictionary<string, string> dict = ToDictionary(body: body);
+        Assert.Equal(expected: "verifier123", actual: dict[key: "code_verifier"]);
     }
 
     [Fact]
     public void AuthCodeBody_ContainsAllRequiredFields()
     {
         List<KeyValuePair<string, string>> body = AuthManager.BuildAuthorizationCodeBody(
-            "my-client",
-            "auth-code-123",
-            "http://localhost:7626/sso-callback",
-            "verifier123"
+            clientId: "my-client",
+            code: "auth-code-123",
+            redirectUri: "http://localhost:7626/sso-callback",
+            codeVerifier: "verifier123"
         );
 
-        Dictionary<string, string> dict = ToDictionary(body);
+        Dictionary<string, string> dict = ToDictionary(body: body);
 
-        Assert.Equal("authorization_code", dict["grant_type"]);
-        Assert.Equal("my-client", dict["client_id"]);
-        Assert.Contains("openid", dict["scope"]);
-        Assert.Equal("http://localhost:7626/sso-callback", dict["redirect_uri"]);
-        Assert.Equal("auth-code-123", dict["code"]);
-        Assert.Equal("verifier123", dict["code_verifier"]);
+        Assert.Equal(expected: "authorization_code", actual: dict[key: "grant_type"]);
+        Assert.Equal(expected: "my-client", actual: dict[key: "client_id"]);
+        Assert.Contains(expectedSubstring: "openid", actualString: dict[key: "scope"]);
+        Assert.Equal(expected: "http://localhost:7626/sso-callback", actual: dict[key: "redirect_uri"]);
+        Assert.Equal(expected: "auth-code-123", actual: dict[key: "code"]);
+        Assert.Equal(expected: "verifier123", actual: dict[key: "code_verifier"]);
     }
 
     // --- Refresh Token Body ---
@@ -76,36 +76,36 @@ public class AuthTokenRequestTests
     public void RefreshBody_DoesNotContainClientSecret()
     {
         List<KeyValuePair<string, string>> body = AuthManager.BuildRefreshTokenBody(
-            "my-client",
-            "refresh-token-abc"
+            clientId: "my-client",
+            refreshToken: "refresh-token-abc"
         );
 
-        Dictionary<string, string> dict = ToDictionary(body);
-        Assert.DoesNotContain("client_secret", dict.Keys);
+        Dictionary<string, string> dict = ToDictionary(body: body);
+        Assert.DoesNotContain(expected: "client_secret", collection: dict.Keys);
     }
 
     [Fact]
     public void RefreshBody_ContainsRefreshToken()
     {
         List<KeyValuePair<string, string>> body = AuthManager.BuildRefreshTokenBody(
-            "my-client",
-            "refresh-token-abc"
+            clientId: "my-client",
+            refreshToken: "refresh-token-abc"
         );
 
-        Dictionary<string, string> dict = ToDictionary(body);
-        Assert.Equal("refresh-token-abc", dict["refresh_token"]);
+        Dictionary<string, string> dict = ToDictionary(body: body);
+        Assert.Equal(expected: "refresh-token-abc", actual: dict[key: "refresh_token"]);
     }
 
     [Fact]
     public void RefreshBody_ContainsCorrectGrantType()
     {
         List<KeyValuePair<string, string>> body = AuthManager.BuildRefreshTokenBody(
-            "my-client",
-            "refresh-token-abc"
+            clientId: "my-client",
+            refreshToken: "refresh-token-abc"
         );
 
-        Dictionary<string, string> dict = ToDictionary(body);
-        Assert.Equal("refresh_token", dict["grant_type"]);
+        Dictionary<string, string> dict = ToDictionary(body: body);
+        Assert.Equal(expected: "refresh_token", actual: dict[key: "grant_type"]);
     }
 
     // --- Permanent Refresh Failure Detection ---
@@ -116,23 +116,23 @@ public class AuthTokenRequestTests
         string body =
             "{\"error\":\"invalid_grant\",\"error_description\":\"Offline user session not found\"}";
 
-        Assert.True(AuthManager.IsPermanentRefreshFailure(body));
+        Assert.True(condition: AuthManager.IsPermanentRefreshFailure(errorBody: body));
     }
 
     [Fact]
     public void PermanentRefreshFailure_IsCaseInsensitive()
     {
-        Assert.True(AuthManager.IsPermanentRefreshFailure("ERROR: INVALID_GRANT"));
+        Assert.True(condition: AuthManager.IsPermanentRefreshFailure(errorBody: "ERROR: INVALID_GRANT"));
     }
 
     [Fact]
     public void PermanentRefreshFailure_FalseForTransientErrors()
     {
         Assert.False(
-            AuthManager.IsPermanentRefreshFailure("{\"error\":\"temporarily_unavailable\"}")
+            condition: AuthManager.IsPermanentRefreshFailure(errorBody: "{\"error\":\"temporarily_unavailable\"}")
         );
-        Assert.False(AuthManager.IsPermanentRefreshFailure("502 Bad Gateway"));
-        Assert.False(AuthManager.IsPermanentRefreshFailure(string.Empty));
+        Assert.False(condition: AuthManager.IsPermanentRefreshFailure(errorBody: "502 Bad Gateway"));
+        Assert.False(condition: AuthManager.IsPermanentRefreshFailure(errorBody: string.Empty));
     }
 
     // --- Device Code Request Body ---
@@ -141,23 +141,23 @@ public class AuthTokenRequestTests
     public void DeviceCodeBody_DoesNotContainClientSecret()
     {
         List<KeyValuePair<string, string>> body = AuthManager.BuildDeviceCodeRequestBody(
-            "my-client"
+            clientId: "my-client"
         );
 
-        Dictionary<string, string> dict = ToDictionary(body);
-        Assert.DoesNotContain("client_secret", dict.Keys);
+        Dictionary<string, string> dict = ToDictionary(body: body);
+        Assert.DoesNotContain(expected: "client_secret", collection: dict.Keys);
     }
 
     [Fact]
     public void DeviceCodeBody_ContainsClientIdAndScope()
     {
         List<KeyValuePair<string, string>> body = AuthManager.BuildDeviceCodeRequestBody(
-            "my-client"
+            clientId: "my-client"
         );
 
-        Dictionary<string, string> dict = ToDictionary(body);
-        Assert.Equal("my-client", dict["client_id"]);
-        Assert.Contains("openid", dict["scope"]);
+        Dictionary<string, string> dict = ToDictionary(body: body);
+        Assert.Equal(expected: "my-client", actual: dict[key: "client_id"]);
+        Assert.Contains(expectedSubstring: "openid", actualString: dict[key: "scope"]);
     }
 
     // --- Device Token Body ---
@@ -166,36 +166,36 @@ public class AuthTokenRequestTests
     public void DeviceTokenBody_DoesNotContainClientSecret()
     {
         List<KeyValuePair<string, string>> body = AuthManager.BuildDeviceTokenBody(
-            "my-client",
-            "device-code-xyz"
+            clientId: "my-client",
+            deviceCode: "device-code-xyz"
         );
 
-        Dictionary<string, string> dict = ToDictionary(body);
-        Assert.DoesNotContain("client_secret", dict.Keys);
+        Dictionary<string, string> dict = ToDictionary(body: body);
+        Assert.DoesNotContain(expected: "client_secret", collection: dict.Keys);
     }
 
     [Fact]
     public void DeviceTokenBody_ContainsDeviceCode()
     {
         List<KeyValuePair<string, string>> body = AuthManager.BuildDeviceTokenBody(
-            "my-client",
-            "device-code-xyz"
+            clientId: "my-client",
+            deviceCode: "device-code-xyz"
         );
 
-        Dictionary<string, string> dict = ToDictionary(body);
-        Assert.Equal("device-code-xyz", dict["device_code"]);
+        Dictionary<string, string> dict = ToDictionary(body: body);
+        Assert.Equal(expected: "device-code-xyz", actual: dict[key: "device_code"]);
     }
 
     [Fact]
     public void DeviceTokenBody_ContainsCorrectGrantType()
     {
         List<KeyValuePair<string, string>> body = AuthManager.BuildDeviceTokenBody(
-            "my-client",
-            "device-code-xyz"
+            clientId: "my-client",
+            deviceCode: "device-code-xyz"
         );
 
-        Dictionary<string, string> dict = ToDictionary(body);
-        Assert.Equal("urn:ietf:params:oauth:grant-type:device_code", dict["grant_type"]);
+        Dictionary<string, string> dict = ToDictionary(body: body);
+        Assert.Equal(expected: "urn:ietf:params:oauth:grant-type:device_code", actual: dict[key: "grant_type"]);
     }
 
     // --- PKCE Code Verifier ---
@@ -205,9 +205,9 @@ public class AuthTokenRequestTests
     {
         string verifier = AuthManager.GenerateCodeVerifier();
 
-        Assert.DoesNotContain("+", verifier);
-        Assert.DoesNotContain("/", verifier);
-        Assert.DoesNotContain("=", verifier);
+        Assert.DoesNotContain(expectedSubstring: "+", actualString: verifier);
+        Assert.DoesNotContain(expectedSubstring: "/", actualString: verifier);
+        Assert.DoesNotContain(expectedSubstring: "=", actualString: verifier);
     }
 
     [Fact]
@@ -216,8 +216,8 @@ public class AuthTokenRequestTests
         string verifier = AuthManager.GenerateCodeVerifier();
 
         Assert.True(
-            verifier.Length >= 43,
-            $"Code verifier length {verifier.Length} is less than RFC 7636 minimum of 43"
+            condition: verifier.Length >= 43,
+            userMessage: $"Code verifier length {verifier.Length} is less than RFC 7636 minimum of 43"
         );
     }
 
@@ -227,7 +227,7 @@ public class AuthTokenRequestTests
         string verifier1 = AuthManager.GenerateCodeVerifier();
         string verifier2 = AuthManager.GenerateCodeVerifier();
 
-        Assert.NotEqual(verifier1, verifier2);
+        Assert.NotEqual(expected: verifier1, actual: verifier2);
     }
 
     // --- PKCE Code Challenge ---
@@ -236,11 +236,11 @@ public class AuthTokenRequestTests
     public void CodeChallenge_IsBase64UrlSafe()
     {
         string verifier = AuthManager.GenerateCodeVerifier();
-        string challenge = AuthManager.GenerateCodeChallenge(verifier);
+        string challenge = AuthManager.GenerateCodeChallenge(codeVerifier: verifier);
 
-        Assert.DoesNotContain("+", challenge);
-        Assert.DoesNotContain("/", challenge);
-        Assert.DoesNotContain("=", challenge);
+        Assert.DoesNotContain(expectedSubstring: "+", actualString: challenge);
+        Assert.DoesNotContain(expectedSubstring: "/", actualString: challenge);
+        Assert.DoesNotContain(expectedSubstring: "=", actualString: challenge);
     }
 
     [Fact]
@@ -251,17 +251,17 @@ public class AuthTokenRequestTests
         string knownVerifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
         string expectedChallenge = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM";
 
-        string challenge = AuthManager.GenerateCodeChallenge(knownVerifier);
+        string challenge = AuthManager.GenerateCodeChallenge(codeVerifier: knownVerifier);
 
-        Assert.Equal(expectedChallenge, challenge);
+        Assert.Equal(expected: expectedChallenge, actual: challenge);
     }
 
     [Fact]
     public void CodeChallenge_DiffersForDifferentVerifiers()
     {
-        string challenge1 = AuthManager.GenerateCodeChallenge("verifier-one-abc");
-        string challenge2 = AuthManager.GenerateCodeChallenge("verifier-two-xyz");
+        string challenge1 = AuthManager.GenerateCodeChallenge(codeVerifier: "verifier-one-abc");
+        string challenge2 = AuthManager.GenerateCodeChallenge(codeVerifier: "verifier-two-xyz");
 
-        Assert.NotEqual(challenge1, challenge2);
+        Assert.NotEqual(expected: challenge1, actual: challenge2);
     }
 }

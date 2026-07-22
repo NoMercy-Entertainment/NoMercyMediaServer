@@ -34,13 +34,13 @@ public sealed class DiscIdentificationService(
 
     public async Task<DiscIdentification> IdentifyAsync(DiscInfo disc, CancellationToken ct)
     {
-        IDiscIdentifier? identifier = Array.Find(_identifiers, id => id.CanHandle(disc.Type));
+        IDiscIdentifier? identifier = Array.Find(array: _identifiers, match: id => id.CanHandle(type: disc.Type));
 
         if (identifier is null)
         {
             logger.LogInformation(
-                "No IDiscIdentifier registered for disc type {Type} — returning NeedsManualAssignment",
-                disc.Type
+                message: "No IDiscIdentifier registered for disc type {Type} — returning NeedsManualAssignment",
+                args: disc.Type
             );
             return new(
                 Kind: MediaKind.Movie,
@@ -51,7 +51,7 @@ public sealed class DiscIdentificationService(
             );
         }
 
-        return await identifier.IdentifyAsync(disc, ct);
+        return await identifier.IdentifyAsync(disc: disc, ct: ct);
     }
 
     /// <summary>
@@ -66,16 +66,16 @@ public sealed class DiscIdentificationService(
     )
     {
         VideoDiscIdentifier? videoIdentifier =
-            Array.Find(_identifiers, id => id is VideoDiscIdentifier) as VideoDiscIdentifier;
+            Array.Find(array: _identifiers, match: id => id is VideoDiscIdentifier) as VideoDiscIdentifier;
 
         if (videoIdentifier is null)
         {
             logger.LogInformation(
-                "SearchAsync called but no VideoDiscIdentifier is registered — returning empty"
+                message: "SearchAsync called but no VideoDiscIdentifier is registered — returning empty"
             );
             return [];
         }
 
-        return await videoIdentifier.SearchAsync(query, type, ct);
+        return await videoIdentifier.SearchAsync(query: query, type: type, ct: ct);
     }
 }

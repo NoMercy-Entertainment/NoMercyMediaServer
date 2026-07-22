@@ -38,8 +38,8 @@ public sealed class EmbeddedStaticAssetsExtensionsTests
     private static IApplicationBuilder CreateBuilder()
     {
         ServiceCollection services = new();
-        services.AddLogging(builder => builder.AddProvider(NullLoggerProvider.Instance));
-        return new ApplicationBuilder(services.BuildServiceProvider());
+        services.AddLogging(configure: builder => builder.AddProvider(provider: NullLoggerProvider.Instance));
+        return new ApplicationBuilder(serviceProvider: services.BuildServiceProvider());
     }
 
     private static DefaultHttpContext CreateContext(string path, IServiceProvider services)
@@ -54,20 +54,20 @@ public sealed class EmbeddedStaticAssetsExtensionsTests
     private static string ReadBody(HttpContext context)
     {
         MemoryStream stream = (MemoryStream)context.Response.Body;
-        return Encoding.UTF8.GetString(stream.ToArray());
+        return Encoding.UTF8.GetString(bytes: stream.ToArray());
     }
 
     [Fact]
     public async Task UseEmbeddedStaticAssets_ExplicitAssemblyOverload_ServesRealEmbeddedAsset()
     {
         IApplicationBuilder builder = CreateBuilder();
-        builder.UseEmbeddedStaticAssets(Assembly.GetExecutingAssembly());
+        builder.UseEmbeddedStaticAssets(assembly: Assembly.GetExecutingAssembly());
         RequestDelegate pipeline = builder.Build();
 
-        DefaultHttpContext context = CreateContext("/index.html", builder.ApplicationServices);
-        await pipeline(context);
+        DefaultHttpContext context = CreateContext(path: "/index.html", services: builder.ApplicationServices);
+        await pipeline(context: context);
 
-        ReadBody(context).Should().Contain("Fixture Index");
+        ReadBody(context: context).Should().Contain(expected: "Fixture Index");
     }
 
     [Fact]
@@ -75,52 +75,52 @@ public sealed class EmbeddedStaticAssetsExtensionsTests
     {
         IApplicationBuilder builder = CreateBuilder();
         builder.UseEmbeddedStaticAssets(
-            options => options.InjectScripts.Add("/injected-by-configure-action.js"),
-            Assembly.GetExecutingAssembly()
+            configure: options => options.InjectScripts.Add(item: "/injected-by-configure-action.js"),
+            assembly: Assembly.GetExecutingAssembly()
         );
         RequestDelegate pipeline = builder.Build();
 
-        DefaultHttpContext context = CreateContext("/index.html", builder.ApplicationServices);
-        await pipeline(context);
+        DefaultHttpContext context = CreateContext(path: "/index.html", services: builder.ApplicationServices);
+        await pipeline(context: context);
 
-        ReadBody(context).Should().Contain("/injected-by-configure-action.js");
+        ReadBody(context: context).Should().Contain(expected: "/injected-by-configure-action.js");
     }
 
     [Fact]
     public async Task UseEmbeddedStaticAssets_OptionsObjectOverload_UsesSuppliedOptions()
     {
         EmbeddedStaticAssetsOptions options = new();
-        options.InjectMetaTags.Add("<meta name=\"from-options-object\" content=\"1\">");
+        options.InjectMetaTags.Add(item: "<meta name=\"from-options-object\" content=\"1\">");
         IApplicationBuilder builder = CreateBuilder();
-        builder.UseEmbeddedStaticAssets(options, Assembly.GetExecutingAssembly());
+        builder.UseEmbeddedStaticAssets(options: options, assembly: Assembly.GetExecutingAssembly());
         RequestDelegate pipeline = builder.Build();
 
-        DefaultHttpContext context = CreateContext("/index.html", builder.ApplicationServices);
-        await pipeline(context);
+        DefaultHttpContext context = CreateContext(path: "/index.html", services: builder.ApplicationServices);
+        await pipeline(context: context);
 
-        ReadBody(context).Should().Contain("from-options-object");
+        ReadBody(context: context).Should().Contain(expected: "from-options-object");
     }
 
     [Fact]
     public async Task UseEmbeddedStaticAssets_CustomEmbeddedResourceRoot_ServesFromThatRoot()
     {
         IApplicationBuilder builder = CreateBuilder();
-        builder.UseEmbeddedStaticAssets(Assembly.GetExecutingAssembly(), "wwwroot/pages");
+        builder.UseEmbeddedStaticAssets(assembly: Assembly.GetExecutingAssembly(), embeddedResourceRoot: "wwwroot/pages");
         RequestDelegate pipeline = builder.Build();
 
-        DefaultHttpContext context = CreateContext("/nested.html", builder.ApplicationServices);
-        await pipeline(context);
+        DefaultHttpContext context = CreateContext(path: "/nested.html", services: builder.ApplicationServices);
+        await pipeline(context: context);
 
-        ReadBody(context).Should().Contain("Nested Fixture Page");
+        ReadBody(context: context).Should().Contain(expected: "Nested Fixture Page");
     }
 
     [Fact]
     public async Task UseEmbeddedStaticAssets_NoMatchingAsset_FallsThroughToNextMiddleware()
     {
         IApplicationBuilder builder = CreateBuilder();
-        builder.UseEmbeddedStaticAssets(Assembly.GetExecutingAssembly(), "wwwroot/pages");
+        builder.UseEmbeddedStaticAssets(assembly: Assembly.GetExecutingAssembly(), embeddedResourceRoot: "wwwroot/pages");
         bool[] reachedTerminal = [false];
-        builder.Run(_ =>
+        builder.Run(handler: _ =>
         {
             reachedTerminal[0] = true;
             return Task.CompletedTask;
@@ -131,10 +131,10 @@ public sealed class EmbeddedStaticAssetsExtensionsTests
         // missing-asset.txt — has an extension, so the SPA (index.html)
         // fallback must NOT kick in and the request must reach the terminal.
         DefaultHttpContext context = CreateContext(
-            "/missing-asset.txt",
-            builder.ApplicationServices
+            path: "/missing-asset.txt",
+            services: builder.ApplicationServices
         );
-        await pipeline(context);
+        await pipeline(context: context);
 
         reachedTerminal[0].Should().BeTrue();
     }

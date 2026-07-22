@@ -28,66 +28,66 @@ public class DolbyVisionPassthroughTests
     [Fact]
     public void Mp4_PreserveDv_AddsDvh1CodecTag()
     {
-        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        Mp4OutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new("/input.mkv"));
+        builder.AddInput(input: new(FilePath: "/input.mkv"));
 
-        strategy.ConfigureOutput(builder, Plan(preserveDv: true), "/output");
+        strategy.ConfigureOutput(builder: builder, plan: Plan(preserveDv: true), outputDirectory: "/output");
 
-        string args = string.Join(" ", builder.Build("ffmpeg").Arguments);
-        args.Should().Contain("-tag:v dvh1");
+        string args = string.Join(separator: " ", value: builder.Build(ffmpegPath: "ffmpeg").Arguments);
+        args.Should().Contain(expected: "-tag:v dvh1");
     }
 
     [Fact]
     public void Mp4_NoDv_UsesDefaultTag()
     {
-        Mp4OutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        Mp4OutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new("/input.mkv"));
+        builder.AddInput(input: new(FilePath: "/input.mkv"));
 
-        strategy.ConfigureOutput(builder, Plan(preserveDv: false), "/output");
+        strategy.ConfigureOutput(builder: builder, plan: Plan(preserveDv: false), outputDirectory: "/output");
 
-        string args = string.Join(" ", builder.Build("ffmpeg").Arguments);
-        args.Should().NotContain("dvh1");
+        string args = string.Join(separator: " ", value: builder.Build(ffmpegPath: "ffmpeg").Arguments);
+        args.Should().NotContain(unexpected: "dvh1");
     }
 
     [Fact]
     public void Hls_PreserveDv_HevcVariant_OverridesHvc1WithDvh1()
     {
-        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new("/input.mkv"));
+        builder.AddInput(input: new(FilePath: "/input.mkv"));
 
         strategy.ConfigureOutput(
-            builder,
-            HlsPlan(encoderName: "libx265", preserveDv: true),
-            "/output"
+            builder: builder,
+            plan: HlsPlan(encoderName: "libx265", preserveDv: true),
+            outputDirectory: "/output"
         );
 
-        string args = string.Join(" ", builder.Build("ffmpeg").Arguments);
-        args.Should().Contain("-tag:v dvh1");
+        string args = string.Join(separator: " ", value: builder.Build(ffmpegPath: "ffmpeg").Arguments);
+        args.Should().Contain(expected: "-tag:v dvh1");
         // dvh1 replaces hvc1 — both appearing in the same argv is a muxer
         // contradiction and would break playback.
-        args.Should().NotContain("-tag:v hvc1");
+        args.Should().NotContain(unexpected: "-tag:v hvc1");
     }
 
     [Fact]
     public void Hls_PreserveDv_H264Variant_NoDvTag()
     {
-        HlsOutputStrategy strategy = new(TestStorageFactory.CreateLocal());
+        HlsOutputStrategy strategy = new(storage: TestStorageFactory.CreateLocal());
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new("/input.mkv"));
+        builder.AddInput(input: new(FilePath: "/input.mkv"));
 
         // DV only rides HEVC. H.264 variants in the same ladder must not
         // inherit the dvh1 tag or the MP4 header becomes invalid.
         strategy.ConfigureOutput(
-            builder,
-            HlsPlan(encoderName: "libx264", preserveDv: true),
-            "/output"
+            builder: builder,
+            plan: HlsPlan(encoderName: "libx264", preserveDv: true),
+            outputDirectory: "/output"
         );
 
-        string args = string.Join(" ", builder.Build("ffmpeg").Arguments);
-        args.Should().NotContain("dvh1");
+        string args = string.Join(separator: " ", value: builder.Build(ffmpegPath: "ffmpeg").Arguments);
+        args.Should().NotContain(unexpected: "dvh1");
     }
 
     private static OutputPlan Plan(bool preserveDv) =>

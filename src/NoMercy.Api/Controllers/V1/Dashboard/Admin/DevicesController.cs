@@ -25,10 +25,10 @@ using NoMercy.Networking.Messaging;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Admin;
 
 [ApiController]
-[Tags("Dashboard Server Devices")]
-[ApiVersion(1.0)]
+[Tags(tags: "Dashboard Server Devices")]
+[ApiVersion(version: 1.0)]
 [Authorize(Policy = "Moderator")]
-[Route("api/v{version:apiVersion}/dashboard/devices", Order = 10)]
+[Route(template: "api/v{version:apiVersion}/dashboard/devices", Order = 10)]
 public class DevicesController(
     IDeviceRepository deviceRepository,
     DeviceBusRegistry busRegistry,
@@ -42,7 +42,7 @@ public class DevicesController(
         List<Device> devices = await deviceRepository.GetDevices();
 
         DevicesDto[] devicesDtos = devices
-            .Select(x => new DevicesDto
+            .Select(selector: x => new DevicesDto
             {
                 Id = x.Id.ToString(),
                 DeviceId = x.DeviceId,
@@ -51,14 +51,14 @@ public class DevicesController(
                 Device = x.Model,
                 Type = x.Type,
                 Online =
-                    busRegistry.IsOnline(x.Id)
-                    || connectedClients.Clients.Values.Any(client => client.Id == x.Id),
+                    busRegistry.IsOnline(deviceId: x.Id)
+                    || connectedClients.Clients.Values.Any(predicate: client => client.Id == x.Id),
                 Name = x.Name,
                 CustomName = x.CustomName,
                 Version = x.Version,
                 Ip = x.Ip,
                 CreatedAt = x.CreatedAt,
-                ActivityLogs = x.ActivityLogs.Select(activityLog => new ActivityLogDto
+                ActivityLogs = x.ActivityLogs.Select(selector: activityLog => new ActivityLogDto
                 {
                     Id = activityLog.Id,
                     Type = activityLog.Type,
@@ -70,14 +70,14 @@ public class DevicesController(
             })
             .ToArray();
 
-        return Ok(new StatusResponseDto<DevicesDto[]> { Status = "ok", Data = devicesDtos });
+        return Ok(value: new StatusResponseDto<DevicesDto[]> { Status = "ok", Data = devicesDtos });
     }
 
     [HttpPost]
     public IActionResult Create()
     {
 
-        return Ok(new PlaceholderResponse { Data = [] });
+        return Ok(value: new PlaceholderResponse { Data = [] });
     }
 
     [HttpDelete]
@@ -86,40 +86,40 @@ public class DevicesController(
 
         await deviceRepository.DeleteAllActivityLogsAsync();
 
-        return Ok(new StatusResponseDto<object> { Status = "ok", Data = new { } });
+        return Ok(value: new StatusResponseDto<object> { Status = "ok", Data = new { } });
     }
 
-    [HttpDelete("offline")]
+    [HttpDelete(template: "offline")]
     public async Task<IActionResult> DestroyOffline()
     {
 
         List<Device> all = await deviceRepository.GetAllAsync();
 
-        List<Device> offline = all.Where(d =>
-                !busRegistry.IsOnline(d.Id)
-                && !connectedClients.Clients.Values.Any(c => c.Id == d.Id)
+        List<Device> offline = all.Where(predicate: d =>
+                !busRegistry.IsOnline(deviceId: d.Id)
+                && !connectedClients.Clients.Values.Any(predicate: c => c.Id == d.Id)
             )
             .ToList();
 
         foreach (Device device in offline)
         {
-            busRegistry.ForceClose(device.Id);
-            RemoveConnectedClientEntries(device.Id);
-            await deviceRepository.DeleteDeviceWithLogsAsync(device.Id);
+            busRegistry.ForceClose(deviceId: device.Id);
+            RemoveConnectedClientEntries(deviceId: device.Id);
+            await deviceRepository.DeleteDeviceWithLogsAsync(deviceId: device.Id);
         }
 
         foreach (
             Guid ownerId in offline
-                .Where(d => d.OwnerUserId is not null)
-                .Select(d => d.OwnerUserId!.Value)
+                .Where(predicate: d => d.OwnerUserId is not null)
+                .Select(selector: d => d.OwnerUserId!.Value)
                 .Distinct()
         )
-            await busRegistry.BroadcastChange(ownerId);
+            await busRegistry.BroadcastChange(ownerUserId: ownerId);
 
         List<Device> remaining = await deviceRepository.GetAllAsync();
 
         return Ok(
-            new StatusResponseDto<object>
+            value: new StatusResponseDto<object>
             {
                 Status = "ok",
                 Data = new { removed = offline.Count, devices = remaining },
@@ -127,38 +127,38 @@ public class DevicesController(
         );
     }
 
-    [HttpDelete("{id}")]
+    [HttpDelete(template: "{id}")]
     public async Task<IActionResult> DestroyOne(string id)
     {
 
-        if (!Ulid.TryParse(id, out Ulid deviceId))
-            return BadRequestResponse("Invalid device id");
+        if (!Ulid.TryParse(base32: id, ulid: out Ulid deviceId))
+            return BadRequestResponse(detail: "Invalid device id");
 
-        Device? device = await deviceRepository.GetByIdAsync(deviceId);
+        Device? device = await deviceRepository.GetByIdAsync(deviceId: deviceId);
         if (device is null)
-            return NotFoundResponse("Device not found");
+            return NotFoundResponse(detail: "Device not found");
 
-        busRegistry.ForceClose(device.Id);
-        RemoveConnectedClientEntries(device.Id);
+        busRegistry.ForceClose(deviceId: device.Id);
+        RemoveConnectedClientEntries(deviceId: device.Id);
 
-        await deviceRepository.DeleteDeviceWithLogsAsync(device.Id);
+        await deviceRepository.DeleteDeviceWithLogsAsync(deviceId: device.Id);
 
         if (device.OwnerUserId is not null)
-            await busRegistry.BroadcastChange(device.OwnerUserId.Value);
+            await busRegistry.BroadcastChange(ownerUserId: device.OwnerUserId.Value);
 
         List<Device> remaining = await deviceRepository.GetAllAsync();
 
-        return Ok(new StatusResponseDto<object> { Status = "ok", Data = remaining });
+        return Ok(value: new StatusResponseDto<object> { Status = "ok", Data = remaining });
     }
 
     private void RemoveConnectedClientEntries(Ulid deviceId)
     {
         List<string> staleKeys = connectedClients
-            .Clients.Where(pair => pair.Value.Id == deviceId)
-            .Select(pair => pair.Key)
+            .Clients.Where(predicate: pair => pair.Value.Id == deviceId)
+            .Select(selector: pair => pair.Key)
             .ToList();
 
         foreach (string key in staleKeys)
-            connectedClients.Clients.TryRemove(key, out Client? _);
+            connectedClients.Clients.TryRemove(key: key, value: out Client? _);
     }
 }

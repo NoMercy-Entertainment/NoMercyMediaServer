@@ -28,32 +28,32 @@ public class RuntimeServerSettings
 
     public int StunPort => InternalServerPort + 1;
 
-    public KeyValuePair<string, int> LibraryWorkers { get; set; } = new(QueueNames.Library, 1);
+    public KeyValuePair<string, int> LibraryWorkers { get; set; } = new(key: QueueNames.Library, value: 1);
 
-    public KeyValuePair<string, int> ImportWorkers { get; set; } = new(QueueNames.Import, 2);
+    public KeyValuePair<string, int> ImportWorkers { get; set; } = new(key: QueueNames.Import, value: 2);
 
-    public KeyValuePair<string, int> ExtrasWorkers { get; set; } = new(QueueNames.Extras, 4);
+    public KeyValuePair<string, int> ExtrasWorkers { get; set; } = new(key: QueueNames.Extras, value: 4);
 
-    public KeyValuePair<string, int> EncoderWorkers { get; set; } = new(QueueNames.Encoder, 1);
+    public KeyValuePair<string, int> EncoderWorkers { get; set; } = new(key: QueueNames.Encoder, value: 1);
 
     public KeyValuePair<string, int> EncoderTaskWorkers { get; set; } =
-        new(QueueNames.EncoderTask, 0);
+        new(key: QueueNames.EncoderTask, value: 0);
 
     public KeyValuePair<string, int> GpuEncoderWorkers { get; set; } =
-        new(QueueNames.EncoderGpu, 1);
+        new(key: QueueNames.EncoderGpu, value: 1);
 
     public KeyValuePair<string, int> CpuEncoderWorkers { get; set; } =
-        new(QueueNames.EncoderCpu, 1);
+        new(key: QueueNames.EncoderCpu, value: 1);
 
-    public KeyValuePair<string, int> CronWorkers { get; set; } = new(QueueNames.Cron, 1);
+    public KeyValuePair<string, int> CronWorkers { get; set; } = new(key: QueueNames.Cron, value: 1);
 
-    public KeyValuePair<string, int> ImageWorkers { get; set; } = new(QueueNames.Image, 3);
+    public KeyValuePair<string, int> ImageWorkers { get; set; } = new(key: QueueNames.Image, value: 3);
 
-    public KeyValuePair<string, int> FileWorkers { get; set; } = new(QueueNames.File, 2);
+    public KeyValuePair<string, int> FileWorkers { get; set; } = new(key: QueueNames.File, value: 2);
 
-    public KeyValuePair<string, int> MusicWorkers { get; set; } = new(QueueNames.Music, 2);
+    public KeyValuePair<string, int> MusicWorkers { get; set; } = new(key: QueueNames.Music, value: 2);
 
-    public KeyValuePair<string, int> PaletteWorkers { get; set; } = new(QueueNames.Palette, 1);
+    public KeyValuePair<string, int> PaletteWorkers { get; set; } = new(key: QueueNames.Palette, value: 1);
 
     public bool Swagger { get; set; } = true;
 

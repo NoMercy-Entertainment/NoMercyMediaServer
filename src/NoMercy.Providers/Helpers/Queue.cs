@@ -30,7 +30,7 @@ public class Queue(QueueOptions options)
 
     private State _state = State.Idle;
     private QueueOptions Options { get; } = options;
-    private SemaphoreSlim Semaphore { get; } = new(options.Concurrent, options.Concurrent);
+    private SemaphoreSlim Semaphore { get; } = new(initialCount: options.Concurrent, maxCount: options.Concurrent);
 
     private readonly Random _r = new();
 
@@ -44,14 +44,14 @@ public class Queue(QueueOptions options)
             return;
 
         _state = State.Running;
-        Start?.Invoke(this, EventArgs.Empty);
-        _ = Task.Run(RunTasksAsync, CancellationToken.None);
+        Start?.Invoke(sender: this, e: EventArgs.Empty);
+        _ = Task.Run(function: RunTasksAsync, cancellationToken: CancellationToken.None);
     }
 
     private void StopQueue()
     {
         _state = State.Stopped;
-        Stop?.Invoke(this, EventArgs.Empty);
+        Stop?.Invoke(sender: this, e: EventArgs.Empty);
     }
 
     private void Finish()
@@ -63,7 +63,7 @@ public class Queue(QueueOptions options)
 
         // StopQueue();
         _state = State.Idle;
-        End?.Invoke(this, EventArgs.Empty);
+        End?.Invoke(sender: this, e: EventArgs.Empty);
     }
 
     private async Task RunTasksAsync()
@@ -79,8 +79,8 @@ public class Queue(QueueOptions options)
             }
             catch (Exception ex)
             {
-                Logger.App($"Queue processor error: {ex.Message}", LogEventLevel.Error);
-                await Task.Delay(1000);
+                Logger.App(message: $"Queue processor error: {ex.Message}", level: LogEventLevel.Error);
+                await Task.Delay(millisecondsDelay: 1000);
             }
     }
 
@@ -90,8 +90,8 @@ public class Queue(QueueOptions options)
         {
             // Priority queue drains first, then the normal queue. Inside each,
             // insertion order = FIFO.
-            DrainQueue(_priorityTasks);
-            DrainQueue(_tasks);
+            DrainQueue(queue: _priorityTasks);
+            DrainQueue(queue: _tasks);
         }
 
         return Task.CompletedTask;
@@ -105,11 +105,11 @@ public class Queue(QueueOptions options)
             if (_currentlyHandled >= Options.Concurrent)
                 return;
 
-            if (!queue.TryGetValue(key, out Func<Task>? value))
+            if (!queue.TryGetValue(key: key, value: out Func<Task>? value))
                 continue;
 
             _currentlyHandled++;
-            queue.Remove(key);
+            queue.Remove(key: key);
 
             try
             {
@@ -128,10 +128,10 @@ public class Queue(QueueOptions options)
 
     private Task Dequeue()
     {
-        int interval = Math.Max(0, Options.Interval - (Environment.TickCount - _lastRan));
-        return Task.Run(async () =>
+        int interval = Math.Max(val1: 0, val2: Options.Interval - (Environment.TickCount - _lastRan));
+        return Task.Run(function: async () =>
         {
-            await Task.Delay(interval);
+            await Task.Delay(millisecondsDelay: interval);
             _lastRan = Environment.TickCount;
             await Execute();
         });
@@ -149,12 +149,12 @@ public class Queue(QueueOptions options)
         lock (_tasks)
         {
             Dictionary<string, Func<Task>> bucket = isPriority ? _priorityTasks : _tasks;
-            while (bucket.ContainsKey(uniqueId))
+            while (bucket.ContainsKey(key: uniqueId))
                 uniqueId = Ulid.NewUlid().ToString();
 
             bucket.Add(
-                uniqueId,
-                async () =>
+                key: uniqueId,
+                value: async () =>
                 {
                     try
                     {
@@ -164,7 +164,7 @@ public class Queue(QueueOptions options)
                             try
                             {
                                 T result = await task();
-                                tcs.SetResult(result);
+                                tcs.SetResult(result: result);
                                 return;
                             }
                             catch (HttpRequestException ex)
@@ -177,19 +177,19 @@ public class Queue(QueueOptions options)
                                             or HttpStatusCode.Forbidden
                                 )
                             {
-                                int delay = (int)Math.Pow(2, attempt + 1) * 1000;
+                                int delay = (int)Math.Pow(x: 2, y: attempt + 1) * 1000;
                                 Logger.App(
-                                    $"Rate limited {ex.StatusCode} ({url}), retrying in {delay / 1000}s (attempt {attempt + 1}/{maxRetries})",
-                                    LogEventLevel.Debug
+                                    message: $"Rate limited {ex.StatusCode} ({url}), retrying in {delay / 1000}s (attempt {attempt + 1}/{maxRetries})",
+                                    level: LogEventLevel.Debug
                                 );
-                                await Task.Delay(delay);
+                                await Task.Delay(millisecondsDelay: delay);
                             }
                             catch (Exception ex)
                             {
-                                tcs.SetException(ex);
-                                if (IsExpectedTransport(ex))
+                                tcs.SetException(exception: ex);
+                                if (IsExpectedTransport(ex: ex))
                                     return;
-                                Logger.App($"Url failed: {url} {ex.Message}", LogEventLevel.Debug);
+                                Logger.App(message: $"Url failed: {url} {ex.Message}", level: LogEventLevel.Debug);
                                 return;
                             }
                         }
@@ -199,8 +199,8 @@ public class Queue(QueueOptions options)
                         Semaphore.Release();
                         lock (_tasks)
                         {
-                            _priorityTasks.Remove(uniqueId);
-                            _tasks.Remove(uniqueId);
+                            _priorityTasks.Remove(key: uniqueId);
+                            _tasks.Remove(key: uniqueId);
                         }
                     }
                 }

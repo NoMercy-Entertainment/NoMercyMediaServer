@@ -23,16 +23,16 @@ public class MusicBrainzBaseClient : ExternalApiClient
     protected MusicBrainzBaseClient() { }
 
     protected MusicBrainzBaseClient(Guid id)
-        : base(id) { }
+        : base(id: id) { }
 
     protected override string HttpClientName => HttpClientNames.MusicBrainz;
-    protected override Uri BaseUrl => new("https://musicbrainz.org/ws/2/");
+    protected override Uri BaseUrl => new(uriString: "https://musicbrainz.org/ws/2/");
 
     // MusicBrainz asks clients to stay at roughly one request per second.
     protected override int RequestIntervalMs => 1500;
 
     protected override void LogRequest(string url) =>
-        Logger.MusicBrainz(url, LogEventLevel.Verbose);
+        Logger.MusicBrainz(message: url, level: LogEventLevel.Verbose);
 
     // MusicBrainz returns 404 for unknown MBIDs — treat as "no result".
     // Transient 429/503 are retried by the shared Queue, not here.

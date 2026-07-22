@@ -30,7 +30,7 @@ public class ThumbnailPlanBuilderTests
         new(
             FilePath: "/movies/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromHours(2),
+            Duration: TimeSpan.FromHours(hours: 2),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 7_200_000_000,
             VideoStreams:
@@ -59,7 +59,7 @@ public class ThumbnailPlanBuilderTests
         new(
             FilePath: "/music/test.flac",
             Format: "flac",
-            Duration: TimeSpan.FromMinutes(4),
+            Duration: TimeSpan.FromMinutes(minutes: 4),
             OverallBitRateKbps: 900,
             FileSizeBytes: 27_000_000,
             VideoStreams: [],
@@ -106,22 +106,22 @@ public class ThumbnailPlanBuilderTests
     public void CopyProfile_WithVideoStream_BuildsPlan()
     {
         MediaInfo media = BuildMediaWithVideo();
-        EncodingProfile profile = BuildProfile(BuildVideoOutput(StreamPolicy.Copy));
+        EncodingProfile profile = BuildProfile(video: BuildVideoOutput(policy: StreamPolicy.Copy));
 
-        ThumbnailOutputPlan? plan = ThumbnailPlanBuilder.Build(profile, media);
+        ThumbnailOutputPlan? plan = ThumbnailPlanBuilder.Build(profile: profile, media: media);
 
-        plan.Should().NotBeNull("a remux/copy profile can still sprite via a separate command");
-        plan!.Width.Should().Be(160);
-        plan.IntervalSeconds.Should().Be(10);
+        plan.Should().NotBeNull(because: "a remux/copy profile can still sprite via a separate command");
+        plan!.Width.Should().Be(expected: 160);
+        plan.IntervalSeconds.Should().Be(expected: 10);
     }
 
     [Fact]
     public void TranscodeProfile_WithVideoStream_BuildsPlan()
     {
         MediaInfo media = BuildMediaWithVideo();
-        EncodingProfile profile = BuildProfile(BuildVideoOutput(StreamPolicy.Transcode));
+        EncodingProfile profile = BuildProfile(video: BuildVideoOutput(policy: StreamPolicy.Transcode));
 
-        ThumbnailOutputPlan? plan = ThumbnailPlanBuilder.Build(profile, media);
+        ThumbnailOutputPlan? plan = ThumbnailPlanBuilder.Build(profile: profile, media: media);
 
         plan.Should().NotBeNull();
     }
@@ -131,11 +131,11 @@ public class ThumbnailPlanBuilderTests
     {
         MediaInfo media = BuildMediaWithVideo();
         EncodingProfile profile = BuildProfile(
-            BuildVideoOutput(StreamPolicy.Copy),
+            video: BuildVideoOutput(policy: StreamPolicy.Copy),
             generateSpriteVtt: false
         );
 
-        ThumbnailOutputPlan? plan = ThumbnailPlanBuilder.Build(profile, media);
+        ThumbnailOutputPlan? plan = ThumbnailPlanBuilder.Build(profile: profile, media: media);
 
         plan.Should().BeNull();
     }
@@ -144,24 +144,24 @@ public class ThumbnailPlanBuilderTests
     public void AudioOnlyMedia_ReturnsNull()
     {
         MediaInfo media = BuildAudioOnlyMedia();
-        EncodingProfile profile = BuildProfile(BuildVideoOutput(StreamPolicy.Copy));
+        EncodingProfile profile = BuildProfile(video: BuildVideoOutput(policy: StreamPolicy.Copy));
 
-        ThumbnailOutputPlan? plan = ThumbnailPlanBuilder.Build(profile, media);
+        ThumbnailOutputPlan? plan = ThumbnailPlanBuilder.Build(profile: profile, media: media);
 
-        plan.Should().BeNull("audio-only media has no frames to sprite from");
+        plan.Should().BeNull(because: "audio-only media has no frames to sprite from");
     }
 
     [Fact]
     public void NoVideoOutputOnProfile_ReturnsNull()
     {
         MediaInfo media = BuildMediaWithVideo();
-        EncodingProfile profile = BuildProfile(BuildVideoOutput(StreamPolicy.Copy)) with
+        EncodingProfile profile = BuildProfile(video: BuildVideoOutput(policy: StreamPolicy.Copy)) with
         {
             Video = null,
         };
 
-        ThumbnailOutputPlan? plan = ThumbnailPlanBuilder.Build(profile, media);
+        ThumbnailOutputPlan? plan = ThumbnailPlanBuilder.Build(profile: profile, media: media);
 
-        plan.Should().BeNull("a profile with no video output has nothing to sprite");
+        plan.Should().BeNull(because: "a profile with no video output has nothing to sprite");
     }
 }

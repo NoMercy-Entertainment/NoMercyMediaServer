@@ -57,8 +57,8 @@ public sealed class WindowsTocReader : ITocReader
 
     // ── P/Invoke ──────────────────────────────────────────────────────────────
 
-    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-    [SupportedOSPlatform("windows")]
+    [DllImport(dllName: "kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    [SupportedOSPlatform(platformName: "windows")]
     private static extern SafeFileHandle CreateFileW(
         string lpFileName,
         uint dwDesiredAccess,
@@ -69,9 +69,9 @@ public sealed class WindowsTocReader : ITocReader
         IntPtr hTemplateFile
     );
 
-    [DllImport("kernel32.dll", SetLastError = true)]
-    [SupportedOSPlatform("windows")]
-    [return: MarshalAs(UnmanagedType.Bool)]
+    [DllImport(dllName: "kernel32.dll", SetLastError = true)]
+    [SupportedOSPlatform(platformName: "windows")]
+    [return: MarshalAs(unmanagedType: UnmanagedType.Bool)]
     private static extern bool DeviceIoControl(
         SafeFileHandle hDevice,
         uint dwIoControlCode,
@@ -89,47 +89,47 @@ public sealed class WindowsTocReader : ITocReader
     public Task<DiscToc?> ReadTocAsync(string drivePath, CancellationToken ct)
     {
         if (!OperatingSystem.IsWindows())
-            return Task.FromResult<DiscToc?>(null);
+            return Task.FromResult<DiscToc?>(result: null);
 
         try
         {
-            char driveLetter = ResolveDriveLetter(drivePath);
+            char driveLetter = ResolveDriveLetter(drivePath: drivePath);
             string devicePath = $@"\\.\{driveLetter}:";
 
             using SafeFileHandle handle = CreateFileW(
-                devicePath,
-                GenericRead,
-                FileShareReadWrite,
-                IntPtr.Zero,
-                OpenExisting,
-                0u,
-                IntPtr.Zero
+                lpFileName: devicePath,
+                dwDesiredAccess: GenericRead,
+                dwShareMode: FileShareReadWrite,
+                lpSecurityAttributes: IntPtr.Zero,
+                dwCreationDisposition: OpenExisting,
+                dwFlagsAndAttributes: 0u,
+                hTemplateFile: IntPtr.Zero
             );
 
             if (handle.IsInvalid)
-                return Task.FromResult<DiscToc?>(null);
+                return Task.FromResult<DiscToc?>(result: null);
 
             byte[] buffer = new byte[TocBufferSize];
             bool ok = DeviceIoControl(
-                handle,
-                IoctlCdromReadToc,
-                IntPtr.Zero,
-                0u,
-                buffer,
-                TocBufferSize,
-                out uint _,
-                IntPtr.Zero
+                hDevice: handle,
+                dwIoControlCode: IoctlCdromReadToc,
+                lpInBuffer: IntPtr.Zero,
+                nInBufferSize: 0u,
+                lpOutBuffer: buffer,
+                nOutBufferSize: TocBufferSize,
+                lpBytesReturned: out uint _,
+                lpOverlapped: IntPtr.Zero
             );
 
             if (!ok)
-                return Task.FromResult<DiscToc?>(null);
+                return Task.FromResult<DiscToc?>(result: null);
 
-            DiscToc toc = ParseCdromToc(buffer);
-            return Task.FromResult<DiscToc?>(toc);
+            DiscToc toc = ParseCdromToc(tocBuffer: buffer);
+            return Task.FromResult<DiscToc?>(result: toc);
         }
         catch
         {
-            return Task.FromResult<DiscToc?>(null);
+            return Task.FromResult<DiscToc?>(result: null);
         }
     }
 
@@ -162,8 +162,8 @@ public sealed class WindowsTocReader : ITocReader
         if (tocBuffer.Length < TocBufferSize)
         {
             throw new ArgumentException(
-                $"CDROM_TOC buffer must be at least {TocBufferSize} bytes; got {tocBuffer.Length}.",
-                nameof(tocBuffer)
+                message: $"CDROM_TOC buffer must be at least {TocBufferSize} bytes; got {tocBuffer.Length}.",
+                paramName: nameof(tocBuffer)
             );
         }
 
@@ -182,9 +182,9 @@ public sealed class WindowsTocReader : ITocReader
             if (trackNumber == LeadOutTrackNumber)
             {
                 leadOutAbsolute = MsfToAbsolute(
-                    tocBuffer[entryStart + TdMinute],
-                    tocBuffer[entryStart + TdSecond],
-                    tocBuffer[entryStart + TdFrame]
+                    minute: tocBuffer[entryStart + TdMinute],
+                    second: tocBuffer[entryStart + TdSecond],
+                    frame: tocBuffer[entryStart + TdFrame]
                 );
                 continue;
             }
@@ -193,9 +193,9 @@ public sealed class WindowsTocReader : ITocReader
             if (slotIndex >= 0 && slotIndex < trackCount)
             {
                 trackOffsets[slotIndex] = MsfToAbsolute(
-                    tocBuffer[entryStart + TdMinute],
-                    tocBuffer[entryStart + TdSecond],
-                    tocBuffer[entryStart + TdFrame]
+                    minute: tocBuffer[entryStart + TdMinute],
+                    second: tocBuffer[entryStart + TdSecond],
+                    frame: tocBuffer[entryStart + TdFrame]
                 );
             }
         }
@@ -203,11 +203,11 @@ public sealed class WindowsTocReader : ITocReader
         if (leadOutAbsolute is null)
         {
             throw new InvalidOperationException(
-                "CDROM_TOC buffer does not contain a lead-out track entry (0xAA)."
+                message: "CDROM_TOC buffer does not contain a lead-out track entry (0xAA)."
             );
         }
 
-        return new(firstTrack, lastTrack, leadOutAbsolute.Value, trackOffsets);
+        return new(FirstTrack: firstTrack, LastTrack: lastTrack, LeadOutOffsetSectors: leadOutAbsolute.Value, TrackOffsetsSectors: trackOffsets);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -217,16 +217,16 @@ public sealed class WindowsTocReader : ITocReader
 
     private static char ResolveDriveLetter(string drivePath)
     {
-        string trimmed = drivePath.TrimEnd('\\', '/');
-        if (trimmed is [_, ':', ..] && char.IsLetter(trimmed[0]))
-            return char.ToUpperInvariant(trimmed[0]);
+        string trimmed = drivePath.TrimEnd(trimChars: ['\\', '/']);
+        if (trimmed is [_, ':', ..] && char.IsLetter(c: trimmed[index: 0]))
+            return char.ToUpperInvariant(c: trimmed[index: 0]);
 
-        if (trimmed.Length == 1 && char.IsLetter(trimmed[0]))
-            return char.ToUpperInvariant(trimmed[0]);
+        if (trimmed.Length == 1 && char.IsLetter(c: trimmed[index: 0]))
+            return char.ToUpperInvariant(c: trimmed[index: 0]);
 
         throw new ArgumentException(
-            $"Cannot extract a drive letter from path '{drivePath}'.",
-            nameof(drivePath)
+            message: $"Cannot extract a drive letter from path '{drivePath}'.",
+            paramName: nameof(drivePath)
         );
     }
 }

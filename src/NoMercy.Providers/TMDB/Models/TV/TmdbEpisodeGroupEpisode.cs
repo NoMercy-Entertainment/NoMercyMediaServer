@@ -15,42 +15,42 @@ namespace NoMercy.Providers.TMDB.Models.TV;
 
 public class TmdbEpisodeGroupEpisode
 {
-    [JsonProperty("air_date")]
+    [JsonProperty(propertyName: "air_date")]
     public string? AirDate { get; set; }
 
-    [JsonProperty("episode_number")]
+    [JsonProperty(propertyName: "episode_number")]
     public int EpisodeNumber { get; set; }
 
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("overview")]
+    [JsonProperty(propertyName: "overview")]
     public string Overview { get; set; } = string.Empty;
 
-    [JsonProperty("production_code")]
+    [JsonProperty(propertyName: "production_code")]
     public string? ProductionCode { get; set; }
 
-    [JsonProperty("runtime")]
+    [JsonProperty(propertyName: "runtime")]
     public int? Runtime { get; set; }
 
-    [JsonProperty("season_number")]
+    [JsonProperty(propertyName: "season_number")]
     public int SeasonNumber { get; set; }
 
-    [JsonProperty("show_id")]
+    [JsonProperty(propertyName: "show_id")]
     public int ShowId { get; set; }
 
-    [JsonProperty("still_path")]
+    [JsonProperty(propertyName: "still_path")]
     public string? StillPath { get; set; }
 
-    [JsonProperty("vote_average")]
+    [JsonProperty(propertyName: "vote_average")]
     public double VoteAverage { get; set; }
 
-    [JsonProperty("vote_count")]
+    [JsonProperty(propertyName: "vote_count")]
     public int VoteCount { get; set; }
 
-    [JsonProperty("order")]
+    [JsonProperty(propertyName: "order")]
     public int Order { get; set; }
 }

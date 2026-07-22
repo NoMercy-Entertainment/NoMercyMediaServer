@@ -38,9 +38,9 @@ public class LiveSessionIdleReaperTests
     {
         NoMercy.Storage.IStorage storage = TestStorageFactory.CreateLocal();
         return new(
-            NullLogger<LiveStreamingService>.Instance,
-            storage,
-            TestStorageFactory.CreateSegmentInventory(storage)
+            logger: NullLogger<LiveStreamingService>.Instance,
+            storage: storage,
+            segmentInventory: TestStorageFactory.CreateSegmentInventory(storage: storage)
         );
     }
 
@@ -54,15 +54,15 @@ public class LiveSessionIdleReaperTests
     {
         LiveStreamingService service = NewStreamingService();
 
-        LiveSession session = new(Ulid.NewUlid().ToString(), MakeQuality());
-        service.Register(session, TimeSpan.FromSeconds(4));
+        LiveSession session = new(sessionId: Ulid.NewUlid().ToString(), quality: MakeQuality());
+        service.Register(session: session, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 4));
 
         // Age the LastAccess timestamp.
         if (lastAccessOffset < TimeSpan.Zero)
         {
             // Simulate old access by accessing then rewinding via reflection.
             // Because LastAccess uses Interlocked ticks, we backdate it directly.
-            BackdateLastAccess(service, session.SessionId, -lastAccessOffset);
+            BackdateLastAccess(service: service, sessionId: session.SessionId, age: -lastAccessOffset);
         }
 
         return (service, session.SessionId);
@@ -74,21 +74,21 @@ public class LiveSessionIdleReaperTests
         TimeSpan age
     )
     {
-        if (!service.TryGetRuntime(sessionId, out LiveRuntimeSession runtime))
+        if (!service.TryGetRuntime(sessionId: sessionId, runtime: out LiveRuntimeSession runtime))
             return;
 
         // Touch with a timestamp in the past by calling the internal field via
         // reflection — keeps the test independent of clock skew.
         FieldInfo? field = typeof(LiveRuntimeSession).GetField(
-            "_lastAccessTicks",
-            BindingFlags.NonPublic | BindingFlags.Instance
+            name: "_lastAccessTicks",
+            bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
         );
 
         if (field is null)
             return;
 
         long backdatedTicks = (DateTime.UtcNow - age).Ticks;
-        field.SetValue(runtime, backdatedTicks);
+        field.SetValue(obj: runtime, value: backdatedTicks);
     }
 
     private static LiveSessionIdleReaper BuildReaper(
@@ -97,10 +97,10 @@ public class LiveSessionIdleReaperTests
         int idleTimeoutMinutes = 5
     ) =>
         new(
-            streamingService,
-            sessionManager,
-            new() { IdleTimeoutMinutes = idleTimeoutMinutes },
-            NullLogger<LiveSessionIdleReaper>.Instance
+            streamingService: streamingService,
+            sessionManager: sessionManager,
+            limits: new() { IdleTimeoutMinutes = idleTimeoutMinutes },
+            logger: NullLogger<LiveSessionIdleReaper>.Instance
         );
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -111,17 +111,17 @@ public class LiveSessionIdleReaperTests
     public async Task SweepAsync_IdleSession_IsDisposed()
     {
         (LiveStreamingService service, string sessionId) = BuildService(
-            TimeSpan.FromMinutes(-6) // 6 min old — exceeds 5 min threshold
+            lastAccessOffset: TimeSpan.FromMinutes(minutes: -6) // 6 min old — exceeds 5 min threshold
         );
 
         Mock<ISessionManager> managerMock = new();
-        LiveSessionIdleReaper reaper = BuildReaper(service, managerMock.Object);
+        LiveSessionIdleReaper reaper = BuildReaper(streamingService: service, sessionManager: managerMock.Object);
 
         await reaper.SweepAsync();
 
         // After eviction the session is no longer registered.
-        service.ActiveSessionIds.Should().NotContain(sessionId);
-        managerMock.Verify(m => m.RemoveSession(sessionId), Times.Once);
+        service.ActiveSessionIds.Should().NotContain(unexpected: sessionId);
+        managerMock.Verify(expression: m => m.RemoveSession(sessionId), times: Times.Once);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -132,16 +132,16 @@ public class LiveSessionIdleReaperTests
     public async Task SweepAsync_ActiveSession_IsLeftAlone()
     {
         (LiveStreamingService service, string sessionId) = BuildService(
-            TimeSpan.FromSeconds(-30) // 30 s old — well within 5 min threshold
+            lastAccessOffset: TimeSpan.FromSeconds(seconds: -30) // 30 s old — well within 5 min threshold
         );
 
         Mock<ISessionManager> managerMock = new();
-        LiveSessionIdleReaper reaper = BuildReaper(service, managerMock.Object);
+        LiveSessionIdleReaper reaper = BuildReaper(streamingService: service, sessionManager: managerMock.Object);
 
         await reaper.SweepAsync();
 
-        service.ActiveSessionIds.Should().Contain(sessionId);
-        managerMock.Verify(m => m.RemoveSession(It.IsAny<string>()), Times.Never);
+        service.ActiveSessionIds.Should().Contain(expected: sessionId);
+        managerMock.Verify(expression: m => m.RemoveSession(It.IsAny<string>()), times: Times.Never);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -152,15 +152,15 @@ public class LiveSessionIdleReaperTests
     public async Task SweepAsync_SessionAtExactTimeout_IsEvicted()
     {
         (LiveStreamingService service, string sessionId) = BuildService(
-            TimeSpan.FromMinutes(-5) // Exactly at the 5-min boundary
+            lastAccessOffset: TimeSpan.FromMinutes(minutes: -5) // Exactly at the 5-min boundary
         );
 
         Mock<ISessionManager> managerMock = new();
-        LiveSessionIdleReaper reaper = BuildReaper(service, managerMock.Object);
+        LiveSessionIdleReaper reaper = BuildReaper(streamingService: service, sessionManager: managerMock.Object);
 
         await reaper.SweepAsync();
 
-        service.ActiveSessionIds.Should().NotContain(sessionId);
+        service.ActiveSessionIds.Should().NotContain(unexpected: sessionId);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -176,20 +176,20 @@ public class LiveSessionIdleReaperTests
     {
         LiveStreamingService service = NewStreamingService();
 
-        LiveSession child = new(Ulid.NewUlid().ToString(), MakeQuality());
-        service.Register(child, TimeSpan.FromSeconds(4), isAudioRenditionChild: true);
+        LiveSession child = new(sessionId: Ulid.NewUlid().ToString(), quality: MakeQuality());
+        service.Register(session: child, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 4), isAudioRenditionChild: true);
 
         // Idle far past the threshold — a non-selected language gets no hits, but
         // it must stay alive so a later switch to it works. The parent disposes it.
-        BackdateLastAccess(service, child.SessionId, TimeSpan.FromMinutes(30));
+        BackdateLastAccess(service: service, sessionId: child.SessionId, age: TimeSpan.FromMinutes(minutes: 30));
 
         Mock<ISessionManager> managerMock = new();
-        LiveSessionIdleReaper reaper = BuildReaper(service, managerMock.Object);
+        LiveSessionIdleReaper reaper = BuildReaper(streamingService: service, sessionManager: managerMock.Object);
 
         await reaper.SweepAsync();
 
-        service.ActiveSessionIds.Should().Contain(child.SessionId);
-        managerMock.Verify(m => m.RemoveSession(It.IsAny<string>()), Times.Never);
+        service.ActiveSessionIds.Should().Contain(expected: child.SessionId);
+        managerMock.Verify(expression: m => m.RemoveSession(It.IsAny<string>()), times: Times.Never);
     }
 
     [Fact]
@@ -197,21 +197,21 @@ public class LiveSessionIdleReaperTests
     {
         LiveStreamingService service = NewStreamingService();
 
-        LiveSession active = new(Ulid.NewUlid().ToString(), MakeQuality());
-        LiveSession idle = new(Ulid.NewUlid().ToString(), MakeQuality());
+        LiveSession active = new(sessionId: Ulid.NewUlid().ToString(), quality: MakeQuality());
+        LiveSession idle = new(sessionId: Ulid.NewUlid().ToString(), quality: MakeQuality());
 
-        service.Register(active, TimeSpan.FromSeconds(4));
-        service.Register(idle, TimeSpan.FromSeconds(4));
+        service.Register(session: active, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 4));
+        service.Register(session: idle, targetSegmentDuration: TimeSpan.FromSeconds(seconds: 4));
 
         // Age only the idle session
-        BackdateLastAccess(service, idle.SessionId, TimeSpan.FromMinutes(10));
+        BackdateLastAccess(service: service, sessionId: idle.SessionId, age: TimeSpan.FromMinutes(minutes: 10));
 
         Mock<ISessionManager> managerMock = new();
-        LiveSessionIdleReaper reaper = BuildReaper(service, managerMock.Object);
+        LiveSessionIdleReaper reaper = BuildReaper(streamingService: service, sessionManager: managerMock.Object);
 
         await reaper.SweepAsync();
 
-        service.ActiveSessionIds.Should().Contain(active.SessionId);
-        service.ActiveSessionIds.Should().NotContain(idle.SessionId);
+        service.ActiveSessionIds.Should().Contain(expected: active.SessionId);
+        service.ActiveSessionIds.Should().NotContain(unexpected: idle.SessionId);
     }
 }

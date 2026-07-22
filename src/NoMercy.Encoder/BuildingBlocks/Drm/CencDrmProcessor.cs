@@ -56,14 +56,14 @@ public class CencDrmProcessor(
     {
         if (config.Method != DrmMethod.Cenc)
             throw new ArgumentException(
-                $"This processor handles CENC only, got {config.Method}",
-                nameof(config)
+                message: $"This processor handles CENC only, got {config.Method}",
+                paramName: nameof(config)
             );
 
         // CENC encryption happens post-encode via PackageAsync.
         // Return an empty sentinel so BuildStage's DRM wiring is a no-op.
         return Task.FromResult(
-            new DrmArtifact(
+            result: new DrmArtifact(
                 KeyInfoFilePath: string.Empty,
                 KeyFilePath: string.Empty,
                 KeyUri: config.KeyUri,
@@ -101,54 +101,54 @@ public class CencDrmProcessor(
     {
         if (config.Method != DrmMethod.Cenc)
             throw new ArgumentException(
-                $"PackageAsync requires DrmMethod.Cenc, got {config.Method}",
-                nameof(config)
+                message: $"PackageAsync requires DrmMethod.Cenc, got {config.Method}",
+                paramName: nameof(config)
             );
 
         IReadOnlyList<CencKeyEntry> keys =
             config.CencKeys
             ?? throw new ArgumentException(
-                "DrmConfig.CencKeys must be set for CENC packaging",
-                nameof(config)
+                message: "DrmConfig.CencKeys must be set for CENC packaging",
+                paramName: nameof(config)
             );
 
         if (keys.Count == 0)
             throw new ArgumentException(
-                "DrmConfig.CencKeys must contain at least one entry",
-                nameof(config)
+                message: "DrmConfig.CencKeys must contain at least one entry",
+                paramName: nameof(config)
             );
 
-        string packagerPath = options.GetShakaPackagerPath(storage);
+        string packagerPath = options.GetShakaPackagerPath(storage: storage);
 
-        List<string> args = BuildPackagerArguments(streamDescriptors, keys, mpdOutputPath);
+        List<string> args = BuildPackagerArguments(streamDescriptors: streamDescriptors, keys: keys, mpdOutputPath: mpdOutputPath);
 
         logger.LogInformation(
-            "Running shaka-packager for CENC packaging: {Args}",
-            string.Join(" ", args)
+            message: "Running shaka-packager for CENC packaging: {Args}",
+            args: string.Join(separator: " ", values: args)
         );
 
         ProcessResult result = await processRunner
             .RunAsync(
-                packagerPath,
-                [.. args],
+                executable: packagerPath,
+                arguments: [.. args],
                 workingDirectory: outputDirectory,
                 cancellationToken: ct
             )
-            .ConfigureAwait(false);
+            .ConfigureAwait(continueOnCapturedContext: false);
 
         if (result.ExitCode != 0)
             throw new InvalidOperationException(
-                $"shaka-packager exited with code {result.ExitCode}. "
-                    + "Check logs for details. "
-                    + $"stderr: {result.StdErr}"
+                message: $"shaka-packager exited with code {result.ExitCode}. "
+                         + "Check logs for details. "
+                         + $"stderr: {result.StdErr}"
             );
 
-        if (!storage.Exists(mpdOutputPath))
+        if (!storage.Exists(path: mpdOutputPath))
             throw new InvalidOperationException(
-                $"shaka-packager completed but MPD not found at: {mpdOutputPath}"
+                message: $"shaka-packager completed but MPD not found at: {mpdOutputPath}"
             );
 
-        logger.LogInformation("CENC packaging complete. MPD: {MpdPath}", mpdOutputPath);
+        logger.LogInformation(message: "CENC packaging complete. MPD: {MpdPath}", args: mpdOutputPath);
         return mpdOutputPath;
     }
 
@@ -174,23 +174,23 @@ public class CencDrmProcessor(
 
         // Stream descriptors — one positional arg per stream
         foreach (CencStreamDescriptor descriptor in streamDescriptors)
-            args.Add(descriptor.ToPackagerSpec());
+            args.Add(item: descriptor.ToPackagerSpec());
 
-        args.Add("--enable_raw_key_encryption");
+        args.Add(item: "--enable_raw_key_encryption");
 
         // --keys label=LABEL:key_id=HEX:key=HEX[,label=LABEL:...]
         // shaka-packager accepts comma-separated entries or repeated --keys flags.
         // We use repeated flags for clarity.
         foreach (CencKeyEntry entry in keys)
         {
-            args.Add("--keys");
+            args.Add(item: "--keys");
             args.Add(
-                $"label={entry.Label}:key_id={Convert.ToHexString(entry.KeyId).ToLowerInvariant()}:key={Convert.ToHexString(entry.Key).ToLowerInvariant()}"
+                item: $"label={entry.Label}:key_id={Convert.ToHexString(inArray: entry.KeyId).ToLowerInvariant()}:key={Convert.ToHexString(inArray: entry.Key).ToLowerInvariant()}"
             );
         }
 
-        args.Add("--mpd_output");
-        args.Add(mpdOutputPath);
+        args.Add(item: "--mpd_output");
+        args.Add(item: mpdOutputPath);
 
         return args;
     }
@@ -214,8 +214,8 @@ public record CencStreamDescriptor(
     /// </summary>
     public string ToPackagerSpec()
     {
-        string input = InputPath.Replace('\\', '/');
-        string output = OutputPath.Replace('\\', '/');
+        string input = InputPath.Replace(oldChar: '\\', newChar: '/');
+        string output = OutputPath.Replace(oldChar: '\\', newChar: '/');
         return $"in={input},stream={StreamType},output={output},drm_label={DrmLabel}";
     }
 }

@@ -33,87 +33,87 @@ public class StartupParallelizationTests
         ConcurrentBag<(string Name, int Phase)> executionLog = [];
 
         // Phase 1: foundational (sequential)
-        await Task.Run(() => executionLog.Add(("CreateFolders", 1)));
+        await Task.Run(action: () => executionLog.Add(item: ("CreateFolders", 1)));
 
         // Phase 2: Auth and Binaries in parallel
-        Task authTask = Task.Run(async () =>
+        Task authTask = Task.Run(function: async () =>
         {
-            await Task.Delay(50);
-            executionLog.Add(("Auth", 2));
+            await Task.Delay(millisecondsDelay: 50);
+            executionLog.Add(item: ("Auth", 2));
         });
-        Task binariesTask = Task.Run(async () =>
+        Task binariesTask = Task.Run(function: async () =>
         {
-            await Task.Delay(30);
-            executionLog.Add(("Binaries", 2));
+            await Task.Delay(millisecondsDelay: 30);
+            executionLog.Add(item: ("Binaries", 2));
         });
         await authTask;
 
         // Phase 3: After auth, these run in parallel
-        Task networkingTask = Task.Run(async () =>
+        Task networkingTask = Task.Run(function: async () =>
         {
-            await Task.Delay(40);
-            executionLog.Add(("Networking", 3));
+            await Task.Delay(millisecondsDelay: 40);
+            executionLog.Add(item: ("Networking", 3));
         });
 
         List<Task> parallelTasks =
         [
-            Task.Run(async () =>
+            Task.Run(function: async () =>
             {
-                await Task.Delay(20);
-                executionLog.Add(("DatabaseSeeder", 3));
+                await Task.Delay(millisecondsDelay: 20);
+                executionLog.Add(item: ("DatabaseSeeder", 3));
             }),
-            Task.Run(async () =>
+            Task.Run(function: async () =>
             {
-                await Task.Delay(10);
-                executionLog.Add(("ChromeCast", 3));
+                await Task.Delay(millisecondsDelay: 10);
+                executionLog.Add(item: ("ChromeCast", 3));
             }),
-            Task.Run(() =>
+            Task.Run(function: () =>
             {
-                executionLog.Add(("UpdateChecker", 3));
+                executionLog.Add(item: ("UpdateChecker", 3));
                 return Task.CompletedTask;
             }),
         ];
 
-        await Task.WhenAll(parallelTasks);
+        await Task.WhenAll(tasks: parallelTasks);
 
         // Phase 4: Register needs Auth + Networking
         await networkingTask;
-        executionLog.Add(("Register", 4));
+        executionLog.Add(item: ("Register", 4));
 
         // Wait for binaries (started in phase 2)
         await binariesTask;
 
         // Verify all tasks executed
-        List<string> executedNames = executionLog.Select(e => e.Name).ToList();
-        Assert.Contains("CreateFolders", executedNames);
-        Assert.Contains("Auth", executedNames);
-        Assert.Contains("Binaries", executedNames);
-        Assert.Contains("Networking", executedNames);
-        Assert.Contains("DatabaseSeeder", executedNames);
-        Assert.Contains("ChromeCast", executedNames);
-        Assert.Contains("UpdateChecker", executedNames);
-        Assert.Contains("Register", executedNames);
-        Assert.Equal(8, executionLog.Count);
+        List<string> executedNames = executionLog.Select(selector: e => e.Name).ToList();
+        Assert.Contains(expected: "CreateFolders", collection: executedNames);
+        Assert.Contains(expected: "Auth", collection: executedNames);
+        Assert.Contains(expected: "Binaries", collection: executedNames);
+        Assert.Contains(expected: "Networking", collection: executedNames);
+        Assert.Contains(expected: "DatabaseSeeder", collection: executedNames);
+        Assert.Contains(expected: "ChromeCast", collection: executedNames);
+        Assert.Contains(expected: "UpdateChecker", collection: executedNames);
+        Assert.Contains(expected: "Register", collection: executedNames);
+        Assert.Equal(expected: 8, actual: executionLog.Count);
 
         // Verify ordering constraints:
         // CreateFolders must complete before any Phase 2+ task
         List<(string Name, int Phase)> logList = executionLog.ToList();
 
-        (string Name, int Phase) createFolders = logList.First(e => e.Name == "CreateFolders");
-        Assert.Equal(1, createFolders.Phase);
+        (string Name, int Phase) createFolders = logList.First(predicate: e => e.Name == "CreateFolders");
+        Assert.Equal(expected: 1, actual: createFolders.Phase);
 
         // Auth and Binaries are phase 2
-        Assert.Equal(2, logList.First(e => e.Name == "Auth").Phase);
-        Assert.Equal(2, logList.First(e => e.Name == "Binaries").Phase);
+        Assert.Equal(expected: 2, actual: logList.First(predicate: e => e.Name == "Auth").Phase);
+        Assert.Equal(expected: 2, actual: logList.First(predicate: e => e.Name == "Binaries").Phase);
 
         // Networking, DatabaseSeeder, ChromeCast, UpdateChecker are phase 3
-        Assert.Equal(3, logList.First(e => e.Name == "Networking").Phase);
-        Assert.Equal(3, logList.First(e => e.Name == "DatabaseSeeder").Phase);
-        Assert.Equal(3, logList.First(e => e.Name == "ChromeCast").Phase);
-        Assert.Equal(3, logList.First(e => e.Name == "UpdateChecker").Phase);
+        Assert.Equal(expected: 3, actual: logList.First(predicate: e => e.Name == "Networking").Phase);
+        Assert.Equal(expected: 3, actual: logList.First(predicate: e => e.Name == "DatabaseSeeder").Phase);
+        Assert.Equal(expected: 3, actual: logList.First(predicate: e => e.Name == "ChromeCast").Phase);
+        Assert.Equal(expected: 3, actual: logList.First(predicate: e => e.Name == "UpdateChecker").Phase);
 
         // Register is phase 4
-        Assert.Equal(4, logList.First(e => e.Name == "Register").Phase);
+        Assert.Equal(expected: 4, actual: logList.First(predicate: e => e.Name == "Register").Phase);
     }
 
     /// <summary>
@@ -131,19 +131,19 @@ public class StartupParallelizationTests
         // other. Both cross it only if they run at the same time; a serialized run
         // would wait out the timeout and return false. No timing comparison, so
         // thread-pool jitter and coverage overhead can't flake it.
-        using Barrier barrier = new(2);
+        using Barrier barrier = new(participantCount: 2);
 
         Task<bool> RunParticipant() =>
             Task.Factory.StartNew(
-                () => barrier.SignalAndWait(TimeSpan.FromSeconds(10)),
-                TaskCreationOptions.LongRunning
+                function: () => barrier.SignalAndWait(timeout: TimeSpan.FromSeconds(seconds: 10)),
+                creationOptions: TaskCreationOptions.LongRunning
             );
 
-        bool[] reachedBarrier = await Task.WhenAll(RunParticipant(), RunParticipant());
+        bool[] reachedBarrier = await Task.WhenAll(tasks: [RunParticipant(), RunParticipant()]);
 
         Assert.True(
-            reachedBarrier[0] && reachedBarrier[1],
-            "Auth and Binaries must run concurrently: both reached the shared barrier."
+            condition: reachedBarrier[0] && reachedBarrier[1],
+            userMessage: "Auth and Binaries must run concurrently: both reached the shared barrier."
         );
     }
 
@@ -156,27 +156,27 @@ public class StartupParallelizationTests
         const int taskCount = 4;
 
         // Simulate Auth completing first.
-        await Task.Delay(10);
+        await Task.Delay(millisecondsDelay: 10);
 
         // Same barrier proof as Phase 2, scaled to all Phase 3 tasks: every task
         // must reach the shared rendezvous before any is allowed to finish, which
         // is only possible if they run at the same time. Robust to CI thread-pool
         // jitter, unlike a wall-clock overlap comparison.
-        using Barrier barrier = new(taskCount);
+        using Barrier barrier = new(participantCount: taskCount);
 
         Task<bool> RunParticipant() =>
             Task.Factory.StartNew(
-                () => barrier.SignalAndWait(TimeSpan.FromSeconds(10)),
-                TaskCreationOptions.LongRunning
+                function: () => barrier.SignalAndWait(timeout: TimeSpan.FromSeconds(seconds: 10)),
+                creationOptions: TaskCreationOptions.LongRunning
             );
 
         bool[] reachedBarrier = await Task.WhenAll(
-            Enumerable.Range(0, taskCount).Select(_ => RunParticipant())
+            tasks: Enumerable.Range(start: 0, count: taskCount).Select(selector: _ => RunParticipant())
         );
 
         Assert.True(
-            reachedBarrier.All(reached => reached),
-            "Phase 3 tasks should run concurrently: all reached the shared barrier."
+            condition: reachedBarrier.All(predicate: reached => reached),
+            userMessage: "Phase 3 tasks should run concurrently: all reached the shared barrier."
         );
     }
 
@@ -192,24 +192,22 @@ public class StartupParallelizationTests
         bool registerStartedBeforeDeps = false;
 
         // Phase 2: Auth
-        Task binariesTask = Task.Run(async () => await Task.Delay(200));
-        await Task.Run(async () =>
+        Task binariesTask = Task.Run(function: async () => await Task.Delay(millisecondsDelay: 200));
+        await Task.Run(function: async () =>
         {
-            await Task.Delay(50);
+            await Task.Delay(millisecondsDelay: 50);
             authCompleted = true;
         });
 
         // Phase 3: Networking (started after auth)
-        Task networkingTask = Task.Run(async () =>
+        Task networkingTask = Task.Run(function: async () =>
         {
-            await Task.Delay(100);
+            await Task.Delay(millisecondsDelay: 100);
             networkingCompleted = true;
         });
 
         // Phase 3: other parallel tasks
-        await Task.WhenAll(
-            Task.Run(async () => await Task.Delay(30)),
-            Task.Run(async () => await Task.Delay(20))
+        await Task.WhenAll(tasks: [Task.Run(function: async () => await Task.Delay(millisecondsDelay: 30)), Task.Run(function: async () => await Task.Delay(millisecondsDelay: 20))]
         );
 
         // Phase 4: Wait for networking then register
@@ -222,11 +220,11 @@ public class StartupParallelizationTests
         // "Register" runs here
         await binariesTask;
 
-        Assert.True(authCompleted, "Auth should be completed before Register");
-        Assert.True(networkingCompleted, "Networking should be completed before Register");
+        Assert.True(condition: authCompleted, userMessage: "Auth should be completed before Register");
+        Assert.True(condition: networkingCompleted, userMessage: "Networking should be completed before Register");
         Assert.False(
-            registerStartedBeforeDeps,
-            "Register must not start before Auth and Networking complete"
+            condition: registerStartedBeforeDeps,
+            userMessage: "Register must not start before Auth and Networking complete"
         );
     }
 }

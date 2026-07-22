@@ -24,13 +24,13 @@ public static class Program
     {
         IsDev =
             Debugger.IsAttached
-            || args.Contains("--dev")
-            || Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") is not null
-            || Environment.ProcessPath?.Contains("bin\\Debug") == true
-            || Environment.ProcessPath?.Contains("bin/Debug") == true;
+            || args.Contains(value: "--dev")
+            || Environment.GetEnvironmentVariable(variable: "DOTNET_RUNNING_IN_CONTAINER") is not null
+            || Environment.ProcessPath?.Contains(value: "bin\\Debug") == true
+            || Environment.ProcessPath?.Contains(value: "bin/Debug") == true;
 
-        ShowOnStartup = args.Contains("--show") || IsDev;
-        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        ShowOnStartup = args.Contains(value: "--show") || IsDev;
+        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args: args);
     }
 
     public static AppBuilder BuildAvaloniaApp()

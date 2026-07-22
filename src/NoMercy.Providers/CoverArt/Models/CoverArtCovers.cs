@@ -15,9 +15,9 @@ namespace NoMercy.Providers.CoverArt.Models;
 
 public class CoverArtCovers
 {
-    [JsonProperty("images")]
+    [JsonProperty(propertyName: "images")]
     public CoverArtImage[] Images { get; set; } = [];
 
-    [JsonProperty("release")]
+    [JsonProperty(propertyName: "release")]
     private string Release { get; set; } = string.Empty;
 }

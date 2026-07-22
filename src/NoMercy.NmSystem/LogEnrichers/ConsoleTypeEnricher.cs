@@ -24,9 +24,9 @@ internal class ConsoleTypeEnricher : ILogEventEnricher
     private static string SpacerEnd(string text, int padding)
     {
         StringBuilder spacing = new();
-        spacing.Append(text);
+        spacing.Append(value: text);
         for (int i = 0; i < padding - text.Length; i++)
-            spacing.Append(' ');
+            spacing.Append(value: ' ');
 
         return spacing.ToString();
     }
@@ -35,29 +35,29 @@ internal class ConsoleTypeEnricher : ILogEventEnricher
     {
         StringBuilder spacing = new();
         for (int i = 0; i < padding - text.Length; i++)
-            spacing.Append(' ');
-        spacing.Append(text);
+            spacing.Append(value: ' ');
+        spacing.Append(value: text);
 
         return spacing.ToString();
     }
 
     private static string Spacer(string text, int padding, bool begin = false)
     {
-        return begin ? SpacerBegin(text, padding) : SpacerEnd(text, padding);
+        return begin ? SpacerBegin(text: text, padding: padding) : SpacerEnd(text: text, padding: padding);
     }
 
     public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
     {
-        logEvent.Properties.TryGetValue("ConsoleType", out LogEventPropertyValue? value);
+        logEvent.Properties.TryGetValue(key: "ConsoleType", value: out LogEventPropertyValue? value);
 
-        string type = value?.ToString().Replace("\"", "") ?? "app";
+        string type = value?.ToString().Replace(oldValue: "\"", newValue: "") ?? "app";
 
-        Color color = Logger.GetColor(type);
+        Color color = Logger.GetColor(type: type);
 
         logEvent.AddOrUpdateProperty(
-            propertyFactory.CreateProperty(
-                "ConsoleType",
-                Spacer(type.ToTitleCase(), 14, true).Pastel(color)
+            property: propertyFactory.CreateProperty(
+                name: "ConsoleType",
+                value: Spacer(text: type.ToTitleCase(), padding: 14, begin: true).Pastel(color: color)
             )
         );
     }

@@ -36,7 +36,7 @@ public class LiveStreamingService(
     // Tombstone of recently removed sessions so the API can distinguish an
     // expired/ended session (410 Gone) from one that never existed (404).
     private readonly ConcurrentDictionary<string, DateTime> _recentlyRemoved = new();
-    private static readonly TimeSpan TombstoneWindow = TimeSpan.FromMinutes(30);
+    private static readonly TimeSpan TombstoneWindow = TimeSpan.FromMinutes(minutes: 30);
 
     public IReadOnlyCollection<string> ActiveSessionIds => _runtimes.Keys.ToList();
 
@@ -47,14 +47,14 @@ public class LiveStreamingService(
         bool isAudioRenditionChild = false
     )
     {
-        LiveRuntimeSession runtime = new(session, targetSegmentDuration, scratchDirectory)
+        LiveRuntimeSession runtime = new(session: session, targetSegmentDuration: targetSegmentDuration, scratchDirectory: scratchDirectory)
         {
             IsAudioRenditionChild = isAudioRenditionChild,
         };
-        if (!_runtimes.TryAdd(session.SessionId, runtime))
+        if (!_runtimes.TryAdd(key: session.SessionId, value: runtime))
         {
             throw new InvalidOperationException(
-                $"Live session '{session.SessionId}' is already registered"
+                message: $"Live session '{session.SessionId}' is already registered"
             );
         }
 
@@ -64,19 +64,19 @@ public class LiveStreamingService(
         // planner in LiveEncoder.SpawnRunner would see the old-quality files still
         // sitting on disk, treat that range as "already covered", and skip
         // re-encoding it — silently serving the previous quality forever.
-        session.AttachBufferResetCallback(() =>
+        session.AttachBufferResetCallback(callback: () =>
         {
             runtime.ResetBuffer();
             if (runtime.ScratchDirectory is { Length: > 0 } scratch)
-                segmentInventory.Purge(scratch);
+                segmentInventory.Purge(scratchDirectory: scratch);
         });
-        runtime.DrainerTask = Task.Run(() => DrainAsync(runtime));
-        logger.LogDebug("Registered live session {SessionId}", session.SessionId);
+        runtime.DrainerTask = Task.Run(function: () => DrainAsync(runtime: runtime));
+        logger.LogDebug(message: "Registered live session {SessionId}", args: session.SessionId);
     }
 
     public void StampChildAudioSessions(string sessionId, IReadOnlyList<string> childSessionIds)
     {
-        if (_runtimes.TryGetValue(sessionId, out LiveRuntimeSession? runtime))
+        if (_runtimes.TryGetValue(key: sessionId, value: out LiveRuntimeSession? runtime))
             runtime.ChildAudioSessionIds = childSessionIds;
     }
 
@@ -86,7 +86,7 @@ public class LiveStreamingService(
         ClientCapabilities client
     )
     {
-        if (_runtimes.TryGetValue(sessionId, out LiveRuntimeSession? runtime))
+        if (_runtimes.TryGetValue(key: sessionId, value: out LiveRuntimeSession? runtime))
         {
             runtime.CachedMediaInfo = mediaInfo;
             runtime.ClientCapabilities = client;
@@ -95,13 +95,13 @@ public class LiveStreamingService(
 
     public void StampAudioRenditions(string sessionId, IReadOnlyList<LiveAudioRendition> renditions)
     {
-        if (_runtimes.TryGetValue(sessionId, out LiveRuntimeSession? runtime))
+        if (_runtimes.TryGetValue(key: sessionId, value: out LiveRuntimeSession? runtime))
             runtime.AudioRenditions = renditions;
     }
 
     public bool TryGetRuntime(string sessionId, out LiveRuntimeSession runtime)
     {
-        return _runtimes.TryGetValue(sessionId, out runtime!);
+        return _runtimes.TryGetValue(key: sessionId, value: out runtime!);
     }
 
     public IReadOnlyList<LiveSessionSnapshot> GetActiveSessions()
@@ -112,7 +112,7 @@ public class LiveStreamingService(
         {
             ILiveSession session = kv.Value.Session;
             snapshots.Add(
-                new(
+                item: new(
                     SessionId: session.SessionId,
                     State: session.State,
                     QualityId: session.CurrentQuality.Id,
@@ -136,20 +136,20 @@ public class LiveStreamingService(
     {
         try
         {
-            if (_runtimes.TryRemove(sessionId, out LiveRuntimeSession? runtime))
+            if (_runtimes.TryRemove(key: sessionId, value: out LiveRuntimeSession? runtime))
             {
-                logger.LogDebug("Removing live session {SessionId}", sessionId);
+                logger.LogDebug(message: "Removing live session {SessionId}", args: sessionId);
 
                 // Cascade to the per-language audio children so switching audio
                 // never outlives the video session it belongs to.
                 foreach (string childId in runtime.ChildAudioSessionIds)
-                    await RemoveAsync(childId).ConfigureAwait(false);
+                    await RemoveAsync(sessionId: childId).ConfigureAwait(continueOnCapturedContext: false);
 
-                await runtime.DisposeAsync().ConfigureAwait(false);
+                await runtime.DisposeAsync().ConfigureAwait(continueOnCapturedContext: false);
 
-                if (!string.IsNullOrWhiteSpace(runtime.ScratchDirectory))
+                if (!string.IsNullOrWhiteSpace(value: runtime.ScratchDirectory))
                 {
-                    TryDeleteScratch(runtime.ScratchDirectory, sessionId);
+                    TryDeleteScratch(scratchDirectory: runtime.ScratchDirectory, sessionId: sessionId);
                 }
             }
         }
@@ -158,8 +158,8 @@ public class LiveStreamingService(
             // Atomic teardown: even if disposing the runtime threw, the session
             // is always pulled from the manager and tombstoned, so it can never
             // linger as a ghost and a later request gets 410 Gone.
-            sessionManager?.RemoveSession(sessionId);
-            RecordRemoved(sessionId);
+            sessionManager?.RemoveSession(sessionId: sessionId);
+            RecordRemoved(sessionId: sessionId);
         }
     }
 
@@ -176,8 +176,8 @@ public class LiveStreamingService(
     /// </summary>
     public async ValueTask DisposeAsync()
     {
-        await DisposeAllSessionsAsync().ConfigureAwait(false);
-        GC.SuppressFinalize(this);
+        await DisposeAllSessionsAsync().ConfigureAwait(continueOnCapturedContext: false);
+        GC.SuppressFinalize(obj: this);
     }
 
     public void Dispose()
@@ -186,23 +186,23 @@ public class LiveStreamingService(
         // the teardown uses ConfigureAwait(false) throughout, so there is no
         // captured-context deadlock.
         DisposeAllSessionsAsync().GetAwaiter().GetResult();
-        GC.SuppressFinalize(this);
+        GC.SuppressFinalize(obj: this);
     }
 
     private async Task DisposeAllSessionsAsync()
     {
         // Snapshot the keys — RemoveAsync mutates _runtimes as it goes.
         foreach (string sessionId in _runtimes.Keys.ToList())
-            await RemoveAsync(sessionId).ConfigureAwait(false);
+            await RemoveAsync(sessionId: sessionId).ConfigureAwait(continueOnCapturedContext: false);
     }
 
     public bool WasRecentlyRemoved(string sessionId)
     {
-        if (!_recentlyRemoved.TryGetValue(sessionId, out DateTime removedAt))
+        if (!_recentlyRemoved.TryGetValue(key: sessionId, value: out DateTime removedAt))
             return false;
         if (DateTime.UtcNow - removedAt > TombstoneWindow)
         {
-            _recentlyRemoved.TryRemove(sessionId, out _);
+            _recentlyRemoved.TryRemove(key: sessionId, value: out _);
             return false;
         }
         return true;
@@ -210,7 +210,7 @@ public class LiveStreamingService(
 
     private void RecordRemoved(string sessionId)
     {
-        _recentlyRemoved[sessionId] = DateTime.UtcNow;
+        _recentlyRemoved[key: sessionId] = DateTime.UtcNow;
         // Keep the tombstone set bounded by pruning expired entries.
         if (_recentlyRemoved.Count > 256)
         {
@@ -218,7 +218,7 @@ public class LiveStreamingService(
             foreach (KeyValuePair<string, DateTime> kv in _recentlyRemoved)
             {
                 if (kv.Value < cutoff)
-                    _recentlyRemoved.TryRemove(kv.Key, out _);
+                    _recentlyRemoved.TryRemove(key: kv.Key, value: out _);
             }
         }
     }
@@ -227,13 +227,11 @@ public class LiveStreamingService(
     {
         try
         {
-            if (storage.Exists(scratchDirectory))
+            if (storage.Exists(path: scratchDirectory))
             {
-                storage.DeleteDirectory(scratchDirectory, recursive: true);
+                storage.DeleteDirectory(path: scratchDirectory, recursive: true);
                 logger.LogDebug(
-                    "Deleted live session scratch {Dir} for {SessionId}",
-                    scratchDirectory,
-                    sessionId
+                    message: "Deleted live session scratch {Dir} for {SessionId}", args: [scratchDirectory, sessionId]
                 );
             }
         }
@@ -243,10 +241,8 @@ public class LiveStreamingService(
             // the FFmpeg handle fully releases. The temp dir will be cleaned
             // up on the next server start or by the OS temp sweep.
             logger.LogWarning(
-                ex,
-                "Could not delete scratch {Dir} for live session {SessionId}",
-                scratchDirectory,
-                sessionId
+                exception: ex,
+                message: "Could not delete scratch {Dir} for live session {SessionId}", args: [scratchDirectory, sessionId]
             );
         }
     }
@@ -257,19 +253,17 @@ public class LiveStreamingService(
         {
             await foreach (
                 Segment segment in runtime.Session.Segments.WithCancellation(
-                    runtime.DrainerCancellation
+                    cancellationToken: runtime.DrainerCancellation
                 )
             )
             {
-                runtime.BufferSegment(segment);
-                await PushSegmentReadyAsync(runtime, segment).ConfigureAwait(false);
+                runtime.BufferSegment(segment: segment);
+                await PushSegmentReadyAsync(runtime: runtime, segment: segment).ConfigureAwait(continueOnCapturedContext: false);
             }
 
             runtime.MarkComplete();
             logger.LogDebug(
-                "Drainer for {SessionId} completed — buffered {Count} segments",
-                runtime.Session.SessionId,
-                runtime.HighestSegmentIndex + 1
+                message: "Drainer for {SessionId} completed — buffered {Count} segments", args: [runtime.Session.SessionId, runtime.HighestSegmentIndex + 1]
             );
         }
         catch (OperationCanceledException)
@@ -279,9 +273,9 @@ public class LiveStreamingService(
         catch (Exception ex)
         {
             logger.LogError(
-                ex,
-                "Drainer for live session {SessionId} failed",
-                runtime.Session.SessionId
+                exception: ex,
+                message: "Drainer for live session {SessionId} failed",
+                args: runtime.Session.SessionId
             );
             runtime.MarkComplete();
         }
@@ -307,15 +301,15 @@ public class LiveStreamingService(
         try
         {
             await transport
-                .SendToClientAsync(sessionId, message, CancellationToken.None)
-                .ConfigureAwait(false);
+                .SendToClientAsync(sessionId: sessionId, message: message, ct: CancellationToken.None)
+                .ConfigureAwait(continueOnCapturedContext: false);
         }
         catch (Exception ex)
         {
             logger.LogDebug(
-                ex,
-                "Transport push failed for SegmentReady on session {SessionId}",
-                sessionId
+                exception: ex,
+                message: "Transport push failed for SegmentReady on session {SessionId}",
+                args: sessionId
             );
         }
     }

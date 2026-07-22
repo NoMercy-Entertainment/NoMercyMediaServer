@@ -33,10 +33,10 @@ using NoMercyQueue;
 namespace NoMercy.Api.Controllers.V1.Music;
 
 [ApiController]
-[ApiVersion(1.0)]
-[Tags("Music Playlists")]
+[ApiVersion(version: 1.0)]
+[Tags(tags: "Music Playlists")]
 [Authorize(Policy = "MediaAccess")]
-[Route("api/v{version:apiVersion}/music/playlists", Order = 3)]
+[Route(template: "api/v{version:apiVersion}/music/playlists", Order = 3)]
 public class PlaylistsController : BaseController
 {
     private readonly IMusicRepository _musicRepository;
@@ -59,45 +59,45 @@ public class PlaylistsController : BaseController
     public async Task<IActionResult> Index()
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view playlists");
+        if (!AuthPolicy.IsAllowed(principal: User))
+            return UnauthorizedResponse(detail: "You do not have permission to view playlists");
 
-        List<PlaylistCardDto> playlistCards = await _musicRepository.GetPlaylistCardsAsync(userId);
+        List<PlaylistCardDto> playlistCards = await _musicRepository.GetPlaylistCardsAsync(userId: userId);
 
         ComponentEnvelope response = Component
             .Grid()
-            .WithItems(playlistCards.Select(p => Component.MusicCard(new MusicCardData(p))));
+            .WithItems(items: playlistCards.Select(selector: p => Component.MusicCard(data: new MusicCardData(playlist: p))));
 
-        return Ok(ComponentResponse.From(response));
+        return Ok(value: ComponentResponse.From(component: response));
     }
 
     [HttpGet]
-    [Route("{id:guid}")]
+    [Route(template: "{id:guid}")]
     public async Task<IActionResult> Show(Guid id)
     {
         Guid userId = User.UserId();
-        if (!AuthPolicy.IsAllowed(User))
-            return UnauthorizedResponse("You do not have permission to view playlists");
+        if (!AuthPolicy.IsAllowed(principal: User))
+            return UnauthorizedResponse(detail: "You do not have permission to view playlists");
 
-        Playlist? playlist = await _musicRepository.GetPlaylistAsync(userId, id);
+        Playlist? playlist = await _musicRepository.GetPlaylistAsync(userId: userId, id: id);
 
         if (playlist == null)
-            return NotFoundResponse("Playlist not found");
+            return NotFoundResponse(detail: "Playlist not found");
 
         string language = Language();
 
         // Fire-and-forget: enqueue takes the queue's global write lock (held by the
         // encoder workers), so dispatching inline blocked this read for seconds.
-        if (string.IsNullOrEmpty(playlist._colorPalette) || playlist._colorPalette == "{}")
-            _ = Task.Run(() =>
+        if (string.IsNullOrEmpty(value: playlist._colorPalette) || playlist._colorPalette == "{}")
+            _ = Task.Run(action: () =>
                 QueueRunner.Current?.Dispatcher.Dispatch(
-                    new ColorPaletteJob("playlist", playlist.Id.ToString()),
-                    "palette",
-                    1
+                    job: new ColorPaletteJob(entityType: "playlist", entityId: playlist.Id.ToString()),
+                    onQueue: "palette",
+                    priority: 1
                 )
             );
 
-        return Ok(new PlaylistResponseDto { Data = new(playlist, language) });
+        return Ok(value: new PlaylistResponseDto { Data = new(playlist: playlist, country: language) });
     }
 
     [HttpPost]
@@ -106,8 +106,8 @@ public class PlaylistsController : BaseController
     {
         Guid userId = User.UserId();
 
-        if (await _musicRepository.PlaylistNameExistsAsync(request.Name, userId))
-            return ConflictResponse("You already have a playlist with that name");
+        if (await _musicRepository.PlaylistNameExistsAsync(name: request.Name, userId: userId))
+            return ConflictResponse(detail: "You already have a playlist with that name");
 
         Playlist newPlaylist = new()
         {
@@ -119,56 +119,56 @@ public class PlaylistsController : BaseController
         string slug = newPlaylist.Name.ToSlug();
 
         // save to app images folder
-        string filePath = Path.Combine(AppFiles.ImagesPath, "music", slug + ".jpg");
-        _logger.LogInformation(filePath);
+        string filePath = Path.Combine(path1: AppFiles.ImagesPath, path2: "music", path3: slug + ".jpg");
+        _logger.LogInformation(message: filePath);
 
         if (request.Cover is not null)
         {
-            Match coverMatch = Regex.Match(request.Cover, "data:image/(?<type>.+?),(?<data>.+)");
+            Match coverMatch = Regex.Match(input: request.Cover, pattern: "data:image/(?<type>.+?),(?<data>.+)");
             if (!coverMatch.Success)
-                return BadRequestResponse("Cover must be a data:image/...;base64,... payload");
+                return BadRequestResponse(detail: "Cover must be a data:image/...;base64,... payload");
 
             byte[] binData;
             try
             {
-                binData = Convert.FromBase64String(coverMatch.Groups["data"].Value);
+                binData = Convert.FromBase64String(s: coverMatch.Groups[groupname: "data"].Value);
             }
             catch (FormatException)
             {
-                return BadRequestResponse("Cover payload is not valid base64");
+                return BadRequestResponse(detail: "Cover payload is not valid base64");
             }
 
-            await using (FileStream stream = new(filePath, FileMode.OpenOrCreate))
-                await stream.WriteAsync(binData);
+            await using (FileStream stream = new(path: filePath, mode: FileMode.OpenOrCreate))
+                await stream.WriteAsync(buffer: binData);
 
             newPlaylist.Cover = $"/{slug}.jpg";
             newPlaylist._colorPalette = await CoverArtImageManagerManager.ColorPalette(
-                "cover",
-                new(filePath)
+                type: "cover",
+                url: new(uriString: filePath)
             );
         }
 
-        _logger.LogInformation("{Playlist}", newPlaylist);
+        _logger.LogInformation(message: "{Playlist}", args: newPlaylist);
 
-        await _musicRepository.CreatePlaylistAsync(newPlaylist, request.Tracks);
+        await _musicRepository.CreatePlaylistAsync(playlist: newPlaylist, trackIds: request.Tracks);
 
-        Playlist? playlist = await _musicRepository.GetPlaylistByNameAsync(request.Name, userId);
+        Playlist? playlist = await _musicRepository.GetPlaylistByNameAsync(name: request.Name, userId: userId);
 
-        await _eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["music-playlists"] });
+        await _eventBus.PublishAsync(@event: new LibraryRefreshedEvent { QueryKey = ["music-playlists"] });
 
-        return Ok(new StatusResponseDto<Playlist?> { Data = playlist, Status = "ok" });
+        return Ok(value: new StatusResponseDto<Playlist?> { Data = playlist, Status = "ok" });
     }
 
     [HttpPatch]
-    [Route("{id:guid}")]
+    [Route(template: "{id:guid}")]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> Edit(Guid id, [FromBody] CreatePlaylistRequestDto request)
     {
         Guid userId = User.UserId();
-        Playlist? playlist = await _musicRepository.GetPlaylistForEditAsync(id, userId);
+        Playlist? playlist = await _musicRepository.GetPlaylistForEditAsync(id: id, userId: userId);
 
         if (playlist is null)
-            return NotFoundResponse("Playlist not found");
+            return NotFoundResponse(detail: "Playlist not found");
 
         string slug = playlist.Name.ToSlug();
         string colorPalette = playlist._colorPalette.OrEmpty();
@@ -176,44 +176,44 @@ public class PlaylistsController : BaseController
 
         if (request.Cover is not null)
         {
-            Match coverMatch = Regex.Match(request.Cover, "data:image/(?<type>.+?),(?<data>.+)");
+            Match coverMatch = Regex.Match(input: request.Cover, pattern: "data:image/(?<type>.+?),(?<data>.+)");
             if (!coverMatch.Success)
-                return BadRequestResponse("Cover must be a data:image/...;base64,... payload");
+                return BadRequestResponse(detail: "Cover must be a data:image/...;base64,... payload");
 
             byte[] binData;
             try
             {
-                binData = Convert.FromBase64String(coverMatch.Groups["data"].Value);
+                binData = Convert.FromBase64String(s: coverMatch.Groups[groupname: "data"].Value);
             }
             catch (FormatException)
             {
-                return BadRequestResponse("Cover payload is not valid base64");
+                return BadRequestResponse(detail: "Cover payload is not valid base64");
             }
 
             cover = $"/{slug}.jpg";
-            string filePath = Path.Combine(AppFiles.ImagesPath, "music", slug + ".jpg");
+            string filePath = Path.Combine(path1: AppFiles.ImagesPath, path2: "music", path3: slug + ".jpg");
 
-            await using (FileStream stream = new(filePath, FileMode.Create))
-                await stream.WriteAsync(binData);
+            await using (FileStream stream = new(path: filePath, mode: FileMode.Create))
+                await stream.WriteAsync(buffer: binData);
 
-            colorPalette = await CoverArtImageManagerManager.ColorPalette("cover", new(filePath));
+            colorPalette = await CoverArtImageManagerManager.ColorPalette(type: "cover", url: new(uriString: filePath));
         }
 
         int result = await _musicRepository.UpdatePlaylistMetadataAsync(
-            id,
-            userId,
-            request.Name,
-            request.Description,
-            cover,
-            colorPalette
+            id: id,
+            userId: userId,
+            name: request.Name,
+            description: request.Description,
+            cover: cover,
+            colorPalette: colorPalette
         );
 
         await _eventBus.PublishAsync(
-            new LibraryRefreshedEvent { QueryKey = ["music", "playlists", id] }
+            @event: new LibraryRefreshedEvent { QueryKey = ["music", "playlists", id] }
         );
 
         return Ok(
-            new StatusResponseDto<string>
+            value: new StatusResponseDto<string>
             {
                 Data = (
                     result > 0 ? "Playlist updated successfully" : "No changes made"
@@ -224,16 +224,16 @@ public class PlaylistsController : BaseController
     }
 
     [HttpDelete]
-    [Route("{id:guid}")]
+    [Route(template: "{id:guid}")]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> Destroy(Guid id)
     {
-        int result = await _musicRepository.DeletePlaylistAsync(id, User.UserId());
+        int result = await _musicRepository.DeletePlaylistAsync(id: id, userId: User.UserId());
 
-        await _eventBus.PublishAsync(new LibraryRefreshedEvent { QueryKey = ["music-playlists"] });
+        await _eventBus.PublishAsync(@event: new LibraryRefreshedEvent { QueryKey = ["music-playlists"] });
 
         return Ok(
-            new StatusResponseDto<string>
+            value: new StatusResponseDto<string>
             {
                 Data = (
                     result > 0 ? "Playlist deleted successfully" : "Playlist not found"
@@ -244,48 +244,48 @@ public class PlaylistsController : BaseController
     }
 
     [HttpPost]
-    [Route("{id:guid}/cover")]
-    [Consumes("multipart/form-data")]
+    [Route(template: "{id:guid}/cover")]
+    [Consumes(contentType: "multipart/form-data")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Cover(Guid id, IFormFile image)
     {
-        Playlist? playlist = await _musicRepository.GetPlaylistForCoverAsync(id, User.UserId());
+        Playlist? playlist = await _musicRepository.GetPlaylistForCoverAsync(id: id, userId: User.UserId());
 
         if (playlist is null)
-            return NotFoundResponse("Playlist not found");
+            return NotFoundResponse(detail: "Playlist not found");
 
         string slug = playlist.Name.ToSlug();
 
         // save to app images folder
-        string filePath2 = Path.Combine(AppFiles.ImagesPath, "music", slug + ".jpg");
-        _logger.LogInformation(filePath2);
-        await using (FileStream stream = new(filePath2, FileMode.Create))
+        string filePath2 = Path.Combine(path1: AppFiles.ImagesPath, path2: "music", path3: slug + ".jpg");
+        _logger.LogInformation(message: filePath2);
+        await using (FileStream stream = new(path: filePath2, mode: FileMode.Create))
         {
-            await image.CopyToAsync(stream);
+            await image.CopyToAsync(target: stream);
         }
 
         string cover = $"/{slug}.jpg";
         string colorPalette = await CoverArtImageManagerManager.ColorPalette(
-            "cover",
-            new(filePath2)
+            type: "cover",
+            url: new(uriString: filePath2)
         );
 
-        await _musicRepository.UpdatePlaylistCoverAsync(id, User.UserId(), cover, colorPalette);
+        await _musicRepository.UpdatePlaylistCoverAsync(id: id, userId: User.UserId(), cover: cover, colorPalette: colorPalette);
 
         await _eventBus.PublishAsync(
-            new LibraryRefreshedEvent { QueryKey = ["music", "playlists", playlist.Id] }
+            @event: new LibraryRefreshedEvent { QueryKey = ["music", "playlists", playlist.Id] }
         );
 
         playlist._colorPalette = colorPalette;
 
         return Ok(
-            new StatusResponseDto<ImageUploadResponseDto>
+            value: new StatusResponseDto<ImageUploadResponseDto>
             {
                 Status = "ok",
                 Message = "Playlist cover updated",
                 Data = new()
                 {
-                    Url = new($"/images/music/{slug}.jpg", UriKind.Relative),
+                    Url = new(uriString: $"/images/music/{slug}.jpg", uriKind: UriKind.Relative),
                     ColorPalette = playlist.ColorPalette,
                 },
             }
@@ -293,24 +293,24 @@ public class PlaylistsController : BaseController
     }
 
     [HttpPost]
-    [Route("{id:guid}/tracks")]
+    [Route(template: "{id:guid}/tracks")]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> AddTrack(
         Guid id,
         [FromBody] CreatePlaylistTrackRequestDto request
     )
     {
-        int result = await _musicRepository.AddPlaylistTrackAsync(id, request.Id, User.UserId());
+        int result = await _musicRepository.AddPlaylistTrackAsync(playlistId: id, trackId: request.Id, userId: User.UserId());
 
         if (result < 0)
-            return NotFoundResponse("Playlist not found");
+            return NotFoundResponse(detail: "Playlist not found");
 
         await _eventBus.PublishAsync(
-            new LibraryRefreshedEvent { QueryKey = ["music", "playlists", id] }
+            @event: new LibraryRefreshedEvent { QueryKey = ["music", "playlists", id] }
         );
 
         return Ok(
-            new StatusResponseDto<string>
+            value: new StatusResponseDto<string>
             {
                 Data = (
                     result > 0 ? "Playlist updated successfully" : "No changes made"
@@ -321,21 +321,21 @@ public class PlaylistsController : BaseController
     }
 
     [HttpDelete]
-    [Route("{id:guid}/tracks/{trackId:guid}")]
+    [Route(template: "{id:guid}/tracks/{trackId:guid}")]
     [Authorize(Policy = "MediaAccess")]
     public async Task<IActionResult> AddTrack(Guid id, Guid trackId)
     {
-        int result = await _musicRepository.RemovePlaylistTrackAsync(id, trackId, User.UserId());
+        int result = await _musicRepository.RemovePlaylistTrackAsync(playlistId: id, trackId: trackId, userId: User.UserId());
 
         if (result < 0)
-            return NotFoundResponse("Track not found in playlist");
+            return NotFoundResponse(detail: "Track not found in playlist");
 
         await _eventBus.PublishAsync(
-            new LibraryRefreshedEvent { QueryKey = ["music", "playlists", id] }
+            @event: new LibraryRefreshedEvent { QueryKey = ["music", "playlists", id] }
         );
 
         return Ok(
-            new StatusResponseDto<string>
+            value: new StatusResponseDto<string>
             {
                 Data = (
                     result > 0 ? "Playlist updated successfully" : "No changes made"
@@ -348,21 +348,21 @@ public class PlaylistsController : BaseController
 
 public class CreatePlaylistRequestDto
 {
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = null!;
 
-    [JsonProperty("description")]
+    [JsonProperty(propertyName: "description")]
     public string? Description { get; set; }
 
-    [JsonProperty("cover")]
+    [JsonProperty(propertyName: "cover")]
     public string? Cover { get; set; }
 
-    [JsonProperty("tracks")]
+    [JsonProperty(propertyName: "tracks")]
     public List<Guid> Tracks { get; set; } = [];
 }
 
 public class CreatePlaylistTrackRequestDto
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public Guid Id { get; set; }
 }

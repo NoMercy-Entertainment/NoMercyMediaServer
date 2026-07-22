@@ -48,18 +48,18 @@ public class PlanStageEmitHdrAndSdrTests
 
     public PlanStageEmitHdrAndSdrTests()
     {
-        _hardware.Setup(h => h.HasGpu).Returns(false);
-        _hardware.Setup(h => h.CpuCores).Returns(8);
-        _hardware.Setup(h => h.Gpus).Returns([]);
-        _hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
+        _hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
+        _hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
+        _hardware.Setup(expression: h => h.Gpus).Returns(value: []);
+        _hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
         _hardware
-            .Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
-            .Returns((GpuDevice?)null);
+            .Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
+            .Returns(value: (GpuDevice?)null);
 
         // Codec-aware: HEVC resolves to a 10-bit-capable software encoder, H.264
         // to an 8-bit one — so the bit-depth role-split has real encoders behind it.
         _codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<IHardwareCapabilities>(),
@@ -67,60 +67,60 @@ public class PlanStageEmitHdrAndSdrTests
                 )
             )
             .Returns(
-                (VideoCodecType codec, IHardwareCapabilities _, EncoderPreference _) =>
+                valueFunction: (VideoCodecType codec, IHardwareCapabilities _, EncoderPreference _) =>
                     codec == VideoCodecType.H265
-                        ? BuildResolved("libx265", supports10Bit: true)
-                        : BuildResolved("libx264", supports10Bit: false)
+                        ? BuildResolved(ffmpegName: "libx265", supports10Bit: true)
+                        : BuildResolved(ffmpegName: "libx264", supports10Bit: false)
             );
 
         _stage = new(
-            new(),
-            new(),
-            new(),
-            _codecResolver.Object,
-            _hardware.Object,
-            new TonemapSelector(),
-            _ffmpegCapabilities.Object,
-            new AbrLadderGenerator(),
-            new NoOpCropDetector(),
-            NullLogger<PlanStage>.Instance
+            graphBuilder: new(),
+            groupingStrategy: new(),
+            costEstimator: new(),
+            codecResolver: _codecResolver.Object,
+            hardware: _hardware.Object,
+            tonemapSelector: new TonemapSelector(),
+            ffmpegCapabilities: _ffmpegCapabilities.Object,
+            abrLadderGenerator: new AbrLadderGenerator(),
+            cropDetector: new NoOpCropDetector(),
+            logger: NullLogger<PlanStage>.Instance
         );
     }
 
     [Fact]
     public async Task HdrSource_SplitsIntoHdrPassthroughAndTonemappedSdr()
     {
-        OutputPlan plan = await RunPlan(EmitHdrAndSdrProfile(), BuildHdrMedia());
+        OutputPlan plan = await RunPlan(profile: EmitHdrAndSdrProfile(), media: BuildHdrMedia());
 
-        plan.VideoOutputs.Should().HaveCount(2);
+        plan.VideoOutputs.Should().HaveCount(expected: 2);
 
-        VideoOutputPlan hdr = plan.VideoOutputs.Single(v => v.EncoderName == "libx265");
-        hdr.IsHdrOutput.Should().BeTrue("the 10-bit HEVC rung preserves HDR");
-        hdr.TonemapFilterChain.Should().BeNull("HDR passthrough must not tonemap");
-        hdr.ExtraFlags.Should().ContainKey("-color_trc").WhoseValue.Should().Be("smpte2084");
+        VideoOutputPlan hdr = plan.VideoOutputs.Single(predicate: v => v.EncoderName == "libx265");
+        hdr.IsHdrOutput.Should().BeTrue(because: "the 10-bit HEVC rung preserves HDR");
+        hdr.TonemapFilterChain.Should().BeNull(because: "HDR passthrough must not tonemap");
+        hdr.ExtraFlags.Should().ContainKey(expected: "-color_trc").WhoseValue.Should().Be(expected: "smpte2084");
 
-        VideoOutputPlan sdr = plan.VideoOutputs.Single(v => v.EncoderName == "libx264");
-        sdr.IsHdrOutput.Should().BeFalse("the 8-bit H.264 rung is the SDR copy");
-        sdr.TonemapFilterChain.Should().NotBeNullOrEmpty("the SDR copy must be tonemapped");
+        VideoOutputPlan sdr = plan.VideoOutputs.Single(predicate: v => v.EncoderName == "libx264");
+        sdr.IsHdrOutput.Should().BeFalse(because: "the 8-bit H.264 rung is the SDR copy");
+        sdr.TonemapFilterChain.Should().NotBeNullOrEmpty(because: "the SDR copy must be tonemapped");
         sdr.ConvertHdrToSdr.Should().BeTrue();
     }
 
     [Fact]
     public async Task SdrSource_BypassesSplit_NoHdrOutputs()
     {
-        OutputPlan plan = await RunPlan(EmitHdrAndSdrProfile(), BuildSdrMedia());
+        OutputPlan plan = await RunPlan(profile: EmitHdrAndSdrProfile(), media: BuildSdrMedia());
 
-        plan.VideoOutputs.Should().HaveCount(2);
-        plan.VideoOutputs.Should().OnlyContain(v => !v.IsHdrOutput);
-        plan.VideoOutputs.Should().OnlyContain(v => v.TonemapFilterChain == null);
+        plan.VideoOutputs.Should().HaveCount(expected: 2);
+        plan.VideoOutputs.Should().OnlyContain(predicate: v => !v.IsHdrOutput);
+        plan.VideoOutputs.Should().OnlyContain(predicate: v => v.TonemapFilterChain == null);
     }
 
     private async Task<OutputPlan> RunPlan(EncodingProfile profile, MediaInfo media)
     {
-        ValidateInput input = new(media, profile);
+        ValidateInput input = new(Media: media, Profile: profile);
         EncodingContext context = EncodingContext.Create();
-        StageResult result = await _stage.ExecuteAsync(input, context, CancellationToken.None);
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: CancellationToken.None);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
         return success.Value.OutputPlan;
     }
 
@@ -235,7 +235,7 @@ public class PlanStageEmitHdrAndSdrTests
         new(
             FilePath: "/media/source.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(90),
+            Duration: TimeSpan.FromMinutes(minutes: 90),
             OverallBitRateKbps: 40000,
             FileSizeBytes: 20_000_000_000,
             VideoStreams: [],
@@ -253,7 +253,7 @@ public class PlanStageEmitHdrAndSdrTests
                 Presets: ["medium"],
                 Profiles: ["high", "main10"],
                 Levels: ["4.1", "5.1"],
-                QualityRange: new(0, 51, 23),
+                QualityRange: new(Min: 0, Max: 51, Default: 23),
                 SupportedRateControl: [RateControlMode.Crf],
                 Supports10Bit: supports10Bit,
                 SupportsHdr: supports10Bit,

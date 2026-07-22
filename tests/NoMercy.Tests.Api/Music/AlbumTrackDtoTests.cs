@@ -16,7 +16,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api.Music;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class AlbumTrackDtoTests
 {
     private static Album BuildAlbum(Guid id, string? cover, ColorPalette? colorPalette = null)
@@ -47,7 +47,7 @@ public class AlbumTrackDtoTests
             Folder = "/music-folder",
             Filename = "song.flac",
             FolderId = Ulid.NewUlid(),
-            Date = new(2020, 5, 1),
+            Date = new(year: 2020, month: 5, day: 1),
             DiscNumber = 2,
             TrackNumber = 7,
             Duration = "215",
@@ -56,11 +56,11 @@ public class AlbumTrackDtoTests
         if (lyrics is not null)
             track.Lyrics = lyrics;
         foreach (TrackUser trackUser in trackUsers ?? [])
-            track.TrackUser.Add(trackUser);
+            track.TrackUser.Add(item: trackUser);
         foreach (ArtistTrack artistTrack in artistTracks ?? [])
-            track.ArtistTrack.Add(artistTrack);
+            track.ArtistTrack.Add(item: artistTrack);
         foreach (AlbumTrack albumTrack in albumTracks ?? [])
-            track.AlbumTrack.Add(albumTrack);
+            track.AlbumTrack.Add(item: albumTrack);
         return track;
     }
 
@@ -75,8 +75,8 @@ public class AlbumTrackDtoTests
     {
         Guid albumId = Guid.NewGuid();
         Guid trackId = Guid.NewGuid();
-        Album album = BuildAlbum(albumId, albumCover, albumColorPalette);
-        Track track = BuildTrack(trackId, trackUsers, artistTracks, nestedAlbumTracks, lyrics);
+        Album album = BuildAlbum(id: albumId, cover: albumCover, colorPalette: albumColorPalette);
+        Track track = BuildTrack(id: trackId, trackUsers: trackUsers, artistTracks: artistTracks, albumTracks: nestedAlbumTracks, lyrics: lyrics);
 
         return new()
         {
@@ -104,10 +104,10 @@ public class AlbumTrackDtoTests
     {
         AlbumTrack subject = BuildSubject();
 
-        AlbumTrackDto dto = new(subject, "US");
+        AlbumTrackDto dto = new(albumTrack: subject, country: "US");
 
-        dto.Id.Should().Be(subject.Track.Id);
-        dto.Name.Should().Be("Track Name");
+        dto.Id.Should().Be(expected: subject.Track.Id);
+        dto.Name.Should().Be(expected: "Track Name");
     }
 
     [Fact]
@@ -115,9 +115,9 @@ public class AlbumTrackDtoTests
     {
         AlbumTrack subject = BuildSubject(albumCover: "/album-cover.jpg");
 
-        AlbumTrackDto dto = new(subject, "US");
+        AlbumTrackDto dto = new(albumTrack: subject, country: "US");
 
-        dto.Cover.Should().Be("/images/music/album-cover.jpg");
+        dto.Cover.Should().Be(expected: "/images/music/album-cover.jpg");
     }
 
     [Fact]
@@ -125,7 +125,7 @@ public class AlbumTrackDtoTests
     {
         AlbumTrack subject = BuildSubject(albumCover: null);
 
-        AlbumTrackDto dto = new(subject, "US");
+        AlbumTrackDto dto = new(albumTrack: subject, country: "US");
 
         dto.Cover.Should().BeNull();
     }
@@ -135,10 +135,10 @@ public class AlbumTrackDtoTests
     {
         AlbumTrack subject = BuildSubject();
 
-        AlbumTrackDto dto = new(subject, "US");
+        AlbumTrackDto dto = new(albumTrack: subject, country: "US");
 
         dto.Path.Should()
-            .Be($"/{subject.Track.FolderId}{subject.Track.Folder}{subject.Track.Filename}");
+            .Be(expected: $"/{subject.Track.FolderId}{subject.Track.Folder}{subject.Track.Filename}");
     }
 
     [Fact]
@@ -146,9 +146,9 @@ public class AlbumTrackDtoTests
     {
         AlbumTrack subject = BuildSubject();
 
-        AlbumTrackDto dto = new(subject, "US");
+        AlbumTrackDto dto = new(albumTrack: subject, country: "US");
 
-        dto.Type.Should().Be("track");
+        dto.Type.Should().Be(expected: "track");
     }
 
     [Fact]
@@ -157,10 +157,10 @@ public class AlbumTrackDtoTests
         ColorPalette palette = new() { Cover = new() { Dominant = "#654321" } };
         AlbumTrack subject = BuildSubject(albumColorPalette: palette);
 
-        AlbumTrackDto dto = new(subject, "US");
+        AlbumTrackDto dto = new(albumTrack: subject, country: "US");
 
         dto.ColorPalette.Should().NotBeNull();
-        dto.ColorPalette!.Cover!.Dominant.Should().Be("#654321");
+        dto.ColorPalette!.Cover!.Dominant.Should().Be(expected: "#654321");
     }
 
     [Fact]
@@ -168,22 +168,22 @@ public class AlbumTrackDtoTests
     {
         AlbumTrack subject = BuildSubject();
 
-        AlbumTrackDto dto = new(subject, "US");
+        AlbumTrackDto dto = new(albumTrack: subject, country: "US");
 
-        dto.Date.Should().Be(subject.Track.Date);
-        dto.Disc.Should().Be(2);
-        dto.Duration.Should().Be("215");
-        dto.Quality.Should().Be(320);
-        dto.Track.Should().Be(7);
+        dto.Date.Should().Be(expected: subject.Track.Date);
+        dto.Disc.Should().Be(expected: 2);
+        dto.Duration.Should().Be(expected: "215");
+        dto.Quality.Should().Be(expected: 320);
+        dto.Track.Should().Be(expected: 7);
     }
 
     [Fact]
     public void Ctor_FavoriteTrue_WhenTrackHasTrackUserEntries()
     {
-        TrackUser trackUser = new(Guid.NewGuid(), Guid.NewGuid());
+        TrackUser trackUser = new(trackId: Guid.NewGuid(), userId: Guid.NewGuid());
         AlbumTrack subject = BuildSubject(trackUsers: [trackUser]);
 
-        AlbumTrackDto dto = new(subject, "US");
+        AlbumTrackDto dto = new(albumTrack: subject, country: "US");
 
         dto.Favorite.Should().BeTrue();
     }
@@ -193,7 +193,7 @@ public class AlbumTrackDtoTests
     {
         AlbumTrack subject = BuildSubject(trackUsers: []);
 
-        AlbumTrackDto dto = new(subject, "US");
+        AlbumTrackDto dto = new(albumTrack: subject, country: "US");
 
         dto.Favorite.Should().BeFalse();
     }
@@ -204,10 +204,10 @@ public class AlbumTrackDtoTests
         Lyric[] lyrics = [new() { Text = "La la la" }];
         AlbumTrack subject = BuildSubject(lyrics: lyrics);
 
-        AlbumTrackDto dto = new(subject, "US");
+        AlbumTrackDto dto = new(albumTrack: subject, country: "US");
 
         dto.Lyrics.Should().NotBeNull();
-        dto.Lyrics!.Should().ContainSingle(lyric => lyric.Text == "La la la");
+        dto.Lyrics!.Should().ContainSingle(predicate: lyric => lyric.Text == "La la la");
     }
 
     [Fact]
@@ -215,9 +215,9 @@ public class AlbumTrackDtoTests
     {
         AlbumTrack subject = BuildSubject();
 
-        AlbumTrackDto dto = new(subject, "US");
+        AlbumTrackDto dto = new(albumTrack: subject, country: "US");
 
-        dto.Link.ToString().Should().Be($"/music/tracks/{subject.Track.Id}");
+        dto.Link.ToString().Should().Be(expected: $"/music/tracks/{subject.Track.Id}");
     }
 
     [Fact]
@@ -227,9 +227,9 @@ public class AlbumTrackDtoTests
         ArtistTrack artistTrackTwo = BuildArtistTrack();
         AlbumTrack subject = BuildSubject(artistTracks: [artistTrackOne, artistTrackTwo]);
 
-        AlbumTrackDto dto = new(subject, "US");
+        AlbumTrackDto dto = new(albumTrack: subject, country: "US");
 
-        dto.Artists.Should().HaveCount(2);
+        dto.Artists.Should().HaveCount(expected: 2);
     }
 
     [Fact]
@@ -239,8 +239,8 @@ public class AlbumTrackDtoTests
         AlbumTrack nestedTwo = BuildNestedAlbumTrack();
         AlbumTrack subject = BuildSubject(nestedAlbumTracks: [nestedOne, nestedTwo]);
 
-        AlbumTrackDto dto = new(subject, "US");
+        AlbumTrackDto dto = new(albumTrack: subject, country: "US");
 
-        dto.Albums.Should().HaveCount(2);
+        dto.Albums.Should().HaveCount(expected: 2);
     }
 }

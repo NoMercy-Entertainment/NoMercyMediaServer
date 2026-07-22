@@ -24,6 +24,6 @@ public static class SystemParallelism
 {
     public static readonly ParallelOptions Options = new()
     {
-        MaxDegreeOfParallelism = (int)Math.Floor(Environment.ProcessorCount / 2.0),
+        MaxDegreeOfParallelism = (int)Math.Floor(d: Environment.ProcessorCount / 2.0),
     };
 }

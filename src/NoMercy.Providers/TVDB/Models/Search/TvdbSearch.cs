@@ -18,87 +18,87 @@ public class TvdbSearchResponse : TvdbResponse<TvdbSearchResult[]> { }
 
 public class TvdbSearchResult
 {
-    [JsonProperty("objectID")]
+    [JsonProperty(propertyName: "objectID")]
     public string ObjectId { get; set; } = string.Empty;
 
-    [JsonProperty("aliases")]
+    [JsonProperty(propertyName: "aliases")]
     public string[]? Aliases { get; set; }
 
-    [JsonProperty("country")]
+    [JsonProperty(propertyName: "country")]
     public string? Country { get; set; }
 
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty("image_url")]
+    [JsonProperty(propertyName: "image_url")]
     public Uri? ImageUrl { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string? Name { get; set; }
 
-    [JsonProperty("first_air_time")]
+    [JsonProperty(propertyName: "first_air_time")]
     public string? FirstAirTime { get; set; }
 
-    [JsonProperty("overview")]
+    [JsonProperty(propertyName: "overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty("primary_language")]
+    [JsonProperty(propertyName: "primary_language")]
     public string? PrimaryLanguage { get; set; }
 
-    [JsonProperty("primary_type")]
+    [JsonProperty(propertyName: "primary_type")]
     public string? PrimaryType { get; set; }
 
-    [JsonProperty("status")]
+    [JsonProperty(propertyName: "status")]
     public string? Status { get; set; }
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string? Type { get; set; }
 
-    [JsonProperty("tvdb_id")]
+    [JsonProperty(propertyName: "tvdb_id")]
     public string? TvdbId { get; set; }
 
-    [JsonProperty("year")]
+    [JsonProperty(propertyName: "year")]
     public string? Year { get; set; }
 
-    [JsonProperty("slug")]
+    [JsonProperty(propertyName: "slug")]
     public string? Slug { get; set; }
 
-    [JsonProperty("overviews")]
+    [JsonProperty(propertyName: "overviews")]
     public Dictionary<string, string>? Overviews { get; set; }
 
-    [JsonProperty("translations")]
+    [JsonProperty(propertyName: "translations")]
     public Dictionary<string, string>? Translations { get; set; }
 
-    [JsonProperty("network")]
+    [JsonProperty(propertyName: "network")]
     public string? Network { get; set; }
 
-    [JsonProperty("remote_ids")]
+    [JsonProperty(propertyName: "remote_ids")]
     public TvdbRemoteId[]? RemoteIds { get; set; }
 
-    [JsonProperty("director")]
+    [JsonProperty(propertyName: "director")]
     public string? Director { get; set; }
 
-    [JsonProperty("studios")]
+    [JsonProperty(propertyName: "studios")]
     public string[]? Studios { get; set; }
 
-    [JsonProperty("genres")]
+    [JsonProperty(propertyName: "genres")]
     public string[]? Genres { get; set; }
 
-    [JsonProperty("companies")]
+    [JsonProperty(propertyName: "companies")]
     public string[]? Companies { get; set; }
 
-    [JsonProperty("companyType")]
+    [JsonProperty(propertyName: "companyType")]
     public string? CompanyType { get; set; }
 
-    [JsonProperty("officialList")]
+    [JsonProperty(propertyName: "officialList")]
     public string? OfficialList { get; set; }
 
-    [JsonProperty("posters")]
+    [JsonProperty(propertyName: "posters")]
     public string[]? Posters { get; set; }
 
-    [JsonProperty("thumbnail")]
+    [JsonProperty(propertyName: "thumbnail")]
     public string? Thumbnail { get; set; }
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string? Title { get; set; }
 }

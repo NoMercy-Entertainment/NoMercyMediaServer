@@ -18,11 +18,11 @@ namespace NoMercy.NmSystem.FFProbe;
 public static class FfProbe
 {
     public static Task<FfProbeData> CreateAsync(string file, CancellationToken ct = default) =>
-        FfProbeService.Current.CreateAsync(file, ct);
+        FfProbeService.Current.CreateAsync(file: file, ct: ct);
 
     public static Task<FfProbeData> CreateAsync(
         IStorageDriver driver,
         string file,
         CancellationToken ct = default
-    ) => FfProbeService.Current.CreateAsync(driver, file, ct);
+    ) => FfProbeService.Current.CreateAsync(driver: driver, file: file, ct: ct);
 }

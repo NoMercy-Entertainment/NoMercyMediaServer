@@ -28,12 +28,12 @@ public class AppDbContextTests : IDisposable
         services.AddDataProtection().UseEphemeralDataProtectionProvider();
 
         ServiceProvider provider = services.BuildServiceProvider();
-        TokenStore.Initialize(provider);
+        TokenStore.Initialize(serviceProvider: provider);
 
         DbContextOptionsBuilder<AppDbContext> optionsBuilder = new();
-        optionsBuilder.UseSqlite("Data Source=:memory:");
+        optionsBuilder.UseSqlite(connectionString: "Data Source=:memory:");
 
-        _context = new(optionsBuilder.Options);
+        _context = new(options: optionsBuilder.Options);
         _context.Database.OpenConnection();
         _context.Database.EnsureCreated();
     }
@@ -47,15 +47,15 @@ public class AppDbContextTests : IDisposable
     [Fact]
     public async Task Configuration_StoresPlainValue()
     {
-        _context.Configuration.Add(new() { Key = "server_name", Value = "My Server" });
+        _context.Configuration.Add(entity: new() { Key = "server_name", Value = "My Server" });
         await _context.SaveChangesAsync();
 
-        Configuration? loaded = await _context.Configuration.FirstOrDefaultAsync(c =>
+        Configuration? loaded = await _context.Configuration.FirstOrDefaultAsync(predicate: c =>
             c.Key == "server_name"
         );
 
-        Assert.NotNull(loaded);
-        Assert.Equal("My Server", loaded.Value);
+        Assert.NotNull(@object: loaded);
+        Assert.Equal(expected: "My Server", actual: loaded.Value);
     }
 
     [Fact]
@@ -63,22 +63,22 @@ public class AppDbContextTests : IDisposable
     {
         string secret = "my-super-secret-token";
 
-        _context.Configuration.Add(new() { Key = "auth_access_token", SecureValue = secret });
+        _context.Configuration.Add(entity: new() { Key = "auth_access_token", SecureValue = secret });
         await _context.SaveChangesAsync();
 
-        Configuration? loaded = await _context.Configuration.FirstOrDefaultAsync(c =>
+        Configuration? loaded = await _context.Configuration.FirstOrDefaultAsync(predicate: c =>
             c.Key == "auth_access_token"
         );
 
-        Assert.NotNull(loaded);
-        Assert.Equal(secret, loaded.SecureValue);
+        Assert.NotNull(@object: loaded);
+        Assert.Equal(expected: secret, actual: loaded.SecureValue);
     }
 
     [Fact]
     public async Task SecureValue_NullRoundtrip()
     {
         _context.Configuration.Add(
-            new()
+            entity: new()
             {
                 Key = "no_secret",
                 Value = "some plain value",
@@ -87,23 +87,23 @@ public class AppDbContextTests : IDisposable
         );
         await _context.SaveChangesAsync();
 
-        Configuration? loaded = await _context.Configuration.FirstOrDefaultAsync(c =>
+        Configuration? loaded = await _context.Configuration.FirstOrDefaultAsync(predicate: c =>
             c.Key == "no_secret"
         );
 
-        Assert.NotNull(loaded);
-        Assert.Null(loaded.SecureValue);
-        Assert.Equal("some plain value", loaded.Value);
+        Assert.NotNull(@object: loaded);
+        Assert.Null(@object: loaded.SecureValue);
+        Assert.Equal(expected: "some plain value", actual: loaded.Value);
     }
 
     [Fact]
     public async Task Configuration_KeyIsUnique()
     {
-        _context.Configuration.Add(new() { Key = "unique_key", Value = "first" });
+        _context.Configuration.Add(entity: new() { Key = "unique_key", Value = "first" });
         await _context.SaveChangesAsync();
 
-        _context.Configuration.Add(new() { Key = "unique_key", Value = "second" });
+        _context.Configuration.Add(entity: new() { Key = "unique_key", Value = "second" });
 
-        await Assert.ThrowsAsync<DbUpdateException>(() => _context.SaveChangesAsync());
+        await Assert.ThrowsAsync<DbUpdateException>(testCode: () => _context.SaveChangesAsync());
     }
 }

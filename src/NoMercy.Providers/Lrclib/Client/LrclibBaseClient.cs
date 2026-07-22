@@ -22,12 +22,12 @@ public class LrclibBaseClient : ExternalApiClient
     protected LrclibBaseClient() { }
 
     protected LrclibBaseClient(Guid id)
-        : base(id) { }
+        : base(id: id) { }
 
     protected override string HttpClientName => HttpClientNames.Lrclib;
-    protected override Uri BaseUrl => new("https://lrclib.net/api/");
+    protected override Uri BaseUrl => new(uriString: "https://lrclib.net/api/");
 
-    protected override void LogRequest(string url) => Logger.Lrclib(url, LogEventLevel.Verbose);
+    protected override void LogRequest(string url) => Logger.Lrclib(message: url, level: LogEventLevel.Verbose);
 
     // Lrclib returns 404 for tracks with no lyrics — treat only that as "no
     // result". Transient failures are retried by the shared Queue, not here.

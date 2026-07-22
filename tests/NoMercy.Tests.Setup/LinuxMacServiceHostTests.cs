@@ -20,182 +20,182 @@ public class LinuxServiceHostTests
     public void GetExecutablePath_ReturnsNonEmptyString()
     {
         string path = AutoStartupManager.GetExecutablePath();
-        Assert.False(string.IsNullOrEmpty(path), "Executable path should not be empty");
+        Assert.False(condition: string.IsNullOrEmpty(value: path), userMessage: "Executable path should not be empty");
     }
 
     [Fact]
     public void GenerateSystemdUnit_ContainsRequiredSections()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Linux))
             return;
 
         (string content, string _) = AutoStartupManager.GenerateSystemdUnit();
 
-        Assert.Contains("[Unit]", content);
-        Assert.Contains("[Service]", content);
-        Assert.Contains("[Install]", content);
+        Assert.Contains(expectedSubstring: "[Unit]", actualString: content);
+        Assert.Contains(expectedSubstring: "[Service]", actualString: content);
+        Assert.Contains(expectedSubstring: "[Install]", actualString: content);
     }
 
     [Fact]
     public void GenerateSystemdUnit_HasNotifyServiceType()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Linux))
             return;
 
         (string content, string _) = AutoStartupManager.GenerateSystemdUnit();
 
         // Type=notify is required for sd_notify integration with Microsoft.Extensions.Hosting.Systemd
-        Assert.Contains("Type=notify", content);
+        Assert.Contains(expectedSubstring: "Type=notify", actualString: content);
     }
 
     [Fact]
     public void GenerateSystemdUnit_PassesServiceFlag()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Linux))
             return;
 
         (string content, string _) = AutoStartupManager.GenerateSystemdUnit();
 
-        Assert.Contains("--service", content);
+        Assert.Contains(expectedSubstring: "--service", actualString: content);
     }
 
     [Fact]
     public void GenerateSystemdUnit_HasNetworkDependency()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Linux))
             return;
 
         (string content, string _) = AutoStartupManager.GenerateSystemdUnit();
 
-        Assert.Contains("After=network-online.target", content);
-        Assert.Contains("Wants=network-online.target", content);
+        Assert.Contains(expectedSubstring: "After=network-online.target", actualString: content);
+        Assert.Contains(expectedSubstring: "Wants=network-online.target", actualString: content);
     }
 
     [Fact]
     public void GenerateSystemdUnit_HasRestartPolicy()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Linux))
             return;
 
         (string content, string _) = AutoStartupManager.GenerateSystemdUnit();
 
-        Assert.Contains("Restart=on-failure", content);
-        Assert.Contains("RestartSec=10", content);
+        Assert.Contains(expectedSubstring: "Restart=on-failure", actualString: content);
+        Assert.Contains(expectedSubstring: "RestartSec=10", actualString: content);
     }
 
     [Fact]
     public void GenerateSystemdUnit_HasJournalLogging()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Linux))
             return;
 
         (string content, string _) = AutoStartupManager.GenerateSystemdUnit();
 
-        Assert.Contains("StandardOutput=journal", content);
-        Assert.Contains("StandardError=journal", content);
-        Assert.Contains("SyslogIdentifier=nomercy-mediaserver", content);
+        Assert.Contains(expectedSubstring: "StandardOutput=journal", actualString: content);
+        Assert.Contains(expectedSubstring: "StandardError=journal", actualString: content);
+        Assert.Contains(expectedSubstring: "SyslogIdentifier=nomercy-mediaserver", actualString: content);
     }
 
     [Fact]
     public void GenerateSystemdUnit_TargetsUserDefault()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Linux))
             return;
 
         (string content, string _) = AutoStartupManager.GenerateSystemdUnit();
 
         // User service should target default.target, not multi-user.target
-        Assert.Contains("WantedBy=default.target", content);
+        Assert.Contains(expectedSubstring: "WantedBy=default.target", actualString: content);
     }
 
     [Fact]
     public void GenerateSystemdUnit_ContainsExecutablePath()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Linux))
             return;
 
         (string content, string _) = AutoStartupManager.GenerateSystemdUnit();
         string exePath = AutoStartupManager.GetExecutablePath();
 
-        Assert.Contains($"ExecStart={exePath}", content);
+        Assert.Contains(expectedSubstring: $"ExecStart={exePath}", actualString: content);
     }
 
     [Fact]
     public void GenerateSystemdUnit_HasWorkingDirectory()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Linux))
             return;
 
         (string content, string _) = AutoStartupManager.GenerateSystemdUnit();
 
-        Assert.Contains("WorkingDirectory=", content);
+        Assert.Contains(expectedSubstring: "WorkingDirectory=", actualString: content);
     }
 
     [Fact]
     public void GenerateSystemdUnit_HasDescription()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Linux))
             return;
 
         (string content, string _) = AutoStartupManager.GenerateSystemdUnit();
 
-        Assert.Contains("Description=NoMercy MediaServer", content);
+        Assert.Contains(expectedSubstring: "Description=NoMercy MediaServer", actualString: content);
     }
 
     [Fact]
     public void GetSystemdUnitPath_PointsToUserServiceDir()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Linux))
             return;
 
         string path = AutoStartupManager.GetSystemdUnitPath();
 
-        Assert.EndsWith("systemd/user/nomercy-mediaserver.service", path);
+        Assert.EndsWith(expectedEndString: "systemd/user/nomercy-mediaserver.service", actualString: path);
     }
 
     [Fact]
     public void GetSystemdUnitPath_RespectsXdgConfigHome()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Linux))
             return;
 
-        string? original = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
+        string? original = Environment.GetEnvironmentVariable(variable: "XDG_CONFIG_HOME");
         try
         {
             string customConfig = "/tmp/test-xdg-config";
-            Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", customConfig);
+            Environment.SetEnvironmentVariable(variable: "XDG_CONFIG_HOME", value: customConfig);
 
             string path = AutoStartupManager.GetSystemdUnitPath();
-            Assert.StartsWith(customConfig, path);
-            Assert.EndsWith("nomercy-mediaserver.service", path);
+            Assert.StartsWith(expectedStartString: customConfig, actualString: path);
+            Assert.EndsWith(expectedEndString: "nomercy-mediaserver.service", actualString: path);
         }
         finally
         {
-            Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", original);
+            Environment.SetEnvironmentVariable(variable: "XDG_CONFIG_HOME", value: original);
         }
     }
 
     [Fact]
     public void GenerateSystemdUnit_PathMatchesGetSystemdUnitPath()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Linux))
             return;
 
         (string _, string generatedPath) = AutoStartupManager.GenerateSystemdUnit();
         string directPath = AutoStartupManager.GetSystemdUnitPath();
 
-        Assert.Equal(directPath, generatedPath);
+        Assert.Equal(expected: directPath, actual: generatedPath);
     }
 
     [Fact]
     public void GenerateSystemdUnit_HasDotnetRootEnvironment()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Linux))
             return;
 
         (string content, string _) = AutoStartupManager.GenerateSystemdUnit();
 
-        Assert.Contains("Environment=DOTNET_ROOT=", content);
+        Assert.Contains(expectedSubstring: "Environment=DOTNET_ROOT=", actualString: content);
     }
 
     [Fact]
@@ -203,7 +203,7 @@ public class LinuxServiceHostTests
     {
         // IsEnabled should return a bool without throwing on any platform
         bool result = AutoStartupManager.IsEnabled();
-        Assert.IsType<bool>(result);
+        Assert.IsType<bool>(@object: result);
     }
 
     [Fact]
@@ -211,6 +211,6 @@ public class LinuxServiceHostTests
     {
         // On a fresh test environment, auto-start should not be registered
         bool result = AutoStartupManager.IsEnabled();
-        Assert.False(result);
+        Assert.False(condition: result);
     }
 }

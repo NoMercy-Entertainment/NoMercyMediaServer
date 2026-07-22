@@ -13,20 +13,20 @@ using NoMercy.Events.DriveMonitor;
 
 namespace NoMercy.Tests.OpticalMedia.Events;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class DriveStatePayloadTests
 {
     [Theory]
-    [InlineData("drive_added")]
-    [InlineData("drive_removed")]
-    [InlineData("disc_inserted")]
-    [InlineData("disc_ejected")]
-    [InlineData("drive_changed")]
-    [InlineData("rip_started")]
-    [InlineData("rip_progress")]
-    [InlineData("rip_complete")]
-    [InlineData("rip_error")]
-    [InlineData("rip_pending")]
+    [InlineData(data: "drive_added")]
+    [InlineData(data: "drive_removed")]
+    [InlineData(data: "disc_inserted")]
+    [InlineData(data: "disc_ejected")]
+    [InlineData(data: "drive_changed")]
+    [InlineData(data: "rip_started")]
+    [InlineData(data: "rip_progress")]
+    [InlineData(data: "rip_complete")]
+    [InlineData(data: "rip_error")]
+    [InlineData(data: "rip_pending")]
     public void KnownMethod_RoundTrips_WithRequiredFields(string method)
     {
         DriveStatePayload payload = new(
@@ -38,10 +38,10 @@ public class DriveStatePayloadTests
             Timestamp: DateTime.UtcNow
         );
 
-        payload.Method.Should().Be(method);
-        payload.Drive.Should().Be("/dev/sr0");
+        payload.Method.Should().Be(expected: method);
+        payload.Drive.Should().Be(expected: "/dev/sr0");
         payload.HasDisc.Should().BeTrue();
-        payload.DiscType.Should().Be("bluray");
+        payload.DiscType.Should().Be(expected: "bluray");
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public class DriveStatePayloadTests
     [Fact]
     public void RipProgress_Fields_PopulatedCorrectly()
     {
-        string jobId = Guid.NewGuid().ToString("N");
+        string jobId = Guid.NewGuid().ToString(format: "N");
 
         DriveStatePayload payload = new(
             Method: "rip_progress",
@@ -77,9 +77,9 @@ public class DriveStatePayloadTests
             Message: "Ripping title 01 — 42%"
         );
 
-        payload.JobId.Should().Be(jobId);
-        payload.Message.Should().Contain("42%");
-        payload.DiscType.Should().Be("dvd");
+        payload.JobId.Should().Be(expected: jobId);
+        payload.Message.Should().Contain(expected: "42%");
+        payload.DiscType.Should().Be(expected: "dvd");
     }
 
     [Fact]
@@ -96,8 +96,8 @@ public class DriveStatePayloadTests
 
         DriveStateChangedEvent evt = new() { DriveStateData = payload };
 
-        evt.DriveStateData.Should().BeSameAs(payload);
-        evt.DriveStateData.Method.Should().Be("disc_inserted");
-        evt.Source.Should().Be("DriveMonitor");
+        evt.DriveStateData.Should().BeSameAs(expected: payload);
+        evt.DriveStateData.Method.Should().Be(expected: "disc_inserted");
+        evt.Source.Should().Be(expected: "DriveMonitor");
     }
 }

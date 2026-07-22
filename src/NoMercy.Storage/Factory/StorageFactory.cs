@@ -47,14 +47,14 @@ public sealed class StorageFactory : IStorageFactory, IDisposable
         IDriverConfigResolver? driverConfigResolver = null
     )
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        ArgumentNullException.ThrowIfNull(builders);
+        _logger = logger ?? throw new ArgumentNullException(paramName: nameof(logger));
+        ArgumentNullException.ThrowIfNull(argument: builders);
         _builders = builders
-            .SelectMany(builder => builder.SupportedTypes.Select(type => (type, builder)))
+            .SelectMany(selector: builder => builder.SupportedTypes.Select(selector: type => (type, builder)))
             .ToDictionary(
-                pair => pair.type,
-                pair => pair.builder,
-                StringComparer.OrdinalIgnoreCase
+                keySelector: pair => pair.type,
+                elementSelector: pair => pair.builder,
+                comparer: StringComparer.OrdinalIgnoreCase
             );
         _driverConfigResolver = driverConfigResolver;
     }
@@ -71,11 +71,11 @@ public sealed class StorageFactory : IStorageFactory, IDisposable
         ICredentialResolver? credentialResolver
     ) =>
         [
-            new LocalDriverBuilder(driver),
-            new NfsDriverBuilder(logger),
-            new S3DriverBuilder(logger, credentialResolver),
-            new WebDavDriverBuilder(logger, credentialResolver),
-            new SmbDriverBuilder(logger, credentialResolver),
+            new LocalDriverBuilder(driver: driver),
+            new NfsDriverBuilder(logger: logger),
+            new S3DriverBuilder(logger: logger, credentialResolver: credentialResolver),
+            new WebDavDriverBuilder(logger: logger, credentialResolver: credentialResolver),
+            new SmbDriverBuilder(logger: logger, credentialResolver: credentialResolver),
         ];
 
     /// <summary>
@@ -89,7 +89,7 @@ public sealed class StorageFactory : IStorageFactory, IDisposable
         IDriverConfigResolver? driverConfigResolver = null,
         ICredentialResolver? credentialResolver = null
     )
-        : this(logger, DefaultBuilders(driver, logger, credentialResolver), driverConfigResolver)
+        : this(logger: logger, builders: DefaultBuilders(driver: driver, logger: logger, credentialResolver: credentialResolver), driverConfigResolver: driverConfigResolver)
     { }
 
     public IStorage For(Ulid folderId, Ulid driverId, string subPath)
@@ -100,20 +100,16 @@ public sealed class StorageFactory : IStorageFactory, IDisposable
         if (_driverConfigResolver is null)
         {
             _logger.LogWarning(
-                "Folder {FolderId} has DriverId {DriverId} but no IDriverConfigResolver is registered; falling back to built-in local",
-                folderId,
-                driverId
+                message: "Folder {FolderId} has DriverId {DriverId} but no IDriverConfigResolver is registered; falling back to built-in local", args: [folderId, driverId]
             );
         }
         else
         {
-            (string Type, string? ConfigJson)? resolved = _driverConfigResolver.Resolve(driverId);
+            (string Type, string? ConfigJson)? resolved = _driverConfigResolver.Resolve(driverId: driverId);
             if (resolved is null)
             {
                 _logger.LogWarning(
-                    "Driver {DriverId} not found for folder {FolderId}; falling back to built-in local",
-                    driverId,
-                    folderId
+                    message: "Driver {DriverId} not found for folder {FolderId}; falling back to built-in local", args: [driverId, folderId]
                 );
             }
             else
@@ -128,8 +124,8 @@ public sealed class StorageFactory : IStorageFactory, IDisposable
         // callers asking for the same (folder, driver) but different subPath
         // would otherwise share a single Storage built for whichever
         // subPath landed first.
-        string cacheKey = BuildCacheKey(folderId, driverType, configJson, subPath);
-        return _cache.GetOrAdd(cacheKey, _ => Build(folderId, driverType, configJson, subPath));
+        string cacheKey = BuildCacheKey(folderId: folderId, driverType: driverType, configJson: configJson, subPath: subPath);
+        return _cache.GetOrAdd(key: cacheKey, valueFactory: _ => Build(folderId: folderId, driverType: driverType, driverConfigJson: configJson, subPath: subPath));
     }
 
     public void Invalidate(Ulid folderId)
@@ -138,11 +134,11 @@ public sealed class StorageFactory : IStorageFactory, IDisposable
         foreach (string key in _cache.Keys)
         {
             if (
-                key.StartsWith(prefix, StringComparison.Ordinal)
-                && _cache.TryRemove(key, out IStorage? removed)
+                key.StartsWith(value: prefix, comparisonType: StringComparison.Ordinal)
+                && _cache.TryRemove(key: key, value: out IStorage? removed)
             )
             {
-                DisposeUnderlyingDriver(removed);
+                DisposeUnderlyingDriver(storage: removed);
             }
         }
     }
@@ -150,7 +146,7 @@ public sealed class StorageFactory : IStorageFactory, IDisposable
     public void InvalidateAll()
     {
         foreach (IStorage storage in _cache.Values)
-            DisposeUnderlyingDriver(storage);
+            DisposeUnderlyingDriver(storage: storage);
         _cache.Clear();
     }
 
@@ -188,7 +184,7 @@ public sealed class StorageFactory : IStorageFactory, IDisposable
     /// </summary>
     internal static string JoinRoot(string root, string subPath, string driverType)
     {
-        if (string.IsNullOrEmpty(subPath))
+        if (string.IsNullOrEmpty(value: subPath))
             return root;
 
         // local/default build on-disk OS paths (the facade's OS boundary);
@@ -197,7 +193,7 @@ public sealed class StorageFactory : IStorageFactory, IDisposable
         switch (driverType)
         {
             case "local":
-                return Path.Combine(root, subPath);
+                return Path.Combine(path1: root, path2: subPath);
 
             case "nfs":
             case "s3":
@@ -211,13 +207,13 @@ public sealed class StorageFactory : IStorageFactory, IDisposable
                 // mount call ends up with a malformed export like
                 // '/mnt/vault/Media/Anime/Anime\Black.Butler.(2008)' and
                 // libnfs rejects the mount outright.
-                string trimmedRoot = root.Replace('\\', '/').TrimEnd('/');
-                string trimmedSub = subPath.Replace('\\', '/').TrimStart('/');
+                string trimmedRoot = root.Replace(oldChar: '\\', newChar: '/').TrimEnd(trimChar: '/');
+                string trimmedSub = subPath.Replace(oldChar: '\\', newChar: '/').TrimStart(trimChar: '/');
                 return $"{trimmedRoot}/{trimmedSub}";
             }
 
             default:
-                return Path.Combine(root, subPath);
+                return Path.Combine(path1: root, path2: subPath);
         }
 #pragma warning restore NMS001
     }
@@ -231,13 +227,13 @@ public sealed class StorageFactory : IStorageFactory, IDisposable
     {
         string normalizedType = driverType.Trim().ToLowerInvariant();
 
-        if (!_builders.TryGetValue(normalizedType, out IStorageDriverBuilder? builder))
+        if (!_builders.TryGetValue(key: normalizedType, value: out IStorageDriverBuilder? builder))
             throw new ArgumentException(
-                $"Unknown driver type '{driverType}' for folder {folderId}.",
-                nameof(driverType)
+                message: $"Unknown driver type '{driverType}' for folder {folderId}.",
+                paramName: nameof(driverType)
             );
 
-        return builder.Build(folderId, normalizedType, driverConfigJson, subPath);
+        return builder.Build(folderId: folderId, driverType: normalizedType, driverConfigJson: driverConfigJson, subPath: subPath);
     }
 
     private static string BuildCacheKey(
@@ -247,12 +243,12 @@ public sealed class StorageFactory : IStorageFactory, IDisposable
         string subPath
     )
     {
-        string configHash = string.IsNullOrEmpty(configJson)
+        string configHash = string.IsNullOrEmpty(value: configJson)
             ? "null"
             : Convert
-                .ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(configJson)))
+                .ToHexString(inArray: SHA256.HashData(source: Encoding.UTF8.GetBytes(s: configJson)))
                 .ToLowerInvariant();
-        string subPathKey = string.IsNullOrEmpty(subPath) ? "_" : subPath;
+        string subPathKey = string.IsNullOrEmpty(value: subPath) ? "_" : subPath;
         return $"{folderId}:{driverType.Trim().ToLowerInvariant()}:{configHash}:{subPathKey}";
     }
 }

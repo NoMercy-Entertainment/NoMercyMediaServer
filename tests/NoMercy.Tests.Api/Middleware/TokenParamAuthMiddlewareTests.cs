@@ -33,7 +33,7 @@ namespace NoMercy.Tests.Api.Middleware;
 /// UserCache (real folder ids, real seeded user) — no HTTP request is made
 /// through the factory itself.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class TokenParamAuthMiddlewareTests : IClassFixture<NoMercyApiFactory>
 {
     public TokenParamAuthMiddlewareTests(NoMercyApiFactory factory)
@@ -46,15 +46,15 @@ public class TokenParamAuthMiddlewareTests : IClassFixture<NoMercyApiFactory>
         out StrongBox<bool> nextCalled
     )
     {
-        StrongBox<bool> called = new(false);
+        StrongBox<bool> called = new(value: false);
         TokenParamAuthMiddleware middleware = new(
-            _ =>
+            next: _ =>
             {
                 called.Value = true;
                 return Task.CompletedTask;
             },
-            ingestKeyStore.Object,
-            NullLogger<TokenParamAuthMiddleware>.Instance
+            ingestKeyStore: ingestKeyStore.Object,
+            logger: NullLogger<TokenParamAuthMiddleware>.Instance
         );
         nextCalled = called;
         return middleware;
@@ -81,8 +81,8 @@ public class TokenParamAuthMiddlewareTests : IClassFixture<NoMercyApiFactory>
 
     private static async Task<string> ReadBodyAsync(HttpContext context)
     {
-        context.Response.Body.Seek(0, SeekOrigin.Begin);
-        using StreamReader reader = new(context.Response.Body);
+        context.Response.Body.Seek(offset: 0, origin: SeekOrigin.Begin);
+        using StreamReader reader = new(stream: context.Response.Body);
         return await reader.ReadToEndAsync();
     }
 
@@ -94,20 +94,20 @@ public class TokenParamAuthMiddlewareTests : IClassFixture<NoMercyApiFactory>
     public async Task LoopbackIngestPort_ValidIngestKey_BypassesAuthAndCallsNext()
     {
         Mock<ILiveIngestKeyStore> ingestKeyStore = new();
-        ingestKeyStore.Setup(s => s.TryValidate("valid-key", "/some/file.m3u8")).Returns(true);
+        ingestKeyStore.Setup(expression: s => s.TryValidate("valid-key", "/some/file.m3u8")).Returns(value: true);
         TokenParamAuthMiddleware middleware = CreateMiddleware(
-            ingestKeyStore,
-            out StrongBox<bool> nextCalled
+            ingestKeyStore: ingestKeyStore,
+            nextCalled: out StrongBox<bool> nextCalled
         );
 
         DefaultHttpContext context = MakeContext(
-            "/some/file.m3u8",
+            path: "/some/file.m3u8",
             remoteIp: IPAddress.Loopback,
             localPort: RuntimeServerSettings.Current.InternalServerPort + 1
         );
-        context.Request.Headers["X-NoMercy-Ingest-Key"] = "valid-key";
+        context.Request.Headers[key: "X-NoMercy-Ingest-Key"] = "valid-key";
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
         nextCalled.Value.Should().BeTrue();
         // Bypass path never touches the Authorization header.
@@ -119,21 +119,21 @@ public class TokenParamAuthMiddlewareTests : IClassFixture<NoMercyApiFactory>
     {
         Mock<ILiveIngestKeyStore> ingestKeyStore = new();
         ingestKeyStore
-            .Setup(s => s.TryValidate(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns(false);
+            .Setup(expression: s => s.TryValidate(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(value: false);
         TokenParamAuthMiddleware middleware = CreateMiddleware(
-            ingestKeyStore,
-            out StrongBox<bool> nextCalled
+            ingestKeyStore: ingestKeyStore,
+            nextCalled: out StrongBox<bool> nextCalled
         );
 
         DefaultHttpContext context = MakeContext(
-            "/random-non-folder-path/file.m3u8",
+            path: "/random-non-folder-path/file.m3u8",
             remoteIp: IPAddress.Loopback,
             localPort: RuntimeServerSettings.Current.InternalServerPort + 1
         );
-        context.Request.Headers["X-NoMercy-Ingest-Key"] = "wrong-key";
+        context.Request.Headers[key: "X-NoMercy-Ingest-Key"] = "wrong-key";
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
         // Falls through to the normal flow — since the path isn't under any
         // known folder id, that flow itself calls next() unconditionally.
@@ -149,26 +149,26 @@ public class TokenParamAuthMiddlewareTests : IClassFixture<NoMercyApiFactory>
         // bypass must not fire.
         Mock<ILiveIngestKeyStore> ingestKeyStore = new();
         ingestKeyStore
-            .Setup(s => s.TryValidate(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns(true);
+            .Setup(expression: s => s.TryValidate(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(value: true);
         TokenParamAuthMiddleware middleware = CreateMiddleware(
-            ingestKeyStore,
-            out StrongBox<bool> nextCalled
+            ingestKeyStore: ingestKeyStore,
+            nextCalled: out StrongBox<bool> nextCalled
         );
 
         DefaultHttpContext context = MakeContext(
-            "/random-non-folder-path/file.m3u8",
-            remoteIp: IPAddress.Parse("203.0.113.5"),
+            path: "/random-non-folder-path/file.m3u8",
+            remoteIp: IPAddress.Parse(ipString: "203.0.113.5"),
             localPort: RuntimeServerSettings.Current.InternalServerPort + 1
         );
-        context.Request.Headers["X-NoMercy-Ingest-Key"] = "valid-key";
+        context.Request.Headers[key: "X-NoMercy-Ingest-Key"] = "valid-key";
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
         // TryValidate must never even be consulted for a non-loopback source.
         ingestKeyStore.Verify(
-            s => s.TryValidate(It.IsAny<string>(), It.IsAny<string>()),
-            Times.Never
+            expression: s => s.TryValidate(It.IsAny<string>(), It.IsAny<string>()),
+            times: Times.Never
         );
         nextCalled.Value.Should().BeTrue();
     }
@@ -182,16 +182,16 @@ public class TokenParamAuthMiddlewareTests : IClassFixture<NoMercyApiFactory>
     {
         Mock<ILiveIngestKeyStore> ingestKeyStore = new();
         TokenParamAuthMiddleware middleware = CreateMiddleware(
-            ingestKeyStore,
-            out StrongBox<bool> nextCalled
+            ingestKeyStore: ingestKeyStore,
+            nextCalled: out StrongBox<bool> nextCalled
         );
 
-        DefaultHttpContext context = MakeContext("/random-non-folder-path");
-        context.Request.QueryString = new("?access_token=my-jwt-value");
+        DefaultHttpContext context = MakeContext(path: "/random-non-folder-path");
+        context.Request.QueryString = new(value: "?access_token=my-jwt-value");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
-        context.Request.Headers.Authorization.ToString().Should().Be("Bearer my-jwt-value");
+        context.Request.Headers.Authorization.ToString().Should().Be(expected: "Bearer my-jwt-value");
         nextCalled.Value.Should().BeTrue();
     }
 
@@ -199,26 +199,26 @@ public class TokenParamAuthMiddlewareTests : IClassFixture<NoMercyApiFactory>
     public async Task ExistingBearerHeader_IsNeverOverwrittenByQueryParam()
     {
         Mock<ILiveIngestKeyStore> ingestKeyStore = new();
-        TokenParamAuthMiddleware middleware = CreateMiddleware(ingestKeyStore, out _);
+        TokenParamAuthMiddleware middleware = CreateMiddleware(ingestKeyStore: ingestKeyStore, nextCalled: out _);
 
-        DefaultHttpContext context = MakeContext("/random-non-folder-path");
+        DefaultHttpContext context = MakeContext(path: "/random-non-folder-path");
         context.Request.Headers.Authorization = "Bearer already-set-token";
-        context.Request.QueryString = new("?access_token=should-be-ignored");
+        context.Request.QueryString = new(value: "?access_token=should-be-ignored");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
-        context.Request.Headers.Authorization.ToString().Should().Be("Bearer already-set-token");
+        context.Request.Headers.Authorization.ToString().Should().Be(expected: "Bearer already-set-token");
     }
 
     [Fact]
     public async Task NoTokenQueryParamAndNoBearer_LeavesAuthorizationHeaderEmpty()
     {
         Mock<ILiveIngestKeyStore> ingestKeyStore = new();
-        TokenParamAuthMiddleware middleware = CreateMiddleware(ingestKeyStore, out _);
+        TokenParamAuthMiddleware middleware = CreateMiddleware(ingestKeyStore: ingestKeyStore, nextCalled: out _);
 
-        DefaultHttpContext context = MakeContext("/random-non-folder-path");
+        DefaultHttpContext context = MakeContext(path: "/random-non-folder-path");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
         context.Request.Headers.Authorization.ToString().Should().BeEmpty();
     }
@@ -232,13 +232,13 @@ public class TokenParamAuthMiddlewareTests : IClassFixture<NoMercyApiFactory>
     {
         Mock<ILiveIngestKeyStore> ingestKeyStore = new();
         TokenParamAuthMiddleware middleware = CreateMiddleware(
-            ingestKeyStore,
-            out StrongBox<bool> nextCalled
+            ingestKeyStore: ingestKeyStore,
+            nextCalled: out StrongBox<bool> nextCalled
         );
 
-        DefaultHttpContext context = MakeContext("/api/v1/media/movies");
+        DefaultHttpContext context = MakeContext(path: "/api/v1/media/movies");
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
         nextCalled.Value.Should().BeTrue();
     }
@@ -252,14 +252,14 @@ public class TokenParamAuthMiddlewareTests : IClassFixture<NoMercyApiFactory>
     {
         Mock<ILiveIngestKeyStore> ingestKeyStore = new();
         TokenParamAuthMiddleware middleware = CreateMiddleware(
-            ingestKeyStore,
-            out StrongBox<bool> nextCalled
+            ingestKeyStore: ingestKeyStore,
+            nextCalled: out StrongBox<bool> nextCalled
         );
 
-        DefaultHttpContext context = MakeContext($"/{NoMercyApiFactory.MovieFolderId}/movie.m3u8");
+        DefaultHttpContext context = MakeContext(path: $"/{NoMercyApiFactory.MovieFolderId}/movie.m3u8");
         context.Request.Headers.Authorization = "Bearer some-jwt";
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
         nextCalled.Value.Should().BeTrue();
     }
@@ -269,66 +269,66 @@ public class TokenParamAuthMiddlewareTests : IClassFixture<NoMercyApiFactory>
     {
         Mock<ILiveIngestKeyStore> ingestKeyStore = new();
         TokenParamAuthMiddleware middleware = CreateMiddleware(
-            ingestKeyStore,
-            out StrongBox<bool> nextCalled
+            ingestKeyStore: ingestKeyStore,
+            nextCalled: out StrongBox<bool> nextCalled
         );
 
         DefaultHttpContext context = MakeContext(
-            $"/{NoMercyApiFactory.MovieFolderId}/movie.m3u8",
-            user: new ClaimsPrincipal(new ClaimsIdentity())
+            path: $"/{NoMercyApiFactory.MovieFolderId}/movie.m3u8",
+            user: new ClaimsPrincipal(identity: new ClaimsIdentity())
         );
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
         nextCalled.Value.Should().BeFalse();
-        context.Response.StatusCode.Should().Be((int)HttpStatusCode.Unauthorized);
-        string body = await ReadBodyAsync(context);
-        using JsonDocument json = JsonDocument.Parse(body);
-        json.RootElement.GetProperty("authError").GetString().Should().Be("NO_TOKEN");
+        context.Response.StatusCode.Should().Be(expected: (int)HttpStatusCode.Unauthorized);
+        string body = await ReadBodyAsync(context: context);
+        using JsonDocument json = JsonDocument.Parse(json: body);
+        json.RootElement.GetProperty(propertyName: "authError").GetString().Should().Be(expected: "NO_TOKEN");
     }
 
     [Fact]
     public async Task FolderScopedPath_MalformedGuidClaim_Returns403InvalidToken()
     {
         Mock<ILiveIngestKeyStore> ingestKeyStore = new();
-        TokenParamAuthMiddleware middleware = CreateMiddleware(ingestKeyStore, out _);
+        TokenParamAuthMiddleware middleware = CreateMiddleware(ingestKeyStore: ingestKeyStore, nextCalled: out _);
 
         ClaimsPrincipal principal = new(
-            new ClaimsIdentity([new(ClaimTypes.NameIdentifier, "not-a-guid")])
+            identity: new ClaimsIdentity(claims: [new(type: ClaimTypes.NameIdentifier, value: "not-a-guid")])
         );
         DefaultHttpContext context = MakeContext(
-            $"/{NoMercyApiFactory.MovieFolderId}/movie.m3u8",
+            path: $"/{NoMercyApiFactory.MovieFolderId}/movie.m3u8",
             user: principal
         );
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
-        context.Response.StatusCode.Should().Be((int)HttpStatusCode.Forbidden);
-        string body = await ReadBodyAsync(context);
-        using JsonDocument json = JsonDocument.Parse(body);
-        json.RootElement.GetProperty("authError").GetString().Should().Be("INVALID_TOKEN");
+        context.Response.StatusCode.Should().Be(expected: (int)HttpStatusCode.Forbidden);
+        string body = await ReadBodyAsync(context: context);
+        using JsonDocument json = JsonDocument.Parse(json: body);
+        json.RootElement.GetProperty(propertyName: "authError").GetString().Should().Be(expected: "INVALID_TOKEN");
     }
 
     [Fact]
     public async Task FolderScopedPath_UnknownUser_Returns403UserNotFound()
     {
         Mock<ILiveIngestKeyStore> ingestKeyStore = new();
-        TokenParamAuthMiddleware middleware = CreateMiddleware(ingestKeyStore, out _);
+        TokenParamAuthMiddleware middleware = CreateMiddleware(ingestKeyStore: ingestKeyStore, nextCalled: out _);
 
         ClaimsPrincipal principal = new(
-            new ClaimsIdentity([new(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString())])
+            identity: new ClaimsIdentity(claims: [new(type: ClaimTypes.NameIdentifier, value: Guid.NewGuid().ToString())])
         );
         DefaultHttpContext context = MakeContext(
-            $"/{NoMercyApiFactory.MovieFolderId}/movie.m3u8",
+            path: $"/{NoMercyApiFactory.MovieFolderId}/movie.m3u8",
             user: principal
         );
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
-        context.Response.StatusCode.Should().Be((int)HttpStatusCode.Forbidden);
-        string body = await ReadBodyAsync(context);
-        using JsonDocument json = JsonDocument.Parse(body);
-        json.RootElement.GetProperty("authError").GetString().Should().Be("USER_NOT_FOUND");
+        context.Response.StatusCode.Should().Be(expected: (int)HttpStatusCode.Forbidden);
+        string body = await ReadBodyAsync(context: context);
+        using JsonDocument json = JsonDocument.Parse(json: body);
+        json.RootElement.GetProperty(propertyName: "authError").GetString().Should().Be(expected: "USER_NOT_FOUND");
     }
 
     [Fact]
@@ -336,21 +336,22 @@ public class TokenParamAuthMiddlewareTests : IClassFixture<NoMercyApiFactory>
     {
         Mock<ILiveIngestKeyStore> ingestKeyStore = new();
         TokenParamAuthMiddleware middleware = CreateMiddleware(
-            ingestKeyStore,
-            out StrongBox<bool> nextCalled
+            ingestKeyStore: ingestKeyStore,
+            nextCalled: out StrongBox<bool> nextCalled
         );
 
         ClaimsPrincipal principal = new(
-            new ClaimsIdentity([
-                new(ClaimTypes.NameIdentifier, TestAuthHandler.DefaultUserId.ToString()),
+            identity: new ClaimsIdentity(claims:
+            [
+                new(type: ClaimTypes.NameIdentifier, value: TestAuthHandler.DefaultUserId.ToString()),
             ])
         );
         DefaultHttpContext context = MakeContext(
-            $"/{NoMercyApiFactory.MovieFolderId}/movie.m3u8",
+            path: $"/{NoMercyApiFactory.MovieFolderId}/movie.m3u8",
             user: principal
         );
 
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context: context);
 
         nextCalled.Value.Should().BeTrue();
     }

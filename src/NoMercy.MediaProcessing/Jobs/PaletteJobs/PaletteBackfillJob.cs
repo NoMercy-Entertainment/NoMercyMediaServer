@@ -64,36 +64,36 @@ public class PaletteBackfillJob : IShouldQueue
         await using AppDbContext appDb = new();
         await using MediaContext db = new();
 
-        if (await PaletteBackfillState.IsCompleteAsync(appDb, CancellationToken.None))
+        if (await PaletteBackfillState.IsCompleteAsync(db: appDb, ct: CancellationToken.None))
             return;
 
         bool anyDispatched = false;
 
         foreach (string entityType in IntTypes)
         {
-            bool dispatched = await ProcessIntTypeAsync(appDb, db, entityType);
+            bool dispatched = await ProcessIntTypeAsync(appDb: appDb, db: db, entityType: entityType);
             if (dispatched)
                 anyDispatched = true;
         }
 
         foreach (string entityType in GuidTypes)
         {
-            bool dispatched = await ProcessGuidTypeAsync(appDb, db, entityType);
+            bool dispatched = await ProcessGuidTypeAsync(appDb: appDb, db: db, entityType: entityType);
             if (dispatched)
                 anyDispatched = true;
         }
 
         if (!anyDispatched)
         {
-            await PaletteBackfillState.SetCompleteAsync(appDb, CancellationToken.None);
+            await PaletteBackfillState.SetCompleteAsync(db: appDb, ct: CancellationToken.None);
             return;
         }
 
         // Re-enqueue self to continue the drain on the next poll cycle.
         QueueRunner.Current?.Dispatcher.Dispatch(
-            new PaletteBackfillJob(),
-            "palette",
-            PalettePriority.BackfillCoordinator
+            job: new PaletteBackfillJob(),
+            onQueue: "palette",
+            priority: PalettePriority.BackfillCoordinator
         );
     }
 
@@ -104,12 +104,12 @@ public class PaletteBackfillJob : IShouldQueue
     )
     {
         long cursor = await PaletteBackfillState.GetCursorAsync(
-            appDb,
-            entityType,
-            CancellationToken.None
+            db: appDb,
+            entityType: entityType,
+            ct: CancellationToken.None
         );
 
-        List<(int Id, string? Palette)> rows = await GetIntPendingRowsAsync(db, entityType, cursor);
+        List<(int Id, string? Palette)> rows = await GetIntPendingRowsAsync(db: db, entityType: entityType, cursor: cursor);
         if (rows.Count == 0)
             return false;
 
@@ -119,17 +119,17 @@ public class PaletteBackfillJob : IShouldQueue
 
         foreach ((int id, string? _) in rows)
             dispatcher.Dispatch(
-                new ColorPaletteJob(entityType, id.ToString()),
-                "palette",
-                PalettePriority.ForBackfill(entityType)
+                job: new ColorPaletteJob(entityType: entityType, entityId: id.ToString()),
+                onQueue: "palette",
+                priority: PalettePriority.ForBackfill(entityType: entityType)
             );
 
         long newCursor = rows[^1].Id;
         await PaletteBackfillState.SetCursorAsync(
-            appDb,
-            entityType,
-            newCursor,
-            CancellationToken.None
+            db: appDb,
+            entityType: entityType,
+            cursor: newCursor,
+            ct: CancellationToken.None
         );
 
         return rows.Count == BatchSize;
@@ -142,15 +142,15 @@ public class PaletteBackfillJob : IShouldQueue
     )
     {
         long offset = await PaletteBackfillState.GetCursorAsync(
-            appDb,
-            entityType,
-            CancellationToken.None
+            db: appDb,
+            entityType: entityType,
+            ct: CancellationToken.None
         );
 
         List<(Guid Id, string? Palette)> rows = await GetGuidPendingRowsAsync(
-            db,
-            entityType,
-            (int)offset
+            db: db,
+            entityType: entityType,
+            offset: (int)offset
         );
         if (rows.Count == 0)
             return false;
@@ -161,17 +161,17 @@ public class PaletteBackfillJob : IShouldQueue
 
         foreach ((Guid id, string? _) in rows)
             dispatcher.Dispatch(
-                new ColorPaletteJob(entityType, id.ToString()),
-                "palette",
-                PalettePriority.ForBackfill(entityType)
+                job: new ColorPaletteJob(entityType: entityType, entityId: id.ToString()),
+                onQueue: "palette",
+                priority: PalettePriority.ForBackfill(entityType: entityType)
             );
 
         long newOffset = offset + rows.Count;
         await PaletteBackfillState.SetCursorAsync(
-            appDb,
-            entityType,
-            newOffset,
-            CancellationToken.None
+            db: appDb,
+            entityType: entityType,
+            cursor: newOffset,
+            ct: CancellationToken.None
         );
 
         return rows.Count == BatchSize;
@@ -185,78 +185,78 @@ public class PaletteBackfillJob : IShouldQueue
         entityType switch
         {
             "movie" => db
-                .Movies.Where(m =>
+                .Movies.Where(predicate: m =>
                     m.Id > cursor && (m._colorPalette == null || m._colorPalette == "")
                 )
-                .OrderBy(m => m.Id)
-                .Take(BatchSize)
-                .Select(m => new ValueTuple<int, string?>(m.Id, m._colorPalette))
+                .OrderBy(keySelector: m => m.Id)
+                .Take(count: BatchSize)
+                .Select(selector: m => new ValueTuple<int, string?>(m.Id, m._colorPalette))
                 .ToListAsync(),
             "tv" => db
-                .Tvs.Where(t => t.Id > cursor && (t._colorPalette == null || t._colorPalette == ""))
-                .OrderBy(t => t.Id)
-                .Take(BatchSize)
-                .Select(t => new ValueTuple<int, string?>(t.Id, t._colorPalette))
+                .Tvs.Where(predicate: t => t.Id > cursor && (t._colorPalette == null || t._colorPalette == ""))
+                .OrderBy(keySelector: t => t.Id)
+                .Take(count: BatchSize)
+                .Select(selector: t => new ValueTuple<int, string?>(t.Id, t._colorPalette))
                 .ToListAsync(),
             "season" => db
-                .Seasons.Where(s =>
+                .Seasons.Where(predicate: s =>
                     s.Id > cursor && (s._colorPalette == null || s._colorPalette == "")
                 )
-                .OrderBy(s => s.Id)
-                .Take(BatchSize)
-                .Select(s => new ValueTuple<int, string?>(s.Id, s._colorPalette))
+                .OrderBy(keySelector: s => s.Id)
+                .Take(count: BatchSize)
+                .Select(selector: s => new ValueTuple<int, string?>(s.Id, s._colorPalette))
                 .ToListAsync(),
             "episode" => db
-                .Episodes.Where(e =>
+                .Episodes.Where(predicate: e =>
                     e.Id > cursor && (e._colorPalette == null || e._colorPalette == "")
                 )
-                .OrderBy(e => e.Id)
-                .Take(BatchSize)
-                .Select(e => new ValueTuple<int, string?>(e.Id, e._colorPalette))
+                .OrderBy(keySelector: e => e.Id)
+                .Take(count: BatchSize)
+                .Select(selector: e => new ValueTuple<int, string?>(e.Id, e._colorPalette))
                 .ToListAsync(),
             "collection" => db
-                .Collections.Where(c =>
+                .Collections.Where(predicate: c =>
                     c.Id > cursor && (c._colorPalette == null || c._colorPalette == "")
                 )
-                .OrderBy(c => c.Id)
-                .Take(BatchSize)
-                .Select(c => new ValueTuple<int, string?>(c.Id, c._colorPalette))
+                .OrderBy(keySelector: c => c.Id)
+                .Take(count: BatchSize)
+                .Select(selector: c => new ValueTuple<int, string?>(c.Id, c._colorPalette))
                 .ToListAsync(),
             "person" => db
-                .People.Where(p =>
+                .People.Where(predicate: p =>
                     p.Id > cursor && (p._colorPalette == null || p._colorPalette == "")
                 )
-                .OrderBy(p => p.Id)
-                .Take(BatchSize)
-                .Select(p => new ValueTuple<int, string?>(p.Id, p._colorPalette))
+                .OrderBy(keySelector: p => p.Id)
+                .Take(count: BatchSize)
+                .Select(selector: p => new ValueTuple<int, string?>(p.Id, p._colorPalette))
                 .ToListAsync(),
             "recommendation" => db
-                .Recommendations.Where(r =>
+                .Recommendations.Where(predicate: r =>
                     r.Id > cursor && (r._colorPalette == null || r._colorPalette == "")
                 )
-                .OrderBy(r => r.Id)
-                .Take(BatchSize)
-                .Select(r => new ValueTuple<int, string?>(r.Id, r._colorPalette))
+                .OrderBy(keySelector: r => r.Id)
+                .Take(count: BatchSize)
+                .Select(selector: r => new ValueTuple<int, string?>(r.Id, r._colorPalette))
                 .ToListAsync(),
             "similar" => db
-                .Similar.Where(s =>
+                .Similar.Where(predicate: s =>
                     s.Id > cursor && (s._colorPalette == null || s._colorPalette == "")
                 )
-                .OrderBy(s => s.Id)
-                .Take(BatchSize)
-                .Select(s => new ValueTuple<int, string?>(s.Id, s._colorPalette))
+                .OrderBy(keySelector: s => s.Id)
+                .Take(count: BatchSize)
+                .Select(selector: s => new ValueTuple<int, string?>(s.Id, s._colorPalette))
                 .ToListAsync(),
             "image" => db
-                .Images.Where(i =>
+                .Images.Where(predicate: i =>
                     i.Id > cursor
                     && i.Site == "https://image.tmdb.org/t/p/"
                     && (i._colorPalette == null || i._colorPalette == "")
                 )
-                .OrderBy(i => i.Id)
-                .Take(BatchSize)
-                .Select(i => new ValueTuple<int, string?>(i.Id, i._colorPalette))
+                .OrderBy(keySelector: i => i.Id)
+                .Take(count: BatchSize)
+                .Select(selector: i => new ValueTuple<int, string?>(i.Id, i._colorPalette))
                 .ToListAsync(),
-            _ => Task.FromResult(new List<(int, string?)>()),
+            _ => Task.FromResult(result: new List<(int, string?)>()),
         };
 
     private static Task<List<(Guid Id, string? Palette)>> GetGuidPendingRowsAsync(
@@ -267,40 +267,40 @@ public class PaletteBackfillJob : IShouldQueue
         entityType switch
         {
             "artist" => db
-                .Artists.Where(a => a._colorPalette == null || a._colorPalette == "")
-                .OrderBy(a => a.Id)
-                .Skip(offset)
-                .Take(BatchSize)
-                .Select(a => new ValueTuple<Guid, string?>(a.Id, a._colorPalette))
+                .Artists.Where(predicate: a => a._colorPalette == null || a._colorPalette == "")
+                .OrderBy(keySelector: a => a.Id)
+                .Skip(count: offset)
+                .Take(count: BatchSize)
+                .Select(selector: a => new ValueTuple<Guid, string?>(a.Id, a._colorPalette))
                 .ToListAsync(),
             "album" => db
-                .Albums.Where(a => a._colorPalette == null || a._colorPalette == "")
-                .OrderBy(a => a.Id)
-                .Skip(offset)
-                .Take(BatchSize)
-                .Select(a => new ValueTuple<Guid, string?>(a.Id, a._colorPalette))
+                .Albums.Where(predicate: a => a._colorPalette == null || a._colorPalette == "")
+                .OrderBy(keySelector: a => a.Id)
+                .Skip(count: offset)
+                .Take(count: BatchSize)
+                .Select(selector: a => new ValueTuple<Guid, string?>(a.Id, a._colorPalette))
                 .ToListAsync(),
             "track" => db
-                .Tracks.Where(t => t._colorPalette == null || t._colorPalette == "")
-                .OrderBy(t => t.Id)
-                .Skip(offset)
-                .Take(BatchSize)
-                .Select(t => new ValueTuple<Guid, string?>(t.Id, t._colorPalette))
+                .Tracks.Where(predicate: t => t._colorPalette == null || t._colorPalette == "")
+                .OrderBy(keySelector: t => t.Id)
+                .Skip(count: offset)
+                .Take(count: BatchSize)
+                .Select(selector: t => new ValueTuple<Guid, string?>(t.Id, t._colorPalette))
                 .ToListAsync(),
             "playlist" => db
-                .Playlists.Where(p => p._colorPalette == null || p._colorPalette == "")
-                .OrderBy(p => p.Id)
-                .Skip(offset)
-                .Take(BatchSize)
-                .Select(p => new ValueTuple<Guid, string?>(p.Id, p._colorPalette))
+                .Playlists.Where(predicate: p => p._colorPalette == null || p._colorPalette == "")
+                .OrderBy(keySelector: p => p.Id)
+                .Skip(count: offset)
+                .Take(count: BatchSize)
+                .Select(selector: p => new ValueTuple<Guid, string?>(p.Id, p._colorPalette))
                 .ToListAsync(),
             "releasegroup" => db
-                .ReleaseGroups.Where(r => r._colorPalette == null || r._colorPalette == "")
-                .OrderBy(r => r.Id)
-                .Skip(offset)
-                .Take(BatchSize)
-                .Select(r => new ValueTuple<Guid, string?>(r.Id, r._colorPalette))
+                .ReleaseGroups.Where(predicate: r => r._colorPalette == null || r._colorPalette == "")
+                .OrderBy(keySelector: r => r.Id)
+                .Skip(count: offset)
+                .Take(count: BatchSize)
+                .Select(selector: r => new ValueTuple<Guid, string?>(r.Id, r._colorPalette))
                 .ToListAsync(),
-            _ => Task.FromResult(new List<(Guid, string?)>()),
+            _ => Task.FromResult(result: new List<(Guid, string?)>()),
         };
 }

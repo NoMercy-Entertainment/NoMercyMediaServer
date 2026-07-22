@@ -35,7 +35,7 @@ namespace NoMercy.Tests.Repositories;
 /// no-tracking validator because they ran tracked — an accident, not a design, and one that
 /// still forced the same split-query correlation cost as the artist bug.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class MusicRepositoryPlaylistPlaybackTests : IDisposable
 {
     private readonly MediaContext _context;
@@ -44,14 +44,14 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
     private readonly MusicRepository _repository;
     private readonly ITestOutputHelper _output;
 
-    private static readonly Guid OtherUserId = Guid.Parse("d0000001-0000-0000-0000-000000000001");
+    private static readonly Guid OtherUserId = Guid.Parse(input: "d0000001-0000-0000-0000-000000000001");
 
     public MusicRepositoryPlaylistPlaybackTests(ITestOutputHelper output)
     {
         _output = output;
         (_factory, _connection) = TestMediaContextFactory.CreateFactory();
         _context = _factory.CreateDbContext();
-        _repository = new(_factory);
+        _repository = new(contextFactory: _factory);
     }
 
     private static (Library library, Folder folder) SeedLibraryAndFolder(
@@ -68,7 +68,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Allowed = true,
             Manage = true,
         };
-        context.Users.Add(testUser);
+        context.Users.Add(entity: testUser);
 
         Library musicLibrary = new()
         {
@@ -77,7 +77,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Type = "music",
             Order = 3,
         };
-        context.Libraries.Add(musicLibrary);
+        context.Libraries.Add(entity: musicLibrary);
 
         Driver driver = new()
         {
@@ -88,8 +88,8 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow,
         };
-        if (!context.Drivers.Any(d => d.Id == Driver.SystemLocalDriverId))
-            context.Drivers.Add(driver);
+        if (!context.Drivers.Any(predicate: d => d.Id == Driver.SystemLocalDriverId))
+            context.Drivers.Add(entity: driver);
 
         Folder musicFolder = new()
         {
@@ -97,12 +97,12 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Path = "/media/music",
             DriverId = Driver.SystemLocalDriverId,
         };
-        context.Folders.Add(musicFolder);
+        context.Folders.Add(entity: musicFolder);
 
         context.SaveChanges();
 
-        context.LibraryUser.Add(new(musicLibrary.Id, userId));
-        context.FolderLibrary.Add(new(musicFolder.Id, musicLibrary.Id));
+        context.LibraryUser.Add(entity: new(libraryId: musicLibrary.Id, userId: userId));
+        context.FolderLibrary.Add(entity: new(folderId: musicFolder.Id, libraryId: musicLibrary.Id));
         context.SaveChanges();
 
         return (musicLibrary, musicFolder);
@@ -113,7 +113,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
     [Fact]
     public async Task GetPlaylistTracksAsync_ReturnsFullOrderedList_WithoutCyclicIncludeCrash()
     {
-        (Library library, Folder folder) = SeedLibraryAndFolder(_context, SeedConstants.UserId);
+        (Library library, Folder folder) = SeedLibraryAndFolder(context: _context, userId: SeedConstants.UserId);
 
         Artist artist = new()
         {
@@ -125,7 +125,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Library = library,
             LibraryFolder = folder,
         };
-        _context.Artists.Add(artist);
+        _context.Artists.Add(entity: artist);
 
         Album album = new()
         {
@@ -139,7 +139,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Library = library,
             LibraryFolder = folder,
         };
-        _context.Albums.Add(album);
+        _context.Albums.Add(entity: album);
 
         Track trackA = new()
         {
@@ -168,20 +168,14 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             FolderId = folder.Id,
             LibraryFolder = folder,
         };
-        _context.Tracks.AddRange(trackA, trackB, trackC);
+        _context.Tracks.AddRange(entities: [trackA, trackB, trackC]);
         _context.SaveChanges();
 
-        _context.AlbumTrack.AddRange(
-            new AlbumTrack(album.Id, trackA.Id),
-            new AlbumTrack(album.Id, trackB.Id),
-            new AlbumTrack(album.Id, trackC.Id)
+        _context.AlbumTrack.AddRange(entities: [new AlbumTrack(albumId: album.Id, trackId: trackA.Id), new AlbumTrack(albumId: album.Id, trackId: trackB.Id), new AlbumTrack(albumId: album.Id, trackId: trackC.Id)]
         );
-        _context.ArtistTrack.AddRange(
-            new ArtistTrack(artist.Id, trackA.Id),
-            new ArtistTrack(artist.Id, trackB.Id),
-            new ArtistTrack(artist.Id, trackC.Id)
+        _context.ArtistTrack.AddRange(entities: [new ArtistTrack(artistId: artist.Id, trackId: trackA.Id), new ArtistTrack(artistId: artist.Id, trackId: trackB.Id), new ArtistTrack(artistId: artist.Id, trackId: trackC.Id)]
         );
-        _context.AlbumArtist.Add(new(album.Id, artist.Id));
+        _context.AlbumArtist.Add(entity: new(albumId: album.Id, artistId: artist.Id));
 
         Playlist playlist = new()
         {
@@ -189,36 +183,33 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Name = "My Playlist",
             UserId = SeedConstants.UserId,
         };
-        _context.Playlists.Add(playlist);
+        _context.Playlists.Add(entity: playlist);
         _context.SaveChanges();
 
-        _context.PlaylistTrack.AddRange(
-            new PlaylistTrack(playlist.Id, trackA.Id),
-            new PlaylistTrack(playlist.Id, trackB.Id),
-            new PlaylistTrack(playlist.Id, trackC.Id)
+        _context.PlaylistTrack.AddRange(entities: [new PlaylistTrack(playlistId: playlist.Id, trackId: trackA.Id), new PlaylistTrack(playlistId: playlist.Id, trackId: trackB.Id), new PlaylistTrack(playlistId: playlist.Id, trackId: trackC.Id)]
         );
         _context.SaveChanges();
 
         List<PlaylistTrack> result = await _repository.GetPlaylistTracksAsync(
-            SeedConstants.UserId,
-            playlist.Id
+            userId: SeedConstants.UserId,
+            playlistId: playlist.Id
         );
 
-        Assert.Equal(3, result.Count);
+        Assert.Equal(expected: 3, actual: result.Count);
 
-        PlaylistTrack? target = result.FirstOrDefault(pt => pt.TrackId == trackB.Id);
-        Assert.NotNull(target);
-        Assert.Equal("R U Mine?", target!.Track.Name);
-        Assert.Equal("AM", target.Track.AlbumTrack.First().Album.Name);
-        Assert.Equal("Arctic Monkeys", target.Track.ArtistTrack.First().Artist.Name);
+        PlaylistTrack? target = result.FirstOrDefault(predicate: pt => pt.TrackId == trackB.Id);
+        Assert.NotNull(@object: target);
+        Assert.Equal(expected: "R U Mine?", actual: target!.Track.Name);
+        Assert.Equal(expected: "AM", actual: target.Track.AlbumTrack.First().Album.Name);
+        Assert.Equal(expected: "Arctic Monkeys", actual: target.Track.ArtistTrack.First().Artist.Name);
     }
 
     [Fact]
     public async Task GetPlaylistTracksAsync_ReturnsEmpty_WhenPlaylistNotOwnedByCaller()
     {
-        (Library library, Folder folder) = SeedLibraryAndFolder(_context, SeedConstants.UserId);
+        (Library library, Folder folder) = SeedLibraryAndFolder(context: _context, userId: SeedConstants.UserId);
         _context.Users.Add(
-            new()
+            entity: new()
             {
                 Id = OtherUserId,
                 Email = "other@nomercy.tv",
@@ -238,7 +229,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             FolderId = folder.Id,
             LibraryFolder = folder,
         };
-        _context.Tracks.Add(track);
+        _context.Tracks.Add(entity: track);
         _context.SaveChanges();
 
         Playlist playlist = new()
@@ -247,19 +238,19 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Name = "Someone Else's Playlist",
             UserId = OtherUserId,
         };
-        _context.Playlists.Add(playlist);
+        _context.Playlists.Add(entity: playlist);
         _context.SaveChanges();
 
-        _context.PlaylistTrack.Add(new(playlist.Id, track.Id));
+        _context.PlaylistTrack.Add(entity: new(playlistId: playlist.Id, trackId: track.Id));
         _context.SaveChanges();
 
         // Requesting as SeedConstants.UserId, who does not own this playlist.
         List<PlaylistTrack> result = await _repository.GetPlaylistTracksAsync(
-            SeedConstants.UserId,
-            playlist.Id
+            userId: SeedConstants.UserId,
+            playlistId: playlist.Id
         );
 
-        Assert.Empty(result);
+        Assert.Empty(collection: result);
     }
 
     /// <summary>
@@ -272,7 +263,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
     [Fact]
     public async Task OldCyclicPlaylistIncludeShape_StillThrowsInvalidOperationException()
     {
-        (Library library, Folder folder) = SeedLibraryAndFolder(_context, SeedConstants.UserId);
+        (Library library, Folder folder) = SeedLibraryAndFolder(context: _context, userId: SeedConstants.UserId);
 
         Track track = new()
         {
@@ -283,7 +274,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             FolderId = folder.Id,
             LibraryFolder = folder,
         };
-        _context.Tracks.Add(track);
+        _context.Tracks.Add(entity: track);
         _context.SaveChanges();
 
         Playlist playlist = new()
@@ -292,21 +283,21 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Name = "Playlist",
             UserId = SeedConstants.UserId,
         };
-        _context.Playlists.Add(playlist);
+        _context.Playlists.Add(entity: playlist);
         _context.SaveChanges();
 
-        _context.PlaylistTrack.Add(new(playlist.Id, track.Id));
+        _context.PlaylistTrack.Add(entity: new(playlistId: playlist.Id, trackId: track.Id));
         _context.SaveChanges();
 
         await using MediaContext queryContext = await _factory.CreateDbContextAsync();
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsAsync<InvalidOperationException>(testCode: () =>
             queryContext
                 .PlaylistTrack.AsNoTracking()
-                .Where(pt => pt.PlaylistId == playlist.Id && pt.TrackId == track.Id)
-                .Include(pt => pt.Playlist)
-                    .ThenInclude(p => p.Tracks)
-                        .ThenInclude(playlistTrack => playlistTrack.Track)
+                .Where(predicate: pt => pt.PlaylistId == playlist.Id && pt.TrackId == track.Id)
+                .Include(navigationPropertyPath: pt => pt.Playlist)
+                    .ThenInclude(navigationPropertyPath: p => p.Tracks)
+                        .ThenInclude(navigationPropertyPath: playlistTrack => playlistTrack.Track)
                 .FirstOrDefaultAsync()
         );
     }
@@ -318,7 +309,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
     [Fact]
     public async Task GetArtistTracksAsync_CompletesWellUnderTwoSeconds_For150PlusTracks()
     {
-        (Library library, Folder folder) = SeedLibraryAndFolder(_context, SeedConstants.UserId);
+        (Library library, Folder folder) = SeedLibraryAndFolder(context: _context, userId: SeedConstants.UserId);
 
         Artist artist = new()
         {
@@ -330,11 +321,11 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Library = library,
             LibraryFolder = folder,
         };
-        _context.Artists.Add(artist);
+        _context.Artists.Add(entity: artist);
         _context.SaveChanges();
 
         _context.Images.Add(
-            new()
+            entity: new()
             {
                 ArtistId = artist.Id,
                 Type = "background",
@@ -360,18 +351,18 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
                 Library = library,
                 LibraryFolder = folder,
             };
-            albums.Add(album);
+            albums.Add(item: album);
         }
-        _context.Albums.AddRange(albums);
+        _context.Albums.AddRange(entities: albums);
         _context.SaveChanges();
 
         foreach (Album album in albums)
         {
-            _context.AlbumArtist.Add(new(album.Id, artist.Id));
+            _context.AlbumArtist.Add(entity: new(albumId: album.Id, artistId: artist.Id));
             for (int iso = 0; iso < 3; iso++)
             {
                 _context.Translations.Add(
-                    new()
+                    entity: new()
                     {
                         AlbumId = album.Id,
                         Iso31661 = iso switch
@@ -399,46 +390,46 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
                 FolderId = folder.Id,
                 LibraryFolder = folder,
             };
-            tracks.Add(track);
+            tracks.Add(item: track);
         }
-        _context.Tracks.AddRange(tracks);
+        _context.Tracks.AddRange(entities: tracks);
         _context.SaveChanges();
 
         int trackIndex = 0;
         for (int a = 0; a < albumCount; a++)
         for (int t = 0; t < tracksPerAlbum; t++)
         {
-            Track track = tracks[trackIndex++];
-            _context.AlbumTrack.Add(new(albums[a].Id, track.Id));
-            _context.ArtistTrack.Add(new(artist.Id, track.Id));
+            Track track = tracks[index: trackIndex++];
+            _context.AlbumTrack.Add(entity: new(albumId: albums[index: a].Id, trackId: track.Id));
+            _context.ArtistTrack.Add(entity: new(artistId: artist.Id, trackId: track.Id));
         }
         _context.SaveChanges();
 
-        Assert.Equal(albumCount * tracksPerAlbum, tracks.Count);
+        Assert.Equal(expected: albumCount * tracksPerAlbum, actual: tracks.Count);
 
         Stopwatch stopwatch = Stopwatch.StartNew();
         List<ArtistTrack> result = await _repository.GetArtistTracksAsync(
-            SeedConstants.UserId,
-            artist.Id
+            userId: SeedConstants.UserId,
+            artistId: artist.Id
         );
         stopwatch.Stop();
         _output.WriteLine(
-            $"GetArtistTracksAsync elapsed {stopwatch.ElapsedMilliseconds}ms for {result.Count} tracks "
-                + "(live-log regression was 81168/62660/103197ms for 153 tracks)"
+            message: $"GetArtistTracksAsync elapsed {stopwatch.ElapsedMilliseconds}ms for {result.Count} tracks "
+                     + "(live-log regression was 81168/62660/103197ms for 153 tracks)"
         );
 
-        Assert.Equal(albumCount * tracksPerAlbum, result.Count);
+        Assert.Equal(expected: albumCount * tracksPerAlbum, actual: result.Count);
         // Prove the two-step attach actually populated the per-track credit list
         // (Track.ArtistTrack), not just the flat first-query columns.
-        Assert.All(result, at => Assert.NotEmpty(at.Track.ArtistTrack));
-        Assert.All(result, at => Assert.NotEmpty(at.Track.AlbumTrack));
+        Assert.All(collection: result, action: at => Assert.NotEmpty(collection: at.Track.ArtistTrack));
+        Assert.All(collection: result, action: at => Assert.NotEmpty(collection: at.Track.AlbumTrack));
 
         // The regression measured live was 80,000-103,000ms for 153 tracks.
         // 2000ms leaves generous CI headroom while still proving the fix by
         // roughly two orders of magnitude.
         Assert.True(
-            stopwatch.ElapsedMilliseconds < 2000,
-            $"GetArtistTracksAsync took {stopwatch.ElapsedMilliseconds}ms for {result.Count} tracks — expected < 2000ms"
+            condition: stopwatch.ElapsedMilliseconds < 2000,
+            userMessage: $"GetArtistTracksAsync took {stopwatch.ElapsedMilliseconds}ms for {result.Count} tracks — expected < 2000ms"
         );
     }
 
@@ -458,10 +449,10 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
     {
         SqlCaptureInterceptor interceptor = new();
         (IDbContextFactory<MediaContext> factory, SqliteConnection connection) =
-            TestMediaContextFactory.CreateFactoryWithInterceptor(interceptor);
+            TestMediaContextFactory.CreateFactoryWithInterceptor(interceptor: interceptor);
         await using MediaContext context = factory.CreateDbContext();
 
-        (Library library, Folder folder) = SeedLibraryAndFolder(context, SeedConstants.UserId);
+        (Library library, Folder folder) = SeedLibraryAndFolder(context: context, userId: SeedConstants.UserId);
 
         Artist artist = new()
         {
@@ -473,7 +464,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Library = library,
             LibraryFolder = folder,
         };
-        context.Artists.Add(artist);
+        context.Artists.Add(entity: artist);
         context.SaveChanges();
 
         const int albumCount = 5;
@@ -492,14 +483,14 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
                 Library = library,
                 LibraryFolder = folder,
             };
-            albums.Add(album);
+            albums.Add(item: album);
         }
-        context.Albums.AddRange(albums);
+        context.Albums.AddRange(entities: albums);
         context.SaveChanges();
 
         foreach (Album album in albums)
             context.Translations.Add(
-                new()
+                entity: new()
                 {
                     AlbumId = album.Id,
                     Iso31661 = "US",
@@ -521,37 +512,37 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
                 FolderId = folder.Id,
                 LibraryFolder = folder,
             };
-            tracks.Add(track);
+            tracks.Add(item: track);
         }
-        context.Tracks.AddRange(tracks);
+        context.Tracks.AddRange(entities: tracks);
         context.SaveChanges();
 
         int trackIndex = 0;
         for (int a = 0; a < albumCount; a++)
         for (int t = 0; t < tracksPerAlbum; t++)
         {
-            Track track = tracks[trackIndex++];
-            context.AlbumTrack.Add(new(albums[a].Id, track.Id));
-            context.ArtistTrack.Add(new(artist.Id, track.Id));
+            Track track = tracks[index: trackIndex++];
+            context.AlbumTrack.Add(entity: new(albumId: albums[index: a].Id, trackId: track.Id));
+            context.ArtistTrack.Add(entity: new(artistId: artist.Id, trackId: track.Id));
         }
         context.SaveChanges();
 
         interceptor.Clear();
-        MusicRepository repository = new(factory);
+        MusicRepository repository = new(contextFactory: factory);
         List<ArtistTrack> result = await repository.GetArtistTracksAsync(
-            SeedConstants.UserId,
-            artist.Id
+            userId: SeedConstants.UserId,
+            artistId: artist.Id
         );
 
-        Assert.Equal(albumCount * tracksPerAlbum, result.Count);
+        Assert.Equal(expected: albumCount * tracksPerAlbum, actual: result.Count);
 
-        int translationsQueryCount = interceptor.CapturedSql.Count(sql =>
-            sql.Contains("\"Translations\"", StringComparison.Ordinal)
+        int translationsQueryCount = interceptor.CapturedSql.Count(predicate: sql =>
+            sql.Contains(value: "\"Translations\"", comparisonType: StringComparison.Ordinal)
         );
 
         Assert.True(
-            translationsQueryCount == 1,
-            $"Expected exactly one query touching Translations for {albumCount} distinct albums, got {translationsQueryCount}"
+            condition: translationsQueryCount == 1,
+            userMessage: $"Expected exactly one query touching Translations for {albumCount} distinct albums, got {translationsQueryCount}"
         );
 
         connection.Dispose();
@@ -566,7 +557,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
     [Fact]
     public async Task GetArtistTracksAsync_AttachesCorrectAlbumTranslations_AcrossMultipleDistinctAlbums()
     {
-        (Library library, Folder folder) = SeedLibraryAndFolder(_context, SeedConstants.UserId);
+        (Library library, Folder folder) = SeedLibraryAndFolder(context: _context, userId: SeedConstants.UserId);
 
         Artist artist = new()
         {
@@ -578,7 +569,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Library = library,
             LibraryFolder = folder,
         };
-        _context.Artists.Add(artist);
+        _context.Artists.Add(entity: artist);
 
         Album albumOne = new()
         {
@@ -600,11 +591,11 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Library = library,
             LibraryFolder = folder,
         };
-        _context.Albums.AddRange(albumOne, albumTwo);
+        _context.Albums.AddRange(entities: [albumOne, albumTwo]);
         _context.SaveChanges();
 
         _context.Translations.Add(
-            new()
+            entity: new()
             {
                 AlbumId = albumOne.Id,
                 Iso31661 = "US",
@@ -612,7 +603,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             }
         );
         _context.Translations.Add(
-            new()
+            entity: new()
             {
                 AlbumId = albumTwo.Id,
                 Iso31661 = "US",
@@ -638,38 +629,34 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             FolderId = folder.Id,
             LibraryFolder = folder,
         };
-        _context.Tracks.AddRange(trackOnAlbumOne, trackOnAlbumTwo);
+        _context.Tracks.AddRange(entities: [trackOnAlbumOne, trackOnAlbumTwo]);
         _context.SaveChanges();
 
-        _context.AlbumTrack.AddRange(
-            new AlbumTrack(albumOne.Id, trackOnAlbumOne.Id),
-            new AlbumTrack(albumTwo.Id, trackOnAlbumTwo.Id)
+        _context.AlbumTrack.AddRange(entities: [new AlbumTrack(albumId: albumOne.Id, trackId: trackOnAlbumOne.Id), new AlbumTrack(albumId: albumTwo.Id, trackId: trackOnAlbumTwo.Id)]
         );
-        _context.ArtistTrack.AddRange(
-            new ArtistTrack(artist.Id, trackOnAlbumOne.Id),
-            new ArtistTrack(artist.Id, trackOnAlbumTwo.Id)
+        _context.ArtistTrack.AddRange(entities: [new ArtistTrack(artistId: artist.Id, trackId: trackOnAlbumOne.Id), new ArtistTrack(artistId: artist.Id, trackId: trackOnAlbumTwo.Id)]
         );
         _context.SaveChanges();
 
         List<ArtistTrack> result = await _repository.GetArtistTracksAsync(
-            SeedConstants.UserId,
-            artist.Id
+            userId: SeedConstants.UserId,
+            artistId: artist.Id
         );
 
-        Assert.Equal(2, result.Count);
+        Assert.Equal(expected: 2, actual: result.Count);
 
-        ArtistTrack? onAlbumOne = result.FirstOrDefault(at => at.TrackId == trackOnAlbumOne.Id);
-        ArtistTrack? onAlbumTwo = result.FirstOrDefault(at => at.TrackId == trackOnAlbumTwo.Id);
-        Assert.NotNull(onAlbumOne);
-        Assert.NotNull(onAlbumTwo);
+        ArtistTrack? onAlbumOne = result.FirstOrDefault(predicate: at => at.TrackId == trackOnAlbumOne.Id);
+        ArtistTrack? onAlbumTwo = result.FirstOrDefault(predicate: at => at.TrackId == trackOnAlbumTwo.Id);
+        Assert.NotNull(@object: onAlbumOne);
+        Assert.NotNull(@object: onAlbumTwo);
 
         Assert.Equal(
-            "First album description",
-            onAlbumOne!.Track.AlbumTrack.First().Album.Translations.First().Description
+            expected: "First album description",
+            actual: onAlbumOne!.Track.AlbumTrack.First().Album.Translations.First().Description
         );
         Assert.Equal(
-            "Second album description",
-            onAlbumTwo!.Track.AlbumTrack.First().Album.Translations.First().Description
+            expected: "Second album description",
+            actual: onAlbumTwo!.Track.AlbumTrack.First().Album.Translations.First().Description
         );
     }
 
@@ -680,7 +667,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
     [Fact]
     public async Task GetAlbumTracksAsync_ReturnsFullyHydratedList_WithoutCyclicIncludeCrash()
     {
-        (Library library, Folder folder) = SeedLibraryAndFolder(_context, SeedConstants.UserId);
+        (Library library, Folder folder) = SeedLibraryAndFolder(context: _context, userId: SeedConstants.UserId);
 
         Artist artist = new()
         {
@@ -692,7 +679,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Library = library,
             LibraryFolder = folder,
         };
-        _context.Artists.Add(artist);
+        _context.Artists.Add(entity: artist);
 
         Album album = new()
         {
@@ -706,7 +693,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Library = library,
             LibraryFolder = folder,
         };
-        _context.Albums.Add(album);
+        _context.Albums.Add(entity: album);
 
         Track trackA = new()
         {
@@ -726,35 +713,31 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             FolderId = folder.Id,
             LibraryFolder = folder,
         };
-        _context.Tracks.AddRange(trackA, trackB);
+        _context.Tracks.AddRange(entities: [trackA, trackB]);
         _context.SaveChanges();
 
-        _context.AlbumTrack.AddRange(
-            new AlbumTrack(album.Id, trackA.Id),
-            new AlbumTrack(album.Id, trackB.Id)
+        _context.AlbumTrack.AddRange(entities: [new AlbumTrack(albumId: album.Id, trackId: trackA.Id), new AlbumTrack(albumId: album.Id, trackId: trackB.Id)]
         );
-        _context.ArtistTrack.AddRange(
-            new ArtistTrack(artist.Id, trackA.Id),
-            new ArtistTrack(artist.Id, trackB.Id)
+        _context.ArtistTrack.AddRange(entities: [new ArtistTrack(artistId: artist.Id, trackId: trackA.Id), new ArtistTrack(artistId: artist.Id, trackId: trackB.Id)]
         );
-        _context.TrackUser.Add(new() { TrackId = trackB.Id, UserId = SeedConstants.UserId });
+        _context.TrackUser.Add(entity: new() { TrackId = trackB.Id, UserId = SeedConstants.UserId });
         _context.SaveChanges();
 
         List<AlbumTrack> result = await _repository.GetAlbumTracksAsync(
-            SeedConstants.UserId,
-            album.Id
+            userId: SeedConstants.UserId,
+            albumId: album.Id
         );
 
-        Assert.Equal(2, result.Count);
+        Assert.Equal(expected: 2, actual: result.Count);
 
-        AlbumTrack? target = result.FirstOrDefault(at => at.TrackId == trackB.Id);
-        Assert.NotNull(target);
-        Assert.Equal("Paranoid Android", target!.Track.Name);
-        Assert.Equal("Radiohead", target.Track.ArtistTrack.First().Artist.Name);
+        AlbumTrack? target = result.FirstOrDefault(predicate: at => at.TrackId == trackB.Id);
+        Assert.NotNull(@object: target);
+        Assert.Equal(expected: "Paranoid Android", actual: target!.Track.Name);
+        Assert.Equal(expected: "Radiohead", actual: target.Track.ArtistTrack.First().Artist.Name);
         // Proves the second-query attach populated Track.AlbumTrack (which album album this
         // track is on), not just the flat first-query columns.
-        Assert.Equal("OK Computer", target.Track.AlbumTrack.First().Album.Name);
-        Assert.NotEmpty(target.Track.TrackUser);
+        Assert.Equal(expected: "OK Computer", actual: target.Track.AlbumTrack.First().Album.Name);
+        Assert.NotEmpty(collection: target.Track.TrackUser);
     }
 
     /// <summary>
@@ -767,7 +750,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
     [Fact]
     public async Task OldCyclicAlbumIncludeShape_StillThrowsInvalidOperationException()
     {
-        (Library library, Folder folder) = SeedLibraryAndFolder(_context, SeedConstants.UserId);
+        (Library library, Folder folder) = SeedLibraryAndFolder(context: _context, userId: SeedConstants.UserId);
 
         Album album = new()
         {
@@ -779,7 +762,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Library = library,
             LibraryFolder = folder,
         };
-        _context.Albums.Add(album);
+        _context.Albums.Add(entity: album);
 
         Track track = new()
         {
@@ -790,21 +773,21 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             FolderId = folder.Id,
             LibraryFolder = folder,
         };
-        _context.Tracks.Add(track);
+        _context.Tracks.Add(entity: track);
         _context.SaveChanges();
 
-        _context.AlbumTrack.Add(new(album.Id, track.Id));
+        _context.AlbumTrack.Add(entity: new(albumId: album.Id, trackId: track.Id));
         _context.SaveChanges();
 
         await using MediaContext queryContext = await _factory.CreateDbContextAsync();
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsAsync<InvalidOperationException>(testCode: () =>
             queryContext
                 .AlbumTrack.AsNoTracking()
-                .Where(at => at.AlbumId == album.Id && at.TrackId == track.Id)
-                .Include(at => at.Album)
-                    .ThenInclude(a => a.AlbumTrack)
-                        .ThenInclude(albumTrack => albumTrack.Track)
+                .Where(predicate: at => at.AlbumId == album.Id && at.TrackId == track.Id)
+                .Include(navigationPropertyPath: at => at.Album)
+                    .ThenInclude(navigationPropertyPath: a => a.AlbumTrack)
+                        .ThenInclude(navigationPropertyPath: albumTrack => albumTrack.Track)
                 .FirstOrDefaultAsync()
         );
     }
@@ -812,7 +795,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
     [Fact]
     public async Task GetAlbumTracksAsync_CompletesWellUnderTwoSeconds_For150PlusTracks()
     {
-        (Library library, Folder folder) = SeedLibraryAndFolder(_context, SeedConstants.UserId);
+        (Library library, Folder folder) = SeedLibraryAndFolder(context: _context, userId: SeedConstants.UserId);
 
         Artist artist = new()
         {
@@ -824,7 +807,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Library = library,
             LibraryFolder = folder,
         };
-        _context.Artists.Add(artist);
+        _context.Artists.Add(entity: artist);
 
         Album album = new()
         {
@@ -837,7 +820,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Library = library,
             LibraryFolder = folder,
         };
-        _context.Albums.Add(album);
+        _context.Albums.Add(entity: album);
         _context.SaveChanges();
 
         const int discCount = 5;
@@ -855,36 +838,36 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
                 FolderId = folder.Id,
                 LibraryFolder = folder,
             };
-            tracks.Add(track);
+            tracks.Add(item: track);
         }
-        _context.Tracks.AddRange(tracks);
+        _context.Tracks.AddRange(entities: tracks);
         _context.SaveChanges();
 
         foreach (Track track in tracks)
         {
-            _context.AlbumTrack.Add(new(album.Id, track.Id));
-            _context.ArtistTrack.Add(new(artist.Id, track.Id));
+            _context.AlbumTrack.Add(entity: new(albumId: album.Id, trackId: track.Id));
+            _context.ArtistTrack.Add(entity: new(artistId: artist.Id, trackId: track.Id));
         }
         _context.SaveChanges();
 
-        Assert.Equal(discCount * tracksPerDisc, tracks.Count);
+        Assert.Equal(expected: discCount * tracksPerDisc, actual: tracks.Count);
 
         Stopwatch stopwatch = Stopwatch.StartNew();
         List<AlbumTrack> result = await _repository.GetAlbumTracksAsync(
-            SeedConstants.UserId,
-            album.Id
+            userId: SeedConstants.UserId,
+            albumId: album.Id
         );
         stopwatch.Stop();
         _output.WriteLine(
-            $"GetAlbumTracksAsync elapsed {stopwatch.ElapsedMilliseconds}ms for {result.Count} tracks"
+            message: $"GetAlbumTracksAsync elapsed {stopwatch.ElapsedMilliseconds}ms for {result.Count} tracks"
         );
 
-        Assert.Equal(discCount * tracksPerDisc, result.Count);
-        Assert.All(result, at => Assert.NotEmpty(at.Track.ArtistTrack));
+        Assert.Equal(expected: discCount * tracksPerDisc, actual: result.Count);
+        Assert.All(collection: result, action: at => Assert.NotEmpty(collection: at.Track.ArtistTrack));
 
         Assert.True(
-            stopwatch.ElapsedMilliseconds < 2000,
-            $"GetAlbumTracksAsync took {stopwatch.ElapsedMilliseconds}ms for {result.Count} tracks — expected < 2000ms"
+            condition: stopwatch.ElapsedMilliseconds < 2000,
+            userMessage: $"GetAlbumTracksAsync took {stopwatch.ElapsedMilliseconds}ms for {result.Count} tracks — expected < 2000ms"
         );
     }
 
@@ -903,10 +886,10 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
     {
         SqlCaptureInterceptor interceptor = new();
         (IDbContextFactory<MediaContext> factory, SqliteConnection connection) =
-            TestMediaContextFactory.CreateFactoryWithInterceptor(interceptor);
+            TestMediaContextFactory.CreateFactoryWithInterceptor(interceptor: interceptor);
         await using MediaContext context = factory.CreateDbContext();
 
-        (Library library, Folder folder) = SeedLibraryAndFolder(context, SeedConstants.UserId);
+        (Library library, Folder folder) = SeedLibraryAndFolder(context: context, userId: SeedConstants.UserId);
 
         Album album = new()
         {
@@ -919,11 +902,11 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Library = library,
             LibraryFolder = folder,
         };
-        context.Albums.Add(album);
+        context.Albums.Add(entity: album);
         context.SaveChanges();
 
         context.Images.Add(
-            new()
+            entity: new()
             {
                 AlbumId = album.Id,
                 Type = "cover",
@@ -932,7 +915,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             }
         );
         context.Translations.Add(
-            new()
+            entity: new()
             {
                 AlbumId = album.Id,
                 Iso31661 = "NL",
@@ -940,7 +923,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             }
         );
         context.Translations.Add(
-            new()
+            entity: new()
             {
                 AlbumId = album.Id,
                 Iso31661 = "US",
@@ -961,38 +944,38 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
                 FolderId = folder.Id,
                 LibraryFolder = folder,
             };
-            tracks.Add(track);
+            tracks.Add(item: track);
         }
-        context.Tracks.AddRange(tracks);
+        context.Tracks.AddRange(entities: tracks);
         context.SaveChanges();
 
         foreach (Track track in tracks)
-            context.AlbumTrack.Add(new(album.Id, track.Id));
+            context.AlbumTrack.Add(entity: new(albumId: album.Id, trackId: track.Id));
         context.SaveChanges();
 
         interceptor.Clear();
-        MusicRepository repository = new(factory);
+        MusicRepository repository = new(contextFactory: factory);
         List<AlbumTrack> result = await repository.GetAlbumTracksAsync(
-            SeedConstants.UserId,
-            album.Id
+            userId: SeedConstants.UserId,
+            albumId: album.Id
         );
 
-        Assert.Equal(trackCount, result.Count);
+        Assert.Equal(expected: trackCount, actual: result.Count);
 
-        int translationsQueryCount = interceptor.CapturedSql.Count(sql =>
-            sql.Contains("\"Translations\"", StringComparison.Ordinal)
+        int translationsQueryCount = interceptor.CapturedSql.Count(predicate: sql =>
+            sql.Contains(value: "\"Translations\"", comparisonType: StringComparison.Ordinal)
         );
-        int imagesQueryCount = interceptor.CapturedSql.Count(sql =>
-            sql.Contains("\"Images\"", StringComparison.Ordinal)
+        int imagesQueryCount = interceptor.CapturedSql.Count(predicate: sql =>
+            sql.Contains(value: "\"Images\"", comparisonType: StringComparison.Ordinal)
         );
 
         Assert.True(
-            translationsQueryCount == 1,
-            $"Expected exactly one query touching Translations for {trackCount} tracks sharing one album, got {translationsQueryCount}"
+            condition: translationsQueryCount == 1,
+            userMessage: $"Expected exactly one query touching Translations for {trackCount} tracks sharing one album, got {translationsQueryCount}"
         );
         Assert.True(
-            imagesQueryCount == 1,
-            $"Expected exactly one query touching Images for {trackCount} tracks sharing one album, got {imagesQueryCount}"
+            condition: imagesQueryCount == 1,
+            userMessage: $"Expected exactly one query touching Images for {trackCount} tracks sharing one album, got {imagesQueryCount}"
         );
 
         connection.Dispose();
@@ -1006,7 +989,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
     [Fact]
     public async Task GetAlbumTracksAsync_AttachesAlbumImagesAndTranslations_ToEveryTrack_WhenTracksShareOneAlbum()
     {
-        (Library library, Folder folder) = SeedLibraryAndFolder(_context, SeedConstants.UserId);
+        (Library library, Folder folder) = SeedLibraryAndFolder(context: _context, userId: SeedConstants.UserId);
 
         Album album = new()
         {
@@ -1019,11 +1002,11 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Library = library,
             LibraryFolder = folder,
         };
-        _context.Albums.Add(album);
+        _context.Albums.Add(entity: album);
         _context.SaveChanges();
 
         _context.Images.Add(
-            new()
+            entity: new()
             {
                 AlbumId = album.Id,
                 Type = "cover",
@@ -1032,7 +1015,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             }
         );
         _context.Translations.Add(
-            new()
+            entity: new()
             {
                 AlbumId = album.Id,
                 Iso31661 = "US",
@@ -1067,31 +1050,28 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             FolderId = folder.Id,
             LibraryFolder = folder,
         };
-        _context.Tracks.AddRange(trackA, trackB, trackC);
+        _context.Tracks.AddRange(entities: [trackA, trackB, trackC]);
         _context.SaveChanges();
 
-        _context.AlbumTrack.AddRange(
-            new AlbumTrack(album.Id, trackA.Id),
-            new AlbumTrack(album.Id, trackB.Id),
-            new AlbumTrack(album.Id, trackC.Id)
+        _context.AlbumTrack.AddRange(entities: [new AlbumTrack(albumId: album.Id, trackId: trackA.Id), new AlbumTrack(albumId: album.Id, trackId: trackB.Id), new AlbumTrack(albumId: album.Id, trackId: trackC.Id)]
         );
         _context.SaveChanges();
 
         List<AlbumTrack> result = await _repository.GetAlbumTracksAsync(
-            SeedConstants.UserId,
-            album.Id
+            userId: SeedConstants.UserId,
+            albumId: album.Id
         );
 
-        Assert.Equal(3, result.Count);
+        Assert.Equal(expected: 3, actual: result.Count);
         Assert.All(
-            result,
-            at =>
+            collection: result,
+            action: at =>
             {
                 AlbumTrack link = at.Track.AlbumTrack.First();
-                Assert.Equal("Shared Album", link.Album.Name);
-                Assert.NotEmpty(link.Album.Images);
-                Assert.NotEmpty(link.Album.Translations);
-                Assert.Equal("A shared album", link.Album.Translations.First().Description);
+                Assert.Equal(expected: "Shared Album", actual: link.Album.Name);
+                Assert.NotEmpty(collection: link.Album.Images);
+                Assert.NotEmpty(collection: link.Album.Translations);
+                Assert.Equal(expected: "A shared album", actual: link.Album.Translations.First().Description);
             }
         );
     }
@@ -1103,7 +1083,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
     [Fact]
     public async Task GetGenreTracksAsync_ReturnsFullyHydratedList_WithoutCyclicIncludeCrash()
     {
-        (Library library, Folder folder) = SeedLibraryAndFolder(_context, SeedConstants.UserId);
+        (Library library, Folder folder) = SeedLibraryAndFolder(context: _context, userId: SeedConstants.UserId);
 
         Artist artist = new()
         {
@@ -1115,7 +1095,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Library = library,
             LibraryFolder = folder,
         };
-        _context.Artists.Add(artist);
+        _context.Artists.Add(entity: artist);
 
         Album album = new()
         {
@@ -1128,13 +1108,13 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Library = library,
             LibraryFolder = folder,
         };
-        _context.Albums.Add(album);
+        _context.Albums.Add(entity: album);
 
         MusicGenre genre = new() { Id = Guid.NewGuid(), Name = "IDM" };
-        _context.MusicGenres.Add(genre);
+        _context.MusicGenres.Add(entity: genre);
         _context.SaveChanges();
 
-        _context.AlbumMusicGenre.Add(new(album.Id, genre.Id));
+        _context.AlbumMusicGenre.Add(entity: new(albumId: album.Id, musicGenreId: genre.Id));
 
         Track trackA = new()
         {
@@ -1154,42 +1134,38 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             FolderId = folder.Id,
             LibraryFolder = folder,
         };
-        _context.Tracks.AddRange(trackA, trackB);
+        _context.Tracks.AddRange(entities: [trackA, trackB]);
         _context.SaveChanges();
 
-        _context.AlbumTrack.AddRange(
-            new AlbumTrack(album.Id, trackA.Id),
-            new AlbumTrack(album.Id, trackB.Id)
+        _context.AlbumTrack.AddRange(entities: [new AlbumTrack(albumId: album.Id, trackId: trackA.Id), new AlbumTrack(albumId: album.Id, trackId: trackB.Id)]
         );
-        _context.ArtistTrack.AddRange(
-            new ArtistTrack(artist.Id, trackA.Id),
-            new ArtistTrack(artist.Id, trackB.Id)
+        _context.ArtistTrack.AddRange(entities: [new ArtistTrack(artistId: artist.Id, trackId: trackA.Id), new ArtistTrack(artistId: artist.Id, trackId: trackB.Id)]
         );
-        _context.MusicGenreTrack.AddRange(new(genre.Id, trackA.Id), new(genre.Id, trackB.Id));
-        _context.TrackUser.Add(new() { TrackId = trackB.Id, UserId = SeedConstants.UserId });
+        _context.MusicGenreTrack.AddRange(entities: [new(genreId: genre.Id, trackId: trackA.Id), new(genreId: genre.Id, trackId: trackB.Id)]);
+        _context.TrackUser.Add(entity: new() { TrackId = trackB.Id, UserId = SeedConstants.UserId });
         _context.SaveChanges();
 
         List<MusicGenreTrack> result = await _repository.GetGenreTracksAsync(
-            SeedConstants.UserId,
-            genre.Id
+            userId: SeedConstants.UserId,
+            genreId: genre.Id
         );
 
-        Assert.Equal(2, result.Count);
+        Assert.Equal(expected: 2, actual: result.Count);
 
-        MusicGenreTrack? target = result.FirstOrDefault(mgt => mgt.TrackId == trackB.Id);
-        Assert.NotNull(target);
-        Assert.Equal("An Eagle in Your Mind", target!.Track.Name);
-        Assert.Equal("Boards of Canada", target.Track.ArtistTrack.First().Artist.Name);
-        Assert.Equal("Music Has the Right to Children", target.Track.AlbumTrack.First().Album.Name);
-        Assert.NotEmpty(target.Track.TrackUser);
+        MusicGenreTrack? target = result.FirstOrDefault(predicate: mgt => mgt.TrackId == trackB.Id);
+        Assert.NotNull(@object: target);
+        Assert.Equal(expected: "An Eagle in Your Mind", actual: target!.Track.Name);
+        Assert.Equal(expected: "Boards of Canada", actual: target.Track.ArtistTrack.First().Artist.Name);
+        Assert.Equal(expected: "Music Has the Right to Children", actual: target.Track.AlbumTrack.First().Album.Name);
+        Assert.NotEmpty(collection: target.Track.TrackUser);
     }
 
     [Fact]
     public async Task GetGenreTracksAsync_ReturnsEmpty_WhenGenreNotOwnedByCaller()
     {
-        (Library library, Folder folder) = SeedLibraryAndFolder(_context, SeedConstants.UserId);
+        (Library library, Folder folder) = SeedLibraryAndFolder(context: _context, userId: SeedConstants.UserId);
         _context.Users.Add(
-            new()
+            entity: new()
             {
                 Id = OtherUserId,
                 Email = "other@nomercy.tv",
@@ -1208,7 +1184,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Type = "music",
             Order = 4,
         };
-        _context.Libraries.Add(otherLibrary);
+        _context.Libraries.Add(entity: otherLibrary);
 
         Folder otherFolder = new()
         {
@@ -1216,11 +1192,11 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Path = "/media/other-music",
             DriverId = Driver.SystemLocalDriverId,
         };
-        _context.Folders.Add(otherFolder);
+        _context.Folders.Add(entity: otherFolder);
         _context.SaveChanges();
 
-        _context.LibraryUser.Add(new(otherLibrary.Id, OtherUserId));
-        _context.FolderLibrary.Add(new(otherFolder.Id, otherLibrary.Id));
+        _context.LibraryUser.Add(entity: new(libraryId: otherLibrary.Id, userId: OtherUserId));
+        _context.FolderLibrary.Add(entity: new(folderId: otherFolder.Id, libraryId: otherLibrary.Id));
         _context.SaveChanges();
 
         Album album = new()
@@ -1233,13 +1209,13 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Library = otherLibrary,
             LibraryFolder = otherFolder,
         };
-        _context.Albums.Add(album);
+        _context.Albums.Add(entity: album);
 
         MusicGenre genre = new() { Id = Guid.NewGuid(), Name = "Private Genre" };
-        _context.MusicGenres.Add(genre);
+        _context.MusicGenres.Add(entity: genre);
         _context.SaveChanges();
 
-        _context.AlbumMusicGenre.Add(new(album.Id, genre.Id));
+        _context.AlbumMusicGenre.Add(entity: new(albumId: album.Id, musicGenreId: genre.Id));
 
         Track track = new()
         {
@@ -1250,20 +1226,20 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             FolderId = folder.Id,
             LibraryFolder = folder,
         };
-        _context.Tracks.Add(track);
+        _context.Tracks.Add(entity: track);
         _context.SaveChanges();
 
-        _context.AlbumTrack.Add(new(album.Id, track.Id));
-        _context.MusicGenreTrack.Add(new(genre.Id, track.Id));
+        _context.AlbumTrack.Add(entity: new(albumId: album.Id, trackId: track.Id));
+        _context.MusicGenreTrack.Add(entity: new(genreId: genre.Id, trackId: track.Id));
         _context.SaveChanges();
 
         // Requesting as SeedConstants.UserId, who has no access to otherLibrary.
         List<MusicGenreTrack> result = await _repository.GetGenreTracksAsync(
-            SeedConstants.UserId,
-            genre.Id
+            userId: SeedConstants.UserId,
+            genreId: genre.Id
         );
 
-        Assert.Empty(result);
+        Assert.Empty(collection: result);
     }
 
     /// <summary>
@@ -1276,7 +1252,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
     [Fact]
     public async Task OldCyclicGenreIncludeShape_StillThrowsInvalidOperationException()
     {
-        (Library library, Folder folder) = SeedLibraryAndFolder(_context, SeedConstants.UserId);
+        (Library library, Folder folder) = SeedLibraryAndFolder(context: _context, userId: SeedConstants.UserId);
 
         Album album = new()
         {
@@ -1288,13 +1264,13 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Library = library,
             LibraryFolder = folder,
         };
-        _context.Albums.Add(album);
+        _context.Albums.Add(entity: album);
 
         MusicGenre genre = new() { Id = Guid.NewGuid(), Name = "Genre" };
-        _context.MusicGenres.Add(genre);
+        _context.MusicGenres.Add(entity: genre);
         _context.SaveChanges();
 
-        _context.AlbumMusicGenre.Add(new(album.Id, genre.Id));
+        _context.AlbumMusicGenre.Add(entity: new(albumId: album.Id, musicGenreId: genre.Id));
 
         Track track = new()
         {
@@ -1305,21 +1281,21 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             FolderId = folder.Id,
             LibraryFolder = folder,
         };
-        _context.Tracks.Add(track);
+        _context.Tracks.Add(entity: track);
         _context.SaveChanges();
 
-        _context.MusicGenreTrack.Add(new(genre.Id, track.Id));
+        _context.MusicGenreTrack.Add(entity: new(genreId: genre.Id, trackId: track.Id));
         _context.SaveChanges();
 
         await using MediaContext queryContext = await _factory.CreateDbContextAsync();
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsAsync<InvalidOperationException>(testCode: () =>
             queryContext
                 .MusicGenreTrack.AsNoTracking()
-                .Where(mgt => mgt.GenreId == genre.Id && mgt.TrackId == track.Id)
-                .Include(mgt => mgt.Genre)
-                    .ThenInclude(g => g.MusicGenreTracks)
-                        .ThenInclude(genreTrack => genreTrack.Track)
+                .Where(predicate: mgt => mgt.GenreId == genre.Id && mgt.TrackId == track.Id)
+                .Include(navigationPropertyPath: mgt => mgt.Genre)
+                    .ThenInclude(navigationPropertyPath: g => g.MusicGenreTracks)
+                        .ThenInclude(navigationPropertyPath: genreTrack => genreTrack.Track)
                 .FirstOrDefaultAsync()
         );
     }
@@ -1327,7 +1303,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
     [Fact]
     public async Task GetGenreTracksAsync_CompletesWellUnderTwoSeconds_For150PlusTracks()
     {
-        (Library library, Folder folder) = SeedLibraryAndFolder(_context, SeedConstants.UserId);
+        (Library library, Folder folder) = SeedLibraryAndFolder(context: _context, userId: SeedConstants.UserId);
 
         Artist artist = new()
         {
@@ -1339,7 +1315,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Library = library,
             LibraryFolder = folder,
         };
-        _context.Artists.Add(artist);
+        _context.Artists.Add(entity: artist);
 
         Album album = new()
         {
@@ -1352,13 +1328,13 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Library = library,
             LibraryFolder = folder,
         };
-        _context.Albums.Add(album);
+        _context.Albums.Add(entity: album);
 
         MusicGenre genre = new() { Id = Guid.NewGuid(), Name = "Electronic" };
-        _context.MusicGenres.Add(genre);
+        _context.MusicGenres.Add(entity: genre);
         _context.SaveChanges();
 
-        _context.AlbumMusicGenre.Add(new(album.Id, genre.Id));
+        _context.AlbumMusicGenre.Add(entity: new(albumId: album.Id, musicGenreId: genre.Id));
         _context.SaveChanges();
 
         const int discCount = 5;
@@ -1376,37 +1352,37 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
                 FolderId = folder.Id,
                 LibraryFolder = folder,
             };
-            tracks.Add(track);
+            tracks.Add(item: track);
         }
-        _context.Tracks.AddRange(tracks);
+        _context.Tracks.AddRange(entities: tracks);
         _context.SaveChanges();
 
         foreach (Track track in tracks)
         {
-            _context.AlbumTrack.Add(new(album.Id, track.Id));
-            _context.ArtistTrack.Add(new(artist.Id, track.Id));
-            _context.MusicGenreTrack.Add(new(genre.Id, track.Id));
+            _context.AlbumTrack.Add(entity: new(albumId: album.Id, trackId: track.Id));
+            _context.ArtistTrack.Add(entity: new(artistId: artist.Id, trackId: track.Id));
+            _context.MusicGenreTrack.Add(entity: new(genreId: genre.Id, trackId: track.Id));
         }
         _context.SaveChanges();
 
-        Assert.Equal(discCount * tracksPerDisc, tracks.Count);
+        Assert.Equal(expected: discCount * tracksPerDisc, actual: tracks.Count);
 
         Stopwatch stopwatch = Stopwatch.StartNew();
         List<MusicGenreTrack> result = await _repository.GetGenreTracksAsync(
-            SeedConstants.UserId,
-            genre.Id
+            userId: SeedConstants.UserId,
+            genreId: genre.Id
         );
         stopwatch.Stop();
         _output.WriteLine(
-            $"GetGenreTracksAsync elapsed {stopwatch.ElapsedMilliseconds}ms for {result.Count} tracks"
+            message: $"GetGenreTracksAsync elapsed {stopwatch.ElapsedMilliseconds}ms for {result.Count} tracks"
         );
 
-        Assert.Equal(discCount * tracksPerDisc, result.Count);
-        Assert.All(result, mgt => Assert.NotEmpty(mgt.Track.ArtistTrack));
+        Assert.Equal(expected: discCount * tracksPerDisc, actual: result.Count);
+        Assert.All(collection: result, action: mgt => Assert.NotEmpty(collection: mgt.Track.ArtistTrack));
 
         Assert.True(
-            stopwatch.ElapsedMilliseconds < 2000,
-            $"GetGenreTracksAsync took {stopwatch.ElapsedMilliseconds}ms for {result.Count} tracks — expected < 2000ms"
+            condition: stopwatch.ElapsedMilliseconds < 2000,
+            userMessage: $"GetGenreTracksAsync took {stopwatch.ElapsedMilliseconds}ms for {result.Count} tracks — expected < 2000ms"
         );
     }
 
@@ -1424,10 +1400,10 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
     {
         SqlCaptureInterceptor interceptor = new();
         (IDbContextFactory<MediaContext> factory, SqliteConnection connection) =
-            TestMediaContextFactory.CreateFactoryWithInterceptor(interceptor);
+            TestMediaContextFactory.CreateFactoryWithInterceptor(interceptor: interceptor);
         await using MediaContext context = factory.CreateDbContext();
 
-        (Library library, Folder folder) = SeedLibraryAndFolder(context, SeedConstants.UserId);
+        (Library library, Folder folder) = SeedLibraryAndFolder(context: context, userId: SeedConstants.UserId);
 
         Artist artist = new()
         {
@@ -1439,11 +1415,11 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Library = library,
             LibraryFolder = folder,
         };
-        context.Artists.Add(artist);
+        context.Artists.Add(entity: artist);
         context.SaveChanges();
 
         context.Images.Add(
-            new()
+            entity: new()
             {
                 ArtistId = artist.Id,
                 Type = "background",
@@ -1453,7 +1429,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
         );
 
         MusicGenre genre = new() { Id = Guid.NewGuid(), Name = "Electronic" };
-        context.MusicGenres.Add(genre);
+        context.MusicGenres.Add(entity: genre);
         context.SaveChanges();
 
         const int albumCount = 5;
@@ -1472,17 +1448,17 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
                 Library = library,
                 LibraryFolder = folder,
             };
-            albums.Add(album);
+            albums.Add(item: album);
         }
-        context.Albums.AddRange(albums);
+        context.Albums.AddRange(entities: albums);
         context.SaveChanges();
 
         foreach (Album album in albums)
         {
-            context.AlbumMusicGenre.Add(new(album.Id, genre.Id));
-            context.AlbumArtist.Add(new(album.Id, artist.Id));
+            context.AlbumMusicGenre.Add(entity: new(albumId: album.Id, musicGenreId: genre.Id));
+            context.AlbumArtist.Add(entity: new(albumId: album.Id, artistId: artist.Id));
             context.Translations.Add(
-                new()
+                entity: new()
                 {
                     AlbumId = album.Id,
                     Iso31661 = "US",
@@ -1505,44 +1481,44 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
                 FolderId = folder.Id,
                 LibraryFolder = folder,
             };
-            tracks.Add(track);
+            tracks.Add(item: track);
         }
-        context.Tracks.AddRange(tracks);
+        context.Tracks.AddRange(entities: tracks);
         context.SaveChanges();
 
         int trackIndex = 0;
         for (int a = 0; a < albumCount; a++)
         for (int t = 0; t < tracksPerAlbum; t++)
         {
-            Track track = tracks[trackIndex++];
-            context.AlbumTrack.Add(new(albums[a].Id, track.Id));
-            context.MusicGenreTrack.Add(new(genre.Id, track.Id));
+            Track track = tracks[index: trackIndex++];
+            context.AlbumTrack.Add(entity: new(albumId: albums[index: a].Id, trackId: track.Id));
+            context.MusicGenreTrack.Add(entity: new(genreId: genre.Id, trackId: track.Id));
         }
         context.SaveChanges();
 
         interceptor.Clear();
-        MusicRepository repository = new(factory);
+        MusicRepository repository = new(contextFactory: factory);
         List<MusicGenreTrack> result = await repository.GetGenreTracksAsync(
-            SeedConstants.UserId,
-            genre.Id
+            userId: SeedConstants.UserId,
+            genreId: genre.Id
         );
 
-        Assert.Equal(albumCount * tracksPerAlbum, result.Count);
+        Assert.Equal(expected: albumCount * tracksPerAlbum, actual: result.Count);
 
-        int translationsQueryCount = interceptor.CapturedSql.Count(sql =>
-            sql.Contains("\"Translations\"", StringComparison.Ordinal)
+        int translationsQueryCount = interceptor.CapturedSql.Count(predicate: sql =>
+            sql.Contains(value: "\"Translations\"", comparisonType: StringComparison.Ordinal)
         );
-        int imagesQueryCount = interceptor.CapturedSql.Count(sql =>
-            sql.Contains("\"Images\"", StringComparison.Ordinal)
+        int imagesQueryCount = interceptor.CapturedSql.Count(predicate: sql =>
+            sql.Contains(value: "\"Images\"", comparisonType: StringComparison.Ordinal)
         );
 
         Assert.True(
-            translationsQueryCount == 1,
-            $"Expected exactly one query touching Translations for {albumCount} distinct albums, got {translationsQueryCount}"
+            condition: translationsQueryCount == 1,
+            userMessage: $"Expected exactly one query touching Translations for {albumCount} distinct albums, got {translationsQueryCount}"
         );
         Assert.True(
-            imagesQueryCount == 1,
-            $"Expected exactly one query touching Images for {albumCount} distinct albums, got {imagesQueryCount}"
+            condition: imagesQueryCount == 1,
+            userMessage: $"Expected exactly one query touching Images for {albumCount} distinct albums, got {imagesQueryCount}"
         );
 
         connection.Dispose();
@@ -1557,10 +1533,10 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
     [Fact]
     public async Task GetGenreTracksAsync_AttachesCorrectAlbumData_AcrossMultipleDistinctAlbums()
     {
-        (Library library, Folder folder) = SeedLibraryAndFolder(_context, SeedConstants.UserId);
+        (Library library, Folder folder) = SeedLibraryAndFolder(context: _context, userId: SeedConstants.UserId);
 
         MusicGenre genre = new() { Id = Guid.NewGuid(), Name = "House" };
-        _context.MusicGenres.Add(genre);
+        _context.MusicGenres.Add(entity: genre);
 
         Album albumOne = new()
         {
@@ -1582,12 +1558,12 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             Library = library,
             LibraryFolder = folder,
         };
-        _context.Albums.AddRange(albumOne, albumTwo);
+        _context.Albums.AddRange(entities: [albumOne, albumTwo]);
         _context.SaveChanges();
 
-        _context.AlbumMusicGenre.AddRange(new(albumOne.Id, genre.Id), new(albumTwo.Id, genre.Id));
+        _context.AlbumMusicGenre.AddRange(entities: [new(albumId: albumOne.Id, musicGenreId: genre.Id), new(albumId: albumTwo.Id, musicGenreId: genre.Id)]);
         _context.Translations.Add(
-            new()
+            entity: new()
             {
                 AlbumId = albumOne.Id,
                 Iso31661 = "US",
@@ -1595,7 +1571,7 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             }
         );
         _context.Translations.Add(
-            new()
+            entity: new()
             {
                 AlbumId = albumTwo.Id,
                 Iso31661 = "US",
@@ -1621,42 +1597,38 @@ public class MusicRepositoryPlaylistPlaybackTests : IDisposable
             FolderId = folder.Id,
             LibraryFolder = folder,
         };
-        _context.Tracks.AddRange(trackOnAlbumOne, trackOnAlbumTwo);
+        _context.Tracks.AddRange(entities: [trackOnAlbumOne, trackOnAlbumTwo]);
         _context.SaveChanges();
 
-        _context.AlbumTrack.AddRange(
-            new AlbumTrack(albumOne.Id, trackOnAlbumOne.Id),
-            new AlbumTrack(albumTwo.Id, trackOnAlbumTwo.Id)
+        _context.AlbumTrack.AddRange(entities: [new AlbumTrack(albumId: albumOne.Id, trackId: trackOnAlbumOne.Id), new AlbumTrack(albumId: albumTwo.Id, trackId: trackOnAlbumTwo.Id)]
         );
-        _context.MusicGenreTrack.AddRange(
-            new(genre.Id, trackOnAlbumOne.Id),
-            new(genre.Id, trackOnAlbumTwo.Id)
+        _context.MusicGenreTrack.AddRange(entities: [new(genreId: genre.Id, trackId: trackOnAlbumOne.Id), new(genreId: genre.Id, trackId: trackOnAlbumTwo.Id)]
         );
         _context.SaveChanges();
 
         List<MusicGenreTrack> result = await _repository.GetGenreTracksAsync(
-            SeedConstants.UserId,
-            genre.Id
+            userId: SeedConstants.UserId,
+            genreId: genre.Id
         );
 
-        Assert.Equal(2, result.Count);
+        Assert.Equal(expected: 2, actual: result.Count);
 
-        MusicGenreTrack? onAlbumOne = result.FirstOrDefault(mgt =>
+        MusicGenreTrack? onAlbumOne = result.FirstOrDefault(predicate: mgt =>
             mgt.TrackId == trackOnAlbumOne.Id
         );
-        MusicGenreTrack? onAlbumTwo = result.FirstOrDefault(mgt =>
+        MusicGenreTrack? onAlbumTwo = result.FirstOrDefault(predicate: mgt =>
             mgt.TrackId == trackOnAlbumTwo.Id
         );
-        Assert.NotNull(onAlbumOne);
-        Assert.NotNull(onAlbumTwo);
+        Assert.NotNull(@object: onAlbumOne);
+        Assert.NotNull(@object: onAlbumTwo);
 
         Assert.Equal(
-            "First compilation description",
-            onAlbumOne!.Track.AlbumTrack.First().Album.Translations.First().Description
+            expected: "First compilation description",
+            actual: onAlbumOne!.Track.AlbumTrack.First().Album.Translations.First().Description
         );
         Assert.Equal(
-            "Second compilation description",
-            onAlbumTwo!.Track.AlbumTrack.First().Album.Translations.First().Description
+            expected: "Second compilation description",
+            actual: onAlbumTwo!.Track.AlbumTrack.First().Album.Translations.First().Description
         );
     }
 

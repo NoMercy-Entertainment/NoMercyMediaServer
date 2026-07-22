@@ -36,7 +36,7 @@ public static class LyricMatcher
 
         foreach (LyricCandidate candidate in candidates)
         {
-            double score = Score(query, candidate);
+            double score = Score(query: query, candidate: candidate);
             if (score < 0)
                 continue;
             if (score > bestScore)
@@ -58,21 +58,21 @@ public static class LyricMatcher
         if (candidate.Lines.Length == 0)
             return -1;
 
-        double titleScore = TitleMatch(query.Title, candidate.Title);
+        double titleScore = TitleMatch(wanted: query.Title, got: candidate.Title);
         if (titleScore < TitleThreshold)
             return -1;
 
-        double artistScore = ArtistMatch(query.Artists, candidate.Artist);
+        double artistScore = ArtistMatch(wantedArtists: query.Artists, got: candidate.Artist);
         if (artistScore < ArtistThreshold)
             return -1;
 
         double durationScore = 100.0;
         if (query.DurationSeconds is { } wanted && candidate.DurationSeconds is { } got)
         {
-            int diff = Math.Abs(wanted - got);
+            int diff = Math.Abs(value: wanted - got);
             if (candidate.HasSyncedLyrics && diff > SyncedDurationToleranceSeconds)
                 return -1;
-            durationScore = Math.Max(0, 100.0 - (diff * 5.0));
+            durationScore = Math.Max(val1: 0, val2: 100.0 - (diff * 5.0));
         }
 
         double syncBonus = candidate.HasSyncedLyrics ? 20.0 : 0.0;
@@ -87,9 +87,9 @@ public static class LyricMatcher
             return 0;
         if (a == b)
             return 100;
-        if (a.Contains(b) || b.Contains(a))
+        if (a.Contains(value: b) || b.Contains(value: a))
             return 95;
-        return FuzzyMatcher.MatchPercentage(a, b);
+        return FuzzyMatcher.MatchPercentage(strA: a, strB: b);
     }
 
     private static double ArtistMatch(IReadOnlyList<string> wantedArtists, string got)
@@ -107,8 +107,8 @@ public static class LyricMatcher
 
             double score =
                 a == b ? 100
-                : b.Contains(a) || a.Contains(b) ? 95
-                : FuzzyMatcher.MatchPercentage(a, b);
+                : b.Contains(value: a) || a.Contains(value: b) ? 95
+                : FuzzyMatcher.MatchPercentage(strA: a, strB: b);
             if (score > best)
                 best = score;
         }

@@ -20,16 +20,16 @@ namespace NoMercy.Tests.Cli.Commands;
 /// every failure kind must keep its assigned, non-zero value so a scripted
 /// caller's exit-code branching never silently changes underneath it.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class ExitCodeTests
 {
     [Fact]
     public void Values_MatchDocumentedContract()
     {
-        ((int)ExitCode.Success).Should().Be(0);
-        ((int)ExitCode.ConfigurationError).Should().Be(1);
-        ((int)ExitCode.ConnectionError).Should().Be(2);
-        ((int)ExitCode.ServerError).Should().Be(3);
-        ((int)ExitCode.Timeout).Should().Be(4);
+        ((int)ExitCode.Success).Should().Be(expected: 0);
+        ((int)ExitCode.ConfigurationError).Should().Be(expected: 1);
+        ((int)ExitCode.ConnectionError).Should().Be(expected: 2);
+        ((int)ExitCode.ServerError).Should().Be(expected: 3);
+        ((int)ExitCode.Timeout).Should().Be(expected: 4);
     }
 }

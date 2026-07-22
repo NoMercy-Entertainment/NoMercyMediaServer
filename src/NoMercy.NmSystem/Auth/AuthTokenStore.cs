@@ -22,6 +22,6 @@ public class AuthTokenStore : IAuthTokenStore
     public void SetAccessToken(string? token)
     {
         _accessToken = token;
-        AccessTokenChanged?.Invoke(this, token);
+        AccessTokenChanged?.Invoke(sender: this, e: token);
     }
 }

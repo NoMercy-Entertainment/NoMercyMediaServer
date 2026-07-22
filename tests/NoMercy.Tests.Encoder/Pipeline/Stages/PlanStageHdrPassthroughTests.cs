@@ -36,16 +36,16 @@ public class PlanStageHdrPassthroughTests
 
     public PlanStageHdrPassthroughTests()
     {
-        _hardware.Setup(h => h.HasGpu).Returns(false);
-        _hardware.Setup(h => h.CpuCores).Returns(8);
-        _hardware.Setup(h => h.Gpus).Returns([]);
-        _hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
+        _hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
+        _hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
+        _hardware.Setup(expression: h => h.Gpus).Returns(value: []);
+        _hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
         _hardware
-            .Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
-            .Returns((GpuDevice?)null);
+            .Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>()))
+            .Returns(value: (GpuDevice?)null);
 
         _codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<IHardwareCapabilities>(),
@@ -53,7 +53,7 @@ public class PlanStageHdrPassthroughTests
                 )
             )
             .Returns(
-                new ResolvedCodec(
+                value: new ResolvedCodec(
                     FfmpegEncoderName: "libx265",
                     EncoderInfo: new(
                         FfmpegName: "libx265",
@@ -61,7 +61,7 @@ public class PlanStageHdrPassthroughTests
                         Presets: ["medium"],
                         Profiles: ["main10"],
                         Levels: ["5.1"],
-                        QualityRange: new(0, 51, 28),
+                        QualityRange: new(Min: 0, Max: 51, Default: 28),
                         SupportedRateControl: [RateControlMode.Crf],
                         Supports10Bit: true,
                         SupportsHdr: true,
@@ -75,16 +75,16 @@ public class PlanStageHdrPassthroughTests
             );
 
         _stage = new(
-            new(),
-            new(),
-            new(),
-            _codecResolver.Object,
-            _hardware.Object,
-            new TonemapSelector(),
-            _ffmpegCapabilities.Object,
-            new AbrLadderGenerator(),
-            new NoOpCropDetector(),
-            NullLogger<PlanStage>.Instance
+            graphBuilder: new(),
+            groupingStrategy: new(),
+            costEstimator: new(),
+            codecResolver: _codecResolver.Object,
+            hardware: _hardware.Object,
+            tonemapSelector: new TonemapSelector(),
+            ffmpegCapabilities: _ffmpegCapabilities.Object,
+            abrLadderGenerator: new AbrLadderGenerator(),
+            cropDetector: new NoOpCropDetector(),
+            logger: NullLogger<PlanStage>.Instance
         );
     }
 
@@ -94,13 +94,13 @@ public class PlanStageHdrPassthroughTests
         MediaInfo media = BuildHdrMedia(transfer: "smpte2084");
         EncodingProfile profile = BuildProfile(tenBit: true, convertHdrToSdr: false);
 
-        OutputPlan plan = await RunPlan(media, profile);
+        OutputPlan plan = await RunPlan(media: media, profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        Assert.Equal("bt2020", video.ExtraFlags["-color_primaries"]);
-        Assert.Equal("smpte2084", video.ExtraFlags["-color_trc"]);
-        Assert.Contains("-colorspace", video.ExtraFlags.Keys);
-        Assert.Equal("tv", video.ExtraFlags["-color_range"]);
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        Assert.Equal(expected: "bt2020", actual: video.ExtraFlags[key: "-color_primaries"]);
+        Assert.Equal(expected: "smpte2084", actual: video.ExtraFlags[key: "-color_trc"]);
+        Assert.Contains(expected: "-colorspace", collection: video.ExtraFlags.Keys);
+        Assert.Equal(expected: "tv", actual: video.ExtraFlags[key: "-color_range"]);
     }
 
     [Fact]
@@ -109,10 +109,10 @@ public class PlanStageHdrPassthroughTests
         MediaInfo media = BuildHdrMedia(transfer: "arib-std-b67");
         EncodingProfile profile = BuildProfile(tenBit: true, convertHdrToSdr: false);
 
-        OutputPlan plan = await RunPlan(media, profile);
+        OutputPlan plan = await RunPlan(media: media, profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        Assert.Equal("arib-std-b67", video.ExtraFlags["-color_trc"]);
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        Assert.Equal(expected: "arib-std-b67", actual: video.ExtraFlags[key: "-color_trc"]);
     }
 
     [Fact]
@@ -121,11 +121,11 @@ public class PlanStageHdrPassthroughTests
         MediaInfo media = BuildHdrMedia(transfer: "smpte2084");
         EncodingProfile profile = BuildProfile(tenBit: false, convertHdrToSdr: true);
 
-        OutputPlan plan = await RunPlan(media, profile);
+        OutputPlan plan = await RunPlan(media: media, profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        Assert.DoesNotContain("-color_primaries", video.ExtraFlags.Keys);
-        Assert.DoesNotContain("-color_trc", video.ExtraFlags.Keys);
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        Assert.DoesNotContain(expected: "-color_primaries", collection: video.ExtraFlags.Keys);
+        Assert.DoesNotContain(expected: "-color_trc", collection: video.ExtraFlags.Keys);
     }
 
     [Fact]
@@ -134,10 +134,10 @@ public class PlanStageHdrPassthroughTests
         MediaInfo media = BuildSdrMedia();
         EncodingProfile profile = BuildProfile(tenBit: false, convertHdrToSdr: false);
 
-        OutputPlan plan = await RunPlan(media, profile);
+        OutputPlan plan = await RunPlan(media: media, profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        Assert.DoesNotContain("-color_primaries", video.ExtraFlags.Keys);
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        Assert.DoesNotContain(expected: "-color_primaries", collection: video.ExtraFlags.Keys);
     }
 
     [Fact]
@@ -148,19 +148,19 @@ public class PlanStageHdrPassthroughTests
         MediaInfo media = BuildHdrMedia(transfer: "smpte2084");
         EncodingProfile profile = BuildProfile(tenBit: true, convertHdrToSdr: true);
 
-        OutputPlan plan = await RunPlan(media, profile);
+        OutputPlan plan = await RunPlan(media: media, profile: profile);
 
-        VideoOutputPlan video = Assert.Single(plan.VideoOutputs);
-        Assert.DoesNotContain("-color_primaries", video.ExtraFlags.Keys);
+        VideoOutputPlan video = Assert.Single(collection: plan.VideoOutputs);
+        Assert.DoesNotContain(expected: "-color_primaries", collection: video.ExtraFlags.Keys);
     }
 
     private async Task<OutputPlan> RunPlan(MediaInfo media, EncodingProfile profile)
     {
-        ValidateInput input = new(media, profile);
+        ValidateInput input = new(Media: media, Profile: profile);
         EncodingContext context = EncodingContext.Create();
-        StageResult result = await _stage.ExecuteAsync(input, context, CancellationToken.None);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: CancellationToken.None);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
         return success.Value.OutputPlan;
     }
 
@@ -168,7 +168,7 @@ public class PlanStageHdrPassthroughTests
         new(
             FilePath: "/media/hdr.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(90),
+            Duration: TimeSpan.FromMinutes(minutes: 90),
             OverallBitRateKbps: 50000,
             FileSizeBytes: 30_000_000_000,
             VideoStreams:
@@ -197,7 +197,7 @@ public class PlanStageHdrPassthroughTests
         new(
             FilePath: "/media/sdr.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(90),
+            Duration: TimeSpan.FromMinutes(minutes: 90),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 4_000_000_000,
             VideoStreams:

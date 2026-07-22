@@ -15,9 +15,9 @@ namespace NoMercy.Providers.Tadb.Models;
 
 public class TadbLanguageDescription
 {
-    [JsonProperty("iso_3166_1")]
+    [JsonProperty(propertyName: "iso_3166_1")]
     public string Iso31661 { get; set; } = string.Empty;
 
-    [JsonProperty("description")]
+    [JsonProperty(propertyName: "description")]
     public string Description { get; set; } = string.Empty;
 }

@@ -31,31 +31,31 @@ public class TesseractModelManagerTests : IDisposable
 
     public TesseractModelManagerTests()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"TessTest_{Guid.NewGuid():N}");
+        _tempDir = Path.Combine(path1: Path.GetTempPath(), path2: $"TessTest_{Guid.NewGuid():N}");
         _options = new() { FfmpegPathOverride = "ffmpeg", TesseractModelsDirectory = _tempDir };
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempDir))
-            Directory.Delete(_tempDir, recursive: true);
-        GC.SuppressFinalize(this);
+        if (Directory.Exists(path: _tempDir))
+            Directory.Delete(path: _tempDir, recursive: true);
+        GC.SuppressFinalize(obj: this);
     }
 
     [Fact]
     public async Task Ensure_WhenModelExists_ReturnsPathWithoutNetwork()
     {
-        Directory.CreateDirectory(_tempDir);
-        string localPath = Path.Combine(_tempDir, "eng.traineddata");
-        await File.WriteAllBytesAsync(localPath, [0xFF, 0xFE]);
+        Directory.CreateDirectory(path: _tempDir);
+        string localPath = Path.Combine(path1: _tempDir, path2: "eng.traineddata");
+        await File.WriteAllBytesAsync(path: localPath, bytes: [0xFF, 0xFE]);
 
         FakeTesseractModelDownloader downloader = new();
-        TesseractModelManager manager = BuildManager(downloader);
+        TesseractModelManager manager = BuildManager(downloader: downloader);
 
-        string resolved = await manager.EnsureLanguageModelAsync("eng", CancellationToken.None);
+        string resolved = await manager.EnsureLanguageModelAsync(language: "eng", ct: CancellationToken.None);
 
-        Assert.Equal(localPath, resolved);
-        Assert.Equal(0, downloader.CallCount);
+        Assert.Equal(expected: localPath, actual: resolved);
+        Assert.Equal(expected: 0, actual: downloader.CallCount);
     }
 
     [Fact]
@@ -63,16 +63,16 @@ public class TesseractModelManagerTests : IDisposable
     {
         byte[] payload = [0x01, 0x02, 0x03, 0x04];
         FakeTesseractModelDownloader downloader = new() { Payload = payload };
-        TesseractModelManager manager = BuildManager(downloader);
+        TesseractModelManager manager = BuildManager(downloader: downloader);
 
-        string resolved = await manager.EnsureLanguageModelAsync("fra", CancellationToken.None);
+        string resolved = await manager.EnsureLanguageModelAsync(language: "fra", ct: CancellationToken.None);
 
-        string expectedPath = Path.Combine(_tempDir, "fra.traineddata");
-        Assert.Equal(expectedPath, resolved);
-        Assert.Equal(1, downloader.CallCount);
-        Assert.True(File.Exists(expectedPath));
-        Assert.Equal(payload, await File.ReadAllBytesAsync(expectedPath));
-        Assert.False(File.Exists($"{expectedPath}.tmp"));
+        string expectedPath = Path.Combine(path1: _tempDir, path2: "fra.traineddata");
+        Assert.Equal(expected: expectedPath, actual: resolved);
+        Assert.Equal(expected: 1, actual: downloader.CallCount);
+        Assert.True(condition: File.Exists(path: expectedPath));
+        Assert.Equal(expected: payload, actual: await File.ReadAllBytesAsync(path: expectedPath));
+        Assert.False(condition: File.Exists(path: $"{expectedPath}.tmp"));
     }
 
     [Fact]
@@ -83,18 +83,18 @@ public class TesseractModelManagerTests : IDisposable
         FakeTesseractModelDownloader downloader = new()
         {
             FailureToThrow = new InvalidOperationException(
-                "nomercy-tesseract release manifest signature could not be verified"
+                message: "nomercy-tesseract release manifest signature could not be verified"
             ),
         };
-        TesseractModelManager manager = BuildManager(downloader);
+        TesseractModelManager manager = BuildManager(downloader: downloader);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            manager.EnsureLanguageModelAsync("deu", CancellationToken.None)
+        await Assert.ThrowsAsync<InvalidOperationException>(testCode: () =>
+            manager.EnsureLanguageModelAsync(language: "deu", ct: CancellationToken.None)
         );
 
-        string expectedPath = Path.Combine(_tempDir, "deu.traineddata");
-        Assert.False(File.Exists(expectedPath));
-        Assert.False(File.Exists($"{expectedPath}.tmp"));
+        string expectedPath = Path.Combine(path1: _tempDir, path2: "deu.traineddata");
+        Assert.False(condition: File.Exists(path: expectedPath));
+        Assert.False(condition: File.Exists(path: $"{expectedPath}.tmp"));
     }
 
     [Fact]
@@ -105,55 +105,55 @@ public class TesseractModelManagerTests : IDisposable
         FakeTesseractModelDownloader downloader = new()
         {
             FailureToThrow = new InvalidDataException(
-                "SHA-256 mismatch: the downloaded model does not match the signed manifest."
+                message: "SHA-256 mismatch: the downloaded model does not match the signed manifest."
             ),
         };
-        TesseractModelManager manager = BuildManager(downloader);
+        TesseractModelManager manager = BuildManager(downloader: downloader);
 
-        await Assert.ThrowsAsync<InvalidDataException>(() =>
-            manager.EnsureLanguageModelAsync("jpn", CancellationToken.None)
+        await Assert.ThrowsAsync<InvalidDataException>(testCode: () =>
+            manager.EnsureLanguageModelAsync(language: "jpn", ct: CancellationToken.None)
         );
 
-        string expectedPath = Path.Combine(_tempDir, "jpn.traineddata");
-        Assert.False(File.Exists(expectedPath));
-        Assert.False(File.Exists($"{expectedPath}.tmp"));
+        string expectedPath = Path.Combine(path1: _tempDir, path2: "jpn.traineddata");
+        Assert.False(condition: File.Exists(path: expectedPath));
+        Assert.False(condition: File.Exists(path: $"{expectedPath}.tmp"));
     }
 
     [Fact]
     public async Task Ensure_EmptyLanguage_ThrowsArgumentException()
     {
-        TesseractModelManager manager = BuildManager(new FakeTesseractModelDownloader());
+        TesseractModelManager manager = BuildManager(downloader: new FakeTesseractModelDownloader());
 
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            manager.EnsureLanguageModelAsync("", CancellationToken.None)
+        await Assert.ThrowsAsync<ArgumentException>(testCode: () =>
+            manager.EnsureLanguageModelAsync(language: "", ct: CancellationToken.None)
         );
     }
 
     [Fact]
     public void GetDownloadedLanguages_WhenDirectoryMissing_ReturnsEmpty()
     {
-        TesseractModelManager manager = BuildManager(new FakeTesseractModelDownloader());
+        TesseractModelManager manager = BuildManager(downloader: new FakeTesseractModelDownloader());
 
         IReadOnlyList<string> langs = manager.GetDownloadedLanguages();
 
-        Assert.Empty(langs);
+        Assert.Empty(collection: langs);
     }
 
     [Fact]
     public async Task GetDownloadedLanguages_ListsAllTrainedData()
     {
-        Directory.CreateDirectory(_tempDir);
-        await File.WriteAllTextAsync(Path.Combine(_tempDir, "eng.traineddata"), "data");
-        await File.WriteAllTextAsync(Path.Combine(_tempDir, "fra.traineddata"), "data");
-        await File.WriteAllTextAsync(Path.Combine(_tempDir, "readme.txt"), "not a model");
+        Directory.CreateDirectory(path: _tempDir);
+        await File.WriteAllTextAsync(path: Path.Combine(path1: _tempDir, path2: "eng.traineddata"), contents: "data");
+        await File.WriteAllTextAsync(path: Path.Combine(path1: _tempDir, path2: "fra.traineddata"), contents: "data");
+        await File.WriteAllTextAsync(path: Path.Combine(path1: _tempDir, path2: "readme.txt"), contents: "not a model");
 
-        TesseractModelManager manager = BuildManager(new FakeTesseractModelDownloader());
+        TesseractModelManager manager = BuildManager(downloader: new FakeTesseractModelDownloader());
 
         IReadOnlyList<string> langs = manager.GetDownloadedLanguages();
 
-        Assert.Contains("eng", langs);
-        Assert.Contains("fra", langs);
-        Assert.DoesNotContain("readme", langs);
+        Assert.Contains(expected: "eng", collection: langs);
+        Assert.Contains(expected: "fra", collection: langs);
+        Assert.DoesNotContain(expected: "readme", collection: langs);
     }
 
     [Fact]
@@ -161,22 +161,22 @@ public class TesseractModelManagerTests : IDisposable
     {
         CancellationTokenSource cts = new();
         FakeTesseractModelDownloader downloader = new() { OnDownloadRequested = cts.Cancel };
-        TesseractModelManager manager = BuildManager(downloader);
+        TesseractModelManager manager = BuildManager(downloader: downloader);
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            manager.EnsureLanguageModelAsync("deu", cts.Token)
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(testCode: () =>
+            manager.EnsureLanguageModelAsync(language: "deu", ct: cts.Token)
         );
 
-        string expectedPath = Path.Combine(_tempDir, "deu.traineddata");
-        Assert.False(File.Exists(expectedPath));
-        Assert.False(File.Exists($"{expectedPath}.tmp"));
+        string expectedPath = Path.Combine(path1: _tempDir, path2: "deu.traineddata");
+        Assert.False(condition: File.Exists(path: expectedPath));
+        Assert.False(condition: File.Exists(path: $"{expectedPath}.tmp"));
     }
 
     private TesseractModelManager BuildManager(ITesseractModelDownloader downloader)
     {
         LocalStorageDriver driver = new();
-        LocalStorage storage = new(driver, new([], driver));
-        return new(_options, downloader, storage, NullLogger<TesseractModelManager>.Instance);
+        LocalStorage storage = new(driver: driver, guard: new(allowedRoots: [], driver: driver));
+        return new(options: _options, downloader: downloader, storage: storage, logger: NullLogger<TesseractModelManager>.Instance);
     }
 
     private sealed class FakeTesseractModelDownloader : ITesseractModelDownloader
@@ -195,7 +195,7 @@ public class TesseractModelManagerTests : IDisposable
             if (FailureToThrow is not null)
                 throw FailureToThrow;
 
-            return Task.FromResult<Stream>(new MemoryStream(Payload));
+            return Task.FromResult<Stream>(result: new MemoryStream(buffer: Payload));
         }
     }
 }

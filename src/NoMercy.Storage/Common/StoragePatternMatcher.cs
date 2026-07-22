@@ -23,24 +23,24 @@ internal static class StoragePatternMatcher
 {
     public static bool Matches(string name, string pattern)
     {
-        if (pattern == "*" || string.IsNullOrEmpty(pattern))
+        if (pattern == "*" || string.IsNullOrEmpty(value: pattern))
             return true;
 
         string regexPattern =
             "^"
             + string.Concat(
-                pattern.Select(c =>
+                values: pattern.Select(selector: c =>
                     c switch
                     {
                         '*' => ".*",
                         '?' => ".",
                         '.' => "\\.",
-                        _ => Regex.Escape(c.ToString()),
+                        _ => Regex.Escape(str: c.ToString()),
                     }
                 )
             )
             + "$";
 
-        return Regex.IsMatch(name, regexPattern, RegexOptions.IgnoreCase);
+        return Regex.IsMatch(input: name, pattern: regexPattern, options: RegexOptions.IgnoreCase);
     }
 }

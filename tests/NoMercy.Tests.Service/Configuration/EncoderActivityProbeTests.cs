@@ -30,21 +30,21 @@ namespace NoMercy.Tests.Service.Configuration;
 /// the exact bug this probe fixes (the benchmark deferred forever once any
 /// encoder worker thread existed, idle or not).
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class EncoderActivityProbeTests
 {
     // A queue with zero configured worker pools — CountWorkersProcessingJob
     // always returns 0 without needing a live worker thread, so it never
     // interferes with the ActiveSessionCount assertions below.
     private static QueueRunner EmptyQueueRunner() =>
-        new(Mock.Of<IQueueContext>(), new QueueConfiguration(), NullLoggerFactory.Instance);
+        new(queueContext: Mock.Of<IQueueContext>(), configuration: new QueueConfiguration(), loggerFactory: NullLoggerFactory.Instance);
 
     [Fact]
     public void IsBusy_ActiveSessionsPresent_ReturnsTrue()
     {
         Mock<ISessionManager> sessionManager = new();
-        sessionManager.SetupGet(s => s.ActiveSessionCount).Returns(1);
-        EncoderActivityProbe probe = new(EmptyQueueRunner(), sessionManager.Object);
+        sessionManager.SetupGet(expression: s => s.ActiveSessionCount).Returns(value: 1);
+        EncoderActivityProbe probe = new(queueRunner: EmptyQueueRunner(), sessionManager: sessionManager.Object);
 
         probe.IsBusy.Should().BeTrue();
     }
@@ -53,8 +53,8 @@ public class EncoderActivityProbeTests
     public void IsBusy_NoSessionsAndNoQueueWorkersConfigured_ReturnsFalse()
     {
         Mock<ISessionManager> sessionManager = new();
-        sessionManager.SetupGet(s => s.ActiveSessionCount).Returns(0);
-        EncoderActivityProbe probe = new(EmptyQueueRunner(), sessionManager.Object);
+        sessionManager.SetupGet(expression: s => s.ActiveSessionCount).Returns(value: 0);
+        EncoderActivityProbe probe = new(queueRunner: EmptyQueueRunner(), sessionManager: sessionManager.Object);
 
         probe.IsBusy.Should().BeFalse();
     }
@@ -68,15 +68,15 @@ public class EncoderActivityProbeTests
         // NoMercy.Tests.Queue; this only pins the composition order (sessions
         // first, queue second, both false -> not busy).
         Mock<ISessionManager> sessionManager = new();
-        sessionManager.SetupGet(s => s.ActiveSessionCount).Returns(0);
+        sessionManager.SetupGet(expression: s => s.ActiveSessionCount).Returns(value: 0);
         QueueRunner queueWithConfiguredButUnstartedPool = new(
-            Mock.Of<IQueueContext>(),
-            new QueueConfiguration { WorkerCounts = new() { ["encoder"] = 1 } },
-            NullLoggerFactory.Instance
+            queueContext: Mock.Of<IQueueContext>(),
+            configuration: new QueueConfiguration { WorkerCounts = new() { [key: "encoder"] = 1 } },
+            loggerFactory: NullLoggerFactory.Instance
         );
         EncoderActivityProbe probe = new(
-            queueWithConfiguredButUnstartedPool,
-            sessionManager.Object
+            queueRunner: queueWithConfiguredButUnstartedPool,
+            sessionManager: sessionManager.Object
         );
 
         probe.IsBusy.Should().BeFalse();

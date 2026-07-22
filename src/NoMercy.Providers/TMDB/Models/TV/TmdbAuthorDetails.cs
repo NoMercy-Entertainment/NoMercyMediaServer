@@ -15,15 +15,15 @@ namespace NoMercy.Providers.TMDB.Models.TV;
 
 public class TmdbAuthorDetails
 {
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("username")]
+    [JsonProperty(propertyName: "username")]
     public string Username { get; set; } = string.Empty;
 
-    [JsonProperty("avatar_path")]
+    [JsonProperty(propertyName: "avatar_path")]
     public string AvatarPath { get; set; } = string.Empty;
 
-    [JsonProperty("rating")]
+    [JsonProperty(propertyName: "rating")]
     public int Rating { get; set; }
 }

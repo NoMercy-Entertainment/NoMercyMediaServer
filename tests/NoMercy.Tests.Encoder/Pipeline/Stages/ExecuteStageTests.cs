@@ -42,21 +42,21 @@ public class ExecuteStageTests
     private static FfmpegCommand Cmd(string name = "encode") =>
         new(Executable: "ffmpeg", Arguments: ["-i", name, "-y", "/out"], WorkingDirectory: null);
 
-    private static ExecutionResult Success() => new(true, 0, "", TimeSpan.Zero, null);
+    private static ExecutionResult Success() => new(Success: true, ExitCode: 0, StdErr: "", Duration: TimeSpan.Zero, Error: null);
 
     private static ExecutionResult Failure(string stderr) =>
         new(
-            false,
-            1,
-            stderr,
-            TimeSpan.Zero,
-            new(EncodingErrorKind.Unknown, "exec failed", stderr, "exec", false)
+            Success: false,
+            ExitCode: 1,
+            StdErr: stderr,
+            Duration: TimeSpan.Zero,
+            Error: new(Kind: EncodingErrorKind.Unknown, Message: "exec failed", FfmpegStderr: stderr, StageName: "exec", Recoverable: false)
         );
 
     private static ExecuteStage BuildStage(IFfmpegExecutor executor, ICheckpointStore? store = null)
     {
         ICheckpointStore effectiveStore = store ?? new Mock<ICheckpointStore>().Object;
-        return new(executor, effectiveStore, NullLogger<ExecuteStage>.Instance);
+        return new(executor: executor, checkpointStore: effectiveStore, logger: NullLogger<ExecuteStage>.Instance);
     }
 
     private static EncodingContext Ctx(string? outputDirectory = null) =>
@@ -68,7 +68,7 @@ public class ExecuteStageTests
     public async Task ExecuteAsync_SingleCommand_Success_ReturnsResults()
     {
         Mock<IFfmpegExecutor> exec = new();
-        exec.Setup(e =>
+        exec.Setup(expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -77,12 +77,12 @@ public class ExecuteStageTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(Success());
+            .ReturnsAsync(value: Success());
 
-        ExecuteStage stage = BuildStage(exec.Object);
-        ExecuteInput input = new([Cmd()], InputDuration: TimeSpan.FromMinutes(10));
+        ExecuteStage stage = BuildStage(executor: exec.Object);
+        ExecuteInput input = new(Commands: [Cmd()], InputDuration: TimeSpan.FromMinutes(minutes: 10));
 
-        StageResult result = await stage.ExecuteAsync(input, Ctx(), CancellationToken.None);
+        StageResult result = await stage.ExecuteAsync(input: input, context: Ctx(), ct: CancellationToken.None);
 
         result.Should().BeOfType<StageSuccess<ExecutionResult[]>>();
         StageSuccess<ExecutionResult[]> success = (StageSuccess<ExecutionResult[]>)result;
@@ -93,7 +93,7 @@ public class ExecuteStageTests
     public async Task ExecuteAsync_MultipleSuccessfulCommands_AllRun()
     {
         Mock<IFfmpegExecutor> exec = new();
-        exec.Setup(e =>
+        exec.Setup(expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -102,20 +102,20 @@ public class ExecuteStageTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(Success());
+            .ReturnsAsync(value: Success());
 
-        ExecuteStage stage = BuildStage(exec.Object);
+        ExecuteStage stage = BuildStage(executor: exec.Object);
         ExecuteInput input = new(
-            [Cmd("main"), Cmd("subs"), Cmd("fonts")],
+            Commands: [Cmd(name: "main"), Cmd(name: "subs"), Cmd(name: "fonts")],
             InputDuration: TimeSpan.Zero
         );
 
-        StageResult result = await stage.ExecuteAsync(input, Ctx(), CancellationToken.None);
+        StageResult result = await stage.ExecuteAsync(input: input, context: Ctx(), ct: CancellationToken.None);
 
         StageSuccess<ExecutionResult[]> success = (StageSuccess<ExecutionResult[]>)result;
-        success.Value.Should().HaveCount(3);
+        success.Value.Should().HaveCount(expected: 3);
         exec.Verify(
-            e =>
+            expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -123,7 +123,7 @@ public class ExecuteStageTests
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Exactly(3)
+            times: Times.Exactly(callCount: 3)
         );
     }
 
@@ -133,7 +133,7 @@ public class ExecuteStageTests
     public async Task ExecuteAsync_Success_DoesNotWriteCheckpoint()
     {
         Mock<IFfmpegExecutor> exec = new();
-        exec.Setup(e =>
+        exec.Setup(expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -142,17 +142,17 @@ public class ExecuteStageTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(Success());
+            .ReturnsAsync(value: Success());
 
         Mock<ICheckpointStore> store = new();
-        ExecuteStage stage = BuildStage(exec.Object, store.Object);
-        ExecuteInput input = new([Cmd()], InputDuration: TimeSpan.Zero);
+        ExecuteStage stage = BuildStage(executor: exec.Object, store: store.Object);
+        ExecuteInput input = new(Commands: [Cmd()], InputDuration: TimeSpan.Zero);
 
-        await stage.ExecuteAsync(input, Ctx("/output/dir"), CancellationToken.None);
+        await stage.ExecuteAsync(input: input, context: Ctx(outputDirectory: "/output/dir"), ct: CancellationToken.None);
 
         store.Verify(
-            s => s.SaveAsync(It.IsAny<JobCheckpoint>(), It.IsAny<CancellationToken>()),
-            Times.Never
+            expression: s => s.SaveAsync(It.IsAny<JobCheckpoint>(), It.IsAny<CancellationToken>()),
+            times: Times.Never
         );
     }
 
@@ -162,7 +162,7 @@ public class ExecuteStageTests
     public async Task ExecuteAsync_MainCommandFails_ReturnsStageFailure()
     {
         Mock<IFfmpegExecutor> exec = new();
-        exec.Setup(e =>
+        exec.Setup(expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -171,19 +171,19 @@ public class ExecuteStageTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(Failure("ffmpeg blew up"));
+            .ReturnsAsync(value: Failure(stderr: "ffmpeg blew up"));
 
-        ExecuteStage stage = BuildStage(exec.Object);
-        ExecuteInput input = new([Cmd("main"), Cmd("subs")], InputDuration: TimeSpan.Zero);
+        ExecuteStage stage = BuildStage(executor: exec.Object);
+        ExecuteInput input = new(Commands: [Cmd(name: "main"), Cmd(name: "subs")], InputDuration: TimeSpan.Zero);
 
-        StageResult result = await stage.ExecuteAsync(input, Ctx(), CancellationToken.None);
+        StageResult result = await stage.ExecuteAsync(input: input, context: Ctx(), ct: CancellationToken.None);
 
         result.Should().BeOfType<StageFailure>();
         StageFailure failure = (StageFailure)result;
-        failure.Error.Message.Should().Be("exec failed");
+        failure.Error.Message.Should().Be(expected: "exec failed");
         // Second command must NOT run after main failure.
         exec.Verify(
-            e =>
+            expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -191,7 +191,7 @@ public class ExecuteStageTests
                     It.IsAny<string?>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Once
+            times: Times.Once
         );
     }
 
@@ -201,7 +201,7 @@ public class ExecuteStageTests
         // Main encode succeeds, subs extraction fails — encode result must
         // still be reported as success since the primary output is intact.
         Mock<IFfmpegExecutor> exec = new();
-        exec.SetupSequence(e =>
+        exec.SetupSequence(expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -210,17 +210,17 @@ public class ExecuteStageTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(Success())
-            .ReturnsAsync(Failure("subtitle extraction failed"));
+            .ReturnsAsync(value: Success())
+            .ReturnsAsync(value: Failure(stderr: "subtitle extraction failed"));
 
-        ExecuteStage stage = BuildStage(exec.Object);
-        ExecuteInput input = new([Cmd("main"), Cmd("subs")], InputDuration: TimeSpan.Zero);
+        ExecuteStage stage = BuildStage(executor: exec.Object);
+        ExecuteInput input = new(Commands: [Cmd(name: "main"), Cmd(name: "subs")], InputDuration: TimeSpan.Zero);
 
-        StageResult result = await stage.ExecuteAsync(input, Ctx(), CancellationToken.None);
+        StageResult result = await stage.ExecuteAsync(input: input, context: Ctx(), ct: CancellationToken.None);
 
         result.Should().BeOfType<StageSuccess<ExecutionResult[]>>();
         StageSuccess<ExecutionResult[]> success = (StageSuccess<ExecutionResult[]>)result;
-        success.Value.Should().HaveCount(2);
+        success.Value.Should().HaveCount(expected: 2);
         success.Value[0].Success.Should().BeTrue();
         success.Value[1].Success.Should().BeFalse();
     }
@@ -238,7 +238,7 @@ public class ExecuteStageTests
             Error: null
         );
         Mock<IFfmpegExecutor> exec = new();
-        exec.Setup(e =>
+        exec.Setup(expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -247,17 +247,17 @@ public class ExecuteStageTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(noErrorFailure);
+            .ReturnsAsync(value: noErrorFailure);
 
-        ExecuteStage stage = BuildStage(exec.Object);
-        ExecuteInput input = new([Cmd("main")], InputDuration: TimeSpan.Zero);
+        ExecuteStage stage = BuildStage(executor: exec.Object);
+        ExecuteInput input = new(Commands: [Cmd(name: "main")], InputDuration: TimeSpan.Zero);
 
-        StageResult result = await stage.ExecuteAsync(input, Ctx(), CancellationToken.None);
+        StageResult result = await stage.ExecuteAsync(input: input, context: Ctx(), ct: CancellationToken.None);
 
         StageFailure failure = result.Should().BeOfType<StageFailure>().Subject;
-        failure.Error.Kind.Should().Be(EncodingErrorKind.ProcessCrashed);
-        failure.Error.FfmpegStderr.Should().Be("SIGKILL");
-        failure.Error.StageName.Should().Be("Execute");
+        failure.Error.Kind.Should().Be(expected: EncodingErrorKind.ProcessCrashed);
+        failure.Error.FfmpegStderr.Should().Be(expected: "SIGKILL");
+        failure.Error.StageName.Should().Be(expected: "Execute");
         failure.Error.Recoverable.Should().BeTrue();
     }
 
@@ -267,7 +267,7 @@ public class ExecuteStageTests
     public async Task ExecuteAsync_MainCommandFails_WritesCheckpointWithFailedAt()
     {
         Mock<IFfmpegExecutor> exec = new();
-        exec.Setup(e =>
+        exec.Setup(expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -276,29 +276,29 @@ public class ExecuteStageTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(Failure("out of memory"));
+            .ReturnsAsync(value: Failure(stderr: "out of memory"));
 
         JobCheckpoint? captured = null;
         Mock<ICheckpointStore> store = new();
         store
-            .Setup(s => s.SaveAsync(It.IsAny<JobCheckpoint>(), It.IsAny<CancellationToken>()))
-            .Callback<JobCheckpoint, CancellationToken>((cp, _) => captured = cp)
-            .Returns(Task.CompletedTask);
+            .Setup(expression: s => s.SaveAsync(It.IsAny<JobCheckpoint>(), It.IsAny<CancellationToken>()))
+            .Callback<JobCheckpoint, CancellationToken>(action: (cp, _) => captured = cp)
+            .Returns(value: Task.CompletedTask);
 
-        ExecuteStage stage = BuildStage(exec.Object, store.Object);
-        ExecuteInput input = new([Cmd("main")], InputDuration: TimeSpan.Zero);
+        ExecuteStage stage = BuildStage(executor: exec.Object, store: store.Object);
+        ExecuteInput input = new(Commands: [Cmd(name: "main")], InputDuration: TimeSpan.Zero);
 
-        await stage.ExecuteAsync(input, Ctx("/output/dir"), CancellationToken.None);
+        await stage.ExecuteAsync(input: input, context: Ctx(outputDirectory: "/output/dir"), ct: CancellationToken.None);
 
         store.Verify(
-            s => s.SaveAsync(It.IsAny<JobCheckpoint>(), It.IsAny<CancellationToken>()),
-            Times.Once
+            expression: s => s.SaveAsync(It.IsAny<JobCheckpoint>(), It.IsAny<CancellationToken>()),
+            times: Times.Once
         );
         captured.Should().NotBeNull();
         captured!.FailedAt.Should().NotBeNull();
-        captured.OutputDirectory.Should().Be("/output/dir");
-        captured.JobId.Should().Be("ctx-1");
-        captured.LastFfmpegStderrTail.Should().Be("out of memory");
+        captured.OutputDirectory.Should().Be(expected: "/output/dir");
+        captured.JobId.Should().Be(expected: "ctx-1");
+        captured.LastFfmpegStderrTail.Should().Be(expected: "out of memory");
     }
 
     [Fact]
@@ -307,7 +307,7 @@ public class ExecuteStageTests
         // When progress events arrive before the crash, LastProgressMs must
         // capture the furthest position the encoder reached.
         Mock<IFfmpegExecutor> exec = new();
-        exec.Setup(e =>
+        exec.Setup(expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -317,7 +317,7 @@ public class ExecuteStageTests
                 )
             )
             .ReturnsAsync(
-                (
+                valueFunction: (
                     FfmpegCommand _,
                     TimeSpan _,
                     Action<EncodingProgress>? onProgress,
@@ -326,10 +326,10 @@ public class ExecuteStageTests
                 ) =>
                 {
                     onProgress?.Invoke(
-                        new(
+                        obj: new(
                             CorrelationId: "ctx-1",
                             PercentComplete: 50,
-                            Elapsed: TimeSpan.FromSeconds(30),
+                            Elapsed: TimeSpan.FromSeconds(seconds: 30),
                             EstimatedRemaining: null,
                             CurrentFps: null,
                             CurrentSpeed: null,
@@ -338,24 +338,24 @@ public class ExecuteStageTests
                             CurrentTimeSeconds: 120.5
                         )
                     );
-                    return Failure("crash after 120s");
+                    return Failure(stderr: "crash after 120s");
                 }
             );
 
         JobCheckpoint? captured = null;
         Mock<ICheckpointStore> store = new();
         store
-            .Setup(s => s.SaveAsync(It.IsAny<JobCheckpoint>(), It.IsAny<CancellationToken>()))
-            .Callback<JobCheckpoint, CancellationToken>((cp, _) => captured = cp)
-            .Returns(Task.CompletedTask);
+            .Setup(expression: s => s.SaveAsync(It.IsAny<JobCheckpoint>(), It.IsAny<CancellationToken>()))
+            .Callback<JobCheckpoint, CancellationToken>(action: (cp, _) => captured = cp)
+            .Returns(value: Task.CompletedTask);
 
-        ExecuteStage stage = BuildStage(exec.Object, store.Object);
-        ExecuteInput input = new([Cmd("main")], InputDuration: TimeSpan.Zero);
+        ExecuteStage stage = BuildStage(executor: exec.Object, store: store.Object);
+        ExecuteInput input = new(Commands: [Cmd(name: "main")], InputDuration: TimeSpan.Zero);
 
-        await stage.ExecuteAsync(input, Ctx("/output/dir"), CancellationToken.None);
+        await stage.ExecuteAsync(input: input, context: Ctx(outputDirectory: "/output/dir"), ct: CancellationToken.None);
 
         captured.Should().NotBeNull();
-        captured!.LastProgressMs.Should().Be(120_500);
+        captured!.LastProgressMs.Should().Be(expected: 120_500);
     }
 
     [Fact]
@@ -364,7 +364,7 @@ public class ExecuteStageTests
         // When context has no OutputDirectory, crash checkpoint is skipped
         // (no valid key to write under).
         Mock<IFfmpegExecutor> exec = new();
-        exec.Setup(e =>
+        exec.Setup(expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -373,17 +373,17 @@ public class ExecuteStageTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(Failure("boom"));
+            .ReturnsAsync(value: Failure(stderr: "boom"));
 
         Mock<ICheckpointStore> store = new();
-        ExecuteStage stage = BuildStage(exec.Object, store.Object);
-        ExecuteInput input = new([Cmd("main")], InputDuration: TimeSpan.Zero);
+        ExecuteStage stage = BuildStage(executor: exec.Object, store: store.Object);
+        ExecuteInput input = new(Commands: [Cmd(name: "main")], InputDuration: TimeSpan.Zero);
 
-        await stage.ExecuteAsync(input, Ctx(outputDirectory: null), CancellationToken.None);
+        await stage.ExecuteAsync(input: input, context: Ctx(outputDirectory: null), ct: CancellationToken.None);
 
         store.Verify(
-            s => s.SaveAsync(It.IsAny<JobCheckpoint>(), It.IsAny<CancellationToken>()),
-            Times.Never
+            expression: s => s.SaveAsync(It.IsAny<JobCheckpoint>(), It.IsAny<CancellationToken>()),
+            times: Times.Never
         );
     }
 
@@ -393,7 +393,7 @@ public class ExecuteStageTests
         // Only main command (index 0) failure triggers a checkpoint.
         // Post-process failure is non-fatal and must NOT write a checkpoint.
         Mock<IFfmpegExecutor> exec = new();
-        exec.SetupSequence(e =>
+        exec.SetupSequence(expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -402,18 +402,18 @@ public class ExecuteStageTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(Success())
-            .ReturnsAsync(Failure("font extract failed"));
+            .ReturnsAsync(value: Success())
+            .ReturnsAsync(value: Failure(stderr: "font extract failed"));
 
         Mock<ICheckpointStore> store = new();
-        ExecuteStage stage = BuildStage(exec.Object, store.Object);
-        ExecuteInput input = new([Cmd("main"), Cmd("fonts")], InputDuration: TimeSpan.Zero);
+        ExecuteStage stage = BuildStage(executor: exec.Object, store: store.Object);
+        ExecuteInput input = new(Commands: [Cmd(name: "main"), Cmd(name: "fonts")], InputDuration: TimeSpan.Zero);
 
-        await stage.ExecuteAsync(input, Ctx("/output/dir"), CancellationToken.None);
+        await stage.ExecuteAsync(input: input, context: Ctx(outputDirectory: "/output/dir"), ct: CancellationToken.None);
 
         store.Verify(
-            s => s.SaveAsync(It.IsAny<JobCheckpoint>(), It.IsAny<CancellationToken>()),
-            Times.Never
+            expression: s => s.SaveAsync(It.IsAny<JobCheckpoint>(), It.IsAny<CancellationToken>()),
+            times: Times.Never
         );
     }
 
@@ -428,7 +428,7 @@ public class ExecuteStageTests
         bool? secondHadProgress = null;
         Mock<IFfmpegExecutor> exec = new();
         int callIndex = 0;
-        exec.Setup(e =>
+        exec.Setup(expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -438,7 +438,7 @@ public class ExecuteStageTests
                 )
             )
             .ReturnsAsync(
-                (
+                valueFunction: (
                     FfmpegCommand _,
                     TimeSpan _,
                     Action<EncodingProgress>? onProgress,
@@ -456,14 +456,14 @@ public class ExecuteStageTests
             );
 
         Mock<IProgressObserver> progress = new();
-        ExecuteStage stage = BuildStage(exec.Object);
+        ExecuteStage stage = BuildStage(executor: exec.Object);
         ExecuteInput input = new(
-            [Cmd("main"), Cmd("post")],
+            Commands: [Cmd(name: "main"), Cmd(name: "post")],
             InputDuration: TimeSpan.Zero,
             Progress: progress.Object
         );
 
-        await stage.ExecuteAsync(input, Ctx(), CancellationToken.None);
+        await stage.ExecuteAsync(input: input, context: Ctx(), ct: CancellationToken.None);
 
         firstHadProgress.Should().BeTrue();
         secondHadProgress.Should().BeFalse();
@@ -477,7 +477,7 @@ public class ExecuteStageTests
         // so the executor still receives a non-null onProgress for command 0.
         Action<EncodingProgress>? observedCallback = null;
         Mock<IFfmpegExecutor> exec = new();
-        exec.Setup(e =>
+        exec.Setup(expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -487,7 +487,7 @@ public class ExecuteStageTests
                 )
             )
             .ReturnsAsync(
-                (
+                valueFunction: (
                     FfmpegCommand _,
                     TimeSpan _,
                     Action<EncodingProgress>? onProgress,
@@ -500,10 +500,10 @@ public class ExecuteStageTests
                 }
             );
 
-        ExecuteStage stage = BuildStage(exec.Object);
-        ExecuteInput input = new([Cmd()], InputDuration: TimeSpan.Zero, Progress: null);
+        ExecuteStage stage = BuildStage(executor: exec.Object);
+        ExecuteInput input = new(Commands: [Cmd()], InputDuration: TimeSpan.Zero, Progress: null);
 
-        await stage.ExecuteAsync(input, Ctx(), CancellationToken.None);
+        await stage.ExecuteAsync(input: input, context: Ctx(), ct: CancellationToken.None);
 
         // Stage always wires a progress callback on cmd 0 to track LastProgressMs.
         observedCallback.Should().NotBeNull();
@@ -521,19 +521,19 @@ public class ExecuteStageTests
     public async Task ExecuteAsync_Success_DeletesDrmKeyTempDirectoryUnderTempRoot()
     {
         string drmTempDir = Path.Combine(
-            StoragePaths.TempRoot,
-            "drm-keys",
-            Guid.NewGuid().ToString("N")
+            path1: StoragePaths.TempRoot,
+            path2: "drm-keys",
+            path3: Guid.NewGuid().ToString(format: "N")
         );
-        Directory.CreateDirectory(drmTempDir);
-        string keyInfoPath = Path.Combine(drmTempDir, "drm_keyinfo.txt");
-        await File.WriteAllTextAsync(keyInfoPath, "https://example/key\n/tmp/drm.key\nabcd\n");
-        await File.WriteAllBytesAsync(Path.Combine(drmTempDir, "drm.key"), new byte[16]);
+        Directory.CreateDirectory(path: drmTempDir);
+        string keyInfoPath = Path.Combine(path1: drmTempDir, path2: "drm_keyinfo.txt");
+        await File.WriteAllTextAsync(path: keyInfoPath, contents: "https://example/key\n/tmp/drm.key\nabcd\n");
+        await File.WriteAllBytesAsync(path: Path.Combine(path1: drmTempDir, path2: "drm.key"), bytes: new byte[16]);
 
         try
         {
             Mock<IFfmpegExecutor> exec = new();
-            exec.Setup(e =>
+            exec.Setup(expression: e =>
                     e.ExecuteAsync(
                         It.IsAny<FfmpegCommand>(),
                         It.IsAny<TimeSpan>(),
@@ -542,27 +542,27 @@ public class ExecuteStageTests
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .ReturnsAsync(Success());
+                .ReturnsAsync(value: Success());
 
-            ExecuteStage stage = BuildStage(exec.Object);
+            ExecuteStage stage = BuildStage(executor: exec.Object);
             FfmpegCommand cmd = new(
                 Executable: "ffmpeg",
                 Arguments: ["-i", "src.mkv", "-hls_key_info_file", keyInfoPath, "-y", "/out"],
                 WorkingDirectory: null
             );
-            ExecuteInput input = new([cmd], InputDuration: TimeSpan.Zero);
+            ExecuteInput input = new(Commands: [cmd], InputDuration: TimeSpan.Zero);
 
-            await stage.ExecuteAsync(input, Ctx(), CancellationToken.None);
+            await stage.ExecuteAsync(input: input, context: Ctx(), ct: CancellationToken.None);
 
             Directory
-                .Exists(drmTempDir)
+                .Exists(path: drmTempDir)
                 .Should()
-                .BeFalse("the DRM key temp dir must be deleted once ffmpeg consumes it");
+                .BeFalse(because: "the DRM key temp dir must be deleted once ffmpeg consumes it");
         }
         finally
         {
-            if (Directory.Exists(drmTempDir))
-                Directory.Delete(drmTempDir, recursive: true);
+            if (Directory.Exists(path: drmTempDir))
+                Directory.Delete(path: drmTempDir, recursive: true);
         }
     }
 
@@ -570,18 +570,18 @@ public class ExecuteStageTests
     public async Task ExecuteAsync_MainCommandFails_StillDeletesDrmKeyTempDirectory()
     {
         string drmTempDir = Path.Combine(
-            StoragePaths.TempRoot,
-            "drm-keys",
-            Guid.NewGuid().ToString("N")
+            path1: StoragePaths.TempRoot,
+            path2: "drm-keys",
+            path3: Guid.NewGuid().ToString(format: "N")
         );
-        Directory.CreateDirectory(drmTempDir);
-        string keyInfoPath = Path.Combine(drmTempDir, "drm_keyinfo.txt");
-        await File.WriteAllTextAsync(keyInfoPath, "https://example/key\n/tmp/drm.key\nabcd\n");
+        Directory.CreateDirectory(path: drmTempDir);
+        string keyInfoPath = Path.Combine(path1: drmTempDir, path2: "drm_keyinfo.txt");
+        await File.WriteAllTextAsync(path: keyInfoPath, contents: "https://example/key\n/tmp/drm.key\nabcd\n");
 
         try
         {
             Mock<IFfmpegExecutor> exec = new();
-            exec.Setup(e =>
+            exec.Setup(expression: e =>
                     e.ExecuteAsync(
                         It.IsAny<FfmpegCommand>(),
                         It.IsAny<TimeSpan>(),
@@ -590,28 +590,28 @@ public class ExecuteStageTests
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .ReturnsAsync(Failure("ffmpeg blew up"));
+                .ReturnsAsync(value: Failure(stderr: "ffmpeg blew up"));
 
-            ExecuteStage stage = BuildStage(exec.Object);
+            ExecuteStage stage = BuildStage(executor: exec.Object);
             FfmpegCommand cmd = new(
                 Executable: "ffmpeg",
                 Arguments: ["-i", "src.mkv", "-hls_key_info_file", keyInfoPath, "-y", "/out"],
                 WorkingDirectory: null
             );
-            ExecuteInput input = new([cmd], InputDuration: TimeSpan.Zero);
+            ExecuteInput input = new(Commands: [cmd], InputDuration: TimeSpan.Zero);
 
-            StageResult result = await stage.ExecuteAsync(input, Ctx(), CancellationToken.None);
+            StageResult result = await stage.ExecuteAsync(input: input, context: Ctx(), ct: CancellationToken.None);
 
             result.Should().BeOfType<StageFailure>();
             Directory
-                .Exists(drmTempDir)
+                .Exists(path: drmTempDir)
                 .Should()
-                .BeFalse("cleanup must run even when the main encode command fails");
+                .BeFalse(because: "cleanup must run even when the main encode command fails");
         }
         finally
         {
-            if (Directory.Exists(drmTempDir))
-                Directory.Delete(drmTempDir, recursive: true);
+            if (Directory.Exists(path: drmTempDir))
+                Directory.Delete(path: drmTempDir, recursive: true);
         }
     }
 
@@ -625,24 +625,24 @@ public class ExecuteStageTests
         // process-wide StoragePaths.TempRoot static, which other tests read
         // concurrently.
         string outsideDir = Path.Combine(
-            Directory.GetCurrentDirectory(),
-            $"not-under-temproot-{Guid.NewGuid():N}"
+            path1: Directory.GetCurrentDirectory(),
+            path2: $"not-under-temproot-{Guid.NewGuid():N}"
         );
-        Directory.CreateDirectory(outsideDir);
-        string keyInfoPath = Path.Combine(outsideDir, "drm_keyinfo.txt");
-        await File.WriteAllTextAsync(keyInfoPath, "https://example/key\n/tmp/drm.key\nabcd\n");
+        Directory.CreateDirectory(path: outsideDir);
+        string keyInfoPath = Path.Combine(path1: outsideDir, path2: "drm_keyinfo.txt");
+        await File.WriteAllTextAsync(path: keyInfoPath, contents: "https://example/key\n/tmp/drm.key\nabcd\n");
 
         try
         {
-            Path.GetFullPath(outsideDir)
+            Path.GetFullPath(path: outsideDir)
                 .Should()
                 .NotStartWith(
-                    Path.GetFullPath(StoragePaths.TempRoot),
-                    "test fixture must be outside TempRoot for this assertion to be meaningful"
+                    unexpected: Path.GetFullPath(path: StoragePaths.TempRoot),
+                    because: "test fixture must be outside TempRoot for this assertion to be meaningful"
                 );
 
             Mock<IFfmpegExecutor> exec = new();
-            exec.Setup(e =>
+            exec.Setup(expression: e =>
                     e.ExecuteAsync(
                         It.IsAny<FfmpegCommand>(),
                         It.IsAny<TimeSpan>(),
@@ -651,27 +651,27 @@ public class ExecuteStageTests
                         It.IsAny<CancellationToken>()
                     )
                 )
-                .ReturnsAsync(Success());
+                .ReturnsAsync(value: Success());
 
-            ExecuteStage stage = BuildStage(exec.Object);
+            ExecuteStage stage = BuildStage(executor: exec.Object);
             FfmpegCommand cmd = new(
                 Executable: "ffmpeg",
                 Arguments: ["-i", "src.mkv", "-hls_key_info_file", keyInfoPath, "-y", "/out"],
                 WorkingDirectory: null
             );
-            ExecuteInput input = new([cmd], InputDuration: TimeSpan.Zero);
+            ExecuteInput input = new(Commands: [cmd], InputDuration: TimeSpan.Zero);
 
-            await stage.ExecuteAsync(input, Ctx(), CancellationToken.None);
+            await stage.ExecuteAsync(input: input, context: Ctx(), ct: CancellationToken.None);
 
             Directory
-                .Exists(outsideDir)
+                .Exists(path: outsideDir)
                 .Should()
-                .BeTrue("cleanup must never delete a directory outside TempRoot");
+                .BeTrue(because: "cleanup must never delete a directory outside TempRoot");
         }
         finally
         {
-            if (Directory.Exists(outsideDir))
-                Directory.Delete(outsideDir, recursive: true);
+            if (Directory.Exists(path: outsideDir))
+                Directory.Delete(path: outsideDir, recursive: true);
         }
     }
 }

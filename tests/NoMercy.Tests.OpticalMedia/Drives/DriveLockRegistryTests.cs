@@ -20,7 +20,7 @@ namespace NoMercy.Tests.OpticalMedia.Drives;
 /// must free the drive key for a subsequent rip. Different drive keys must
 /// never contend with each other.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class DriveLockRegistryTests
 {
     [Fact]
@@ -28,7 +28,7 @@ public class DriveLockRegistryTests
     {
         DriveLockRegistry registry = new();
 
-        bool acquired = registry.TryAcquire("D:\\", out DriveLock? driveLock);
+        bool acquired = registry.TryAcquire(driveKey: "D:\\", driveLock: out DriveLock? driveLock);
 
         acquired.Should().BeTrue();
         driveLock.Should().NotBeNull();
@@ -38,9 +38,9 @@ public class DriveLockRegistryTests
     public void TryAcquire_SecondCallForSameKey_Fails()
     {
         DriveLockRegistry registry = new();
-        registry.TryAcquire("D:\\", out _);
+        registry.TryAcquire(driveKey: "D:\\", driveLock: out _);
 
-        bool acquiredAgain = registry.TryAcquire("D:\\", out DriveLock? driveLock);
+        bool acquiredAgain = registry.TryAcquire(driveKey: "D:\\", driveLock: out DriveLock? driveLock);
 
         acquiredAgain.Should().BeFalse();
         driveLock.Should().BeNull();
@@ -51,8 +51,8 @@ public class DriveLockRegistryTests
     {
         DriveLockRegistry registry = new();
 
-        bool first = registry.TryAcquire("D:\\", out _);
-        bool second = registry.TryAcquire("E:\\", out _);
+        bool first = registry.TryAcquire(driveKey: "D:\\", driveLock: out _);
+        bool second = registry.TryAcquire(driveKey: "E:\\", driveLock: out _);
 
         first.Should().BeTrue();
         second.Should().BeTrue();
@@ -62,9 +62,9 @@ public class DriveLockRegistryTests
     public void TryAcquire_IsCaseInsensitive()
     {
         DriveLockRegistry registry = new();
-        registry.TryAcquire("volume-uuid-ABC", out _);
+        registry.TryAcquire(driveKey: "volume-uuid-ABC", driveLock: out _);
 
-        bool acquiredLower = registry.TryAcquire("volume-uuid-abc", out DriveLock? driveLock);
+        bool acquiredLower = registry.TryAcquire(driveKey: "volume-uuid-abc", driveLock: out DriveLock? driveLock);
 
         acquiredLower.Should().BeFalse();
         driveLock.Should().BeNull();
@@ -74,10 +74,10 @@ public class DriveLockRegistryTests
     public void Dispose_ReleasesLock_AllowingReacquisition()
     {
         DriveLockRegistry registry = new();
-        registry.TryAcquire("D:\\", out DriveLock? driveLock);
+        registry.TryAcquire(driveKey: "D:\\", driveLock: out DriveLock? driveLock);
 
         driveLock!.Dispose();
-        bool reacquired = registry.TryAcquire("D:\\", out DriveLock? second);
+        bool reacquired = registry.TryAcquire(driveKey: "D:\\", driveLock: out DriveLock? second);
 
         reacquired.Should().BeTrue();
         second.Should().NotBeNull();
@@ -87,28 +87,28 @@ public class DriveLockRegistryTests
     public void Dispose_CalledTwice_IsIdempotent()
     {
         DriveLockRegistry registry = new();
-        registry.TryAcquire("D:\\", out DriveLock? driveLock);
+        registry.TryAcquire(driveKey: "D:\\", driveLock: out DriveLock? driveLock);
 
         driveLock!.Dispose();
         Action secondDispose = () => driveLock.Dispose();
 
         secondDispose.Should().NotThrow();
         registry
-            .TryAcquire("D:\\", out _)
+            .TryAcquire(driveKey: "D:\\", driveLock: out _)
             .Should()
-            .BeTrue("first Dispose already released the lock");
+            .BeTrue(because: "first Dispose already released the lock");
     }
 
     [Fact]
     public void Dispose_OnOneKey_DoesNotReleaseOtherKeys()
     {
         DriveLockRegistry registry = new();
-        registry.TryAcquire("D:\\", out DriveLock? driveLockD);
-        registry.TryAcquire("E:\\", out _);
+        registry.TryAcquire(driveKey: "D:\\", driveLock: out DriveLock? driveLockD);
+        registry.TryAcquire(driveKey: "E:\\", driveLock: out _);
 
         driveLockD!.Dispose();
 
-        registry.TryAcquire("D:\\", out _).Should().BeTrue();
-        registry.TryAcquire("E:\\", out _).Should().BeFalse("E:\\ was never released");
+        registry.TryAcquire(driveKey: "D:\\", driveLock: out _).Should().BeTrue();
+        registry.TryAcquire(driveKey: "E:\\", driveLock: out _).Should().BeFalse(because: "E:\\ was never released");
     }
 }

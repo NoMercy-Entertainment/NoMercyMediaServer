@@ -49,7 +49,7 @@ public class StartupArgumentsViewModel : INotifyPropertyChanged
     {
         TraySettings settings = LauncherSettings.Load();
         settings.StartupArguments = StartupArguments;
-        LauncherSettings.Save(settings);
+        LauncherSettings.Save(settings: settings);
         SaveStatus = "Saved";
         return Task.CompletedTask;
     }
@@ -58,6 +58,6 @@ public class StartupArgumentsViewModel : INotifyPropertyChanged
 
     protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
-        PropertyChanged?.Invoke(this, new(propertyName));
+        PropertyChanged?.Invoke(sender: this, e: new(propertyName: propertyName));
     }
 }

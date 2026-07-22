@@ -79,7 +79,7 @@ public class FinalizeStageBlueprintTests
         new(
             FilePath: "/media/fight-club.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromSeconds(7800),
+            Duration: TimeSpan.FromSeconds(seconds: 7800),
             OverallBitRateKbps: 25_000,
             FileSizeBytes: 24_375_000_000L,
             VideoStreams: [],
@@ -96,7 +96,7 @@ public class FinalizeStageBlueprintTests
     {
         Mock<IOutputStrategy> strategyMock = new();
         strategyMock
-            .Setup(s =>
+            .Setup(expression: s =>
                 s.FinalizeAsync(
                     It.IsAny<string>(),
                     It.IsAny<OutputPlan>(),
@@ -104,25 +104,25 @@ public class FinalizeStageBlueprintTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Returns(Task.CompletedTask);
-        strategyMock.Setup(s => s.Format).Returns(OutputFormat.Hls);
+            .Returns(value: Task.CompletedTask);
+        strategyMock.Setup(expression: s => s.Format).Returns(value: OutputFormat.Hls);
 
         Mock<IOutputStrategyFactory> factoryMock = new();
-        factoryMock.Setup(f => f.Resolve(OutputFormat.Hls)).Returns(strategyMock.Object);
+        factoryMock.Setup(expression: f => f.Resolve(OutputFormat.Hls)).Returns(value: strategyMock.Object);
 
         Mock<IChapterWriter> chapterWriterMock = new();
         Mock<IFontExtractor> fontExtractorMock = new();
         fontExtractorMock
-            .Setup(f => f.WriteFontManifestAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(0);
+            .Setup(expression: f => f.WriteFontManifestAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: 0);
 
         return new(
-            chapterWriterMock.Object,
-            fontExtractorMock.Object,
-            factoryMock.Object,
-            NullLogger<FinalizeStage>.Instance,
-            storage,
-            blueprintWriter
+            chapterWriter: chapterWriterMock.Object,
+            fontExtractor: fontExtractorMock.Object,
+            outputStrategyFactory: factoryMock.Object,
+            logger: NullLogger<FinalizeStage>.Instance,
+            storage: storage,
+            blueprintWriter: blueprintWriter
         );
     }
 
@@ -131,43 +131,43 @@ public class FinalizeStageBlueprintTests
     {
         TestStorage storage = new();
         BundleLayout layout = MakeHlsLayout();
-        OutputPlan plan = MakeOutputPlan(layout);
+        OutputPlan plan = MakeOutputPlan(layout: layout);
         string outputDir = "Fight Club (1999)";
 
-        storage.Seed($"{outputDir}/mfa_master.m3u8", [0x23, 0x45]);
-        storage.Seed($"{outputDir}/video/1080p/mfa_1080p_init.mp4", [0x00, 0x01]);
+        storage.Seed(path: $"{outputDir}/mfa_master.m3u8", bytes: [0x23, 0x45]);
+        storage.Seed(path: $"{outputDir}/video/1080p/mfa_1080p_init.mp4", bytes: [0x00, 0x01]);
 
         FinalizeStage stage = MakeStage(
-            storage,
-            new MediaBlueprintWriter(new MediaBlueprintBuilder())
+            storage: storage,
+            blueprintWriter: new MediaBlueprintWriter(builder: new MediaBlueprintBuilder())
         );
 
         EncodingContext context = EncodingContext.Create() with
         {
-            MediaItem = new MovieMediaRef(MediaType.Movie, 550, "Fight Club", 1999),
+            MediaItem = new MovieMediaRef(Type: MediaType.Movie, Id: 550, Title: "Fight Club", Year: 1999),
             MediaInfo = MinimalMediaInfo(),
         };
 
         StageResult result = await stage.ExecuteAsync(
-            MakeFinalizeInput(plan, outputDir),
-            context,
-            CancellationToken.None
+            input: MakeFinalizeInput(plan: plan, outputDir: outputDir),
+            context: context,
+            ct: CancellationToken.None
         );
 
         result.Should().BeOfType<StageSuccess<FinalizeOutput>>();
 
         // At the media folder root — never nested under encodes/{slug}/.
-        string? json = storage.ReadString($"{outputDir}/{MediaBlueprintWriter.FileName}");
-        json.Should().NotBeNull(".nomercy.json must be written at the media folder root");
+        string? json = storage.ReadString(path: $"{outputDir}/{MediaBlueprintWriter.FileName}");
+        json.Should().NotBeNull(because: ".nomercy.json must be written at the media folder root");
 
-        MediaBlueprint? blueprint = JsonConvert.DeserializeObject<MediaBlueprint>(json!);
+        MediaBlueprint? blueprint = JsonConvert.DeserializeObject<MediaBlueprint>(value: json!);
         blueprint.Should().NotBeNull();
-        blueprint!.Identity.Type.Should().Be("movie");
-        blueprint.Identity.TmdbId.Should().Be(550);
-        blueprint.Source.Container.Should().Be("matroska");
+        blueprint!.Identity.Type.Should().Be(expected: "movie");
+        blueprint.Identity.TmdbId.Should().Be(expected: 550);
+        blueprint.Source.Container.Should().Be(expected: "matroska");
         blueprint.Encodes.Should().ContainSingle();
-        blueprint.Encodes[0].PresetSlug.Should().Be("web-1080p");
-        blueprint.Encodes[0].TargetContainer.Should().Be("matroska");
+        blueprint.Encodes[index: 0].PresetSlug.Should().Be(expected: "web-1080p");
+        blueprint.Encodes[index: 0].TargetContainer.Should().Be(expected: "matroska");
     }
 
     [Fact]
@@ -177,27 +177,27 @@ public class FinalizeStageBlueprintTests
         // finalize still succeeds and no exception is thrown.
         TestStorage storage = new();
         BundleLayout layout = MakeHlsLayout();
-        OutputPlan plan = MakeOutputPlan(layout);
+        OutputPlan plan = MakeOutputPlan(layout: layout);
         string outputDir = "Fight Club (1999)";
 
-        storage.Seed($"{outputDir}/mfa_master.m3u8", [0x23]);
+        storage.Seed(path: $"{outputDir}/mfa_master.m3u8", bytes: [0x23]);
 
-        FinalizeStage stage = MakeStage(storage, blueprintWriter: null);
+        FinalizeStage stage = MakeStage(storage: storage, blueprintWriter: null);
 
         EncodingContext context = EncodingContext.Create() with
         {
-            MediaItem = new MovieMediaRef(MediaType.Movie, 550, "Fight Club", 1999),
+            MediaItem = new MovieMediaRef(Type: MediaType.Movie, Id: 550, Title: "Fight Club", Year: 1999),
             MediaInfo = MinimalMediaInfo(),
         };
 
         StageResult result = await stage.ExecuteAsync(
-            MakeFinalizeInput(plan, outputDir),
-            context,
-            CancellationToken.None
+            input: MakeFinalizeInput(plan: plan, outputDir: outputDir),
+            context: context,
+            ct: CancellationToken.None
         );
 
         result.Should().BeOfType<StageSuccess<FinalizeOutput>>();
-        storage.ReadString($"{outputDir}/{MediaBlueprintWriter.FileName}").Should().BeNull();
+        storage.ReadString(path: $"{outputDir}/{MediaBlueprintWriter.FileName}").Should().BeNull();
     }
 
     [Fact]
@@ -215,40 +215,40 @@ public class FinalizeStageBlueprintTests
         const string destination = "Films/Fight Club (1999)";
         const string sourceMkv = "Films/Fight Club (1999)/Fight Club (1999).mkv";
         BundleLayout layout = MakeHlsLayout();
-        OutputPlan plan = MakeOutputPlan(layout);
+        OutputPlan plan = MakeOutputPlan(layout: layout);
 
-        storage.Seed($"{stagingDir}/mfa_master.m3u8", [0x23, 0x45]);
+        storage.Seed(path: $"{stagingDir}/mfa_master.m3u8", bytes: [0x23, 0x45]);
 
         FinalizeStage stage = MakeStage(
-            storage,
-            new MediaBlueprintWriter(new MediaBlueprintBuilder())
+            storage: storage,
+            blueprintWriter: new MediaBlueprintWriter(builder: new MediaBlueprintBuilder())
         );
 
         EncodingContext context = EncodingContext.Create() with
         {
-            MediaItem = new MovieMediaRef(MediaType.Movie, 550, "Fight Club", 1999),
+            MediaItem = new MovieMediaRef(Type: MediaType.Movie, Id: 550, Title: "Fight Club", Year: 1999),
             MediaInfo = MinimalMediaInfo(),
             OriginalOutputDirectory = destination,
             OriginalInputPath = sourceMkv,
         };
 
         StageResult result = await stage.ExecuteAsync(
-            MakeFinalizeInput(plan, stagingDir),
-            context,
-            CancellationToken.None
+            input: MakeFinalizeInput(plan: plan, outputDir: stagingDir),
+            context: context,
+            ct: CancellationToken.None
         );
 
         result.Should().BeOfType<StageSuccess<FinalizeOutput>>();
 
         // Written INTO the staging dir (publish relocates it to the media root).
-        string? json = storage.ReadString($"{stagingDir}/{MediaBlueprintWriter.FileName}");
-        json.Should().NotBeNull(".nomercy.json must be written into staging so publish carries it");
+        string? json = storage.ReadString(path: $"{stagingDir}/{MediaBlueprintWriter.FileName}");
+        json.Should().NotBeNull(because: ".nomercy.json must be written into staging so publish carries it");
 
-        MediaBlueprint blueprint = JsonConvert.DeserializeObject<MediaBlueprint>(json!)!;
+        MediaBlueprint blueprint = JsonConvert.DeserializeObject<MediaBlueprint>(value: json!)!;
         // The record names the real destination, not the staging scaffolding.
-        blueprint.Encodes[0].OutputLocation.Should().Be(destination);
+        blueprint.Encodes[index: 0].OutputLocation.Should().Be(expected: destination);
         // And the real source, not the staging lease MediaInfo.FilePath points at.
-        blueprint.Source.Path.Should().Be(sourceMkv);
+        blueprint.Source.Path.Should().Be(expected: sourceMkv);
     }
 
     [Fact]
@@ -256,40 +256,40 @@ public class FinalizeStageBlueprintTests
     {
         TestStorage storage = new();
         string outputDir = "Fight Club (1999)";
-        IMediaBlueprintWriter writer = new MediaBlueprintWriter(new MediaBlueprintBuilder());
+        IMediaBlueprintWriter writer = new MediaBlueprintWriter(builder: new MediaBlueprintBuilder());
 
-        storage.Seed($"{outputDir}/mfa_master.m3u8", [0x23]);
+        storage.Seed(path: $"{outputDir}/mfa_master.m3u8", bytes: [0x23]);
 
-        FinalizeStage firstStage = MakeStage(storage, writer);
+        FinalizeStage firstStage = MakeStage(storage: storage, blueprintWriter: writer);
         EncodingContext context = EncodingContext.Create() with
         {
-            MediaItem = new MovieMediaRef(MediaType.Movie, 550, "Fight Club", 1999),
+            MediaItem = new MovieMediaRef(Type: MediaType.Movie, Id: 550, Title: "Fight Club", Year: 1999),
             MediaInfo = MinimalMediaInfo(),
         };
 
         await firstStage.ExecuteAsync(
-            MakeFinalizeInput(MakeOutputPlan(MakeHlsLayout("web-1080p")), outputDir),
-            context,
-            CancellationToken.None
+            input: MakeFinalizeInput(plan: MakeOutputPlan(layout: MakeHlsLayout(presetSlug: "web-1080p")), outputDir: outputDir),
+            context: context,
+            ct: CancellationToken.None
         );
 
-        FinalizeStage secondStage = MakeStage(storage, writer);
+        FinalizeStage secondStage = MakeStage(storage: storage, blueprintWriter: writer);
         await secondStage.ExecuteAsync(
-            MakeFinalizeInput(MakeOutputPlan(MakeHlsLayout("archive-mkv")), outputDir),
-            context,
-            CancellationToken.None
+            input: MakeFinalizeInput(plan: MakeOutputPlan(layout: MakeHlsLayout(presetSlug: "archive-mkv")), outputDir: outputDir),
+            context: context,
+            ct: CancellationToken.None
         );
 
         MediaBlueprint blueprint = JsonConvert.DeserializeObject<MediaBlueprint>(
-            storage.ReadString($"{outputDir}/{MediaBlueprintWriter.FileName}")!
+            value: storage.ReadString(path: $"{outputDir}/{MediaBlueprintWriter.FileName}")!
         )!;
 
-        blueprint.Encodes.Should().HaveCount(2);
+        blueprint.Encodes.Should().HaveCount(expected: 2);
         blueprint
-            .Encodes.Select(e => e.PresetSlug)
+            .Encodes.Select(selector: e => e.PresetSlug)
             .Should()
-            .BeEquivalentTo("web-1080p", "archive-mkv");
+            .BeEquivalentTo(expectation: ["web-1080p", "archive-mkv"]);
         // Identity + source stay shared, written once.
-        blueprint.Identity.TmdbId.Should().Be(550);
+        blueprint.Identity.TmdbId.Should().Be(expected: 550);
     }
 }

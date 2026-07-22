@@ -15,6 +15,6 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record ServerUpdateRequest
 {
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 }

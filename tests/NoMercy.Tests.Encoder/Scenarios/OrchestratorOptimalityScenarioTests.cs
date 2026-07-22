@@ -41,17 +41,17 @@ public class OrchestratorOptimalityScenarioTests
     public OrchestratorOptimalityScenarioTests()
     {
         _storage
-            .Setup(s => s.AcquireLocalPathAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string path, CancellationToken _) => new(path));
-        _storage.Setup(s => s.Driver).Returns(new LocalStorageDriver());
+            .Setup(expression: s => s.AcquireLocalPathAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(valueFunction: (string path, CancellationToken _) => new(path: path));
+        _storage.Setup(expression: s => s.Driver).Returns(value: new LocalStorageDriver());
     }
 
     private EncodingOrchestrator BuildOrchestrator() =>
         new(
-            _resolver.Object,
-            _storage.Object,
-            _encoder.Object,
-            NullLogger<EncodingOrchestrator>.Instance
+            resolver: _resolver.Object,
+            storage: _storage.Object,
+            encoder: _encoder.Object,
+            logger: NullLogger<EncodingOrchestrator>.Instance
         );
 
     private static EncodingRequest BuildRequest(string presetName, Container container) =>
@@ -134,7 +134,7 @@ public class OrchestratorOptimalityScenarioTests
         int width = 160,
         int height = 90,
         int interval = 10
-    ) => new(width, height, interval);
+    ) => new(Width: width, Height: height, IntervalSeconds: interval);
 
     private static OutputPlan MakePlan(
         OutputFormat format,
@@ -159,11 +159,12 @@ public class OrchestratorOptimalityScenarioTests
     [Fact]
     public async Task Merge_FourKHdrAndSdrPresets_ProducesOneOutputPlanWithBothVideoOutputs()
     {
-        EncodingRequest fourKRequest = BuildRequest("4K HDR AlwaysPreserve", Container.HlsTs);
-        EncodingRequest sdrRequest = BuildRequest("1080p SDR AlwaysTonemap", Container.HlsTs);
+        EncodingRequest fourKRequest = BuildRequest(presetName: "4K HDR AlwaysPreserve", container: Container.HlsTs);
+        EncodingRequest sdrRequest = BuildRequest(presetName: "1080p SDR AlwaysTonemap", container: Container.HlsTs);
 
         OutputPlan fourKPlan = MakePlan(
-            OutputFormat.Hls,
+            format: OutputFormat.Hls,
+            videos:
             [
                 TranscodeVideo(
                     width: 3840,
@@ -173,13 +174,14 @@ public class OrchestratorOptimalityScenarioTests
                     tonemapFilterChain: ""
                 ),
             ],
-            [MakeAudio("eng")],
-            [MakeSubtitle("eng")],
-            MakeThumbnails()
+            audios: [MakeAudio(language: "eng")],
+            subtitles: [MakeSubtitle(language: "eng")],
+            thumbnails: MakeThumbnails()
         );
 
         OutputPlan sdrPlan = MakePlan(
-            OutputFormat.Hls,
+            format: OutputFormat.Hls,
+            videos:
             [
                 TranscodeVideo(
                     width: 1920,
@@ -189,36 +191,36 @@ public class OrchestratorOptimalityScenarioTests
                     tonemapFilterChain: "zscale=m=in_color_matrix=bt2020:min=bt709:dither=error_diffusion,tonemap=tonemap_algo=libplacebo:desat=0"
                 ),
             ],
-            [MakeAudio("eng")],
-            [MakeSubtitle("eng")],
-            null
+            audios: [MakeAudio(language: "eng")],
+            subtitles: [MakeSubtitle(language: "eng")],
+            thumbnails: null
         );
 
         _encoder
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.PlanAsync(
                     It.Is<EncodingRequest>(r => r.Profile.Name == "4K HDR AlwaysPreserve"),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(fourKPlan);
+            .ReturnsAsync(value: fourKPlan);
         _encoder
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.PlanAsync(
                     It.Is<EncodingRequest>(r => r.Profile.Name == "1080p SDR AlwaysTonemap"),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(sdrPlan);
+            .ReturnsAsync(value: sdrPlan);
 
         EncodingOrchestrator orchestrator = BuildOrchestrator();
 
-        OutputPlan? merged = await orchestrator.PlanMergedAsync([fourKRequest, sdrRequest]);
+        OutputPlan? merged = await orchestrator.PlanMergedAsync(requests: [fourKRequest, sdrRequest]);
 
         merged.Should().NotBeNull();
-        merged!.VideoOutputs.Should().HaveCount(2);
-        merged.VideoOutputs.Should().Contain(v => v.Width == 3840 && v.IsHdrOutput);
-        merged.VideoOutputs.Should().Contain(v => v.Width == 1920 && !v.IsHdrOutput);
+        merged!.VideoOutputs.Should().HaveCount(expected: 2);
+        merged.VideoOutputs.Should().Contain(predicate: v => v.Width == 3840 && v.IsHdrOutput);
+        merged.VideoOutputs.Should().Contain(predicate: v => v.Width == 1920 && !v.IsHdrOutput);
     }
 
     // ================================================================
@@ -229,49 +231,49 @@ public class OrchestratorOptimalityScenarioTests
     [Fact]
     public async Task Merge_BothPresetsWantSameAudioLanguageAndCodec_DeduplicatesToOneAudio()
     {
-        EncodingRequest fourKRequest = BuildRequest("4K HDR", Container.HlsTs);
-        EncodingRequest sdrRequest = BuildRequest("1080p SDR", Container.HlsTs);
+        EncodingRequest fourKRequest = BuildRequest(presetName: "4K HDR", container: Container.HlsTs);
+        EncodingRequest sdrRequest = BuildRequest(presetName: "1080p SDR", container: Container.HlsTs);
 
         OutputPlan fourKPlan = MakePlan(
-            OutputFormat.Hls,
-            [TranscodeVideo(3840, 2160, isHdrOutput: true)],
-            [MakeAudio("eng", "aac")],
-            [MakeSubtitle("eng")],
-            MakeThumbnails()
+            format: OutputFormat.Hls,
+            videos: [TranscodeVideo(width: 3840, height: 2160, isHdrOutput: true)],
+            audios: [MakeAudio(language: "eng", encoderName: "aac")],
+            subtitles: [MakeSubtitle(language: "eng")],
+            thumbnails: MakeThumbnails()
         );
 
         OutputPlan sdrPlan = MakePlan(
-            OutputFormat.Hls,
-            [TranscodeVideo(1920, 1080, isHdrOutput: false)],
-            [MakeAudio("eng", "aac")],
-            [MakeSubtitle("eng")],
-            null
+            format: OutputFormat.Hls,
+            videos: [TranscodeVideo(width: 1920, height: 1080, isHdrOutput: false)],
+            audios: [MakeAudio(language: "eng", encoderName: "aac")],
+            subtitles: [MakeSubtitle(language: "eng")],
+            thumbnails: null
         );
 
         _encoder
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.PlanAsync(
                     It.Is<EncodingRequest>(r => r.Profile.Name == "4K HDR"),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(fourKPlan);
+            .ReturnsAsync(value: fourKPlan);
         _encoder
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.PlanAsync(
                     It.Is<EncodingRequest>(r => r.Profile.Name == "1080p SDR"),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(sdrPlan);
+            .ReturnsAsync(value: sdrPlan);
 
         EncodingOrchestrator orchestrator = BuildOrchestrator();
 
-        OutputPlan? merged = await orchestrator.PlanMergedAsync([fourKRequest, sdrRequest]);
+        OutputPlan? merged = await orchestrator.PlanMergedAsync(requests: [fourKRequest, sdrRequest]);
 
         merged.Should().NotBeNull();
-        merged!.AudioOutputs.Should().HaveCount(1);
-        merged.AudioOutputs[0].Language.Should().Be("eng");
+        merged!.AudioOutputs.Should().HaveCount(expected: 1);
+        merged.AudioOutputs[0].Language.Should().Be(expected: "eng");
     }
 
     // ================================================================
@@ -282,53 +284,54 @@ public class OrchestratorOptimalityScenarioTests
     [Fact]
     public async Task Merge_DifferentCodecsForSameLanguage_KeepsBoth()
     {
-        EncodingRequest copyEac3Request = BuildRequest("4K EAC3 Copy", Container.HlsTs);
-        EncodingRequest transcodeAacRequest = BuildRequest("1080p AAC Transcode", Container.HlsTs);
+        EncodingRequest copyEac3Request = BuildRequest(presetName: "4K EAC3 Copy", container: Container.HlsTs);
+        EncodingRequest transcodeAacRequest = BuildRequest(presetName: "1080p AAC Transcode", container: Container.HlsTs);
 
         OutputPlan eac3Plan = MakePlan(
-            OutputFormat.Hls,
-            [TranscodeVideo(3840, 2160, isHdrOutput: true)],
-            [MakeAudio("eng", "eac3")],
-            [],
-            MakeThumbnails()
+            format: OutputFormat.Hls,
+            videos: [TranscodeVideo(width: 3840, height: 2160, isHdrOutput: true)],
+            audios: [MakeAudio(language: "eng", encoderName: "eac3")],
+            subtitles: [],
+            thumbnails: MakeThumbnails()
         );
 
         OutputPlan aacPlan = MakePlan(
-            OutputFormat.Hls,
-            [TranscodeVideo(1920, 1080, isHdrOutput: false)],
-            [MakeAudio("eng", "aac")],
-            [],
-            null
+            format: OutputFormat.Hls,
+            videos: [TranscodeVideo(width: 1920, height: 1080, isHdrOutput: false)],
+            audios: [MakeAudio(language: "eng", encoderName: "aac")],
+            subtitles: [],
+            thumbnails: null
         );
 
         _encoder
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.PlanAsync(
                     It.Is<EncodingRequest>(r => r.Profile.Name == "4K EAC3 Copy"),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(eac3Plan);
+            .ReturnsAsync(value: eac3Plan);
         _encoder
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.PlanAsync(
                     It.Is<EncodingRequest>(r => r.Profile.Name == "1080p AAC Transcode"),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(aacPlan);
+            .ReturnsAsync(value: aacPlan);
 
         EncodingOrchestrator orchestrator = BuildOrchestrator();
 
-        OutputPlan? merged = await orchestrator.PlanMergedAsync([
+        OutputPlan? merged = await orchestrator.PlanMergedAsync(requests:
+        [
             copyEac3Request,
             transcodeAacRequest,
         ]);
 
         merged.Should().NotBeNull();
-        merged!.AudioOutputs.Should().HaveCount(2);
-        merged.AudioOutputs.Should().Contain(a => a.Language == "eng" && a.EncoderName == "eac3");
-        merged.AudioOutputs.Should().Contain(a => a.Language == "eng" && a.EncoderName == "aac");
+        merged!.AudioOutputs.Should().HaveCount(expected: 2);
+        merged.AudioOutputs.Should().Contain(predicate: a => a.Language == "eng" && a.EncoderName == "eac3");
+        merged.AudioOutputs.Should().Contain(predicate: a => a.Language == "eng" && a.EncoderName == "aac");
     }
 
     // ================================================================
@@ -338,26 +341,26 @@ public class OrchestratorOptimalityScenarioTests
     [Fact]
     public async Task DecomposeMergedAsync_SinglePreset_MatchesDecomposeAsync()
     {
-        EncodingRequest request = BuildRequest("Solo", Container.HlsTs);
+        EncodingRequest request = BuildRequest(presetName: "Solo", container: Container.HlsTs);
         OutputPlan plan = MakePlan(
-            OutputFormat.Hls,
-            [TranscodeVideo(1920, 1080, isHdrOutput: false)],
-            [MakeAudio("eng")],
-            [MakeSubtitle("eng")],
-            MakeThumbnails()
+            format: OutputFormat.Hls,
+            videos: [TranscodeVideo(width: 1920, height: 1080, isHdrOutput: false)],
+            audios: [MakeAudio(language: "eng")],
+            subtitles: [MakeSubtitle(language: "eng")],
+            thumbnails: MakeThumbnails()
         );
 
         _encoder
-            .Setup(e => e.PlanAsync(It.IsAny<EncodingRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(plan);
+            .Setup(expression: e => e.PlanAsync(It.IsAny<EncodingRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: plan);
 
         Mock<IEncodingStrategy> strategy = new();
-        strategy.Setup(s => s.Format).Returns(OutputFormat.Hls);
-        strategy.Setup(s => s.EncodeMode).Returns(EncodeMode.SinglePass);
+        strategy.Setup(expression: s => s.Format).Returns(value: OutputFormat.Hls);
+        strategy.Setup(expression: s => s.EncodeMode).Returns(value: EncodeMode.SinglePass);
         strategy
-            .Setup(s => s.Decompose(It.IsAny<OutputPlan>(), It.IsAny<string>()))
+            .Setup(expression: s => s.Decompose(It.IsAny<OutputPlan>(), It.IsAny<string>()))
             .Returns(
-                (OutputPlan p, string tag) =>
+                valueFunction: (OutputPlan p, string tag) =>
                     [
                         new DecomposedTask(
                             TaskId: $"{tag}-video-0",
@@ -378,16 +381,16 @@ public class OrchestratorOptimalityScenarioTests
                     ]
             );
         _resolver
-            .Setup(r => r.Resolve(OutputFormat.Hls, EncodeMode.SinglePass))
-            .Returns(strategy.Object);
+            .Setup(expression: r => r.Resolve(OutputFormat.Hls, EncodeMode.SinglePass))
+            .Returns(value: strategy.Object);
 
         EncodingOrchestrator orchestrator = BuildOrchestrator();
 
-        DecomposedTask[] viaDecomposeAsync = await orchestrator.DecomposeAsync(request, GroupTag);
-        DecomposedTask[] viaMerged = await orchestrator.DecomposeMergedAsync([request], GroupTag);
+        DecomposedTask[] viaDecomposeAsync = await orchestrator.DecomposeAsync(request: request, groupTag: GroupTag);
+        DecomposedTask[] viaMerged = await orchestrator.DecomposeMergedAsync(requests: [request], groupTag: GroupTag);
 
-        viaMerged.Should().HaveCount(viaDecomposeAsync.Length);
-        viaMerged.Should().BeEquivalentTo(viaDecomposeAsync);
+        viaMerged.Should().HaveCount(expected: viaDecomposeAsync.Length);
+        viaMerged.Should().BeEquivalentTo(expectation: viaDecomposeAsync);
     }
 
     // ================================================================
@@ -398,50 +401,50 @@ public class OrchestratorOptimalityScenarioTests
     [Fact]
     public async Task DecomposeMergedAsync_TwoPresets_CallsDecomposeOnceWithMergedPlan()
     {
-        EncodingRequest fourKRequest = BuildRequest("4K HDR", Container.HlsTs);
-        EncodingRequest sdrRequest = BuildRequest("1080p SDR", Container.HlsTs);
+        EncodingRequest fourKRequest = BuildRequest(presetName: "4K HDR", container: Container.HlsTs);
+        EncodingRequest sdrRequest = BuildRequest(presetName: "1080p SDR", container: Container.HlsTs);
 
         OutputPlan fourKPlan = MakePlan(
-            OutputFormat.Hls,
-            [TranscodeVideo(3840, 2160, isHdrOutput: true)],
-            [MakeAudio("eng")],
-            [MakeSubtitle("eng")],
-            MakeThumbnails()
+            format: OutputFormat.Hls,
+            videos: [TranscodeVideo(width: 3840, height: 2160, isHdrOutput: true)],
+            audios: [MakeAudio(language: "eng")],
+            subtitles: [MakeSubtitle(language: "eng")],
+            thumbnails: MakeThumbnails()
         );
 
         OutputPlan sdrPlan = MakePlan(
-            OutputFormat.Hls,
-            [TranscodeVideo(1920, 1080, isHdrOutput: false)],
-            [MakeAudio("eng")],
-            [MakeSubtitle("eng")],
-            null
+            format: OutputFormat.Hls,
+            videos: [TranscodeVideo(width: 1920, height: 1080, isHdrOutput: false)],
+            audios: [MakeAudio(language: "eng")],
+            subtitles: [MakeSubtitle(language: "eng")],
+            thumbnails: null
         );
 
         _encoder
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.PlanAsync(
                     It.Is<EncodingRequest>(r => r.Profile.Name == "4K HDR"),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(fourKPlan);
+            .ReturnsAsync(value: fourKPlan);
         _encoder
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.PlanAsync(
                     It.Is<EncodingRequest>(r => r.Profile.Name == "1080p SDR"),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(sdrPlan);
+            .ReturnsAsync(value: sdrPlan);
 
         OutputPlan? capturedPlan = null;
         Mock<IEncodingStrategy> strategy = new();
-        strategy.Setup(s => s.Format).Returns(OutputFormat.Hls);
-        strategy.Setup(s => s.EncodeMode).Returns(EncodeMode.SinglePass);
+        strategy.Setup(expression: s => s.Format).Returns(value: OutputFormat.Hls);
+        strategy.Setup(expression: s => s.EncodeMode).Returns(value: EncodeMode.SinglePass);
         strategy
-            .Setup(s => s.Decompose(It.IsAny<OutputPlan>(), It.IsAny<string>()))
+            .Setup(expression: s => s.Decompose(It.IsAny<OutputPlan>(), It.IsAny<string>()))
             .Returns(
-                (OutputPlan p, string tag) =>
+                valueFunction: (OutputPlan p, string tag) =>
                 {
                     capturedPlan = p;
                     return
@@ -466,26 +469,26 @@ public class OrchestratorOptimalityScenarioTests
                 }
             );
         _resolver
-            .Setup(r => r.Resolve(OutputFormat.Hls, EncodeMode.SinglePass))
-            .Returns(strategy.Object);
+            .Setup(expression: r => r.Resolve(OutputFormat.Hls, EncodeMode.SinglePass))
+            .Returns(value: strategy.Object);
 
         EncodingOrchestrator orchestrator = BuildOrchestrator();
 
         DecomposedTask[] tasks = await orchestrator.DecomposeMergedAsync(
-            [fourKRequest, sdrRequest],
-            GroupTag
+            requests: [fourKRequest, sdrRequest],
+            groupTag: GroupTag
         );
 
         strategy.Verify(
-            s => s.Decompose(It.IsAny<OutputPlan>(), GroupTag),
-            Times.Once,
-            "one coordinated encode means exactly one Decompose call, not one per preset"
+            expression: s => s.Decompose(It.IsAny<OutputPlan>(), GroupTag),
+            times: Times.Once,
+            failMessage: "one coordinated encode means exactly one Decompose call, not one per preset"
         );
         capturedPlan.Should().NotBeNull();
-        capturedPlan!.VideoOutputs.Should().HaveCount(2);
-        capturedPlan.VideoOutputs.Should().Contain(v => v.Width == 3840 && v.IsHdrOutput);
-        capturedPlan.VideoOutputs.Should().Contain(v => v.Width == 1920 && !v.IsHdrOutput);
-        tasks.Should().HaveCount(2);
+        capturedPlan!.VideoOutputs.Should().HaveCount(expected: 2);
+        capturedPlan.VideoOutputs.Should().Contain(predicate: v => v.Width == 3840 && v.IsHdrOutput);
+        capturedPlan.VideoOutputs.Should().Contain(predicate: v => v.Width == 1920 && !v.IsHdrOutput);
+        tasks.Should().HaveCount(expected: 2);
     }
 
     // ================================================================
@@ -521,42 +524,42 @@ public class OrchestratorOptimalityScenarioTests
         ];
 
         VideoOutputPlan hdrTranscode = TranscodeVideo(
-            3840,
-            2160,
+            width: 3840,
+            height: 2160,
             isHdrOutput: true,
             convertHdrToSdr: false,
             tonemapFilterChain: ""
         );
 
         VideoOutputPlan sdrTonemap = TranscodeVideo(
-            1920,
-            1080,
+            width: 1920,
+            height: 1080,
             isHdrOutput: false,
             convertHdrToSdr: true,
             tonemapFilterChain: "zscale=m=in_color_matrix=bt2020:min=bt709:dither=error_diffusion"
         );
 
         OutputPlan plan = MakePlan(
-            OutputFormat.Hls,
-            [hdrTranscode, sdrTonemap],
-            [MakeAudio("eng")],
-            [MakeSubtitle("eng")],
-            MakeThumbnails()
+            format: OutputFormat.Hls,
+            videos: [hdrTranscode, sdrTonemap],
+            audios: [MakeAudio(language: "eng")],
+            subtitles: [MakeSubtitle(language: "eng")],
+            thumbnails: MakeThumbnails()
         );
 
         IReadOnlyList<DecodeGroup> groups = DecodeAwareBundlePlanner.GroupByDecodeClass(
-            tasks,
-            plan
+            tasks: tasks,
+            plan: plan
         );
 
-        groups.Should().HaveCount(2, "HDR preserve and tonemap should be separate decode groups");
+        groups.Should().HaveCount(expected: 2, because: "HDR preserve and tonemap should be separate decode groups");
         IReadOnlyList<int> hdrGroup =
-            groups.FirstOrDefault(g => g.Class == DecodeClass.Transcode)?.VideoTaskIndexes ?? [];
+            groups.FirstOrDefault(predicate: g => g.Class == DecodeClass.Transcode)?.VideoTaskIndexes ?? [];
         IReadOnlyList<int> tonemapGroup =
-            groups.FirstOrDefault(g => g.Class == DecodeClass.Tonemap)?.VideoTaskIndexes ?? [];
+            groups.FirstOrDefault(predicate: g => g.Class == DecodeClass.Tonemap)?.VideoTaskIndexes ?? [];
 
-        hdrGroup.Should().Contain(0);
-        tonemapGroup.Should().Contain(1);
+        hdrGroup.Should().Contain(expected: 0);
+        tonemapGroup.Should().Contain(expected: 1);
     }
 
     // ================================================================
@@ -591,32 +594,32 @@ public class OrchestratorOptimalityScenarioTests
             ),
         ];
 
-        VideoOutputPlan copyVideo = CopyVideo(0);
-        VideoOutputPlan transcodeVideo = TranscodeVideo(1920, 1080, isHdrOutput: false);
+        VideoOutputPlan copyVideo = CopyVideo(index: 0);
+        VideoOutputPlan transcodeVideo = TranscodeVideo(width: 1920, height: 1080, isHdrOutput: false);
 
         OutputPlan plan = MakePlan(
-            OutputFormat.Hls,
-            [copyVideo, transcodeVideo],
-            [MakeAudio("eng")],
-            [MakeSubtitle("eng")],
-            MakeThumbnails()
+            format: OutputFormat.Hls,
+            videos: [copyVideo, transcodeVideo],
+            audios: [MakeAudio(language: "eng")],
+            subtitles: [MakeSubtitle(language: "eng")],
+            thumbnails: MakeThumbnails()
         );
 
         IReadOnlyList<DecodeGroup> groups = DecodeAwareBundlePlanner.GroupByDecodeClass(
-            tasks,
-            plan
+            tasks: tasks,
+            plan: plan
         );
 
-        groups.Should().HaveCount(2, "copy and transcode form separate groups at Layer 1");
+        groups.Should().HaveCount(expected: 2, because: "copy and transcode form separate groups at Layer 1");
         IReadOnlyList<int>? copyIndexes = groups
-            .FirstOrDefault(g => g.Class == DecodeClass.Copy)
+            .FirstOrDefault(predicate: g => g.Class == DecodeClass.Copy)
             ?.VideoTaskIndexes;
-        copyIndexes.Should().Contain(0, "copy task is in the Copy group");
+        copyIndexes.Should().Contain(expected: 0, because: "copy task is in the Copy group");
 
         IReadOnlyList<int>? transcodeIndexes = groups
-            .FirstOrDefault(g => g.Class == DecodeClass.Transcode)
+            .FirstOrDefault(predicate: g => g.Class == DecodeClass.Transcode)
             ?.VideoTaskIndexes;
-        transcodeIndexes.Should().Contain(1, "transcode task is in the Transcode group");
+        transcodeIndexes.Should().Contain(expected: 1, because: "transcode task is in the Transcode group");
     }
 
     // ================================================================
@@ -662,27 +665,28 @@ public class OrchestratorOptimalityScenarioTests
         ];
 
         OutputPlan plan = MakePlan(
-            OutputFormat.Hls,
+            format: OutputFormat.Hls,
+            videos:
             [
-                TranscodeVideo(3840, 2160, isHdrOutput: true),
-                TranscodeVideo(1920, 1080, isHdrOutput: true),
-                TranscodeVideo(1280, 720, isHdrOutput: true),
+                TranscodeVideo(width: 3840, height: 2160, isHdrOutput: true),
+                TranscodeVideo(width: 1920, height: 1080, isHdrOutput: true),
+                TranscodeVideo(width: 1280, height: 720, isHdrOutput: true),
             ],
-            [MakeAudio("eng")],
-            [MakeSubtitle("eng")],
-            MakeThumbnails()
+            audios: [MakeAudio(language: "eng")],
+            subtitles: [MakeSubtitle(language: "eng")],
+            thumbnails: MakeThumbnails()
         );
 
         IReadOnlyList<DecodeGroup> groups = DecodeAwareBundlePlanner.GroupByDecodeClass(
-            tasks,
-            plan
+            tasks: tasks,
+            plan: plan
         );
 
         groups
             .Should()
-            .HaveCount(1, "multiple transcode rungs off same source share one decode group");
-        groups[0].Class.Should().Be(DecodeClass.Transcode);
-        groups[0].VideoTaskIndexes.Should().HaveCount(3);
+            .HaveCount(expected: 1, because: "multiple transcode rungs off same source share one decode group");
+        groups[index: 0].Class.Should().Be(expected: DecodeClass.Transcode);
+        groups[index: 0].VideoTaskIndexes.Should().HaveCount(expected: 3);
     }
 
     // ================================================================
@@ -692,37 +696,37 @@ public class OrchestratorOptimalityScenarioTests
     [Fact]
     public async Task DecomposeMergedAsync_DifferentContainers_Throws()
     {
-        EncodingRequest hlsRequest = BuildRequest("HLS preset", Container.HlsTs);
-        EncodingRequest mkvRequest = BuildRequest("MKV preset", Container.Mkv);
+        EncodingRequest hlsRequest = BuildRequest(presetName: "HLS preset", container: Container.HlsTs);
+        EncodingRequest mkvRequest = BuildRequest(presetName: "MKV preset", container: Container.Mkv);
 
         _encoder
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.PlanAsync(
                     It.Is<EncodingRequest>(r => r.Profile.Name == "HLS preset"),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(MakePlan(OutputFormat.Hls, [TranscodeVideo(1920, 1080, false)]));
+            .ReturnsAsync(value: MakePlan(format: OutputFormat.Hls, videos: [TranscodeVideo(width: 1920, height: 1080, isHdrOutput: false)]));
         _encoder
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.PlanAsync(
                     It.Is<EncodingRequest>(r => r.Profile.Name == "MKV preset"),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(MakePlan(OutputFormat.Mkv, [TranscodeVideo(1920, 1080, false)]));
+            .ReturnsAsync(value: MakePlan(format: OutputFormat.Mkv, videos: [TranscodeVideo(width: 1920, height: 1080, isHdrOutput: false)]));
 
         _resolver
-            .Setup(r => r.Resolve(It.IsAny<OutputFormat>(), It.IsAny<EncodeMode>()))
+            .Setup(expression: r => r.Resolve(It.IsAny<OutputFormat>(), It.IsAny<EncodeMode>()))
             .Returns<OutputFormat, EncodeMode>(
-                (f, m) =>
+                valueFunction: (f, m) =>
                 {
                     Mock<IEncodingStrategy> strategy = new();
-                    strategy.Setup(s => s.Format).Returns(f);
-                    strategy.Setup(s => s.EncodeMode).Returns(m);
+                    strategy.Setup(expression: s => s.Format).Returns(value: f);
+                    strategy.Setup(expression: s => s.EncodeMode).Returns(value: m);
                     strategy
-                        .Setup(s => s.Decompose(It.IsAny<OutputPlan>(), It.IsAny<string>()))
-                        .Returns((OutputPlan p, string tag) => []);
+                        .Setup(expression: s => s.Decompose(It.IsAny<OutputPlan>(), It.IsAny<string>()))
+                        .Returns(valueFunction: (OutputPlan p, string tag) => []);
                     return strategy.Object;
                 }
             );
@@ -730,11 +734,11 @@ public class OrchestratorOptimalityScenarioTests
         EncodingOrchestrator orchestrator = BuildOrchestrator();
 
         Func<Task> act = async () =>
-            await orchestrator.DecomposeMergedAsync([hlsRequest, mkvRequest], GroupTag);
+            await orchestrator.DecomposeMergedAsync(requests: [hlsRequest, mkvRequest], groupTag: GroupTag);
 
         await act.Should()
             .ThrowAsync<MergedEncodingIncompatibleException>(
-                "presets with different output formats cannot merge"
+                because: "presets with different output formats cannot merge"
             );
     }
 
@@ -745,8 +749,8 @@ public class OrchestratorOptimalityScenarioTests
     [Fact]
     public async Task DecomposeMergedAsync_DifferentEncodeModes_Throws()
     {
-        EncodingRequest singlePassRequest = BuildRequest("Single Pass", Container.HlsTs);
-        EncodingRequest twoPassRequest = BuildRequest("Two Pass", Container.HlsTs);
+        EncodingRequest singlePassRequest = BuildRequest(presetName: "Single Pass", container: Container.HlsTs);
+        EncodingRequest twoPassRequest = BuildRequest(presetName: "Two Pass", container: Container.HlsTs);
 
         singlePassRequest = singlePassRequest with
         {
@@ -757,20 +761,20 @@ public class OrchestratorOptimalityScenarioTests
             Profile = twoPassRequest.Profile with { EncodeMode = EncodeMode.TwoPass },
         };
 
-        OutputPlan plan = MakePlan(OutputFormat.Hls, [TranscodeVideo(1920, 1080, false)]);
+        OutputPlan plan = MakePlan(format: OutputFormat.Hls, videos: [TranscodeVideo(width: 1920, height: 1080, isHdrOutput: false)]);
 
         _encoder
-            .Setup(e => e.PlanAsync(It.IsAny<EncodingRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(plan);
+            .Setup(expression: e => e.PlanAsync(It.IsAny<EncodingRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(value: plan);
 
         EncodingOrchestrator orchestrator = BuildOrchestrator();
 
         Func<Task> act = async () =>
-            await orchestrator.DecomposeMergedAsync([singlePassRequest, twoPassRequest], GroupTag);
+            await orchestrator.DecomposeMergedAsync(requests: [singlePassRequest, twoPassRequest], groupTag: GroupTag);
 
         await act.Should()
             .ThrowAsync<MergedEncodingIncompatibleException>(
-                "presets with different encode modes cannot merge"
+                because: "presets with different encode modes cannot merge"
             );
     }
 
@@ -806,40 +810,40 @@ public class OrchestratorOptimalityScenarioTests
             ),
         ];
 
-        VideoOutputPlan hdrTranscode = TranscodeVideo(3840, 2160, isHdrOutput: true);
+        VideoOutputPlan hdrTranscode = TranscodeVideo(width: 3840, height: 2160, isHdrOutput: true);
         VideoOutputPlan sdrTonemap = TranscodeVideo(
-            1920,
-            1080,
+            width: 1920,
+            height: 1080,
             isHdrOutput: false,
             convertHdrToSdr: true,
             tonemapFilterChain: "zscale=m=in_color_matrix=bt2020:min=bt709"
         );
 
         OutputPlan plan = MakePlan(
-            OutputFormat.Hls,
-            [hdrTranscode, sdrTonemap],
-            [MakeAudio("eng")],
-            [MakeSubtitle("eng")],
-            MakeThumbnails()
+            format: OutputFormat.Hls,
+            videos: [hdrTranscode, sdrTonemap],
+            audios: [MakeAudio(language: "eng")],
+            subtitles: [MakeSubtitle(language: "eng")],
+            thumbnails: MakeThumbnails()
         );
 
         IReadOnlyList<DecodeGroup> groups = DecodeAwareBundlePlanner.GroupByDecodeClass(
-            tasks,
-            plan
+            tasks: tasks,
+            plan: plan
         );
 
         groups
             .Should()
             .HaveCount(
-                2,
-                "HDR preserve (Transcode) and tonemap (Tonemap) form separate decode groups"
+                expected: 2,
+                because: "HDR preserve (Transcode) and tonemap (Tonemap) form separate decode groups"
             );
         groups
             .Should()
-            .Contain(g => g.Class == DecodeClass.Transcode && g.VideoTaskIndexes.Contains(0));
+            .Contain(predicate: g => g.Class == DecodeClass.Transcode && g.VideoTaskIndexes.Contains(0));
         groups
             .Should()
-            .Contain(g => g.Class == DecodeClass.Tonemap && g.VideoTaskIndexes.Contains(1));
+            .Contain(predicate: g => g.Class == DecodeClass.Tonemap && g.VideoTaskIndexes.Contains(1));
     }
 
     // ================================================================
@@ -850,7 +854,7 @@ public class OrchestratorOptimalityScenarioTests
     [Fact]
     public void GroupByDecodeClass_GpuResourceRoutingTaggedOnNvencTask()
     {
-        ResourceRequirement gpuResource = new("gpu0", GpuSlots: 1, CpuThreads: 2);
+        ResourceRequirement gpuResource = new(GpuDeviceKey: "gpu0", GpuSlots: 1, CpuThreads: 2);
 
         DecomposedTask[] tasks =
         [
@@ -867,21 +871,21 @@ public class OrchestratorOptimalityScenarioTests
         ];
 
         OutputPlan plan = MakePlan(
-            OutputFormat.Hls,
-            [TranscodeVideo(1920, 1080, isHdrOutput: false)],
-            [MakeAudio("eng")],
-            [MakeSubtitle("eng")],
-            MakeThumbnails()
+            format: OutputFormat.Hls,
+            videos: [TranscodeVideo(width: 1920, height: 1080, isHdrOutput: false)],
+            audios: [MakeAudio(language: "eng")],
+            subtitles: [MakeSubtitle(language: "eng")],
+            thumbnails: MakeThumbnails()
         );
 
         IReadOnlyList<DecodeGroup> groups = DecodeAwareBundlePlanner.GroupByDecodeClass(
-            tasks,
-            plan
+            tasks: tasks,
+            plan: plan
         );
 
-        groups.Should().HaveCount(1);
-        groups[0].Class.Should().Be(DecodeClass.Transcode);
-        groups[0].VideoTaskIndexes.Should().Contain(0);
+        groups.Should().HaveCount(expected: 1);
+        groups[index: 0].Class.Should().Be(expected: DecodeClass.Transcode);
+        groups[index: 0].VideoTaskIndexes.Should().Contain(expected: 0);
     }
 
     // ================================================================
@@ -916,21 +920,21 @@ public class OrchestratorOptimalityScenarioTests
         ];
 
         OutputPlan plan = MakePlan(
-            OutputFormat.Hls,
-            [CopyVideo(0)],
-            [MakeAudio("eng")],
-            [MakeSubtitle("eng")],
-            null
+            format: OutputFormat.Hls,
+            videos: [CopyVideo(index: 0)],
+            audios: [MakeAudio(language: "eng")],
+            subtitles: [MakeSubtitle(language: "eng")],
+            thumbnails: null
         );
 
         IReadOnlyList<DecodeGroup> groups = DecodeAwareBundlePlanner.GroupByDecodeClass(
-            tasks,
-            plan
+            tasks: tasks,
+            plan: plan
         );
 
-        groups.Should().HaveCount(1, "pure copy video forms only one Copy decode group");
-        groups[0].Class.Should().Be(DecodeClass.Copy);
-        groups[0].VideoTaskIndexes.Should().Contain(0, "copy video is in the Copy group");
+        groups.Should().HaveCount(expected: 1, because: "pure copy video forms only one Copy decode group");
+        groups[index: 0].Class.Should().Be(expected: DecodeClass.Copy);
+        groups[index: 0].VideoTaskIndexes.Should().Contain(expected: 0, because: "copy video is in the Copy group");
     }
 
     // ================================================================
@@ -941,38 +945,38 @@ public class OrchestratorOptimalityScenarioTests
     [Fact]
     public async Task PlanMergedAsync_OnePlannerFails_ReturnsNull()
     {
-        EncodingRequest workingRequest = BuildRequest("Working Preset", Container.HlsTs);
-        EncodingRequest failingRequest = BuildRequest("Failing Preset", Container.HlsTs);
+        EncodingRequest workingRequest = BuildRequest(presetName: "Working Preset", container: Container.HlsTs);
+        EncodingRequest failingRequest = BuildRequest(presetName: "Failing Preset", container: Container.HlsTs);
 
         OutputPlan workingPlan = MakePlan(
-            OutputFormat.Hls,
-            [TranscodeVideo(1920, 1080, isHdrOutput: false)],
-            [MakeAudio("eng")],
-            [MakeSubtitle("eng")],
-            MakeThumbnails()
+            format: OutputFormat.Hls,
+            videos: [TranscodeVideo(width: 1920, height: 1080, isHdrOutput: false)],
+            audios: [MakeAudio(language: "eng")],
+            subtitles: [MakeSubtitle(language: "eng")],
+            thumbnails: MakeThumbnails()
         );
 
         _encoder
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.PlanAsync(
                     It.Is<EncodingRequest>(r => r.Profile.Name == "Working Preset"),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(workingPlan);
+            .ReturnsAsync(value: workingPlan);
         _encoder
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.PlanAsync(
                     It.Is<EncodingRequest>(r => r.Profile.Name == "Failing Preset"),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync((OutputPlan?)null);
+            .ReturnsAsync(value: (OutputPlan?)null);
 
         EncodingOrchestrator orchestrator = BuildOrchestrator();
 
-        OutputPlan? merged = await orchestrator.PlanMergedAsync([workingRequest, failingRequest]);
+        OutputPlan? merged = await orchestrator.PlanMergedAsync(requests: [workingRequest, failingRequest]);
 
-        merged.Should().BeNull("merge should fail if any preset fails to plan");
+        merged.Should().BeNull(because: "merge should fail if any preset fails to plan");
     }
 }

@@ -16,16 +16,16 @@ namespace NoMercy.NmSystem.SystemCalls;
 
 internal static class WindowsStartupManager
 {
-    [SupportedOSPlatform("windows")]
+    [SupportedOSPlatform(platformName: "windows")]
     public static bool IsWindowsStartupEnabled()
     {
         try
         {
             using RegistryKey? key = Registry.CurrentUser.OpenSubKey(
-                @"Software\Microsoft\Windows\CurrentVersion\Run",
-                false
+                name: @"Software\Microsoft\Windows\CurrentVersion\Run",
+                writable: false
             );
-            return key?.GetValue("NoMercyMediaServer") is not null;
+            return key?.GetValue(name: "NoMercyMediaServer") is not null;
         }
         catch
         {
@@ -33,7 +33,7 @@ internal static class WindowsStartupManager
         }
     }
 
-    [SupportedOSPlatform("windows")]
+    [SupportedOSPlatform(platformName: "windows")]
     public static void RegisterWindowsStartup()
     {
         try
@@ -43,39 +43,39 @@ internal static class WindowsStartupManager
             string targetPath = launcherPath ?? StartupManagerShared.GetExecutablePath();
 
             using RegistryKey? key = Registry.CurrentUser.OpenSubKey(
-                @"Software\Microsoft\Windows\CurrentVersion\Run",
-                true
+                name: @"Software\Microsoft\Windows\CurrentVersion\Run",
+                writable: true
             );
             if (key != null)
             {
-                key.SetValue("NoMercyMediaServer", $"\"{targetPath}\"");
-                Logger.App($"Windows startup registration successful: {targetPath}");
+                key.SetValue(name: "NoMercyMediaServer", value: $"\"{targetPath}\"");
+                Logger.App(message: $"Windows startup registration successful: {targetPath}");
             }
         }
         catch (Exception ex)
         {
-            Logger.App($"Failed to register Windows startup: {ex.Message}");
+            Logger.App(message: $"Failed to register Windows startup: {ex.Message}");
         }
     }
 
-    [SupportedOSPlatform("windows")]
+    [SupportedOSPlatform(platformName: "windows")]
     public static void UnregisterWindowsStartup()
     {
         try
         {
             using RegistryKey? key = Registry.CurrentUser.OpenSubKey(
-                @"Software\Microsoft\Windows\CurrentVersion\Run",
-                true
+                name: @"Software\Microsoft\Windows\CurrentVersion\Run",
+                writable: true
             );
-            if (key?.GetValue("NoMercyMediaServer") != null)
+            if (key?.GetValue(name: "NoMercyMediaServer") != null)
             {
-                key.DeleteValue("NoMercyMediaServer");
-                Logger.App("Windows startup unregistration successful.");
+                key.DeleteValue(name: "NoMercyMediaServer");
+                Logger.App(message: "Windows startup unregistration successful.");
             }
         }
         catch (Exception ex)
         {
-            Logger.App($"Failed to unregister Windows startup: {ex.Message}");
+            Logger.App(message: $"Failed to unregister Windows startup: {ex.Message}");
         }
     }
 }

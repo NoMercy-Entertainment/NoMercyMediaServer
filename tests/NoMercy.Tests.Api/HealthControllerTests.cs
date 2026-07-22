@@ -16,7 +16,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api;
 
-[Trait("Category", "Characterization")]
+[Trait(name: "Category", value: "Characterization")]
 public class HealthControllerTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly HttpClient _client;
@@ -29,97 +29,97 @@ public class HealthControllerTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Health_ReturnsOk_WithHealthyStatus()
     {
-        HttpResponseMessage response = await _client.GetAsync("/health");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/health");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
 
         string content = await response.Content.ReadAsStringAsync();
-        JsonDocument json = JsonDocument.Parse(content);
+        JsonDocument json = JsonDocument.Parse(json: content);
 
-        Assert.Equal("healthy", json.RootElement.GetProperty("status").GetString());
-        Assert.True(json.RootElement.TryGetProperty("timestamp", out _));
+        Assert.Equal(expected: "healthy", actual: json.RootElement.GetProperty(propertyName: "status").GetString());
+        Assert.True(condition: json.RootElement.TryGetProperty(propertyName: "timestamp", value: out _));
     }
 
     [Fact]
     public async Task HealthReady_ReturnsReadinessStatus_WithDatabaseCheck()
     {
-        HttpResponseMessage response = await _client.GetAsync("/health/ready");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/health/ready");
 
         string content = await response.Content.ReadAsStringAsync();
-        JsonDocument json = JsonDocument.Parse(content);
+        JsonDocument json = JsonDocument.Parse(json: content);
 
-        Assert.True(json.RootElement.TryGetProperty("status", out JsonElement statusElement));
+        Assert.True(condition: json.RootElement.TryGetProperty(propertyName: "status", value: out JsonElement statusElement));
         string? status = statusElement.GetString();
         Assert.True(
-            status == "ready" || status == "not_ready",
-            $"Expected 'ready' or 'not_ready', got '{status}'"
+            condition: status == "ready" || status == "not_ready",
+            userMessage: $"Expected 'ready' or 'not_ready', got '{status}'"
         );
 
-        Assert.True(json.RootElement.TryGetProperty("database", out JsonElement dbElement));
+        Assert.True(condition: json.RootElement.TryGetProperty(propertyName: "database", value: out JsonElement dbElement));
         string? dbStatus = dbElement.GetString();
         Assert.True(
-            dbStatus == "ok" || dbStatus == "unavailable",
-            $"Expected 'ok' or 'unavailable', got '{dbStatus}'"
+            condition: dbStatus == "ok" || dbStatus == "unavailable",
+            userMessage: $"Expected 'ok' or 'unavailable', got '{dbStatus}'"
         );
 
-        Assert.True(json.RootElement.TryGetProperty("server_started", out _));
-        Assert.True(json.RootElement.TryGetProperty("timestamp", out _));
+        Assert.True(condition: json.RootElement.TryGetProperty(propertyName: "server_started", value: out _));
+        Assert.True(condition: json.RootElement.TryGetProperty(propertyName: "timestamp", value: out _));
     }
 
     [Fact]
     public async Task HealthDetailed_ReturnsOk_WithVersionAndEnvironment()
     {
-        HttpResponseMessage response = await _client.GetAsync("/health/detailed");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/health/detailed");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected: HttpStatusCode.OK, actual: response.StatusCode);
 
         string content = await response.Content.ReadAsStringAsync();
-        JsonDocument json = JsonDocument.Parse(content);
+        JsonDocument json = JsonDocument.Parse(json: content);
 
-        Assert.True(json.RootElement.TryGetProperty("status", out JsonElement statusElement));
+        Assert.True(condition: json.RootElement.TryGetProperty(propertyName: "status", value: out JsonElement statusElement));
         string? status = statusElement.GetString();
         string[] validStatuses = ["healthy", "degraded", "starting", "unhealthy"];
-        Assert.Contains(status, validStatuses);
+        Assert.Contains(expected: status, collection: validStatuses);
 
-        Assert.False(string.IsNullOrEmpty(json.RootElement.GetProperty("version").GetString()));
-        Assert.False(string.IsNullOrEmpty(json.RootElement.GetProperty("environment").GetString()));
+        Assert.False(condition: string.IsNullOrEmpty(value: json.RootElement.GetProperty(propertyName: "version").GetString()));
+        Assert.False(condition: string.IsNullOrEmpty(value: json.RootElement.GetProperty(propertyName: "environment").GetString()));
     }
 
     [Fact]
     public async Task HealthDetailed_ReturnsComponentStatus()
     {
-        HttpResponseMessage response = await _client.GetAsync("/health/detailed");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/health/detailed");
 
         string content = await response.Content.ReadAsStringAsync();
-        JsonDocument json = JsonDocument.Parse(content);
+        JsonDocument json = JsonDocument.Parse(json: content);
 
-        Assert.True(json.RootElement.TryGetProperty("components", out JsonElement components));
-        Assert.True(components.TryGetProperty("database", out _));
-        Assert.True(components.TryGetProperty("authentication", out _));
-        Assert.True(components.TryGetProperty("network", out _));
-        Assert.True(components.TryGetProperty("registration", out _));
+        Assert.True(condition: json.RootElement.TryGetProperty(propertyName: "components", value: out JsonElement components));
+        Assert.True(condition: components.TryGetProperty(propertyName: "database", value: out _));
+        Assert.True(condition: components.TryGetProperty(propertyName: "authentication", value: out _));
+        Assert.True(condition: components.TryGetProperty(propertyName: "network", value: out _));
+        Assert.True(condition: components.TryGetProperty(propertyName: "registration", value: out _));
     }
 
     [Fact]
     public async Task HealthDetailed_ReturnsUptimeAndDegradedFlag()
     {
-        HttpResponseMessage response = await _client.GetAsync("/health/detailed");
+        HttpResponseMessage response = await _client.GetAsync(requestUri: "/health/detailed");
 
         string content = await response.Content.ReadAsStringAsync();
-        JsonDocument json = JsonDocument.Parse(content);
+        JsonDocument json = JsonDocument.Parse(json: content);
 
         Assert.True(
-            json.RootElement.TryGetProperty("uptime_seconds", out JsonElement uptimeElement)
+            condition: json.RootElement.TryGetProperty(propertyName: "uptime_seconds", value: out JsonElement uptimeElement)
         );
         long uptime = uptimeElement.GetInt64();
-        Assert.True(uptime >= 0, $"Uptime should be non-negative, got {uptime}");
+        Assert.True(condition: uptime >= 0, userMessage: $"Uptime should be non-negative, got {uptime}");
 
         Assert.True(
-            json.RootElement.TryGetProperty("is_degraded", out JsonElement degradedElement)
+            condition: json.RootElement.TryGetProperty(propertyName: "is_degraded", value: out JsonElement degradedElement)
         );
         Assert.True(
-            degradedElement.ValueKind is JsonValueKind.True or JsonValueKind.False,
-            "is_degraded should be a boolean"
+            condition: degradedElement.ValueKind is JsonValueKind.True or JsonValueKind.False,
+            userMessage: "is_degraded should be a boolean"
         );
     }
 }

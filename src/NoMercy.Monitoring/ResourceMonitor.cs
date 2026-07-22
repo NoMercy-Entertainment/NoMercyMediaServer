@@ -26,7 +26,7 @@ public sealed class ResourceMonitor : IDisposable
     public ResourceMonitor(ILogger<ResourceMonitor> logger)
     {
         _logger = logger;
-        _logger.LogInformation("Initializing Resource Monitor");
+        _logger.LogInformation(message: "Initializing Resource Monitor");
         Start();
     }
 
@@ -55,7 +55,7 @@ public sealed class ResourceMonitor : IDisposable
         else if (OperatingSystem.IsLinux())
             _provider = CreateLinuxProvider();
 
-        _logger.LogInformation("Resource Monitor started");
+        _logger.LogInformation(message: "Resource Monitor started");
     }
 
     public void Stop()
@@ -63,7 +63,7 @@ public sealed class ResourceMonitor : IDisposable
         if (_provider is IDisposable disposable)
             disposable.Dispose();
         _provider = null;
-        _logger.LogInformation("Resource Monitor stopped");
+        _logger.LogInformation(message: "Resource Monitor stopped");
     }
 
     public void Dispose()
@@ -75,9 +75,9 @@ public sealed class ResourceMonitor : IDisposable
         _provider = null;
     }
 
-    [SupportedOSPlatform("windows")]
+    [SupportedOSPlatform(platformName: "windows")]
     private static IResourceProvider CreateWindowsProvider() => new WindowsResourceProvider();
 
-    [SupportedOSPlatform("linux")]
+    [SupportedOSPlatform(platformName: "linux")]
     private static IResourceProvider CreateLinuxProvider() => new LinuxResourceProvider();
 }

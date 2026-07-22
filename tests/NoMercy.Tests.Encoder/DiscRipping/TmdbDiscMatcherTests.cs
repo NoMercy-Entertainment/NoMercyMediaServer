@@ -16,43 +16,43 @@ namespace NoMercy.Tests.Encoder.DiscRipping;
 public class TmdbDiscMatcherTests
 {
     [Theory]
-    [InlineData("Avatar_Book_1_Disc_1", "Avatar Book 1")]
-    [InlineData("Avatar_Book_1_Disc_2", "Avatar Book 1")]
-    [InlineData("Avatar.Book.1.Disc.1", "Avatar Book 1")]
-    [InlineData("Avatar-Book-1-Disc-1", "Avatar Book 1")]
-    [InlineData("LORD_OF_THE_RINGS", "LORD OF THE RINGS")]
-    [InlineData("Wall-E", "Wall E")]
-    [InlineData("THE_MATRIX_DISC_1", "THE MATRIX")]
-    [InlineData("Frozen", "Frozen")]
+    [InlineData(data: ["Avatar_Book_1_Disc_1", "Avatar Book 1"])]
+    [InlineData(data: ["Avatar_Book_1_Disc_2", "Avatar Book 1"])]
+    [InlineData(data: ["Avatar.Book.1.Disc.1", "Avatar Book 1"])]
+    [InlineData(data: ["Avatar-Book-1-Disc-1", "Avatar Book 1"])]
+    [InlineData(data: ["LORD_OF_THE_RINGS", "LORD OF THE RINGS"])]
+    [InlineData(data: ["Wall-E", "Wall E"])]
+    [InlineData(data: ["THE_MATRIX_DISC_1", "THE MATRIX"])]
+    [InlineData(data: ["Frozen", "Frozen"])]
     public void NormalizeLabel_StripsSeparatorsAndDiscSuffix(string input, string expected)
     {
-        VideoDiscIdentifier.NormalizeLabel(input).Should().Be(expected);
+        VideoDiscIdentifier.NormalizeLabel(label: input).Should().Be(expected: expected);
     }
 
     [Fact]
     public void NormalizeLabel_EmptyInput_ReturnsEmpty()
     {
-        VideoDiscIdentifier.NormalizeLabel("").Should().BeEmpty();
+        VideoDiscIdentifier.NormalizeLabel(label: "").Should().BeEmpty();
     }
 
     [Fact]
     public void NormalizeLabel_OnlyDiscSuffix_ReturnsEmpty()
     {
-        VideoDiscIdentifier.NormalizeLabel(" disc 1").Should().BeEmpty();
+        VideoDiscIdentifier.NormalizeLabel(label: " disc 1").Should().BeEmpty();
     }
 
     [Fact]
     public void NormalizeLabel_DoesNotStripDiscMidWord()
     {
         VideoDiscIdentifier
-            .NormalizeLabel("Discovery Channel Disc 1")
+            .NormalizeLabel(label: "Discovery Channel Disc 1")
             .Should()
-            .Be("Discovery Channel");
+            .Be(expected: "Discovery Channel");
     }
 
     [Fact]
     public void NormalizeLabel_PreservesNumbersInTitle()
     {
-        VideoDiscIdentifier.NormalizeLabel("Star_Trek_2_Disc_1").Should().Be("Star Trek 2");
+        VideoDiscIdentifier.NormalizeLabel(label: "Star_Trek_2_Disc_1").Should().Be(expected: "Star Trek 2");
     }
 }

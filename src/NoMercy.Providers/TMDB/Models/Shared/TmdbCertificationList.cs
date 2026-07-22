@@ -15,84 +15,84 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbCertificationList
 {
-    [JsonProperty("AU")]
+    [JsonProperty(propertyName: "AU")]
     public TmdbCertificationItem[] Au { get; set; } = [];
 
-    [JsonProperty("BG")]
+    [JsonProperty(propertyName: "BG")]
     public TmdbCertificationItem[] Bg { get; set; } = [];
 
-    [JsonProperty("BR")]
+    [JsonProperty(propertyName: "BR")]
     public TmdbCertificationItem[] Br { get; set; } = [];
 
-    [JsonProperty("CA-QC")]
+    [JsonProperty(propertyName: "CA-QC")]
     public TmdbCertificationItem[] Caqc { get; set; } = [];
 
-    [JsonProperty("CA")]
+    [JsonProperty(propertyName: "CA")]
     public TmdbCertificationItem[] Ca { get; set; } = [];
 
-    [JsonProperty("DE")]
+    [JsonProperty(propertyName: "DE")]
     public TmdbCertificationItem[] De { get; set; } = [];
 
-    [JsonProperty("ES")]
+    [JsonProperty(propertyName: "ES")]
     public TmdbCertificationItem[] Es { get; set; } = [];
 
-    [JsonProperty("FI")]
+    [JsonProperty(propertyName: "FI")]
     public TmdbCertificationItem[] Fi { get; set; } = [];
 
-    [JsonProperty("FR")]
+    [JsonProperty(propertyName: "FR")]
     public TmdbCertificationItem[] Fr { get; set; } = [];
 
-    [JsonProperty("GB")]
+    [JsonProperty(propertyName: "GB")]
     public TmdbCertificationItem[] Gb { get; set; } = [];
 
-    [JsonProperty("HU")]
+    [JsonProperty(propertyName: "HU")]
     public TmdbCertificationItem[] Hu { get; set; } = [];
 
-    [JsonProperty("IN")]
+    [JsonProperty(propertyName: "IN")]
     public TmdbCertificationItem[] In { get; set; } = [];
 
-    [JsonProperty("KR")]
+    [JsonProperty(propertyName: "KR")]
     public TmdbCertificationItem[] Kr { get; set; } = [];
 
-    [JsonProperty("LT")]
+    [JsonProperty(propertyName: "LT")]
     public TmdbCertificationItem[] Lt { get; set; } = [];
 
-    [JsonProperty("NL")]
+    [JsonProperty(propertyName: "NL")]
     public TmdbCertificationItem[] Nl { get; set; } = [];
 
-    [JsonProperty("NZ")]
+    [JsonProperty(propertyName: "NZ")]
     public TmdbCertificationItem[] Nz { get; set; } = [];
 
-    [JsonProperty("PH")]
+    [JsonProperty(propertyName: "PH")]
     public TmdbCertificationItem[] Ph { get; set; } = [];
 
-    [JsonProperty("RU")]
+    [JsonProperty(propertyName: "RU")]
     public TmdbCertificationItem[] Ru { get; set; } = [];
 
-    [JsonProperty("SK")]
+    [JsonProperty(propertyName: "SK")]
     public TmdbCertificationItem[] Sk { get; set; } = [];
 
-    [JsonProperty("US")]
+    [JsonProperty(propertyName: "US")]
     public TmdbCertificationItem[] Us { get; set; } = [];
 
-    [JsonProperty("DK")]
+    [JsonProperty(propertyName: "DK")]
     public TmdbCertificationItem[] Dk { get; set; } = [];
 
-    [JsonProperty("IT")]
+    [JsonProperty(propertyName: "IT")]
     public TmdbCertificationItem[] It { get; set; } = [];
 
-    [JsonProperty("MY")]
+    [JsonProperty(propertyName: "MY")]
     public TmdbCertificationItem[] My { get; set; } = [];
 
-    [JsonProperty("NO")]
+    [JsonProperty(propertyName: "NO")]
     public TmdbCertificationItem[] No { get; set; } = [];
 
-    [JsonProperty("SE")]
+    [JsonProperty(propertyName: "SE")]
     public TmdbCertificationItem[] Se { get; set; } = [];
 
-    [JsonProperty("TH")]
+    [JsonProperty(propertyName: "TH")]
     public TmdbCertificationItem[] Th { get; set; } = [];
 
-    [JsonProperty("PT")]
+    [JsonProperty(propertyName: "PT")]
     public TmdbCertificationItem[] Pt { get; set; } = [];
 }

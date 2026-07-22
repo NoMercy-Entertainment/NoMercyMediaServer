@@ -29,10 +29,10 @@ public class UserProvisioningService : IUserProvisioningService
     {
         await using MediaContext mediaContext = await _mediaContextFactory.CreateDbContextAsync();
         await mediaContext
-            .Users.Upsert(user)
-            .On(x => x.Id)
+            .Users.Upsert(entity: user)
+            .On(match: x => x.Id)
             .WhenMatched(
-                (oldUser, newUser) =>
+                updater: (oldUser, newUser) =>
                     new()
                     {
                         Id = newUser.Id,
@@ -48,6 +48,6 @@ public class UserProvisioningService : IUserProvisioningService
             )
             .RunAsync();
 
-        UserCache.Current.AddUser(user);
+        UserCache.Current.AddUser(user: user);
     }
 }

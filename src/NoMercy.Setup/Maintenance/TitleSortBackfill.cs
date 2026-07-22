@@ -33,7 +33,7 @@ public static class TitleSortBackfill
     private const int BatchSize = 1000;
 
     public static Task RunAsync(CancellationToken ct = default) =>
-        RunAsync(static () => new MediaContext(), ct);
+        RunAsync(contextFactory: static () => new MediaContext(), ct: ct);
 
     public static async Task RunAsync(
         Func<MediaContext> contextFactory,
@@ -42,18 +42,18 @@ public static class TitleSortBackfill
     {
         try
         {
-            int artists = await ReconcileArtistsAsync(contextFactory, ct);
-            int albums = await ReconcileAlbumsAsync(contextFactory, ct);
+            int artists = await ReconcileArtistsAsync(contextFactory: contextFactory, ct: ct);
+            int albums = await ReconcileAlbumsAsync(contextFactory: contextFactory, ct: ct);
 
             if (artists > 0 || albums > 0)
                 Logger.Setup(
-                    $"TitleSort reconcile complete: {artists} artists, {albums} albums updated",
-                    LogEventLevel.Information
+                    message: $"TitleSort reconcile complete: {artists} artists, {albums} albums updated",
+                    level: LogEventLevel.Information
                 );
         }
         catch (Exception e)
         {
-            Logger.Setup($"TitleSort reconcile failed: {e.Message}", LogEventLevel.Warning);
+            Logger.Setup(message: $"TitleSort reconcile failed: {e.Message}", level: LogEventLevel.Warning);
         }
     }
 
@@ -71,10 +71,10 @@ public static class TitleSortBackfill
             // TitleSort, never Id, so rows never shift between pages. Guid cursor
             // comparison does not translate on SQLite, hence Skip/Take here.
             List<Artist> batch = await context
-                .Artists.OrderBy(artist => artist.Id)
-                .Skip(offset)
-                .Take(BatchSize)
-                .ToListAsync(ct);
+                .Artists.OrderBy(keySelector: artist => artist.Id)
+                .Skip(count: offset)
+                .Take(count: BatchSize)
+                .ToListAsync(cancellationToken: ct);
 
             if (batch.Count == 0)
                 break;
@@ -89,7 +89,7 @@ public static class TitleSortBackfill
                 }
             }
 
-            await context.SaveChangesAsync(ct);
+            await context.SaveChangesAsync(cancellationToken: ct);
             offset += batch.Count;
         }
 
@@ -107,10 +107,10 @@ public static class TitleSortBackfill
         {
             await using MediaContext context = contextFactory();
             List<Album> batch = await context
-                .Albums.OrderBy(album => album.Id)
-                .Skip(offset)
-                .Take(BatchSize)
-                .ToListAsync(ct);
+                .Albums.OrderBy(keySelector: album => album.Id)
+                .Skip(count: offset)
+                .Take(count: BatchSize)
+                .ToListAsync(cancellationToken: ct);
 
             if (batch.Count == 0)
                 break;
@@ -125,7 +125,7 @@ public static class TitleSortBackfill
                 }
             }
 
-            await context.SaveChangesAsync(ct);
+            await context.SaveChangesAsync(cancellationToken: ct);
             offset += batch.Count;
         }
 

@@ -23,20 +23,20 @@ namespace NoMercy.Tests.Storage;
 /// The mount now retries on a fresh context, matching every other libnfs call
 /// in the driver.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class NfsMountRetryTests
 {
     private static NfsDriverConfig Config() =>
-        NfsDriverConfig.For("fake-server", "/export", version: 4);
+        NfsDriverConfig.For(server: "fake-server", export: "/export", version: 4);
 
     [Fact]
     public void Mount_succeeds_first_attempt_without_retry()
     {
         FaultyLibNfs fake = new();
 
-        using NfsStorageDriver driver = new(Config(), fake, NullLogger.Instance);
+        using NfsStorageDriver driver = new(config: Config(), libNfs: fake, log: NullLogger.Instance);
 
-        fake.CallCounts.GetValueOrDefault("Mount").Should().Be(1);
+        fake.CallCounts.GetValueOrDefault(key: "Mount").Should().Be(expected: 1);
     }
 
     [Fact]
@@ -45,31 +45,31 @@ public class NfsMountRetryTests
         FaultyLibNfs fake = new();
         // First mount RPC times out the way the NAS did mid-encode; the retry
         // (call index 1) lands on a healthy server.
-        fake.Faults["Mount:0"] = (-1, "command timed out");
+        fake.Faults[key: "Mount:0"] = (-1, "command timed out");
 
-        using NfsStorageDriver driver = new(Config(), fake, NullLogger.Instance);
+        using NfsStorageDriver driver = new(config: Config(), libNfs: fake, log: NullLogger.Instance);
 
-        fake.CallCounts.GetValueOrDefault("Mount").Should().Be(2);
+        fake.CallCounts.GetValueOrDefault(key: "Mount").Should().Be(expected: 2);
         // Each retry rebuilds the libnfs context from scratch.
-        fake.CallCounts.GetValueOrDefault("InitContext").Should().Be(2);
+        fake.CallCounts.GetValueOrDefault(key: "InitContext").Should().Be(expected: 2);
     }
 
     [Fact]
     public void Mount_that_keeps_timing_out_throws_after_the_attempt_budget()
     {
         FaultyLibNfs fake = new();
-        fake.Faults["Mount:0"] = (-1, "command timed out");
-        fake.Faults["Mount:1"] = (-1, "command timed out");
-        fake.Faults["Mount:2"] = (-1, "command timed out");
+        fake.Faults[key: "Mount:0"] = (-1, "command timed out");
+        fake.Faults[key: "Mount:1"] = (-1, "command timed out");
+        fake.Faults[key: "Mount:2"] = (-1, "command timed out");
 
         Action act = () =>
         {
-            using NfsStorageDriver _ = new(Config(), fake, NullLogger.Instance);
+            using NfsStorageDriver _ = new(config: Config(), libNfs: fake, log: NullLogger.Instance);
         };
 
         act.Should()
             .Throw<IOException>()
-            .WithMessage("*mount failed*after 3 attempts*command timed out*");
-        fake.CallCounts.GetValueOrDefault("Mount").Should().Be(3);
+            .WithMessage(expectedWildcardPattern: "*mount failed*after 3 attempts*command timed out*");
+        fake.CallCounts.GetValueOrDefault(key: "Mount").Should().Be(expected: 3);
     }
 }

@@ -22,32 +22,32 @@ namespace NoMercy.Database.Models.Media;
 /// bytes and acts as the primary key so lookups from the profile's
 /// <c>PublisherKeyFingerprint</c> field are a direct PK hit.
 /// </summary>
-[PrimaryKey(nameof(Fingerprint))]
+[PrimaryKey(propertyName: nameof(Fingerprint))]
 public sealed class TrustedPublisherKey
 {
     /// <summary>Lowercase hex SHA-256 of the raw Ed25519 public key bytes (64 chars).</summary>
     [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.None)]
-    [MaxLength(64)]
-    [JsonProperty("fingerprint")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
+    [MaxLength(length: 64)]
+    [JsonProperty(propertyName: "fingerprint")]
     public string Fingerprint { get; init; } = "";
 
     /// <summary>Human-readable label shown in the admin UI.</summary>
-    [MaxLength(256)]
-    [JsonProperty("label")]
+    [MaxLength(length: 256)]
+    [JsonProperty(propertyName: "label")]
     public string Label { get; set; } = "";
 
     /// <summary>Raw Ed25519 public key bytes encoded as base64.</summary>
-    [MaxLength(256)]
-    [JsonProperty("public_key_base64")]
+    [MaxLength(length: 256)]
+    [JsonProperty(propertyName: "public_key_base64")]
     public string PublicKeyBase64 { get; set; } = "";
 
     /// <summary>UTC timestamp when this key was added.</summary>
-    [JsonProperty("added_at")]
+    [JsonProperty(propertyName: "added_at")]
     public DateTime AddedAt { get; init; } = DateTime.UtcNow;
 
     /// <summary>User id (Keycloak sub) of the admin who registered the key.</summary>
-    [MaxLength(256)]
-    [JsonProperty("added_by")]
+    [MaxLength(length: 256)]
+    [JsonProperty(propertyName: "added_by")]
     public string AddedBy { get; init; } = "";
 }

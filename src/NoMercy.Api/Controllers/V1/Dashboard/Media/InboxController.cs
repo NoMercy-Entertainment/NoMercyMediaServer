@@ -30,10 +30,10 @@ using NoMercy.MediaProcessing.Inbox;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 
 [ApiController]
-[Tags("Dashboard Inbox")]
-[ApiVersion(1.0)]
+[Tags(tags: "Dashboard Inbox")]
+[ApiVersion(version: 1.0)]
 [Authorize(Policy = "Moderator")]
-[Route("api/v{version:apiVersion}/dashboard/inbox", Order = 10)]
+[Route(template: "api/v{version:apiVersion}/dashboard/inbox", Order = 10)]
 public class InboxController(IInboxRepository inboxRepository, IInboxMetadataProbe metadataProbe)
     : BaseController
 {
@@ -42,26 +42,26 @@ public class InboxController(IInboxRepository inboxRepository, IInboxMetadataPro
     {
 
         List<InboxItem> items = await inboxRepository.GetAllAsync(
-            status,
-            HttpContext.RequestAborted
+            status: status,
+            ct: HttpContext.RequestAborted
         );
 
-        return Ok(new { Data = items.Select(item => new InboxItemDto(item)) });
+        return Ok(value: new { Data = items.Select(selector: item => new InboxItemDto(item: item)) });
     }
 
-    [HttpGet("{id:ulid}")]
+    [HttpGet(template: "{id:ulid}")]
     public async Task<IActionResult> Show(Ulid id)
     {
 
-        InboxItem? item = await inboxRepository.GetByIdAsync(id, HttpContext.RequestAborted);
+        InboxItem? item = await inboxRepository.GetByIdAsync(id: id, ct: HttpContext.RequestAborted);
 
         if (item is null)
-            return NotFoundResponse("Inbox item not found");
+            return NotFoundResponse(detail: "Inbox item not found");
 
-        return Ok(new InboxItemDto(item));
+        return Ok(value: new InboxItemDto(item: item));
     }
 
-    [HttpGet("{id:ulid}/matches")]
+    [HttpGet(template: "{id:ulid}/matches")]
     public async Task<IActionResult> Matches(
         Ulid id,
         [FromQuery] string type,
@@ -69,11 +69,11 @@ public class InboxController(IInboxRepository inboxRepository, IInboxMetadataPro
     )
     {
 
-        if (string.IsNullOrWhiteSpace(type))
-            return BadRequestResponse("type is required");
+        if (string.IsNullOrWhiteSpace(value: type))
+            return BadRequestResponse(detail: "type is required");
 
-        if (string.IsNullOrWhiteSpace(query))
-            return BadRequestResponse("query is required");
+        if (string.IsNullOrWhiteSpace(value: query))
+            return BadRequestResponse(detail: "query is required");
 
         CandidateMatch[] candidates;
 
@@ -81,18 +81,18 @@ public class InboxController(IInboxRepository inboxRepository, IInboxMetadataPro
         {
             case "movie":
                 candidates = await metadataProbe.SearchMoviesAsync(
-                    query,
-                    null,
-                    HttpContext.RequestAborted
+                    title: query,
+                    year: null,
+                    ct: HttpContext.RequestAborted
                 );
                 break;
 
             case "tv":
             case "anime":
                 candidates = await metadataProbe.SearchTvAsync(
-                    query,
-                    null,
-                    HttpContext.RequestAborted
+                    title: query,
+                    year: null,
+                    ct: HttpContext.RequestAborted
                 );
                 break;
 
@@ -102,29 +102,29 @@ public class InboxController(IInboxRepository inboxRepository, IInboxMetadataPro
 
             default:
                 return BadRequestResponse(
-                    $"Unsupported type '{type}'. Expected: movie, tv, anime, music"
+                    detail: $"Unsupported type '{type}'. Expected: movie, tv, anime, music"
                 );
         }
 
-        return Ok(new { Data = candidates });
+        return Ok(value: new { Data = candidates });
     }
 
-    [HttpPost("{id:ulid}/assign")]
+    [HttpPost(template: "{id:ulid}/assign")]
     public async Task<IActionResult> Assign(Ulid id, [FromBody] InboxAssignRequest request)
     {
 
-        InboxItem? item = await inboxRepository.GetTrackedByIdAsync(id, HttpContext.RequestAborted);
+        InboxItem? item = await inboxRepository.GetTrackedByIdAsync(id: id, ct: HttpContext.RequestAborted);
 
         if (item is null)
-            return NotFoundResponse("Inbox item not found");
+            return NotFoundResponse(detail: "Inbox item not found");
 
         Folder? folder = await inboxRepository.GetFolderByIdAsync(
-            request.TargetFolderId,
-            HttpContext.RequestAborted
+            folderId: request.TargetFolderId,
+            ct: HttpContext.RequestAborted
         );
 
         if (folder is null)
-            return NotFoundResponse("Target folder not found");
+            return NotFoundResponse(detail: "Target folder not found");
 
         InboxDestination destination = new()
         {
@@ -143,70 +143,70 @@ public class InboxController(IInboxRepository inboxRepository, IInboxMetadataPro
         try
         {
             await inboxRepository.ExecuteAssignmentAsync(
-                item,
-                request.Match,
-                destination,
-                HttpContext.RequestAborted
+                item: item,
+                match: request.Match,
+                destination: destination,
+                ct: HttpContext.RequestAborted
             );
         }
         catch (Exception ex)
         {
             return InternalServerErrorResponse(
-                $"Failed to assign inbox item: {ex.GetType().Name}: {ex.Message}"
+                detail: $"Failed to assign inbox item: {ex.GetType().Name}: {ex.Message}"
             );
         }
 
         if (EventBusProvider.IsConfigured)
         {
             await EventBusProvider.Current.PublishAsync(
-                new InboxItemUpdatedEvent { Id = item.Id.ToString(), Status = item.Status }
+                @event: new InboxItemUpdatedEvent { Id = item.Id.ToString(), Status = item.Status }
             );
         }
 
         return Ok(
-            new StatusResponseDto<InboxItemDto>
+            value: new StatusResponseDto<InboxItemDto>
             {
                 Status = "ok",
                 Message = "Successfully assigned inbox item.",
-                Data = new(item),
+                Data = new(item: item),
             }
         );
     }
 
-    [HttpPost("{id:ulid}/dismiss")]
+    [HttpPost(template: "{id:ulid}/dismiss")]
     public async Task<IActionResult> Dismiss(Ulid id)
     {
 
-        InboxItem? item = await inboxRepository.GetTrackedByIdAsync(id, HttpContext.RequestAborted);
+        InboxItem? item = await inboxRepository.GetTrackedByIdAsync(id: id, ct: HttpContext.RequestAborted);
 
         if (item is null)
-            return NotFoundResponse("Inbox item not found");
+            return NotFoundResponse(detail: "Inbox item not found");
 
-        await inboxRepository.DismissAsync(item, HttpContext.RequestAborted);
+        await inboxRepository.DismissAsync(item: item, ct: HttpContext.RequestAborted);
 
         if (EventBusProvider.IsConfigured)
         {
             await EventBusProvider.Current.PublishAsync(
-                new InboxItemUpdatedEvent { Id = item.Id.ToString(), Status = item.Status }
+                @event: new InboxItemUpdatedEvent { Id = item.Id.ToString(), Status = item.Status }
             );
         }
 
         return Ok(
-            new StatusResponseDto<string> { Status = "ok", Message = "Inbox item dismissed." }
+            value: new StatusResponseDto<string> { Status = "ok", Message = "Inbox item dismissed." }
         );
     }
 
-    [HttpDelete("{id:ulid}")]
+    [HttpDelete(template: "{id:ulid}")]
     public async Task<IActionResult> Delete(Ulid id)
     {
 
-        InboxItem? item = await inboxRepository.GetTrackedByIdAsync(id, HttpContext.RequestAborted);
+        InboxItem? item = await inboxRepository.GetTrackedByIdAsync(id: id, ct: HttpContext.RequestAborted);
 
         if (item is null)
-            return NotFoundResponse("Inbox item not found");
+            return NotFoundResponse(detail: "Inbox item not found");
 
-        await inboxRepository.DeleteAsync(item, HttpContext.RequestAborted);
+        await inboxRepository.DeleteAsync(item: item, ct: HttpContext.RequestAborted);
 
-        return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Inbox item removed." });
+        return Ok(value: new StatusResponseDto<string> { Status = "ok", Message = "Inbox item removed." });
     }
 }

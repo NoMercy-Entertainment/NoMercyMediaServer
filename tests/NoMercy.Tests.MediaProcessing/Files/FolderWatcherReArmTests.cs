@@ -25,29 +25,29 @@ public class FolderWatcherReArmTests
     public void TryReArm_ReEnablesAStoppedWatcher()
     {
         string dir = Path.Combine(
-            Path.GetTempPath(),
-            "nm-fw-rearm-" + Guid.NewGuid().ToString("N")
+            path1: Path.GetTempPath(),
+            path2: "nm-fw-rearm-" + Guid.NewGuid().ToString(format: "N")
         );
-        Directory.CreateDirectory(dir);
+        Directory.CreateDirectory(path: dir);
         try
         {
-            using FileSystemWatcher watcher = new(dir) { EnableRaisingEvents = true };
+            using FileSystemWatcher watcher = new(path: dir) { EnableRaisingEvents = true };
             watcher.EnableRaisingEvents = false;
 
-            bool result = FolderWatcher.TryReArm(watcher);
+            bool result = FolderWatcher.TryReArm(watcher: watcher);
 
-            Assert.True(result);
-            Assert.True(watcher.EnableRaisingEvents);
+            Assert.True(condition: result);
+            Assert.True(condition: watcher.EnableRaisingEvents);
         }
         finally
         {
-            Directory.Delete(dir, recursive: true);
+            Directory.Delete(path: dir, recursive: true);
         }
     }
 
     [Fact]
     public void TryReArm_NullWatcher_ReturnsFalse()
     {
-        Assert.False(FolderWatcher.TryReArm(null));
+        Assert.False(condition: FolderWatcher.TryReArm(watcher: null));
     }
 }

@@ -15,12 +15,12 @@ namespace NoMercy.Providers.TMDB.Models.Companies;
 
 public class TmdbParentCompany
 {
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("logo_path")]
+    [JsonProperty(propertyName: "logo_path")]
     public string? LogoPath { get; set; }
 }

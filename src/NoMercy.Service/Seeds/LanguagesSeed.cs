@@ -26,14 +26,14 @@ public static class LanguagesSeed
         if (hasLanguages)
             return;
 
-        Logger.Setup("Adding Languages", LogEventLevel.Verbose);
+        Logger.Setup(message: "Adding Languages", level: LogEventLevel.Verbose);
 
         TmdbConfigClient configClient = new();
 
         Language[] languages =
             (await configClient.Languages())
                 ?.ToList()
-                .ConvertAll<Language>(language =>
+                .ConvertAll<Language>(converter: language =>
                     new()
                     {
                         Iso6391 = language.Iso6391,
@@ -47,9 +47,9 @@ public static class LanguagesSeed
         try
         {
             await dbContext
-                .Languages.UpsertRange(languages)
-                .On(v => new { v.Iso6391 })
-                .WhenMatched(v =>
+                .Languages.UpsertRange(entities: languages)
+                .On(match: v => new { v.Iso6391 })
+                .WhenMatched(updater: v =>
                     new()
                     {
                         Iso6391 = v.Iso6391,
@@ -61,7 +61,7 @@ public static class LanguagesSeed
         }
         catch (Exception e)
         {
-            Logger.Setup($"Languages seed failed: {e.Message}", LogEventLevel.Warning);
+            Logger.Setup(message: $"Languages seed failed: {e.Message}", level: LogEventLevel.Warning);
         }
     }
 }

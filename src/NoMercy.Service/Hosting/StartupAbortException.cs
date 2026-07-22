@@ -14,8 +14,8 @@ namespace NoMercy.Service.Hosting;
 public class StartupAbortException : Exception
 {
     public StartupAbortException(string message)
-        : base(message) { }
+        : base(message: message) { }
 
     public StartupAbortException(string message, Exception innerException)
-        : base(message, innerException) { }
+        : base(message: message, innerException: innerException) { }
 }

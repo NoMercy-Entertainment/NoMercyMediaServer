@@ -28,7 +28,7 @@ public sealed class DbPresetLookup(MediaContext context) : IPresetLookup
     {
         EncodingPreset? row = context
             .EncodingPresets.AsNoTracking()
-            .FirstOrDefault(p => p.Id == presetId);
+            .FirstOrDefault(predicate: p => p.Id == presetId);
         return row is null ? null : (row.ProfileJson, row.ParentPresetId);
     }
 }

@@ -18,17 +18,17 @@ public class MediaKeyResolver : IMediaKeyResolver
     public string ForMedia(MediaType type, long id)
     {
         if (id < 0)
-            throw new ArgumentOutOfRangeException(nameof(id), "Media id must be non-negative.");
+            throw new ArgumentOutOfRangeException(paramName: nameof(id), message: "Media id must be non-negative.");
 
         char prefix = type switch
         {
             MediaType.Movie => 'm',
             MediaType.Episode => 'e',
             MediaType.Track => 't',
-            _ => throw new ArgumentOutOfRangeException(nameof(type)),
+            _ => throw new ArgumentOutOfRangeException(paramName: nameof(type)),
         };
 
-        return $"{prefix}{ToBase36(id)}";
+        return $"{prefix}{ToBase36(value: id)}";
     }
 
     private static string ToBase36(long value)
@@ -40,9 +40,9 @@ public class MediaKeyResolver : IMediaKeyResolver
         int i = buffer.Length;
         while (value > 0)
         {
-            buffer[--i] = Alphabet[(int)(value % 36)];
+            buffer[index: --i] = Alphabet[index: (int)(value % 36)];
             value /= 36;
         }
-        return new(buffer[i..]);
+        return new(value: buffer[i..]);
     }
 }

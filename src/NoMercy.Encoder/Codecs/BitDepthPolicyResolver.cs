@@ -50,11 +50,11 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
         if (requestedBitDepth <= 8)
         {
             decisions.Add(
-                new(
-                    "plan",
-                    "plan.bit_depth",
-                    "8-bit requested — no policy check needed",
-                    new { requested = 8 }
+                entry: new(
+                    Stage: "plan",
+                    Key: "plan.bit_depth",
+                    Message: "8-bit requested — no policy check needed",
+                    Data: new { requested = 8 }
                 )
             );
             return new(
@@ -69,16 +69,16 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
         // 10-bit request and encoder supports it — keep as-is.
         if (resolvedCodec.EncoderInfo.Supports10Bit)
         {
-            string pf = string.IsNullOrEmpty(resolvedCodec.EncoderInfo.PixelFormat10Bit)
+            string pf = string.IsNullOrEmpty(value: resolvedCodec.EncoderInfo.PixelFormat10Bit)
                 ? "yuv420p10le"
                 : resolvedCodec.EncoderInfo.PixelFormat10Bit;
 
             decisions.Add(
-                new(
-                    "plan",
-                    "plan.bit_depth",
-                    "10-bit kept — encoder supports it",
-                    new { handle = resolvedCodec.FfmpegEncoderName, pixel_format = pf }
+                entry: new(
+                    Stage: "plan",
+                    Key: "plan.bit_depth",
+                    Message: "10-bit kept — encoder supports it",
+                    Data: new { handle = resolvedCodec.FfmpegEncoderName, pixel_format = pf }
                 )
             );
 
@@ -96,16 +96,16 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
 
         return policy switch
         {
-            BitDepthPolicy.WarnAndDowngrade => HandleWarnAndDowngrade(encoderHandle, decisions),
-            BitDepthPolicy.Strict => HandleStrict(encoderHandle, decisions),
+            BitDepthPolicy.WarnAndDowngrade => HandleWarnAndDowngrade(encoderHandle: encoderHandle, decisions: decisions),
+            BitDepthPolicy.Strict => HandleStrict(encoderHandle: encoderHandle, decisions: decisions),
             BitDepthPolicy.PreferSoftware => HandlePreferSoftware(
-                encoderHandle,
-                codec,
-                decisions,
-                softwareReResolver
+                fromHandle: encoderHandle,
+                codec: codec,
+                decisions: decisions,
+                softwareReResolver: softwareReResolver
             ),
-            BitDepthPolicy.SilentDowngrade => HandleSilentDowngrade(decisions),
-            _ => HandleWarnAndDowngrade(encoderHandle, decisions),
+            BitDepthPolicy.SilentDowngrade => HandleSilentDowngrade(decisions: decisions),
+            _ => HandleWarnAndDowngrade(encoderHandle: encoderHandle, decisions: decisions),
         };
     }
 
@@ -115,11 +115,11 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
     )
     {
         decisions.Add(
-            new(
-                "plan",
-                "plan.bit_depth",
-                "10-bit auto-downgraded to 8-bit",
-                new { handle = encoderHandle, policy = nameof(BitDepthPolicy.WarnAndDowngrade) }
+            entry: new(
+                Stage: "plan",
+                Key: "plan.bit_depth",
+                Message: "10-bit auto-downgraded to 8-bit",
+                Data: new { handle = encoderHandle, policy = nameof(BitDepthPolicy.WarnAndDowngrade) }
             )
         );
 
@@ -157,22 +157,22 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
     )
     {
         decisions.Add(
-            new(
-                "plan",
-                "plan.bit_depth",
-                "Strict violation — plan failed",
-                new { handle = encoderHandle, policy = nameof(BitDepthPolicy.Strict) }
+            entry: new(
+                Stage: "plan",
+                Key: "plan.bit_depth",
+                Message: "Strict violation — plan failed",
+                Data: new { handle = encoderHandle, policy = nameof(BitDepthPolicy.Strict) }
             )
         );
 
         EncoderRuntimeException failure = new(
-            new(
+            shape: new(
                 Id: EncoderRuleId.BitDepthStrictViolation,
                 Message: $"Encoder '{encoderHandle}' does not support 10-bit and bit_depth_policy = Strict forbids downgrade.",
                 Suggestion: "Switch the profile to PreferSoftware or remove the 10-bit requirement.",
                 Details: new { handle = encoderHandle }
             ),
-            422
+            httpStatusCode: 422
         );
 
         return new(
@@ -191,19 +191,19 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
         Func<VideoCodecType, ResolvedCodec> softwareReResolver
     )
     {
-        ResolvedCodec sw = softwareReResolver(codec);
+        ResolvedCodec sw = softwareReResolver(arg: codec);
         string toHandle = sw.FfmpegEncoderName;
 
-        string pf = string.IsNullOrEmpty(sw.EncoderInfo.PixelFormat10Bit)
+        string pf = string.IsNullOrEmpty(value: sw.EncoderInfo.PixelFormat10Bit)
             ? "yuv420p10le"
             : sw.EncoderInfo.PixelFormat10Bit;
 
         decisions.Add(
-            new(
-                "plan",
-                "plan.bit_depth_switched_to_software",
-                $"10-bit needed — switched from {fromHandle} to {toHandle}",
-                new
+            entry: new(
+                Stage: "plan",
+                Key: "plan.bit_depth_switched_to_software",
+                Message: $"10-bit needed — switched from {fromHandle} to {toHandle}",
+                Data: new
                 {
                     from = fromHandle,
                     to = toHandle,
@@ -224,11 +224,11 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
     private static BitDepthResolutionResult HandleSilentDowngrade(IDecisionLogSink decisions)
     {
         decisions.Add(
-            new(
-                "plan",
-                "plan.bit_depth",
-                "10-bit silently downgraded to 8-bit (policy = SilentDowngrade)",
-                new { policy = nameof(BitDepthPolicy.SilentDowngrade) }
+            entry: new(
+                Stage: "plan",
+                Key: "plan.bit_depth",
+                Message: "10-bit silently downgraded to 8-bit (policy = SilentDowngrade)",
+                Data: new { policy = nameof(BitDepthPolicy.SilentDowngrade) }
             )
         );
 

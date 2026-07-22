@@ -35,12 +35,12 @@ public static class Cpu
         List<string> vendors = [];
 
 #pragma warning disable CA1416
-        ManagementObjectSearcher searcher = new("select Name from Win32_Processor");
+        ManagementObjectSearcher searcher = new(queryString: "select Name from Win32_Processor");
         foreach (ManagementBaseObject? o in searcher.Get())
         {
             ManagementObject? item = (ManagementObject)o;
-            if (item["Name"] is string cpuName)
-                vendors.Add(cpuName.Trim());
+            if (item[propertyName: "Name"] is string cpuName)
+                vendors.Add(item: cpuName.Trim());
         }
 #pragma warning restore CA1416
 
@@ -51,20 +51,20 @@ public static class Cpu
     {
         List<string> vendors = [];
 
-        string output = Shell.ExecCommand("lscpu");
+        string output = Shell.ExecCommand(command: "lscpu");
         string modelName = "Unknown";
         int sockets = 1;
 
-        foreach (string line in output.Split('\n'))
+        foreach (string line in output.Split(separator: '\n'))
         {
-            if (line.StartsWith("Model name:"))
-                modelName = line.Split(':', 2)[1].Trim();
-            else if (line.StartsWith("Socket(s):"))
-                int.TryParse(line.Split(':', 2)[1].Trim(), out sockets);
+            if (line.StartsWith(value: "Model name:"))
+                modelName = line.Split(separator: ':', count: 2)[1].Trim();
+            else if (line.StartsWith(value: "Socket(s):"))
+                int.TryParse(s: line.Split(separator: ':', count: 2)[1].Trim(), result: out sockets);
         }
 
         for (int i = 0; i < sockets; i++)
-            vendors.Add(modelName);
+            vendors.Add(item: modelName);
 
         return vendors;
     }
@@ -73,8 +73,8 @@ public static class Cpu
     {
         List<string> vendors = [];
 
-        string output = Shell.ExecCommand("sysctl -n machdep.cpu.brand_string");
-        vendors.Add(output.Trim());
+        string output = Shell.ExecCommand(command: "sysctl -n machdep.cpu.brand_string");
+        vendors.Add(item: output.Trim());
 
         return vendors;
     }
@@ -98,12 +98,12 @@ public static class Cpu
         List<string> cpus = [];
 
 #pragma warning disable CA1416
-        ManagementObjectSearcher searcher = new("select Name from Win32_Processor");
+        ManagementObjectSearcher searcher = new(queryString: "select Name from Win32_Processor");
         foreach (ManagementBaseObject? o in searcher.Get())
         {
             ManagementObject? item = (ManagementObject)o;
-            if (item["Name"] is string cpuName)
-                cpus.Add(cpuName.Trim());
+            if (item[propertyName: "Name"] is string cpuName)
+                cpus.Add(item: cpuName.Trim());
         }
 #pragma warning restore CA1416
 
@@ -114,20 +114,20 @@ public static class Cpu
     {
         List<string> cpus = [];
 
-        string output = Shell.ExecCommand("lscpu");
+        string output = Shell.ExecCommand(command: "lscpu");
         string modelName = "Unknown";
         int sockets = 1;
 
-        foreach (string line in output.Split('\n'))
+        foreach (string line in output.Split(separator: '\n'))
         {
-            if (line.StartsWith("Model name:"))
-                modelName = line.Split(':', 2)[1].Trim();
-            else if (line.StartsWith("Socket(s):"))
-                int.TryParse(line.Split(':', 2)[1].Trim(), out sockets);
+            if (line.StartsWith(value: "Model name:"))
+                modelName = line.Split(separator: ':', count: 2)[1].Trim();
+            else if (line.StartsWith(value: "Socket(s):"))
+                int.TryParse(s: line.Split(separator: ':', count: 2)[1].Trim(), result: out sockets);
         }
 
         for (int i = 0; i < sockets; i++)
-            cpus.Add(modelName);
+            cpus.Add(item: modelName);
 
         return cpus;
     }
@@ -136,8 +136,8 @@ public static class Cpu
     {
         List<string> cpus = [];
 
-        string output = Shell.ExecCommand("sysctl -n machdep.cpu.brand_string");
-        cpus.Add(output.Trim());
+        string output = Shell.ExecCommand(command: "sysctl -n machdep.cpu.brand_string");
+        cpus.Add(item: output.Trim());
 
         return cpus;
     }

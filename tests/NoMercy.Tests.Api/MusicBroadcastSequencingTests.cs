@@ -27,7 +27,7 @@ namespace NoMercy.Tests.Api;
 /// conservative burst-coalescing in
 /// <see cref="MusicPlaybackService.UpdatePlaybackState"/>.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class MusicBroadcastSequencingTests
 {
     private static PlaylistTrackDto MakeTrack()
@@ -41,7 +41,7 @@ public class MusicBroadcastSequencingTests
             Folder = "/music/",
             FolderId = Ulid.NewUlid(),
         };
-        return new(track, "US");
+        return new(track: track, country: "US");
     }
 
     private static (
@@ -54,7 +54,7 @@ public class MusicBroadcastSequencingTests
         MusicActiveDeviceRegistry registry = new();
         Mock<IClientMessenger> messenger = new();
         messenger
-            .Setup(m =>
+            .Setup(expression: m =>
                 m.SendTo(
                     It.IsAny<string>(),
                     It.IsAny<string>(),
@@ -62,13 +62,13 @@ public class MusicBroadcastSequencingTests
                     It.IsAny<object?>()
                 )
             )
-            .Returns(Task.CompletedTask);
+            .Returns(value: Task.CompletedTask);
 
         MusicPlaybackService service = new(
-            stateManager,
-            Mock.Of<IServiceProvider>(),
-            messenger.Object,
-            registry
+            stateManager: stateManager,
+            serviceProvider: Mock.Of<IServiceProvider>(),
+            clientMessenger: messenger.Object,
+            activeDeviceRegistry: registry
         );
 
         return (service, stateManager, messenger);
@@ -82,11 +82,11 @@ public class MusicBroadcastSequencingTests
         MusicPlayerStateManager stateManager = new();
         Guid userId = Guid.NewGuid();
 
-        long previous = stateManager.NextSeq(userId);
+        long previous = stateManager.NextSeq(userId: userId);
         for (int i = 0; i < 1_000; i++)
         {
-            long next = stateManager.NextSeq(userId);
-            next.Should().BeGreaterThan(previous);
+            long next = stateManager.NextSeq(userId: userId);
+            next.Should().BeGreaterThan(expected: previous);
             previous = next;
         }
     }
@@ -101,9 +101,9 @@ public class MusicBroadcastSequencingTests
         long before = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         MusicPlayerStateManager stateManager = new();
 
-        long seq = stateManager.NextSeq(Guid.NewGuid());
+        long seq = stateManager.NextSeq(userId: Guid.NewGuid());
 
-        seq.Should().BeGreaterThanOrEqualTo(before);
+        seq.Should().BeGreaterThanOrEqualTo(expected: before);
     }
 
     [Fact]
@@ -117,15 +117,15 @@ public class MusicBroadcastSequencingTests
         // same-millisecond calls each fall back to previousSeq + 1.
         long userALastSeq = 0;
         for (int i = 0; i < 10_000; i++)
-            userALastSeq = stateManager.NextSeq(userA);
+            userALastSeq = stateManager.NextSeq(userId: userA);
 
         long beforeUserBCall = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        long userBFirstSeq = stateManager.NextSeq(userB);
+        long userBFirstSeq = stateManager.NextSeq(userId: userB);
 
         // userB's first call must not inherit userA's inflated counter — it
         // stays anchored to the wall clock instead of a shared sequence.
-        userBFirstSeq.Should().BeLessThan(userALastSeq);
-        userBFirstSeq.Should().BeGreaterThanOrEqualTo(beforeUserBCall);
+        userBFirstSeq.Should().BeLessThan(expected: userALastSeq);
+        userBFirstSeq.Should().BeGreaterThanOrEqualTo(expected: beforeUserBCall);
     }
 
     // ── MusicPlaybackService.UpdatePlaybackState — Seq stamping ─────────────
@@ -135,12 +135,12 @@ public class MusicBroadcastSequencingTests
     {
         (MusicPlaybackService service, _, _) = MakeService();
         User user = new() { Id = Guid.NewGuid(), Name = "Test User" };
-        MusicPlayerState state = new() { CurrentList = new("", UriKind.Relative) };
+        MusicPlayerState state = new() { CurrentList = new(uriString: "", uriKind: UriKind.Relative) };
 
         long before = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        await service.UpdatePlaybackState(user, state);
+        await service.UpdatePlaybackState(user: user, state: state);
 
-        state.Seq.Should().BeGreaterThanOrEqualTo(before);
+        state.Seq.Should().BeGreaterThanOrEqualTo(expected: before);
     }
 
     [Fact]
@@ -151,20 +151,20 @@ public class MusicBroadcastSequencingTests
         MusicPlayerState state = new()
         {
             CurrentItem = MakeTrack(),
-            CurrentList = new("", UriKind.Relative),
+            CurrentList = new(uriString: "", uriKind: UriKind.Relative),
             PlayState = true,
         };
 
-        await service.UpdatePlaybackState(user, state);
+        await service.UpdatePlaybackState(user: user, state: state);
         long first = state.Seq;
 
         // A genuinely new position (different time bucket) must never be
         // coalesced away, so this always produces a fresh, higher Seq.
-        state.SetPosition(5_000);
-        await service.UpdatePlaybackState(user, state);
+        state.SetPosition(positionMs: 5_000);
+        await service.UpdatePlaybackState(user: user, state: state);
         long second = state.Seq;
 
-        second.Should().BeGreaterThan(first);
+        second.Should().BeGreaterThan(expected: first);
     }
 
     [Fact]
@@ -175,11 +175,11 @@ public class MusicBroadcastSequencingTests
         (MusicPlaybackService service, _, Mock<IClientMessenger> messenger) = MakeService();
         User user = new() { Id = Guid.NewGuid(), Name = "Test User" };
 
-        await service.UpdatePlaybackState(user, null);
+        await service.UpdatePlaybackState(user: user, state: null);
 
         messenger.Verify(
-            m => m.SendTo("MusicPlayerState", "musicHub", user.Id, It.IsAny<object>()),
-            Times.Once
+            expression: m => m.SendTo("MusicPlayerState", "musicHub", user.Id, It.IsAny<object>()),
+            times: Times.Once
         );
     }
 
@@ -188,11 +188,11 @@ public class MusicBroadcastSequencingTests
     [Fact]
     public void CloneForBroadcast_PreservesSeq()
     {
-        MusicPlayerState state = new() { CurrentList = new("", UriKind.Relative), Seq = 123_456 };
+        MusicPlayerState state = new() { CurrentList = new(uriString: "", uriKind: UriKind.Relative), Seq = 123_456 };
 
         MusicPlayerState broadcast = state.CloneForBroadcast();
 
-        broadcast.Seq.Should().Be(123_456);
+        broadcast.Seq.Should().Be(expected: 123_456);
     }
 
     // ── Burst coalescing ──────────────────────────────────────────────────────
@@ -206,7 +206,7 @@ public class MusicBroadcastSequencingTests
         MusicPlayerState state = new()
         {
             CurrentItem = track,
-            CurrentList = new("", UriKind.Relative),
+            CurrentList = new(uriString: "", uriKind: UriKind.Relative),
             PlayState = true,
             Time = 1_500,
         };
@@ -214,15 +214,15 @@ public class MusicBroadcastSequencingTests
         // Two back-to-back emits for the exact same track/play-state/second of
         // position — the redundant echo a burst of ungated call sites can
         // produce — must collapse to a single broadcast.
-        await service.UpdatePlaybackState(user, state);
+        await service.UpdatePlaybackState(user: user, state: state);
         long firstSeq = state.Seq;
-        await service.UpdatePlaybackState(user, state);
+        await service.UpdatePlaybackState(user: user, state: state);
         long afterSecondCall = state.Seq;
 
-        afterSecondCall.Should().Be(firstSeq);
+        afterSecondCall.Should().Be(expected: firstSeq);
         messenger.Verify(
-            m => m.SendTo("MusicPlayerState", "musicHub", user.Id, It.IsAny<object>()),
-            Times.Once
+            expression: m => m.SendTo("MusicPlayerState", "musicHub", user.Id, It.IsAny<object>()),
+            times: Times.Once
         );
     }
 
@@ -235,18 +235,18 @@ public class MusicBroadcastSequencingTests
         MusicPlayerState state = new()
         {
             CurrentItem = track,
-            CurrentList = new("", UriKind.Relative),
+            CurrentList = new(uriString: "", uriKind: UriKind.Relative),
             PlayState = true,
             Time = 1_500,
         };
 
-        await service.UpdatePlaybackState(user, state);
+        await service.UpdatePlaybackState(user: user, state: state);
         state.PlayState = false; // genuine pause — must always reach clients
-        await service.UpdatePlaybackState(user, state);
+        await service.UpdatePlaybackState(user: user, state: state);
 
         messenger.Verify(
-            m => m.SendTo("MusicPlayerState", "musicHub", user.Id, It.IsAny<object>()),
-            Times.Exactly(2)
+            expression: m => m.SendTo("MusicPlayerState", "musicHub", user.Id, It.IsAny<object>()),
+            times: Times.Exactly(callCount: 2)
         );
     }
 
@@ -258,18 +258,18 @@ public class MusicBroadcastSequencingTests
         MusicPlayerState state = new()
         {
             CurrentItem = MakeTrack(),
-            CurrentList = new("", UriKind.Relative),
+            CurrentList = new(uriString: "", uriKind: UriKind.Relative),
             PlayState = true,
             Time = 1_500,
         };
 
-        await service.UpdatePlaybackState(user, state);
+        await service.UpdatePlaybackState(user: user, state: state);
         state.CurrentItem = MakeTrack(); // genuine track change
-        await service.UpdatePlaybackState(user, state);
+        await service.UpdatePlaybackState(user: user, state: state);
 
         messenger.Verify(
-            m => m.SendTo("MusicPlayerState", "musicHub", user.Id, It.IsAny<object>()),
-            Times.Exactly(2)
+            expression: m => m.SendTo("MusicPlayerState", "musicHub", user.Id, It.IsAny<object>()),
+            times: Times.Exactly(callCount: 2)
         );
     }
 
@@ -282,18 +282,18 @@ public class MusicBroadcastSequencingTests
         MusicPlayerState state = new()
         {
             CurrentItem = track,
-            CurrentList = new("", UriKind.Relative),
+            CurrentList = new(uriString: "", uriKind: UriKind.Relative),
             PlayState = true,
             Time = 1_500,
         };
 
-        await service.UpdatePlaybackState(user, state);
+        await service.UpdatePlaybackState(user: user, state: state);
         state.Time = 3_500; // a different second-granularity position
-        await service.UpdatePlaybackState(user, state);
+        await service.UpdatePlaybackState(user: user, state: state);
 
         messenger.Verify(
-            m => m.SendTo("MusicPlayerState", "musicHub", user.Id, It.IsAny<object>()),
-            Times.Exactly(2)
+            expression: m => m.SendTo("MusicPlayerState", "musicHub", user.Id, It.IsAny<object>()),
+            times: Times.Exactly(callCount: 2)
         );
     }
 
@@ -307,28 +307,28 @@ public class MusicBroadcastSequencingTests
         MusicPlayerState stateA = new()
         {
             CurrentItem = track,
-            CurrentList = new("", UriKind.Relative),
+            CurrentList = new(uriString: "", uriKind: UriKind.Relative),
             PlayState = true,
             Time = 1_500,
         };
         MusicPlayerState stateB = new()
         {
             CurrentItem = track,
-            CurrentList = new("", UriKind.Relative),
+            CurrentList = new(uriString: "", uriKind: UriKind.Relative),
             PlayState = true,
             Time = 1_500,
         };
 
-        await service.UpdatePlaybackState(userA, stateA);
-        await service.UpdatePlaybackState(userB, stateB);
+        await service.UpdatePlaybackState(user: userA, state: stateA);
+        await service.UpdatePlaybackState(user: userB, state: stateB);
 
         messenger.Verify(
-            m => m.SendTo("MusicPlayerState", "musicHub", userA.Id, It.IsAny<object>()),
-            Times.Once
+            expression: m => m.SendTo("MusicPlayerState", "musicHub", userA.Id, It.IsAny<object>()),
+            times: Times.Once
         );
         messenger.Verify(
-            m => m.SendTo("MusicPlayerState", "musicHub", userB.Id, It.IsAny<object>()),
-            Times.Once
+            expression: m => m.SendTo("MusicPlayerState", "musicHub", userB.Id, It.IsAny<object>()),
+            times: Times.Once
         );
     }
 
@@ -341,20 +341,20 @@ public class MusicBroadcastSequencingTests
         MusicPlayerState state = new()
         {
             CurrentItem = track,
-            CurrentList = new("", UriKind.Relative),
+            CurrentList = new(uriString: "", uriKind: UriKind.Relative),
             PlayState = true,
             Time = 1_500,
         };
 
-        await service.UpdatePlaybackState(user, state);
+        await service.UpdatePlaybackState(user: user, state: state);
         // Comfortably past the ~50ms coalesce window — a legitimately repeated
         // tick of the same fields must still reach clients.
-        await Task.Delay(120);
-        await service.UpdatePlaybackState(user, state);
+        await Task.Delay(millisecondsDelay: 120);
+        await service.UpdatePlaybackState(user: user, state: state);
 
         messenger.Verify(
-            m => m.SendTo("MusicPlayerState", "musicHub", user.Id, It.IsAny<object>()),
-            Times.Exactly(2)
+            expression: m => m.SendTo("MusicPlayerState", "musicHub", user.Id, It.IsAny<object>()),
+            times: Times.Exactly(callCount: 2)
         );
     }
 }

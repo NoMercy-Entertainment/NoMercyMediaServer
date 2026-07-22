@@ -36,7 +36,7 @@ public class LocalWorkerDispatcher(
     // Overload for callers that don't want to plumb a progress sink —
     // keeps the test-bootstrap shape unchanged.
     public LocalWorkerDispatcher(IFfmpegExecutor executor, ILogger<LocalWorkerDispatcher> logger)
-        : this(executor, new NullTaskProgressSink(), logger) { }
+        : this(executor: executor, progressSink: new NullTaskProgressSink(), logger: logger) { }
 
     public int AvailableWorkerCount => 1;
 
@@ -50,10 +50,7 @@ public class LocalWorkerDispatcher(
             EncodeTask task = tasks[i];
 
             logger.LogInformation(
-                "Dispatching task {TaskId} ({Type}) locally → {Output}",
-                task.TaskId,
-                task.Type,
-                task.OutputPath
+                message: "Dispatching task {TaskId} ({Type}) locally → {Output}", args: [task.TaskId, task.Type, task.OutputPath]
             );
 
             try
@@ -66,25 +63,25 @@ public class LocalWorkerDispatcher(
                 {
                     try
                     {
-                        progressSink.Report(currentTaskId, progress);
+                        progressSink.Report(taskId: currentTaskId, progress: progress);
                     }
                     catch (Exception ex)
                     {
                         // Progress reporting must NEVER fail the encode.
                         logger.LogDebug(
-                            ex,
-                            "Progress sink failed for task {TaskId}",
-                            currentTaskId
+                            exception: ex,
+                            message: "Progress sink failed for task {TaskId}",
+                            args: currentTaskId
                         );
                     }
                 };
 
                 ExecutionResult exec = await executor.ExecuteAsync(
-                    task.Command,
-                    task.TimeRangeDuration ?? TimeSpan.Zero,
-                    onProgress,
-                    task.TaskId,
-                    ct
+                    command: task.Command,
+                    inputDuration: task.TimeRangeDuration ?? TimeSpan.Zero,
+                    onProgress: onProgress,
+                    correlationId: task.TaskId,
+                    ct: ct
                 );
 
                 results[i] = new(
@@ -92,15 +89,13 @@ public class LocalWorkerDispatcher(
                     Success: exec.Success,
                     OutputPath: task.OutputPath,
                     Duration: exec.Duration,
-                    Error: exec.Success ? null : ErrorMessage(exec.Error)
+                    Error: exec.Success ? null : ErrorMessage(error: exec.Error)
                 );
 
                 if (!exec.Success)
                 {
                     logger.LogWarning(
-                        "Local task {TaskId} failed: {Error}",
-                        task.TaskId,
-                        results[i].Error
+                        message: "Local task {TaskId} failed: {Error}", args: [task.TaskId, results[i].Error]
                     );
                 }
             }
@@ -110,7 +105,7 @@ public class LocalWorkerDispatcher(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Local task {TaskId} threw", task.TaskId);
+                logger.LogError(exception: ex, message: "Local task {TaskId} threw", args: task.TaskId);
                 results[i] = new(
                     TaskId: task.TaskId,
                     Success: false,

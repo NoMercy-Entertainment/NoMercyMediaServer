@@ -16,7 +16,7 @@ namespace NoMercy.NmSystem.Dto;
 public class AnimeParser
 {
     private static readonly Regex NameRegex = new(
-        @"^\[([^\s\[\]]*?)\](?:[\s_\.]+)?([^\[\]]+?)(?:[\s_\.]+)?-?(?:[\s_\.]+)?(?:(?:S(\d+))?(?:[\s_.]+)?-?(?:[\s_.]+)E?([0-9\.]+)(?:v[0-9]+)?(?:[\s_\.]+)?([^\(\[\]\)]+?)?(?:[\s_\.]+)?)?(?:[\(\[](.*?)[\]\)])?(?:[\s_\.]+)?(?:\[([a-fA-F0-9]+)\])\.([a-zA-Z]+)$"
+        pattern: @"^\[([^\s\[\]]*?)\](?:[\s_\.]+)?([^\[\]]+?)(?:[\s_\.]+)?-?(?:[\s_\.]+)?(?:(?:S(\d+))?(?:[\s_.]+)?-?(?:[\s_.]+)E?([0-9\.]+)(?:v[0-9]+)?(?:[\s_\.]+)?([^\(\[\]\)]+?)?(?:[\s_\.]+)?)?(?:[\(\[](.*?)[\]\)])?(?:[\s_\.]+)?(?:\[([a-fA-F0-9]+)\])\.([a-zA-Z]+)$"
     );
 
     /// <summary>
@@ -36,21 +36,21 @@ public class AnimeParser
     /// </returns>
     public static AnimeInfo ParseAnimeFilename(string filename)
     {
-        Match match = NameRegex.Match(filename.Trim());
+        Match match = NameRegex.Match(input: filename.Trim());
         if (!match.Success)
             return new() { FileName = filename };
 
         AnimeInfo info = new()
         {
             FileName = filename,
-            Group = match.Groups[1].Value,
-            Name = match.Groups[2].Value.Replace("_", " "),
-            Season = match.Groups[3].Success ? int.Parse(match.Groups[3].Value) : null,
-            Episode = match.Groups[4].Success ? int.Parse(match.Groups[4].Value) : null,
-            Title = match.Groups[5].Success ? match.Groups[5].Value : null,
-            ExtraInfo = match.Groups[6].Success ? match.Groups[6].Value : null,
-            Checksum = match.Groups[7].Success ? match.Groups[7].Value : null,
-            Extension = match.Groups[8].Success ? match.Groups[8].Value : null,
+            Group = match.Groups[groupnum: 1].Value,
+            Name = match.Groups[groupnum: 2].Value.Replace(oldValue: "_", newValue: " "),
+            Season = match.Groups[groupnum: 3].Success ? int.Parse(s: match.Groups[groupnum: 3].Value) : null,
+            Episode = match.Groups[groupnum: 4].Success ? int.Parse(s: match.Groups[groupnum: 4].Value) : null,
+            Title = match.Groups[groupnum: 5].Success ? match.Groups[groupnum: 5].Value : null,
+            ExtraInfo = match.Groups[groupnum: 6].Success ? match.Groups[groupnum: 6].Value : null,
+            Checksum = match.Groups[groupnum: 7].Success ? match.Groups[groupnum: 7].Value : null,
+            Extension = match.Groups[groupnum: 8].Success ? match.Groups[groupnum: 8].Value : null,
         };
 
         return info;

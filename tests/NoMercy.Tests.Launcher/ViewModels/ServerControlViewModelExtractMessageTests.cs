@@ -28,25 +28,25 @@ public sealed class ServerControlViewModelExtractMessageTests
 {
     private static readonly MethodInfo ExtractMessageMethod =
         typeof(ServerControlViewModel).GetMethod(
-            "ExtractMessage",
-            BindingFlags.NonPublic | BindingFlags.Static
+            name: "ExtractMessage",
+            bindingAttr: BindingFlags.NonPublic | BindingFlags.Static
         )!;
 
     private static string? ExtractMessage(string? json) =>
-        (string?)ExtractMessageMethod.Invoke(null, [json]);
+        (string?)ExtractMessageMethod.Invoke(obj: null, parameters: [json]);
 
     [Fact]
     public void ExtractMessage_JsonWithMessageField_ReturnsThatMessage()
     {
-        string? result = ExtractMessage("""{"message":"disk full"}""");
+        string? result = ExtractMessage(json: """{"message":"disk full"}""");
 
-        result.Should().Be("disk full");
+        result.Should().Be(expected: "disk full");
     }
 
     [Fact]
     public void ExtractMessage_JsonWithoutMessageField_ReturnsNull()
     {
-        string? result = ExtractMessage("""{"error":"disk full"}""");
+        string? result = ExtractMessage(json: """{"error":"disk full"}""");
 
         result.Should().BeNull();
     }
@@ -54,7 +54,7 @@ public sealed class ServerControlViewModelExtractMessageTests
     [Fact]
     public void ExtractMessage_MalformedJson_ReturnsNullInsteadOfThrowing()
     {
-        string? result = ExtractMessage("{ not valid json ");
+        string? result = ExtractMessage(json: "{ not valid json ");
 
         result.Should().BeNull();
     }
@@ -62,7 +62,7 @@ public sealed class ServerControlViewModelExtractMessageTests
     [Fact]
     public void ExtractMessage_NullInput_ReturnsNull()
     {
-        string? result = ExtractMessage(null);
+        string? result = ExtractMessage(json: null);
 
         result.Should().BeNull();
     }
@@ -70,7 +70,7 @@ public sealed class ServerControlViewModelExtractMessageTests
     [Fact]
     public void ExtractMessage_EmptyString_ReturnsNull()
     {
-        string? result = ExtractMessage(string.Empty);
+        string? result = ExtractMessage(json: string.Empty);
 
         result.Should().BeNull();
     }
@@ -78,7 +78,7 @@ public sealed class ServerControlViewModelExtractMessageTests
     [Fact]
     public void ExtractMessage_NonObjectJson_ReturnsNullInsteadOfThrowing()
     {
-        string? result = ExtractMessage("[1,2,3]");
+        string? result = ExtractMessage(json: "[1,2,3]");
 
         result.Should().BeNull();
     }

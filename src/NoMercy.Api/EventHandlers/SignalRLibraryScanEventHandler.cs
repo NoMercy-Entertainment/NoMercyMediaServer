@@ -32,18 +32,18 @@ public class SignalRLibraryScanEventHandler : IDisposable
     {
         _logger = logger;
         _clientMessenger = clientMessenger;
-        _subscriptions.Add(eventBus.Subscribe<LibraryScanStartedEvent>(OnScanStarted));
-        _subscriptions.Add(eventBus.Subscribe<LibraryScanCompletedEvent>(OnScanCompleted));
-        _subscriptions.Add(eventBus.Subscribe<MediaAddedEvent>(OnMediaAdded));
-        _subscriptions.Add(eventBus.Subscribe<MediaRemovedEvent>(OnMediaRemoved));
+        _subscriptions.Add(item: eventBus.Subscribe<LibraryScanStartedEvent>(handler: OnScanStarted));
+        _subscriptions.Add(item: eventBus.Subscribe<LibraryScanCompletedEvent>(handler: OnScanCompleted));
+        _subscriptions.Add(item: eventBus.Subscribe<MediaAddedEvent>(handler: OnMediaAdded));
+        _subscriptions.Add(item: eventBus.Subscribe<MediaRemovedEvent>(handler: OnMediaRemoved));
     }
 
     internal async Task OnScanStarted(LibraryScanStartedEvent @event, CancellationToken ct)
     {
         await _clientMessenger.SendToAll(
-            "LibraryScanStarted",
-            "dashboardHub",
-            new
+            name: "LibraryScanStarted",
+            endpoint: "dashboardHub",
+            data: new
             {
                 LibraryId = @event.LibraryId.ToString(),
                 @event.LibraryName,
@@ -51,15 +51,15 @@ public class SignalRLibraryScanEventHandler : IDisposable
             }
         );
 
-        _logger.LogInformation("Library scan started: {LibraryName}", @event.LibraryName);
+        _logger.LogInformation(message: "Library scan started: {LibraryName}", args: @event.LibraryName);
     }
 
     internal async Task OnScanCompleted(LibraryScanCompletedEvent @event, CancellationToken ct)
     {
         await _clientMessenger.SendToAll(
-            "LibraryScanCompleted",
-            "dashboardHub",
-            new
+            name: "LibraryScanCompleted",
+            endpoint: "dashboardHub",
+            data: new
             {
                 LibraryId = @event.LibraryId.ToString(),
                 @event.LibraryName,
@@ -70,18 +70,16 @@ public class SignalRLibraryScanEventHandler : IDisposable
         );
 
         _logger.LogInformation(
-            "Library scan completed: {LibraryName}, {ItemsFound} items found",
-            @event.LibraryName,
-            @event.ItemsFound
+            message: "Library scan completed: {LibraryName}, {ItemsFound} items found", args: [@event.LibraryName, @event.ItemsFound]
         );
     }
 
     internal async Task OnMediaAdded(MediaAddedEvent @event, CancellationToken ct)
     {
         await _clientMessenger.SendToAll(
-            "MediaAdded",
-            "dashboardHub",
-            new
+            name: "MediaAdded",
+            endpoint: "dashboardHub",
+            data: new
             {
                 @event.MediaId,
                 @event.MediaType,
@@ -95,9 +93,9 @@ public class SignalRLibraryScanEventHandler : IDisposable
     internal async Task OnMediaRemoved(MediaRemovedEvent @event, CancellationToken ct)
     {
         await _clientMessenger.SendToAll(
-            "MediaRemoved",
-            "dashboardHub",
-            new
+            name: "MediaRemoved",
+            endpoint: "dashboardHub",
+            data: new
             {
                 @event.MediaId,
                 @event.MediaType,

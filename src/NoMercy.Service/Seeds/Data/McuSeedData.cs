@@ -19,7 +19,7 @@ public static class McuSeedData
 {
     public static readonly Special Special = new()
     {
-        Id = Ulid.Parse("01HSBYSE7ZNGN7P586BQJ7W9ZB"),
+        Id = Ulid.Parse(base32: "01HSBYSE7ZNGN7P586BQJ7W9ZB"),
         Title = "Marvel Cinematic Universe",
         Backdrop = "/clje9xd4v0000d4ef0usufhy9.jpg",
         Poster = "/4Af70wDv1sN8JztUNnvXgae193O.jpg",

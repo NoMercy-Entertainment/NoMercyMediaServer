@@ -22,8 +22,8 @@ namespace NoMercy.Encoder.Execution;
 public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor> logger)
     : IFfmpegExecutor
 {
-    private static readonly TimeSpan ProgressThrottleInterval = TimeSpan.FromMilliseconds(500);
-    private static readonly TimeSpan ExitGracePeriod = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan ProgressThrottleInterval = TimeSpan.FromMilliseconds(milliseconds: 500);
+    private static readonly TimeSpan ExitGracePeriod = TimeSpan.FromSeconds(seconds: 10);
 
     public async Task<ExecutionResult> ExecuteAsync(
         FfmpegCommand command,
@@ -48,19 +48,16 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
         // Kill signal: fires after a grace period once FFmpeg reports progress=end.
         // This prevents the process from hanging indefinitely after output is written.
         CancellationTokenSource killCts = new();
-        bool hasProgressPipe = command.Arguments.Contains("pipe:1");
+        bool hasProgressPipe = command.Arguments.Contains(value: "pipe:1");
         int ffmpegPid = 0;
 
         logger.LogDebug(
-            "[{CorrelationId}] Executing: {Executable} {Args}",
-            correlationId,
-            command.Executable,
-            string.Join(" ", command.Arguments)
+            message: "[{CorrelationId}] Executing: {Executable} {Args}", args: [correlationId, command.Executable, string.Join(separator: " ", value: command.Arguments)]
         );
 
         void OnStdOut(string line)
         {
-            FfmpegProgressSnapshot? snapshot = parser.FeedLine(line);
+            FfmpegProgressSnapshot? snapshot = parser.FeedLine(line: line);
             if (snapshot is null)
                 return;
 
@@ -69,8 +66,8 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
             {
                 speedSum += snapshot.Speed;
                 fpsSum += snapshot.Fps;
-                peakSpeed = Math.Max(peakSpeed, snapshot.Speed);
-                peakFps = Math.Max(peakFps, snapshot.Fps);
+                peakSpeed = Math.Max(val1: peakSpeed, val2: snapshot.Speed);
+                peakFps = Math.Max(val1: peakFps, val2: snapshot.Fps);
                 lastTotalSize = snapshot.TotalSizeBytes;
                 sampleCount++;
             }
@@ -79,11 +76,9 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
             {
                 lastTotalSize = snapshot.TotalSizeBytes;
                 logger.LogDebug(
-                    "[{CorrelationId}] progress=end received, starting {Grace}s exit grace period",
-                    correlationId,
-                    ExitGracePeriod.TotalSeconds
+                    message: "[{CorrelationId}] progress=end received, starting {Grace}s exit grace period", args: [correlationId, ExitGracePeriod.TotalSeconds]
                 );
-                killCts.CancelAfter(ExitGracePeriod);
+                killCts.CancelAfter(delay: ExitGracePeriod);
             }
 
             if (onProgress is null)
@@ -100,16 +95,16 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
             double percent =
                 inputDuration.TotalSeconds > 0
                     ? Math.Min(
-                        100.0,
-                        snapshot.OutTime.TotalSeconds / inputDuration.TotalSeconds * 100.0
+                        val1: 100.0,
+                        val2: snapshot.OutTime.TotalSeconds / inputDuration.TotalSeconds * 100.0
                     )
                     : 0;
 
             TimeSpan? remaining =
                 snapshot.Speed > 0 && inputDuration.TotalSeconds > 0
                     ? TimeSpan.FromSeconds(
-                        (inputDuration.TotalSeconds - snapshot.OutTime.TotalSeconds)
-                            / snapshot.Speed
+                        value: (inputDuration.TotalSeconds - snapshot.OutTime.TotalSeconds)
+                               / snapshot.Speed
                     )
                     : null;
 
@@ -118,7 +113,7 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
             // SignalR payload (EventBusProgressObserver), so it must stay
             // period-decimal regardless of the host's locale.
             string bitrateStr = snapshot.BitrateKbps.HasValue
-                ? $"{snapshot.BitrateKbps.Value.ToString("F1", CultureInfo.InvariantCulture)}kbits/s"
+                ? $"{snapshot.BitrateKbps.Value.ToString(format: "F1", provider: CultureInfo.InvariantCulture)}kbits/s"
                 : "N/A";
 
             EncodingProgress progress = new(
@@ -137,20 +132,20 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
                 DurationSeconds: inputDuration.TotalSeconds
             );
 
-            onProgress(progress);
+            onProgress(obj: progress);
         }
 
         try
         {
             ProcessResult result = await processRunner.RunAsync(
-                command.Executable,
-                command.Arguments,
-                OnStdOut,
-                null,
-                command.WorkingDirectory,
-                ct,
-                killCts.Token,
-                pid => ffmpegPid = pid
+                executable: command.Executable,
+                arguments: command.Arguments,
+                onStdOut: OnStdOut,
+                onStdErr: null,
+                workingDirectory: command.WorkingDirectory,
+                cancellationToken: ct,
+                killSignal: killCts.Token,
+                onProcessStarted: pid => ffmpegPid = pid
             );
 
             stopwatch.Stop();
@@ -166,11 +161,7 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
                 );
 
                 logger.LogInformation(
-                    "[{CorrelationId}] FFmpeg completed in {Duration} (avg {Speed:F2}x, {Fps:F1} fps)",
-                    correlationId,
-                    stopwatch.Elapsed,
-                    metrics.AverageSpeed,
-                    metrics.AverageFps
+                    message: "[{CorrelationId}] FFmpeg completed in {Duration} (avg {Speed:F2}x, {Fps:F1} fps)", args: [correlationId, stopwatch.Elapsed, metrics.AverageSpeed, metrics.AverageFps]
                 );
 
                 return new(
@@ -183,13 +174,9 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
                 );
             }
 
-            EncodingError error = ClassifyError(result.StdErr, result.ExitCode);
+            EncodingError error = ClassifyError(stderr: result.StdErr, exitCode: result.ExitCode);
             logger.LogError(
-                "[{CorrelationId}] FFmpeg failed: exit={ExitCode} error={ErrorKind}\nstderr: {StdErr}",
-                correlationId,
-                result.ExitCode,
-                error.Kind,
-                result.StdErr
+                message: "[{CorrelationId}] FFmpeg failed: exit={ExitCode} error={ErrorKind}\nstderr: {StdErr}", args: [correlationId, result.ExitCode, error.Kind, result.StdErr]
             );
 
             return new(
@@ -212,16 +199,16 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
 
         EncodingErrorKind kind = lower switch
         {
-            _ when lower.Contains("no such file") => EncodingErrorKind.InputNotFound,
-            _ when lower.Contains("invalid data found") => EncodingErrorKind.InputCorrupt,
-            _ when lower.Contains("codec not currently supported") =>
+            _ when lower.Contains(value: "no such file") => EncodingErrorKind.InputNotFound,
+            _ when lower.Contains(value: "invalid data found") => EncodingErrorKind.InputCorrupt,
+            _ when lower.Contains(value: "codec not currently supported") =>
                 EncodingErrorKind.CodecUnavailable,
-            _ when lower.Contains("encoder") && lower.Contains("not found") =>
+            _ when lower.Contains(value: "encoder") && lower.Contains(value: "not found") =>
                 EncodingErrorKind.CodecUnavailable,
-            _ when lower.Contains("device") && lower.Contains("cannot") =>
+            _ when lower.Contains(value: "device") && lower.Contains(value: "cannot") =>
                 EncodingErrorKind.HardwareFailure,
-            _ when lower.Contains("no space left") => EncodingErrorKind.DiskFull,
-            _ when lower.Contains("out of memory") => EncodingErrorKind.HardwareFailure,
+            _ when lower.Contains(value: "no space left") => EncodingErrorKind.DiskFull,
+            _ when lower.Contains(value: "out of memory") => EncodingErrorKind.HardwareFailure,
             _ => EncodingErrorKind.ProcessCrashed,
         };
 

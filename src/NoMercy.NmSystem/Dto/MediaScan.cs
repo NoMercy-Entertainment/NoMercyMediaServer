@@ -32,8 +32,8 @@ public class MediaScan : IDisposable, IAsyncDisposable
     private string? Filter { get; set; }
 
     private readonly Regex _folderNameRegex = new(
-        @"video_.*|audio_.*|subtitles|scans|cds.*|ost|album|music|original|fonts|thumbs|metadata|NCED|NCOP|\s\(\d\)\.|~",
-        RegexOptions.IgnoreCase
+        pattern: @"video_.*|audio_.*|subtitles|scans|cds.*|ost|album|music|original|fonts|thumbs|metadata|NCED|NCOP|\s\(\d\)\.|~",
+        options: RegexOptions.IgnoreCase
     );
 
     private string[] _extensionFilter = [];
@@ -70,7 +70,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
             ],
             "music" => [".mp3", ".flac", ".wav", ".m4a"],
             "subtitle" => [".srt", ".vtt", ".ass"],
-            _ => throw new ArgumentOutOfRangeException(nameof(mediaType), mediaType, null),
+            _ => throw new ArgumentOutOfRangeException(paramName: nameof(mediaType), actualValue: mediaType, message: null),
         };
 
         return this;
@@ -78,10 +78,10 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
     public async Task<ConcurrentBag<MediaFolderExtend>> Process(string rootFolder, int depth = 0)
     {
-        rootFolder = _driver.GetFullPath(rootFolder);
+        rootFolder = _driver.GetFullPath(path: rootFolder);
         return !_fileListingEnabled
-            ? await Task.Run(() => ScanFoldersOnly(rootFolder, depth))
-            : await ScanFolderAsync(rootFolder, depth);
+            ? await Task.Run(function: () => ScanFoldersOnly(folderPath: rootFolder, depth: depth))
+            : await ScanFolderAsync(folderPath: rootFolder, depth: depth);
     }
 
     private async Task<ConcurrentBag<MediaFolderExtend>> ScanFolderAsync(
@@ -89,29 +89,29 @@ public class MediaScan : IDisposable, IAsyncDisposable
         int depth
     )
     {
-        folderPath = _driver.GetFullPath(folderPath);
+        folderPath = _driver.GetFullPath(path: folderPath);
 
         ConcurrentBag<MediaFolderExtend> folders = [];
 
         if (depth < 0)
             return folders;
 
-        if (!_driver.DirectoryExists(folderPath))
+        if (!_driver.DirectoryExists(path: folderPath))
             return folders;
 
-        ConcurrentBag<MediaFile> files = await FilesAsync(folderPath);
+        ConcurrentBag<MediaFile> files = await FilesAsync(folderPath: folderPath);
 
-        MovieFile movieFile1 = _movieDetector.GetInfo(folderPath);
+        MovieFile movieFile1 = _movieDetector.GetInfo(filePath: folderPath);
         movieFile1.Year ??= folderPath.TryGetYear();
 
         folders.Add(
-            new()
+            item: new()
             {
-                Name = Path.GetFileName(folderPath),
+                Name = Path.GetFileName(path: folderPath),
                 Path = folderPath,
-                Created = _driver.GetCreationTimeUtc(folderPath).ToLocalTime(),
-                Modified = _driver.GetLastWriteTimeUtc(folderPath).ToLocalTime(),
-                Accessed = _driver.GetLastAccessTimeUtc(folderPath).ToLocalTime(),
+                Created = _driver.GetCreationTimeUtc(path: folderPath).ToLocalTime(),
+                Modified = _driver.GetLastWriteTimeUtc(path: folderPath).ToLocalTime(),
+                Accessed = _driver.GetLastAccessTimeUtc(path: folderPath).ToLocalTime(),
                 Type = "folder",
                 Parsed = new()
                 {
@@ -130,9 +130,9 @@ public class MediaScan : IDisposable, IAsyncDisposable
             try
             {
                 directories = _driver
-                    .EnumerateFileSystemEntries(folderPath, "*", SearchOption.TopDirectoryOnly)
-                    .Where(e => _driver.DirectoryExists(e))
-                    .OrderBy(f => f);
+                    .EnumerateFileSystemEntries(directory: folderPath, searchPattern: "*", option: SearchOption.TopDirectoryOnly)
+                    .Where(predicate: e => _driver.DirectoryExists(path: e))
+                    .OrderBy(keySelector: f => f);
             }
             catch
             {
@@ -142,22 +142,22 @@ public class MediaScan : IDisposable, IAsyncDisposable
                 return folders;
 
             await Parallel.ForEachAsync(
-                directories,
-                SystemParallelism.Options,
-                async (directory, cancellationToken) =>
+                source: directories,
+                parallelOptions: SystemParallelism.Options,
+                body: async (directory, cancellationToken) =>
                 {
-                    string folderName = Path.GetFileName(directory);
+                    string folderName = Path.GetFileName(path: directory);
 
-                    if ((_regexFilterEnabled && _folderNameRegex.IsMatch(folderName)) || depth == 0)
+                    if ((_regexFilterEnabled && _folderNameRegex.IsMatch(input: folderName)) || depth == 0)
                     {
                         files.Add(
-                            new()
+                            item: new()
                             {
                                 Name = folderName,
                                 Path = directory,
-                                Created = _driver.GetCreationTimeUtc(directory).ToLocalTime(),
-                                Modified = _driver.GetLastWriteTimeUtc(directory).ToLocalTime(),
-                                Accessed = _driver.GetLastAccessTimeUtc(directory).ToLocalTime(),
+                                Created = _driver.GetCreationTimeUtc(path: directory).ToLocalTime(),
+                                Modified = _driver.GetLastWriteTimeUtc(path: directory).ToLocalTime(),
+                                Accessed = _driver.GetLastAccessTimeUtc(path: directory).ToLocalTime(),
                                 Type = "folder",
                             }
                         );
@@ -166,29 +166,29 @@ public class MediaScan : IDisposable, IAsyncDisposable
                     }
 
                     ConcurrentBag<MediaFile> files2 =
-                        depth - 1 > 0 ? await FilesAsync(directory) : [];
+                        depth - 1 > 0 ? await FilesAsync(folderPath: directory) : [];
 
                     string cleanedFolderName = StringExtensions
                         .RemoveBracketedString()
-                        .Replace(folderName, string.Empty)
+                        .Replace(input: folderName, replacement: string.Empty)
                         .Trim();
                     string cleanedDirectory = Path.Combine(
-                        Path.GetDirectoryName(directory)!,
-                        cleanedFolderName
+                        path1: Path.GetDirectoryName(path: directory)!,
+                        path2: cleanedFolderName
                     );
-                    MovieFile movieFile = _movieDetector.GetInfo(cleanedDirectory);
+                    MovieFile movieFile = _movieDetector.GetInfo(filePath: cleanedDirectory);
                     movieFile.Year ??= directory.TryGetYear();
-                    if (string.IsNullOrEmpty(movieFile.Title))
-                        movieFile.Title = cleanedFolderName.Replace('.', ' ').Trim();
+                    if (string.IsNullOrEmpty(value: movieFile.Title))
+                        movieFile.Title = cleanedFolderName.Replace(oldChar: '.', newChar: ' ').Trim();
 
                     folders.Add(
-                        new()
+                        item: new()
                         {
                             Name = folderName,
                             Path = directory,
-                            Created = _driver.GetCreationTimeUtc(directory).ToLocalTime(),
-                            Modified = _driver.GetLastWriteTimeUtc(directory).ToLocalTime(),
-                            Accessed = _driver.GetLastAccessTimeUtc(directory).ToLocalTime(),
+                            Created = _driver.GetCreationTimeUtc(path: directory).ToLocalTime(),
+                            Modified = _driver.GetLastWriteTimeUtc(path: directory).ToLocalTime(),
+                            Accessed = _driver.GetLastAccessTimeUtc(path: directory).ToLocalTime(),
                             Type = "folder",
                             Parsed = new()
                             {
@@ -200,29 +200,29 @@ public class MediaScan : IDisposable, IAsyncDisposable
                             Files = files2.Count > 0 ? files2 : null,
 
                             SubFolders =
-                                depth - 1 > 0 ? await ScanFolderAsync(directory, depth - 1) : [],
+                                depth - 1 > 0 ? await ScanFolderAsync(folderPath: directory, depth: depth - 1) : [],
                         }
                     );
                 }
             );
 
             ConcurrentBag<MediaFolderExtend> response = folders
-                .Where(f => f.Name is not "")
-                .OrderByDescending(f => f.Name)
+                .Where(predicate: f => f.Name is not "")
+                .OrderByDescending(keySelector: f => f.Name)
                 .ToConcurrentBag();
 
             return response;
         }
         catch (Exception e)
         {
-            Logger.App(e.Message, LogEventLevel.Fatal);
+            Logger.App(message: e.Message, level: LogEventLevel.Fatal);
             throw;
         }
     }
 
     private ConcurrentBag<MediaFolderExtend> ScanFoldersOnly(string folderPath, int depth)
     {
-        folderPath = _driver.GetFullPath(folderPath.ToUtf8());
+        folderPath = _driver.GetFullPath(path: folderPath.ToUtf8());
 
         if (depth < 0)
             return [];
@@ -232,30 +232,30 @@ public class MediaScan : IDisposable, IAsyncDisposable
             ConcurrentBag<MediaFolderExtend> folders = [];
 
             IOrderedEnumerable<string> directories = _driver
-                .EnumerateFileSystemEntries(folderPath, "*", SearchOption.TopDirectoryOnly)
-                .Where(e => _driver.DirectoryExists(e))
-                .OrderBy(f => f);
+                .EnumerateFileSystemEntries(directory: folderPath, searchPattern: "*", option: SearchOption.TopDirectoryOnly)
+                .Where(predicate: e => _driver.DirectoryExists(path: e))
+                .OrderBy(keySelector: f => f);
 
             Parallel.ForEach(
-                directories,
-                SystemParallelism.Options,
-                (directory, _) =>
+                source: directories,
+                parallelOptions: SystemParallelism.Options,
+                body: (directory, _) =>
                 {
-                    string dir = _driver.GetFullPath(directory.ToUtf8());
-                    Logger.App($"Scanning {dir}");
+                    string dir = _driver.GetFullPath(path: directory.ToUtf8());
+                    Logger.App(message: $"Scanning {dir}");
 
-                    string folderName = Path.GetFileName(dir);
+                    string folderName = Path.GetFileName(path: dir);
 
-                    if (_regexFilterEnabled && _folderNameRegex.IsMatch(folderName))
+                    if (_regexFilterEnabled && _folderNameRegex.IsMatch(input: folderName))
                     {
                         folders.Add(
-                            new()
+                            item: new()
                             {
                                 Name = folderName,
                                 Path = dir,
-                                Created = _driver.GetCreationTimeUtc(dir).ToLocalTime(),
-                                Modified = _driver.GetLastWriteTimeUtc(dir).ToLocalTime(),
-                                Accessed = _driver.GetLastAccessTimeUtc(dir).ToLocalTime(),
+                                Created = _driver.GetCreationTimeUtc(path: dir).ToLocalTime(),
+                                Modified = _driver.GetLastWriteTimeUtc(path: dir).ToLocalTime(),
+                                Accessed = _driver.GetLastAccessTimeUtc(path: dir).ToLocalTime(),
                                 Type = "folder",
                             }
                         );
@@ -265,25 +265,25 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
                     string cleanedFolderName = StringExtensions
                         .RemoveBracketedString()
-                        .Replace(folderName, string.Empty)
+                        .Replace(input: folderName, replacement: string.Empty)
                         .Trim();
                     string cleanedDirectory = Path.Combine(
-                        Path.GetDirectoryName(directory)!,
-                        cleanedFolderName
+                        path1: Path.GetDirectoryName(path: directory)!,
+                        path2: cleanedFolderName
                     );
-                    MovieFile movieFile = _movieDetector.GetInfo(cleanedDirectory);
+                    MovieFile movieFile = _movieDetector.GetInfo(filePath: cleanedDirectory);
                     movieFile.Year ??= directory.TryGetYear();
-                    if (string.IsNullOrEmpty(movieFile.Title))
-                        movieFile.Title = cleanedFolderName.Replace('.', ' ').Trim();
+                    if (string.IsNullOrEmpty(value: movieFile.Title))
+                        movieFile.Title = cleanedFolderName.Replace(oldChar: '.', newChar: ' ').Trim();
 
                     folders.Add(
-                        new()
+                        item: new()
                         {
                             Name = folderName,
                             Path = directory,
-                            Created = _driver.GetCreationTimeUtc(directory).ToLocalTime(),
-                            Modified = _driver.GetLastWriteTimeUtc(directory).ToLocalTime(),
-                            Accessed = _driver.GetLastAccessTimeUtc(directory).ToLocalTime(),
+                            Created = _driver.GetCreationTimeUtc(path: directory).ToLocalTime(),
+                            Modified = _driver.GetLastWriteTimeUtc(path: directory).ToLocalTime(),
+                            Accessed = _driver.GetLastAccessTimeUtc(path: directory).ToLocalTime(),
                             Type = "folder",
 
                             Parsed = new()
@@ -293,22 +293,22 @@ public class MediaScan : IDisposable, IAsyncDisposable
                                 FilePath = movieFile.Path,
                             },
 
-                            SubFolders = depth - 1 > 0 ? ScanFoldersOnly(directory, depth - 1) : [],
+                            SubFolders = depth - 1 > 0 ? ScanFoldersOnly(folderPath: directory, depth: depth - 1) : [],
                         }
                     );
                 }
             );
 
             ConcurrentBag<MediaFolderExtend> response = folders
-                .Where(f => f.Name is not "")
-                .OrderByDescending(f => f.Name)
+                .Where(predicate: f => f.Name is not "")
+                .OrderByDescending(keySelector: f => f.Name)
                 .ToConcurrentBag();
 
             return response;
         }
         catch (Exception e)
         {
-            Logger.App(e.Message, LogEventLevel.Fatal);
+            Logger.App(message: e.Message, level: LogEventLevel.Fatal);
             throw;
         }
     }
@@ -319,23 +319,23 @@ public class MediaScan : IDisposable, IAsyncDisposable
         try
         {
             IEnumerable<string> entries = _driver
-                .EnumerateFileSystemEntries(folderPath, "*", SearchOption.TopDirectoryOnly)
-                .Where(e => _driver.FileExists(e));
+                .EnumerateFileSystemEntries(directory: folderPath, searchPattern: "*", option: SearchOption.TopDirectoryOnly)
+                .Where(predicate: e => _driver.FileExists(path: e));
 
             await Parallel.ForEachAsync(
-                entries,
-                SystemParallelism.Options,
-                async (file, cancellationToken) =>
+                source: entries,
+                parallelOptions: SystemParallelism.Options,
+                body: async (file, cancellationToken) =>
                 {
-                    file = _driver.GetFullPath(file.ToUtf8());
+                    file = _driver.GetFullPath(path: file.ToUtf8());
 
                     if (Filter is not null)
-                        if (!file.Contains(Filter))
+                        if (!file.Contains(value: Filter))
                             return;
 
-                    string extension = Path.GetExtension(file).ToLower();
+                    string extension = Path.GetExtension(path: file).ToLower();
 
-                    if (_extensionFilter.Length > 0 && !_extensionFilter.Contains(extension))
+                    if (_extensionFilter.Length > 0 && !_extensionFilter.Contains(value: extension))
                         return;
 
                     bool isVideoFile = extension is ".mp4" or ".avi" or ".mkv" or ".m3u8";
@@ -346,29 +346,29 @@ public class MediaScan : IDisposable, IAsyncDisposable
                         return;
 
                     MovieFile? movieFile =
-                        isVideoFile || isAudioFile ? _movieDetector.GetInfo(file) : null;
+                        isVideoFile || isAudioFile ? _movieDetector.GetInfo(filePath: file) : null;
 
                     // Override MovieDetector's season/episode with our own regex on the filename only,
                     // because MovieDetector can pick up season/episode numbers from parent folder segments
                     // in the full path (e.g. "S02 1080p" in the folder name instead of the file name).
                     if (movieFile is not null && (isVideoFile || isAudioFile))
                     {
-                        string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
+                        string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(path: file);
                         string cleanedFileName = StringExtensions
                             .RemoveBracketedString()
-                            .Replace(fileNameWithoutExtension, string.Empty)
+                            .Replace(input: fileNameWithoutExtension, replacement: string.Empty)
                             .Trim();
 
                         Match epMatch = StringExtensions
                             .MatchEpisodePrefix()
-                            .Match(cleanedFileName);
+                            .Match(input: cleanedFileName);
                         if (!epMatch.Success)
-                            epMatch = StringExtensions.MatchSeasonEpisode().Match(cleanedFileName);
+                            epMatch = StringExtensions.MatchSeasonEpisode().Match(input: cleanedFileName);
 
                         if (epMatch is { Success: true, Groups.Count: >= 3 })
                         {
-                            movieFile.Season = int.Parse(epMatch.Groups[1].Value);
-                            movieFile.Episode = int.Parse(epMatch.Groups[2].Value);
+                            movieFile.Season = int.Parse(s: epMatch.Groups[groupnum: 1].Value);
+                            movieFile.Episode = int.Parse(s: epMatch.Groups[groupnum: 2].Value);
                             movieFile.IsSeries = true;
                             movieFile.IsSuccess = true;
                         }
@@ -376,10 +376,10 @@ public class MediaScan : IDisposable, IAsyncDisposable
                         {
                             Match wordMatch = StringExtensions
                                 .MatchEpisodeWord()
-                                .Match(cleanedFileName);
+                                .Match(input: cleanedFileName);
                             if (wordMatch.Success)
                             {
-                                movieFile.Episode = int.Parse(wordMatch.Groups[1].Value);
+                                movieFile.Episode = int.Parse(s: wordMatch.Groups[groupnum: 1].Value);
                                 movieFile.IsSeries = true;
                                 movieFile.IsSuccess = true;
                             }
@@ -392,18 +392,18 @@ public class MediaScan : IDisposable, IAsyncDisposable
                     {
                         if (isVideoFile || isAudioFile)
                         {
-                            ffprobe = await FfProbe.CreateAsync(_driver, file, cancellationToken);
+                            ffprobe = await FfProbe.CreateAsync(driver: _driver, file: file, ct: cancellationToken);
                             if (isAudioFile)
                             {
                                 // TagFile needs random access — only safe on local FS.
                                 if (_driver is LocalStorageDriver)
-                                    tagFile = TagFile.Create(file);
+                                    tagFile = TagFile.Create(path: file);
                             }
                         }
                     }
                     catch (Exception e)
                     {
-                        Logger.App(e.Message, LogEventLevel.Fatal);
+                        Logger.App(message: e.Message, level: LogEventLevel.Fatal);
                     }
 
                     MovieFileExtend movieFileExtend = new()
@@ -421,13 +421,13 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
                     MediaFile res = new()
                     {
-                        Name = Path.GetFileName(file),
+                        Name = Path.GetFileName(path: file),
                         Path = file,
                         Extension = extension,
-                        Size = _driver.GetFileSize(file),
-                        Created = _driver.GetCreationTimeUtc(file).ToLocalTime(),
-                        Modified = _driver.GetLastWriteTimeUtc(file).ToLocalTime(),
-                        Accessed = _driver.GetLastAccessTimeUtc(file).ToLocalTime(),
+                        Size = _driver.GetFileSize(path: file),
+                        Created = _driver.GetCreationTimeUtc(path: file).ToLocalTime(),
+                        Modified = _driver.GetLastWriteTimeUtc(path: file).ToLocalTime(),
+                        Accessed = _driver.GetLastAccessTimeUtc(path: file).ToLocalTime(),
                         Type = "file",
 
                         Parsed = movieFileExtend,
@@ -435,17 +435,17 @@ public class MediaScan : IDisposable, IAsyncDisposable
                         TagFile = tagFile,
                     };
 
-                    files.Add(res);
+                    files.Add(item: res);
                 }
             );
 
-            ConcurrentBag<MediaFile> response = files.OrderBy(f => f.Name).ToConcurrentBag();
+            ConcurrentBag<MediaFile> response = files.OrderBy(keySelector: f => f.Name).ToConcurrentBag();
 
             return response;
         }
         catch (Exception e)
         {
-            Logger.App(e.Message, LogEventLevel.Fatal);
+            Logger.App(message: e.Message, level: LogEventLevel.Fatal);
 
             return files;
         }

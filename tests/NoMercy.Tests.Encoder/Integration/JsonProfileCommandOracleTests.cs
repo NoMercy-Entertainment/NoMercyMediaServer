@@ -44,8 +44,8 @@ namespace NoMercy.Tests.Encoder.Integration;
 /// Skip logic: a case is skipped only when the required encoder binary is absent
 /// from this ffmpeg build — an environment gap, not a code bug.
 /// </summary>
-[Trait("Category", "Integration")]
-[Collection("RealEncode")]
+[Trait(name: "Category", value: "Integration")]
+[Collection(name: "RealEncode")]
 public class JsonProfileCommandOracleTests : IAsyncLifetime
 {
     private string _testDir = string.Empty;
@@ -62,17 +62,18 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         _ffmpegPath = NoMercyFfmpegProbe.ResolveFfmpegPath() ?? "ffmpeg";
-        _ffprobePath = NoMercyFfmpegProbe.ResolveFfprobePath(_ffmpegPath) ?? "ffprobe";
+        _ffprobePath = NoMercyFfmpegProbe.ResolveFfprobePath(ffmpegPath: _ffmpegPath) ?? "ffprobe";
 
         _testDir = Path.Combine(
-            Path.GetTempPath(),
-            "nomercy-json-oracle-" + Guid.NewGuid().ToString("N")[..8]
+            path1: Path.GetTempPath(),
+            path2: "nomercy-json-oracle-" + Guid.NewGuid().ToString(format: "N")[..8]
         );
-        Directory.CreateDirectory(_testDir);
+        Directory.CreateDirectory(path: _testDir);
 
         // 1-second stereo video+audio clip (8-bit H.264/yuv420p, AAC stereo).
-        _inputFile = Path.Combine(_testDir, "src.mp4");
-        int exit = await RunFfmpegAsync([
+        _inputFile = Path.Combine(path1: _testDir, path2: "src.mp4");
+        int exit = await RunFfmpegAsync(args:
+        [
             "-y",
             "-f",
             "lavfi",
@@ -93,11 +94,12 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
             _inputFile,
         ]);
         if (exit != 0)
-            throw new InvalidOperationException("JSON oracle stereo clip generation failed.");
+            throw new InvalidOperationException(message: "JSON oracle stereo clip generation failed.");
 
         // 5.1-channel surround source so downmix profiles have real surround input.
-        _surroundInputFile = Path.Combine(_testDir, "src51.mkv");
-        int surroundExit = await RunFfmpegAsync([
+        _surroundInputFile = Path.Combine(path1: _testDir, path2: "src51.mkv");
+        int surroundExit = await RunFfmpegAsync(args:
+        [
             "-y",
             "-f",
             "lavfi",
@@ -118,16 +120,17 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
             _surroundInputFile,
         ]);
         if (surroundExit != 0)
-            throw new InvalidOperationException("JSON oracle 5.1 clip generation failed.");
+            throw new InvalidOperationException(message: "JSON oracle 5.1 clip generation failed.");
 
         // Source with an embedded SRT stream for subtitle profile tests.
-        string srtPath = Path.Combine(_testDir, "sub.srt");
+        string srtPath = Path.Combine(path1: _testDir, path2: "sub.srt");
         await File.WriteAllTextAsync(
-            srtPath,
-            "1\n00:00:00,000 --> 00:00:12,000\nOracle subtitle line\n"
+            path: srtPath,
+            contents: "1\n00:00:00,000 --> 00:00:12,000\nOracle subtitle line\n"
         );
-        _subtitleInputFile = Path.Combine(_testDir, "src_sub.mkv");
-        int subExit = await RunFfmpegAsync([
+        _subtitleInputFile = Path.Combine(path1: _testDir, path2: "src_sub.mkv");
+        int subExit = await RunFfmpegAsync(args:
+        [
             "-y",
             "-f",
             "lavfi",
@@ -152,13 +155,14 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
             _subtitleInputFile,
         ]);
         if (subExit != 0)
-            throw new InvalidOperationException("JSON oracle subtitle clip generation failed.");
+            throw new InvalidOperationException(message: "JSON oracle subtitle clip generation failed.");
 
         // H.264 video + Opus stereo audio — proves a Copy-policy audio output
         // carries a codec HlsFmp4 didn't support before this slice (Opus)
         // through a real stream-copy remux, not a re-encode.
-        _opusInputFile = Path.Combine(_testDir, "src_opus.mkv");
-        int opusExit = await RunFfmpegAsync([
+        _opusInputFile = Path.Combine(path1: _testDir, path2: "src_opus.mkv");
+        int opusExit = await RunFfmpegAsync(args:
+        [
             "-y",
             "-f",
             "lavfi",
@@ -181,11 +185,12 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
             _opusInputFile,
         ]);
         if (opusExit != 0)
-            throw new InvalidOperationException("JSON oracle Opus clip generation failed.");
+            throw new InvalidOperationException(message: "JSON oracle Opus clip generation failed.");
 
         // Audio-only source for FLAC/AAC/MP3 container profiles that have no video.
-        _audioOnlyInputFile = Path.Combine(_testDir, "src_audio.flac");
-        int audioExit = await RunFfmpegAsync([
+        _audioOnlyInputFile = Path.Combine(path1: _testDir, path2: "src_audio.flac");
+        int audioExit = await RunFfmpegAsync(args:
+        [
             "-y",
             "-f",
             "lavfi",
@@ -196,20 +201,20 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
             _audioOnlyInputFile,
         ]);
         if (audioExit != 0)
-            throw new InvalidOperationException("JSON oracle audio-only clip generation failed.");
+            throw new InvalidOperationException(message: "JSON oracle audio-only clip generation failed.");
 
         _availableEncoders = await ProbeAvailableEncodersAsync();
 
         ServiceCollection services = new();
         services.AddLogging();
-        string suffix = Guid.NewGuid().ToString("N")[..8];
-        services.AddDbContextFactory<MediaContext>(o =>
-            o.UseInMemoryDatabase($"json-oracle-media-{suffix}")
+        string suffix = Guid.NewGuid().ToString(format: "N")[..8];
+        services.AddDbContextFactory<MediaContext>(optionsAction: o =>
+            o.UseInMemoryDatabase(databaseName: $"json-oracle-media-{suffix}")
         );
-        services.AddDbContextFactory<AppDbContext>(o =>
-            o.UseInMemoryDatabase($"json-oracle-app-{suffix}")
+        services.AddDbContextFactory<AppDbContext>(optionsAction: o =>
+            o.UseInMemoryDatabase(databaseName: $"json-oracle-app-{suffix}")
         );
-        services.AddNoMercyEncoder(opts =>
+        services.AddNoMercyEncoder(configure: opts =>
         {
             opts.FfmpegPathOverride = _ffmpegPath;
             opts.FfprobePathOverride = _ffprobePath;
@@ -225,7 +230,7 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
 
         HardwareInitializationService hwInit =
             _serviceProvider.GetRequiredService<HardwareInitializationService>();
-        await hwInit.StartAsync(CancellationToken.None);
+        await hwInit.StartAsync(cancellationToken: CancellationToken.None);
     }
 
     private sealed class TestHostLifetime : IHostApplicationLifetime
@@ -242,8 +247,8 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
         _serviceProvider.Dispose();
         try
         {
-            if (Directory.Exists(_testDir))
-                Directory.Delete(_testDir, recursive: true);
+            if (Directory.Exists(path: _testDir))
+                Directory.Delete(path: _testDir, recursive: true);
         }
         catch
         {
@@ -266,25 +271,25 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
     public static IEnumerable<object[]> BuiltinPresetCases()
     {
         foreach (EncodingProfile profile in BuiltinPresets.All())
-            yield return [profile.Name, JsonConvert.SerializeObject(profile)];
+            yield return [profile.Name, JsonConvert.SerializeObject(value: profile)];
     }
 
     [SkippableTheory]
-    [MemberData(nameof(BuiltinPresetCases))]
+    [MemberData(memberName: nameof(BuiltinPresetCases))]
     public async Task BuiltinPreset_SerializeDeserializeEncode_FfmpegAcceptsCommand(
         string presetName,
         string serializedJson
     )
     {
         EncodingProfile? deserialized = JsonConvert.DeserializeObject<EncodingProfile>(
-            serializedJson
+            value: serializedJson
         );
 
         deserialized
             .Should()
             .NotBeNull(
-                $"builtin preset '{presetName}' must survive a JsonConvert round-trip "
-                    + "with no JsonSerializerSettings (the path used by EncoderProfileService)"
+                because: $"builtin preset '{presetName}' must survive a JsonConvert round-trip "
+                         + "with no JsonSerializerSettings (the path used by EncoderProfileService)"
             );
 
         EncodingProfile profile = deserialized!;
@@ -292,42 +297,42 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
         // Skip if the required video encoder is absent from this ffmpeg build.
         if (profile.Video is not null)
         {
-            string videoEncoder = VideoEncoderName(profile.Video.Codec);
-            if (!string.IsNullOrEmpty(videoEncoder))
+            string videoEncoder = VideoEncoderName(codec: profile.Video.Codec);
+            if (!string.IsNullOrEmpty(value: videoEncoder))
                 Skip.IfNot(
-                    _availableEncoders.Contains(videoEncoder),
-                    $"preset '{presetName}': video encoder '{videoEncoder}' absent from this ffmpeg build"
+                    condition: _availableEncoders.Contains(item: videoEncoder),
+                    reason: $"preset '{presetName}': video encoder '{videoEncoder}' absent from this ffmpeg build"
                 );
         }
 
         // Skip if any required audio encoder is absent.
         foreach (AudioOutput audioOutput in profile.Audio)
         {
-            string audioEncoder = AudioEncoderName(audioOutput.Codec);
-            if (!string.IsNullOrEmpty(audioEncoder))
+            string audioEncoder = AudioEncoderName(codec: audioOutput.Codec);
+            if (!string.IsNullOrEmpty(value: audioEncoder))
                 Skip.IfNot(
-                    _availableEncoders.Contains(audioEncoder),
-                    $"preset '{presetName}': audio encoder '{audioEncoder}' absent from this ffmpeg build"
+                    condition: _availableEncoders.Contains(item: audioEncoder),
+                    reason: $"preset '{presetName}': audio encoder '{audioEncoder}' absent from this ffmpeg build"
                 );
         }
 
         // Pick the appropriate synthetic source for this profile.
-        string inputPath = ChooseInputPath(profile);
+        string inputPath = ChooseInputPath(profile: profile);
 
         string outputDir = Path.Combine(
-            _testDir,
-            "builtin_" + SanitizeName(presetName) + "_" + Guid.NewGuid().ToString("N")[..4]
+            path1: _testDir,
+            path2: "builtin_" + SanitizeName(name: presetName) + "_" + Guid.NewGuid().ToString(format: "N")[..4]
         );
-        Directory.CreateDirectory(outputDir);
+        Directory.CreateDirectory(path: outputDir);
 
-        EncodingResult result = await RunEncodeAsync(profile, inputPath, outputDir);
+        EncodingResult result = await RunEncodeAsync(profile: profile, inputPath: inputPath, outputDir: outputDir);
 
         result
             .Success.Should()
             .BeTrue(
-                $"ffmpeg must accept the command generated from builtin preset '{presetName}' "
-                    + $"after a bare JsonConvert round-trip. "
-                    + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+                because: $"ffmpeg must accept the command generated from builtin preset '{presetName}' "
+                         + $"after a bare JsonConvert round-trip. "
+                         + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
     }
 
@@ -821,7 +826,7 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
     }
 
     [SkippableTheory]
-    [MemberData(nameof(HandWrittenJsonCases))]
+    [MemberData(memberName: nameof(HandWrittenJsonCases))]
     public async Task HandWrittenJson_IntegerEnums_DeserializesAndFfmpegAcceptsCommand(
         string caseName,
         string profileJson,
@@ -830,32 +835,32 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
     {
         // Bare deserialize — same code path as EncoderProfileService lines 159 / 292.
         // No JsonSerializerSettings, so Newtonsoft default settings apply.
-        EncodingProfile? profile = JsonConvert.DeserializeObject<EncodingProfile>(profileJson);
+        EncodingProfile? profile = JsonConvert.DeserializeObject<EncodingProfile>(value: profileJson);
 
         profile
             .Should()
             .NotBeNull(
-                $"hand-written JSON case '{caseName}' must deserialize cleanly under "
-                    + "Newtonsoft default settings (integer enums, PascalCase fields)"
+                because: $"hand-written JSON case '{caseName}' must deserialize cleanly under "
+                         + "Newtonsoft default settings (integer enums, PascalCase fields)"
             );
 
         if (profile!.Video is not null)
         {
-            string videoEncoder = VideoEncoderName(profile.Video.Codec);
-            if (!string.IsNullOrEmpty(videoEncoder))
+            string videoEncoder = VideoEncoderName(codec: profile.Video.Codec);
+            if (!string.IsNullOrEmpty(value: videoEncoder))
                 Skip.IfNot(
-                    _availableEncoders.Contains(videoEncoder),
-                    $"case '{caseName}': video encoder '{videoEncoder}' absent from this ffmpeg build"
+                    condition: _availableEncoders.Contains(item: videoEncoder),
+                    reason: $"case '{caseName}': video encoder '{videoEncoder}' absent from this ffmpeg build"
                 );
         }
 
         foreach (AudioOutput audioOutput in profile.Audio)
         {
-            string audioEncoder = AudioEncoderName(audioOutput.Codec);
-            if (!string.IsNullOrEmpty(audioEncoder))
+            string audioEncoder = AudioEncoderName(codec: audioOutput.Codec);
+            if (!string.IsNullOrEmpty(value: audioEncoder))
                 Skip.IfNot(
-                    _availableEncoders.Contains(audioEncoder),
-                    $"case '{caseName}': audio encoder '{audioEncoder}' absent from this ffmpeg build"
+                    condition: _availableEncoders.Contains(item: audioEncoder),
+                    reason: $"case '{caseName}': audio encoder '{audioEncoder}' absent from this ffmpeg build"
                 );
         }
 
@@ -869,18 +874,18 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
         };
 
         string outputDir = Path.Combine(
-            _testDir,
-            "handwritten_" + SanitizeName(caseName) + "_" + Guid.NewGuid().ToString("N")[..4]
+            path1: _testDir,
+            path2: "handwritten_" + SanitizeName(name: caseName) + "_" + Guid.NewGuid().ToString(format: "N")[..4]
         );
-        Directory.CreateDirectory(outputDir);
+        Directory.CreateDirectory(path: outputDir);
 
-        EncodingResult result = await RunEncodeAsync(profile, inputPath, outputDir);
+        EncodingResult result = await RunEncodeAsync(profile: profile, inputPath: inputPath, outputDir: outputDir);
 
         result
             .Success.Should()
             .BeTrue(
-                $"ffmpeg must accept the command generated from hand-written JSON case '{caseName}'. "
-                    + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
+                because: $"ffmpeg must accept the command generated from hand-written JSON case '{caseName}'. "
+                         + $"Error: {result.Error?.Message} | stderr: {result.Error?.FfmpegStderr}"
             );
 
         // The copy+sprite case has its sprite generated by a SEPARATE ffmpeg
@@ -893,23 +898,23 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
         // copy playlist encoded.
         if (caseName == "HlsFmp4CopyVideoWithSprite")
         {
-            string spritePath = Path.Combine(outputDir, "thumbs_160x90.webp");
-            string vttPath = Path.Combine(outputDir, "thumbs_160x90.vtt");
+            string spritePath = Path.Combine(path1: outputDir, path2: "thumbs_160x90.webp");
+            string vttPath = Path.Combine(path1: outputDir, path2: "thumbs_160x90.vtt");
 
-            File.Exists(spritePath)
+            File.Exists(path: spritePath)
                 .Should()
                 .BeTrue(
-                    $"the separate sprite command must produce {spritePath} for a copy-video HLS plan"
+                    because: $"the separate sprite command must produce {spritePath} for a copy-video HLS plan"
                 );
-            File.Exists(vttPath)
+            File.Exists(path: vttPath)
                 .Should()
-                .BeTrue($"the separate sprite command must produce {vttPath} alongside the sprite");
-            new FileInfo(spritePath)
+                .BeTrue(because: $"the separate sprite command must produce {vttPath} alongside the sprite");
+            new FileInfo(fileName: spritePath)
                 .Length.Should()
-                .BeGreaterThan(0, "the sprite sheet must contain real image data");
-            new FileInfo(vttPath)
+                .BeGreaterThan(expected: 0, because: "the sprite sheet must contain real image data");
+            new FileInfo(fileName: vttPath)
                 .Length.Should()
-                .BeGreaterThan(0, "the VTT cue file must not be empty");
+                .BeGreaterThan(expected: 0, because: "the VTT cue file must not be empty");
         }
 
         // A successful exit alone doesn't prove "-c:v copy" / "-c:a copy" were
@@ -924,9 +929,9 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
             // bare numbered .m4s media fragment which ffprobe can't reliably
             // identify standalone.
             string[] initSegments = Directory.GetFiles(
-                outputDir,
-                "init.mp4",
-                SearchOption.AllDirectories
+                path: outputDir,
+                searchPattern: "init.mp4",
+                searchOption: SearchOption.AllDirectories
             );
 
             // Match against the immediate parent directory name only — the
@@ -934,32 +939,32 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
             // substrings (from the case name), so matching the full path
             // would find every init.mp4 under either filter.
             string[] videoTargets = initSegments
-                .Where(p =>
-                    Path.GetFileName(Path.GetDirectoryName(p))!
-                        .Contains("video", StringComparison.OrdinalIgnoreCase)
+                .Where(predicate: p =>
+                    Path.GetFileName(path: Path.GetDirectoryName(path: p))!
+                        .Contains(value: "video", comparisonType: StringComparison.OrdinalIgnoreCase)
                 )
                 .ToArray();
             string[] audioTargets = initSegments
-                .Where(p =>
-                    Path.GetFileName(Path.GetDirectoryName(p))!
-                        .Contains("audio", StringComparison.OrdinalIgnoreCase)
+                .Where(predicate: p =>
+                    Path.GetFileName(path: Path.GetDirectoryName(path: p))!
+                        .Contains(value: "audio", comparisonType: StringComparison.OrdinalIgnoreCase)
                 )
                 .ToArray();
 
-            videoTargets.Should().NotBeEmpty("the copy-video output must write segment files");
-            audioTargets.Should().NotBeEmpty("the copy-audio output must write segment files");
+            videoTargets.Should().NotBeEmpty(because: "the copy-video output must write segment files");
+            audioTargets.Should().NotBeEmpty(because: "the copy-audio output must write segment files");
 
-            string[] videoCodecs = await ProbeCodecNamesAsync(videoTargets[0]);
-            string[] audioCodecs = await ProbeCodecNamesAsync(audioTargets[0]);
+            string[] videoCodecs = await ProbeCodecNamesAsync(mediaPath: videoTargets[0]);
+            string[] audioCodecs = await ProbeCodecNamesAsync(mediaPath: audioTargets[0]);
 
             videoCodecs
                 .Should()
-                .Contain("h264", "-c:v copy must preserve the source codec, never re-encode it");
+                .Contain(expected: "h264", because: "-c:v copy must preserve the source codec, never re-encode it");
             audioCodecs
                 .Should()
                 .Contain(
-                    "opus",
-                    "-c:a copy must preserve the source Opus codec, never re-encode it to aac/eac3"
+                    expected: "opus",
+                    because: "-c:a copy must preserve the source Opus codec, never re-encode it to aac/eac3"
                 );
         }
     }
@@ -1009,20 +1014,20 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
             """;
 
         EncodingProfile? profile = JsonConvert.DeserializeObject<EncodingProfile>(
-            JsonWithStringEnums
+            value: JsonWithStringEnums
         );
 
-        profile.Should().NotBeNull("Newtonsoft accepts enum member names by default");
-        profile!.Container.Should().Be(Container.Mkv, "\"Mkv\" maps to Container.Mkv");
+        profile.Should().NotBeNull(because: "Newtonsoft accepts enum member names by default");
+        profile!.Container.Should().Be(expected: Container.Mkv, because: "\"Mkv\" maps to Container.Mkv");
         profile
             .Video!.Codec.Should()
-            .Be(NoMercy.Encoder.Codecs.VideoCodecType.H264, "\"H264\" maps to VideoCodecType.H264");
+            .Be(expected: NoMercy.Encoder.Codecs.VideoCodecType.H264, because: "\"H264\" maps to VideoCodecType.H264");
         profile
             .Video.CodecProfile.Should()
-            .Be(CodecProfile.High, "\"High\" maps to CodecProfile.High");
+            .Be(expected: CodecProfile.High, because: "\"High\" maps to CodecProfile.High");
         profile
             .Video.RateControl.Should()
-            .Be(RateControlMode.Crf, "\"Crf\" maps to RateControlMode.Crf");
+            .Be(expected: RateControlMode.Crf, because: "\"Crf\" maps to RateControlMode.Crf");
     }
 
     // -------------------------------------------------------------------------
@@ -1040,9 +1045,9 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
             OutputDirectory: outputDir,
             Profile: profile
         );
-        using CancellationTokenSource cts = new(TimeSpan.FromMinutes(2));
+        using CancellationTokenSource cts = new(delay: TimeSpan.FromMinutes(minutes: 2));
         IEncoder encoder = _serviceProvider.GetRequiredService<IEncoder>();
-        return await encoder.EncodeAsync(request, progress: null, cts.Token);
+        return await encoder.EncodeAsync(request: request, progress: null, ct: cts.Token);
     }
 
     /// <summary>
@@ -1059,7 +1064,7 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
         if (profile.Subtitles.Length > 0)
             return _subtitleInputFile;
 
-        bool hasSurroundAudio = profile.Audio.Any(a => a.Channels > 2);
+        bool hasSurroundAudio = profile.Audio.Any(predicate: a => a.Channels > 2);
         if (hasSurroundAudio)
             return _surroundInputFile;
 
@@ -1098,11 +1103,11 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
     /// so output directories can be created cleanly for each test case.
     /// </summary>
     private static string SanitizeName(string name) =>
-        System.Text.RegularExpressions.Regex.Replace(name, @"[^A-Za-z0-9_\-]", "_");
+        System.Text.RegularExpressions.Regex.Replace(input: name, pattern: @"[^A-Za-z0-9_\-]", replacement: "_");
 
     private async Task<IReadOnlySet<string>> ProbeAvailableEncodersAsync()
     {
-        HashSet<string> encoders = new(StringComparer.Ordinal);
+        HashSet<string> encoders = new(comparer: StringComparer.Ordinal);
         ProcessStartInfo psi = new()
         {
             FileName = _ffmpegPath,
@@ -1111,25 +1116,25 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
-        psi.ArgumentList.Add("-hide_banner");
-        psi.ArgumentList.Add("-encoders");
+        psi.ArgumentList.Add(item: "-hide_banner");
+        psi.ArgumentList.Add(item: "-encoders");
 
-        using Process process = Process.Start(psi)!;
+        using Process process = Process.Start(startInfo: psi)!;
         string stdout = await process.StandardOutput.ReadToEndAsync();
         await process.WaitForExitAsync();
 
-        foreach (string line in stdout.Split('\n'))
+        foreach (string line in stdout.Split(separator: '\n'))
         {
             string trimmed = line.Trim();
             string[] parts = trimmed.Split(
-                ' ',
-                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+                separator: ' ',
+                options: StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
             );
             if (
                 parts is [{ Length: 6 }, _, ..]
-                && parts[0].All(c => c is 'V' or 'A' or 'S' or 'F' or 'X' or 'B' or 'D' or '.')
+                && parts[0].All(predicate: c => c is 'V' or 'A' or 'S' or 'F' or 'X' or 'B' or 'D' or '.')
             )
-                encoders.Add(parts[1]);
+                encoders.Add(item: parts[1]);
         }
         return encoders;
     }
@@ -1145,9 +1150,9 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
             RedirectStandardError = true,
         };
         foreach (string arg in args)
-            psi.ArgumentList.Add(arg);
+            psi.ArgumentList.Add(item: arg);
 
-        using Process process = Process.Start(psi)!;
+        using Process process = Process.Start(startInfo: psi)!;
         Task<string> stderr = process.StandardError.ReadToEndAsync();
         Task<string> stdout = process.StandardOutput.ReadToEndAsync();
         await process.WaitForExitAsync();
@@ -1171,20 +1176,20 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
-        psi.ArgumentList.Add("-v");
-        psi.ArgumentList.Add("error");
-        psi.ArgumentList.Add("-show_entries");
-        psi.ArgumentList.Add("stream=codec_name");
-        psi.ArgumentList.Add("-of");
-        psi.ArgumentList.Add("default=noprint_wrappers=1:nokey=1");
-        psi.ArgumentList.Add(mediaPath);
+        psi.ArgumentList.Add(item: "-v");
+        psi.ArgumentList.Add(item: "error");
+        psi.ArgumentList.Add(item: "-show_entries");
+        psi.ArgumentList.Add(item: "stream=codec_name");
+        psi.ArgumentList.Add(item: "-of");
+        psi.ArgumentList.Add(item: "default=noprint_wrappers=1:nokey=1");
+        psi.ArgumentList.Add(item: mediaPath);
 
-        using Process process = Process.Start(psi)!;
+        using Process process = Process.Start(startInfo: psi)!;
         string stdout = await process.StandardOutput.ReadToEndAsync();
         await process.WaitForExitAsync();
 
         return stdout
-            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Split(separator: '\n', options: StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .ToArray();
     }
 }

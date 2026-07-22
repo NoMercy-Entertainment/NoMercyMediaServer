@@ -25,25 +25,25 @@ public class Aes128HlsDrmProcessorTests
         string? artifactDir = null;
         try
         {
-            Aes128HlsDrmProcessor sut = new(TestStorageFactory.CreateLocal());
-            DrmConfig config = new(DrmMethod.Aes128, KeyUri: "https://example/key/abc");
+            Aes128HlsDrmProcessor sut = new(storage: TestStorageFactory.CreateLocal());
+            DrmConfig config = new(Method: DrmMethod.Aes128, KeyUri: "https://example/key/abc");
 
-            DrmArtifact artifact = await sut.PrepareAsync(dir, config, CancellationToken.None);
-            artifactDir = Path.GetDirectoryName(artifact.KeyFilePath);
+            DrmArtifact artifact = await sut.PrepareAsync(outputDirectory: dir, config: config, ct: CancellationToken.None);
+            artifactDir = Path.GetDirectoryName(path: artifact.KeyFilePath);
 
-            artifact.Key.Length.Should().Be(16);
-            artifact.Iv.Length.Should().Be(16);
-            File.Exists(artifact.KeyFilePath).Should().BeTrue();
-            File.Exists(artifact.KeyInfoFilePath).Should().BeTrue();
+            artifact.Key.Length.Should().Be(expected: 16);
+            artifact.Iv.Length.Should().Be(expected: 16);
+            File.Exists(path: artifact.KeyFilePath).Should().BeTrue();
+            File.Exists(path: artifact.KeyInfoFilePath).Should().BeTrue();
 
-            byte[] onDisk = await File.ReadAllBytesAsync(artifact.KeyFilePath);
-            onDisk.Should().Equal(artifact.Key);
+            byte[] onDisk = await File.ReadAllBytesAsync(path: artifact.KeyFilePath);
+            onDisk.Should().Equal(elements: artifact.Key);
         }
         finally
         {
-            Directory.Delete(dir, recursive: true);
-            if (!string.IsNullOrEmpty(artifactDir) && Directory.Exists(artifactDir))
-                Directory.Delete(artifactDir, recursive: true);
+            Directory.Delete(path: dir, recursive: true);
+            if (!string.IsNullOrEmpty(value: artifactDir) && Directory.Exists(path: artifactDir))
+                Directory.Delete(path: artifactDir, recursive: true);
         }
     }
 
@@ -53,33 +53,33 @@ public class Aes128HlsDrmProcessorTests
         string outputDirectory = NewTempDir();
         try
         {
-            Aes128HlsDrmProcessor sut = new(TestStorageFactory.CreateLocal());
-            DrmConfig config = new(DrmMethod.Aes128, KeyUri: "https://example/key/no-leak");
+            Aes128HlsDrmProcessor sut = new(storage: TestStorageFactory.CreateLocal());
+            DrmConfig config = new(Method: DrmMethod.Aes128, KeyUri: "https://example/key/no-leak");
 
             DrmArtifact artifact = await sut.PrepareAsync(
-                outputDirectory,
-                config,
-                CancellationToken.None
+                outputDirectory: outputDirectory,
+                config: config,
+                ct: CancellationToken.None
             );
 
             // The output directory is what gets published to the served
             // destination — the raw key must never land there.
-            File.Exists(Path.Combine(outputDirectory, "drm.key")).Should().BeFalse();
-            File.Exists(Path.Combine(outputDirectory, "drm_keyinfo.txt")).Should().BeFalse();
+            File.Exists(path: Path.Combine(path1: outputDirectory, path2: "drm.key")).Should().BeFalse();
+            File.Exists(path: Path.Combine(path1: outputDirectory, path2: "drm_keyinfo.txt")).Should().BeFalse();
             Directory
-                .GetFileSystemEntries(outputDirectory)
+                .GetFileSystemEntries(path: outputDirectory)
                 .Should()
-                .BeEmpty("PrepareAsync must not write any artifact into outputDirectory");
+                .BeEmpty(because: "PrepareAsync must not write any artifact into outputDirectory");
 
-            string fullArtifactDir = Path.GetFullPath(Path.GetDirectoryName(artifact.KeyFilePath)!);
-            string fullTempRoot = Path.GetFullPath(StoragePaths.TempRoot);
-            fullArtifactDir.Should().StartWith(fullTempRoot);
+            string fullArtifactDir = Path.GetFullPath(path: Path.GetDirectoryName(path: artifact.KeyFilePath)!);
+            string fullTempRoot = Path.GetFullPath(path: StoragePaths.TempRoot);
+            fullArtifactDir.Should().StartWith(expected: fullTempRoot);
 
-            Directory.Delete(fullArtifactDir, recursive: true);
+            Directory.Delete(path: fullArtifactDir, recursive: true);
         }
         finally
         {
-            Directory.Delete(outputDirectory, recursive: true);
+            Directory.Delete(path: outputDirectory, recursive: true);
         }
     }
 
@@ -89,30 +89,30 @@ public class Aes128HlsDrmProcessorTests
         string dir = NewTempDir();
         try
         {
-            Aes128HlsDrmProcessor sut = new(TestStorageFactory.CreateLocal());
+            Aes128HlsDrmProcessor sut = new(storage: TestStorageFactory.CreateLocal());
             string keyUri = $"https://example/key/{Guid.NewGuid():N}";
-            DrmConfig config = new(DrmMethod.Aes128, KeyUri: keyUri);
+            DrmConfig config = new(Method: DrmMethod.Aes128, KeyUri: keyUri);
 
-            DrmArtifact artifact = await sut.PrepareAsync(dir, config, CancellationToken.None);
+            DrmArtifact artifact = await sut.PrepareAsync(outputDirectory: dir, config: config, ct: CancellationToken.None);
 
             (byte[] Key, byte[] Iv)? stored = await DrmKeyStore.TryGetKeyAsync(
-                keyUri,
-                CancellationToken.None
+                keyUri: keyUri,
+                ct: CancellationToken.None
             );
 
             stored
                 .Should()
                 .NotBeNull(
-                    "the raw key must be recoverable for an authorized key-serving endpoint"
+                    because: "the raw key must be recoverable for an authorized key-serving endpoint"
                 );
-            stored!.Value.Key.Should().Equal(artifact.Key);
-            stored.Value.Iv.Should().Equal(artifact.Iv);
+            stored!.Value.Key.Should().Equal(elements: artifact.Key);
+            stored.Value.Iv.Should().Equal(elements: artifact.Iv);
 
-            Directory.Delete(Path.GetDirectoryName(artifact.KeyFilePath)!, recursive: true);
+            Directory.Delete(path: Path.GetDirectoryName(path: artifact.KeyFilePath)!, recursive: true);
         }
         finally
         {
-            Directory.Delete(dir, recursive: true);
+            Directory.Delete(path: dir, recursive: true);
         }
     }
 
@@ -122,30 +122,30 @@ public class Aes128HlsDrmProcessorTests
         string dir = NewTempDir();
         try
         {
-            Aes128HlsDrmProcessor sut = new(TestStorageFactory.CreateLocal());
-            byte[] fixedKey = Enumerable.Range(0, 16).Select(i => (byte)i).ToArray();
-            byte[] fixedIv = Enumerable.Range(16, 16).Select(i => (byte)i).ToArray();
+            Aes128HlsDrmProcessor sut = new(storage: TestStorageFactory.CreateLocal());
+            byte[] fixedKey = Enumerable.Range(start: 0, count: 16).Select(selector: i => (byte)i).ToArray();
+            byte[] fixedIv = Enumerable.Range(start: 16, count: 16).Select(selector: i => (byte)i).ToArray();
             DrmConfig config = new(
-                DrmMethod.Aes128,
+                Method: DrmMethod.Aes128,
                 KeyUri: "https://example/k/42",
                 Key: fixedKey,
                 Iv: fixedIv
             );
 
-            DrmArtifact artifact = await sut.PrepareAsync(dir, config, CancellationToken.None);
+            DrmArtifact artifact = await sut.PrepareAsync(outputDirectory: dir, config: config, ct: CancellationToken.None);
 
-            string contents = await File.ReadAllTextAsync(artifact.KeyInfoFilePath);
-            string[] lines = contents.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            string contents = await File.ReadAllTextAsync(path: artifact.KeyInfoFilePath);
+            string[] lines = contents.Split(separator: '\n', options: StringSplitOptions.RemoveEmptyEntries);
 
-            lines[0].Should().Be("https://example/k/42");
-            lines[1].Should().EndWith("/drm.key");
-            lines[2].Should().Be(Convert.ToHexString(fixedIv).ToLowerInvariant());
+            lines[0].Should().Be(expected: "https://example/k/42");
+            lines[1].Should().EndWith(expected: "/drm.key");
+            lines[2].Should().Be(expected: Convert.ToHexString(inArray: fixedIv).ToLowerInvariant());
 
-            Directory.Delete(Path.GetDirectoryName(artifact.KeyFilePath)!, recursive: true);
+            Directory.Delete(path: Path.GetDirectoryName(path: artifact.KeyFilePath)!, recursive: true);
         }
         finally
         {
-            Directory.Delete(dir, recursive: true);
+            Directory.Delete(path: dir, recursive: true);
         }
     }
 
@@ -155,21 +155,21 @@ public class Aes128HlsDrmProcessorTests
         string dir = NewTempDir();
         try
         {
-            Aes128HlsDrmProcessor sut = new(TestStorageFactory.CreateLocal());
-            byte[] key = Enumerable.Range(0, 16).Select(i => (byte)(0xA0 + i)).ToArray();
-            DrmConfig config = new(DrmMethod.Aes128, KeyUri: "http://k", Key: key);
+            Aes128HlsDrmProcessor sut = new(storage: TestStorageFactory.CreateLocal());
+            byte[] key = Enumerable.Range(start: 0, count: 16).Select(selector: i => (byte)(0xA0 + i)).ToArray();
+            DrmConfig config = new(Method: DrmMethod.Aes128, KeyUri: "http://k", Key: key);
 
-            DrmArtifact artifact = await sut.PrepareAsync(dir, config, CancellationToken.None);
+            DrmArtifact artifact = await sut.PrepareAsync(outputDirectory: dir, config: config, ct: CancellationToken.None);
 
-            artifact.Key.Should().Equal(key);
-            byte[] onDisk = await File.ReadAllBytesAsync(artifact.KeyFilePath);
-            onDisk.Should().Equal(key);
+            artifact.Key.Should().Equal(elements: key);
+            byte[] onDisk = await File.ReadAllBytesAsync(path: artifact.KeyFilePath);
+            onDisk.Should().Equal(elements: key);
 
-            Directory.Delete(Path.GetDirectoryName(artifact.KeyFilePath)!, recursive: true);
+            Directory.Delete(path: Path.GetDirectoryName(path: artifact.KeyFilePath)!, recursive: true);
         }
         finally
         {
-            Directory.Delete(dir, recursive: true);
+            Directory.Delete(path: dir, recursive: true);
         }
     }
 
@@ -179,21 +179,21 @@ public class Aes128HlsDrmProcessorTests
         string dir = NewTempDir();
         try
         {
-            Aes128HlsDrmProcessor sut = new(TestStorageFactory.CreateLocal());
+            Aes128HlsDrmProcessor sut = new(storage: TestStorageFactory.CreateLocal());
             DrmConfig config = new(
-                DrmMethod.Aes128,
+                Method: DrmMethod.Aes128,
                 KeyUri: "http://k",
                 Key: new byte[8] // too short
             );
 
-            Func<Task> act = () => sut.PrepareAsync(dir, config, CancellationToken.None);
+            Func<Task> act = () => sut.PrepareAsync(outputDirectory: dir, config: config, ct: CancellationToken.None);
 
-            await act.Should().ThrowAsync<ArgumentException>().WithMessage("*key must be 16*");
+            await act.Should().ThrowAsync<ArgumentException>().WithMessage(expectedWildcardPattern: "*key must be 16*");
         }
         finally
         {
-            if (Directory.Exists(dir))
-                Directory.Delete(dir, recursive: true);
+            if (Directory.Exists(path: dir))
+                Directory.Delete(path: dir, recursive: true);
         }
     }
 
@@ -203,17 +203,17 @@ public class Aes128HlsDrmProcessorTests
         string dir = NewTempDir();
         try
         {
-            Aes128HlsDrmProcessor sut = new(TestStorageFactory.CreateLocal());
-            DrmConfig config = new(DrmMethod.None, KeyUri: "http://k");
+            Aes128HlsDrmProcessor sut = new(storage: TestStorageFactory.CreateLocal());
+            DrmConfig config = new(Method: DrmMethod.None, KeyUri: "http://k");
 
-            Func<Task> act = () => sut.PrepareAsync(dir, config, CancellationToken.None);
+            Func<Task> act = () => sut.PrepareAsync(outputDirectory: dir, config: config, ct: CancellationToken.None);
 
-            await act.Should().ThrowAsync<ArgumentException>().WithMessage("*AES-128 only*");
+            await act.Should().ThrowAsync<ArgumentException>().WithMessage(expectedWildcardPattern: "*AES-128 only*");
         }
         finally
         {
-            if (Directory.Exists(dir))
-                Directory.Delete(dir, recursive: true);
+            if (Directory.Exists(path: dir))
+                Directory.Delete(path: dir, recursive: true);
         }
     }
 
@@ -223,30 +223,30 @@ public class Aes128HlsDrmProcessorTests
         string dir = NewTempDir();
         try
         {
-            Aes128HlsDrmProcessor sut = new(TestStorageFactory.CreateLocal());
-            DrmConfig config = new(DrmMethod.Aes128, KeyUri: "");
+            Aes128HlsDrmProcessor sut = new(storage: TestStorageFactory.CreateLocal());
+            DrmConfig config = new(Method: DrmMethod.Aes128, KeyUri: "");
 
-            Func<Task> act = () => sut.PrepareAsync(dir, config, CancellationToken.None);
+            Func<Task> act = () => sut.PrepareAsync(outputDirectory: dir, config: config, ct: CancellationToken.None);
 
-            await act.Should().ThrowAsync<ArgumentException>().WithMessage("*KeyUri*");
+            await act.Should().ThrowAsync<ArgumentException>().WithMessage(expectedWildcardPattern: "*KeyUri*");
         }
         finally
         {
-            if (Directory.Exists(dir))
-                Directory.Delete(dir, recursive: true);
+            if (Directory.Exists(path: dir))
+                Directory.Delete(path: dir, recursive: true);
         }
     }
 
     [Fact]
     public void Method_IsAes128() =>
-        new Aes128HlsDrmProcessor(TestStorageFactory.CreateLocal())
+        new Aes128HlsDrmProcessor(storage: TestStorageFactory.CreateLocal())
             .Method.Should()
-            .Be(DrmMethod.Aes128);
+            .Be(expected: DrmMethod.Aes128);
 
     private static string NewTempDir()
     {
-        string dir = Path.Combine(Path.GetTempPath(), $"drm-test-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(dir);
+        string dir = Path.Combine(path1: Path.GetTempPath(), path2: $"drm-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: dir);
         return dir;
     }
 }

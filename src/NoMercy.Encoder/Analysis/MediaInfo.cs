@@ -62,9 +62,9 @@ public record MediaInfo(
     public bool HasSubtitles => SubtitleStreams.Count > 0;
     public bool HasAttachments => Attachments.Count > 0;
 
-    public bool IsHdr => VideoStreams.Any(v => v.IsHdr);
+    public bool IsHdr => VideoStreams.Any(predicate: v => v.IsHdr);
     public int PrimaryBitDepth => VideoStreams.FirstOrDefault()?.BitDepth ?? 8;
-    public bool IsVariableFrameRate => VideoStreams.Any(v => v.IsVariableFrameRate);
+    public bool IsVariableFrameRate => VideoStreams.Any(predicate: v => v.IsVariableFrameRate);
     public double PrimaryFrameRate => VideoStreams.FirstOrDefault()?.AverageFrameRate ?? 0;
     public int PrimaryRotation => VideoStreams.FirstOrDefault()?.Rotation ?? 0;
 }

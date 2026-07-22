@@ -20,7 +20,7 @@ public class CredentialResolver : ICredentialResolver
 {
     public (string AccessKey, string SecretKey)? Resolve(string credentialsRef)
     {
-        UserPass? cred = CredentialManager.Credential(credentialsRef);
+        UserPass? cred = CredentialManager.Credential(target: credentialsRef);
         if (cred is null)
             return null;
 
@@ -29,7 +29,7 @@ public class CredentialResolver : ICredentialResolver
         // store, and propagating that to the AWS SDK / WebDAV client surfaces
         // as "Credential access key has length 0" instead of falling through
         // to the default credential chain or anonymous-mode wiring.
-        if (string.IsNullOrEmpty(cred.Username) && string.IsNullOrEmpty(cred.Password))
+        if (string.IsNullOrEmpty(value: cred.Username) && string.IsNullOrEmpty(value: cred.Password))
             return null;
 
         return (cred.Username, cred.Password);

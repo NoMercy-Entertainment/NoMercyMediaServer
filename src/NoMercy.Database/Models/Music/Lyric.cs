@@ -16,27 +16,27 @@ namespace NoMercy.Database.Models.Music;
 
 public class Lyric
 {
-    [JsonProperty("text")]
+    [JsonProperty(propertyName: "text")]
     public string Text { get; set; } = string.Empty;
 
-    [JsonProperty("time")]
+    [JsonProperty(propertyName: "time")]
     public LineTime Time { get; set; } = new();
 
-    [JsonProperty("rtl")]
+    [JsonProperty(propertyName: "rtl")]
     public bool Rtl => Text.GetTextDirection() == StringExtensions.TextDirection.RTL;
 
     public class LineTime
     {
-        [JsonProperty("total")]
+        [JsonProperty(propertyName: "total")]
         public double Total;
 
-        [JsonProperty("minutes")]
+        [JsonProperty(propertyName: "minutes")]
         public int Minutes;
 
-        [JsonProperty("seconds")]
+        [JsonProperty(propertyName: "seconds")]
         public int Seconds;
 
-        [JsonProperty("hundredths")]
+        [JsonProperty(propertyName: "hundredths")]
         public int Hundredths;
     }
 }

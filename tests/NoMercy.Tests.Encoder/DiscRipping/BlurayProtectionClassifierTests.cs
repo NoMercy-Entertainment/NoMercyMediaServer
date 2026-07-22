@@ -18,8 +18,8 @@ public class BlurayProtectionClassifierTests
     [Fact]
     public void Classify_NullOrEmpty_ReturnsNull()
     {
-        BlurayDiscSource.ClassifyProtection("").Should().BeNull();
-        BlurayDiscSource.ClassifyProtection(null!).Should().BeNull();
+        BlurayDiscSource.ClassifyProtection(stderr: "").Should().BeNull();
+        BlurayDiscSource.ClassifyProtection(stderr: null!).Should().BeNull();
     }
 
     [Fact]
@@ -29,10 +29,10 @@ public class BlurayProtectionClassifierTests
             @"src/libaacs/mmc.c:719: Drive does not support reading drive certificate
 src/libaacs/aacs.c:1181: Unable to read drive certificate";
 
-        var p = BlurayDiscSource.ClassifyProtection(stderr);
+        var p = BlurayDiscSource.ClassifyProtection(stderr: stderr);
         p.Should().NotBeNull();
-        p!.Kind.Should().Be("AACS");
-        p.Message.Should().Contain("bus key");
+        p!.Kind.Should().Be(expected: "AACS");
+        p.Message.Should().Contain(expected: "bus key");
     }
 
     [Fact]
@@ -40,10 +40,10 @@ src/libaacs/aacs.c:1181: Unable to read drive certificate";
     {
         const string stderr = @"src/libbluray/disc/aacs.c:306: Unable to decrypt unit (AACS)!";
 
-        var p = BlurayDiscSource.ClassifyProtection(stderr);
+        var p = BlurayDiscSource.ClassifyProtection(stderr: stderr);
         p.Should().NotBeNull();
-        p!.Kind.Should().Be("AACS");
-        p.Message.Should().Contain("KEYDB");
+        p!.Kind.Should().Be(expected: "AACS");
+        p.Message.Should().Contain(expected: "KEYDB");
     }
 
     [Fact]
@@ -51,9 +51,9 @@ src/libaacs/aacs.c:1181: Unable to read drive certificate";
     {
         const string stderr = "bdplus: no matching converter";
 
-        var p = BlurayDiscSource.ClassifyProtection(stderr);
+        var p = BlurayDiscSource.ClassifyProtection(stderr: stderr);
         p.Should().NotBeNull();
-        p!.Kind.Should().Be("BD+");
+        p!.Kind.Should().Be(expected: "BD+");
     }
 
     [Fact]
@@ -64,7 +64,7 @@ src/libaacs/aacs.c:1181: Unable to read drive certificate";
 [bluray @ 0000028e11e4bfc0] playlist 01601.mpls (0:23:39)
 [bluray @ 0000028e11e4bfc0] selected 00600.mpls";
 
-        BlurayDiscSource.ClassifyProtection(stderr).Should().BeNull();
+        BlurayDiscSource.ClassifyProtection(stderr: stderr).Should().BeNull();
     }
 
     [Fact]
@@ -82,10 +82,10 @@ src/libaacs/aacs.c:1181: Unable to read drive certificate
 [bluray @ 0000028e11e4bfc0] selected 00600.mpls
 src/libbluray/disc/aacs.c:306: Unable to decrypt unit (AACS)!";
 
-        var p = BlurayDiscSource.ClassifyProtection(stderr);
+        var p = BlurayDiscSource.ClassifyProtection(stderr: stderr);
         p.Should().NotBeNull();
-        p!.Kind.Should().Be("AACS");
+        p!.Kind.Should().Be(expected: "AACS");
         // Drive-cert-not-supported takes precedence over generic decrypt-unit
-        p.Message.Should().Contain("bus key");
+        p.Message.Should().Contain(expected: "bus key");
     }
 }

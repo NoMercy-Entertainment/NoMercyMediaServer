@@ -24,6 +24,6 @@ public class TmdbEpisodeGroupClient : TmdbBaseClient
 
     public Task<TmdbEpisodeGroupDetails?> Details(bool? priority = false)
     {
-        return Get<TmdbEpisodeGroupDetails>("tv/episode_group/" + _groupId, priority: priority);
+        return Get<TmdbEpisodeGroupDetails>(url: "tv/episode_group/" + _groupId, priority: priority);
     }
 }

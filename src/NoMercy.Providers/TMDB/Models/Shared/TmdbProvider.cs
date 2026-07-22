@@ -15,15 +15,15 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbProvider
 {
-    [JsonProperty("display_priority")]
+    [JsonProperty(propertyName: "display_priority")]
     public int DisplayPriority { get; set; }
 
-    [JsonProperty("logo_path")]
+    [JsonProperty(propertyName: "logo_path")]
     public string LogoPath { get; set; } = string.Empty;
 
-    [JsonProperty("provider_name")]
+    [JsonProperty(propertyName: "provider_name")]
     public string ProviderName { get; set; } = string.Empty;
 
-    [JsonProperty("provider_id")]
+    [JsonProperty(propertyName: "provider_id")]
     public int ProviderId { get; set; }
 }

@@ -15,12 +15,12 @@ namespace NoMercy.Providers.AcoustId.Models;
 
 public class AcoustIdFingerprintDate
 {
-    [JsonProperty("day")]
+    [JsonProperty(propertyName: "day")]
     public int Day { get; set; }
 
-    [JsonProperty("month")]
+    [JsonProperty(propertyName: "month")]
     public int Month { get; set; }
 
-    [JsonProperty("year")]
+    [JsonProperty(propertyName: "year")]
     public int Year { get; set; }
 }

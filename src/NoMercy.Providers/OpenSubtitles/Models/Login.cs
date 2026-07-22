@@ -13,25 +13,25 @@ using System.Xml.Serialization;
 
 namespace NoMercy.Providers.OpenSubtitles.Models;
 
-[XmlRoot("methodCall")]
+[XmlRoot(elementName: "methodCall")]
 public class Login
 {
-    [XmlElement("methodName")]
+    [XmlElement(elementName: "methodName")]
     public string MethodName { get; set; } = null!;
 
-    [XmlArray("params")]
-    [XmlArrayItem("param")]
+    [XmlArray(elementName: "params")]
+    [XmlArrayItem(elementName: "param")]
     public LoginParam[] Params { get; set; } = null!;
 }
 
 public class LoginParam
 {
-    [XmlElement("value")]
+    [XmlElement(elementName: "value")]
     public LoginValue? Value { get; set; }
 }
 
 public class LoginValue
 {
-    [XmlElement("string")]
+    [XmlElement(elementName: "string")]
     public string? String { get; set; }
 }

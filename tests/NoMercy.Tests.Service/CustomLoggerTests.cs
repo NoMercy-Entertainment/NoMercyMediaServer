@@ -27,23 +27,23 @@ namespace NoMercy.Tests.Service;
 /// provider rather than being a no-op stub — job base classes rely on scopes
 /// for correlated log lines.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class CustomLoggerTests
 {
     private static CustomLogger<CustomLoggerTests> BuildLogger(out StringWriter output)
     {
         output = new();
         NoMercyLoggerOptions options = new() { MinimumLevel = LogLevel.Trace };
-        NoMercyLoggerProvider provider = new(options, output);
-        return new(provider);
+        NoMercyLoggerProvider provider = new(options: options, output: output);
+        return new(provider: provider);
     }
 
     [Fact]
     public void BeginScope_DoesNotThrowAndReturnsADisposable()
     {
-        CustomLogger<CustomLoggerTests> logger = BuildLogger(out _);
+        CustomLogger<CustomLoggerTests> logger = BuildLogger(output: out _);
 
-        IDisposable? scope = logger.BeginScope("correlation-id");
+        IDisposable? scope = logger.BeginScope(state: "correlation-id");
 
         scope.Should().NotBeNull();
         scope!.Dispose();
@@ -52,14 +52,14 @@ public class CustomLoggerTests
     [Fact]
     public void Log_FilteredFrameworkPhrase_BelowError_IsSuppressed()
     {
-        CustomLogger<CustomLoggerTests> logger = BuildLogger(out StringWriter output);
+        CustomLogger<CustomLoggerTests> logger = BuildLogger(output: out StringWriter output);
 
         logger.Log(
-            LogLevel.Information,
-            new EventId(0),
-            "Middleware configuration started",
-            null,
-            (s, _) => s
+            logLevel: LogLevel.Information,
+            eventId: new EventId(id: 0),
+            state: "Middleware configuration started",
+            exception: null,
+            formatter: (s, _) => s
         );
 
         output.ToString().Should().BeEmpty();
@@ -70,14 +70,14 @@ public class CustomLoggerTests
     {
         // Errors bypass phrase filtering — a "Microsoft" frame inside a real
         // exception's rendered stack must never be dropped.
-        CustomLogger<CustomLoggerTests> logger = BuildLogger(out StringWriter output);
+        CustomLogger<CustomLoggerTests> logger = BuildLogger(output: out StringWriter output);
 
         logger.Log(
-            LogLevel.Error,
-            new EventId(0),
-            "Unhandled exception in Microsoft.AspNetCore.Something",
-            null,
-            (s, _) => s
+            logLevel: LogLevel.Error,
+            eventId: new EventId(id: 0),
+            state: "Unhandled exception in Microsoft.AspNetCore.Something",
+            exception: null,
+            formatter: (s, _) => s
         );
 
         output.ToString().Should().NotBeEmpty();
@@ -86,11 +86,11 @@ public class CustomLoggerTests
     [Fact]
     public void Log_NonFilteredMessage_IsLogged()
     {
-        CustomLogger<CustomLoggerTests> logger = BuildLogger(out StringWriter output);
+        CustomLogger<CustomLoggerTests> logger = BuildLogger(output: out StringWriter output);
 
-        logger.Log(LogLevel.Information, new EventId(0), "Server started", null, (s, _) => s);
+        logger.Log(logLevel: LogLevel.Information, eventId: new EventId(id: 0), state: "Server started", exception: null, formatter: (s, _) => s);
 
-        output.ToString().Should().Contain("Server started");
+        output.ToString().Should().Contain(expected: "Server started");
     }
 
     [Fact]
@@ -98,16 +98,16 @@ public class CustomLoggerTests
     {
         NoMercyLoggerOptions options = new() { MinimumLevel = LogLevel.Warning };
         StringWriter output = new();
-        NoMercyLoggerProvider provider = new(options, output);
-        CustomLogger<CustomLoggerTests> logger = new(provider);
+        NoMercyLoggerProvider provider = new(options: options, output: output);
+        CustomLogger<CustomLoggerTests> logger = new(provider: provider);
         bool formatterCalled = false;
 
         logger.Log(
-            LogLevel.Debug,
-            new EventId(0),
-            "state",
-            null,
-            (_, _) =>
+            logLevel: LogLevel.Debug,
+            eventId: new EventId(id: 0),
+            state: "state",
+            exception: null,
+            formatter: (_, _) =>
             {
                 formatterCalled = true;
                 return "irrelevant";
@@ -123,10 +123,10 @@ public class CustomLoggerTests
     {
         NoMercyLoggerOptions options = new() { MinimumLevel = LogLevel.Warning };
         CustomLogger<CustomLoggerTests> logger = new(
-            new NoMercyLoggerProvider(options, new StringWriter())
+            provider: new NoMercyLoggerProvider(options: options, output: new StringWriter())
         );
 
-        logger.IsEnabled(LogLevel.Information).Should().BeFalse();
-        logger.IsEnabled(LogLevel.Warning).Should().BeTrue();
+        logger.IsEnabled(logLevel: LogLevel.Information).Should().BeFalse();
+        logger.IsEnabled(logLevel: LogLevel.Warning).Should().BeTrue();
     }
 }

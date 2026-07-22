@@ -49,22 +49,22 @@ public static class Logger
 
     public class LogType
     {
-        [JsonProperty("name")]
+        [JsonProperty(propertyName: "name")]
         public string Name { get; }
 
-        [JsonProperty("display_name")]
+        [JsonProperty(propertyName: "display_name")]
         public string DisplayName { get; }
 
-        [JsonProperty("color")]
+        [JsonProperty(propertyName: "color")]
         public Color Color { get; }
 
-        [JsonProperty("colorHex")]
+        [JsonProperty(propertyName: "colorHex")]
         public string ColorHex { get; }
 
-        [JsonProperty("type")]
+        [JsonProperty(propertyName: "type")]
         public string Type { get; }
 
-        [JsonProperty("level")]
+        [JsonProperty(propertyName: "level")]
         public LogEventLevel DefaultLevel { get; }
 
         public LogType(
@@ -87,57 +87,57 @@ public static class Logger
     public static readonly Dictionary<string, LogType> LogTypes = new()
     {
         // System category
-        { "_", new("_", "System", Color.DimGray, "spacer") },
-        { "app", new("app", "App", Color.MediumPurple, "System") },
-        { "access", new("access", "Access", Color.MediumPurple, "System") },
-        { "configuration", new("configuration", "Configuration", Color.MediumPurple, "System") },
-        { "setup", new("setup", "Setup", Color.CornflowerBlue, "System") },
-        { "system", new("system", "System", Color.CornflowerBlue, "System") },
-        { "service", new("service", "Service", Color.CornflowerBlue, "System") },
-        { "debug", new("debug", "Debug", Color.Gray, "System", LogEventLevel.Debug) },
-        { "info", new("info", "Info", Color.White, "System") },
-        { "warning", new("warning", "Warning", Color.Yellow, "System", LogEventLevel.Warning) },
-        { "error", new("error", "Error", Color.Red, "System", LogEventLevel.Error) },
-        { "auth", new("auth", "Auth", Color.CornflowerBlue, "System") },
-        { "register", new("register", "Register", Color.CornflowerBlue, "System") },
-        { "certificate", new("certificate", "Certificate", Color.CornflowerBlue, "System") },
+        { "_", new(name: "_", displayName: "System", color: Color.DimGray, type: "spacer") },
+        { "app", new(name: "app", displayName: "App", color: Color.MediumPurple, type: "System") },
+        { "access", new(name: "access", displayName: "Access", color: Color.MediumPurple, type: "System") },
+        { "configuration", new(name: "configuration", displayName: "Configuration", color: Color.MediumPurple, type: "System") },
+        { "setup", new(name: "setup", displayName: "Setup", color: Color.CornflowerBlue, type: "System") },
+        { "system", new(name: "system", displayName: "System", color: Color.CornflowerBlue, type: "System") },
+        { "service", new(name: "service", displayName: "Service", color: Color.CornflowerBlue, type: "System") },
+        { "debug", new(name: "debug", displayName: "Debug", color: Color.Gray, type: "System", defaultLevel: LogEventLevel.Debug) },
+        { "info", new(name: "info", displayName: "Info", color: Color.White, type: "System") },
+        { "warning", new(name: "warning", displayName: "Warning", color: Color.Yellow, type: "System", defaultLevel: LogEventLevel.Warning) },
+        { "error", new(name: "error", displayName: "Error", color: Color.Red, type: "System", defaultLevel: LogEventLevel.Error) },
+        { "auth", new(name: "auth", displayName: "Auth", color: Color.CornflowerBlue, type: "System") },
+        { "register", new(name: "register", displayName: "Register", color: Color.CornflowerBlue, type: "System") },
+        { "certificate", new(name: "certificate", displayName: "Certificate", color: Color.CornflowerBlue, type: "System") },
         // Workers category
-        { "__", new("__", "Workers", Color.DimGray, "spacer") },
-        { "queue", new("queue", "Queue", Color.Chocolate, "Workers", LogEventLevel.Debug) },
-        { "encoder", new("encoder", "Encoder", Color.Chocolate, "Workers") },
-        { "ripper", new("ripper", "Ripper", Color.Chocolate, "Workers") },
+        { "__", new(name: "__", displayName: "Workers", color: Color.DimGray, type: "spacer") },
+        { "queue", new(name: "queue", displayName: "Queue", color: Color.Chocolate, type: "Workers", defaultLevel: LogEventLevel.Debug) },
+        { "encoder", new(name: "encoder", displayName: "Encoder", color: Color.Chocolate, type: "Workers") },
+        { "ripper", new(name: "ripper", displayName: "Ripper", color: Color.Chocolate, type: "Workers") },
         // Networking category
-        { "___", new("___", "Networking", Color.DimGray, "spacer") },
-        { "http", new("http", "Http", Color.Orange, "Networking") },
-        { "notify", new("notify", "Notify", Color.Orange, "Networking") },
-        { "ping", new("ping", "Ping", Color.Orange, "Networking") },
-        { "socket", new("socket", "Socket", Color.Orange, "Networking") },
-        { "request", new("request", "Request", Color.Orange, "Networking", LogEventLevel.Debug) },
+        { "___", new(name: "___", displayName: "Networking", color: Color.DimGray, type: "spacer") },
+        { "http", new(name: "http", displayName: "Http", color: Color.Orange, type: "Networking") },
+        { "notify", new(name: "notify", displayName: "Notify", color: Color.Orange, type: "Networking") },
+        { "ping", new(name: "ping", displayName: "Ping", color: Color.Orange, type: "Networking") },
+        { "socket", new(name: "socket", displayName: "Socket", color: Color.Orange, type: "Networking") },
+        { "request", new(name: "request", displayName: "Request", color: Color.Orange, type: "Networking", defaultLevel: LogEventLevel.Debug) },
         // Providers category
-        { "____", new("____", "Providers", Color.DimGray, "spacer") },
-        { "youtube", new("youtube", "YouTube", Color.DodgerBlue, "Providers") },
-        { "acoustid", new("acoustid", "AcoustID", Color.DodgerBlue, "Providers") },
-        { "anidb", new("anidb", "AniDB", Color.DodgerBlue, "Providers") },
-        { "audiodb", new("audiodb", "AudioDB", Color.DodgerBlue, "Providers") },
-        { "coverart", new("coverart", "CoverArt", Color.DodgerBlue, "Providers") },
-        { "fanart", new("fanart", "Fanart", Color.DodgerBlue, "Providers") },
-        { "fingerprint", new("fingerprint", "Fingerprint", Color.DodgerBlue, "Providers") },
-        { "lrclib", new("lrclib", "Lrclib", Color.DodgerBlue, "Providers") },
-        { "lyrics", new("lyrics", "Lyrics", Color.DodgerBlue, "Providers") },
-        { "moviedb", new("moviedb", "TheMovieDB", Color.DodgerBlue, "Providers") },
-        { "musicbrainz", new("musicbrainz", "MusicBrainz", Color.DodgerBlue, "Providers") },
-        { "musixmatch", new("musixmatch", "MusixMatch", Color.DodgerBlue, "Providers") },
-        { "openSubs", new("openSubs", "OpenSubs", Color.DodgerBlue, "Providers") },
-        { "tvdb", new("tvdb", "TheTVDB", Color.DodgerBlue, "Providers") },
+        { "____", new(name: "____", displayName: "Providers", color: Color.DimGray, type: "spacer") },
+        { "youtube", new(name: "youtube", displayName: "YouTube", color: Color.DodgerBlue, type: "Providers") },
+        { "acoustid", new(name: "acoustid", displayName: "AcoustID", color: Color.DodgerBlue, type: "Providers") },
+        { "anidb", new(name: "anidb", displayName: "AniDB", color: Color.DodgerBlue, type: "Providers") },
+        { "audiodb", new(name: "audiodb", displayName: "AudioDB", color: Color.DodgerBlue, type: "Providers") },
+        { "coverart", new(name: "coverart", displayName: "CoverArt", color: Color.DodgerBlue, type: "Providers") },
+        { "fanart", new(name: "fanart", displayName: "Fanart", color: Color.DodgerBlue, type: "Providers") },
+        { "fingerprint", new(name: "fingerprint", displayName: "Fingerprint", color: Color.DodgerBlue, type: "Providers") },
+        { "lrclib", new(name: "lrclib", displayName: "Lrclib", color: Color.DodgerBlue, type: "Providers") },
+        { "lyrics", new(name: "lyrics", displayName: "Lyrics", color: Color.DodgerBlue, type: "Providers") },
+        { "moviedb", new(name: "moviedb", displayName: "TheMovieDB", color: Color.DodgerBlue, type: "Providers") },
+        { "musicbrainz", new(name: "musicbrainz", displayName: "MusicBrainz", color: Color.DodgerBlue, type: "Providers") },
+        { "musixmatch", new(name: "musixmatch", displayName: "MusixMatch", color: Color.DodgerBlue, type: "Providers") },
+        { "openSubs", new(name: "openSubs", displayName: "OpenSubs", color: Color.DodgerBlue, type: "Providers") },
+        { "tvdb", new(name: "tvdb", displayName: "TheTVDB", color: Color.DodgerBlue, type: "Providers") },
         // Notifications category
-        { "_____", new("_____", "Notifications", Color.DimGray, "spacer") },
-        { "discord", new("discord", "Discord", Color.Green, "Notifications") },
-        { "twitch", new("twitch", "Twitch", Color.Green, "Notifications") },
-        { "spotify", new("spotify", "Spotify", Color.Green, "Notifications") },
-        { "twitter", new("twitter", "Twitter", Color.Green, "Notifications") },
-        { "webhook", new("webhook", "Webhook", Color.Green, "Notifications") },
-        { "whatsapp", new("whatsapp", "Whatsapp", Color.Green, "Notifications") },
-        { "telegram", new("telegram", "Telegram", Color.Green, "Notifications") },
+        { "_____", new(name: "_____", displayName: "Notifications", color: Color.DimGray, type: "spacer") },
+        { "discord", new(name: "discord", displayName: "Discord", color: Color.Green, type: "Notifications") },
+        { "twitch", new(name: "twitch", displayName: "Twitch", color: Color.Green, type: "Notifications") },
+        { "spotify", new(name: "spotify", displayName: "Spotify", color: Color.Green, type: "Notifications") },
+        { "twitter", new(name: "twitter", displayName: "Twitter", color: Color.Green, type: "Notifications") },
+        { "webhook", new(name: "webhook", displayName: "Webhook", color: Color.Green, type: "Notifications") },
+        { "whatsapp", new(name: "whatsapp", displayName: "Whatsapp", color: Color.Green, type: "Notifications") },
+        { "telegram", new(name: "telegram", displayName: "Telegram", color: Color.Green, type: "Notifications") },
     };
 
     static Logger()
@@ -157,8 +157,8 @@ public static class Logger
             .Enrich.With<FileTimestampEnricher>()
             .Enrich.With<FileMessageEnricher>()
             .WriteTo.File(
-                new CompactJsonFormatter(),
-                filePath,
+                formatter: new CompactJsonFormatter(),
+                path: filePath,
                 rollingInterval: RollingInterval.Day,
                 // Without shared:true the Serilog file sink takes an exclusive
                 // FileShare.Read lock. Two processes pointing at the same log
@@ -173,34 +173,34 @@ public static class Logger
                 // 2 s is short enough that a SIGSEGV / power loss only loses
                 // a couple seconds of trailing logs, long enough to keep IO
                 // overhead invisible.
-                flushToDiskInterval: TimeSpan.FromSeconds(2)
+                flushToDiskInterval: TimeSpan.FromSeconds(seconds: 2)
             );
     }
 
     private static SystemConsoleTheme Literate { get; } =
         new(
-            new Dictionary<ConsoleThemeStyle, SystemConsoleThemeStyle>
+            styles: new Dictionary<ConsoleThemeStyle, SystemConsoleThemeStyle>
             {
-                [ConsoleThemeStyle.Text] = new() { Foreground = ConsoleColor.White },
-                [ConsoleThemeStyle.SecondaryText] = new() { Foreground = ConsoleColor.Gray },
-                [ConsoleThemeStyle.TertiaryText] = new() { Foreground = ConsoleColor.Cyan },
-                [ConsoleThemeStyle.Invalid] = new() { Foreground = ConsoleColor.Yellow },
-                [ConsoleThemeStyle.Null] = new() { Foreground = ConsoleColor.Blue },
-                [ConsoleThemeStyle.Name] = new() { Foreground = ConsoleColor.Gray },
-                [ConsoleThemeStyle.String] = new() { Foreground = ConsoleColor.White },
-                [ConsoleThemeStyle.Number] = new() { Foreground = ConsoleColor.Magenta },
-                [ConsoleThemeStyle.Boolean] = new() { Foreground = ConsoleColor.DarkYellow },
-                [ConsoleThemeStyle.Scalar] = new() { Foreground = ConsoleColor.Green },
-                [ConsoleThemeStyle.LevelVerbose] = new() { Foreground = ConsoleColor.Gray },
-                [ConsoleThemeStyle.LevelDebug] = new() { Foreground = ConsoleColor.Gray },
-                [ConsoleThemeStyle.LevelInformation] = new() { Foreground = ConsoleColor.White },
-                [ConsoleThemeStyle.LevelWarning] = new() { Foreground = ConsoleColor.Yellow },
-                [ConsoleThemeStyle.LevelError] = new()
+                [key: ConsoleThemeStyle.Text] = new() { Foreground = ConsoleColor.White },
+                [key: ConsoleThemeStyle.SecondaryText] = new() { Foreground = ConsoleColor.Gray },
+                [key: ConsoleThemeStyle.TertiaryText] = new() { Foreground = ConsoleColor.Cyan },
+                [key: ConsoleThemeStyle.Invalid] = new() { Foreground = ConsoleColor.Yellow },
+                [key: ConsoleThemeStyle.Null] = new() { Foreground = ConsoleColor.Blue },
+                [key: ConsoleThemeStyle.Name] = new() { Foreground = ConsoleColor.Gray },
+                [key: ConsoleThemeStyle.String] = new() { Foreground = ConsoleColor.White },
+                [key: ConsoleThemeStyle.Number] = new() { Foreground = ConsoleColor.Magenta },
+                [key: ConsoleThemeStyle.Boolean] = new() { Foreground = ConsoleColor.DarkYellow },
+                [key: ConsoleThemeStyle.Scalar] = new() { Foreground = ConsoleColor.Green },
+                [key: ConsoleThemeStyle.LevelVerbose] = new() { Foreground = ConsoleColor.Gray },
+                [key: ConsoleThemeStyle.LevelDebug] = new() { Foreground = ConsoleColor.Gray },
+                [key: ConsoleThemeStyle.LevelInformation] = new() { Foreground = ConsoleColor.White },
+                [key: ConsoleThemeStyle.LevelWarning] = new() { Foreground = ConsoleColor.Yellow },
+                [key: ConsoleThemeStyle.LevelError] = new()
                 {
                     Foreground = ConsoleColor.White,
                     Background = ConsoleColor.Red,
                 },
-                [ConsoleThemeStyle.LevelFatal] = new()
+                [key: ConsoleThemeStyle.LevelFatal] = new()
                 {
                     Foreground = ConsoleColor.White,
                     Background = ConsoleColor.Red,
@@ -224,7 +224,7 @@ public static class Logger
         return new LoggerConfiguration()
             .MinimumLevel.Verbose()
             .DefaultEnrich()
-            .WriteTo.Logger(lc =>
+            .WriteTo.Logger(configureLogger: lc =>
             {
                 lc.SinkConsole();
             });
@@ -235,7 +235,7 @@ public static class Logger
         return new LoggerConfiguration()
             .MinimumLevel.Verbose()
             .DefaultEnrich()
-            .WriteTo.Logger(lc => lc.SinkFile(Path.Join(AppFiles.LogPath, "log.txt")));
+            .WriteTo.Logger(configureLogger: lc => lc.SinkFile(filePath: Path.Join(path1: AppFiles.LogPath, path2: "log.txt")));
     }
 
     private static bool ShouldLog(LogEventLevel level) => level >= _maxLogLevel;
@@ -257,7 +257,7 @@ public static class Logger
         {
             foreach ((string logType, string message, LogEventLevel level) in lines)
             {
-                Log(logType, message, level);
+                Log(logType: logType, message: message, level: level);
             }
         }
     }
@@ -270,23 +270,23 @@ public static class Logger
     /// early-boot output is not stuck on the legacy Serilog format.</summary>
     private static void WriteConsoleFallback(LogEntry entry)
     {
-        LogCategory category = LogCategories.Resolve(entry.Type);
+        LogCategory category = LogCategories.Resolve(key: entry.Type);
         bool color =
-            !Console.IsOutputRedirected && Environment.GetEnvironmentVariable("NO_COLOR") is null;
+            !Console.IsOutputRedirected && Environment.GetEnvironmentVariable(variable: "NO_COLOR") is null;
         string line = ConsoleLineRenderer.Render(
-            entry.Time.ToLocalTime(),
-            ToMelLevel(entry.LogLevel),
-            category,
-            entry.Message,
-            null,
-            NoMercyConsoleTheme.Dark,
-            color,
-            ConsoleFallbackWidth()
+            timestamp: entry.Time.ToLocalTime(),
+            level: ToMelLevel(level: entry.LogLevel),
+            category: category,
+            message: entry.Message,
+            exception: null,
+            theme: NoMercyConsoleTheme.Dark,
+            color: color,
+            width: ConsoleFallbackWidth()
         );
 
         lock (ConsoleFallbackGate)
         {
-            Console.Out.WriteLine(line);
+            Console.Out.WriteLine(value: line);
         }
     }
 
@@ -306,7 +306,7 @@ public static class Logger
             // No attached console; fall through to a sensible default.
         }
 
-        return int.TryParse(Environment.GetEnvironmentVariable("COLUMNS"), out int cols) && cols > 0
+        return int.TryParse(s: Environment.GetEnvironmentVariable(variable: "COLUMNS"), result: out int cols) && cols > 0
             ? cols
             : 120;
     }
@@ -326,14 +326,14 @@ public static class Logger
     private static void Log<T>(string logType, T message, LogEventLevel? level = null)
         where T : class
     {
-        if (!LogTypes.TryGetValue(logType, out LogType? type))
+        if (!LogTypes.TryGetValue(key: logType, value: out LogType? type))
         {
-            type = new(logType, logType, Color.White, "Unknown");
+            type = new(name: logType, displayName: logType, color: Color.White, type: "Unknown");
         }
 
         LogEventLevel logLevel = level ?? type.DefaultLevel;
 
-        if (!ShouldLog(logLevel))
+        if (!ShouldLog(level: logLevel))
             return;
 
         string colorHex = type.ColorHex;
@@ -350,7 +350,7 @@ public static class Logger
 
         if (ConsoleSink is { } sink)
         {
-            sink(entry);
+            sink(obj: entry);
         }
         else
         {
@@ -358,172 +358,172 @@ public static class Logger
             // built): render through the same ConsoleLineRenderer the provider
             // uses so pre-host lines match the unified format instead of the
             // legacy Serilog template.
-            WriteConsoleFallback(entry);
+            WriteConsoleFallback(entry: entry);
         }
 
         FileLog
-            .ForContext("Type", logType)
-            .ForContext("Color", colorHex)
-            .ForContext("Message", message.ToJson())
-            .ForContext("Level", logLevel)
-            .ForContext("ConsoleType", type.Name)
-            .Write(logLevel, "{@Message}", message.ToJson());
+            .ForContext(propertyName: "Type", value: logType)
+            .ForContext(propertyName: "Color", value: colorHex)
+            .ForContext(propertyName: "Message", value: message.ToJson())
+            .ForContext(propertyName: "Level", value: logLevel)
+            .ForContext(propertyName: "ConsoleType", value: type.Name)
+            .Write(level: logLevel, messageTemplate: "{@Message}", propertyValue: message.ToJson());
 
-        LogEmitted?.Invoke(entry);
+        LogEmitted?.Invoke(obj: entry);
     }
 
     // Generic entry point
     public static void Write<T>(string logType, T message, LogEventLevel? level = null)
         where T : class
     {
-        Log(logType, message, level);
+        Log(logType: logType, message: message, level: level);
     }
 
     public static void Write(string logType, string message, LogEventLevel? level = null)
     {
-        Log(logType, message, level);
+        Log(logType: logType, message: message, level: level);
     }
 
     internal static Color GetColor(string type)
     {
-        return LogTypes.TryGetValue(type, out LogType? color) ? color.Color : Color.Red;
+        return LogTypes.TryGetValue(key: type, value: out LogType? color) ? color.Color : Color.Red;
     }
 
     // Standard logging methods with simplified implementation
     public static void Debug<T>(T message, LogEventLevel? level = null)
-        where T : class => Log("debug", message, level ?? LogEventLevel.Debug);
+        where T : class => Log(logType: "debug", message: message, level: level ?? LogEventLevel.Debug);
 
     public static void Info<T>(T message, LogEventLevel? level = null)
-        where T : class => Log("info", message, level ?? LogEventLevel.Information);
+        where T : class => Log(logType: "info", message: message, level: level ?? LogEventLevel.Information);
 
     public static void Warning<T>(T message, LogEventLevel? level = null)
-        where T : class => Log("warning", message, level ?? LogEventLevel.Warning);
+        where T : class => Log(logType: "warning", message: message, level: level ?? LogEventLevel.Warning);
 
     public static void Error<T>(T message, LogEventLevel? level = null)
-        where T : class => Log("error", message, level ?? LogEventLevel.Error);
+        where T : class => Log(logType: "error", message: message, level: level ?? LogEventLevel.Error);
 
     public static void Verbose<T>(T message, LogEventLevel? level = null)
-        where T : class => Log("verbose", message, level ?? LogEventLevel.Verbose);
+        where T : class => Log(logType: "verbose", message: message, level: level ?? LogEventLevel.Verbose);
 
     public static void Access<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("access", message, level);
+        where T : class => Log(logType: "access", message: message, level: level);
 
     public static void App<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("app", message, level);
+        where T : class => Log(logType: "app", message: message, level: level);
 
     public static void Auth<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("auth", message, level);
+        where T : class => Log(logType: "auth", message: message, level: level);
 
     public static void Register<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("register", message, level);
+        where T : class => Log(logType: "register", message: message, level: level);
 
     public static void Certificate<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("certificate", message, level);
+        where T : class => Log(logType: "certificate", message: message, level: level);
 
     public static void Configuration<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("configuration", message, level);
+        where T : class => Log(logType: "configuration", message: message, level: level);
 
     public static void Setup<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("setup", message, level);
+        where T : class => Log(logType: "setup", message: message, level: level);
 
     public static void System<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("system", message, level);
+        where T : class => Log(logType: "system", message: message, level: level);
 
     public static void Queue<T>(T message, LogEventLevel level = LogEventLevel.Debug)
-        where T : class => Log("queue", message, level);
+        where T : class => Log(logType: "queue", message: message, level: level);
 
     public static void Encoder<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("encoder", message, level);
+        where T : class => Log(logType: "encoder", message: message, level: level);
 
     public static void Ripper<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("ripper", message, level);
+        where T : class => Log(logType: "ripper", message: message, level: level);
 
     public static void Http<T>(T message, LogEventLevel level = LogEventLevel.Information)
         where T : class =>
-        Log("http", message, BootLog.IsBootInProgress ? LogEventLevel.Debug : level);
+        Log(logType: "http", message: message, level: BootLog.IsBootInProgress ? LogEventLevel.Debug : level);
 
     public static void Ping<T>(T message, LogEventLevel level = LogEventLevel.Information)
         where T : class =>
-        Log("ping", message, BootLog.IsBootInProgress ? LogEventLevel.Debug : level);
+        Log(logType: "ping", message: message, level: BootLog.IsBootInProgress ? LogEventLevel.Debug : level);
 
     public static void Request<T>(T message, LogEventLevel level = LogEventLevel.Debug)
-        where T : class => Log("request", message, level);
+        where T : class => Log(logType: "request", message: message, level: level);
 
     public static void Socket<T>(T message, LogEventLevel level = LogEventLevel.Information)
         where T : class =>
-        Log("socket", message, BootLog.IsBootInProgress ? LogEventLevel.Debug : level);
+        Log(logType: "socket", message: message, level: BootLog.IsBootInProgress ? LogEventLevel.Debug : level);
 
     public static void AcoustId<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("acoustid", message, level);
+        where T : class => Log(logType: "acoustid", message: message, level: level);
 
     public static void AniDb<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("anidb", message, level);
+        where T : class => Log(logType: "anidb", message: message, level: level);
 
     public static void AudioDb<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("audiodb", message, level);
+        where T : class => Log(logType: "audiodb", message: message, level: level);
 
     public static void CoverArt<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("coverart", message, level);
+        where T : class => Log(logType: "coverart", message: message, level: level);
 
     public static void FanArt<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("fanart", message, level);
+        where T : class => Log(logType: "fanart", message: message, level: level);
 
     public static void Fingerprint<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("fingerprint", message, level);
+        where T : class => Log(logType: "fingerprint", message: message, level: level);
 
     public static void Lrclib<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("lrclib", message, level);
+        where T : class => Log(logType: "lrclib", message: message, level: level);
 
     public static void Lyrics<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("lyrics", message, level);
+        where T : class => Log(logType: "lyrics", message: message, level: level);
 
     public static void MovieDb<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("moviedb", message, level);
+        where T : class => Log(logType: "moviedb", message: message, level: level);
 
     public static void MusicBrainz<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("musicbrainz", message, level);
+        where T : class => Log(logType: "musicbrainz", message: message, level: level);
 
     public static void MusixMatch<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("musixmatch", message, level);
+        where T : class => Log(logType: "musixmatch", message: message, level: level);
 
     public static void OpenSubs<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("opensubs", message, level);
+        where T : class => Log(logType: "opensubs", message: message, level: level);
 
     public static void QBitTorrent<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("qbittorrent", message, level);
+        where T : class => Log(logType: "qbittorrent", message: message, level: level);
 
     public static void RuTorrent<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("rutorrent", message, level);
+        where T : class => Log(logType: "rutorrent", message: message, level: level);
 
     public static void SabNzbd<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("sabnzbd", message, level);
+        where T : class => Log(logType: "sabnzbd", message: message, level: level);
 
     public static void Tvdb<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("tvdb", message, level);
+        where T : class => Log(logType: "tvdb", message: message, level: level);
 
     public static void Youtube<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("youtube", message, level);
+        where T : class => Log(logType: "youtube", message: message, level: level);
 
     public static void Discord<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("discord", message, level);
+        where T : class => Log(logType: "discord", message: message, level: level);
 
     public static void Notify<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("notify", message, level);
+        where T : class => Log(logType: "notify", message: message, level: level);
 
     public static void Telegram<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("telegram", message, level);
+        where T : class => Log(logType: "telegram", message: message, level: level);
 
     public static void Transmission<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("transmission", message, level);
+        where T : class => Log(logType: "transmission", message: message, level: level);
 
     public static void Twitter<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("twitter", message, level);
+        where T : class => Log(logType: "twitter", message: message, level: level);
 
     public static void Webhook<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("webhook", message, level);
+        where T : class => Log(logType: "webhook", message: message, level: level);
 
     public static void Whatsapp<T>(T message, LogEventLevel level = LogEventLevel.Information)
-        where T : class => Log("whatsapp", message, level);
+        where T : class => Log(logType: "whatsapp", message: message, level: level);
 
     public static async Task<List<LogEntry>> GetLogs(
         int limit = 10,
@@ -533,16 +533,16 @@ public static class Logger
         string logDirectoryPath = AppFiles.LogPath;
         // LOCAL-ONLY: Logger is a static class in NmSystem; no reference to NoMercy.Providers.
         IStorageDriver driver = new LocalStorageDriver();
-        IStorage storage = new LocalStorage(driver, new([], driver));
+        IStorage storage = new LocalStorage(driver: driver, guard: new(allowedRoots: [], driver: driver));
         List<LogEntry> logs = await LogReader.GetLogsAsync(
-            storage,
-            logDirectoryPath,
+            storage: storage,
+            logDirectoryPath: logDirectoryPath,
             filter: filter
         );
 
-        return logs.OrderByDescending(entry => entry.Time)
-            .Take(limit)
-            .OrderBy(entry => entry.Time)
+        return logs.OrderByDescending(keySelector: entry => entry.Time)
+            .Take(count: limit)
+            .OrderBy(keySelector: entry => entry.Time)
             .ToList();
     }
 }

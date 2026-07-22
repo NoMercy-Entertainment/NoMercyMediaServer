@@ -30,19 +30,19 @@ public class HlsChapterDateRangeTests
 
     private static readonly IReadOnlyList<ChapterInfo> ThreeChapters =
     [
-        new(TimeSpan.Zero, TimeSpan.FromMinutes(10), "Opening"),
-        new(TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(50), "Act One"),
-        new(TimeSpan.FromMinutes(50), TimeSpan.FromMinutes(90), "Finale"),
+        new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(minutes: 10), Title: "Opening"),
+        new(Start: TimeSpan.FromMinutes(minutes: 10), End: TimeSpan.FromMinutes(minutes: 50), Title: "Act One"),
+        new(Start: TimeSpan.FromMinutes(minutes: 50), End: TimeSpan.FromMinutes(minutes: 90), Title: "Finale"),
     ];
 
     private string Generate(OutputPlan plan)
     {
         PlaylistGenerator generator = new();
         return generator.GenerateMasterPlaylist(
-            plan,
-            "Movie.Title",
-            EmptyVideoMetrics,
-            EmptyAudioMetrics
+            plan: plan,
+            mediaTitle: "Movie.Title",
+            videoMetrics: EmptyVideoMetrics,
+            audioMetrics: EmptyAudioMetrics
         );
     }
 
@@ -51,23 +51,23 @@ public class HlsChapterDateRangeTests
     [Fact]
     public void WithChapters_EmitsOneDateRangeLinePerChapter()
     {
-        string playlist = Generate(CreatePlan(ThreeChapters));
+        string playlist = Generate(plan: CreatePlan(chapters: ThreeChapters));
 
         int count = playlist
-            .Split('\n')
-            .Count(line => line.TrimEnd().StartsWith("#EXT-X-DATERANGE:"));
+            .Split(separator: '\n')
+            .Count(predicate: line => line.TrimEnd().StartsWith(value: "#EXT-X-DATERANGE:"));
 
-        count.Should().Be(ThreeChapters.Count);
+        count.Should().Be(expected: ThreeChapters.Count);
     }
 
     [Fact]
     public void WithChapters_DateRangeIdFollowsChIndexFormat()
     {
-        string playlist = Generate(CreatePlan(ThreeChapters));
+        string playlist = Generate(plan: CreatePlan(chapters: ThreeChapters));
 
-        playlist.Should().Contain("ID=\"ch0\"");
-        playlist.Should().Contain("ID=\"ch1\"");
-        playlist.Should().Contain("ID=\"ch2\"");
+        playlist.Should().Contain(expected: "ID=\"ch0\"");
+        playlist.Should().Contain(expected: "ID=\"ch1\"");
+        playlist.Should().Contain(expected: "ID=\"ch2\"");
     }
 
     [Fact]
@@ -76,55 +76,55 @@ public class HlsChapterDateRangeTests
         // Chapter 1: 0–600 s → 600.000 s
         // Chapter 2: 600–3000 s → 2400.000 s
         // Chapter 3: 3000–5400 s → 2400.000 s
-        string playlist = Generate(CreatePlan(ThreeChapters));
+        string playlist = Generate(plan: CreatePlan(chapters: ThreeChapters));
 
-        playlist.Should().Contain("DURATION=600.000");
-        playlist.Should().Contain("DURATION=2400.000");
+        playlist.Should().Contain(expected: "DURATION=600.000");
+        playlist.Should().Contain(expected: "DURATION=2400.000");
     }
 
     [Fact]
     public void WithChapters_StartDateIsUtcIso8601()
     {
-        string playlist = Generate(CreatePlan(ThreeChapters));
+        string playlist = Generate(plan: CreatePlan(chapters: ThreeChapters));
 
         // Chapter 1 starts at epoch (0 s offset from Unix epoch)
-        playlist.Should().Contain("START-DATE=\"1970-01-01T00:00:00.000Z\"");
+        playlist.Should().Contain(expected: "START-DATE=\"1970-01-01T00:00:00.000Z\"");
         // Chapter 2 starts at 10 minutes = 600 s
-        playlist.Should().Contain("START-DATE=\"1970-01-01T00:10:00.000Z\"");
+        playlist.Should().Contain(expected: "START-DATE=\"1970-01-01T00:10:00.000Z\"");
     }
 
     [Fact]
     public void WithChapters_ChapterTitleAppearsInCustomAttribute()
     {
-        string playlist = Generate(CreatePlan(ThreeChapters));
+        string playlist = Generate(plan: CreatePlan(chapters: ThreeChapters));
 
-        playlist.Should().Contain("X-COM-NOMERCY-CHAPTER-TITLE=\"Opening\"");
-        playlist.Should().Contain("X-COM-NOMERCY-CHAPTER-TITLE=\"Act One\"");
-        playlist.Should().Contain("X-COM-NOMERCY-CHAPTER-TITLE=\"Finale\"");
+        playlist.Should().Contain(expected: "X-COM-NOMERCY-CHAPTER-TITLE=\"Opening\"");
+        playlist.Should().Contain(expected: "X-COM-NOMERCY-CHAPTER-TITLE=\"Act One\"");
+        playlist.Should().Contain(expected: "X-COM-NOMERCY-CHAPTER-TITLE=\"Finale\"");
     }
 
     [Fact]
     public void WithChapters_VersionBumpedToV8()
     {
-        string playlist = Generate(CreatePlan(ThreeChapters));
+        string playlist = Generate(plan: CreatePlan(chapters: ThreeChapters));
 
-        playlist.Should().Contain("#EXT-X-VERSION:8");
+        playlist.Should().Contain(expected: "#EXT-X-VERSION:8");
     }
 
     [Fact]
     public void WithoutChapters_NoDatRangeLines()
     {
-        string playlist = Generate(CreatePlan(null));
+        string playlist = Generate(plan: CreatePlan(chapters: null));
 
-        playlist.Should().NotContain("#EXT-X-DATERANGE:");
+        playlist.Should().NotContain(unexpected: "#EXT-X-DATERANGE:");
     }
 
     [Fact]
     public void WithEmptyChapterList_NoDatRangeLines()
     {
-        string playlist = Generate(CreatePlan([]));
+        string playlist = Generate(plan: CreatePlan(chapters: []));
 
-        playlist.Should().NotContain("#EXT-X-DATERANGE:");
+        playlist.Should().NotContain(unexpected: "#EXT-X-DATERANGE:");
     }
 
     [Fact]
@@ -132,12 +132,12 @@ public class HlsChapterDateRangeTests
     {
         IReadOnlyList<ChapterInfo> chapters =
         [
-            new(TimeSpan.Zero, TimeSpan.FromMinutes(10), "It's \"Alive\""),
+            new(Start: TimeSpan.Zero, End: TimeSpan.FromMinutes(minutes: 10), Title: "It's \"Alive\""),
         ];
-        string playlist = Generate(CreatePlan(chapters));
+        string playlist = Generate(plan: CreatePlan(chapters: chapters));
 
         // Double quotes inside title must be escaped as \"
-        playlist.Should().Contain("X-COM-NOMERCY-CHAPTER-TITLE=\"It's \\\"Alive\\\"\"");
+        playlist.Should().Contain(expected: "X-COM-NOMERCY-CHAPTER-TITLE=\"It's \\\"Alive\\\"\"");
     }
 
     // ------------------------------------------------------------------
@@ -150,21 +150,21 @@ public class HlsChapterDateRangeTests
             VideoOutputs:
             [
                 new(
-                    1920,
-                    1080,
-                    "libx264",
-                    23,
-                    8000,
-                    "medium",
-                    "high",
-                    "4.0",
-                    false,
-                    "yuv420p",
-                    "[v0]",
-                    new()
+                    Width: 1920,
+                    Height: 1080,
+                    EncoderName: "libx264",
+                    Crf: 23,
+                    BitrateKbps: 8000,
+                    Preset: "medium",
+                    Profile: "high",
+                    Level: "4.0",
+                    TenBit: false,
+                    PixelFormat: "yuv420p",
+                    MapLabel: "[v0]",
+                    ExtraFlags: new()
                 ),
             ],
-            AudioOutputs: [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
+            AudioOutputs: [new(EncoderName: "aac", BitrateKbps: 192, Channels: 2, SampleRate: 48000, Action: StreamAction.Transcode, Language: "eng", MapLabel: "0:a:0")],
             SubtitleOutputs: [],
             Thumbnails: null,
             Chapters: chapters

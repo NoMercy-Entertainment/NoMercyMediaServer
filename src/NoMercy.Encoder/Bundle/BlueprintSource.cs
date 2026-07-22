@@ -21,16 +21,16 @@ namespace NoMercy.Encoder.Bundle;
 /// </summary>
 public record BlueprintSource(
     /// <summary>The original source path, never a staging lease.</summary>
-    [property: JsonProperty("path")] string Path,
-    [property: JsonProperty("filename")] string Filename,
-    [property: JsonProperty("container")] string Container,
-    [property: JsonProperty("size_bytes")] long SizeBytes,
-    [property: JsonProperty("duration_seconds")] double DurationSeconds,
+    [property: JsonProperty(propertyName: "path")] string Path,
+    [property: JsonProperty(propertyName: "filename")] string Filename,
+    [property: JsonProperty(propertyName: "container")] string Container,
+    [property: JsonProperty(propertyName: "size_bytes")] long SizeBytes,
+    [property: JsonProperty(propertyName: "duration_seconds")] double DurationSeconds,
     // Deferred: computing this requires a full re-read of the source file. No
     // streaming hasher is wired into the analyzer pipeline yet — see spec
     // "Open items".
-    [property: JsonProperty("sha256")] string? Sha256,
+    [property: JsonProperty(propertyName: "sha256")] string? Sha256,
     // format + streams + chapters as ffprobe emitted them. Every track in
     // every encodes[] entry joins into this by source_stream_index.
-    [property: JsonProperty("ffprobe")] JObject? Ffprobe
+    [property: JsonProperty(propertyName: "ffprobe")] JObject? Ffprobe
 );

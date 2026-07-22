@@ -15,12 +15,12 @@ namespace NoMercy.Providers.TMDB.Models.Certifications;
 
 public class TmdbMovieCertification
 {
-    [JsonProperty("certification")]
+    [JsonProperty(propertyName: "certification")]
     public string? Rating { get; set; }
 
-    [JsonProperty("meaning")]
+    [JsonProperty(propertyName: "meaning")]
     public string Meaning { get; set; } = string.Empty;
 
-    [JsonProperty("order")]
+    [JsonProperty(propertyName: "order")]
     public int Order { get; set; }
 }

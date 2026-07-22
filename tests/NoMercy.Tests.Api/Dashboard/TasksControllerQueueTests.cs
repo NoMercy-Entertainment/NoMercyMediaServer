@@ -25,7 +25,7 @@ namespace NoMercy.Tests.Api.Dashboard;
 /// job was enqueued and is never rewritten, so its own "status" field stays
 /// "pending" for the job's whole life.
 /// </summary>
-[Trait("Category", "Tasks")]
+[Trait(name: "Category", value: "Tasks")]
 public class TasksControllerQueueTests : IClassFixture<NoMercyApiFactory>, IAsyncLifetime
 {
     private readonly HttpClient _authed;
@@ -68,7 +68,7 @@ public class TasksControllerQueueTests : IClassFixture<NoMercyApiFactory>, IAsyn
         {
             Queue = "encoder",
             Priority = 4,
-            Payload = PayloadFor("990001"),
+            Payload = PayloadFor(mediaId: "990001"),
             ReservedAt = DateTime.UtcNow,
             AvailableAt = DateTime.UtcNow,
             CreatedAt = DateTime.UtcNow,
@@ -77,7 +77,7 @@ public class TasksControllerQueueTests : IClassFixture<NoMercyApiFactory>, IAsyn
         {
             Queue = "encoder",
             Priority = 4,
-            Payload = PayloadFor("990002"),
+            Payload = PayloadFor(mediaId: "990002"),
             ReservedAt = null,
             AvailableAt = DateTime.UtcNow,
             CreatedAt = DateTime.UtcNow,
@@ -94,10 +94,10 @@ public class TasksControllerQueueTests : IClassFixture<NoMercyApiFactory>, IAsyn
             Payload = "{ this is not valid json",
             ReservedAt = null,
             AvailableAt = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow.AddMinutes(-1),
+            CreatedAt = DateTime.UtcNow.AddMinutes(value: -1),
         };
 
-        ctx.QueueJobs.AddRange(unparseable, reserved, pending);
+        ctx.QueueJobs.AddRange(entities: [unparseable, reserved, pending]);
         await ctx.SaveChangesAsync();
 
         _reservedRowId = reserved.Id;
@@ -109,7 +109,7 @@ public class TasksControllerQueueTests : IClassFixture<NoMercyApiFactory>, IAsyn
     {
         await using QueueContext ctx = new();
         await ctx
-            .QueueJobs.Where(j =>
+            .QueueJobs.Where(predicate: j =>
                 j.Id == _reservedRowId || j.Id == _pendingRowId || j.Id == _unparseableRowId
             )
             .ExecuteDeleteAsync();
@@ -117,22 +117,22 @@ public class TasksControllerQueueTests : IClassFixture<NoMercyApiFactory>, IAsyn
 
     private async Task<JsonElement[]> GetQueueAsync()
     {
-        HttpResponseMessage response = await _authed.GetAsync("/api/v1/dashboard/tasks/queue");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        HttpResponseMessage response = await _authed.GetAsync(requestUri: "/api/v1/dashboard/tasks/queue");
+        response.StatusCode.Should().Be(expected: HttpStatusCode.OK);
 
         string json = await response.Content.ReadAsStringAsync();
-        JsonDocument doc = JsonDocument.Parse(json);
+        JsonDocument doc = JsonDocument.Parse(json: json);
         JsonElement root = doc.RootElement;
         JsonElement array =
-            root.ValueKind == JsonValueKind.Object ? root.GetProperty("data") : root;
+            root.ValueKind == JsonValueKind.Object ? root.GetProperty(propertyName: "data") : root;
 
         return array.EnumerateArray().ToArray();
     }
 
     private static JsonElement RowWithId(JsonElement[] rows, int id)
     {
-        JsonElement[] matches = rows.Where(r => r.GetProperty("id").GetInt32() == id).ToArray();
-        matches.Should().ContainSingle("row {0} must appear exactly once in the queue listing", id);
+        JsonElement[] matches = rows.Where(predicate: r => r.GetProperty(propertyName: "id").GetInt32() == id).ToArray();
+        matches.Should().ContainSingle(because: "row {0} must appear exactly once in the queue listing", becauseArgs: id);
         return matches[0];
     }
 
@@ -141,14 +141,14 @@ public class TasksControllerQueueTests : IClassFixture<NoMercyApiFactory>, IAsyn
     {
         JsonElement[] rows = await GetQueueAsync();
 
-        RowWithId(rows, _reservedRowId)
-            .GetProperty("status")
+        RowWithId(rows: rows, id: _reservedRowId)
+            .GetProperty(propertyName: "status")
             .GetString()
             .Should()
             .Be(
-                "running",
-                "the row carries ReservedAt, so the job is in flight — the payload's own "
-                    + "\"status\" is a stale enqueue-time snapshot and must not be trusted"
+                expected: "running",
+                because: "the row carries ReservedAt, so the job is in flight — the payload's own "
+                         + "\"status\" is a stale enqueue-time snapshot and must not be trusted"
             );
     }
 
@@ -157,11 +157,11 @@ public class TasksControllerQueueTests : IClassFixture<NoMercyApiFactory>, IAsyn
     {
         JsonElement[] rows = await GetQueueAsync();
 
-        RowWithId(rows, _pendingRowId)
-            .GetProperty("status")
+        RowWithId(rows: rows, id: _pendingRowId)
+            .GetProperty(propertyName: "status")
             .GetString()
             .Should()
-            .Be("pending", "the row has no ReservedAt, so the job has not started");
+            .Be(expected: "pending", because: "the row has no ReservedAt, so the job has not started");
     }
 
     [Fact]
@@ -169,8 +169,8 @@ public class TasksControllerQueueTests : IClassFixture<NoMercyApiFactory>, IAsyn
     {
         JsonElement[] rows = await GetQueueAsync();
 
-        RowWithId(rows, _reservedRowId).GetProperty("payload_id").GetString().Should().Be("990001");
-        RowWithId(rows, _pendingRowId).GetProperty("payload_id").GetString().Should().Be("990002");
+        RowWithId(rows: rows, id: _reservedRowId).GetProperty(propertyName: "payload_id").GetString().Should().Be(expected: "990001");
+        RowWithId(rows: rows, id: _pendingRowId).GetProperty(propertyName: "payload_id").GetString().Should().Be(expected: "990002");
     }
 
     [Fact]
@@ -178,16 +178,16 @@ public class TasksControllerQueueTests : IClassFixture<NoMercyApiFactory>, IAsyn
     {
         JsonElement[] rows = await GetQueueAsync();
 
-        rows.Select(r => r.GetProperty("id").GetInt32())
+        rows.Select(selector: r => r.GetProperty(propertyName: "id").GetInt32())
             .Should()
             .NotContain(
-                _unparseableRowId,
-                "a row whose payload cannot be read describes no job and must be dropped"
+                unexpected: _unparseableRowId,
+                because: "a row whose payload cannot be read describes no job and must be dropped"
             );
 
         // The reserved row must still be reported as reserved. If the parsed jobs
         // were zipped to rows by position, this job would have inherited the
         // dropped row's (unreserved) state and read "pending".
-        RowWithId(rows, _reservedRowId).GetProperty("status").GetString().Should().Be("running");
+        RowWithId(rows: rows, id: _reservedRowId).GetProperty(propertyName: "status").GetString().Should().Be(expected: "running");
     }
 }

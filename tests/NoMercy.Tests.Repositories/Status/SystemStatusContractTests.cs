@@ -33,10 +33,10 @@ public class SystemStatusContractTests
 
         store.AccessToken.Should().BeNull();
 
-        store.SetAccessToken("abc123");
+        store.SetAccessToken(token: "abc123");
 
-        store.AccessToken.Should().Be("abc123");
-        observed.Should().Be("abc123");
+        store.AccessToken.Should().Be(expected: "abc123");
+        observed.Should().Be(expected: "abc123");
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class SystemStatusContractTests
     {
         ConnectivityStatus status = new();
 
-        status.NatStatus.Should().Be(NatStatus.None);
+        status.NatStatus.Should().Be(expected: NatStatus.None);
         status.PortForwarded.Should().BeFalse();
     }
 }

@@ -32,7 +32,7 @@ public static class PlaylistItemKindWire
             PlaylistItemKind.Tv => "tv",
             PlaylistItemKind.Episode => "episode",
             PlaylistItemKind.Special => "special",
-            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
+            _ => throw new ArgumentOutOfRangeException(paramName: nameof(kind), actualValue: kind, message: null),
         };
 
     public static bool TryParse(string? value, out PlaylistItemKind kind)

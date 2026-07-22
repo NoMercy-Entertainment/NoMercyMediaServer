@@ -41,31 +41,31 @@ public sealed class FileManagerMasterRebuildTests : IDisposable
 
     public FileManagerMasterRebuildTests()
     {
-        _tempRoot = Path.Combine(Path.GetTempPath(), $"nm-master-rebuild-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempRoot);
+        _tempRoot = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-master-rebuild-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: _tempRoot);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempRoot))
-            Directory.Delete(_tempRoot, recursive: true);
+        if (Directory.Exists(path: _tempRoot))
+            Directory.Delete(path: _tempRoot, recursive: true);
     }
 
     [Fact]
     public async Task Scan_PublishedCascadeOutput_RebuildsCompleteMasterFromDisk()
     {
-        string hostDir = Path.Combine(_tempRoot, "The.Punisher.One.Last.Kill.(2026).NoMercy");
-        Directory.CreateDirectory(hostDir);
+        string hostDir = Path.Combine(path1: _tempRoot, path2: "The.Punisher.One.Last.Kill.(2026).NoMercy");
+        Directory.CreateDirectory(path: hostDir);
 
-        WriteVariant(hostDir, "video_3840x2160", segmentBytes: 900_000, extension: ".m4s");
-        WriteVariant(hostDir, "video_1920x1080_SDR", segmentBytes: 300_000, extension: ".m4s");
-        WriteVariant(hostDir, "audio_eng_eac3", segmentBytes: 60_000, extension: ".m4s");
-        WriteInitMp4(hostDir, "video_3840x2160");
-        WriteInitMp4(hostDir, "video_1920x1080_SDR");
-        WriteSubtitle(hostDir, "eng", "full");
+        WriteVariant(hostDir: hostDir, dirName: "video_3840x2160", segmentBytes: 900_000, extension: ".m4s");
+        WriteVariant(hostDir: hostDir, dirName: "video_1920x1080_SDR", segmentBytes: 300_000, extension: ".m4s");
+        WriteVariant(hostDir: hostDir, dirName: "audio_eng_eac3", segmentBytes: 60_000, extension: ".m4s");
+        WriteInitMp4(hostDir: hostDir, dirName: "video_3840x2160");
+        WriteInitMp4(hostDir: hostDir, dirName: "video_1920x1080_SDR");
+        WriteSubtitle(hostDir: hostDir, language: "eng", variant: "full");
 
         SetupProbe(
-            "video_3840x2160",
+            dirName: "video_3840x2160",
             codec: "hevc",
             width: 3840,
             height: 2160,
@@ -73,7 +73,7 @@ public sealed class FileManagerMasterRebuildTests : IDisposable
             colorTransfer: "smpte2084"
         );
         SetupProbe(
-            "video_1920x1080_SDR",
+            dirName: "video_1920x1080_SDR",
             codec: "hevc",
             width: 1920,
             height: 1080,
@@ -82,170 +82,170 @@ public sealed class FileManagerMasterRebuildTests : IDisposable
         );
 
         LocalStorageDriver driver = new();
-        LocalStorage storage = new(driver, new StoragePathGuard([], driver));
+        LocalStorage storage = new(driver: driver, guard: new StoragePathGuard(allowedRoots: [], driver: driver));
 
         FileManager manager = BuildFileManager();
-        List<IVideo> video = InvokeGetVideoHashList(manager, storage, hostDir);
-        video.Should().HaveCount(2, "both rendition dirs must be picked up by the scan");
+        List<IVideo> video = InvokeGetVideoHashList(manager: manager, storage: storage, hostFolder: hostDir);
+        video.Should().HaveCount(expected: 2, because: "both rendition dirs must be picked up by the scan");
 
         string fileName = "/The.Punisher.One.Last.Kill.(2026).NoMercy.m3u8";
 
-        await InvokeRebuildHlsMasterFromDiskAsync(manager, storage, hostDir, fileName, video);
+        await InvokeRebuildHlsMasterFromDiskAsync(manager: manager, storage: storage, hostFolder: hostDir, fileName: fileName, video: video);
 
-        string masterPath = Path.Combine(hostDir, "The.Punisher.One.Last.Kill.(2026).NoMercy.m3u8");
-        File.Exists(masterPath)
+        string masterPath = Path.Combine(path1: hostDir, path2: "The.Punisher.One.Last.Kill.(2026).NoMercy.m3u8");
+        File.Exists(path: masterPath)
             .Should()
-            .BeTrue("the rebuild must write the master onto the host folder");
+            .BeTrue(because: "the rebuild must write the master onto the host folder");
 
-        string master = await File.ReadAllTextAsync(masterPath);
+        string master = await File.ReadAllTextAsync(path: masterPath);
 
         List<string> streamInfLines = master
-            .Split('\n')
-            .Where(line => line.StartsWith("#EXT-X-STREAM-INF:", StringComparison.Ordinal))
+            .Split(separator: '\n')
+            .Where(predicate: line => line.StartsWith(value: "#EXT-X-STREAM-INF:", comparisonType: StringComparison.Ordinal))
             .ToList();
-        streamInfLines.Should().HaveCount(2);
+        streamInfLines.Should().HaveCount(expected: 2);
 
-        string? hdrLine = streamInfLines.FirstOrDefault(line =>
-            line.Contains("RESOLUTION=3840x2160", StringComparison.Ordinal)
+        string? hdrLine = streamInfLines.FirstOrDefault(predicate: line =>
+            line.Contains(value: "RESOLUTION=3840x2160", comparisonType: StringComparison.Ordinal)
         );
-        string? sdrLine = streamInfLines.FirstOrDefault(line =>
-            line.Contains("RESOLUTION=1920x1080", StringComparison.Ordinal)
+        string? sdrLine = streamInfLines.FirstOrDefault(predicate: line =>
+            line.Contains(value: "RESOLUTION=1920x1080", comparisonType: StringComparison.Ordinal)
         );
         hdrLine.Should().NotBeNull();
         sdrLine.Should().NotBeNull();
 
-        hdrLine.Should().Contain("VIDEO-RANGE=PQ");
-        sdrLine.Should().Contain("VIDEO-RANGE=SDR");
+        hdrLine.Should().Contain(expected: "VIDEO-RANGE=PQ");
+        sdrLine.Should().Contain(expected: "VIDEO-RANGE=SDR");
 
-        hdrLine.Should().MatchRegex(@"CODECS=""hvc1\.2\.4\.L150\.B0,ec-3""");
-        sdrLine.Should().MatchRegex(@"CODECS=""hvc1\.1\.6\.L120\.B0,ec-3""");
+        hdrLine.Should().MatchRegex(regularExpression: @"CODECS=""hvc1\.2\.4\.L150\.B0,ec-3""");
+        sdrLine.Should().MatchRegex(regularExpression: @"CODECS=""hvc1\.1\.6\.L120\.B0,ec-3""");
 
-        int hdrBandwidth = ExtractInt(hdrLine!, "BANDWIDTH");
-        int sdrBandwidth = ExtractInt(sdrLine!, "BANDWIDTH");
-        hdrBandwidth.Should().NotBe(sdrBandwidth);
+        int hdrBandwidth = ExtractInt(streamInfLine: hdrLine!, attribute: "BANDWIDTH");
+        int sdrBandwidth = ExtractInt(streamInfLine: sdrLine!, attribute: "BANDWIDTH");
+        hdrBandwidth.Should().NotBe(unexpected: sdrBandwidth);
 
-        master.Should().Contain("#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio_eac3\",LANGUAGE=\"eng\"");
-        master.Should().Contain("#EXT-X-MEDIA:TYPE=SUBTITLES");
-        hdrLine.Should().Contain("AUDIO=\"audio_eac3\"");
-        hdrLine.Should().Contain("SUBTITLES=\"subs\"");
+        master.Should().Contain(expected: "#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio_eac3\",LANGUAGE=\"eng\"");
+        master.Should().Contain(expected: "#EXT-X-MEDIA:TYPE=SUBTITLES");
+        hdrLine.Should().Contain(expected: "AUDIO=\"audio_eac3\"");
+        hdrLine.Should().Contain(expected: "SUBTITLES=\"subs\"");
 
         // Renditions-on-disk == entries-in-master, for every kind.
-        int videoDirsOnDisk = Directory.GetDirectories(hostDir, "video_*").Length;
-        int audioDirsOnDisk = Directory.GetDirectories(hostDir, "audio_*").Length;
+        int videoDirsOnDisk = Directory.GetDirectories(path: hostDir, searchPattern: "video_*").Length;
+        int audioDirsOnDisk = Directory.GetDirectories(path: hostDir, searchPattern: "audio_*").Length;
         int subtitleTracksOnDisk = Directory
-            .GetDirectories(Path.Combine(hostDir, "subtitles"))
-            .Sum(languageDir => Directory.GetFiles(languageDir, "*.ass").Length);
+            .GetDirectories(path: Path.Combine(path1: hostDir, path2: "subtitles"))
+            .Sum(selector: languageDir => Directory.GetFiles(path: languageDir, searchPattern: "*.ass").Length);
 
-        streamInfLines.Count.Should().Be(videoDirsOnDisk);
-        Regex.Matches(master, "#EXT-X-MEDIA:TYPE=AUDIO").Count.Should().Be(audioDirsOnDisk);
+        streamInfLines.Count.Should().Be(expected: videoDirsOnDisk);
+        Regex.Matches(input: master, pattern: "#EXT-X-MEDIA:TYPE=AUDIO").Count.Should().Be(expected: audioDirsOnDisk);
         Regex
-            .Matches(master, "#EXT-X-MEDIA:TYPE=SUBTITLES")
+            .Matches(input: master, pattern: "#EXT-X-MEDIA:TYPE=SUBTITLES")
             .Count.Should()
-            .Be(subtitleTracksOnDisk);
+            .Be(expected: subtitleTracksOnDisk);
     }
 
     [Fact]
     public async Task Scan_SecondPass_MasterAlreadyComplete_SkipsReprobeAndKeepsMaster()
     {
-        string hostDir = Path.Combine(_tempRoot, "Repeat.Run.(2024).NoMercy");
-        Directory.CreateDirectory(hostDir);
-        WriteVariant(hostDir, "video_1920x1080_SDR", segmentBytes: 300_000, extension: ".m4s");
-        WriteInitMp4(hostDir, "video_1920x1080_SDR");
-        WriteVariant(hostDir, "audio_eng_eac3", segmentBytes: 60_000, extension: ".m4s");
-        SetupProbe("video_1920x1080_SDR", "hevc", 1920, 1080, bitDepth: 8, colorTransfer: "bt709");
+        string hostDir = Path.Combine(path1: _tempRoot, path2: "Repeat.Run.(2024).NoMercy");
+        Directory.CreateDirectory(path: hostDir);
+        WriteVariant(hostDir: hostDir, dirName: "video_1920x1080_SDR", segmentBytes: 300_000, extension: ".m4s");
+        WriteInitMp4(hostDir: hostDir, dirName: "video_1920x1080_SDR");
+        WriteVariant(hostDir: hostDir, dirName: "audio_eng_eac3", segmentBytes: 60_000, extension: ".m4s");
+        SetupProbe(dirName: "video_1920x1080_SDR", codec: "hevc", width: 1920, height: 1080, bitDepth: 8, colorTransfer: "bt709");
 
         LocalStorageDriver driver = new();
-        LocalStorage storage = new(driver, new StoragePathGuard([], driver));
+        LocalStorage storage = new(driver: driver, guard: new StoragePathGuard(allowedRoots: [], driver: driver));
         FileManager manager = BuildFileManager();
         string fileName = "/Repeat.Run.(2024).NoMercy.m3u8";
-        string masterPath = Path.Combine(hostDir, "Repeat.Run.(2024).NoMercy.m3u8");
+        string masterPath = Path.Combine(path1: hostDir, path2: "Repeat.Run.(2024).NoMercy.m3u8");
 
-        List<IVideo> firstVideo = InvokeGetVideoHashList(manager, storage, hostDir);
-        await InvokeRebuildHlsMasterFromDiskAsync(manager, storage, hostDir, fileName, firstVideo);
+        List<IVideo> firstVideo = InvokeGetVideoHashList(manager: manager, storage: storage, hostFolder: hostDir);
+        await InvokeRebuildHlsMasterFromDiskAsync(manager: manager, storage: storage, hostFolder: hostDir, fileName: fileName, video: firstVideo);
 
         _mediaAnalyzer
             .Invocations.Count.Should()
             .BeGreaterThan(
-                0,
-                "the first pass has no master on disk and must probe every rendition"
+                expected: 0,
+                because: "the first pass has no master on disk and must probe every rendition"
             );
-        string firstMaster = await File.ReadAllTextAsync(masterPath);
+        string firstMaster = await File.ReadAllTextAsync(path: masterPath);
 
         // A second scan of the same, already-complete output must be a pure read:
         // no rendition probe, no master rewrite — this is the per-file cost that
         // made a rescan crawl.
         _mediaAnalyzer.Invocations.Clear();
-        List<IVideo> secondVideo = InvokeGetVideoHashList(manager, storage, hostDir);
-        await InvokeRebuildHlsMasterFromDiskAsync(manager, storage, hostDir, fileName, secondVideo);
+        List<IVideo> secondVideo = InvokeGetVideoHashList(manager: manager, storage: storage, hostFolder: hostDir);
+        await InvokeRebuildHlsMasterFromDiskAsync(manager: manager, storage: storage, hostFolder: hostDir, fileName: fileName, video: secondVideo);
 
         _mediaAnalyzer
             .Invocations.Should()
-            .BeEmpty("a master already advertising every on-disk rendition must not be reprobed");
-        (await File.ReadAllTextAsync(masterPath))
+            .BeEmpty(because: "a master already advertising every on-disk rendition must not be reprobed");
+        (await File.ReadAllTextAsync(path: masterPath))
             .Should()
-            .Be(firstMaster, "the skipped rebuild must leave the master untouched");
+            .Be(expected: firstMaster, because: "the skipped rebuild must leave the master untouched");
     }
 
     [Fact]
     public async Task Scan_SecondPass_NewLadderRungPublished_RecreatesMasterWithEveryRung()
     {
-        string hostDir = Path.Combine(_tempRoot, "Cascade.Grows.(2025).NoMercy");
-        Directory.CreateDirectory(hostDir);
-        WriteVariant(hostDir, "video_1920x1080_SDR", segmentBytes: 300_000, extension: ".m4s");
-        WriteInitMp4(hostDir, "video_1920x1080_SDR");
-        WriteVariant(hostDir, "audio_eng_eac3", segmentBytes: 60_000, extension: ".m4s");
-        SetupProbe("video_1920x1080_SDR", "hevc", 1920, 1080, bitDepth: 8, colorTransfer: "bt709");
+        string hostDir = Path.Combine(path1: _tempRoot, path2: "Cascade.Grows.(2025).NoMercy");
+        Directory.CreateDirectory(path: hostDir);
+        WriteVariant(hostDir: hostDir, dirName: "video_1920x1080_SDR", segmentBytes: 300_000, extension: ".m4s");
+        WriteInitMp4(hostDir: hostDir, dirName: "video_1920x1080_SDR");
+        WriteVariant(hostDir: hostDir, dirName: "audio_eng_eac3", segmentBytes: 60_000, extension: ".m4s");
+        SetupProbe(dirName: "video_1920x1080_SDR", codec: "hevc", width: 1920, height: 1080, bitDepth: 8, colorTransfer: "bt709");
 
         LocalStorageDriver driver = new();
-        LocalStorage storage = new(driver, new StoragePathGuard([], driver));
+        LocalStorage storage = new(driver: driver, guard: new StoragePathGuard(allowedRoots: [], driver: driver));
         FileManager manager = BuildFileManager();
         string fileName = "/Cascade.Grows.(2025).NoMercy.m3u8";
-        string masterPath = Path.Combine(hostDir, "Cascade.Grows.(2025).NoMercy.m3u8");
+        string masterPath = Path.Combine(path1: hostDir, path2: "Cascade.Grows.(2025).NoMercy.m3u8");
 
-        List<IVideo> firstVideo = InvokeGetVideoHashList(manager, storage, hostDir);
-        await InvokeRebuildHlsMasterFromDiskAsync(manager, storage, hostDir, fileName, firstVideo);
-        CountStreamInf(await File.ReadAllTextAsync(masterPath))
+        List<IVideo> firstVideo = InvokeGetVideoHashList(manager: manager, storage: storage, hostFolder: hostDir);
+        await InvokeRebuildHlsMasterFromDiskAsync(manager: manager, storage: storage, hostFolder: hostDir, fileName: fileName, video: firstVideo);
+        CountStreamInf(master: await File.ReadAllTextAsync(path: masterPath))
             .Should()
-            .Be(1, "the first bundle published only the 1080p rung");
+            .Be(expected: 1, because: "the first bundle published only the 1080p rung");
 
         // A later self-finalizing bundle publishes the 4K rung into the SAME output
         // folder — the exact multi-run case the disk-truth rebuild exists for. The
         // skip guard must NOT treat the now-stale master as complete.
-        WriteVariant(hostDir, "video_3840x2160", segmentBytes: 900_000, extension: ".m4s");
-        WriteInitMp4(hostDir, "video_3840x2160");
-        SetupProbe("video_3840x2160", "hevc", 3840, 2160, bitDepth: 10, colorTransfer: "smpte2084");
+        WriteVariant(hostDir: hostDir, dirName: "video_3840x2160", segmentBytes: 900_000, extension: ".m4s");
+        WriteInitMp4(hostDir: hostDir, dirName: "video_3840x2160");
+        SetupProbe(dirName: "video_3840x2160", codec: "hevc", width: 3840, height: 2160, bitDepth: 10, colorTransfer: "smpte2084");
 
-        List<IVideo> secondVideo = InvokeGetVideoHashList(manager, storage, hostDir);
-        secondVideo.Should().HaveCount(2, "the scan sees both published rungs on disk");
-        await InvokeRebuildHlsMasterFromDiskAsync(manager, storage, hostDir, fileName, secondVideo);
+        List<IVideo> secondVideo = InvokeGetVideoHashList(manager: manager, storage: storage, hostFolder: hostDir);
+        secondVideo.Should().HaveCount(expected: 2, because: "the scan sees both published rungs on disk");
+        await InvokeRebuildHlsMasterFromDiskAsync(manager: manager, storage: storage, hostFolder: hostDir, fileName: fileName, video: secondVideo);
 
-        string secondMaster = await File.ReadAllTextAsync(masterPath);
-        CountStreamInf(secondMaster)
+        string secondMaster = await File.ReadAllTextAsync(path: masterPath);
+        CountStreamInf(master: secondMaster)
             .Should()
-            .Be(2, "a master missing an on-disk rung must be recreated to list every rung");
-        secondMaster.Should().Contain("RESOLUTION=3840x2160");
-        secondMaster.Should().Contain("RESOLUTION=1920x1080");
+            .Be(expected: 2, because: "a master missing an on-disk rung must be recreated to list every rung");
+        secondMaster.Should().Contain(expected: "RESOLUTION=3840x2160");
+        secondMaster.Should().Contain(expected: "RESOLUTION=1920x1080");
     }
 
     [Fact]
     public async Task Scan_NonHlsItem_NoVideoRenditions_DoesNotWriteAMaster()
     {
-        string hostDir = Path.Combine(_tempRoot, "Some.Raw.File.(2020).NoMercy");
-        Directory.CreateDirectory(hostDir);
+        string hostDir = Path.Combine(path1: _tempRoot, path2: "Some.Raw.File.(2020).NoMercy");
+        Directory.CreateDirectory(path: hostDir);
 
         LocalStorageDriver driver = new();
-        LocalStorage storage = new(driver, new StoragePathGuard([], driver));
+        LocalStorage storage = new(driver: driver, guard: new StoragePathGuard(allowedRoots: [], driver: driver));
         FileManager manager = BuildFileManager();
 
         await InvokeRebuildHlsMasterFromDiskAsync(
-            manager,
-            storage,
-            hostDir,
-            "/Some.Raw.File.(2020).NoMercy.mkv",
-            []
+            manager: manager,
+            storage: storage,
+            hostFolder: hostDir,
+            fileName: "/Some.Raw.File.(2020).NoMercy.mkv",
+            video: []
         );
 
-        Directory.GetFiles(hostDir, "*.m3u8").Should().BeEmpty();
+        Directory.GetFiles(path: hostDir, searchPattern: "*.m3u8").Should().BeEmpty();
     }
 
     // -----------------------------------------------------------------------
@@ -256,75 +256,76 @@ public sealed class FileManagerMasterRebuildTests : IDisposable
     [Fact]
     public async Task Scan_OldNamingAudioDirsNoCodecSuffix_NoBlueprint_RebuildsMasterWithAudioGroup()
     {
-        string hostDir = Path.Combine(_tempRoot, "Chainsaw.Man.S01E01.(2022).NoMercy");
-        Directory.CreateDirectory(hostDir);
+        string hostDir = Path.Combine(path1: _tempRoot, path2: "Chainsaw.Man.S01E01.(2022).NoMercy");
+        Directory.CreateDirectory(path: hostDir);
 
-        WriteVariant(hostDir, "video_1920x1080_SDR", segmentBytes: 300_000, extension: ".m4s");
-        WriteInitMp4(hostDir, "video_1920x1080_SDR");
+        WriteVariant(hostDir: hostDir, dirName: "video_1920x1080_SDR", segmentBytes: 300_000, extension: ".m4s");
+        WriteInitMp4(hostDir: hostDir, dirName: "video_1920x1080_SDR");
         // Pre-codec-suffix encoder naming: no `_<codec>` token on the dir at
         // all — the exact on-disk shape that regressed audio to silent.
-        WriteVariant(hostDir, "audio_jpn", segmentBytes: 60_000, extension: ".m4s");
-        WriteVariant(hostDir, "audio_eng", segmentBytes: 60_000, extension: ".m4s");
+        WriteVariant(hostDir: hostDir, dirName: "audio_jpn", segmentBytes: 60_000, extension: ".m4s");
+        WriteVariant(hostDir: hostDir, dirName: "audio_eng", segmentBytes: 60_000, extension: ".m4s");
 
-        SetupProbe("video_1920x1080_SDR", "hevc", 1920, 1080, bitDepth: 8, colorTransfer: "bt709");
+        SetupProbe(dirName: "video_1920x1080_SDR", codec: "hevc", width: 1920, height: 1080, bitDepth: 8, colorTransfer: "bt709");
 
         LocalStorageDriver driver = new();
-        LocalStorage storage = new(driver, new StoragePathGuard([], driver));
+        LocalStorage storage = new(driver: driver, guard: new StoragePathGuard(allowedRoots: [], driver: driver));
         FileManager manager = BuildFileManager();
         string fileName = "/Chainsaw.Man.S01E01.(2022).NoMercy.m3u8";
-        string masterPath = Path.Combine(hostDir, "Chainsaw.Man.S01E01.(2022).NoMercy.m3u8");
+        string masterPath = Path.Combine(path1: hostDir, path2: "Chainsaw.Man.S01E01.(2022).NoMercy.m3u8");
 
-        List<IVideo> video = InvokeGetVideoHashList(manager, storage, hostDir);
-        await InvokeRebuildHlsMasterFromDiskAsync(manager, storage, hostDir, fileName, video);
+        List<IVideo> video = InvokeGetVideoHashList(manager: manager, storage: storage, hostFolder: hostDir);
+        await InvokeRebuildHlsMasterFromDiskAsync(manager: manager, storage: storage, hostFolder: hostDir, fileName: fileName, video: video);
 
-        File.Exists(masterPath).Should().BeTrue();
-        string master = await File.ReadAllTextAsync(masterPath);
+        File.Exists(path: masterPath).Should().BeTrue();
+        string master = await File.ReadAllTextAsync(path: masterPath);
 
         Regex
-            .Matches(master, "#EXT-X-MEDIA:TYPE=AUDIO")
+            .Matches(input: master, pattern: "#EXT-X-MEDIA:TYPE=AUDIO")
             .Count.Should()
-            .Be(2, "both old-naming audio dirs must surface as a group, not be silently skipped");
-        master.Should().Contain("LANGUAGE=\"jpn\"");
-        master.Should().Contain("LANGUAGE=\"eng\"");
+            .Be(expected: 2, because: "both old-naming audio dirs must surface as a group, not be silently skipped");
+        master.Should().Contain(expected: "LANGUAGE=\"jpn\"");
+        master.Should().Contain(expected: "LANGUAGE=\"eng\"");
 
         string streamInfLine = master
-            .Split('\n')
-            .First(line => line.StartsWith("#EXT-X-STREAM-INF:", StringComparison.Ordinal));
+            .Split(separator: '\n')
+            .First(predicate: line => line.StartsWith(value: "#EXT-X-STREAM-INF:", comparisonType: StringComparison.Ordinal));
         System.Text.RegularExpressions.Match audioAttr = Regex.Match(
-            streamInfLine,
-            "AUDIO=\"(?<id>[^\"]+)\""
+            input: streamInfLine,
+            pattern: "AUDIO=\"(?<id>[^\"]+)\""
         );
         audioAttr
             .Success.Should()
             .BeTrue(
-                "the video variant must reference the audio group the rebuild actually emitted"
+                because: "the video variant must reference the audio group the rebuild actually emitted"
             );
-        master.Should().Contain($"GROUP-ID=\"{audioAttr.Groups["id"].Value}\"");
+        master.Should().Contain(expected: $"GROUP-ID=\"{audioAttr.Groups[groupname: "id"].Value}\"");
     }
 
     [Fact]
     public async Task Scan_BlueprintPresent_CustomAudioRenditionPath_MasterBuiltFromBlueprintFiles()
     {
-        string hostDir = Path.Combine(_tempRoot, "Custom.Naming.Title.(2025).NoMercy");
-        Directory.CreateDirectory(hostDir);
+        string hostDir = Path.Combine(path1: _tempRoot, path2: "Custom.Naming.Title.(2025).NoMercy");
+        Directory.CreateDirectory(path: hostDir);
 
-        WriteVariant(hostDir, "video_1920x1080_SDR", segmentBytes: 300_000, extension: ".m4s");
-        WriteInitMp4(hostDir, "video_1920x1080_SDR");
-        SetupProbe("video_1920x1080_SDR", "hevc", 1920, 1080, bitDepth: 8, colorTransfer: "bt709");
+        WriteVariant(hostDir: hostDir, dirName: "video_1920x1080_SDR", segmentBytes: 300_000, extension: ".m4s");
+        WriteInitMp4(hostDir: hostDir, dirName: "video_1920x1080_SDR");
+        SetupProbe(dirName: "video_1920x1080_SDR", codec: "hevc", width: 1920, height: 1080, bitDepth: 8, colorTransfer: "bt709");
 
         // A custom PlaylistNameTemplate produced this — no "audio_" prefix at
         // all. A directory-name parse (even a lenient one) can never resolve
         // this; only the blueprint's recorded Files[] can.
-        string customAudioDir = Path.Combine(hostDir, "sound", "japanese-track");
-        Directory.CreateDirectory(customAudioDir);
-        File.WriteAllBytes(Path.Combine(customAudioDir, "stream_00000.m4s"), new byte[60_000]);
+        string customAudioDir = Path.Combine(path1: hostDir, path2: "sound", path3: "japanese-track");
+        Directory.CreateDirectory(path: customAudioDir);
+        File.WriteAllBytes(path: Path.Combine(path1: customAudioDir, path2: "stream_00000.m4s"), bytes: new byte[60_000]);
         File.WriteAllText(
-            Path.Combine(customAudioDir, "stream.m3u8"),
-            "#EXTM3U\n#EXTINF:6.000000,\nstream_00000.m4s\n#EXT-X-ENDLIST\n"
+            path: Path.Combine(path1: customAudioDir, path2: "stream.m3u8"),
+            contents: "#EXTM3U\n#EXTINF:6.000000,\nstream_00000.m4s\n#EXT-X-ENDLIST\n"
         );
 
         WriteAudioBlueprint(
-            hostDir,
+            hostDir: hostDir,
+            tracks:
             [
                 new BlueprintTrack(
                     SourceStreamIndex: 1,
@@ -347,53 +348,53 @@ public sealed class FileManagerMasterRebuildTests : IDisposable
         );
 
         LocalStorageDriver driver = new();
-        LocalStorage storage = new(driver, new StoragePathGuard([], driver));
+        LocalStorage storage = new(driver: driver, guard: new StoragePathGuard(allowedRoots: [], driver: driver));
         FileManager manager = BuildFileManager();
         string fileName = "/Custom.Naming.Title.(2025).NoMercy.m3u8";
-        string masterPath = Path.Combine(hostDir, "Custom.Naming.Title.(2025).NoMercy.m3u8");
+        string masterPath = Path.Combine(path1: hostDir, path2: "Custom.Naming.Title.(2025).NoMercy.m3u8");
 
-        List<IVideo> video = InvokeGetVideoHashList(manager, storage, hostDir);
-        await InvokeRebuildHlsMasterFromDiskAsync(manager, storage, hostDir, fileName, video);
+        List<IVideo> video = InvokeGetVideoHashList(manager: manager, storage: storage, hostFolder: hostDir);
+        await InvokeRebuildHlsMasterFromDiskAsync(manager: manager, storage: storage, hostFolder: hostDir, fileName: fileName, video: video);
 
-        string master = await File.ReadAllTextAsync(masterPath);
+        string master = await File.ReadAllTextAsync(path: masterPath);
 
-        master.Should().Contain("#EXT-X-MEDIA:TYPE=AUDIO");
-        master.Should().Contain("LANGUAGE=\"jpn\"");
+        master.Should().Contain(expected: "#EXT-X-MEDIA:TYPE=AUDIO");
+        master.Should().Contain(expected: "LANGUAGE=\"jpn\"");
         master
             .Should()
             .Contain(
-                "URI=\"sound/japanese-track/stream.m3u8\"",
-                "the master must reference the blueprint's resolved output path, not a guessed directory name"
+                expected: "URI=\"sound/japanese-track/stream.m3u8\"",
+                because: "the master must reference the blueprint's resolved output path, not a guessed directory name"
             );
     }
 
     [Fact]
     public async Task Scan_ZeroAudioRenditions_MasterHasNoAudioGroupAndNoDanglingReference()
     {
-        string hostDir = Path.Combine(_tempRoot, "Silent.Documentary.(2019).NoMercy");
-        Directory.CreateDirectory(hostDir);
+        string hostDir = Path.Combine(path1: _tempRoot, path2: "Silent.Documentary.(2019).NoMercy");
+        Directory.CreateDirectory(path: hostDir);
 
-        WriteVariant(hostDir, "video_1920x1080_SDR", segmentBytes: 300_000, extension: ".m4s");
-        WriteInitMp4(hostDir, "video_1920x1080_SDR");
-        SetupProbe("video_1920x1080_SDR", "hevc", 1920, 1080, bitDepth: 8, colorTransfer: "bt709");
+        WriteVariant(hostDir: hostDir, dirName: "video_1920x1080_SDR", segmentBytes: 300_000, extension: ".m4s");
+        WriteInitMp4(hostDir: hostDir, dirName: "video_1920x1080_SDR");
+        SetupProbe(dirName: "video_1920x1080_SDR", codec: "hevc", width: 1920, height: 1080, bitDepth: 8, colorTransfer: "bt709");
 
         LocalStorageDriver driver = new();
-        LocalStorage storage = new(driver, new StoragePathGuard([], driver));
+        LocalStorage storage = new(driver: driver, guard: new StoragePathGuard(allowedRoots: [], driver: driver));
         FileManager manager = BuildFileManager();
         string fileName = "/Silent.Documentary.(2019).NoMercy.m3u8";
-        string masterPath = Path.Combine(hostDir, "Silent.Documentary.(2019).NoMercy.m3u8");
+        string masterPath = Path.Combine(path1: hostDir, path2: "Silent.Documentary.(2019).NoMercy.m3u8");
 
-        List<IVideo> video = InvokeGetVideoHashList(manager, storage, hostDir);
-        await InvokeRebuildHlsMasterFromDiskAsync(manager, storage, hostDir, fileName, video);
+        List<IVideo> video = InvokeGetVideoHashList(manager: manager, storage: storage, hostFolder: hostDir);
+        await InvokeRebuildHlsMasterFromDiskAsync(manager: manager, storage: storage, hostFolder: hostDir, fileName: fileName, video: video);
 
-        string master = await File.ReadAllTextAsync(masterPath);
+        string master = await File.ReadAllTextAsync(path: masterPath);
 
-        master.Should().NotContain("#EXT-X-MEDIA:TYPE=AUDIO");
+        master.Should().NotContain(unexpected: "#EXT-X-MEDIA:TYPE=AUDIO");
         master
             .Should()
             .NotContain(
-                "AUDIO=\"",
-                "a title with zero audio renditions must not reference an audio group that was never emitted"
+                unexpected: "AUDIO=\"",
+                because: "a title with zero audio renditions must not reference an audio group that was never emitted"
             );
     }
 
@@ -437,8 +438,8 @@ public sealed class FileManagerMasterRebuildTests : IDisposable
             ]
         );
 
-        string json = JsonConvert.SerializeObject(blueprint, Formatting.Indented);
-        File.WriteAllText(Path.Combine(hostDir, MediaBlueprintWriter.FileName), json);
+        string json = JsonConvert.SerializeObject(value: blueprint, formatting: Formatting.Indented);
+        File.WriteAllText(path: Path.Combine(path1: hostDir, path2: MediaBlueprintWriter.FileName), contents: json);
     }
 
     // -----------------------------------------------------------------------
@@ -452,25 +453,25 @@ public sealed class FileManagerMasterRebuildTests : IDisposable
         string extension
     )
     {
-        string variantDirectory = Path.Combine(hostDir, dirName);
-        Directory.CreateDirectory(variantDirectory);
+        string variantDirectory = Path.Combine(path1: hostDir, path2: dirName);
+        Directory.CreateDirectory(path: variantDirectory);
 
         byte[] segment = new byte[segmentBytes];
-        File.WriteAllBytes(Path.Combine(variantDirectory, $"{dirName}_00000{extension}"), segment);
+        File.WriteAllBytes(path: Path.Combine(path1: variantDirectory, path2: $"{dirName}_00000{extension}"), bytes: segment);
 
         string playlist =
             $"#EXTM3U\n#EXTINF:6.000000,\n{dirName}_00000{extension}\n#EXT-X-ENDLIST\n";
-        File.WriteAllText(Path.Combine(variantDirectory, $"{dirName}.m3u8"), playlist);
+        File.WriteAllText(path: Path.Combine(path1: variantDirectory, path2: $"{dirName}.m3u8"), contents: playlist);
     }
 
     private static void WriteInitMp4(string hostDir, string dirName) =>
-        File.WriteAllBytes(Path.Combine(hostDir, dirName, "init.mp4"), new byte[512]);
+        File.WriteAllBytes(path: Path.Combine(path1: hostDir, path2: dirName, path3: "init.mp4"), bytes: new byte[512]);
 
     private static void WriteSubtitle(string hostDir, string language, string variant)
     {
-        string subtitleDirectory = Path.Combine(hostDir, "subtitles", language);
-        Directory.CreateDirectory(subtitleDirectory);
-        File.WriteAllText(Path.Combine(subtitleDirectory, $"{variant}.ass"), "[Script Info]\n");
+        string subtitleDirectory = Path.Combine(path1: hostDir, path2: "subtitles", path3: language);
+        Directory.CreateDirectory(path: subtitleDirectory);
+        File.WriteAllText(path: Path.Combine(path1: subtitleDirectory, path2: $"{variant}.ass"), contents: "[Script Info]\n");
     }
 
     private void SetupProbe(
@@ -485,7 +486,7 @@ public sealed class FileManagerMasterRebuildTests : IDisposable
         MediaInfo info = new(
             FilePath: dirName,
             Format: "mov,mp4,m4a,3gp,3g2,mj2",
-            Duration: TimeSpan.FromSeconds(6),
+            Duration: TimeSpan.FromSeconds(seconds: 6),
             OverallBitRateKbps: 0,
             FileSizeBytes: 0,
             VideoStreams:
@@ -511,28 +512,28 @@ public sealed class FileManagerMasterRebuildTests : IDisposable
         );
 
         _mediaAnalyzer
-            .Setup(analyzer =>
+            .Setup(expression: analyzer =>
                 analyzer.AnalyzeAsync(
                     It.Is<string>(path => path.Contains(dirName)),
                     It.IsAny<IStorage>(),
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(info);
+            .ReturnsAsync(value: info);
     }
 
     private static int CountStreamInf(string master) =>
         master
-            .Split('\n')
-            .Count(line => line.StartsWith("#EXT-X-STREAM-INF:", StringComparison.Ordinal));
+            .Split(separator: '\n')
+            .Count(predicate: line => line.StartsWith(value: "#EXT-X-STREAM-INF:", comparisonType: StringComparison.Ordinal));
 
     private static int ExtractInt(string streamInfLine, string attribute)
     {
         System.Text.RegularExpressions.Match match = Regex.Match(
-            streamInfLine,
-            $@"{attribute}=(?<value>\d+)"
+            input: streamInfLine,
+            pattern: $@"{attribute}=(?<value>\d+)"
         );
-        return int.Parse(match.Groups["value"].Value);
+        return int.Parse(s: match.Groups[groupname: "value"].Value);
     }
 
     // -----------------------------------------------------------------------
@@ -545,7 +546,7 @@ public sealed class FileManagerMasterRebuildTests : IDisposable
         Mock<IFileRepository> repoMock = new();
         Mock<IStorageFactory> factoryMock = new();
         Mock<IStorageDriver> driverMock = new();
-        return new(repoMock.Object, factoryMock.Object, driverMock.Object, _mediaAnalyzer.Object);
+        return new(fileRepository: repoMock.Object, storageFactory: factoryMock.Object, storageDriver: driverMock.Object, mediaAnalyzer: _mediaAnalyzer.Object);
     }
 
     private static List<IVideo> InvokeGetVideoHashList(
@@ -556,11 +557,11 @@ public sealed class FileManagerMasterRebuildTests : IDisposable
     {
         MethodInfo method =
             typeof(FileManager).GetMethod(
-                "GetVideoHashList",
-                BindingFlags.NonPublic | BindingFlags.Instance
-            ) ?? throw new InvalidOperationException("GetVideoHashList not found");
+                name: "GetVideoHashList",
+                bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
+            ) ?? throw new InvalidOperationException(message: "GetVideoHashList not found");
 
-        return (List<IVideo>)method.Invoke(manager, [storage, hostFolder])!;
+        return (List<IVideo>)method.Invoke(obj: manager, parameters: [storage, hostFolder])!;
     }
 
     private static async Task InvokeRebuildHlsMasterFromDiskAsync(
@@ -573,10 +574,10 @@ public sealed class FileManagerMasterRebuildTests : IDisposable
     {
         MethodInfo method =
             typeof(FileManager).GetMethod(
-                "RebuildHlsMasterFromDiskAsync",
-                BindingFlags.NonPublic | BindingFlags.Instance
-            ) ?? throw new InvalidOperationException("RebuildHlsMasterFromDiskAsync not found");
+                name: "RebuildHlsMasterFromDiskAsync",
+                bindingAttr: BindingFlags.NonPublic | BindingFlags.Instance
+            ) ?? throw new InvalidOperationException(message: "RebuildHlsMasterFromDiskAsync not found");
 
-        await (Task)method.Invoke(manager, [storage, hostFolder, fileName, video])!;
+        await (Task)method.Invoke(obj: manager, parameters: [storage, hostFolder, fileName, video])!;
     }
 }

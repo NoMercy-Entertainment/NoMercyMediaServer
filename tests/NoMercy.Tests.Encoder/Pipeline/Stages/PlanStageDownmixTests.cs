@@ -38,15 +38,15 @@ public class PlanStageDownmixTests
     public PlanStageDownmixTests()
     {
         Mock<IHardwareCapabilities> hardware = new();
-        hardware.Setup(h => h.HasGpu).Returns(false);
-        hardware.Setup(h => h.CpuCores).Returns(8);
-        hardware.Setup(h => h.Gpus).Returns([]);
-        hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
-        hardware.Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>())).Returns((GpuDevice?)null);
+        hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
+        hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
+        hardware.Setup(expression: h => h.Gpus).Returns(value: []);
+        hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
+        hardware.Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>())).Returns(value: (GpuDevice?)null);
 
         Mock<ICodecResolver> codecResolver = new();
         codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<IHardwareCapabilities>(),
@@ -54,7 +54,7 @@ public class PlanStageDownmixTests
                 )
             )
             .Returns(
-                new ResolvedCodec(
+                value: new ResolvedCodec(
                     FfmpegEncoderName: "libx264",
                     EncoderInfo: new(
                         FfmpegName: "libx264",
@@ -62,7 +62,7 @@ public class PlanStageDownmixTests
                         Presets: ["medium"],
                         Profiles: ["high"],
                         Levels: ["4.1"],
-                        QualityRange: new(0, 51, 23),
+                        QualityRange: new(Min: 0, Max: 51, Default: 23),
                         SupportedRateControl: [RateControlMode.Crf],
                         Supports10Bit: false,
                         SupportsHdr: false,
@@ -76,16 +76,16 @@ public class PlanStageDownmixTests
             );
 
         _stage = new(
-            new(),
-            new(),
-            new(),
-            codecResolver.Object,
-            hardware.Object,
-            new TonemapSelector(),
-            new Mock<IFfmpegCapabilities>().Object,
-            new AbrLadderGenerator(),
-            new NoOpCropDetector(),
-            NullLogger<PlanStage>.Instance
+            graphBuilder: new(),
+            groupingStrategy: new(),
+            costEstimator: new(),
+            codecResolver: codecResolver.Object,
+            hardware: hardware.Object,
+            tonemapSelector: new TonemapSelector(),
+            ffmpegCapabilities: new Mock<IFfmpegCapabilities>().Object,
+            abrLadderGenerator: new AbrLadderGenerator(),
+            cropDetector: new NoOpCropDetector(),
+            logger: NullLogger<PlanStage>.Instance
         );
     }
 
@@ -97,9 +97,9 @@ public class PlanStageDownmixTests
     public void BuildAudioFilter_DownmixAuto_Unchanged()
     {
         string? filter = AudioFilterBuilder.BuildAudioFilter(
-            LoudnessMode.None,
-            DownmixMode.Auto,
-            null
+            loudness: LoudnessMode.None,
+            downmix: DownmixMode.Auto,
+            customPanMatrix: null
         );
 
         filter.Should().BeNull();
@@ -109,49 +109,49 @@ public class PlanStageDownmixTests
     public void BuildAudioFilter_StereoItuR128_EmitsPanWithBs775Coefficients()
     {
         string? filter = AudioFilterBuilder.BuildAudioFilter(
-            LoudnessMode.None,
-            DownmixMode.StereoItuR128,
-            null
+            loudness: LoudnessMode.None,
+            downmix: DownmixMode.StereoItuR128,
+            customPanMatrix: null
         );
 
         filter
             .Should()
-            .Be("pan=stereo|FL<FL+0.707*FC+0.707*BL+0.707*SL|FR<FR+0.707*FC+0.707*BR+0.707*SR");
+            .Be(expected: "pan=stereo|FL<FL+0.707*FC+0.707*BL+0.707*SL|FR<FR+0.707*FC+0.707*BR+0.707*SR");
     }
 
     [Fact]
     public void BuildAudioFilter_Mono_EmitsPanMonoMatrix()
     {
         string? filter = AudioFilterBuilder.BuildAudioFilter(
-            LoudnessMode.None,
-            DownmixMode.Mono,
-            null
+            loudness: LoudnessMode.None,
+            downmix: DownmixMode.Mono,
+            customPanMatrix: null
         );
 
-        filter.Should().StartWith("pan=mono|c0<");
-        filter.Should().Contain("FL");
-        filter.Should().Contain("FR");
+        filter.Should().StartWith(expected: "pan=mono|c0<");
+        filter.Should().Contain(expected: "FL");
+        filter.Should().Contain(expected: "FR");
     }
 
     [Fact]
     public void BuildAudioFilter_CustomMatrix_WrapsPanPrefix()
     {
         string? filter = AudioFilterBuilder.BuildAudioFilter(
-            LoudnessMode.None,
-            DownmixMode.Custom,
-            "stereo|FL<1.0*FL|FR<1.0*FR"
+            loudness: LoudnessMode.None,
+            downmix: DownmixMode.Custom,
+            customPanMatrix: "stereo|FL<1.0*FL|FR<1.0*FR"
         );
 
-        filter.Should().Be("pan=stereo|FL<1.0*FL|FR<1.0*FR");
+        filter.Should().Be(expected: "pan=stereo|FL<1.0*FL|FR<1.0*FR");
     }
 
     [Fact]
     public void BuildAudioFilter_CustomWithoutMatrix_ReturnsNull()
     {
         string? filter = AudioFilterBuilder.BuildAudioFilter(
-            LoudnessMode.None,
-            DownmixMode.Custom,
-            "   "
+            loudness: LoudnessMode.None,
+            downmix: DownmixMode.Custom,
+            customPanMatrix: "   "
         );
 
         filter.Should().BeNull();
@@ -164,29 +164,29 @@ public class PlanStageDownmixTests
         // channel layout — otherwise loudnorm measures the multichannel signal
         // and under-normalizes the downmix.
         string? filter = AudioFilterBuilder.BuildAudioFilter(
-            LoudnessMode.EbuR128,
-            DownmixMode.StereoItuR128,
-            null
+            loudness: LoudnessMode.EbuR128,
+            downmix: DownmixMode.StereoItuR128,
+            customPanMatrix: null
         );
 
-        int panIdx = filter!.IndexOf("pan=", StringComparison.Ordinal);
-        int loudIdx = filter.IndexOf("loudnorm=", StringComparison.Ordinal);
+        int panIdx = filter!.IndexOf(value: "pan=", comparisonType: StringComparison.Ordinal);
+        int loudIdx = filter.IndexOf(value: "loudnorm=", comparisonType: StringComparison.Ordinal);
 
-        panIdx.Should().BeGreaterThanOrEqualTo(0);
-        loudIdx.Should().BeGreaterThan(panIdx);
-        filter.Should().Contain(",");
+        panIdx.Should().BeGreaterThanOrEqualTo(expected: 0);
+        loudIdx.Should().BeGreaterThan(expected: panIdx);
+        filter.Should().Contain(expected: ",");
     }
 
     [Fact]
     public void BuildAudioFilter_LoudnormOnly_NoPanPrefix()
     {
         string? filter = AudioFilterBuilder.BuildAudioFilter(
-            LoudnessMode.EbuR128,
-            DownmixMode.Auto,
-            null
+            loudness: LoudnessMode.EbuR128,
+            downmix: DownmixMode.Auto,
+            customPanMatrix: null
         );
 
-        filter.Should().Be("loudnorm=I=-16:TP=-1.5:LRA=11");
+        filter.Should().Be(expected: "loudnorm=I=-16:TP=-1.5:LRA=11");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -196,31 +196,31 @@ public class PlanStageDownmixTests
     [Fact]
     public async Task PlanStage_StereoDownmixRequested_PlanAudioFilterContainsPan()
     {
-        EncodingProfile profile = BuildProfile(DownmixMode.StereoItuR128, LoudnessMode.None);
-        OutputPlan plan = await RunPlan(profile);
+        EncodingProfile profile = BuildProfile(downmix: DownmixMode.StereoItuR128, loudness: LoudnessMode.None);
+        OutputPlan plan = await RunPlan(profile: profile);
 
-        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
-        audio.AudioFilter.Should().StartWith("pan=stereo");
+        AudioOutputPlan audio = Assert.Single(collection: plan.AudioOutputs);
+        audio.AudioFilter.Should().StartWith(expected: "pan=stereo");
     }
 
     [Fact]
     public async Task PlanStage_StereoDownmixWithLoudnorm_ChainsBoth()
     {
-        EncodingProfile profile = BuildProfile(DownmixMode.StereoItuR128, LoudnessMode.EbuR128);
-        OutputPlan plan = await RunPlan(profile);
+        EncodingProfile profile = BuildProfile(downmix: DownmixMode.StereoItuR128, loudness: LoudnessMode.EbuR128);
+        OutputPlan plan = await RunPlan(profile: profile);
 
-        AudioOutputPlan audio = Assert.Single(plan.AudioOutputs);
-        audio.AudioFilter.Should().Contain("pan=stereo");
-        audio.AudioFilter.Should().Contain("loudnorm=");
+        AudioOutputPlan audio = Assert.Single(collection: plan.AudioOutputs);
+        audio.AudioFilter.Should().Contain(expected: "pan=stereo");
+        audio.AudioFilter.Should().Contain(expected: "loudnorm=");
     }
 
     private async Task<OutputPlan> RunPlan(EncodingProfile profile)
     {
-        ValidateInput input = new(BuildMedia(), profile);
+        ValidateInput input = new(Media: BuildMedia(), Profile: profile);
         EncodingContext context = EncodingContext.Create();
-        StageResult result = await _stage.ExecuteAsync(input, context, CancellationToken.None);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: CancellationToken.None);
 
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
         return success.Value.OutputPlan;
     }
 
@@ -228,7 +228,7 @@ public class PlanStageDownmixTests
         new(
             FilePath: "/media/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(90),
+            Duration: TimeSpan.FromMinutes(minutes: 90),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 4_000_000_000,
             VideoStreams:
@@ -301,8 +301,8 @@ public class PlanStageDownmixTests
                     SampleRateHz: 48000,
                     AllowedLanguages: [],
                     DefaultLanguage: null,
-                    Loudness: loudness == LoudnessMode.None ? null : new LoudnessConfig(loudness),
-                    Downmix: downmix == DownmixMode.Auto ? null : new DownmixConfig(downmix),
+                    Loudness: loudness == LoudnessMode.None ? null : new LoudnessConfig(Mode: loudness),
+                    Downmix: downmix == DownmixMode.Auto ? null : new DownmixConfig(Mode: downmix),
                     SegmentNameTemplate: "audio/{lang}-{codec}",
                     PlaylistNameTemplate: "audio/{lang}-{codec}/playlist"
                 ),

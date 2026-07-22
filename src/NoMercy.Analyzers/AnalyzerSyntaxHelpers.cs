@@ -52,7 +52,7 @@ internal static class AnalyzerSyntaxHelpers
         }
 
         return candidate.Length > target.Length
-            && candidate[target.Length] == '.'
-            && candidate.StartsWith(target, StringComparison.Ordinal);
+            && candidate[index: target.Length] == '.'
+            && candidate.StartsWith(value: target, comparisonType: StringComparison.Ordinal);
     }
 }

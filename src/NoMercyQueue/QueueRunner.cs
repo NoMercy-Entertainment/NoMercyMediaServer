@@ -98,21 +98,21 @@ public class QueueRunner
             queueReadyStages ?? new Dictionary<string, NoMercy.NmSystem.Lifecycle.BootStage>();
         _logger = loggerFactory.CreateLogger<QueueRunner>();
         _jobQueue = new(
-            queueContext,
-            configuration.MaxAttempts,
-            loggerFactory.CreateLogger<JobQueue>()
+            context: queueContext,
+            maxAttempts: configuration.MaxAttempts,
+            logger: loggerFactory.CreateLogger<JobQueue>()
         );
-        Dispatcher = new(_jobQueue, loggerFactory.CreateLogger<JobDispatcher>());
+        Dispatcher = new(queue: _jobQueue, logger: loggerFactory.CreateLogger<JobDispatcher>());
 
         _workers = new();
         foreach (KeyValuePair<string, int> entry in configuration.WorkerCounts)
         {
-            _workers[entry.Key] = new(entry.Value);
+            _workers[key: entry.Key] = new(count: entry.Value);
         }
 
         _logger.LogInformation(
-            "QueueRunner constructed with WorkerCounts: {Counts}",
-            string.Join(", ", configuration.WorkerCounts.Select(kvp => $"{kvp.Key}={kvp.Value}"))
+            message: "QueueRunner constructed with WorkerCounts: {Counts}",
+            args: string.Join(separator: ", ", values: configuration.WorkerCounts.Select(selector: kvp => $"{kvp.Key}={kvp.Value}"))
         );
 
         Current = this;
@@ -124,7 +124,7 @@ public class QueueRunner
         {
             if (_isInitialized)
             {
-                _logger.LogDebug("QueueRunner.Initialize() skipped — already initialized");
+                _logger.LogDebug(message: "QueueRunner.Initialize() skipped — already initialized");
                 return;
             }
 
@@ -140,16 +140,14 @@ public class QueueRunner
             int target = keyValuePair.Value.Count;
             for (int i = 0; i < target; i++)
             {
-                SpawnWorkerThread(keyValuePair.Key);
+                SpawnWorkerThread(name: keyValuePair.Key);
                 workerCount++;
             }
-            spawnedPerQueue[keyValuePair.Key] = target;
+            spawnedPerQueue[key: keyValuePair.Key] = target;
         }
 
         _logger.LogInformation(
-            "Queue workers spawned per queue: {Counts} (total {Total})",
-            string.Join(", ", spawnedPerQueue.Select(kvp => $"{kvp.Key}={kvp.Value}")),
-            workerCount
+            message: "Queue workers spawned per queue: {Counts} (total {Total})", args: [string.Join(separator: ", ", values: spawnedPerQueue.Select(selector: kvp => $"{kvp.Key}={kvp.Value}")), workerCount]
         );
 
         // Restore any queues that were persisted as paused before the last shutdown.
@@ -164,12 +162,12 @@ public class QueueRunner
             foreach (string queueName in queueNames)
             {
                 string key = $"queue.{queueName}.paused";
-                if (_configurationStore.HasKey(key) && _configurationStore.GetValue(key) == "true")
+                if (_configurationStore.HasKey(key: key) && _configurationStore.GetValue(key: key) == "true")
                 {
-                    await Stop(queueName);
+                    await Stop(name: queueName);
                     _logger.LogInformation(
-                        "Queue '{Name}' restored as paused from configuration store",
-                        queueName
+                        message: "Queue '{Name}' restored as paused from configuration store",
+                        args: queueName
                     );
                 }
             }
@@ -184,19 +182,19 @@ public class QueueRunner
     private void SpawnWorkerThread(string name)
     {
         string threadKey = $"{name}-{Guid.NewGuid():N}";
-        Thread thread = new(() =>
+        Thread thread = new(start: () =>
         {
             try
             {
-                SpawnWorker(name);
+                SpawnWorker(name: name);
             }
             catch (Exception ex)
             {
-                _logger.LogError("Worker {Name} crashed: {Message}", name, ex.Message);
+                _logger.LogError(message: "Worker {Name} crashed: {Message}", args: [name, ex.Message]);
             }
             finally
             {
-                _activeWorkerThreads.TryRemove(threadKey, out _);
+                _activeWorkerThreads.TryRemove(key: threadKey, value: out _);
             }
         })
         {
@@ -205,36 +203,36 @@ public class QueueRunner
             Priority = ThreadPriority.Lowest,
         };
 
-        _activeWorkerThreads.TryAdd(threadKey, thread);
+        _activeWorkerThreads.TryAdd(key: threadKey, value: thread);
         thread.Start();
     }
 
     private void SpawnWorker(string name)
     {
-        IResourceBudget? budget = _resourceAwareQueues.Contains(name) ? _resourceBudget : null;
+        IResourceBudget? budget = _resourceAwareQueues.Contains(item: name) ? _resourceBudget : null;
 
         QueueWorker queueWorkerInstance = new(
-            _jobQueue,
-            name,
-            this,
+            queue: _jobQueue,
+            name: name,
+            runner: this,
             scopeFactory: _scopeFactory,
             phaseTracker: _phaseTracker,
             resourceBudget: budget,
             resourceAwareQueues: _resourceAwareQueues,
             activityGate: _activityGate,
             readyStage: _queueReadyStages.TryGetValue(
-                name,
-                out NoMercy.NmSystem.Lifecycle.BootStage stage
+                key: name,
+                value: out NoMercy.NmSystem.Lifecycle.BootStage stage
             )
                 ? stage
                 : NoMercy.NmSystem.Lifecycle.BootStage.All
         );
 
-        queueWorkerInstance.WorkCompleted += QueueWorkerCompleted(name, queueWorkerInstance);
+        queueWorkerInstance.WorkCompleted += QueueWorkerCompleted(name: name, instance: queueWorkerInstance);
 
         lock (_workersLock)
         {
-            _workers[name].WorkerInstances.Add(queueWorkerInstance);
+            _workers[key: name].WorkerInstances.Add(item: queueWorkerInstance);
         }
 
         queueWorkerInstance.Start();
@@ -247,7 +245,7 @@ public class QueueRunner
         List<QueueWorker> snapshot;
         lock (_workersLock)
         {
-            snapshot = [.. _workers[name].WorkerInstances];
+            snapshot = [.. _workers[key: name].WorkerInstances];
         }
 
         foreach (QueueWorker workerInstance in snapshot)
@@ -265,7 +263,7 @@ public class QueueRunner
         }
 
         foreach (string key in keys)
-            Start(key);
+            Start(name: key);
 
         return Task.CompletedTask;
     }
@@ -275,7 +273,7 @@ public class QueueRunner
         List<QueueWorker> snapshot;
         lock (_workersLock)
         {
-            snapshot = [.. _workers[name].WorkerInstances];
+            snapshot = [.. _workers[key: name].WorkerInstances];
         }
 
         foreach (QueueWorker workerInstance in snapshot)
@@ -293,7 +291,7 @@ public class QueueRunner
         }
 
         foreach (string key in keys)
-            Stop(key);
+            Stop(name: key);
 
         return Task.CompletedTask;
     }
@@ -303,7 +301,7 @@ public class QueueRunner
         List<QueueWorker> snapshot;
         lock (_workersLock)
         {
-            snapshot = [.. _workers[name].WorkerInstances];
+            snapshot = [.. _workers[key: name].WorkerInstances];
         }
 
         foreach (QueueWorker workerInstance in snapshot)
@@ -321,7 +319,7 @@ public class QueueRunner
         }
 
         foreach (string key in keys)
-            Restart(key);
+            Restart(name: key);
 
         return Task.CompletedTask;
     }
@@ -332,12 +330,12 @@ public class QueueRunner
     /// </summary>
     public async Task Pause(string name)
     {
-        await Stop(name);
+        await Stop(name: name);
 
         if (_configurationStore is not null)
-            await _configurationStore.SetValueAsync($"queue.{name}.paused", "true");
+            await _configurationStore.SetValueAsync(key: $"queue.{name}.paused", value: "true");
 
-        _logger.LogInformation("Queue '{Name}' paused and state persisted", name);
+        _logger.LogInformation(message: "Queue '{Name}' paused and state persisted", args: name);
     }
 
     /// <summary>
@@ -346,12 +344,12 @@ public class QueueRunner
     /// </summary>
     public async Task Resume(string name)
     {
-        await Start(name);
+        await Start(name: name);
 
         if (_configurationStore is not null)
-            await _configurationStore.SetValueAsync($"queue.{name}.paused", "false");
+            await _configurationStore.SetValueAsync(key: $"queue.{name}.paused", value: "false");
 
-        _logger.LogInformation("Queue '{Name}' resumed and state persisted", name);
+        _logger.LogInformation(message: "Queue '{Name}' resumed and state persisted", args: name);
     }
 
     /// <summary>
@@ -368,7 +366,7 @@ public class QueueRunner
         // that extra stage is still pending. This surfaces the startup hold in
         // the dashboard without persisting it as a user-initiated pause.
         if (
-            _queueReadyStages.TryGetValue(name, out NoMercy.NmSystem.Lifecycle.BootStage readyStage)
+            _queueReadyStages.TryGetValue(key: name, value: out NoMercy.NmSystem.Lifecycle.BootStage readyStage)
         )
         {
             NoMercy.NmSystem.Lifecycle.BootStage extra =
@@ -376,7 +374,7 @@ public class QueueRunner
             if (
                 extra != NoMercy.NmSystem.Lifecycle.BootStage.None
                 && _phaseTracker is { } pt
-                && !pt.IsComplete(extra)
+                && !pt.IsComplete(stage: extra)
             )
                 return true;
         }
@@ -385,11 +383,11 @@ public class QueueRunner
             return false;
 
         string key = $"queue.{name}.paused";
-        return _configurationStore.HasKey(key)
+        return _configurationStore.HasKey(key: key)
             && string.Equals(
-                _configurationStore.GetValue(key),
-                "true",
-                StringComparison.OrdinalIgnoreCase
+                a: _configurationStore.GetValue(key: key),
+                b: "true",
+                comparisonType: StringComparison.OrdinalIgnoreCase
             );
     }
 
@@ -402,18 +400,18 @@ public class QueueRunner
         {
             lock (_workersLock)
             {
-                if (!ShouldRemoveWorker(name))
+                if (!ShouldRemoveWorker(name: name))
                     return;
 
                 instance.Stop();
-                _workers[name].WorkerInstances.Remove(instance);
+                _workers[key: name].WorkerInstances.Remove(item: instance);
             }
         };
     }
 
     private bool ShouldRemoveWorker(string name)
     {
-        return _workers[name].WorkerInstances.Count > _workers[name].Count;
+        return _workers[key: name].WorkerInstances.Count > _workers[key: name].Count;
     }
 
     private void UpdateRunningWorkerCounts(string name)
@@ -423,44 +421,42 @@ public class QueueRunner
         CancellationToken token;
         lock (_workersLock)
         {
-            if (ShouldRemoveWorker(name))
+            if (ShouldRemoveWorker(name: name))
                 return;
-            spawned = _workers[name].WorkerInstances.Count;
-            targetCount = _workers[name].Count;
-            token = _workers[name].Cts.Token;
+            spawned = _workers[key: name].WorkerInstances.Count;
+            targetCount = _workers[key: name].Count;
+            token = _workers[key: name].Cts.Token;
         }
 
         Task workerTask = Task.Run(
-            async () =>
+            function: async () =>
             {
                 while (spawned < targetCount)
                 {
                     bool isUpdating;
                     lock (_workersLock)
                     {
-                        isUpdating = _workers[name].IsUpdating;
+                        isUpdating = _workers[key: name].IsUpdating;
                     }
 
                     if (isUpdating || spawned >= targetCount)
                         break;
 
-                    SpawnWorkerThread(name);
+                    SpawnWorkerThread(name: name);
                     spawned += 1;
 
-                    await Task.Delay(100, token);
+                    await Task.Delay(millisecondsDelay: 100, cancellationToken: token);
                 }
             },
-            token
+            cancellationToken: token
         );
 
         workerTask.ContinueWith(
-            t =>
+            continuationAction: t =>
                 _logger.LogError(
-                    "UpdateRunningWorkerCounts for {Name} failed: {Message}",
-                    name,
-                    t.Exception?.GetBaseException().Message
+                    message: "UpdateRunningWorkerCounts for {Name} failed: {Message}", args: [name, t.Exception?.GetBaseException().Message]
                 ),
-            TaskContinuationOptions.OnlyOnFaulted
+            continuationOptions: TaskContinuationOptions.OnlyOnFaulted
         );
     }
 
@@ -469,8 +465,8 @@ public class QueueRunner
         bool exists;
         lock (_workersLock)
         {
-            exists = _workers.ContainsKey(name);
-            if (exists && _workers[name].Count == max)
+            exists = _workers.ContainsKey(key: name);
+            if (exists && _workers[key: name].Count == max)
                 return true;
         }
 
@@ -479,15 +475,15 @@ public class QueueRunner
 
         if (_configurationStore is not null)
         {
-            await _configurationStore.SetValueAsync($"{name}Runners", max.ToString(), userId);
+            await _configurationStore.SetValueAsync(key: $"{name}Runners", value: max.ToString(), modifiedBy: userId);
         }
 
-        _logger.LogInformation("Setting queue {Name} to {Max} workers", name, max);
+        _logger.LogInformation(message: "Setting queue {Name} to {Max} workers", args: [name, max]);
 
         CancellationToken token;
         lock (_workersLock)
         {
-            WorkerEntry entry = _workers[name];
+            WorkerEntry entry = _workers[key: name];
             entry.IsUpdating = true;
             entry.Cts.Cancel();
             entry.Count = max;
@@ -496,15 +492,15 @@ public class QueueRunner
         }
 
         await Task.Run(
-            () =>
+            action: () =>
             {
                 lock (_workersLock)
                 {
-                    _workers[name].IsUpdating = false;
+                    _workers[key: name].IsUpdating = false;
                 }
-                UpdateRunningWorkerCounts(name);
+                UpdateRunningWorkerCounts(name: name);
             },
-            token
+            cancellationToken: token
         );
 
         return true;
@@ -514,7 +510,7 @@ public class QueueRunner
     {
         lock (_workersLock)
         {
-            return _workers[name].WorkerInstances.IndexOf(queueWorker);
+            return _workers[key: name].WorkerInstances.IndexOf(item: queueWorker);
         }
     }
 
@@ -541,7 +537,7 @@ public class QueueRunner
         {
             foreach (KeyValuePair<string, WorkerEntry> entry in _workers)
             {
-                if (!namePredicate(entry.Key))
+                if (!namePredicate(arg: entry.Key))
                     continue;
                 foreach (QueueWorker worker in entry.Value.WorkerInstances)
                     if (worker.IsProcessingJob)

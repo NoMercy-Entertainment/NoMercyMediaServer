@@ -22,7 +22,7 @@ public class InMemoryEventBus(ILogger<InMemoryEventBus>? logger = null) : IEvent
     public async Task PublishAsync<TEvent>(TEvent @event, CancellationToken ct = default)
         where TEvent : IEvent
     {
-        if (!_handlers.TryGetValue(typeof(TEvent), out List<Delegate>? handlers))
+        if (!_handlers.TryGetValue(key: typeof(TEvent), value: out List<Delegate>? handlers))
         {
             return;
         }
@@ -38,7 +38,7 @@ public class InMemoryEventBus(ILogger<InMemoryEventBus>? logger = null) : IEvent
             ct.ThrowIfCancellationRequested();
             try
             {
-                await ((Func<TEvent, CancellationToken, Task>)handler)(@event, ct);
+                await ((Func<TEvent, CancellationToken, Task>)handler)(arg1: @event, arg2: ct);
             }
             catch (OperationCanceledException)
             {
@@ -47,9 +47,9 @@ public class InMemoryEventBus(ILogger<InMemoryEventBus>? logger = null) : IEvent
             catch (Exception ex)
             {
                 logger?.LogError(
-                    ex,
-                    "Event handler for {EventType} failed — other handlers will still execute",
-                    typeof(TEvent).Name
+                    exception: ex,
+                    message: "Event handler for {EventType} failed — other handlers will still execute",
+                    args: typeof(TEvent).Name
                 );
             }
         }
@@ -58,18 +58,18 @@ public class InMemoryEventBus(ILogger<InMemoryEventBus>? logger = null) : IEvent
     public IDisposable Subscribe<TEvent>(Func<TEvent, CancellationToken, Task> handler)
         where TEvent : IEvent
     {
-        List<Delegate> handlers = _handlers.GetOrAdd(typeof(TEvent), _ => []);
+        List<Delegate> handlers = _handlers.GetOrAdd(key: typeof(TEvent), valueFactory: _ => []);
 
         lock (_lock)
         {
-            handlers.Add(handler);
+            handlers.Add(item: handler);
         }
 
-        return new Subscription(() =>
+        return new Subscription(onDispose: () =>
         {
             lock (_lock)
             {
-                handlers.Remove(handler);
+                handlers.Remove(item: handler);
             }
         });
     }
@@ -78,7 +78,7 @@ public class InMemoryEventBus(ILogger<InMemoryEventBus>? logger = null) : IEvent
         where TEvent : IEvent
     {
         Func<TEvent, CancellationToken, Task> wrapper = handler.HandleAsync;
-        return Subscribe(wrapper);
+        return Subscribe(handler: wrapper);
     }
 
     private sealed class Subscription(Action onDispose) : IDisposable
@@ -87,7 +87,7 @@ public class InMemoryEventBus(ILogger<InMemoryEventBus>? logger = null) : IEvent
 
         public void Dispose()
         {
-            if (Interlocked.Exchange(ref _disposed, 1) == 0)
+            if (Interlocked.Exchange(location1: ref _disposed, value: 1) == 0)
             {
                 onDispose();
             }

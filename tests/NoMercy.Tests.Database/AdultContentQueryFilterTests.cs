@@ -27,17 +27,17 @@ public class AdultContentQueryFilterTests
     public void Model_BuildsWithoutRequiredDependentFilterMismatch()
     {
         DbContextOptionsBuilder<MediaContext> optionsBuilder = new();
-        optionsBuilder.UseSqlite("Data Source=:memory:");
-        optionsBuilder.ConfigureWarnings(warnings =>
+        optionsBuilder.UseSqlite(connectionString: "Data Source=:memory:");
+        optionsBuilder.ConfigureWarnings(warningsConfigurationBuilderAction: warnings =>
             warnings.Throw(
-                CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning
+                eventIds: CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning
             )
         );
 
-        using MediaContext context = new(optionsBuilder.Options);
+        using MediaContext context = new(options: optionsBuilder.Options);
 
         IModel model = context.Model;
 
-        Assert.NotNull(model);
+        Assert.NotNull(@object: model);
     }
 }

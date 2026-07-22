@@ -15,7 +15,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Storage;
 
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class StoragePathHelpersRebaseTests
 {
     [Fact]
@@ -25,20 +25,20 @@ public class StoragePathHelpersRebaseTests
         // driver-absolute path under the NFS export, the facade needs it
         // scope-relative to the folder root.
         string result = StoragePathHelpers.RebaseToFolderRoot(
-            "/mnt/vault/Media/Marvels/TV.Shows/What.If.(2021)/What.If..S01E01.NoMercy.m3u8",
-            "Marvels/TV.Shows"
+            absolutePath: "/mnt/vault/Media/Marvels/TV.Shows/What.If.(2021)/What.If..S01E01.NoMercy.m3u8",
+            folderPath: "Marvels/TV.Shows"
         );
 
-        result.Should().Be("Marvels/TV.Shows/What.If.(2021)/What.If..S01E01.NoMercy.m3u8");
+        result.Should().Be(expected: "Marvels/TV.Shows/What.If.(2021)/What.If..S01E01.NoMercy.m3u8");
     }
 
     [Fact]
     public void Leaves_an_already_relative_path_unchanged_except_a_leading_slash()
     {
         StoragePathHelpers
-            .RebaseToFolderRoot("Marvels/TV.Shows/What.If.(2021)/f.m3u8", "Marvels/TV.Shows")
+            .RebaseToFolderRoot(absolutePath: "Marvels/TV.Shows/What.If.(2021)/f.m3u8", folderPath: "Marvels/TV.Shows")
             .Should()
-            .Be("Marvels/TV.Shows/What.If.(2021)/f.m3u8");
+            .Be(expected: "Marvels/TV.Shows/What.If.(2021)/f.m3u8");
     }
 
     [Fact]
@@ -47,37 +47,37 @@ public class StoragePathHelpersRebaseTests
         // Legacy local library stored as an M: drive path; the folder root is
         // the same relative segment. Backslashes normalize to forward slashes.
         string result = StoragePathHelpers.RebaseToFolderRoot(
-            @"M:\Anime\Anime\Death.Note.(2006)\Death.Note.S00E01.NoMercy.mp4",
-            @"Anime\Anime"
+            absolutePath: @"M:\Anime\Anime\Death.Note.(2006)\Death.Note.S00E01.NoMercy.mp4",
+            folderPath: @"Anime\Anime"
         );
 
-        result.Should().Be("Anime/Anime/Death.Note.(2006)/Death.Note.S00E01.NoMercy.mp4");
+        result.Should().Be(expected: "Anime/Anime/Death.Note.(2006)/Death.Note.S00E01.NoMercy.mp4");
     }
 
     [Fact]
     public void Returns_trimmed_input_when_the_root_is_not_a_segment_of_the_path()
     {
         StoragePathHelpers
-            .RebaseToFolderRoot("/some/other/tree/file.m3u8", "Marvels/TV.Shows")
+            .RebaseToFolderRoot(absolutePath: "/some/other/tree/file.m3u8", folderPath: "Marvels/TV.Shows")
             .Should()
-            .Be("some/other/tree/file.m3u8");
+            .Be(expected: "some/other/tree/file.m3u8");
     }
 
     [Fact]
     public void Returns_trimmed_input_when_the_root_is_empty()
     {
         StoragePathHelpers
-            .RebaseToFolderRoot("/mnt/vault/Media/x/y.m3u8", "")
+            .RebaseToFolderRoot(absolutePath: "/mnt/vault/Media/x/y.m3u8", folderPath: "")
             .Should()
-            .Be("mnt/vault/Media/x/y.m3u8");
+            .Be(expected: "mnt/vault/Media/x/y.m3u8");
     }
 
     [Fact]
     public void Matches_the_root_case_insensitively()
     {
         StoragePathHelpers
-            .RebaseToFolderRoot("/mnt/vault/Media/MARVELS/tv.shows/show/f.m3u8", "Marvels/TV.Shows")
+            .RebaseToFolderRoot(absolutePath: "/mnt/vault/Media/MARVELS/tv.shows/show/f.m3u8", folderPath: "Marvels/TV.Shows")
             .Should()
-            .Be("MARVELS/tv.shows/show/f.m3u8");
+            .Be(expected: "MARVELS/tv.shows/show/f.m3u8");
     }
 }

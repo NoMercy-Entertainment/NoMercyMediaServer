@@ -24,11 +24,11 @@ namespace NoMercy.Encoder.Codecs;
 public sealed class SvtAv1QualityScaler : IQualityScaler
 {
     public bool Supports(string encoderHandle) =>
-        string.Equals(encoderHandle, "libsvtav1", StringComparison.OrdinalIgnoreCase);
+        string.Equals(a: encoderHandle, b: "libsvtav1", comparisonType: StringComparison.OrdinalIgnoreCase);
 
     public int Translate(int sourceCrf, int sourceMax, int targetMax, CodecHint hint)
     {
         int svtMax = targetMax > 0 ? targetMax : 63;
-        return Math.Clamp(sourceCrf, 0, svtMax);
+        return Math.Clamp(value: sourceCrf, min: 0, max: svtMax);
     }
 }

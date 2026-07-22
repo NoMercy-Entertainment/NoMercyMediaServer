@@ -42,14 +42,14 @@ public static class StorageDriverGrouper
 
         foreach (FolderRootInput item in inputList)
         {
-            StorageEndpoint endpoint = DetectEndpoint(item.AbsoluteRootPath);
-            if (!byEndpoint.TryGetValue(endpoint.Key, out List<FolderRootInput>? group))
+            StorageEndpoint endpoint = DetectEndpoint(absolutePath: item.AbsoluteRootPath);
+            if (!byEndpoint.TryGetValue(key: endpoint.Key, value: out List<FolderRootInput>? group))
             {
                 group = [];
-                byEndpoint[endpoint.Key] = group;
+                byEndpoint[key: endpoint.Key] = group;
             }
 
-            group.Add(item);
+            group.Add(item: item);
         }
 
         List<DriverGroup> result = [];
@@ -57,7 +57,7 @@ public static class StorageDriverGrouper
         {
             string endpointKey = kv.Key;
             List<FolderRootInput> members = kv.Value;
-            StorageEndpointKind kind = DetectEndpoint(members[0].AbsoluteRootPath).Kind;
+            StorageEndpointKind kind = DetectEndpoint(absolutePath: members[index: 0].AbsoluteRootPath).Kind;
             // The endpoint kind drives path math (UNC uses '\\' separators and a
             // \\server\share root), but a UNC folder is still served by the local
             // driver — Windows mounts the share and LocalStorage reads it natively.
@@ -66,19 +66,19 @@ public static class StorageDriverGrouper
             const string driverType = "local";
 
             string driverRoot = ComputeCommonAncestor(
-                members.Select(m => m.AbsoluteRootPath).ToList(),
-                kind
+                absolutePaths: members.Select(selector: m => m.AbsoluteRootPath).ToList(),
+                kind: kind
             );
 
             List<FolderAssignment> assignments = members
-                .Select(member =>
+                .Select(selector: member =>
                 {
-                    string subPath = ComputeSubPath(driverRoot, member.AbsoluteRootPath, kind);
-                    return new FolderAssignment(member.FolderId, subPath);
+                    string subPath = ComputeSubPath(driverRoot: driverRoot, absolutePath: member.AbsoluteRootPath, kind: kind);
+                    return new FolderAssignment(FolderId: member.FolderId, SubPath: subPath);
                 })
                 .ToList();
 
-            result.Add(new(driverRoot, driverType, assignments));
+            result.Add(item: new(DriverRoot: driverRoot, DriverType: driverType, Folders: assignments));
         }
 
         return result;
@@ -91,31 +91,31 @@ public static class StorageDriverGrouper
     /// </summary>
     internal static StorageEndpoint DetectEndpoint(string absolutePath)
     {
-        string normalized = absolutePath.Replace('/', '\\');
+        string normalized = absolutePath.Replace(oldChar: '/', newChar: '\\');
 
-        if (normalized.StartsWith(@"\\", StringComparison.Ordinal))
+        if (normalized.StartsWith(value: @"\\", comparisonType: StringComparison.Ordinal))
         {
             string withoutLeading = normalized[2..];
-            int serverEnd = withoutLeading.IndexOf('\\');
+            int serverEnd = withoutLeading.IndexOf(value: '\\');
             if (serverEnd < 0)
-                return new(@"\\" + withoutLeading, StorageEndpointKind.Smb);
+                return new(Key: @"\\" + withoutLeading, Kind: StorageEndpointKind.Smb);
 
             string server = withoutLeading[..serverEnd];
             string rest = withoutLeading[(serverEnd + 1)..];
-            int shareEnd = rest.IndexOf('\\');
+            int shareEnd = rest.IndexOf(value: '\\');
             string share = shareEnd < 0 ? rest : rest[..shareEnd];
 
             string endpointKey = $@"\\{server}\{share}";
-            return new(endpointKey, StorageEndpointKind.Smb);
+            return new(Key: endpointKey, Kind: StorageEndpointKind.Smb);
         }
 
         if (normalized is [_, ':', ..])
         {
             string driveKey = normalized[..2].ToUpperInvariant();
-            return new(driveKey, StorageEndpointKind.Local);
+            return new(Key: driveKey, Kind: StorageEndpointKind.Local);
         }
 
-        return new("/", StorageEndpointKind.Local);
+        return new(Key: "/", Kind: StorageEndpointKind.Local);
     }
 
     /// <summary>
@@ -130,25 +130,25 @@ public static class StorageDriverGrouper
     )
     {
         if (absolutePaths.Count == 0)
-            throw new ArgumentException("Path list must not be empty.", nameof(absolutePaths));
+            throw new ArgumentException(message: "Path list must not be empty.", paramName: nameof(absolutePaths));
 
         if (absolutePaths.Count == 1)
-            return absolutePaths[0];
+            return absolutePaths[index: 0];
 
-        char separator = kind == StorageEndpointKind.Smb ? '\\' : LocalSeparator(absolutePaths[0]);
+        char separator = kind == StorageEndpointKind.Smb ? '\\' : LocalSeparator(path: absolutePaths[index: 0]);
 
         List<string[]> splitPaths = absolutePaths
-            .Select(path => SplitPath(path, separator))
+            .Select(selector: path => SplitPath(path: path, separator: separator))
             .ToList();
 
-        int minLength = splitPaths.Min(segments => segments.Length);
+        int minLength = splitPaths.Min(selector: segments => segments.Length);
         int commonSegments = 0;
 
         for (int segmentIndex = 0; segmentIndex < minLength; segmentIndex++)
         {
-            string reference = splitPaths[0][segmentIndex];
-            bool allMatch = splitPaths.All(segments =>
-                string.Equals(segments[segmentIndex], reference, StringComparison.OrdinalIgnoreCase)
+            string reference = splitPaths[index: 0][segmentIndex];
+            bool allMatch = splitPaths.All(predicate: segments =>
+                string.Equals(a: segments[segmentIndex], b: reference, comparisonType: StringComparison.OrdinalIgnoreCase)
             );
 
             if (!allMatch)
@@ -160,7 +160,7 @@ public static class StorageDriverGrouper
         if (commonSegments == 0)
             return kind == StorageEndpointKind.Smb ? @"\\" : "/";
 
-        return JoinSegments(splitPaths[0][..commonSegments], separator, kind);
+        return JoinSegments(segments: splitPaths[index: 0][..commonSegments], separator: separator, kind: kind);
     }
 
     /// <summary>
@@ -173,17 +173,17 @@ public static class StorageDriverGrouper
         StorageEndpointKind kind
     )
     {
-        char separator = kind == StorageEndpointKind.Smb ? '\\' : LocalSeparator(absolutePath);
-        string normalizedRoot = driverRoot.TrimEnd('/', '\\');
-        string normalizedPath = absolutePath.TrimEnd('/', '\\');
+        char separator = kind == StorageEndpointKind.Smb ? '\\' : LocalSeparator(path: absolutePath);
+        string normalizedRoot = driverRoot.TrimEnd(trimChars: ['/', '\\']);
+        string normalizedPath = absolutePath.TrimEnd(trimChars: ['/', '\\']);
 
-        if (string.Equals(normalizedRoot, normalizedPath, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(a: normalizedRoot, b: normalizedPath, comparisonType: StringComparison.OrdinalIgnoreCase))
             return string.Empty;
 
         if (
             normalizedPath.StartsWith(
-                normalizedRoot + separator,
-                StringComparison.OrdinalIgnoreCase
+                value: normalizedRoot + separator,
+                comparisonType: StringComparison.OrdinalIgnoreCase
             )
         )
             return normalizedPath[(normalizedRoot.Length + 1)..];
@@ -198,14 +198,14 @@ public static class StorageDriverGrouper
 
     private static string[] SplitPath(string path, char separator)
     {
-        return path.Replace(separator == '\\' ? '/' : '\\', separator)
-            .Split(separator, StringSplitOptions.RemoveEmptyEntries);
+        return path.Replace(oldChar: separator == '\\' ? '/' : '\\', newChar: separator)
+            .Split(separator: separator, options: StringSplitOptions.RemoveEmptyEntries);
     }
 
     private static string JoinSegments(string[] segments, char separator, StorageEndpointKind kind)
     {
         if (kind == StorageEndpointKind.Smb)
-            return @"\\" + string.Join('\\', segments);
+            return @"\\" + string.Join(separator: '\\', value: segments);
 
         if (segments.Length == 0)
             return "/";
@@ -217,9 +217,9 @@ public static class StorageDriverGrouper
         {
             if (segments.Length == 1)
                 return first + separator;
-            return first + separator + string.Join(separator, segments[1..]);
+            return first + separator + string.Join(separator: separator, value: segments[1..]);
         }
 
-        return "/" + string.Join('/', segments);
+        return "/" + string.Join(separator: '/', value: segments);
     }
 }

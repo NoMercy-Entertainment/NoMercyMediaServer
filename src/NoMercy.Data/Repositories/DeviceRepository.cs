@@ -19,18 +19,18 @@ public class DeviceRepository(MediaContext context) : IDeviceRepository
 {
     public async Task<List<Device>> GetDevices()
     {
-        return await context.Devices.Include(device => device.ActivityLogs).ToListAsync();
+        return await context.Devices.Include(navigationPropertyPath: device => device.ActivityLogs).ToListAsync();
     }
 
     public async Task AddDeviceAsync(Device device)
     {
-        await context.Devices.AddAsync(device);
+        await context.Devices.AddAsync(entity: device);
         await context.SaveChangesAsync();
     }
 
     public Task DeleteDeviceAsync(Device device)
     {
-        context.Devices.Remove(device);
+        context.Devices.Remove(entity: device);
         return context.SaveChangesAsync();
     }
 
@@ -38,14 +38,14 @@ public class DeviceRepository(MediaContext context) : IDeviceRepository
     {
         return await context
             .Devices.AsNoTracking()
-            .FirstOrDefaultAsync(d => d.Id == deviceId && d.OwnerUserId == ownerUserId);
+            .FirstOrDefaultAsync(predicate: d => d.Id == deviceId && d.OwnerUserId == ownerUserId);
     }
 
     public async Task<List<Device>> GetOwnerDevicesAsync(Guid ownerUserId)
     {
         return await context
             .Devices.AsNoTracking()
-            .Where(d => d.OwnerUserId == ownerUserId)
+            .Where(predicate: d => d.OwnerUserId == ownerUserId)
             .ToListAsync();
     }
 
@@ -54,7 +54,7 @@ public class DeviceRepository(MediaContext context) : IDeviceRepository
         // ActivityLog.DeviceId → Device is configured with DeleteBehavior.Cascade
         // in MediaContext.OnModelCreating, so the DB removes dependent rows
         // atomically when the device row is deleted.  No app-level child sweep needed.
-        return context.Devices.Where(d => d.Id == deviceId).ExecuteDeleteAsync();
+        return context.Devices.Where(predicate: d => d.Id == deviceId).ExecuteDeleteAsync();
     }
 
     public Task DeleteActivityLogsByOwnerAsync(Guid ownerUserId)
@@ -62,13 +62,13 @@ public class DeviceRepository(MediaContext context) : IDeviceRepository
         // Deletes ActivityLog rows whose Device is owned by the caller.
         // Does NOT delete the Device rows themselves — only clears the log history.
         return context
-            .ActivityLogs.Where(log => log.Device.OwnerUserId == ownerUserId)
+            .ActivityLogs.Where(predicate: log => log.Device.OwnerUserId == ownerUserId)
             .ExecuteDeleteAsync();
     }
 
     public async Task<Device?> GetByIdAsync(Ulid deviceId)
     {
-        return await context.Devices.AsNoTracking().FirstOrDefaultAsync(d => d.Id == deviceId);
+        return await context.Devices.AsNoTracking().FirstOrDefaultAsync(predicate: d => d.Id == deviceId);
     }
 
     public async Task<List<Device>> GetAllAsync()

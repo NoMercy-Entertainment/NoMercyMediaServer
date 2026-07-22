@@ -16,9 +16,9 @@ namespace NoMercy.Providers.TMDB.Models.Networks;
 
 public class TmdbNetworkImages
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("logos")]
+    [JsonProperty(propertyName: "logos")]
     public TmdbLogo[] Logos { get; set; } = [];
 }

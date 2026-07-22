@@ -24,7 +24,7 @@ public class HlsMasterPlaylistVersionTests
             hasChapterDateRanges: false
         );
 
-        Assert.Equal(3, version);
+        Assert.Equal(expected: 3, actual: version);
     }
 
     [Fact]
@@ -36,7 +36,7 @@ public class HlsMasterPlaylistVersionTests
             hasChapterDateRanges: false
         );
 
-        Assert.Equal(6, version);
+        Assert.Equal(expected: 6, actual: version);
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public class HlsMasterPlaylistVersionTests
             hasChapterDateRanges: false
         );
 
-        Assert.Equal(7, version);
+        Assert.Equal(expected: 7, actual: version);
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public class HlsMasterPlaylistVersionTests
             hasChapterDateRanges: true
         );
 
-        Assert.Equal(8, version);
+        Assert.Equal(expected: 8, actual: version);
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public class HlsMasterPlaylistVersionTests
             hasChapterDateRanges: false
         );
 
-        Assert.Equal(7, versionSubsFmp4);
+        Assert.Equal(expected: 7, actual: versionSubsFmp4);
 
         // subs + fmp4 + chapters → 8
         int versionAll = PlaylistGenerator.ComputeMasterVersion(
@@ -82,6 +82,6 @@ public class HlsMasterPlaylistVersionTests
             hasChapterDateRanges: true
         );
 
-        Assert.Equal(8, versionAll);
+        Assert.Equal(expected: 8, actual: versionAll);
     }
 }

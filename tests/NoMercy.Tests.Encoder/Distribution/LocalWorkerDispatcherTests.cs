@@ -26,7 +26,7 @@ public class LocalWorkerDispatcherTests
     {
         Mock<IFfmpegExecutor> executor = new();
         executor
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -36,26 +36,26 @@ public class LocalWorkerDispatcherTests
                 )
             )
             .ReturnsAsync(
-                new ExecutionResult(
+                value: new ExecutionResult(
                     Success: true,
                     ExitCode: 0,
                     StdErr: "",
-                    Duration: TimeSpan.FromSeconds(3),
+                    Duration: TimeSpan.FromSeconds(seconds: 3),
                     Error: null
                 )
             );
 
-        LocalWorkerDispatcher dispatcher = NewDispatcher(executor.Object);
-        EncodeTask[] tasks = [MakeTask("task-0", "/out/a.m3u8"), MakeTask("task-1", "/out/b.m3u8")];
+        LocalWorkerDispatcher dispatcher = NewDispatcher(executor: executor.Object);
+        EncodeTask[] tasks = [MakeTask(id: "task-0", outputPath: "/out/a.m3u8"), MakeTask(id: "task-1", outputPath: "/out/b.m3u8")];
 
-        DispatchResult[] results = await dispatcher.DispatchAsync(tasks, CancellationToken.None);
+        DispatchResult[] results = await dispatcher.DispatchAsync(tasks: tasks, ct: CancellationToken.None);
 
-        results.Should().HaveCount(2);
-        results.Should().AllSatisfy(r => r.Success.Should().BeTrue());
-        results[0].TaskId.Should().Be("task-0");
-        results[1].TaskId.Should().Be("task-1");
+        results.Should().HaveCount(expected: 2);
+        results.Should().AllSatisfy(expected: r => r.Success.Should().BeTrue());
+        results[0].TaskId.Should().Be(expected: "task-0");
+        results[1].TaskId.Should().Be(expected: "task-1");
         executor.Verify(
-            e =>
+            expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -63,7 +63,7 @@ public class LocalWorkerDispatcherTests
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()
                 ),
-            Times.Exactly(2)
+            times: Times.Exactly(callCount: 2)
         );
     }
 
@@ -73,7 +73,7 @@ public class LocalWorkerDispatcherTests
         List<string> callOrder = [];
         Mock<IFfmpegExecutor> executor = new();
         executor
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -83,7 +83,7 @@ public class LocalWorkerDispatcherTests
                 )
             )
             .Returns(
-                async (
+                valueFunction: async (
                     FfmpegCommand _,
                     TimeSpan _,
                     Action<EncodingProgress>? _,
@@ -91,25 +91,25 @@ public class LocalWorkerDispatcherTests
                     CancellationToken _
                 ) =>
                 {
-                    callOrder.Add($"start:{corrId}");
-                    await Task.Delay(20);
-                    callOrder.Add($"end:{corrId}");
+                    callOrder.Add(item: $"start:{corrId}");
+                    await Task.Delay(millisecondsDelay: 20);
+                    callOrder.Add(item: $"end:{corrId}");
                     return new(
                         Success: true,
                         ExitCode: 0,
                         StdErr: "",
-                        Duration: TimeSpan.FromSeconds(1),
+                        Duration: TimeSpan.FromSeconds(seconds: 1),
                         Error: null
                     );
                 }
             );
 
-        LocalWorkerDispatcher dispatcher = NewDispatcher(executor.Object);
-        EncodeTask[] tasks = [MakeTask("t0", "/out/a"), MakeTask("t1", "/out/b")];
+        LocalWorkerDispatcher dispatcher = NewDispatcher(executor: executor.Object);
+        EncodeTask[] tasks = [MakeTask(id: "t0", outputPath: "/out/a"), MakeTask(id: "t1", outputPath: "/out/b")];
 
-        await dispatcher.DispatchAsync(tasks, CancellationToken.None);
+        await dispatcher.DispatchAsync(tasks: tasks, ct: CancellationToken.None);
 
-        callOrder.Should().Equal("start:t0", "end:t0", "start:t1", "end:t1");
+        callOrder.Should().Equal(expected: ["start:t0", "end:t0", "start:t1", "end:t1"]);
     }
 
     [Fact]
@@ -118,7 +118,7 @@ public class LocalWorkerDispatcherTests
         Mock<IFfmpegExecutor> executor = new();
         int call = 0;
         executor
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -127,22 +127,22 @@ public class LocalWorkerDispatcherTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Returns(() =>
+            .Returns(valueFunction: () =>
             {
                 int current = ++call;
                 bool failFirst = current == 1;
                 return Task.FromResult(
-                    new ExecutionResult(
+                    result: new ExecutionResult(
                         Success: !failFirst,
                         ExitCode: failFirst ? 1 : 0,
                         StdErr: failFirst ? "boom" : "",
-                        Duration: TimeSpan.FromSeconds(1),
+                        Duration: TimeSpan.FromSeconds(seconds: 1),
                         Error: failFirst
                             ? new EncodingError(
-                                EncodingErrorKind.ProcessCrashed,
-                                "ffmpeg died",
-                                null,
-                                "Execute",
+                                Kind: EncodingErrorKind.ProcessCrashed,
+                                Message: "ffmpeg died",
+                                FfmpegStderr: null,
+                                StageName: "Execute",
                                 Recoverable: false
                             )
                             : null
@@ -150,13 +150,13 @@ public class LocalWorkerDispatcherTests
                 );
             });
 
-        LocalWorkerDispatcher dispatcher = NewDispatcher(executor.Object);
-        EncodeTask[] tasks = [MakeTask("t0", "/out/a"), MakeTask("t1", "/out/b")];
+        LocalWorkerDispatcher dispatcher = NewDispatcher(executor: executor.Object);
+        EncodeTask[] tasks = [MakeTask(id: "t0", outputPath: "/out/a"), MakeTask(id: "t1", outputPath: "/out/b")];
 
-        DispatchResult[] results = await dispatcher.DispatchAsync(tasks, CancellationToken.None);
+        DispatchResult[] results = await dispatcher.DispatchAsync(tasks: tasks, ct: CancellationToken.None);
 
         results[0].Success.Should().BeFalse();
-        results[0].Error.Should().Contain("ffmpeg died");
+        results[0].Error.Should().Contain(expected: "ffmpeg died");
         results[1].Success.Should().BeTrue();
     }
 
@@ -166,7 +166,7 @@ public class LocalWorkerDispatcherTests
         Mock<IFfmpegExecutor> executor = new();
         int call = 0;
         executor
-            .Setup(e =>
+            .Setup(expression: e =>
                 e.ExecuteAsync(
                     It.IsAny<FfmpegCommand>(),
                     It.IsAny<TimeSpan>(),
@@ -175,32 +175,32 @@ public class LocalWorkerDispatcherTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .Returns(() =>
+            .Returns(valueFunction: () =>
             {
                 call++;
                 return Task.FromResult(
-                    new ExecutionResult(
+                    result: new ExecutionResult(
                         Success: true,
                         ExitCode: 0,
                         StdErr: "",
-                        Duration: TimeSpan.FromMilliseconds(10),
+                        Duration: TimeSpan.FromMilliseconds(milliseconds: 10),
                         Error: null
                     )
                 );
             });
 
-        LocalWorkerDispatcher dispatcher = NewDispatcher(executor.Object);
+        LocalWorkerDispatcher dispatcher = NewDispatcher(executor: executor.Object);
         EncodeTask[] tasks =
         [
-            MakeTask("t0", "/out/a"),
-            MakeTask("t1", "/out/b"),
-            MakeTask("t2", "/out/c"),
+            MakeTask(id: "t0", outputPath: "/out/a"),
+            MakeTask(id: "t1", outputPath: "/out/b"),
+            MakeTask(id: "t2", outputPath: "/out/c"),
         ];
 
         using CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
-        Func<Task> act = () => dispatcher.DispatchAsync(tasks, cts.Token);
+        Func<Task> act = () => dispatcher.DispatchAsync(tasks: tasks, ct: cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
@@ -208,18 +208,18 @@ public class LocalWorkerDispatcherTests
     [Fact]
     public void AvailableWorkerCount_IsOne()
     {
-        LocalWorkerDispatcher dispatcher = NewDispatcher(new Mock<IFfmpegExecutor>().Object);
+        LocalWorkerDispatcher dispatcher = NewDispatcher(executor: new Mock<IFfmpegExecutor>().Object);
 
-        dispatcher.AvailableWorkerCount.Should().Be(1);
+        dispatcher.AvailableWorkerCount.Should().Be(expected: 1);
     }
 
     private static LocalWorkerDispatcher NewDispatcher(IFfmpegExecutor executor) =>
-        new(executor, NullLogger<LocalWorkerDispatcher>.Instance);
+        new(executor: executor, logger: NullLogger<LocalWorkerDispatcher>.Instance);
 
     private static EncodeTask MakeTask(string id, string outputPath) =>
         new(
             TaskId: id,
-            Command: new("ffmpeg", ["-i", "in.mkv", "out.ts"], null),
+            Command: new(Executable: "ffmpeg", Arguments: ["-i", "in.mkv", "out.ts"], WorkingDirectory: null),
             OutputPath: outputPath,
             Type: EncodeTaskType.QualityVariant
         );

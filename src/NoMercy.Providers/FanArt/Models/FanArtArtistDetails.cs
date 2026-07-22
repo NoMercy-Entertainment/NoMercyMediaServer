@@ -16,22 +16,22 @@ namespace NoMercy.Providers.FanArt.Models;
 
 public class FanArtArtistDetails : FanArtArtist
 {
-    [JsonProperty("artistthumb")]
+    [JsonProperty(propertyName: "artistthumb")]
     public Image[] Thumbs { get; set; } = [];
 
-    [JsonProperty("albums")]
-    [JsonConverter(typeof(GuidKeyDictionaryConverter<Albums>))]
+    [JsonProperty(propertyName: "albums")]
+    [JsonConverter(converterType: typeof(GuidKeyDictionaryConverter<Albums>))]
     public Dictionary<Guid, Albums> ArtistAlbum { get; set; } = [];
 
-    [JsonProperty("artistbackground")]
+    [JsonProperty(propertyName: "artistbackground")]
     public Image[] Backgrounds { get; set; } = [];
 
-    [JsonProperty("hdmusiclogo")]
+    [JsonProperty(propertyName: "hdmusiclogo")]
     public Image[] HdLogos { get; set; } = [];
 
-    [JsonProperty("musiclogo")]
+    [JsonProperty(propertyName: "musiclogo")]
     public Image[] Logos { get; set; } = [];
 
-    [JsonProperty("musicbanner")]
+    [JsonProperty(propertyName: "musicbanner")]
     public Image[] Banners { get; set; } = [];
 }

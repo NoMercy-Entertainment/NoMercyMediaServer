@@ -33,30 +33,31 @@ public abstract class ConsoleMessages
         ConsoleExtensions.Enable();
 
         string visitLine = Config.IsDev
-            ? $"{_("#00a10d")}".Pastel("#00a10d")
+            ? $"{_(color: "#00a10d")}".Pastel(hexColor: "#00a10d")
                 + "      "
-                + "  visit:".Pastel("#cccccc")
-                + $"  {ExternalServicesConfig.Current.AppBaseUrl}   ".Pastel("#ffffff")
-                + $"{_("#00a10d")}".Pastel("#00a10d")
-            : $"{_("#00a10d")}".Pastel("#00a10d")
+                + "  visit:".Pastel(hexColor: "#cccccc")
+                + $"  {ExternalServicesConfig.Current.AppBaseUrl}   ".Pastel(hexColor: "#ffffff")
+                + $"{_(color: "#00a10d")}".Pastel(hexColor: "#00a10d")
+            : $"{_(color: "#00a10d")}".Pastel(hexColor: "#00a10d")
                 + "      "
-                + "  visit:".Pastel("#cccccc")
-                + $"  {ExternalServicesConfig.Current.AppBaseUrl}       ".Pastel("#ffffff")
-                + $"{_("#00a10d")}".Pastel("#00a10d");
+                + "  visit:".Pastel(hexColor: "#cccccc")
+                + $"  {ExternalServicesConfig.Current.AppBaseUrl}       ".Pastel(hexColor: "#ffffff")
+                + $"{_(color: "#00a10d")}".Pastel(hexColor: "#00a10d");
 
-        Logger.WriteBanner([
-            ("setup", ("╔" + Repeat("═", 46) + "╗").Pastel("#00a10d"), LogEventLevel.Information),
+        Logger.WriteBanner(lines:
+        [
+            ("setup", ("╔" + Repeat(stringToRepeat: "═", repeat: 46) + "╗").Pastel(hexColor: "#00a10d"), LogEventLevel.Information),
             (
                 "setup",
-                $"{_("#00a10d")}".Pastel("#00a10d")
+                $"{_(color: "#00a10d")}".Pastel(hexColor: "#00a10d")
                     + "     "
-                    + "Secure Server running: on port:".Pastel("#5ffa71")
-                    + $" {RuntimeServerSettings.Current.InternalServerPort}     ".Pastel("#ffffff")
-                    + $"{_("#00a10d")}".Pastel("#00a10d"),
+                    + "Secure Server running: on port:".Pastel(hexColor: "#5ffa71")
+                    + $" {RuntimeServerSettings.Current.InternalServerPort}     ".Pastel(hexColor: "#ffffff")
+                    + $"{_(color: "#00a10d")}".Pastel(hexColor: "#00a10d"),
                 LogEventLevel.Information
             ),
             ("setup", visitLine, LogEventLevel.Information),
-            ("setup", ("╚" + Repeat("═", 46) + "╝").Pastel("#00a10d"), LogEventLevel.Information),
+            ("setup", ("╚" + Repeat(stringToRepeat: "═", repeat: 46) + "╝").Pastel(hexColor: "#00a10d"), LogEventLevel.Information),
         ]);
 
         return Task.CompletedTask;
@@ -64,14 +65,14 @@ public abstract class ConsoleMessages
 
     private static string _(string? color = null)
     {
-        return "║".Pastel(color ?? Colors[0]);
+        return "║".Pastel(hexColor: color ?? Colors[0]);
     }
 
     private static string Repeat(string stringToRepeat, int repeat)
     {
-        StringBuilder builder = new(repeat * stringToRepeat.Length);
+        StringBuilder builder = new(capacity: repeat * stringToRepeat.Length);
         for (int i = 0; i < repeat; i++)
-            builder.Append(stringToRepeat);
+            builder.Append(value: stringToRepeat);
 
         return builder.ToString();
     }
@@ -84,15 +85,15 @@ public abstract class ConsoleMessages
 
         // Add spaces to the left of the text
         for (int i = 102 - rightPadding; i > text.Length; i--)
-            spacing.Add("");
+            spacing.Add(item: "");
 
-        spacing.Add(text);
+        spacing.Add(item: text);
 
         // Add spaces to the right of the text
         for (int i = 0; i < rightPadding; i++)
-            spacing.Add("");
+            spacing.Add(item: "");
 
-        return string.Join(" ", spacing);
+        return string.Join(separator: " ", values: spacing);
     }
 
     private static bool IsXmasTime()
@@ -100,8 +101,8 @@ public abstract class ConsoleMessages
         DateTime today = DateTime.Today;
         int currentYear = today.Year;
 
-        long xmasBeginDate = new DateTime(currentYear, 12, 7).Ticks;
-        long xmasEndDate = new DateTime(currentYear + 1, 1, 5).Ticks;
+        long xmasBeginDate = new DateTime(year: currentYear, month: 12, day: 7).Ticks;
+        long xmasEndDate = new DateTime(year: currentYear + 1, month: 1, day: 5).Ticks;
 
         return today.Ticks > xmasBeginDate && xmasEndDate < today.Ticks;
     }
@@ -127,19 +128,19 @@ public abstract class ConsoleMessages
         {
             foreach (char letter in outputString)
             {
-                string? text = letters[letter.ToString()][i];
+                string? text = letters[key: letter.ToString()][index: i];
 
                 text = letter switch
                 {
-                    '║' => text.Pastel(Colors[0]),
-                    'N' or 'M' or 'S' => text.Pastel(Colors[1]),
-                    _ => text.Pastel(Colors[2]),
+                    '║' => text.Pastel(hexColor: Colors[0]),
+                    'N' or 'M' or 'S' => text.Pastel(hexColor: Colors[1]),
+                    _ => text.Pastel(hexColor: Colors[2]),
                 };
 
-                builder.Append(text);
+                builder.Append(value: text);
 
                 if (i == 5)
-                    totalWidth += letters[letter.ToString()][i].Length;
+                    totalWidth += letters[key: letter.ToString()][index: i].Length;
             }
 
             if (i == 9)
@@ -149,18 +150,18 @@ public abstract class ConsoleMessages
 
         int magicSpacer = totalWidth - 2;
 
-        Console.WriteLine($"{("╔" + Repeat("═", magicSpacer) + "╗").Pastel(Colors[0])}");
-        Console.WriteLine($"{_()}{Repeat(" ", magicSpacer)}{_()}");
+        Console.WriteLine(value: $"{("╔" + Repeat(stringToRepeat: "═", repeat: magicSpacer) + "╗").Pastel(hexColor: Colors[0])}");
+        Console.WriteLine(value: $"{_()}{Repeat(stringToRepeat: " ", repeat: magicSpacer)}{_()}");
 
-        Console.WriteLine(builder.ToString());
+        Console.WriteLine(value: builder.ToString());
 
         Console.WriteLine(
-            $"{_()}{Repeat(" ", 63)}{letters["y"][10].Pastel(Colors[2])}"
-                + CreateQuote(Quote, 4)
-                + $"{letters["║"][0].Pastel(Colors[0])}"
+            value: $"{_()}{Repeat(stringToRepeat: " ", repeat: 63)}{letters[key: "y"][index: 10].Pastel(hexColor: Colors[2])}"
+                   + CreateQuote(text: Quote, rightPadding: 4)
+                   + $"{letters[key: "║"][index: 0].Pastel(hexColor: Colors[0])}"
         );
         // Console.WriteLine($"{_()}" + CreateQuote(Quote, totalWidth, 4) + $"{(isXmas() ? ConsoleLetters.ColossalXmas : ConsoleLetters.Colossal)["║"][0].Pastel(Colors[0])}");
-        Console.WriteLine($"{("╚" + Repeat("═", magicSpacer) + "╝").Pastel(Colors[0])}");
+        Console.WriteLine(value: $"{("╚" + Repeat(stringToRepeat: "═", repeat: magicSpacer) + "╝").Pastel(hexColor: Colors[0])}");
     }
 
     public static Task Welcome()
@@ -168,22 +169,22 @@ public abstract class ConsoleMessages
         if (!Console.IsOutputRedirected)
             return Task.CompletedTask;
 
-        Console.WriteLine(("╔" + Repeat("═", 46) + "╗").Pastel("#00a10d"));
+        Console.WriteLine(value: ("╔" + Repeat(stringToRepeat: "═", repeat: 46) + "╗").Pastel(hexColor: "#00a10d"));
         Console.WriteLine(
-            $"{_("#00a10d")}".Pastel("#00a10d")
-                + @"     "
-                + "Welcome to NoMercy MediaServer".Pastel("#5ffa71")
-                + "     ".Pastel("#ffffff")
-                + $"{_("#00a10d")}".Pastel("#00a10d")
+            value: $"{_(color: "#00a10d")}".Pastel(hexColor: "#00a10d")
+                   + @"     "
+                   + "Welcome to NoMercy MediaServer".Pastel(hexColor: "#5ffa71")
+                   + "     ".Pastel(hexColor: "#ffffff")
+                   + $"{_(color: "#00a10d")}".Pastel(hexColor: "#00a10d")
         );
         Console.WriteLine(
-            $"{_("#00a10d")}".Pastel("#00a10d")
-                + @"      "
-                + "Version:".Pastel("#cccccc")
-                + "  1.0.0      ".Pastel("#ffffff")
-                + $"{_("#00a10d")}".Pastel("#00a10d")
+            value: $"{_(color: "#00a10d")}".Pastel(hexColor: "#00a10d")
+                   + @"      "
+                   + "Version:".Pastel(hexColor: "#cccccc")
+                   + "  1.0.0      ".Pastel(hexColor: "#ffffff")
+                   + $"{_(color: "#00a10d")}".Pastel(hexColor: "#00a10d")
         );
-        Console.WriteLine(("╚" + Repeat("═", 46) + "╝").Pastel("#00a10d"));
+        Console.WriteLine(value: ("╚" + Repeat(stringToRepeat: "═", repeat: 46) + "╝").Pastel(hexColor: "#00a10d"));
 
         return Task.CompletedTask;
     }
@@ -194,21 +195,21 @@ public abstract class ConsoleMessages
         {
             if (OperatingSystem.IsWindows())
                 Console.SetWindowSize(
-                    Math.Min(width, Console.LargestWindowWidth),
-                    Math.Min(height, Console.LargestWindowHeight)
+                    width: Math.Min(val1: width, val2: Console.LargestWindowWidth),
+                    height: Math.Min(val1: height, val2: Console.LargestWindowHeight)
                 );
             else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
-                Console.Write($"\x1b[8;{height};{width}t");
+                Console.Write(value: $"\x1b[8;{height};{width}t");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to resize console: {ex.Message}");
+            Console.WriteLine(value: $"Failed to resize console: {ex.Message}");
         }
     }
 
     private static void ClearConsole()
     {
         Console.Clear();
-        Console.SetCursorPosition(0, 0);
+        Console.SetCursorPosition(left: 0, top: 0);
     }
 }

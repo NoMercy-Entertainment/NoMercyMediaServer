@@ -16,45 +16,45 @@ namespace NoMercy.NmSystem.Information;
 public static class Screen
 {
     public static bool IsDocker =>
-        !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"));
+        !string.IsNullOrEmpty(value: Environment.GetEnvironmentVariable(variable: "DOTNET_RUNNING_IN_CONTAINER"));
 
     public static int ScreenWidth()
     {
-        return RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ScreenWidthWindows() : 1666;
+        return RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows) ? ScreenWidthWindows() : 1666;
     }
 
-    [DllImport("user32.dll")]
+    [DllImport(dllName: "user32.dll")]
     private static extern int GetSystemMetrics(int nIndex);
 
     private static int ScreenWidthWindows(int screenIndex = 0)
     {
-        return GetSystemMetrics(screenIndex);
+        return GetSystemMetrics(nIndex: screenIndex);
     }
 
     public static bool IsDesktopEnvironment()
     {
         if (
-            RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-            || RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
+            RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Windows)
+            || RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.OSX)
         )
             return true;
 
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        if (!RuntimeInformation.IsOSPlatform(osPlatform: OSPlatform.Linux))
             return false;
 
         if (IsDocker)
             return false;
 
-        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WSL_DISTRO_NAME")))
+        if (!string.IsNullOrEmpty(value: Environment.GetEnvironmentVariable(variable: "WSL_DISTRO_NAME")))
             return false;
 
-        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY")))
+        if (!string.IsNullOrEmpty(value: Environment.GetEnvironmentVariable(variable: "WAYLAND_DISPLAY")))
             return true;
 
-        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISPLAY")))
+        if (!string.IsNullOrEmpty(value: Environment.GetEnvironmentVariable(variable: "DISPLAY")))
             return true;
 
-        string? sessionType = Environment.GetEnvironmentVariable("XDG_SESSION_TYPE");
+        string? sessionType = Environment.GetEnvironmentVariable(variable: "XDG_SESSION_TYPE");
         return sessionType is "x11" or "wayland";
     }
 }

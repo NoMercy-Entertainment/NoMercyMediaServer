@@ -15,115 +15,115 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record ContainerDto
 {
-    [JsonProperty("label")]
+    [JsonProperty(propertyName: "label")]
     public string Label { get; set; } = string.Empty;
 
-    [JsonProperty("value")]
+    [JsonProperty(propertyName: "value")]
     public string Value { get; set; } = string.Empty;
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonProperty("default")]
+    [JsonProperty(propertyName: "default")]
     public bool IsDefault { get; set; }
 
-    [JsonProperty("available_video_codecs")]
+    [JsonProperty(propertyName: "available_video_codecs")]
     public VideoCodecDto[] AvailableVideoCodecs { get; set; } = [];
 
-    [JsonProperty("available_audio_codecs")]
+    [JsonProperty(propertyName: "available_audio_codecs")]
     public AudioCodecDto[] AvailableAudioCodecs { get; set; } = [];
 
-    [JsonProperty("available_subtitle_codecs")]
+    [JsonProperty(propertyName: "available_subtitle_codecs")]
     public SubtitleCodecDto[] AvailableSubtitleCodecs { get; set; } = [];
 
-    [JsonProperty("available_resolutions")]
+    [JsonProperty(propertyName: "available_resolutions")]
     public VideoQualityDto[] AvailableVideoSizes { get; set; } = [];
 }
 
 public class CodecDto
 {
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("value")]
+    [JsonProperty(propertyName: "value")]
     public string Value { get; set; } = string.Empty;
 
-    [JsonProperty("simple_value")]
+    [JsonProperty(propertyName: "simple_value")]
     public string SimpleValue { get; set; } = string.Empty;
 
-    [JsonProperty("requires_gpu")]
+    [JsonProperty(propertyName: "requires_gpu")]
     public bool RequiresGpu { get; set; }
 
-    [JsonProperty("is_default")]
+    [JsonProperty(propertyName: "is_default")]
     public bool IsDefault { get; set; }
 }
 
 public class VideoQualityDto
 {
-    [JsonProperty("width")]
+    [JsonProperty(propertyName: "width")]
     public int Width { get; set; }
 
-    [JsonProperty("height")]
+    [JsonProperty(propertyName: "height")]
     public int Height { get; set; }
 
-    [JsonProperty("label")]
+    [JsonProperty(propertyName: "label")]
     public string Label { get; set; } = string.Empty;
 }
 
 public class VideoCodecDto : CodecDto
 {
-    [JsonProperty("color_spaces")]
+    [JsonProperty(propertyName: "color_spaces")]
     public LabelValueDto[] AvailableVideoColorSpaces { get; set; } = [];
 
-    [JsonProperty("tunes")]
+    [JsonProperty(propertyName: "tunes")]
     public LabelValueDto[] AvailableVideoTunes { get; set; } = [];
 
-    [JsonProperty("profiles")]
+    [JsonProperty(propertyName: "profiles")]
     public LabelValueDto[] AvailableVideoProfiles { get; set; } = [];
 
-    [JsonProperty("presets")]
+    [JsonProperty(propertyName: "presets")]
     public LabelValueDto[] AvailablePresets { get; set; } = [];
 }
 
 public class AudioCodecDto : CodecDto
 {
-    [JsonProperty("available_languages")]
+    [JsonProperty(propertyName: "available_languages")]
     public LabelValueDto[] AvailableLanguages { get; set; } = [];
 
-    [JsonProperty("audio_quality_level")]
+    [JsonProperty(propertyName: "audio_quality_level")]
     public int AudioQualityLevel { get; set; }
 
-    [JsonProperty("audio_channels")]
+    [JsonProperty(propertyName: "audio_channels")]
     public int AudioChannels { get; set; }
 
-    [JsonProperty("hls_segment_filename")]
+    [JsonProperty(propertyName: "hls_segment_filename")]
     public string HlsSegmentFilename { get; set; } = string.Empty;
 
-    [JsonProperty("hls_playlist_filename")]
+    [JsonProperty(propertyName: "hls_playlist_filename")]
     public string HlsPlaylistFilename { get; set; } = string.Empty;
 
-    [JsonProperty("bit_rate")]
+    [JsonProperty(propertyName: "bit_rate")]
     public long BitRate { get; set; }
 }
 
 public class SubtitleCodecDto : CodecDto
 {
-    [JsonProperty("available_languages")]
+    [JsonProperty(propertyName: "available_languages")]
     public LabelValueDto[] AvailableLanguages { get; set; } = [];
 
-    [JsonProperty("hls_segment_filename")]
+    [JsonProperty(propertyName: "hls_segment_filename")]
     public string HlsSegmentFilename { get; set; } = string.Empty;
 
-    [JsonProperty("hls_playlist_filename")]
+    [JsonProperty(propertyName: "hls_playlist_filename")]
     public string HlsPlaylistFilename { get; set; } = string.Empty;
 }
 
 public class LabelValueDto
 {
-    [JsonProperty("label")]
+    [JsonProperty(propertyName: "label")]
     public string Label { get; set; } = string.Empty;
 
-    [JsonProperty("value")]
+    [JsonProperty(propertyName: "value")]
     public string Value { get; set; } = string.Empty;
 
     public LabelValueDto(string s)

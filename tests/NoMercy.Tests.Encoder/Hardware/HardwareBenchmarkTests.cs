@@ -29,27 +29,27 @@ public class HardwareBenchmarkTests
         EncoderInfo encoder = MakeSoftwareH264();
 
         string[] args = CalibrationArgumentBuilder.BuildCalibrationArguments(
-            SoftwareTarget(encoder),
-            1920,
-            1080
+            target: SoftwareTarget(encoder: encoder),
+            width: 1920,
+            height: 1080
         );
 
-        int fIdx = Array.IndexOf(args, "-f");
-        args[fIdx + 1].Should().Be("lavfi");
+        int fIdx = Array.IndexOf(array: args, value: "-f");
+        args[fIdx + 1].Should().Be(expected: "lavfi");
 
-        int iIdx = Array.IndexOf(args, "-i");
-        args[iIdx + 1].Should().Contain("testsrc=");
-        args[iIdx + 1].Should().Contain("size=1920x1080");
-        args[iIdx + 1].Should().Contain("rate=30");
+        int iIdx = Array.IndexOf(array: args, value: "-i");
+        args[iIdx + 1].Should().Contain(expected: "testsrc=");
+        args[iIdx + 1].Should().Contain(expected: "size=1920x1080");
+        args[iIdx + 1].Should().Contain(expected: "rate=30");
     }
 
     [Fact]
     public void BuildCalibrationArguments_UsesNullMuxerSoNothingIsWritten()
     {
         string[] args = CalibrationArgumentBuilder.BuildCalibrationArguments(
-            SoftwareTarget(MakeSoftwareH264()),
-            1280,
-            720
+            target: SoftwareTarget(encoder: MakeSoftwareH264()),
+            width: 1280,
+            height: 720
         );
 
         // Last output should be "-f null -" to discard encoded frames.
@@ -64,23 +64,23 @@ public class HardwareBenchmarkTests
         }
 
         // lavfi input comes first, null output comes second — must find two "-f" occurrences
-        int firstF = Array.IndexOf(args, "-f");
-        int secondF = Array.IndexOf(args, "-f", firstF + 1);
-        secondF.Should().BeGreaterThan(firstF);
-        args[secondF + 1].Should().Be("null");
+        int firstF = Array.IndexOf(array: args, value: "-f");
+        int secondF = Array.IndexOf(array: args, value: "-f", startIndex: firstF + 1);
+        secondF.Should().BeGreaterThan(expected: firstF);
+        args[secondF + 1].Should().Be(expected: "null");
     }
 
     [Fact]
     public void BuildCalibrationArguments_SelectsMediumPresetForSoftware()
     {
         string[] args = CalibrationArgumentBuilder.BuildCalibrationArguments(
-            SoftwareTarget(MakeSoftwareH264()),
-            1280,
-            720
+            target: SoftwareTarget(encoder: MakeSoftwareH264()),
+            width: 1280,
+            height: 720
         );
 
-        int presetIdx = Array.IndexOf(args, "-preset");
-        args[presetIdx + 1].Should().Be("medium");
+        int presetIdx = Array.IndexOf(array: args, value: "-preset");
+        args[presetIdx + 1].Should().Be(expected: "medium");
     }
 
     [Fact]
@@ -92,7 +92,7 @@ public class HardwareBenchmarkTests
             Presets: ["p1", "p2", "p3", "p4", "p5", "p6", "p7"],
             Profiles: ["high"],
             Levels: [],
-            QualityRange: new(0, 51, 23),
+            QualityRange: new(Min: 0, Max: 51, Default: 23),
             SupportedRateControl: [RateControlMode.Cqp],
             Supports10Bit: false,
             SupportsHdr: false,
@@ -102,13 +102,13 @@ public class HardwareBenchmarkTests
         );
 
         string[] args = CalibrationArgumentBuilder.BuildCalibrationArguments(
-            HardwareTarget(nvenc, "RTX 4080", vendorIndex: 0),
-            1920,
-            1080
+            target: HardwareTarget(encoder: nvenc, deviceName: "RTX 4080", vendorIndex: 0),
+            width: 1920,
+            height: 1080
         );
 
-        int presetIdx = Array.IndexOf(args, "-preset");
-        args[presetIdx + 1].Should().Be("p4");
+        int presetIdx = Array.IndexOf(array: args, value: "-preset");
+        args[presetIdx + 1].Should().Be(expected: "p4");
     }
 
     [Fact]
@@ -120,37 +120,37 @@ public class HardwareBenchmarkTests
             Presets: ["balanced"],
             Profiles: ["high"],
             Levels: [],
-            QualityRange: new(0, 51, 23),
+            QualityRange: new(Min: 0, Max: 51, Default: 23),
             SupportedRateControl: [RateControlMode.Cqp],
             Supports10Bit: false,
             SupportsHdr: false,
             MaxConcurrentSessions: int.MaxValue,
             PixelFormat10Bit: "",
-            VendorSpecificFlags: new() { ["-usage"] = "transcoding" }
+            VendorSpecificFlags: new() { [key: "-usage"] = "transcoding" }
         );
 
         string[] args = CalibrationArgumentBuilder.BuildCalibrationArguments(
-            HardwareTarget(amf, "Radeon 7900XT", vendorIndex: 0),
-            1280,
-            720
+            target: HardwareTarget(encoder: amf, deviceName: "Radeon 7900XT", vendorIndex: 0),
+            width: 1280,
+            height: 720
         );
 
-        int usageIdx = Array.IndexOf(args, "-usage");
-        usageIdx.Should().BeGreaterThan(-1);
-        args[usageIdx + 1].Should().Be("transcoding");
+        int usageIdx = Array.IndexOf(array: args, value: "-usage");
+        usageIdx.Should().BeGreaterThan(expected: -1);
+        args[usageIdx + 1].Should().Be(expected: "transcoding");
     }
 
     [Fact]
     public void BuildCalibrationArguments_IncludesProgressPipe()
     {
         string[] args = CalibrationArgumentBuilder.BuildCalibrationArguments(
-            SoftwareTarget(MakeSoftwareH264()),
-            1920,
-            1080
+            target: SoftwareTarget(encoder: MakeSoftwareH264()),
+            width: 1920,
+            height: 1080
         );
 
-        int idx = Array.IndexOf(args, "-progress");
-        args[idx + 1].Should().Be("pipe:1");
+        int idx = Array.IndexOf(array: args, value: "-progress");
+        args[idx + 1].Should().Be(expected: "pipe:1");
     }
 
     [Fact]
@@ -160,15 +160,15 @@ public class HardwareBenchmarkTests
         // ~10s of source) so the steady-state throughput is what gets
         // measured, not first-second spin-up.
         string[] args = CalibrationArgumentBuilder.BuildCalibrationArguments(
-            SoftwareTarget(MakeSoftwareH264()),
-            1920,
-            1080
+            target: SoftwareTarget(encoder: MakeSoftwareH264()),
+            width: 1920,
+            height: 1080
         );
 
-        int framesIdx = Array.IndexOf(args, "-frames:v");
-        framesIdx.Should().BeGreaterThan(-1);
-        int frameCount = int.Parse(args[framesIdx + 1]);
-        frameCount.Should().Be(300);
+        int framesIdx = Array.IndexOf(array: args, value: "-frames:v");
+        framesIdx.Should().BeGreaterThan(expected: -1);
+        int frameCount = int.Parse(s: args[framesIdx + 1]);
+        frameCount.Should().Be(expected: 300);
     }
 
     [Fact]
@@ -182,15 +182,15 @@ public class HardwareBenchmarkTests
             FfmpegName = "libaom-av1",
         };
         string[] args = CalibrationArgumentBuilder.BuildCalibrationArguments(
-            new(VideoCodecType.Av1, libaom, Device: null, VendorIndex: 0),
-            1920,
-            1080
+            target: new(Codec: VideoCodecType.Av1, Encoder: libaom, Device: null, VendorIndex: 0),
+            width: 1920,
+            height: 1080
         );
 
-        int framesIdx = Array.IndexOf(args, "-frames:v");
-        framesIdx.Should().BeGreaterThan(-1);
-        int frameCount = int.Parse(args[framesIdx + 1]);
-        frameCount.Should().Be(60);
+        int framesIdx = Array.IndexOf(array: args, value: "-frames:v");
+        framesIdx.Should().BeGreaterThan(expected: -1);
+        int frameCount = int.Parse(s: args[framesIdx + 1]);
+        frameCount.Should().Be(expected: 60);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -201,18 +201,18 @@ public class HardwareBenchmarkTests
     public void SelectCandidates_ExcludesHwEncodersForMissingVendor()
     {
         Mock<IHardwareCapabilities> hardware = new();
-        hardware.Setup(h => h.Gpus).Returns([]); // no GPUs installed
+        hardware.Setup(expression: h => h.Gpus).Returns(value: []); // no GPUs installed
 
-        HardwareBenchmark sut = NewBenchmark(hardware.Object);
+        HardwareBenchmark sut = NewBenchmark(hardware: hardware.Object);
 
-        List<EncoderInfo> candidates = sut.SelectCandidates().Select(c => c.Encoder).ToList();
+        List<EncoderInfo> candidates = sut.SelectCandidates().Select(selector: c => c.Encoder).ToList();
 
         // Software encoders (no RequiredVendor) must remain.
-        candidates.Should().Contain(e => e.FfmpegName == "libx264");
+        candidates.Should().Contain(predicate: e => e.FfmpegName == "libx264");
         // Hardware encoders must be filtered out.
-        candidates.Should().NotContain(e => e.FfmpegName == "h264_nvenc");
-        candidates.Should().NotContain(e => e.FfmpegName == "h264_amf");
-        candidates.Should().NotContain(e => e.FfmpegName == "h264_qsv");
+        candidates.Should().NotContain(predicate: e => e.FfmpegName == "h264_nvenc");
+        candidates.Should().NotContain(predicate: e => e.FfmpegName == "h264_amf");
+        candidates.Should().NotContain(predicate: e => e.FfmpegName == "h264_qsv");
     }
 
     [Fact]
@@ -220,8 +220,9 @@ public class HardwareBenchmarkTests
     {
         Mock<IHardwareCapabilities> hardware = new();
         hardware
-            .Setup(h => h.Gpus)
-            .Returns([
+            .Setup(expression: h => h.Gpus)
+            .Returns(value:
+            [
                 new(
                     Vendor: GpuVendor.Nvidia,
                     Name: "RTX 4080",
@@ -231,12 +232,12 @@ public class HardwareBenchmarkTests
                 ),
             ]);
 
-        HardwareBenchmark sut = NewBenchmark(hardware.Object);
+        HardwareBenchmark sut = NewBenchmark(hardware: hardware.Object);
 
-        List<string> names = sut.SelectCandidates().Select(c => c.Encoder.FfmpegName).ToList();
+        List<string> names = sut.SelectCandidates().Select(selector: c => c.Encoder.FfmpegName).ToList();
 
-        names.Should().Contain("h264_nvenc");
-        names.Should().NotContain("h264_amf");
+        names.Should().Contain(expected: "h264_nvenc");
+        names.Should().NotContain(unexpected: "h264_amf");
     }
 
     [Fact]
@@ -244,8 +245,9 @@ public class HardwareBenchmarkTests
     {
         Mock<IHardwareCapabilities> hardware = new();
         hardware
-            .Setup(h => h.Gpus)
-            .Returns([
+            .Setup(expression: h => h.Gpus)
+            .Returns(value:
+            [
                 new(
                     Vendor: GpuVendor.Nvidia,
                     Name: "RTX 4080",
@@ -262,15 +264,15 @@ public class HardwareBenchmarkTests
                 ),
             ]);
 
-        HardwareBenchmark sut = NewBenchmark(hardware.Object);
+        HardwareBenchmark sut = NewBenchmark(hardware: hardware.Object);
 
         List<CalibrationTarget> nvencH264 = sut.SelectCandidates()
-            .Where(c => c.Encoder.FfmpegName == "h264_nvenc")
+            .Where(predicate: c => c.Encoder.FfmpegName == "h264_nvenc")
             .ToList();
 
-        nvencH264.Should().HaveCount(2);
-        nvencH264.Select(c => c.VendorIndex).Should().BeEquivalentTo([0, 1]);
-        nvencH264.Select(c => c.Device!.Name).Should().BeEquivalentTo("RTX 4080", "RTX 3060");
+        nvencH264.Should().HaveCount(expected: 2);
+        nvencH264.Select(selector: c => c.VendorIndex).Should().BeEquivalentTo(expectation: [0, 1]);
+        nvencH264.Select(selector: c => c.Device!.Name).Should().BeEquivalentTo(expectation: ["RTX 4080", "RTX 3060"]);
     }
 
     [Fact]
@@ -278,8 +280,9 @@ public class HardwareBenchmarkTests
     {
         Mock<IHardwareCapabilities> hardware = new();
         hardware
-            .Setup(h => h.Gpus)
-            .Returns([
+            .Setup(expression: h => h.Gpus)
+            .Returns(value:
+            [
                 new(
                     Vendor: GpuVendor.Nvidia,
                     Name: "RTX 4080",
@@ -303,21 +306,21 @@ public class HardwareBenchmarkTests
                 ),
             ]);
 
-        HardwareBenchmark sut = NewBenchmark(hardware.Object);
+        HardwareBenchmark sut = NewBenchmark(hardware: hardware.Object);
 
         List<CalibrationTarget> targets = sut.SelectCandidates().ToList();
 
         CalibrationTarget[] nvenc = targets
-            .Where(t => t.Encoder.FfmpegName == "h264_nvenc")
+            .Where(predicate: t => t.Encoder.FfmpegName == "h264_nvenc")
             .ToArray();
-        nvenc.Should().HaveCount(2);
+        nvenc.Should().HaveCount(expected: 2);
         // Vendor-relative indexing: Nvidia positions inside the Nvidia-only list,
         // NOT positions inside the global Gpus list.
-        nvenc.Select(t => t.VendorIndex).Should().BeEquivalentTo([0, 1]);
+        nvenc.Select(selector: t => t.VendorIndex).Should().BeEquivalentTo(expectation: [0, 1]);
 
-        CalibrationTarget[] qsv = targets.Where(t => t.Encoder.FfmpegName == "h264_qsv").ToArray();
-        qsv.Should().HaveCount(1);
-        qsv[0].VendorIndex.Should().Be(0);
+        CalibrationTarget[] qsv = targets.Where(predicate: t => t.Encoder.FfmpegName == "h264_qsv").ToArray();
+        qsv.Should().HaveCount(expected: 1);
+        qsv[0].VendorIndex.Should().Be(expected: 0);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -334,7 +337,7 @@ public class HardwareBenchmarkTests
             Presets: ["p1", "p4", "p7"],
             Profiles: ["high"],
             Levels: [],
-            QualityRange: new(0, 51, 23),
+            QualityRange: new(Min: 0, Max: 51, Default: 23),
             SupportedRateControl: [RateControlMode.Cqp],
             Supports10Bit: false,
             SupportsHdr: false,
@@ -344,32 +347,32 @@ public class HardwareBenchmarkTests
         );
 
         string[] args = CalibrationArgumentBuilder.BuildCalibrationArguments(
-            HardwareTarget(nvenc, "RTX 3060", vendorIndex: 1),
-            1920,
-            1080
+            target: HardwareTarget(encoder: nvenc, deviceName: "RTX 3060", vendorIndex: 1),
+            width: 1920,
+            height: 1080
         );
 
-        int initIdx = Array.IndexOf(args, "-init_hw_device");
-        initIdx.Should().BeGreaterThan(-1);
-        args[initIdx + 1].Should().Be("cuda=cu:1");
+        int initIdx = Array.IndexOf(array: args, value: "-init_hw_device");
+        initIdx.Should().BeGreaterThan(expected: -1);
+        args[initIdx + 1].Should().Be(expected: "cuda=cu:1");
 
-        int gpuIdx = Array.IndexOf(args, "-gpu");
-        gpuIdx.Should().BeGreaterThan(-1);
-        args[gpuIdx + 1].Should().Be("1");
+        int gpuIdx = Array.IndexOf(array: args, value: "-gpu");
+        gpuIdx.Should().BeGreaterThan(expected: -1);
+        args[gpuIdx + 1].Should().Be(expected: "1");
     }
 
     [Fact]
     public void BuildCalibrationArguments_Software_DoesNotEmitHwInit()
     {
         string[] args = CalibrationArgumentBuilder.BuildCalibrationArguments(
-            SoftwareTarget(MakeSoftwareH264()),
-            1920,
-            1080
+            target: SoftwareTarget(encoder: MakeSoftwareH264()),
+            width: 1920,
+            height: 1080
         );
 
-        args.Should().NotContain("-init_hw_device");
-        args.Should().NotContain("-filter_hw_device");
-        args.Should().NotContain("-gpu");
+        args.Should().NotContain(unexpected: "-init_hw_device");
+        args.Should().NotContain(unexpected: "-filter_hw_device");
+        args.Should().NotContain(unexpected: "-gpu");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -381,11 +384,11 @@ public class HardwareBenchmarkTests
     {
         // libx264 is in the fast-software-encoder list — gets a 4K probe
         // so the speed index has a real reading instead of extrapolation.
-        CalibrationTarget target = SoftwareTarget(MakeSoftwareH264());
-        (int W, int H)[] tiers = HardwareBenchmark.TiersForTarget(target).ToArray();
+        CalibrationTarget target = SoftwareTarget(encoder: MakeSoftwareH264());
+        (int W, int H)[] tiers = HardwareBenchmark.TiersForTarget(target: target).ToArray();
 
-        tiers.Should().Contain((3840, 2160));
-        tiers.Should().Contain((1920, 1080));
+        tiers.Should().Contain(expected: (3840, 2160));
+        tiers.Should().Contain(expected: (1920, 1080));
     }
 
     [Fact]
@@ -398,11 +401,11 @@ public class HardwareBenchmarkTests
         {
             FfmpegName = "libaom-av1",
         };
-        CalibrationTarget target = new(VideoCodecType.Av1, libaom, Device: null, VendorIndex: 0);
-        (int W, int H)[] tiers = HardwareBenchmark.TiersForTarget(target).ToArray();
+        CalibrationTarget target = new(Codec: VideoCodecType.Av1, Encoder: libaom, Device: null, VendorIndex: 0);
+        (int W, int H)[] tiers = HardwareBenchmark.TiersForTarget(target: target).ToArray();
 
-        tiers.Should().NotContain((3840, 2160));
-        tiers.Should().Contain((1920, 1080));
+        tiers.Should().NotContain(unexpected: (3840, 2160));
+        tiers.Should().Contain(expected: (1920, 1080));
     }
 
     [Fact]
@@ -416,7 +419,7 @@ public class HardwareBenchmarkTests
             Presets: ["p4"],
             Profiles: ["high"],
             Levels: [],
-            QualityRange: new(0, 51, 23),
+            QualityRange: new(Min: 0, Max: 51, Default: 23),
             SupportedRateControl: [RateControlMode.Cq],
             Supports10Bit: false,
             SupportsHdr: false,
@@ -424,12 +427,12 @@ public class HardwareBenchmarkTests
             PixelFormat10Bit: "",
             VendorSpecificFlags: new()
         );
-        CalibrationTarget target = HardwareTarget(nvenc, "RTX 4080", vendorIndex: 0);
+        CalibrationTarget target = HardwareTarget(encoder: nvenc, deviceName: "RTX 4080", vendorIndex: 0);
 
-        (int W, int H)[] tiers = HardwareBenchmark.TiersForTarget(target).ToArray();
+        (int W, int H)[] tiers = HardwareBenchmark.TiersForTarget(target: target).ToArray();
 
-        tiers[0].Should().Be((3840, 2160));
-        tiers.Length.Should().Be(4);
+        tiers[0].Should().Be(expected: (3840, 2160));
+        tiers.Length.Should().Be(expected: 4);
     }
 
     [Fact]
@@ -449,7 +452,7 @@ public class HardwareBenchmarkTests
             Presets: ["medium"],
             Profiles: ["high"],
             Levels: [],
-            QualityRange: new(1, 51, 23),
+            QualityRange: new(Min: 1, Max: 51, Default: 23),
             SupportedRateControl: [RateControlMode.Icq],
             Supports10Bit: false,
             SupportsHdr: false,
@@ -464,11 +467,11 @@ public class HardwareBenchmarkTests
             MaxEncoderSessions: int.MaxValue,
             SupportedCodecs: [VideoCodecType.H264]
         );
-        CalibrationTarget target = new(VideoCodecType.H264, qsv, lowVram, VendorIndex: 0);
+        CalibrationTarget target = new(Codec: VideoCodecType.H264, Encoder: qsv, Device: lowVram, VendorIndex: 0);
 
-        (int W, int H)[] tiers = HardwareBenchmark.TiersForTarget(target).ToArray();
+        (int W, int H)[] tiers = HardwareBenchmark.TiersForTarget(target: target).ToArray();
 
-        tiers.Should().NotContain((3840, 2160));
+        tiers.Should().NotContain(unexpected: (3840, 2160));
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -480,7 +483,7 @@ public class HardwareBenchmarkTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -491,7 +494,7 @@ public class HardwareBenchmarkTests
                 )
             )
             .Returns(
-                (
+                valueFunction: (
                     string _,
                     string[] _,
                     Action<string>? onStdOut,
@@ -501,12 +504,12 @@ public class HardwareBenchmarkTests
                 ) =>
                 {
                     // Feed a typical ffmpeg -progress payload: 60 fps, end marker.
-                    onStdOut?.Invoke("frame=150");
-                    onStdOut?.Invoke("fps=60");
-                    onStdOut?.Invoke("speed=2.0x");
-                    onStdOut?.Invoke("progress=end");
+                    onStdOut?.Invoke(obj: "frame=150");
+                    onStdOut?.Invoke(obj: "fps=60");
+                    onStdOut?.Invoke(obj: "speed=2.0x");
+                    onStdOut?.Invoke(obj: "progress=end");
                     return Task.FromResult(
-                        new ProcessResult(
+                        result: new ProcessResult(
                             ExitCode: 0,
                             StdOut: "",
                             StdErr: "",
@@ -517,18 +520,18 @@ public class HardwareBenchmarkTests
             );
 
         Mock<IHardwareCapabilities> hardware = new();
-        hardware.Setup(h => h.Gpus).Returns([]);
+        hardware.Setup(expression: h => h.Gpus).Returns(value: []);
 
         Mock<ISpeedIndexStore> store = new();
 
-        HardwareBenchmark sut = NewBenchmark(hardware.Object, runner.Object, store.Object);
+        HardwareBenchmark sut = NewBenchmark(hardware: hardware.Object, processRunner: runner.Object, store: store.Object);
 
-        SpeedIndex index = await sut.CalibrateAsync(CancellationToken.None);
+        SpeedIndex index = await sut.CalibrateAsync(ct: CancellationToken.None);
 
         index.Measurements.Should().NotBeEmpty();
-        index.Measurements.Values.Should().AllSatisfy(m => m.Fps.Should().Be(60));
-        index.Measurements.Values.Should().AllSatisfy(m => m.SpeedMultiplier.Should().Be(2.0));
-        store.Verify(s => s.Save(It.IsAny<SpeedIndex>()), Times.Once);
+        index.Measurements.Values.Should().AllSatisfy(expected: m => m.Fps.Should().Be(expected: 60));
+        index.Measurements.Values.Should().AllSatisfy(expected: m => m.SpeedMultiplier.Should().Be(expected: 2.0));
+        store.Verify(expression: s => s.Save(It.IsAny<SpeedIndex>()), times: Times.Once);
     }
 
     [Fact]
@@ -536,7 +539,7 @@ public class HardwareBenchmarkTests
     {
         Mock<IProcessRunner> runner = new();
         runner
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -547,8 +550,8 @@ public class HardwareBenchmarkTests
                 )
             )
             .Returns(
-                Task.FromResult(
-                    new ProcessResult(
+                value: Task.FromResult(
+                    result: new ProcessResult(
                         ExitCode: 1,
                         StdOut: "",
                         StdErr: "boom",
@@ -558,12 +561,12 @@ public class HardwareBenchmarkTests
             );
 
         Mock<IHardwareCapabilities> hardware = new();
-        hardware.Setup(h => h.Gpus).Returns([]);
+        hardware.Setup(expression: h => h.Gpus).Returns(value: []);
         Mock<ISpeedIndexStore> store = new();
 
-        HardwareBenchmark sut = NewBenchmark(hardware.Object, runner.Object, store.Object);
+        HardwareBenchmark sut = NewBenchmark(hardware: hardware.Object, processRunner: runner.Object, store: store.Object);
 
-        SpeedIndex index = await sut.CalibrateAsync(CancellationToken.None);
+        SpeedIndex index = await sut.CalibrateAsync(ct: CancellationToken.None);
 
         index.Measurements.Should().BeEmpty();
     }
@@ -572,8 +575,8 @@ public class HardwareBenchmarkTests
     public void NeedsRecalibration_EmptyCache_ReturnsTrue()
     {
         Mock<ISpeedIndexStore> store = new();
-        store.Setup(s => s.Load()).Returns((SpeedIndex?)null);
-        store.Setup(s => s.LastCalibratedAt).Returns((DateTime?)null);
+        store.Setup(expression: s => s.Load()).Returns(value: (SpeedIndex?)null);
+        store.Setup(expression: s => s.LastCalibratedAt).Returns(value: (DateTime?)null);
 
         HardwareBenchmark sut = NewBenchmark(store: store.Object);
 
@@ -585,17 +588,17 @@ public class HardwareBenchmarkTests
     {
         Mock<ISpeedIndexStore> store = new();
         SpeedIndex index = new(
-            new()
+            Measurements: new()
             {
-                [new(VideoCodecType.H264, "libx264", 1920, null)] = new(
-                    60,
-                    2.0,
-                    DateTime.UtcNow.AddDays(-60)
+                [key: new(Codec: VideoCodecType.H264, Encoder: "libx264", Width: 1920, DeviceName: null)] = new(
+                    Fps: 60,
+                    SpeedMultiplier: 2.0,
+                    MeasuredAt: DateTime.UtcNow.AddDays(value: -60)
                 ),
             }
         );
-        store.Setup(s => s.Load()).Returns(index);
-        store.Setup(s => s.LastCalibratedAt).Returns(DateTime.UtcNow.AddDays(-60));
+        store.Setup(expression: s => s.Load()).Returns(value: index);
+        store.Setup(expression: s => s.LastCalibratedAt).Returns(value: DateTime.UtcNow.AddDays(value: -60));
 
         HardwareBenchmark sut = NewBenchmark(store: store.Object);
 
@@ -607,23 +610,23 @@ public class HardwareBenchmarkTests
     {
         Mock<ISpeedIndexStore> store = new();
         SpeedIndex index = new(
-            new()
+            Measurements: new()
             {
-                [new(VideoCodecType.H264, "libx264", 1920, null)] = new(
-                    60,
-                    2.0,
-                    DateTime.UtcNow.AddDays(-1)
+                [key: new(Codec: VideoCodecType.H264, Encoder: "libx264", Width: 1920, DeviceName: null)] = new(
+                    Fps: 60,
+                    SpeedMultiplier: 2.0,
+                    MeasuredAt: DateTime.UtcNow.AddDays(value: -1)
                 ),
             }
         );
-        store.Setup(s => s.Load()).Returns(index);
-        store.Setup(s => s.LastCalibratedAt).Returns(DateTime.UtcNow.AddDays(-1));
+        store.Setup(expression: s => s.Load()).Returns(value: index);
+        store.Setup(expression: s => s.LastCalibratedAt).Returns(value: DateTime.UtcNow.AddDays(value: -1));
         // Fresh cache means the schema version also matches the current
         // build's BenchmarkSchemaVersion — without this the version-mismatch
         // branch fires and forces recalibration regardless of calendar age.
         store
-            .Setup(s => s.LoadedSchemaVersion)
-            .Returns(HardwareBenchmark.BenchmarkSchemaVersion);
+            .Setup(expression: s => s.LoadedSchemaVersion)
+            .Returns(value: HardwareBenchmark.BenchmarkSchemaVersion);
 
         HardwareBenchmark sut = NewBenchmark(store: store.Object);
 
@@ -639,18 +642,18 @@ public class HardwareBenchmarkTests
         // calendar grace window has not elapsed.
         Mock<ISpeedIndexStore> store = new();
         SpeedIndex index = new(
-            new()
+            Measurements: new()
             {
-                [new(VideoCodecType.H264, "libx264", 1920, null)] = new(
-                    60,
-                    2.0,
-                    DateTime.UtcNow.AddHours(-1)
+                [key: new(Codec: VideoCodecType.H264, Encoder: "libx264", Width: 1920, DeviceName: null)] = new(
+                    Fps: 60,
+                    SpeedMultiplier: 2.0,
+                    MeasuredAt: DateTime.UtcNow.AddHours(value: -1)
                 ),
             }
         );
-        store.Setup(s => s.Load()).Returns(index);
-        store.Setup(s => s.LastCalibratedAt).Returns(DateTime.UtcNow.AddHours(-1));
-        store.Setup(s => s.LoadedSchemaVersion).Returns(0);
+        store.Setup(expression: s => s.Load()).Returns(value: index);
+        store.Setup(expression: s => s.LastCalibratedAt).Returns(value: DateTime.UtcNow.AddHours(value: -1));
+        store.Setup(expression: s => s.LoadedSchemaVersion).Returns(value: 0);
 
         HardwareBenchmark sut = NewBenchmark(store: store.Object);
 
@@ -666,18 +669,18 @@ public class HardwareBenchmarkTests
         // numbers.
         Mock<ISpeedIndexStore> store = new();
         SpeedIndex index = new(
-            new()
+            Measurements: new()
             {
-                [new(VideoCodecType.H264, "libx264", 1920, null)] = new(
-                    60,
-                    2.0,
-                    DateTime.UtcNow.AddHours(-1)
+                [key: new(Codec: VideoCodecType.H264, Encoder: "libx264", Width: 1920, DeviceName: null)] = new(
+                    Fps: 60,
+                    SpeedMultiplier: 2.0,
+                    MeasuredAt: DateTime.UtcNow.AddHours(value: -1)
                 ),
             }
         );
-        store.Setup(s => s.Load()).Returns(index);
-        store.Setup(s => s.LastCalibratedAt).Returns(DateTime.UtcNow.AddHours(-1));
-        store.Setup(s => s.LoadedSchemaVersion).Returns((int?)null);
+        store.Setup(expression: s => s.Load()).Returns(value: index);
+        store.Setup(expression: s => s.LastCalibratedAt).Returns(value: DateTime.UtcNow.AddHours(value: -1));
+        store.Setup(expression: s => s.LoadedSchemaVersion).Returns(value: (int?)null);
 
         HardwareBenchmark sut = NewBenchmark(store: store.Object);
 
@@ -695,20 +698,20 @@ public class HardwareBenchmarkTests
     )
     {
         Mock<IHardwareCapabilities> hw = new();
-        hw.Setup(h => h.Gpus).Returns([]);
+        hw.Setup(expression: h => h.Gpus).Returns(value: []);
         IHardwareCapabilities hwImpl = hardware ?? hw.Object;
 
         IProcessRunner runner =
-            processRunner ?? new Mock<IProcessRunner>(MockBehavior.Loose).Object;
+            processRunner ?? new Mock<IProcessRunner>(behavior: MockBehavior.Loose).Object;
         ISpeedIndexStore storeImpl = store ?? new Mock<ISpeedIndexStore>().Object;
 
         return new(
-            new(),
-            hwImpl,
-            runner,
-            storeImpl,
-            new() { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
-            NullLogger<HardwareBenchmark>.Instance
+            codecRegistry: new(),
+            hardware: hwImpl,
+            processRunner: runner,
+            store: storeImpl,
+            options: new() { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
+            logger: NullLogger<HardwareBenchmark>.Instance
         );
     }
 
@@ -719,7 +722,7 @@ public class HardwareBenchmarkTests
             Presets: ["ultrafast", "fast", "medium", "slow", "veryslow"],
             Profiles: ["high"],
             Levels: ["4.1"],
-            QualityRange: new(0, 51, 23),
+            QualityRange: new(Min: 0, Max: 51, Default: 23),
             SupportedRateControl: [RateControlMode.Crf],
             Supports10Bit: true,
             SupportsHdr: false,
@@ -729,7 +732,7 @@ public class HardwareBenchmarkTests
         );
 
     private static CalibrationTarget SoftwareTarget(EncoderInfo encoder) =>
-        new(VideoCodecType.H264, encoder, Device: null, VendorIndex: 0);
+        new(Codec: VideoCodecType.H264, Encoder: encoder, Device: null, VendorIndex: 0);
 
     private static CalibrationTarget HardwareTarget(
         EncoderInfo encoder,
@@ -744,6 +747,6 @@ public class HardwareBenchmarkTests
             MaxEncoderSessions: 12,
             SupportedCodecs: [VideoCodecType.H264, VideoCodecType.H265]
         );
-        return new(VideoCodecType.H264, encoder, device, vendorIndex);
+        return new(Codec: VideoCodecType.H264, Encoder: encoder, Device: device, VendorIndex: vendorIndex);
     }
 }

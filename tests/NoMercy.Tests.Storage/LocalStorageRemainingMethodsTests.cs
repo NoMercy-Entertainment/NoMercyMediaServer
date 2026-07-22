@@ -24,7 +24,7 @@ namespace NoMercy.Tests.Storage;
 /// against a REAL temp directory — this facade's whole job is talking to
 /// the OS filesystem, so a mock of that filesystem would not prove it works.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class LocalStorageRemainingMethodsTests : IDisposable
 {
     private readonly string _root;
@@ -34,17 +34,17 @@ public sealed class LocalStorageRemainingMethodsTests : IDisposable
 
     public LocalStorageRemainingMethodsTests()
     {
-        _root = Path.Combine(Path.GetTempPath(), $"nm-lsrm-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_root);
-        _guard = new([_root], _driver);
-        _storage = new(_driver, _guard);
+        _root = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-lsrm-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(path: _root);
+        _guard = new(allowedRoots: [_root], driver: _driver);
+        _storage = new(driver: _driver, guard: _guard);
     }
 
     public void Dispose()
     {
         try
         {
-            Directory.Delete(_root, recursive: true);
+            Directory.Delete(path: _root, recursive: true);
         }
         catch
         {
@@ -55,96 +55,96 @@ public sealed class LocalStorageRemainingMethodsTests : IDisposable
     [Fact]
     public void Constructor_rejects_null_driver()
     {
-        Action act = () => new LocalStorage(null!, _guard);
+        Action act = () => new LocalStorage(driver: null!, guard: _guard);
 
-        act.Should().Throw<ArgumentNullException>().WithParameterName("driver");
+        act.Should().Throw<ArgumentNullException>().WithParameterName(paramName: "driver");
     }
 
     [Fact]
     public void Constructor_rejects_null_guard()
     {
-        Action act = () => new LocalStorage(_driver, null!);
+        Action act = () => new LocalStorage(driver: _driver, guard: null!);
 
-        act.Should().Throw<ArgumentNullException>().WithParameterName("guard");
+        act.Should().Throw<ArgumentNullException>().WithParameterName(paramName: "guard");
     }
 
     [Fact]
     public async Task OpenReadAsync_returns_a_stream_over_the_real_file()
     {
-        File.WriteAllBytes(Path.Combine(_root, "clip.bin"), [1, 2, 3]);
+        File.WriteAllBytes(path: Path.Combine(path1: _root, path2: "clip.bin"), bytes: [1, 2, 3]);
 
         await using Stream stream = await _storage.OpenReadAsync(
-            "clip.bin",
-            CancellationToken.None
+            path: "clip.bin",
+            ct: CancellationToken.None
         );
         byte[] buffer = new byte[3];
-        await stream.ReadExactlyAsync(buffer);
+        await stream.ReadExactlyAsync(buffer: buffer);
 
-        buffer.Should().Equal(1, 2, 3);
+        buffer.Should().Equal(elements: [1, 2, 3]);
     }
 
     [Fact]
     public void Size_returns_real_file_length()
     {
-        File.WriteAllBytes(Path.Combine(_root, "sized.bin"), new byte[777]);
+        File.WriteAllBytes(path: Path.Combine(path1: _root, path2: "sized.bin"), bytes: new byte[777]);
 
-        _storage.Size("sized.bin").Should().Be(777);
+        _storage.Size(path: "sized.bin").Should().Be(expected: 777);
     }
 
     [Fact]
     public void LastModified_reflects_a_recent_real_write()
     {
-        File.WriteAllText(Path.Combine(_root, "recent.txt"), "x");
+        File.WriteAllText(path: Path.Combine(path1: _root, path2: "recent.txt"), contents: "x");
 
         _storage
-            .LastModified("recent.txt")
+            .LastModified(path: "recent.txt")
             .UtcDateTime.Should()
-            .BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
+            .BeCloseTo(nearbyTime: DateTime.UtcNow, precision: TimeSpan.FromMinutes(minutes: 1));
     }
 
     [Fact]
     public void OpenRead_sync_returns_a_readable_stream_over_the_real_file()
     {
-        File.WriteAllBytes(Path.Combine(_root, "readme.bin"), [9, 8, 7]);
+        File.WriteAllBytes(path: Path.Combine(path1: _root, path2: "readme.bin"), bytes: [9, 8, 7]);
 
-        using Stream stream = _storage.OpenRead("readme.bin");
+        using Stream stream = _storage.OpenRead(path: "readme.bin");
         byte[] buffer = new byte[3];
-        stream.ReadExactly(buffer);
+        stream.ReadExactly(buffer: buffer);
 
-        buffer.Should().Equal(9, 8, 7);
+        buffer.Should().Equal(elements: [9, 8, 7]);
     }
 
     [Fact]
     public void OpenWrite_sync_creates_parent_directories_and_writes_real_bytes()
     {
-        using (Stream stream = _storage.OpenWrite("deep/nested/out.bin", overwrite: true))
-            stream.Write([4, 5, 6], 0, 3);
+        using (Stream stream = _storage.OpenWrite(path: "deep/nested/out.bin", overwrite: true))
+            stream.Write(buffer: [4, 5, 6], offset: 0, count: 3);
 
-        File.ReadAllBytes(Path.Combine(_root, "deep", "nested", "out.bin")).Should().Equal(4, 5, 6);
+        File.ReadAllBytes(path: Path.Combine(path1: _root, path2: "deep", path3: "nested", path4: "out.bin")).Should().Equal(elements: [4, 5, 6]);
     }
 
     [Fact]
     public async Task MoveDirectoryAsync_moves_a_real_directory_tree()
     {
-        Directory.CreateDirectory(Path.Combine(_root, "olddir"));
-        File.WriteAllText(Path.Combine(_root, "olddir", "f.txt"), "x");
+        Directory.CreateDirectory(path: Path.Combine(path1: _root, path2: "olddir"));
+        File.WriteAllText(path: Path.Combine(path1: _root, path2: "olddir", path3: "f.txt"), contents: "x");
 
-        await _storage.MoveDirectoryAsync("olddir", "newdir", CancellationToken.None);
+        await _storage.MoveDirectoryAsync(from: "olddir", to: "newdir", ct: CancellationToken.None);
 
-        Directory.Exists(Path.Combine(_root, "olddir")).Should().BeFalse();
-        File.Exists(Path.Combine(_root, "newdir", "f.txt")).Should().BeTrue();
+        Directory.Exists(path: Path.Combine(path1: _root, path2: "olddir")).Should().BeFalse();
+        File.Exists(path: Path.Combine(path1: _root, path2: "newdir", path3: "f.txt")).Should().BeTrue();
     }
 
     [Fact]
     public void MoveDirectory_sync_moves_a_real_directory_tree()
     {
-        Directory.CreateDirectory(Path.Combine(_root, "olddir2"));
-        File.WriteAllText(Path.Combine(_root, "olddir2", "f.txt"), "x");
+        Directory.CreateDirectory(path: Path.Combine(path1: _root, path2: "olddir2"));
+        File.WriteAllText(path: Path.Combine(path1: _root, path2: "olddir2", path3: "f.txt"), contents: "x");
 
-        _storage.MoveDirectory("olddir2", "newdir2");
+        _storage.MoveDirectory(from: "olddir2", to: "newdir2");
 
-        Directory.Exists(Path.Combine(_root, "olddir2")).Should().BeFalse();
-        File.Exists(Path.Combine(_root, "newdir2", "f.txt")).Should().BeTrue();
+        Directory.Exists(path: Path.Combine(path1: _root, path2: "olddir2")).Should().BeFalse();
+        File.Exists(path: Path.Combine(path1: _root, path2: "newdir2", path3: "f.txt")).Should().BeTrue();
     }
 
     [Fact]
@@ -155,22 +155,22 @@ public sealed class LocalStorageRemainingMethodsTests : IDisposable
         // own entries (some backends self-list the directory node) must map
         // to the empty string — the canonical "this is the root" scope-
         // relative path — not a leaked absolute path or a stray "/".
-        Mock<IStorageDriver> driver = new(MockBehavior.Loose);
-        driver.Setup(d => d.GetFullPath(It.IsAny<string>())).Returns<string>(Path.GetFullPath);
-        driver.Setup(d => d.ResolveLinkTarget(It.IsAny<string>())).Returns((string?)null);
+        Mock<IStorageDriver> driver = new(behavior: MockBehavior.Loose);
+        driver.Setup(expression: d => d.GetFullPath(It.IsAny<string>())).Returns<string>(valueFunction: Path.GetFullPath);
+        driver.Setup(expression: d => d.ResolveLinkTarget(It.IsAny<string>())).Returns(value: (string?)null);
         driver
-            .Setup(d =>
+            .Setup(expression: d =>
                 d.EnumerateEntries(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<SearchOption>())
             )
-            .Returns([new StorageEntryInfo(_root, true, 0L, DateTime.UtcNow)]);
-        StoragePathGuard guard = new([_root], driver.Object);
-        LocalStorage storage = new(driver.Object, guard);
+            .Returns(value: [new StorageEntryInfo(Path: _root, IsDirectory: true, Size: 0L, LastWriteUtc: DateTime.UtcNow)]);
+        StoragePathGuard guard = new(allowedRoots: [_root], driver: driver.Object);
+        LocalStorage storage = new(driver: driver.Object, guard: guard);
 
-        IReadOnlyList<StorageEntry> entries = storage.List("", null, recursive: false);
+        IReadOnlyList<StorageEntry> entries = storage.List(path: "", pattern: null, recursive: false);
 
         entries.Should().ContainSingle();
-        entries[0]
+        entries[index: 0]
             .Path.Should()
-            .Be(string.Empty, "the root entry itself must map to the empty scope-relative path");
+            .Be(expected: string.Empty, because: "the root entry itself must map to the empty scope-relative path");
     }
 }

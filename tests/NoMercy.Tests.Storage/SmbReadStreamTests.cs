@@ -22,7 +22,7 @@ namespace NoMercy.Tests.Storage;
 /// reads, EOF detection, error propagation, and that Dispose always closes
 /// the handle and tears down the session even when CloseFile fails.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public sealed class SmbReadStreamTests
 {
     private static SmbSession NewSession(Mock<ISMBFileStore> store) =>
@@ -47,7 +47,7 @@ public sealed class SmbReadStreamTests
         Mock<ISMBFileStore> store = new();
         int callIndex = 0;
         store
-            .Setup(s =>
+            .Setup(expression: s =>
                 s.ReadFile(
                     out It.Ref<byte[]>.IsAny,
                     It.IsAny<object>(),
@@ -56,7 +56,7 @@ public sealed class SmbReadStreamTests
                 )
             )
             .Returns(
-                (InvokeReadFile)(
+                valueFunction: (InvokeReadFile)(
                     (out byte[] data, object _, long _, int _) =>
                     {
                         if (callIndex++ == 0)
@@ -69,18 +69,18 @@ public sealed class SmbReadStreamTests
                     }
                 )
             );
-        SmbSession session = NewSession(store);
-        using SmbReadStream stream = new(session, new object(), "/file.bin");
+        SmbSession session = NewSession(store: store);
+        using SmbReadStream stream = new(session: session, handle: new object(), path: "/file.bin");
 
         byte[] buffer = new byte[content.Length];
-        int read = stream.Read(buffer, 0, buffer.Length);
-        int readAtEof = stream.Read(buffer, 0, buffer.Length);
+        int read = stream.Read(buffer: buffer, offset: 0, count: buffer.Length);
+        int readAtEof = stream.Read(buffer: buffer, offset: 0, count: buffer.Length);
 
-        read.Should().Be(content.Length);
-        buffer.Should().Equal(content);
+        read.Should().Be(expected: content.Length);
+        buffer.Should().Equal(elements: content);
         readAtEof
             .Should()
-            .Be(0, "a second read past EOF must return 0, not re-issue ReadFile forever");
+            .Be(expected: 0, because: "a second read past EOF must return 0, not re-issue ReadFile forever");
     }
 
     [Fact]
@@ -90,7 +90,7 @@ public sealed class SmbReadStreamTests
         Mock<ISMBFileStore> store = new();
         int callIndex = 0;
         store
-            .Setup(s =>
+            .Setup(expression: s =>
                 s.ReadFile(
                     out It.Ref<byte[]>.IsAny,
                     It.IsAny<object>(),
@@ -99,7 +99,7 @@ public sealed class SmbReadStreamTests
                 )
             )
             .Returns(
-                (InvokeReadFile)(
+                valueFunction: (InvokeReadFile)(
                     (out byte[] data, object _, long _, int _) =>
                     {
                         if (callIndex++ == 0)
@@ -112,28 +112,28 @@ public sealed class SmbReadStreamTests
                     }
                 )
             );
-        SmbSession session = NewSession(store);
-        using SmbReadStream stream = new(session, new object(), "/file.bin");
+        SmbSession session = NewSession(store: store);
+        using SmbReadStream stream = new(session: session, handle: new object(), path: "/file.bin");
 
         byte[] small = new byte[2];
         List<byte> collected = [];
         int n;
-        while ((n = stream.Read(small, 0, small.Length)) > 0)
-            collected.AddRange(small.AsSpan(0, n).ToArray());
+        while ((n = stream.Read(buffer: small, offset: 0, count: small.Length)) > 0)
+            collected.AddRange(collection: small.AsSpan(start: 0, length: n).ToArray());
 
         collected
             .Should()
-            .Equal(content, "carry-over must reassemble the full chunk across undersized reads");
+            .Equal(expected: content, because: "carry-over must reassemble the full chunk across undersized reads");
         store.Verify(
-            s =>
+            expression: s =>
                 s.ReadFile(
                     out It.Ref<byte[]>.IsAny,
                     It.IsAny<object>(),
                     It.IsAny<long>(),
                     It.IsAny<int>()
                 ),
-            Times.Exactly(2),
-            "only one native ReadFile should be needed to serve a chunk that fits, plus one to detect EOF"
+            times: Times.Exactly(callCount: 2),
+            failMessage: "only one native ReadFile should be needed to serve a chunk that fits, plus one to detect EOF"
         );
     }
 
@@ -141,19 +141,19 @@ public sealed class SmbReadStreamTests
     public void Read_with_zero_count_returns_zero_without_calling_ReadFile()
     {
         Mock<ISMBFileStore> store = new();
-        SmbSession session = NewSession(store);
-        using SmbReadStream stream = new(session, new object(), "/file.bin");
+        SmbSession session = NewSession(store: store);
+        using SmbReadStream stream = new(session: session, handle: new object(), path: "/file.bin");
 
-        stream.Read([], 0, 0).Should().Be(0);
+        stream.Read(buffer: [], offset: 0, count: 0).Should().Be(expected: 0);
         store.Verify(
-            s =>
+            expression: s =>
                 s.ReadFile(
                     out It.Ref<byte[]>.IsAny,
                     It.IsAny<object>(),
                     It.IsAny<long>(),
                     It.IsAny<int>()
                 ),
-            Times.Never
+            times: Times.Never
         );
     }
 
@@ -169,16 +169,16 @@ public sealed class SmbReadStreamTests
         Mock<ISMBFileStore> store = new();
         byte[] nonEmptyChunk = [0x01];
         store
-            .Setup(s =>
+            .Setup(expression: s =>
                 s.ReadFile(out nonEmptyChunk, It.IsAny<object>(), It.IsAny<long>(), It.IsAny<int>())
             )
-            .Returns(NTStatus.STATUS_ACCESS_DENIED);
-        SmbSession session = NewSession(store);
-        using SmbReadStream stream = new(session, new object(), "/secret.bin");
+            .Returns(value: NTStatus.STATUS_ACCESS_DENIED);
+        SmbSession session = NewSession(store: store);
+        using SmbReadStream stream = new(session: session, handle: new object(), path: "/secret.bin");
 
-        Action act = () => _ = stream.Read(new byte[4], 0, 4);
+        Action act = () => _ = stream.Read(buffer: new byte[4], offset: 0, count: 4);
 
-        act.Should().Throw<IOException>().WithMessage("*STATUS_ACCESS_DENIED*");
+        act.Should().Throw<IOException>().WithMessage(expectedWildcardPattern: "*STATUS_ACCESS_DENIED*");
     }
 
     [Fact]
@@ -188,7 +188,7 @@ public sealed class SmbReadStreamTests
         Mock<ISMBFileStore> store = new();
         int callIndex = 0;
         store
-            .Setup(s =>
+            .Setup(expression: s =>
                 s.ReadFile(
                     out It.Ref<byte[]>.IsAny,
                     It.IsAny<object>(),
@@ -197,7 +197,7 @@ public sealed class SmbReadStreamTests
                 )
             )
             .Returns(
-                (InvokeReadFile)(
+                valueFunction: (InvokeReadFile)(
                     (out byte[] data, object _, long _, int _) =>
                     {
                         if (callIndex++ == 0)
@@ -210,26 +210,26 @@ public sealed class SmbReadStreamTests
                     }
                 )
             );
-        SmbSession session = NewSession(store);
-        using SmbReadStream stream = new(session, new object(), "/file.bin");
+        SmbSession session = NewSession(store: store);
+        using SmbReadStream stream = new(session: session, handle: new object(), path: "/file.bin");
 
         byte[] buffer = new byte[3];
-        int read = await stream.ReadAsync(buffer, 0, 3, CancellationToken.None);
+        int read = await stream.ReadAsync(buffer: buffer, offset: 0, count: 3, ct: CancellationToken.None);
 
-        read.Should().Be(3);
-        buffer.Should().Equal(content);
+        read.Should().Be(expected: 3);
+        buffer.Should().Equal(elements: content);
     }
 
     [Fact]
     public async Task ReadAsync_byte_array_overload_honors_cancellation()
     {
         Mock<ISMBFileStore> store = new();
-        SmbSession session = NewSession(store);
-        using SmbReadStream stream = new(session, new object(), "/file.bin");
+        SmbSession session = NewSession(store: store);
+        using SmbReadStream stream = new(session: session, handle: new object(), path: "/file.bin");
         using CancellationTokenSource cts = new();
         cts.Cancel();
 
-        Func<Task> act = async () => _ = await stream.ReadAsync(new byte[4], 0, 4, cts.Token);
+        Func<Task> act = async () => _ = await stream.ReadAsync(buffer: new byte[4], offset: 0, count: 4, ct: cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
@@ -241,7 +241,7 @@ public sealed class SmbReadStreamTests
         Mock<ISMBFileStore> store = new();
         int callIndex = 0;
         store
-            .Setup(s =>
+            .Setup(expression: s =>
                 s.ReadFile(
                     out It.Ref<byte[]>.IsAny,
                     It.IsAny<object>(),
@@ -250,7 +250,7 @@ public sealed class SmbReadStreamTests
                 )
             )
             .Returns(
-                (InvokeReadFile)(
+                valueFunction: (InvokeReadFile)(
                     (out byte[] data, object _, long _, int _) =>
                     {
                         if (callIndex++ == 0)
@@ -263,26 +263,26 @@ public sealed class SmbReadStreamTests
                     }
                 )
             );
-        SmbSession session = NewSession(store);
-        using SmbReadStream stream = new(session, new object(), "/file.bin");
+        SmbSession session = NewSession(store: store);
+        using SmbReadStream stream = new(session: session, handle: new object(), path: "/file.bin");
 
         byte[] buffer = new byte[3];
-        int read = await stream.ReadAsync(buffer.AsMemory());
+        int read = await stream.ReadAsync(buffer: buffer.AsMemory());
 
-        read.Should().Be(3);
-        buffer.Should().Equal(content);
+        read.Should().Be(expected: 3);
+        buffer.Should().Equal(elements: content);
     }
 
     [Fact]
     public void ReadAsync_memory_overload_honors_cancellation()
     {
         Mock<ISMBFileStore> store = new();
-        SmbSession session = NewSession(store);
-        using SmbReadStream stream = new(session, new object(), "/file.bin");
+        SmbSession session = NewSession(store: store);
+        using SmbReadStream stream = new(session: session, handle: new object(), path: "/file.bin");
         using CancellationTokenSource cts = new();
         cts.Cancel();
 
-        Func<Task> act = async () => _ = await stream.ReadAsync(new byte[4].AsMemory(), cts.Token);
+        Func<Task> act = async () => _ = await stream.ReadAsync(buffer: new byte[4].AsMemory(), ct: cts.Token);
 
         act.Should().ThrowAsync<OperationCanceledException>();
     }
@@ -291,8 +291,8 @@ public sealed class SmbReadStreamTests
     public void Capability_flags_and_unsupported_members_match_a_forward_only_stream()
     {
         Mock<ISMBFileStore> store = new();
-        SmbSession session = NewSession(store);
-        using SmbReadStream stream = new(session, new object(), "/file.bin");
+        SmbSession session = NewSession(store: store);
+        using SmbReadStream stream = new(session: session, handle: new object(), path: "/file.bin");
 
         stream.CanRead.Should().BeTrue();
         stream.CanSeek.Should().BeFalse();
@@ -301,9 +301,9 @@ public sealed class SmbReadStreamTests
         ((Action)(() => _ = stream.Length)).Should().Throw<NotSupportedException>();
         ((Action)(() => _ = stream.Position)).Should().Throw<NotSupportedException>();
         ((Action)(() => stream.Position = 0)).Should().Throw<NotSupportedException>();
-        ((Action)(() => stream.Seek(0, SeekOrigin.Begin))).Should().Throw<NotSupportedException>();
-        ((Action)(() => stream.SetLength(1))).Should().Throw<NotSupportedException>();
-        ((Action)(() => stream.Write([1], 0, 1))).Should().Throw<NotSupportedException>();
+        ((Action)(() => stream.Seek(offset: 0, origin: SeekOrigin.Begin))).Should().Throw<NotSupportedException>();
+        ((Action)(() => stream.SetLength(value: 1))).Should().Throw<NotSupportedException>();
+        ((Action)(() => stream.Write(buffer: [1], offset: 0, count: 1))).Should().Throw<NotSupportedException>();
         ((Action)(() => stream.Flush())).Should().NotThrow();
     }
 
@@ -311,19 +311,19 @@ public sealed class SmbReadStreamTests
     public void Dispose_closes_the_handle_and_disposes_the_session()
     {
         Mock<ISMBFileStore> store = new();
-        store.Setup(s => s.CloseFile(It.IsAny<object>())).Returns(NTStatus.STATUS_SUCCESS);
-        store.Setup(s => s.Disconnect()).Returns(NTStatus.STATUS_SUCCESS);
-        SmbSession session = NewSession(store);
+        store.Setup(expression: s => s.CloseFile(It.IsAny<object>())).Returns(value: NTStatus.STATUS_SUCCESS);
+        store.Setup(expression: s => s.Disconnect()).Returns(value: NTStatus.STATUS_SUCCESS);
+        SmbSession session = NewSession(store: store);
         object handle = new();
-        SmbReadStream stream = new(session, handle, "/file.bin");
+        SmbReadStream stream = new(session: session, handle: handle, path: "/file.bin");
 
         stream.Dispose();
 
-        store.Verify(s => s.CloseFile(handle), Times.Once);
+        store.Verify(expression: s => s.CloseFile(handle), times: Times.Once);
         store.Verify(
-            s => s.Disconnect(),
-            Times.Once,
-            "the session must be torn down after the handle closes"
+            expression: s => s.Disconnect(),
+            times: Times.Once,
+            failMessage: "the session must be torn down after the handle closes"
         );
     }
 
@@ -331,21 +331,21 @@ public sealed class SmbReadStreamTests
     public void Dispose_disposes_the_session_even_when_CloseFile_throws()
     {
         Mock<ISMBFileStore> store = new();
-        store.Setup(s => s.CloseFile(It.IsAny<object>())).Throws<InvalidOperationException>();
-        store.Setup(s => s.Disconnect()).Returns(NTStatus.STATUS_SUCCESS);
-        SmbSession session = NewSession(store);
-        SmbReadStream stream = new(session, new object(), "/file.bin");
+        store.Setup(expression: s => s.CloseFile(It.IsAny<object>())).Throws<InvalidOperationException>();
+        store.Setup(expression: s => s.Disconnect()).Returns(value: NTStatus.STATUS_SUCCESS);
+        SmbSession session = NewSession(store: store);
+        SmbReadStream stream = new(session: session, handle: new object(), path: "/file.bin");
 
         Action act = () => stream.Dispose();
 
         act.Should()
             .Throw<InvalidOperationException>(
-                "CloseFile failures are not swallowed by the stream itself"
+                because: "CloseFile failures are not swallowed by the stream itself"
             );
         store.Verify(
-            s => s.Disconnect(),
-            Times.Once,
-            "the session must still be disposed via `finally` even though CloseFile threw"
+            expression: s => s.Disconnect(),
+            times: Times.Once,
+            failMessage: "the session must still be disposed via `finally` even though CloseFile threw"
         );
     }
 
@@ -353,18 +353,18 @@ public sealed class SmbReadStreamTests
     public void Dispose_is_idempotent()
     {
         Mock<ISMBFileStore> store = new();
-        store.Setup(s => s.CloseFile(It.IsAny<object>())).Returns(NTStatus.STATUS_SUCCESS);
-        store.Setup(s => s.Disconnect()).Returns(NTStatus.STATUS_SUCCESS);
-        SmbSession session = NewSession(store);
-        SmbReadStream stream = new(session, new object(), "/file.bin");
+        store.Setup(expression: s => s.CloseFile(It.IsAny<object>())).Returns(value: NTStatus.STATUS_SUCCESS);
+        store.Setup(expression: s => s.Disconnect()).Returns(value: NTStatus.STATUS_SUCCESS);
+        SmbSession session = NewSession(store: store);
+        SmbReadStream stream = new(session: session, handle: new object(), path: "/file.bin");
 
         stream.Dispose();
         stream.Dispose();
 
         store.Verify(
-            s => s.CloseFile(It.IsAny<object>()),
-            Times.Once,
-            "a second Dispose must not re-close the handle"
+            expression: s => s.CloseFile(It.IsAny<object>()),
+            times: Times.Once,
+            failMessage: "a second Dispose must not re-close the handle"
         );
     }
 }

@@ -16,21 +16,21 @@ namespace NoMercy.Providers.TMDB.Models.TV;
 
 public class TmdbTvShow : TmdbBase
 {
-    [JsonProperty("first_air_date")]
+    [JsonProperty(propertyName: "first_air_date")]
     public DateTime? FirstAirDate { get; set; }
 
-    [JsonProperty("genre_ids")]
+    [JsonProperty(propertyName: "genre_ids")]
     public int?[] GenreIds { get; set; } = [];
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("origin_country")]
+    [JsonProperty(propertyName: "origin_country")]
     public string[] OriginCountry { get; set; } = [];
 
-    [JsonProperty("original_name")]
+    [JsonProperty(propertyName: "original_name")]
     public string OriginalName { get; set; } = string.Empty;
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string MediaType { get; set; } = string.Empty;
 }

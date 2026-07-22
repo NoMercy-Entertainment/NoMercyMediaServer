@@ -16,58 +16,58 @@ namespace NoMercy.Tests.Encoder.Hardware;
 public class DriverFingerprintTests
 {
     private static GpuDriverInfo Nvidia(string driver = "31.0.15.4601") =>
-        new("Nvidia", "RTX 4090", driver, 0);
+        new(Vendor: "Nvidia", Model: "RTX 4090", DriverVersion: driver, Index: 0);
 
     private static GpuDriverInfo Intel(string driver = "31.0.101.2134") =>
-        new("Intel", "Arc A770", driver, 1);
+        new(Vendor: "Intel", Model: "Arc A770", DriverVersion: driver, Index: 1);
 
     [Fact]
     public void ComputeHash_SameInputs_ProducesStableHash()
     {
-        DriverFingerprint fp = new([Nvidia(), Intel()]);
+        DriverFingerprint fp = new(Gpus: [Nvidia(), Intel()]);
 
         string first = fp.ComputeHash();
         string second = fp.ComputeHash();
 
-        first.Should().Be(second);
+        first.Should().Be(expected: second);
     }
 
     [Fact]
     public void ComputeHash_OrderInsensitive_SameHashRegardlessOfGpuOrder()
     {
-        DriverFingerprint fp1 = new([Nvidia(), Intel()]);
-        DriverFingerprint fp2 = new([Intel(), Nvidia()]);
+        DriverFingerprint fp1 = new(Gpus: [Nvidia(), Intel()]);
+        DriverFingerprint fp2 = new(Gpus: [Intel(), Nvidia()]);
 
-        fp1.ComputeHash().Should().Be(fp2.ComputeHash());
+        fp1.ComputeHash().Should().Be(expected: fp2.ComputeHash());
     }
 
     [Fact]
     public void ComputeHash_ChangesWhenDriverVersionChanges()
     {
-        DriverFingerprint fp1 = new([Nvidia()]);
-        DriverFingerprint fp2 = new([Nvidia("31.0.15.5000")]);
+        DriverFingerprint fp1 = new(Gpus: [Nvidia()]);
+        DriverFingerprint fp2 = new(Gpus: [Nvidia(driver: "31.0.15.5000")]);
 
-        fp1.ComputeHash().Should().NotBe(fp2.ComputeHash());
+        fp1.ComputeHash().Should().NotBe(unexpected: fp2.ComputeHash());
     }
 
     [Fact]
     public void ComputeHash_ChangesWhenGpuAdded()
     {
-        DriverFingerprint fp1 = new([Nvidia()]);
-        DriverFingerprint fp2 = new([Nvidia(), Intel()]);
+        DriverFingerprint fp1 = new(Gpus: [Nvidia()]);
+        DriverFingerprint fp2 = new(Gpus: [Nvidia(), Intel()]);
 
-        fp1.ComputeHash().Should().NotBe(fp2.ComputeHash());
+        fp1.ComputeHash().Should().NotBe(unexpected: fp2.ComputeHash());
     }
 
     [Fact]
     public void ComputeHash_HandlesEmptyDriverVersion_ProducesStableHash()
     {
-        DriverFingerprint fp1 = new([new("Nvidia", "RTX 4090", string.Empty, 0)]);
-        DriverFingerprint fp2 = new([new("Nvidia", "RTX 4090", string.Empty, 0)]);
+        DriverFingerprint fp1 = new(Gpus: [new(Vendor: "Nvidia", Model: "RTX 4090", DriverVersion: string.Empty, Index: 0)]);
+        DriverFingerprint fp2 = new(Gpus: [new(Vendor: "Nvidia", Model: "RTX 4090", DriverVersion: string.Empty, Index: 0)]);
 
         string hash = fp1.ComputeHash();
 
         hash.Should().NotBeNullOrWhiteSpace();
-        hash.Should().Be(fp2.ComputeHash());
+        hash.Should().Be(expected: fp2.ComputeHash());
     }
 }

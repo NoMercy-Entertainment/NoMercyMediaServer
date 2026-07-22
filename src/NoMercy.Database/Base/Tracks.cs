@@ -17,9 +17,9 @@ namespace NoMercy.Database;
 
 public class VideoTracks : Timestamps
 {
-    [Column("Track")]
-    [StringLength(1024)]
-    [JsonProperty("tracks")]
+    [Column(name: "Track")]
+    [StringLength(maximumLength: 1024)]
+    [JsonProperty(propertyName: "tracks")]
     [JsonIgnore]
     // ReSharper disable once InconsistentNaming
     public string _tracks { get; set; } = string.Empty;
@@ -28,8 +28,8 @@ public class VideoTracks : Timestamps
     public VideoTrack[] Tracks
     {
         get =>
-            (_tracks != string.Empty ? JsonConvert.DeserializeObject<VideoTrack[]>(_tracks) : [])
+            (_tracks != string.Empty ? JsonConvert.DeserializeObject<VideoTrack[]>(value: _tracks) : [])
             ?? [];
-        set => _tracks = JsonConvert.SerializeObject(value);
+        set => _tracks = JsonConvert.SerializeObject(value: value);
     }
 }

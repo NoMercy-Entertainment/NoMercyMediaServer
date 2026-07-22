@@ -22,8 +22,8 @@ public class EncoderProcessRegistryTests
     {
         _registry.Register(jobId: 42, processId: 1234);
 
-        Assert.Equal([1234], _registry.GetProcessIds(42));
-        Assert.Contains(42, _registry.ActiveJobIds);
+        Assert.Equal(expected: [1234], actual: _registry.GetProcessIds(jobId: 42));
+        Assert.Contains(expected: 42, collection: _registry.ActiveJobIds);
     }
 
     [Fact]
@@ -32,7 +32,7 @@ public class EncoderProcessRegistryTests
         _registry.Register(jobId: 42, processId: 1234);
         _registry.Register(jobId: 42, processId: 1234);
 
-        Assert.Single(_registry.GetProcessIds(42));
+        Assert.Single(collection: _registry.GetProcessIds(jobId: 42));
     }
 
     [Fact]
@@ -41,10 +41,10 @@ public class EncoderProcessRegistryTests
         _registry.Register(jobId: 42, processId: 1234);
         _registry.Register(jobId: 42, processId: 5678);
 
-        IReadOnlyCollection<int> pids = _registry.GetProcessIds(42);
-        Assert.Equal(2, pids.Count);
-        Assert.Contains(1234, pids);
-        Assert.Contains(5678, pids);
+        IReadOnlyCollection<int> pids = _registry.GetProcessIds(jobId: 42);
+        Assert.Equal(expected: 2, actual: pids.Count);
+        Assert.Contains(expected: 1234, collection: pids);
+        Assert.Contains(expected: 5678, collection: pids);
     }
 
     [Fact]
@@ -53,7 +53,7 @@ public class EncoderProcessRegistryTests
         _registry.Register(jobId: 42, processId: 0);
         _registry.Register(jobId: 42, processId: -1);
 
-        Assert.Empty(_registry.GetProcessIds(42));
+        Assert.Empty(collection: _registry.GetProcessIds(jobId: 42));
     }
 
     [Fact]
@@ -62,11 +62,11 @@ public class EncoderProcessRegistryTests
         _registry.Register(jobId: 42, processId: 1234);
         _registry.Register(jobId: 42, processId: 5678);
 
-        _registry.Unregister(42, 1234);
+        _registry.Unregister(jobId: 42, processId: 1234);
 
-        IReadOnlyCollection<int> pids = _registry.GetProcessIds(42);
-        Assert.Single(pids);
-        Assert.Contains(5678, pids);
+        IReadOnlyCollection<int> pids = _registry.GetProcessIds(jobId: 42);
+        Assert.Single(collection: pids);
+        Assert.Contains(expected: 5678, collection: pids);
     }
 
     [Fact]
@@ -74,10 +74,10 @@ public class EncoderProcessRegistryTests
     {
         _registry.Register(jobId: 42, processId: 1234);
 
-        _registry.Unregister(42, 1234);
+        _registry.Unregister(jobId: 42, processId: 1234);
 
-        Assert.Empty(_registry.GetProcessIds(42));
-        Assert.DoesNotContain(42, _registry.ActiveJobIds);
+        Assert.Empty(collection: _registry.GetProcessIds(jobId: 42));
+        Assert.DoesNotContain(expected: 42, collection: _registry.ActiveJobIds);
     }
 
     [Fact]
@@ -86,15 +86,15 @@ public class EncoderProcessRegistryTests
         _registry.Register(jobId: 42, processId: 1234);
         _registry.Register(jobId: 42, processId: 5678);
 
-        _registry.UnregisterJob(42);
+        _registry.UnregisterJob(jobId: 42);
 
-        Assert.Empty(_registry.GetProcessIds(42));
+        Assert.Empty(collection: _registry.GetProcessIds(jobId: 42));
     }
 
     [Fact]
     public void GetProcessIds_UnknownJob_ReturnsEmpty()
     {
-        Assert.Empty(_registry.GetProcessIds(99));
+        Assert.Empty(collection: _registry.GetProcessIds(jobId: 99));
     }
 
     [Fact]
@@ -103,9 +103,9 @@ public class EncoderProcessRegistryTests
         _registry.Register(jobId: 1, processId: 100);
         _registry.Register(jobId: 2, processId: 200);
 
-        Assert.Equal([100], _registry.GetProcessIds(1));
-        Assert.Equal([200], _registry.GetProcessIds(2));
-        Assert.Equal(2, _registry.ActiveJobIds.Count);
+        Assert.Equal(expected: [100], actual: _registry.GetProcessIds(jobId: 1));
+        Assert.Equal(expected: [200], actual: _registry.GetProcessIds(jobId: 2));
+        Assert.Equal(expected: 2, actual: _registry.ActiveJobIds.Count);
     }
 
     [Fact]
@@ -117,9 +117,9 @@ public class EncoderProcessRegistryTests
         const int pidsPerTask = 50;
 
         Task[] tasks = Enumerable
-            .Range(0, taskCount)
-            .Select(taskIndex =>
-                Task.Run(() =>
+            .Range(start: 0, count: taskCount)
+            .Select(selector: taskIndex =>
+                Task.Run(action: () =>
                 {
                     for (int i = 0; i < pidsPerTask; i++)
                     {
@@ -130,8 +130,8 @@ public class EncoderProcessRegistryTests
             )
             .ToArray();
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks: tasks);
 
-        Assert.Equal(taskCount * pidsPerTask, _registry.GetProcessIds(1).Count);
+        Assert.Equal(expected: taskCount * pidsPerTask, actual: _registry.GetProcessIds(jobId: 1).Count);
     }
 }

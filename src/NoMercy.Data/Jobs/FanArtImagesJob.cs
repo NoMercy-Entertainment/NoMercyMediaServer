@@ -32,7 +32,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
     public ILoggerFactory LoggerFactory { get; set; } = null!;
 
     [JsonIgnore]
-    private ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
+    private ILogger Log => field ??= LoggerFactory.CreateLogger(type: GetType());
 
     public void InjectStorageServices(IServiceProvider serviceProvider)
     {
@@ -73,10 +73,10 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
     public async Task Handle()
     {
         if (MusicBrainzArtist is not null)
-            await StoreArtist(MusicBrainzArtist);
+            await StoreArtist(musicBrainzArtist: MusicBrainzArtist);
 
         if (MusicBrainzRelease is not null)
-            await StoreRelease(MusicBrainzRelease);
+            await StoreRelease(musicBrainzRelease: MusicBrainzRelease);
     }
 
     public async Task StoreArtist(MusicBrainzArtist musicBrainzArtist)
@@ -84,13 +84,13 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
         try
         {
             using FanArtMusicClient fanArtMusicClient = new();
-            FanArtArtistDetails? fanArt = await fanArtMusicClient.Artist(musicBrainzArtist.Id);
+            FanArtArtistDetails? fanArt = await fanArtMusicClient.Artist(id: musicBrainzArtist.Id);
             if (fanArt is null)
                 return;
 
             List<Image> thumbs = fanArt
                 .Thumbs.ToList()
-                .ConvertAll<Image>(image =>
+                .ConvertAll<Image>(converter: image =>
                     new()
                     {
                         AspectRatio = 1,
@@ -104,7 +104,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
 
             List<Image> logos = fanArt
                 .Logos.ToList()
-                .ConvertAll<Image>(image =>
+                .ConvertAll<Image>(converter: image =>
                     new()
                     {
                         AspectRatio = 1,
@@ -117,7 +117,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
                 );
             List<Image> banners = fanArt
                 .Banners.ToList()
-                .ConvertAll<Image>(image =>
+                .ConvertAll<Image>(converter: image =>
                     new()
                     {
                         AspectRatio = 1,
@@ -130,7 +130,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
                 );
             List<Image> hdLogos = fanArt
                 .HdLogos.ToList()
-                .ConvertAll<Image>(image =>
+                .ConvertAll<Image>(converter: image =>
                     new()
                     {
                         AspectRatio = 1,
@@ -143,7 +143,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
                 );
             List<Image> artistBackgrounds = fanArt
                 .Backgrounds.ToList()
-                .ConvertAll<Image>(image =>
+                .ConvertAll<Image>(converter: image =>
                     new()
                     {
                         AspectRatio = 1,
@@ -156,14 +156,14 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
                 );
 
             List<Image> images = thumbs
-                .Concat(logos)
-                .Concat(banners)
-                .Concat(hdLogos)
-                .Concat(artistBackgrounds)
+                .Concat(second: logos)
+                .Concat(second: banners)
+                .Concat(second: hdLogos)
+                .Concat(second: artistBackgrounds)
                 .ToList();
 
             await using MediaContext mediaContext = new();
-            Artist dbArtist = await mediaContext.Artists.FirstAsync(a =>
+            Artist dbArtist = await mediaContext.Artists.FirstAsync(predicate: a =>
                 a.Id == musicBrainzArtist.Id
             );
 
@@ -173,10 +173,10 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
             await mediaContext.SaveChangesAsync();
 
             await mediaContext
-                .Images.UpsertRange(images)
-                .On(v => new { v.FilePath, v.ArtistId })
+                .Images.UpsertRange(entities: images)
+                .On(match: v => new { v.FilePath, v.ArtistId })
                 .WhenMatched(
-                    (s, i) =>
+                    updater: (s, i) =>
                         new()
                         {
                             AspectRatio = i.AspectRatio,
@@ -193,9 +193,9 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
         }
         catch (Exception e)
         {
-            if (e.Message.Contains("404"))
+            if (e.Message.Contains(value: "404"))
                 return;
-            Log.LogTrace(e.Message);
+            Log.LogTrace(message: e.Message);
         }
     }
 
@@ -205,7 +205,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
         {
             using FanArtMusicClient fanArtMusicClient = new();
             FanArtAlbum? fanArt = await fanArtMusicClient.Album(
-                musicBrainzRelease.MusicBrainzReleaseGroup.Id
+                id: musicBrainzRelease.MusicBrainzReleaseGroup.Id
             );
             if (fanArt is null)
                 return;
@@ -215,7 +215,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
             foreach ((Guid albumId, Albums albums) in fanArt.Albums)
             {
                 covers.AddRange(
-                    albums.Cover.Select(image => new Image
+                    collection: albums.Cover.Select(selector: image => new Image
                     {
                         AspectRatio = 1,
                         Type = "cover",
@@ -228,7 +228,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
                 );
 
                 cdArts.AddRange(
-                    albums.CdArt.Select(image => new Image
+                    collection: albums.CdArt.Select(selector: image => new Image
                     {
                         AspectRatio = 1,
                         Type = "cdArt",
@@ -243,13 +243,13 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
 
             await using MediaContext mediaContext = new();
             ReleaseGroup dbRelease = await mediaContext
-                .ReleaseGroups.Include(a => a.AlbumReleaseGroup)
-                    .ThenInclude(a => a.Album)
-                .FirstAsync(a => a.Id == musicBrainzRelease.MusicBrainzReleaseGroup.Id);
+                .ReleaseGroups.Include(navigationPropertyPath: a => a.AlbumReleaseGroup)
+                    .ThenInclude(navigationPropertyPath: a => a.Album)
+                .FirstAsync(predicate: a => a.Id == musicBrainzRelease.MusicBrainzReleaseGroup.Id);
 
             IEnumerable<Image> images = covers
-                .Concat(cdArts)
-                .Where(image => dbRelease.AlbumReleaseGroup.Any(ar => ar.AlbumId == image.AlbumId));
+                .Concat(second: cdArts)
+                .Where(predicate: image => dbRelease.AlbumReleaseGroup.Any(predicate: ar => ar.AlbumId == image.AlbumId));
 
             Image? albumCover = covers.FirstOrDefault();
 
@@ -263,10 +263,10 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
             await mediaContext.SaveChangesAsync();
 
             await mediaContext
-                .Images.UpsertRange(images)
-                .On(v => new { v.FilePath, v.AlbumId })
+                .Images.UpsertRange(entities: images)
+                .On(match: v => new { v.FilePath, v.AlbumId })
                 .WhenMatched(
-                    (s, i) =>
+                    updater: (s, i) =>
                         new()
                         {
                             AspectRatio = i.AspectRatio,
@@ -284,9 +284,9 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
         }
         catch (Exception e)
         {
-            if (e.Message.Contains("404"))
+            if (e.Message.Contains(value: "404"))
                 return;
-            Log.LogTrace(e.Message);
+            Log.LogTrace(message: e.Message);
         }
     }
 }

@@ -19,10 +19,10 @@ namespace NoMercy.Api.Controllers.V1.Media.Subtitles.Dtos;
 /// <c>download_url</c> (equivalently <c>id</c>).
 /// </summary>
 public record SubtitleDownloadRequestDto(
-    [property: JsonProperty("type")] string Type,
-    [property: JsonProperty("id")] int Id,
-    [property: JsonProperty("video_file_id")] string? VideoFileId,
-    [property: JsonProperty("download_url")] string DownloadUrl,
-    [property: JsonProperty("language")] string Language,
-    [property: JsonProperty("format")] string? Format
+    [property: JsonProperty(propertyName: "type")] string Type,
+    [property: JsonProperty(propertyName: "id")] int Id,
+    [property: JsonProperty(propertyName: "video_file_id")] string? VideoFileId,
+    [property: JsonProperty(propertyName: "download_url")] string DownloadUrl,
+    [property: JsonProperty(propertyName: "language")] string Language,
+    [property: JsonProperty(propertyName: "format")] string? Format
 );

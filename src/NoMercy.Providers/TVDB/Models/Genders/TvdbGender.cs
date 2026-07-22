@@ -18,10 +18,10 @@ public class TvdbGendersResponse : TvdbResponse<TvdbGender[]> { }
 
 public class TvdbGender
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 }
 

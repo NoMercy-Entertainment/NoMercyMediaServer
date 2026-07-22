@@ -67,10 +67,10 @@ public class LiveFfmpegRunnerCapTests
     /// </summary>
     private static IProcessRunner MakeInstantProcessRunner()
     {
-        ProcessResult ok = new(0, "", "", TimeSpan.Zero);
+        ProcessResult ok = new(ExitCode: 0, StdOut: "", StdErr: "", Duration: TimeSpan.Zero);
         Mock<IProcessRunner> mock = new();
 
-        mock.Setup(r =>
+        mock.Setup(expression: r =>
                 r.RunAsync(
                     It.IsAny<string>(),
                     It.IsAny<string[]>(),
@@ -80,7 +80,7 @@ public class LiveFfmpegRunnerCapTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(ok);
+            .ReturnsAsync(value: ok);
 
         return mock.Object;
     }
@@ -92,10 +92,10 @@ public class LiveFfmpegRunnerCapTests
     private static IStorage MakeNoopStorage()
     {
         Mock<IStorage> mock = new();
-        mock.Setup(s => s.CreateDirectory(It.IsAny<string>()));
-        mock.Setup(s => s.AcquireLocalPath(It.IsAny<string>()))
-            .Returns(new LocalPathLease(Path.GetTempPath()));
-        mock.Setup(s => s.Exists(It.IsAny<string>())).Returns(false);
+        mock.Setup(expression: s => s.CreateDirectory(It.IsAny<string>()));
+        mock.Setup(expression: s => s.AcquireLocalPath(It.IsAny<string>()))
+            .Returns(value: new LocalPathLease(path: Path.GetTempPath()));
+        mock.Setup(expression: s => s.Exists(It.IsAny<string>())).Returns(value: false);
         return mock.Object;
     }
 
@@ -109,7 +109,7 @@ public class LiveFfmpegRunnerCapTests
     )
     {
         IHardwareCapabilities hw =
-            hardware ?? new HardwareCapabilities([], Environment.ProcessorCount);
+            hardware ?? new HardwareCapabilities(Gpus: [], CpuCores: Environment.ProcessorCount);
 
         EncoderOptions opts = new()
         {
@@ -118,25 +118,25 @@ public class LiveFfmpegRunnerCapTests
         };
 
         Mock<IResourceBudget> noopBudget = new();
-        ResourceLease noopLease = new("noop", null, 0, 0);
-        noopBudget.Setup(b => b.Acquire(It.IsAny<ResourceRequirement>())).Returns(noopLease);
+        ResourceLease noopLease = new(LeaseId: "noop", GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 0);
+        noopBudget.Setup(expression: b => b.Acquire(It.IsAny<ResourceRequirement>())).Returns(value: noopLease);
         noopBudget
-            .Setup(b =>
+            .Setup(expression: b =>
                 b.AcquireAsync(It.IsAny<ResourceRequirement>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync(noopLease);
-        noopBudget.Setup(b => b.Release(It.IsAny<ResourceLease>()));
+            .ReturnsAsync(value: noopLease);
+        noopBudget.Setup(expression: b => b.Release(It.IsAny<ResourceLease>()));
 
         return new(
-            processRunner ?? MakeInstantProcessRunner(),
-            opts,
-            NullLogger<LiveFfmpegRunner>.Instance,
-            storage ?? TestStorageFactory.CreateLocal(),
-            cap,
-            hw,
-            codecResolver ?? new CodecResolver(new CodecRegistry()),
-            noopBudget.Object,
-            transport
+            processRunner: processRunner ?? MakeInstantProcessRunner(),
+            options: opts,
+            logger: NullLogger<LiveFfmpegRunner>.Instance,
+            storage: storage ?? TestStorageFactory.CreateLocal(),
+            nvencSessionCap: cap,
+            hardware: hw,
+            codecResolver: codecResolver ?? new CodecResolver(registry: new CodecRegistry()),
+            resourceBudget: noopBudget.Object,
+            transport: transport
         );
     }
 
@@ -150,13 +150,13 @@ public class LiveFfmpegRunnerCapTests
     {
         Mock<INvencSessionCap> capMock = new();
         capMock
-            .Setup(c => c.EnforceForGpuEncode(It.IsAny<string>(), true))
-            .Throws(RuntimeErrors.GpuCapacityExhausted("RTX 3080", 3));
+            .Setup(expression: c => c.EnforceForGpuEncode(It.IsAny<string>(), true))
+            .Throws(exception: RuntimeErrors.GpuCapacityExhausted(gpu: "RTX 3080", sessions: 3));
 
         List<(string SessionId, object Message)> pushed = [];
         Mock<ILiveSessionTransport> transportMock = new();
         transportMock
-            .Setup(t =>
+            .Setup(expression: t =>
                 t.SendToClientAsync(
                     It.IsAny<string>(),
                     It.IsAny<object>(),
@@ -164,36 +164,36 @@ public class LiveFfmpegRunnerCapTests
                 )
             )
             .Callback<string, object, CancellationToken>(
-                (sessionId, message, _) => pushed.Add((sessionId, message))
+                action: (sessionId, message, _) => pushed.Add(item: (sessionId, message))
             )
-            .Returns(Task.CompletedTask);
+            .Returns(value: Task.CompletedTask);
 
         LiveFfmpegRunner runner = BuildRunner(
-            capMock.Object,
+            cap: capMock.Object,
             processRunner: MakeInstantProcessRunner(),
             storage: MakeNoopStorage(),
             transport: transportMock.Object
         );
 
         LiveQuality hwQuality = MakeHwQuality();
-        LiveSession session = new("cap-hw-001", hwQuality);
-        string outputDir = Path.Combine(Path.GetTempPath(), "nomercy-cap-test-" + Ulid.NewUlid());
+        LiveSession session = new(sessionId: "cap-hw-001", quality: hwQuality);
+        string outputDir = Path.Combine(path1: Path.GetTempPath(), path2: "nomercy-cap-test-" + Ulid.NewUlid());
 
         Func<Task> act = () =>
-            runner.RunAsync(MakeInput(hwQuality, outputDir), session, CancellationToken.None);
+            runner.RunAsync(input: MakeInput(quality: hwQuality, outputDir: outputDir), session: session, ct: CancellationToken.None);
 
         await act.Should().NotThrowAsync();
 
-        session.CurrentQuality.Encoder.Should().Be("libx264");
+        session.CurrentQuality.Encoder.Should().Be(expected: "libx264");
         session.CurrentQuality.IsHardwareAccelerated.Should().BeFalse();
 
-        pushed.Should().ContainSingle(p => p.Message is QualityChangedMessage);
+        pushed.Should().ContainSingle(predicate: p => p.Message is QualityChangedMessage);
         QualityChangedMessage message = pushed
-            .Select(p => p.Message)
+            .Select(selector: p => p.Message)
             .OfType<QualityChangedMessage>()
             .Single();
-        message.Reason.Should().Be(QualityChangeReason.GpuFallbackToCpu);
-        message.NewQuality.Encoder.Should().Be("libx264");
+        message.Reason.Should().Be(expected: QualityChangeReason.GpuFallbackToCpu);
+        message.NewQuality.Encoder.Should().Be(expected: "libx264");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -206,22 +206,22 @@ public class LiveFfmpegRunnerCapTests
         Mock<INvencSessionCap> capMock = new();
 
         LiveFfmpegRunner runner = BuildRunner(
-            capMock.Object,
+            cap: capMock.Object,
             processRunner: MakeInstantProcessRunner(),
             storage: MakeNoopStorage()
         );
 
-        LiveSession session = new("cap-sw-001", MakeSwQuality());
-        string outputDir = Path.Combine(Path.GetTempPath(), "cap-sw-" + Ulid.NewUlid());
+        LiveSession session = new(sessionId: "cap-sw-001", quality: MakeSwQuality());
+        string outputDir = Path.Combine(path1: Path.GetTempPath(), path2: "cap-sw-" + Ulid.NewUlid());
 
         await runner.RunAsync(
-            MakeInput(MakeSwQuality(), outputDir),
-            session,
-            CancellationToken.None
+            input: MakeInput(quality: MakeSwQuality(), outputDir: outputDir),
+            session: session,
+            ct: CancellationToken.None
         );
 
         // Must be called with requiresGpu=false for software encodes.
-        capMock.Verify(c => c.EnforceForGpuEncode(It.IsAny<string>(), false), Times.Once);
-        capMock.Verify(c => c.EnforceForGpuEncode(It.IsAny<string>(), true), Times.Never);
+        capMock.Verify(expression: c => c.EnforceForGpuEncode(It.IsAny<string>(), false), times: Times.Once);
+        capMock.Verify(expression: c => c.EnforceForGpuEncode(It.IsAny<string>(), true), times: Times.Never);
     }
 }

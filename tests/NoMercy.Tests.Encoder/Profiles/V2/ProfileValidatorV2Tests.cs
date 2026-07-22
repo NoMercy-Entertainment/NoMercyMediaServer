@@ -23,40 +23,40 @@ public class ProfileValidatorV2Tests
             Name: "test",
             Container: Container.HlsFmp4,
             Video: new(
-                StreamPolicy.Transcode,
-                VideoCodecType.H264,
-                1920,
-                1080,
-                RateControlMode.Crf,
-                22,
-                0,
-                null,
-                null,
-                "medium",
-                CodecProfile.High,
-                "4.0",
-                null,
-                8,
-                "yuv420p",
-                4,
-                false,
-                "",
-                ""
+                Policy: StreamPolicy.Transcode,
+                Codec: VideoCodecType.H264,
+                Width: 1920,
+                Height: 1080,
+                RateControl: RateControlMode.Crf,
+                Crf: 22,
+                BitrateKbps: 0,
+                MaxBitrateKbps: null,
+                BufferSizeKbps: null,
+                Preset: "medium",
+                CodecProfile: CodecProfile.High,
+                Level: "4.0",
+                Tune: null,
+                BitDepth: 8,
+                PixelFormat: "yuv420p",
+                KeyframeIntervalSeconds: 4,
+                ConvertHdrToSdr: false,
+                SegmentNameTemplate: "",
+                PlaylistNameTemplate: ""
             ),
             Audio:
             [
                 new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    192,
-                    2,
-                    48000,
-                    [],
-                    null,
-                    null,
-                    null,
-                    "",
-                    ""
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Aac,
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: [],
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: "",
+                    PlaylistNameTemplate: ""
                 ),
             ],
             Subtitles: []
@@ -65,7 +65,7 @@ public class ProfileValidatorV2Tests
     [Fact]
     public void Valid_minimal_hls_profile_passes()
     {
-        ProfileValidationResult result = ProfileValidator.Validate(MinimalHls());
+        ProfileValidationResult result = ProfileValidator.Validate(profile: MinimalHls());
         result.IsValid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
     }
@@ -79,23 +79,23 @@ public class ProfileValidatorV2Tests
             Audio =
             [
                 new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Opus,
-                    128,
-                    2,
-                    48000,
-                    [],
-                    null,
-                    null,
-                    null,
-                    "",
-                    ""
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Opus,
+                    BitrateKbps: 128,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: [],
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: "",
+                    PlaylistNameTemplate: ""
                 ),
             ],
         };
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("Mp4") && e.Contains("Opus"));
+        result.Errors.Should().Contain(predicate: e => e.Contains("Mp4") && e.Contains("Opus"));
     }
 
     [Fact]
@@ -106,9 +106,9 @@ public class ProfileValidatorV2Tests
             Container = Container.HlsTs,
             Video = MinimalHls().Video! with { Codec = VideoCodecType.H265 },
         };
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.Contains("HlsTs") && e.Contains("H265"));
+        result.Errors.Should().Contain(predicate: e => e.Contains("HlsTs") && e.Contains("H265"));
     }
 
     [Fact]
@@ -119,21 +119,21 @@ public class ProfileValidatorV2Tests
             Audio =
             [
                 new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    0,
-                    2,
-                    48000,
-                    [],
-                    null,
-                    null,
-                    null,
-                    "",
-                    ""
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Aac,
+                    BitrateKbps: 0,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: [],
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: "",
+                    PlaylistNameTemplate: ""
                 ),
             ],
         };
-        ProfileValidator.Validate(profile).Errors.Should().Contain(e => e.Contains("BitrateKbps"));
+        ProfileValidator.Validate(profile: profile).Errors.Should().Contain(predicate: e => e.Contains("BitrateKbps"));
     }
 
     [Fact]
@@ -144,9 +144,9 @@ public class ProfileValidatorV2Tests
             Ladder = new() { Mode = LadderMode.Manual, Rungs = [] },
         };
         ProfileValidator
-            .Validate(profile)
+            .Validate(profile: profile)
             .Errors.Should()
-            .Contain(e => e.Contains("Manual ladder"));
+            .Contain(predicate: e => e.Contains("Manual ladder"));
     }
 
     [Fact]
@@ -159,12 +159,12 @@ public class ProfileValidatorV2Tests
                 Mode = LadderMode.Manual,
                 Rungs =
                 [
-                    new(1280, 720, VideoCodecType.H264, 5000, 7500, 10000, 24.0),
-                    new(1920, 1080, VideoCodecType.H264, 3000, 4500, 6000, 24.0),
+                    new(Width: 1280, Height: 720, Codec: VideoCodecType.H264, BitrateKbps: 5000, MaxBitrateKbps: 7500, BufferSizeKbps: 10000, Framerate: 24.0),
+                    new(Width: 1920, Height: 1080, Codec: VideoCodecType.H264, BitrateKbps: 3000, MaxBitrateKbps: 4500, BufferSizeKbps: 6000, Framerate: 24.0),
                 ],
             },
         };
-        ProfileValidator.Validate(profile).Errors.Should().Contain(e => e.Contains("ascending"));
+        ProfileValidator.Validate(profile: profile).Errors.Should().Contain(predicate: e => e.Contains("ascending"));
     }
 
     [Fact]
@@ -176,24 +176,24 @@ public class ProfileValidatorV2Tests
             Audio =
             [
                 new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Mp3,
-                    192,
-                    2,
-                    48000,
-                    [],
-                    null,
-                    null,
-                    null,
-                    "",
-                    ""
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Mp3,
+                    BitrateKbps: 192,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: [],
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: "",
+                    PlaylistNameTemplate: ""
                 ),
             ],
         };
         ProfileValidator
-            .Validate(profile)
+            .Validate(profile: profile)
             .Errors.Should()
-            .Contain(e => e.Contains("CMAF") && e.Contains("Mp3"));
+            .Contain(predicate: e => e.Contains("CMAF") && e.Contains("Mp3"));
     }
 
     [Fact]
@@ -203,18 +203,18 @@ public class ProfileValidatorV2Tests
         {
             foreach (VideoCodecType codec in Enum.GetValues<VideoCodecType>())
             {
-                if (ContainerCompatibility.SupportsVideo(container, codec))
+                if (ContainerCompatibility.SupportsVideo(container: container, codec: codec))
                     continue;
                 EncodingProfile profile = MinimalHls() with
                 {
                     Container = container,
                     Video = MinimalHls().Video! with { Codec = codec },
                 };
-                ProfileValidationResult result = ProfileValidator.Validate(profile);
-                result.IsValid.Should().BeFalse($"{container}+{codec} must reject");
+                ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
+                result.IsValid.Should().BeFalse(because: $"{container}+{codec} must reject");
                 result
                     .Errors.Should()
-                    .Contain(e =>
+                    .Contain(predicate: e =>
                         e.Contains(container.ToString())
                         && e.Contains(codec.ToString())
                         && e.Contains("Compatible containers")
@@ -230,7 +230,7 @@ public class ProfileValidatorV2Tests
         {
             foreach (AudioCodecType codec in Enum.GetValues<AudioCodecType>())
             {
-                if (ContainerCompatibility.SupportsAudio(container, codec))
+                if (ContainerCompatibility.SupportsAudio(container: container, codec: codec))
                     continue;
                 EncodingProfile profile = MinimalHls() with
                 {
@@ -238,25 +238,25 @@ public class ProfileValidatorV2Tests
                     Audio =
                     [
                         new(
-                            StreamPolicy.Transcode,
-                            codec,
-                            192,
-                            2,
-                            48000,
-                            [],
-                            null,
-                            null,
-                            null,
-                            "",
-                            ""
+                            Policy: StreamPolicy.Transcode,
+                            Codec: codec,
+                            BitrateKbps: 192,
+                            Channels: 2,
+                            SampleRateHz: 48000,
+                            AllowedLanguages: [],
+                            DefaultLanguage: null,
+                            Loudness: null,
+                            Downmix: null,
+                            SegmentNameTemplate: "",
+                            PlaylistNameTemplate: ""
                         ),
                     ],
                 };
-                ProfileValidationResult result = ProfileValidator.Validate(profile);
-                result.IsValid.Should().BeFalse($"{container}+{codec} audio must reject");
+                ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
+                result.IsValid.Should().BeFalse(because: $"{container}+{codec} audio must reject");
                 result
                     .Errors.Should()
-                    .Contain(e =>
+                    .Contain(predicate: e =>
                         e.Contains(container.ToString())
                         && e.Contains(codec.ToString())
                         && e.Contains("Compatible containers")
@@ -266,8 +266,8 @@ public class ProfileValidatorV2Tests
     }
 
     [Theory]
-    [InlineData(-1)]
-    [InlineData(0)]
+    [InlineData(data: -1)]
+    [InlineData(data: 0)]
     public void Audio_bitrate_non_positive_for_lossy_codec_rejects(int bitrate)
     {
         EncodingProfile profile = MinimalHls() with
@@ -275,21 +275,21 @@ public class ProfileValidatorV2Tests
             Audio =
             [
                 new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Aac,
-                    bitrate,
-                    2,
-                    48000,
-                    [],
-                    null,
-                    null,
-                    null,
-                    "",
-                    ""
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Aac,
+                    BitrateKbps: bitrate,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: [],
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: "",
+                    PlaylistNameTemplate: ""
                 ),
             ],
         };
-        ProfileValidator.Validate(profile).Errors.Should().NotBeEmpty();
+        ProfileValidator.Validate(profile: profile).Errors.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -301,21 +301,21 @@ public class ProfileValidatorV2Tests
             Audio =
             [
                 new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Flac,
-                    0,
-                    2,
-                    48000,
-                    [],
-                    null,
-                    null,
-                    null,
-                    "",
-                    ""
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Flac,
+                    BitrateKbps: 0,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: [],
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: "",
+                    PlaylistNameTemplate: ""
                 ),
             ],
         };
-        ProfileValidator.Validate(profile).IsValid.Should().BeTrue();
+        ProfileValidator.Validate(profile: profile).IsValid.Should().BeTrue();
     }
 
     [Fact]
@@ -327,21 +327,21 @@ public class ProfileValidatorV2Tests
             Audio =
             [
                 new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.TrueHd,
-                    0,
-                    6,
-                    48000,
-                    [],
-                    null,
-                    null,
-                    null,
-                    "",
-                    ""
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.TrueHd,
+                    BitrateKbps: 0,
+                    Channels: 6,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: [],
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: "",
+                    PlaylistNameTemplate: ""
                 ),
             ],
         };
-        ProfileValidator.Validate(profile).IsValid.Should().BeTrue();
+        ProfileValidator.Validate(profile: profile).IsValid.Should().BeTrue();
     }
 
     [Fact]
@@ -352,10 +352,10 @@ public class ProfileValidatorV2Tests
             Ladder = new()
             {
                 Mode = LadderMode.Manual,
-                Rungs = [new(1920, 1080, VideoCodecType.H264, 6000, 9000, 12000, 24.0)],
+                Rungs = [new(Width: 1920, Height: 1080, Codec: VideoCodecType.H264, BitrateKbps: 6000, MaxBitrateKbps: 9000, BufferSizeKbps: 12000, Framerate: 24.0)],
             },
         };
-        ProfileValidator.Validate(profile).IsValid.Should().BeTrue();
+        ProfileValidator.Validate(profile: profile).IsValid.Should().BeTrue();
     }
 
     [Fact]
@@ -368,13 +368,13 @@ public class ProfileValidatorV2Tests
                 Mode = LadderMode.Manual,
                 Rungs =
                 [
-                    new(854, 480, VideoCodecType.H264, 1500, 2250, 3000, 24.0),
-                    new(1920, 1080, VideoCodecType.H264, 6000, 9000, 12000, 24.0),
-                    new(1280, 720, VideoCodecType.H264, 8000, 12000, 16000, 24.0),
+                    new(Width: 854, Height: 480, Codec: VideoCodecType.H264, BitrateKbps: 1500, MaxBitrateKbps: 2250, BufferSizeKbps: 3000, Framerate: 24.0),
+                    new(Width: 1920, Height: 1080, Codec: VideoCodecType.H264, BitrateKbps: 6000, MaxBitrateKbps: 9000, BufferSizeKbps: 12000, Framerate: 24.0),
+                    new(Width: 1280, Height: 720, Codec: VideoCodecType.H264, BitrateKbps: 8000, MaxBitrateKbps: 12000, BufferSizeKbps: 16000, Framerate: 24.0),
                 ],
             },
         };
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
         result.IsValid.Should().BeTrue();
     }
 
@@ -387,25 +387,25 @@ public class ProfileValidatorV2Tests
             Audio =
             [
                 new(
-                    StreamPolicy.Transcode,
-                    AudioCodecType.Opus,
-                    128,
-                    2,
-                    48000,
-                    [],
-                    null,
-                    null,
-                    null,
-                    "",
-                    ""
+                    Policy: StreamPolicy.Transcode,
+                    Codec: AudioCodecType.Opus,
+                    BitrateKbps: 128,
+                    Channels: 2,
+                    SampleRateHz: 48000,
+                    AllowedLanguages: [],
+                    DefaultLanguage: null,
+                    Loudness: null,
+                    Downmix: null,
+                    SegmentNameTemplate: "",
+                    PlaylistNameTemplate: ""
                 ),
             ],
         };
-        string error = ProfileValidator.Validate(profile).Errors.Single();
-        error.Should().Contain("Mp4");
-        error.Should().Contain("Opus");
-        error.Should().Contain("does not support");
-        error.Should().Contain("Compatible containers");
+        string error = ProfileValidator.Validate(profile: profile).Errors.Single();
+        error.Should().Contain(expected: "Mp4");
+        error.Should().Contain(expected: "Opus");
+        error.Should().Contain(expected: "does not support");
+        error.Should().Contain(expected: "Compatible containers");
     }
 
     [Fact]
@@ -413,10 +413,10 @@ public class ProfileValidatorV2Tests
     {
         EncodingProfile profile = MinimalHls() with
         {
-            CustomArguments = new() { ["c:v"] = "libx265" },
+            CustomArguments = new() { [key: "c:v"] = "libx265" },
         };
-        ProfileValidationResult result = ProfileValidator.Validate(profile);
+        ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
         result.IsValid.Should().BeTrue();
-        result.Warnings.Should().Contain(w => w.Contains("c:v"));
+        result.Warnings.Should().Contain(predicate: w => w.Contains("c:v"));
     }
 }

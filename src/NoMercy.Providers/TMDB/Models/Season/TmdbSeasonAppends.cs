@@ -16,24 +16,24 @@ namespace NoMercy.Providers.TMDB.Models.Season;
 
 public class TmdbSeasonAppends : TmdbSeasonDetails
 {
-    [JsonProperty("aggregate_credits")]
+    [JsonProperty(propertyName: "aggregate_credits")]
     public TmdbSeasonAggregatedCredits AggregateCredits { get; set; } = new();
 
-    [JsonProperty("changes")]
+    [JsonProperty(propertyName: "changes")]
     public TmdbSeasonChanges? Changes { get; set; }
 
-    [JsonProperty("credits")]
+    [JsonProperty(propertyName: "credits")]
     public TmdbSeasonCredits TmdbSeasonCredits { get; set; } = new();
 
-    [JsonProperty("external_ids")]
+    [JsonProperty(propertyName: "external_ids")]
     public TmdbSeasonExternalIds TmdbSeasonExternalIds { get; set; } = new();
 
-    [JsonProperty("images")]
+    [JsonProperty(propertyName: "images")]
     public TmdbSeasonImages TmdbSeasonImages { get; set; } = new();
 
-    [JsonProperty("translations")]
+    [JsonProperty(propertyName: "translations")]
     public TmdbCombinedTranslations Translations { get; set; } = new();
 
-    [JsonProperty("videos")]
+    [JsonProperty(propertyName: "videos")]
     public TmdbSeasonVideos TmdbSeasonVideos { get; set; } = new();
 }

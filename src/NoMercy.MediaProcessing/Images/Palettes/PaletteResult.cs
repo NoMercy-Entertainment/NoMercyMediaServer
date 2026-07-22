@@ -13,7 +13,7 @@ namespace NoMercy.MediaProcessing.Images.Palettes;
 
 public sealed record PaletteResult(string Json, bool Permanent)
 {
-    public static PaletteResult Success(string json) => new(json, false);
+    public static PaletteResult Success(string json) => new(Json: json, Permanent: false);
 
-    public static PaletteResult NoImage() => new("{}", true);
+    public static PaletteResult NoImage() => new(Json: "{}", Permanent: true);
 }

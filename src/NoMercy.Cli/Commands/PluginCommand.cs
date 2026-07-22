@@ -18,43 +18,43 @@ internal static class PluginCommand
 {
     public static Command Create(Option<string?> pipeOption, ICliClientFactory clientFactory)
     {
-        Command listCmd = new("list") { Description = "List installed plugins" };
+        Command listCmd = new(name: "list") { Description = "List installed plugins" };
 
         listCmd.SetAction(
-            async (parseResult, ct) =>
+            action: async (parseResult, ct) =>
             {
-                string? pipe = parseResult.GetValue(pipeOption);
-                using ICliClient client = clientFactory.Create(pipe);
+                string? pipe = parseResult.GetValue(option: pipeOption);
+                using ICliClient client = clientFactory.Create(pipeNameOrSocketPath: pipe);
                 List<PluginResponse>? plugins = await client.GetAsync<List<PluginResponse>>(
-                    ApiRoutes.Plugins,
-                    ct
+                    path: ApiRoutes.Plugins,
+                    cancellationToken: ct
                 );
 
                 if (plugins is null)
                 {
-                    await Console.Error.WriteLineAsync("Could not connect to server.");
+                    await Console.Error.WriteLineAsync(value: "Could not connect to server.");
                     return (int)ExitCode.ServerError;
                 }
 
                 if (plugins.Count == 0)
                 {
-                    Console.WriteLine("No plugins installed.");
+                    Console.WriteLine(value: "No plugins installed.");
                     return (int)ExitCode.Success;
                 }
 
-                Console.WriteLine($"{"Name", -25} {"Version", -12} {"Status", -10} {"Author"}");
-                Console.WriteLine(new string('-', 70));
+                Console.WriteLine(value: $"{"Name", -25} {"Version", -12} {"Status", -10} {"Author"}");
+                Console.WriteLine(value: new string(c: '-', count: 70));
                 foreach (PluginResponse p in plugins)
                 {
-                    Console.WriteLine($"{p.Name, -25} {p.Version, -12} {p.Status, -10} {p.Author}");
+                    Console.WriteLine(value: $"{p.Name, -25} {p.Version, -12} {p.Status, -10} {p.Author}");
                 }
 
                 return (int)ExitCode.Success;
             }
         );
 
-        Command command = new("plugin") { Description = "Manage plugins" };
-        command.Subcommands.Add(listCmd);
+        Command command = new(name: "plugin") { Description = "Manage plugins" };
+        command.Subcommands.Add(item: listCmd);
 
         return command;
     }

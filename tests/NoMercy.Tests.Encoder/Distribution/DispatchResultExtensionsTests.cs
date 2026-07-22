@@ -32,7 +32,7 @@ public class DispatchResultExtensionsTests
             TaskId: "task-001",
             Success: true,
             OutputPath: "/out/encode",
-            Duration: TimeSpan.FromSeconds(120),
+            Duration: TimeSpan.FromSeconds(seconds: 120),
             Error: null,
             WorkerId: "worker-A"
         );
@@ -40,12 +40,12 @@ public class DispatchResultExtensionsTests
         EncodingResult result = dispatch.ToEncodingResult();
 
         result.Success.Should().BeTrue();
-        result.Status.Should().Be("success");
-        result.OutputPath.Should().Be("/out/encode");
-        result.Duration.Should().Be(TimeSpan.FromSeconds(120));
+        result.Status.Should().Be(expected: "success");
+        result.OutputPath.Should().Be(expected: "/out/encode");
+        result.Duration.Should().Be(expected: TimeSpan.FromSeconds(seconds: 120));
         result.Error.Should().BeNull();
         result.EnrichedError.Should().BeNull();
-        result.JobId.Should().Be("task-001");
+        result.JobId.Should().Be(expected: "task-001");
     }
 
     [Fact]
@@ -63,14 +63,14 @@ public class DispatchResultExtensionsTests
         EncodingResult result = dispatch.ToEncodingResult();
 
         result.Success.Should().BeFalse();
-        result.Status.Should().Be("failed");
+        result.Status.Should().Be(expected: "failed");
         result.Error.Should().NotBeNull();
-        result.Error!.Message.Should().Be("ffmpeg returned exit code 1");
-        result.Error.StageName.Should().Be("worker-B");
+        result.Error!.Message.Should().Be(expected: "ffmpeg returned exit code 1");
+        result.Error.StageName.Should().Be(expected: "worker-B");
         result.Error.Recoverable.Should().BeFalse();
         result.EnrichedError.Should().NotBeNull();
-        result.EnrichedError!.Id.Should().Be(EncoderRuleId.EncoderInitFailed);
-        result.EnrichedError.Message.Should().Be("ffmpeg returned exit code 1");
+        result.EnrichedError!.Id.Should().Be(expected: EncoderRuleId.EncoderInitFailed);
+        result.EnrichedError.Message.Should().Be(expected: "ffmpeg returned exit code 1");
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public class DispatchResultExtensionsTests
         EncodingResult result = dispatch.ToEncodingResult();
 
         result.Error.Should().NotBeNull();
-        result.Error!.StageName.Should().Be("remote");
+        result.Error!.StageName.Should().Be(expected: "remote");
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public class DispatchResultExtensionsTests
         EncodingResult result = dispatch.ToEncodingResult();
 
         result.Success.Should().BeFalse();
-        result.Status.Should().Be("failed");
+        result.Status.Should().Be(expected: "failed");
         // Without a remote-reported error string the projection skips
         // synthesising both legacy + enriched errors. The orchestrator can
         // still surface 'failed' from Status alone.
@@ -120,19 +120,19 @@ public class DispatchResultExtensionsTests
         EncodingResult result = new(
             Success: true,
             OutputPath: "/out/done",
-            Duration: TimeSpan.FromMinutes(2),
+            Duration: TimeSpan.FromMinutes(minutes: 2),
             Error: null,
             Metrics: null
         );
 
-        DispatchResult dispatch = result.ToDispatchResult("task-A", workerId: "worker-X");
+        DispatchResult dispatch = result.ToDispatchResult(taskId: "task-A", workerId: "worker-X");
 
-        dispatch.TaskId.Should().Be("task-A");
+        dispatch.TaskId.Should().Be(expected: "task-A");
         dispatch.Success.Should().BeTrue();
-        dispatch.OutputPath.Should().Be("/out/done");
-        dispatch.Duration.Should().Be(TimeSpan.FromMinutes(2));
+        dispatch.OutputPath.Should().Be(expected: "/out/done");
+        dispatch.Duration.Should().Be(expected: TimeSpan.FromMinutes(minutes: 2));
         dispatch.Error.Should().BeNull();
-        dispatch.WorkerId.Should().Be("worker-X");
+        dispatch.WorkerId.Should().Be(expected: "worker-X");
     }
 
     [Fact]
@@ -160,10 +160,10 @@ public class DispatchResultExtensionsTests
             ),
         };
 
-        DispatchResult dispatch = result.ToDispatchResult("task-B");
+        DispatchResult dispatch = result.ToDispatchResult(taskId: "task-B");
 
         dispatch.Success.Should().BeFalse();
-        dispatch.Error.Should().Be("enriched error wins");
+        dispatch.Error.Should().Be(expected: "enriched error wins");
     }
 
     [Fact]
@@ -183,9 +183,9 @@ public class DispatchResultExtensionsTests
             Metrics: null
         );
 
-        DispatchResult dispatch = result.ToDispatchResult("task-C");
+        DispatchResult dispatch = result.ToDispatchResult(taskId: "task-C");
 
-        dispatch.Error.Should().Be("legacy only");
+        dispatch.Error.Should().Be(expected: "legacy only");
     }
 
     [Fact]
@@ -199,7 +199,7 @@ public class DispatchResultExtensionsTests
             Metrics: null
         );
 
-        DispatchResult dispatch = result.ToDispatchResult("task-D");
+        DispatchResult dispatch = result.ToDispatchResult(taskId: "task-D");
 
         dispatch.WorkerId.Should().BeNull();
     }
@@ -213,18 +213,18 @@ public class DispatchResultExtensionsTests
             TaskId: "task-r1",
             Success: true,
             OutputPath: "/out/r1",
-            Duration: TimeSpan.FromSeconds(60),
+            Duration: TimeSpan.FromSeconds(seconds: 60),
             WorkerId: "worker-R"
         );
 
         DispatchResult roundtripped = original
             .ToEncodingResult()
-            .ToDispatchResult("task-r1", "worker-R");
+            .ToDispatchResult(taskId: "task-r1", workerId: "worker-R");
 
-        roundtripped.TaskId.Should().Be(original.TaskId);
-        roundtripped.Success.Should().Be(original.Success);
-        roundtripped.OutputPath.Should().Be(original.OutputPath);
-        roundtripped.Duration.Should().Be(original.Duration);
-        roundtripped.WorkerId.Should().Be(original.WorkerId);
+        roundtripped.TaskId.Should().Be(expected: original.TaskId);
+        roundtripped.Success.Should().Be(expected: original.Success);
+        roundtripped.OutputPath.Should().Be(expected: original.OutputPath);
+        roundtripped.Duration.Should().Be(expected: original.Duration);
+        roundtripped.WorkerId.Should().Be(expected: original.WorkerId);
     }
 }

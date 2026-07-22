@@ -16,7 +16,7 @@ using System.Runtime.Versioning;
 namespace NoMercy.Encoder.Execution;
 
 /// <summary>Suspends/resumes processes via ntdll NtSuspendProcess/NtResumeProcess on Windows.</summary>
-[SupportedOSPlatform("windows")]
+[SupportedOSPlatform(platformName: "windows")]
 public sealed class WindowsProcessSuspender : IProcessSuspender
 {
     public void Suspend(int processId)
@@ -28,13 +28,13 @@ public sealed class WindowsProcessSuspender : IProcessSuspender
         // and Windows can reuse that same handle value for something
         // unrelated — a later NtSuspendProcess/NtResumeProcess call against
         // the stale value could then act on the wrong process entirely.
-        using Process? process = TryGetProcess(processId);
+        using Process? process = TryGetProcess(pid: processId);
         if (process is null)
         {
             return;
         }
 
-        NtSuspendProcess(process.Handle);
+        NtSuspendProcess(processHandle: process.Handle);
         // No manual NtClose here — Process.Dispose() (via `using`) owns
         // closing the handle it lazily opened via .Handle above. Closing it
         // here too would double-close the same OS handle value.
@@ -42,20 +42,20 @@ public sealed class WindowsProcessSuspender : IProcessSuspender
 
     public void Resume(int processId)
     {
-        using Process? process = TryGetProcess(processId);
+        using Process? process = TryGetProcess(pid: processId);
         if (process is null)
         {
             return;
         }
 
-        NtResumeProcess(process.Handle);
+        NtResumeProcess(processHandle: process.Handle);
     }
 
     private static Process? TryGetProcess(int pid)
     {
         try
         {
-            return Process.GetProcessById(pid);
+            return Process.GetProcessById(processId: pid);
         }
         catch (Exception)
         {
@@ -64,9 +64,9 @@ public sealed class WindowsProcessSuspender : IProcessSuspender
         }
     }
 
-    [DllImport("ntdll.dll")]
+    [DllImport(dllName: "ntdll.dll")]
     private static extern uint NtSuspendProcess(nint processHandle);
 
-    [DllImport("ntdll.dll")]
+    [DllImport(dllName: "ntdll.dll")]
     private static extern uint NtResumeProcess(nint processHandle);
 }

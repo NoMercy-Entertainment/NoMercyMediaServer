@@ -51,16 +51,16 @@ public class ServerRunner : IServerRunner
         // Start the HTTP host
         try
         {
-            await httpHost.StartAsync(shutdownCoordinator.Token);
+            await httpHost.StartAsync(cancellationToken: shutdownCoordinator.Token);
         }
         catch (IOException ex)
             when (ex.InnerException is SocketException
-                || ex.Message.Contains("address already in use", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains(value: "address already in use", comparisonType: StringComparison.OrdinalIgnoreCase)
             )
         {
             bool shouldRetry = await _portManager.HandlePortInUse(
-                RuntimeServerSettings.Current.InternalServerPort,
-                ex
+                port: RuntimeServerSettings.Current.InternalServerPort,
+                ex: ex
             );
             await httpHost.DisposeAsync();
             return shouldRetry;
@@ -69,8 +69,8 @@ public class ServerRunner : IServerRunner
         string setupUrl =
             $"http://localhost:{RuntimeServerSettings.Current.InternalServerPort}/setup";
         _logger.LogInformation(
-            "Server is in setup mode. Please complete setup at: {SetupUrl}",
-            setupUrl
+            message: "Server is in setup mode. Please complete setup at: {SetupUrl}",
+            args: setupUrl
         );
 
         // Try to open the browser automatically if running interactively.
@@ -78,17 +78,17 @@ public class ServerRunner : IServerRunner
         {
             try
             {
-                AuthManager.OpenBrowser(setupUrl);
+                AuthManager.OpenBrowser(url: setupUrl);
             }
             catch (Exception ex)
             {
                 _logger.LogInformation(
-                    "Could not open browser automatically: {Message}",
-                    ex.Message
+                    message: "Could not open browser automatically: {Message}",
+                    args: ex.Message
                 );
                 _logger.LogInformation(
-                    "Please open your browser and navigate to: {SetupUrl}",
-                    setupUrl
+                    message: "Please open your browser and navigate to: {SetupUrl}",
+                    args: setupUrl
                 );
             }
         }
@@ -98,24 +98,24 @@ public class ServerRunner : IServerRunner
         if (options.RunAsService || !AuthManager.IsDesktopEnvironment())
         {
             _ = Task.Run(
-                async () =>
+                function: async () =>
                 {
                     try
                     {
                         await orchestrator.StartHeadlessDeviceCodeFlowAsync(
-                            shutdownCoordinator.Token
+                            ct: shutdownCoordinator.Token
                         );
                     }
                     catch (Exception ex)
                     {
                         _logger.LogError(
-                            ex,
-                            "Headless device code flow error: {Message}",
-                            ex.Message
+                            exception: ex,
+                            message: "Headless device code flow error: {Message}",
+                            args: ex.Message
                         );
                     }
                 },
-                shutdownCoordinator.Token
+                cancellationToken: shutdownCoordinator.Token
             );
         }
 
@@ -127,36 +127,36 @@ public class ServerRunner : IServerRunner
             .Services.GetRequiredService<IHostApplicationLifetime>()
             .ApplicationStopping;
         using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-            shutdownCoordinator.Token,
-            hostStopping
+            token1: shutdownCoordinator.Token,
+            token2: hostStopping
         );
 
         // Run post-auth (registration + cert) in background — this waits for
         // Authenticated state, then runs Phase 3 and transitions to Complete.
         Task postAuthTask = Task.Run(
-            async () =>
+            function: async () =>
             {
                 try
                 {
-                    await setupState.WaitForPhaseAsync(SetupPhase.Authenticated, linkedCts.Token);
-                    await orchestrator.RunRegistrationAsync(linkedCts.Token);
+                    await setupState.WaitForPhaseAsync(targetPhase: SetupPhase.Authenticated, cancellationToken: linkedCts.Token);
+                    await orchestrator.RunRegistrationAsync(ct: linkedCts.Token);
                 }
                 catch (OperationCanceledException)
                 {
                     // Shutdown requested
                 }
             },
-            linkedCts.Token
+            cancellationToken: linkedCts.Token
         );
 
         // Wait for setup to reach Complete or for the server to be shut down
         try
         {
-            await setupState.WaitForPhaseAsync(SetupPhase.Complete, linkedCts.Token);
+            await setupState.WaitForPhaseAsync(targetPhase: SetupPhase.Complete, cancellationToken: linkedCts.Token);
         }
         catch (OperationCanceledException)
         {
-            await httpHost.StopAsync(TimeSpan.FromSeconds(10));
+            await httpHost.StopAsync(timeout: TimeSpan.FromSeconds(seconds: 10));
             await httpHost.DisposeAsync();
             return false;
         }
@@ -169,17 +169,17 @@ public class ServerRunner : IServerRunner
         if (!Start.Certificate!.EnsureHttpsCertificate())
         {
             _logger.LogInformation(
-                "Setup completed but no usable certificate (including self-signed fallback) — continuing on HTTP"
+                message: "Setup completed but no usable certificate (including self-signed fallback) — continuing on HTTP"
             );
-            await httpHost.WaitForShutdownAsync(shutdownCoordinator.Token);
+            await httpHost.WaitForShutdownAsync(token: shutdownCoordinator.Token);
             await httpHost.DisposeAsync();
             return false;
         }
 
-        _logger.LogInformation("Certificate ready — restarting with HTTPS...");
+        _logger.LogInformation(message: "Certificate ready — restarting with HTTPS...");
 
         // Give the SSO callback page time to deliver its response to the browser
-        await Task.Delay(3000);
+        await Task.Delay(millisecondsDelay: 3000);
 
         // Gracefully stop the HTTP host. Cancel the old coordinator while its token
         // source is still alive so background work bound to it winds down before the
@@ -188,14 +188,14 @@ public class ServerRunner : IServerRunner
         // ObjectDisposedException on every cert-acquired setup restart.
         httpHost.Services.GetRequiredService<IBootStatus>().MarkStopped();
         _shutdownCoordinator.RequestShutdown();
-        await httpHost.StopAsync(TimeSpan.FromSeconds(10));
+        await httpHost.StopAsync(timeout: TimeSpan.FromSeconds(seconds: 10));
         await httpHost.DisposeAsync();
 
         // Build and start a new host with HTTPS
         Stopwatch restartStopWatch = new();
         restartStopWatch.Start();
 
-        WebApplication httpsHost = WebHostFactory.Create(options);
+        WebApplication httpsHost = WebHostFactory.Create(options: options);
 
         IShutdownCoordinator httpsShutdownCoordinator =
             httpsHost.Services.GetRequiredService<IShutdownCoordinator>();
@@ -209,7 +209,7 @@ public class ServerRunner : IServerRunner
         SetupState httpsSetupState = httpsHost.Services.GetRequiredService<SetupState>();
         httpsSetupState.DetermineInitialPhase(hasValidToken: hasValidToken, isRegistered: true);
 
-        httpsAuthManager.ScheduleBackgroundRefresh(httpsShutdownCoordinator.Token);
+        httpsAuthManager.ScheduleBackgroundRefresh(ct: httpsShutdownCoordinator.Token);
 
         // Force the DI container to instantiate QueueRunner (it's a lazy singleton).
         // The constructor sets QueueRunner.Current = this.
@@ -218,10 +218,10 @@ public class ServerRunner : IServerRunner
         // Initialize queue workers so they can process jobs on the HTTPS host.
         await httpsQueueRunner.Initialize();
 
-        HostLifecycleHooks.Register(httpsHost, restartStopWatch);
+        HostLifecycleHooks.Register(app: httpsHost, stopWatch: restartStopWatch);
 
-        _logger.LogInformation("HTTPS server starting...");
-        return await RunHost(httpsHost);
+        _logger.LogInformation(message: "HTTPS server starting...");
+        return await RunHost(host: httpsHost);
     }
 
     public async Task<bool> RunHost(WebApplication host)
@@ -230,23 +230,23 @@ public class ServerRunner : IServerRunner
             host.Services.GetRequiredService<IShutdownCoordinator>();
         try
         {
-            await host.RunAsync(shutdownCoordinator.Token);
+            await host.RunAsync(token: shutdownCoordinator.Token);
         }
         catch (IOException ex)
             when (ex.InnerException is SocketException
-                || ex.Message.Contains("address already in use", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains(value: "address already in use", comparisonType: StringComparison.OrdinalIgnoreCase)
             )
         {
             bool shouldRetry = await _portManager.HandlePortInUse(
-                RuntimeServerSettings.Current.InternalServerPort,
-                ex
+                port: RuntimeServerSettings.Current.InternalServerPort,
+                ex: ex
             );
             await host.DisposeAsync();
             return shouldRetry;
         }
         catch (OperationCanceledException)
         {
-            _logger.LogInformation("Shutdown completed");
+            _logger.LogInformation(message: "Shutdown completed");
         }
 
         return false;

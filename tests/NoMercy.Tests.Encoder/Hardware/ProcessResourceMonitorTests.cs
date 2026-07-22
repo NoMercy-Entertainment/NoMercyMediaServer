@@ -23,8 +23,8 @@ public class ProcessResourceMonitorTests
 
         double percent = sut.GetCpuUsagePercent();
 
-        percent.Should().BeGreaterThanOrEqualTo(0);
-        percent.Should().BeLessThanOrEqualTo(100);
+        percent.Should().BeGreaterThanOrEqualTo(expected: 0);
+        percent.Should().BeLessThanOrEqualTo(expected: 100);
     }
 
     [Fact]
@@ -33,12 +33,12 @@ public class ProcessResourceMonitorTests
         ProcessResourceMonitor sut = new();
         // Prime the snapshot cache.
         sut.GetCpuUsagePercent();
-        Thread.Sleep(10);
+        Thread.Sleep(millisecondsTimeout: 10);
 
         double percent = sut.GetCpuUsagePercent();
 
-        percent.Should().BeGreaterThanOrEqualTo(0);
-        percent.Should().BeLessThanOrEqualTo(100);
+        percent.Should().BeGreaterThanOrEqualTo(expected: 0);
+        percent.Should().BeLessThanOrEqualTo(expected: 100);
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public class ProcessResourceMonitorTests
 
         long mb = sut.GetAvailableMemoryMb();
 
-        mb.Should().BeGreaterThanOrEqualTo(0);
+        mb.Should().BeGreaterThanOrEqualTo(expected: 0);
     }
 
     [Fact]
@@ -63,9 +63,9 @@ public class ProcessResourceMonitorTests
             SupportedCodecs: [VideoCodecType.H264]
         );
 
-        double util = sut.GetGpuEncodeUtilization(nvidia.Name);
+        double util = sut.GetGpuEncodeUtilization(gpuDeviceKey: nvidia.Name);
 
-        util.Should().Be(0.0);
+        util.Should().Be(expected: 0.0);
     }
 
     [Fact]
@@ -73,10 +73,10 @@ public class ProcessResourceMonitorTests
     {
         NullResourceMonitor sut = new();
 
-        sut.GetCpuUsagePercent().Should().Be(0);
-        sut.GetSystemCpuUsagePercent().Should().Be(0);
-        sut.GetAvailableMemoryMb().Should().Be(0);
-        sut.GetGpuEncodeUtilization("n/a").Should().Be(0);
+        sut.GetCpuUsagePercent().Should().Be(expected: 0);
+        sut.GetSystemCpuUsagePercent().Should().Be(expected: 0);
+        sut.GetAvailableMemoryMb().Should().Be(expected: 0);
+        sut.GetGpuEncodeUtilization(gpuDeviceKey: "n/a").Should().Be(expected: 0);
     }
 
     [Fact]
@@ -86,8 +86,8 @@ public class ProcessResourceMonitorTests
 
         double percent = sut.GetSystemCpuUsagePercent();
 
-        percent.Should().BeGreaterThanOrEqualTo(0);
-        percent.Should().BeLessThanOrEqualTo(100);
+        percent.Should().BeGreaterThanOrEqualTo(expected: 0);
+        percent.Should().BeLessThanOrEqualTo(expected: 100);
     }
 
     [Fact]
@@ -95,12 +95,12 @@ public class ProcessResourceMonitorTests
     {
         ProcessResourceMonitor sut = new();
         sut.GetSystemCpuUsagePercent();
-        Thread.Sleep(50);
+        Thread.Sleep(millisecondsTimeout: 50);
 
         double percent = sut.GetSystemCpuUsagePercent();
 
-        percent.Should().BeGreaterThanOrEqualTo(0);
-        percent.Should().BeLessThanOrEqualTo(100);
-        double.IsNaN(percent).Should().BeFalse();
+        percent.Should().BeGreaterThanOrEqualTo(expected: 0);
+        percent.Should().BeLessThanOrEqualTo(expected: 100);
+        double.IsNaN(d: percent).Should().BeFalse();
     }
 }

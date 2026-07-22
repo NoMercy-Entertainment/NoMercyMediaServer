@@ -47,33 +47,33 @@ public class EncodeTaskJobDegradeTests
     public void DegradeToSoftware_GpuPinnedTask_DropsGpuKeyAndReroutesToEncoderCpu()
     {
         EncodeTaskJob job = BuildJob(
-            new ResourceRequirement(GpuDeviceKey: "h264_amf", GpuSlots: 1, CpuThreads: 2)
+            resources: new ResourceRequirement(GpuDeviceKey: "h264_amf", GpuSlots: 1, CpuThreads: 2)
         );
 
-        Assert.Equal(QueueNames.EncoderGpu, job.QueueName);
+        Assert.Equal(expected: QueueNames.EncoderGpu, actual: job.QueueName);
 
         IShouldQueue? degraded = job.DegradeToSoftware();
 
-        Assert.NotNull(degraded);
-        Assert.Same(job, degraded);
-        Assert.Null(job.Task.Resources!.GpuDeviceKey);
-        Assert.Equal(0, job.Task.Resources.GpuSlots);
-        Assert.Equal(2, job.Task.Resources.CpuThreads);
-        Assert.Equal(QueueNames.EncoderCpu, job.QueueName);
-        Assert.Equal(QueueNames.EncoderCpu, degraded.QueueName);
+        Assert.NotNull(@object: degraded);
+        Assert.Same(expected: job, actual: degraded);
+        Assert.Null(@object: job.Task.Resources!.GpuDeviceKey);
+        Assert.Equal(expected: 0, actual: job.Task.Resources.GpuSlots);
+        Assert.Equal(expected: 2, actual: job.Task.Resources.CpuThreads);
+        Assert.Equal(expected: QueueNames.EncoderCpu, actual: job.QueueName);
+        Assert.Equal(expected: QueueNames.EncoderCpu, actual: degraded.QueueName);
     }
 
     [Fact]
     public void DegradeToSoftware_AlreadyCpuOnlyTask_ReturnsNull()
     {
         EncodeTaskJob job = BuildJob(
-            new ResourceRequirement(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 4)
+            resources: new ResourceRequirement(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: 4)
         );
 
         IShouldQueue? degraded = job.DegradeToSoftware();
 
-        Assert.Null(degraded);
-        Assert.Equal(QueueNames.EncoderCpu, job.QueueName);
+        Assert.Null(@object: degraded);
+        Assert.Equal(expected: QueueNames.EncoderCpu, actual: job.QueueName);
     }
 
     [Fact]
@@ -83,6 +83,6 @@ public class EncodeTaskJobDegradeTests
 
         IShouldQueue? degraded = job.DegradeToSoftware();
 
-        Assert.Null(degraded);
+        Assert.Null(@object: degraded);
     }
 }

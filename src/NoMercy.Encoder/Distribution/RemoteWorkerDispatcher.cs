@@ -42,7 +42,7 @@ public class RemoteWorkerDispatcher(
     private const int MaxRemoteAttempts = 2;
 
     public int AvailableWorkerCount =>
-        Math.Max(localFallback.AvailableWorkerCount, registry.GetActiveWorkers().Count);
+        Math.Max(val1: localFallback.AvailableWorkerCount, val2: registry.GetActiveWorkers().Count);
 
     public async Task<DispatchResult[]> DispatchAsync(EncodeTask[] tasks, CancellationToken ct)
     {
@@ -50,18 +50,18 @@ public class RemoteWorkerDispatcher(
 
         if (remoteWorkers.Count == 0)
         {
-            logger.LogDebug("No remote workers registered — falling back to local dispatcher");
-            return await localFallback.DispatchAsync(tasks, ct).ConfigureAwait(false);
+            logger.LogDebug(message: "No remote workers registered — falling back to local dispatcher");
+            return await localFallback.DispatchAsync(tasks: tasks, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
         }
 
         List<WorkerCapacity> capacities = remoteWorkers
-            .Select(w =>
+            .Select(selector: w =>
             {
                 ResourceBudgetSnapshot budget = w.GetAvailableBudget();
-                int slots = Math.Max(0, budget.AvailableGpuSlots + budget.AvailableCpuThreads);
+                int slots = Math.Max(val1: 0, val2: budget.AvailableGpuSlots + budget.AvailableCpuThreads);
                 return new WorkerCapacity(
                     WorkerId: w.WorkerId,
-                    SpeedMultiplier: Math.Max(1, slots),
+                    SpeedMultiplier: Math.Max(val1: 1, val2: slots),
                     AvailableSlots: slots,
                     // Carry the GPU capability through to the assigner. Without
                     // this the flag defaults false, the assigner's GPU-routing
@@ -74,29 +74,27 @@ public class RemoteWorkerDispatcher(
             })
             .ToList();
 
-        Dictionary<string, EncodeTask[]> assignments = assigner.Assign(tasks, capacities);
+        Dictionary<string, EncodeTask[]> assignments = assigner.Assign(tasks: tasks, workers: capacities);
 
         // Build a lookup so we can map worker IDs back to concrete workers.
-        Dictionary<string, IRemoteWorker> workerById = remoteWorkers.ToDictionary(w => w.WorkerId);
+        Dictionary<string, IRemoteWorker> workerById = remoteWorkers.ToDictionary(keySelector: w => w.WorkerId);
 
         logger.LogInformation(
-            "Dispatching {Count} tasks across {Workers} remote workers",
-            tasks.Length,
-            remoteWorkers.Count
+            message: "Dispatching {Count} tasks across {Workers} remote workers", args: [tasks.Length, remoteWorkers.Count]
         );
 
         // Run every task in parallel. Each task gets its own retry chain
         // across up to MaxRemoteAttempts distinct workers before the
         // local fallback kicks in.
         Task<DispatchResult>[] dispatches = assignments
-            .SelectMany(kvp =>
-                kvp.Value.Select(task =>
-                    RunWithRemoteRetryAsync(workerById[kvp.Key], task, remoteWorkers, ct)
+            .SelectMany(selector: kvp =>
+                kvp.Value.Select(selector: task =>
+                    RunWithRemoteRetryAsync(initialWorker: workerById[key: kvp.Key], task: task, allWorkers: remoteWorkers, ct: ct)
                 )
             )
             .ToArray();
 
-        DispatchResult[] results = await Task.WhenAll(dispatches).ConfigureAwait(false);
+        DispatchResult[] results = await Task.WhenAll(tasks: dispatches).ConfigureAwait(continueOnCapturedContext: false);
         return results;
     }
 
@@ -112,10 +110,10 @@ public class RemoteWorkerDispatcher(
 
         for (int attempt = 0; attempt < MaxRemoteAttempts && current is not null; attempt++)
         {
-            attempted.Add(current.WorkerId);
+            attempted.Add(item: current.WorkerId);
 
-            DispatchResult? attemptResult = await TryWorkerAsync(current, task, ct)
-                .ConfigureAwait(false);
+            DispatchResult? attemptResult = await TryWorkerAsync(worker: current, task: task, ct: ct)
+                .ConfigureAwait(continueOnCapturedContext: false);
             if (attemptResult is { Success: true })
                 return attemptResult;
 
@@ -123,8 +121,8 @@ public class RemoteWorkerDispatcher(
             // with the most available slots so a transient error on the
             // first pick doesn't cascade into the weakest worker.
             current = allWorkers
-                .Where(w => !attempted.Contains(w.WorkerId))
-                .OrderByDescending(w =>
+                .Where(predicate: w => !attempted.Contains(item: w.WorkerId))
+                .OrderByDescending(keySelector: w =>
                 {
                     ResourceBudgetSnapshot b = w.GetAvailableBudget();
                     return b.AvailableGpuSlots + b.AvailableCpuThreads;
@@ -134,27 +132,22 @@ public class RemoteWorkerDispatcher(
             if (current is not null)
             {
                 logger.LogInformation(
-                    "Task {TaskId} failed on {FailedWorker}; retrying on {NextWorker}",
-                    task.TaskId,
-                    attempted.Last(),
-                    current.WorkerId
+                    message: "Task {TaskId} failed on {FailedWorker}; retrying on {NextWorker}", args: [task.TaskId, attempted.Last(), current.WorkerId]
                 );
             }
         }
 
         // All remote attempts exhausted — fall back to local for this task.
         logger.LogWarning(
-            "Task {TaskId} exhausted remote retries ({Attempts} workers tried) — using local dispatcher",
-            task.TaskId,
-            attempted.Count
+            message: "Task {TaskId} exhausted remote retries ({Attempts} workers tried) — using local dispatcher", args: [task.TaskId, attempted.Count]
         );
         DispatchResult[] fallbackResults = await localFallback
-            .DispatchAsync([task], ct)
-            .ConfigureAwait(false);
+            .DispatchAsync(tasks: [task], ct: ct)
+            .ConfigureAwait(continueOnCapturedContext: false);
         return fallbackResults.Length > 0
             ? fallbackResults[0]
             : new(
-                task.TaskId,
+                TaskId: task.TaskId,
                 Success: false,
                 OutputPath: task.OutputPath,
                 Duration: TimeSpan.Zero,
@@ -175,16 +168,13 @@ public class RemoteWorkerDispatcher(
     {
         try
         {
-            DispatchResult result = await worker.ExecuteTaskAsync(task, ct).ConfigureAwait(false);
-            RecordOutcome(worker.WorkerId, result.Success);
+            DispatchResult result = await worker.ExecuteTaskAsync(task: task, ct: ct).ConfigureAwait(continueOnCapturedContext: false);
+            RecordOutcome(workerId: worker.WorkerId, success: result.Success);
             if (result.Success)
                 return result;
 
             logger.LogWarning(
-                "Worker {WorkerId} failed task {TaskId} ({Error})",
-                worker.WorkerId,
-                task.TaskId,
-                result.Error
+                message: "Worker {WorkerId} failed task {TaskId} ({Error})", args: [worker.WorkerId, task.TaskId, result.Error]
             );
             return null;
         }
@@ -194,12 +184,10 @@ public class RemoteWorkerDispatcher(
         }
         catch (Exception ex)
         {
-            RecordOutcome(worker.WorkerId, success: false);
+            RecordOutcome(workerId: worker.WorkerId, success: false);
             logger.LogWarning(
-                ex,
-                "Worker {WorkerId} threw on task {TaskId}",
-                worker.WorkerId,
-                task.TaskId
+                exception: ex,
+                message: "Worker {WorkerId} threw on task {TaskId}", args: [worker.WorkerId, task.TaskId]
             );
             return null;
         }
@@ -215,10 +203,10 @@ public class RemoteWorkerDispatcher(
         switch (registry)
         {
             case JsonRemoteWorkerRegistry json:
-                json.RecordTaskOutcome(workerId, success);
+                json.RecordTaskOutcome(workerId: workerId, success: success);
                 break;
             case InMemoryRemoteWorkerRegistry mem:
-                mem.RecordTaskOutcome(workerId, success);
+                mem.RecordTaskOutcome(workerId: workerId, success: success);
                 break;
         }
     }

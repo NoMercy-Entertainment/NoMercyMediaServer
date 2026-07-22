@@ -31,12 +31,12 @@ public class ProcessThrottle(ILogger<ProcessThrottle> logger, IProcessSuspender 
         // so contention is negligible.
         lock (_lock)
         {
-            if (!_suspendedPids.Add(processId))
+            if (!_suspendedPids.Add(item: processId))
                 return;
 
-            suspender.Suspend(processId);
+            suspender.Suspend(processId: processId);
 
-            logger.LogDebug("Suspended process {Pid}", processId);
+            logger.LogDebug(message: "Suspended process {Pid}", args: processId);
         }
     }
 
@@ -44,12 +44,12 @@ public class ProcessThrottle(ILogger<ProcessThrottle> logger, IProcessSuspender 
     {
         lock (_lock)
         {
-            if (!_suspendedPids.Remove(processId))
+            if (!_suspendedPids.Remove(item: processId))
                 return;
 
-            suspender.Resume(processId);
+            suspender.Resume(processId: processId);
 
-            logger.LogDebug("Resumed process {Pid}", processId);
+            logger.LogDebug(message: "Resumed process {Pid}", args: processId);
         }
     }
 
@@ -57,7 +57,7 @@ public class ProcessThrottle(ILogger<ProcessThrottle> logger, IProcessSuspender 
     {
         lock (_lock)
         {
-            return _suspendedPids.Contains(processId);
+            return _suspendedPids.Contains(item: processId);
         }
     }
 }

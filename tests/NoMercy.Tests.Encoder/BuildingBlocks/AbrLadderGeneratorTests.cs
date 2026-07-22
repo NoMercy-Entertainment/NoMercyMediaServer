@@ -24,7 +24,7 @@ namespace NoMercy.Tests.Encoder.BuildingBlocks;
 /// </summary>
 public class AbrLadderGeneratorLegacyTests
 {
-    private readonly AbrLadderGenerator _generator = new(NullLogger<AbrLadderGenerator>.Instance);
+    private readonly AbrLadderGenerator _generator = new(logger: NullLogger<AbrLadderGenerator>.Instance);
 
     [Fact]
     public void Generate_1080pSource_ProducesTiersUpToSource()
@@ -32,13 +32,13 @@ public class AbrLadderGeneratorLegacyTests
         MediaInfo media = BuildMedia(width: 1920, height: 1080, bitRateKbps: 6000);
         VideoOutput reference = BuildReference();
 
-        VideoOutput[] ladder = _generator.Generate(media, reference);
+        VideoOutput[] ladder = _generator.Generate(media: media, reference: reference);
 
-        Assert.Equal(4, ladder.Length);
-        Assert.Equal(360, ladder[0].Height);
-        Assert.Equal(480, ladder[1].Height);
-        Assert.Equal(720, ladder[2].Height);
-        Assert.Equal(1080, ladder[3].Height);
+        Assert.Equal(expected: 4, actual: ladder.Length);
+        Assert.Equal(expected: 360, actual: ladder[0].Height);
+        Assert.Equal(expected: 480, actual: ladder[1].Height);
+        Assert.Equal(expected: 720, actual: ladder[2].Height);
+        Assert.Equal(expected: 1080, actual: ladder[3].Height);
     }
 
     [Fact]
@@ -47,12 +47,12 @@ public class AbrLadderGeneratorLegacyTests
         MediaInfo media = BuildMedia(width: 3840, height: 2160, bitRateKbps: 50000);
         VideoOutput reference = BuildReference();
 
-        VideoOutput[] ladder = _generator.Generate(media, reference);
+        VideoOutput[] ladder = _generator.Generate(media: media, reference: reference);
 
-        int[] heights = ladder.Select(v => v.Height ?? 0).ToArray();
-        Assert.Contains(360, heights);
-        Assert.Contains(1080, heights);
-        Assert.Contains(2160, heights);
+        int[] heights = ladder.Select(selector: v => v.Height ?? 0).ToArray();
+        Assert.Contains(expected: 360, collection: heights);
+        Assert.Contains(expected: 1080, collection: heights);
+        Assert.Contains(expected: 2160, collection: heights);
     }
 
     [Fact]
@@ -61,10 +61,10 @@ public class AbrLadderGeneratorLegacyTests
         MediaInfo media = BuildMedia(width: 1280, height: 720, bitRateKbps: 3000);
         VideoOutput reference = BuildReference();
 
-        VideoOutput[] ladder = _generator.Generate(media, reference);
+        VideoOutput[] ladder = _generator.Generate(media: media, reference: reference);
 
-        Assert.All(ladder, v => Assert.True(v.Height <= 720));
-        Assert.DoesNotContain(1080, ladder.Select(v => v.Height ?? 0));
+        Assert.All(collection: ladder, action: v => Assert.True(condition: v.Height <= 720));
+        Assert.DoesNotContain(expected: 1080, collection: ladder.Select(selector: v => v.Height ?? 0));
     }
 
     [Fact]
@@ -74,15 +74,15 @@ public class AbrLadderGeneratorLegacyTests
         MediaInfo highBitrate = BuildMedia(width: 1920, height: 1080, bitRateKbps: 8000);
         VideoOutput reference = BuildReference();
 
-        VideoOutput[] low = _generator.Generate(lowBitrate, reference);
-        VideoOutput[] high = _generator.Generate(highBitrate, reference);
+        VideoOutput[] low = _generator.Generate(media: lowBitrate, reference: reference);
+        VideoOutput[] high = _generator.Generate(media: highBitrate, reference: reference);
 
-        VideoOutput low1080 = Assert.Single(low, v => v.Height == 1080);
-        VideoOutput high1080 = Assert.Single(high, v => v.Height == 1080);
+        VideoOutput low1080 = Assert.Single(collection: low, predicate: v => v.Height == 1080);
+        VideoOutput high1080 = Assert.Single(collection: high, predicate: v => v.Height == 1080);
 
         Assert.True(
-            low1080.BitrateKbps < high1080.BitrateKbps,
-            "low-bitrate source should produce a lower-bitrate 1080p tier"
+            condition: low1080.BitrateKbps < high1080.BitrateKbps,
+            userMessage: "low-bitrate source should produce a lower-bitrate 1080p tier"
         );
     }
 
@@ -92,9 +92,9 @@ public class AbrLadderGeneratorLegacyTests
         MediaInfo media = BuildMedia(width: 1920, height: 1080, bitRateKbps: 6000);
         VideoOutput reference = BuildReference() with { Codec = VideoCodecType.H265 };
 
-        VideoOutput[] ladder = _generator.Generate(media, reference);
+        VideoOutput[] ladder = _generator.Generate(media: media, reference: reference);
 
-        Assert.All(ladder, v => Assert.Equal(VideoCodecType.H265, v.Codec));
+        Assert.All(collection: ladder, action: v => Assert.Equal(expected: VideoCodecType.H265, actual: v.Codec));
     }
 
     [Fact]
@@ -103,9 +103,9 @@ public class AbrLadderGeneratorLegacyTests
         MediaInfo media = BuildMedia(width: 1920, height: 1080, bitRateKbps: 6000);
         VideoOutput reference = BuildReference();
 
-        VideoOutput[] ladder = _generator.Generate(media, reference);
+        VideoOutput[] ladder = _generator.Generate(media: media, reference: reference);
 
-        Assert.All(ladder, v => Assert.Equal(0, v.Width % 2));
+        Assert.All(collection: ladder, action: v => Assert.Equal(expected: 0, actual: v.Width % 2));
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public class AbrLadderGeneratorLegacyTests
         MediaInfo media = new(
             FilePath: "/audio-only.m4a",
             Format: "mp4",
-            Duration: TimeSpan.FromMinutes(3),
+            Duration: TimeSpan.FromMinutes(minutes: 3),
             OverallBitRateKbps: 256,
             FileSizeBytes: 1_000_000,
             VideoStreams: [],
@@ -123,9 +123,9 @@ public class AbrLadderGeneratorLegacyTests
             Chapters: []
         );
 
-        VideoOutput[] ladder = _generator.Generate(media, BuildReference());
+        VideoOutput[] ladder = _generator.Generate(media: media, reference: BuildReference());
 
-        Assert.Empty(ladder);
+        Assert.Empty(collection: ladder);
     }
 
     [Fact]
@@ -134,17 +134,17 @@ public class AbrLadderGeneratorLegacyTests
         MediaInfo media = BuildMedia(width: 1920, height: 1200, bitRateKbps: 8000);
         VideoOutput reference = BuildReference();
 
-        VideoOutput[] ladder = _generator.Generate(media, reference);
+        VideoOutput[] ladder = _generator.Generate(media: media, reference: reference);
 
-        Assert.Equal(1200, ladder[^1].Height);
-        Assert.Equal(1920, ladder[^1].Width);
+        Assert.Equal(expected: 1200, actual: ladder[^1].Height);
+        Assert.Equal(expected: 1920, actual: ladder[^1].Width);
     }
 
     private static MediaInfo BuildMedia(int width, int height, long bitRateKbps) =>
         new(
             FilePath: "/video.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(90),
+            Duration: TimeSpan.FromMinutes(minutes: 90),
             OverallBitRateKbps: bitRateKbps + 500,
             FileSizeBytes: 4_000_000_000,
             VideoStreams:
@@ -199,7 +199,7 @@ public class AbrLadderGeneratorLegacyTests
 /// </summary>
 public class AbrLadderGeneratorAutoConfigTests
 {
-    private readonly AbrLadderGenerator _generator = new(NullLogger<AbrLadderGenerator>.Instance);
+    private readonly AbrLadderGenerator _generator = new(logger: NullLogger<AbrLadderGenerator>.Instance);
 
     // ── Test 1 ───────────────────────────────────────────────────────────────
     [Fact]
@@ -217,9 +217,9 @@ public class AbrLadderGeneratorAutoConfigTests
             NeverUpsource = false,
         };
 
-        LadderRung[] rungs = _generator.GenerateLadder(media, VideoCodecType.H264, config);
+        LadderRung[] rungs = _generator.GenerateLadder(media: media, profileCodec: VideoCodecType.H264, autoConfig: config);
 
-        rungs.Should().HaveCount(5);
+        rungs.Should().HaveCount(expected: 5);
     }
 
     // ── Test 2 ───────────────────────────────────────────────────────────────
@@ -236,10 +236,10 @@ public class AbrLadderGeneratorAutoConfigTests
             MaxRungs = 10,
         };
 
-        LadderRung[] rungs = _generator.GenerateLadder(media, VideoCodecType.H264, config);
+        LadderRung[] rungs = _generator.GenerateLadder(media: media, profileCodec: VideoCodecType.H264, autoConfig: config);
 
-        rungs.Should().AllSatisfy(r => r.Height.Should().BeLessThanOrEqualTo(720));
-        rungs.Should().NotContain(r => r.Height == 1080);
+        rungs.Should().AllSatisfy(expected: r => r.Height.Should().BeLessThanOrEqualTo(expected: 720));
+        rungs.Should().NotContain(predicate: r => r.Height == 1080);
     }
 
     // ── Test 3 ───────────────────────────────────────────────────────────────
@@ -258,9 +258,9 @@ public class AbrLadderGeneratorAutoConfigTests
             MinTierGapPercent = 0,
         };
 
-        LadderRung[] rungs = _generator.GenerateLadder(media, VideoCodecType.H264, config);
+        LadderRung[] rungs = _generator.GenerateLadder(media: media, profileCodec: VideoCodecType.H264, autoConfig: config);
 
-        rungs.Should().AllSatisfy(r => r.BitrateKbps.Should().BeLessThanOrEqualTo(1000));
+        rungs.Should().AllSatisfy(expected: r => r.BitrateKbps.Should().BeLessThanOrEqualTo(expected: 1000));
     }
 
     // ── Test 4 ───────────────────────────────────────────────────────────────
@@ -282,13 +282,13 @@ public class AbrLadderGeneratorAutoConfigTests
             MinTierGapPercent = 0,
         };
 
-        LadderRung[] rungs = _generator.GenerateLadder(media, VideoCodecType.H264, config);
+        LadderRung[] rungs = _generator.GenerateLadder(media: media, profileCodec: VideoCodecType.H264, autoConfig: config);
 
-        LadderRung rung1080 = rungs.Single(r => r.Height == 1080);
-        rung1080.BitrateKbps.Should().Be(3000);
+        LadderRung rung1080 = rungs.Single(predicate: r => r.Height == 1080);
+        rung1080.BitrateKbps.Should().Be(expected: 3000);
 
-        LadderRung rung540 = rungs.Single(r => r.Height == 540);
-        rung540.BitrateKbps.Should().Be(750);
+        LadderRung rung540 = rungs.Single(predicate: r => r.Height == 540);
+        rung540.BitrateKbps.Should().Be(expected: 750);
     }
 
     // ── Test 5 ───────────────────────────────────────────────────────────────
@@ -311,16 +311,16 @@ public class AbrLadderGeneratorAutoConfigTests
             MinTierGapPercent = 0,
         };
 
-        LadderRung[] rungs = _generator.GenerateLadder(media, VideoCodecType.H264, config);
+        LadderRung[] rungs = _generator.GenerateLadder(media: media, profileCodec: VideoCodecType.H264, autoConfig: config);
 
         rungs
-            .Where(r => r.Height <= 720)
+            .Where(predicate: r => r.Height <= 720)
             .Should()
-            .AllSatisfy(r => r.Codec.Should().Be(VideoCodecType.H264));
+            .AllSatisfy(expected: r => r.Codec.Should().Be(expected: VideoCodecType.H264));
         rungs
-            .Where(r => r.Height > 720)
+            .Where(predicate: r => r.Height > 720)
             .Should()
-            .AllSatisfy(r => r.Codec.Should().Be(VideoCodecType.H265));
+            .AllSatisfy(expected: r => r.Codec.Should().Be(expected: VideoCodecType.H265));
     }
 
     // ── Test 6 ───────────────────────────────────────────────────────────────
@@ -340,7 +340,7 @@ public class AbrLadderGeneratorAutoConfigTests
             NeverUpsource = false,
         };
 
-        Action act = () => _generator.GenerateLadder(media, VideoCodecType.H264, config);
+        Action act = () => _generator.GenerateLadder(media: media, profileCodec: VideoCodecType.H264, autoConfig: config);
 
         act.Should().Throw<InvalidOperationException>();
     }
@@ -364,10 +364,10 @@ public class AbrLadderGeneratorAutoConfigTests
             MinTierGapPercent = 0,
         };
 
-        LadderRung[] rungs = _generator.GenerateLadder(media, VideoCodecType.H264, config);
+        LadderRung[] rungs = _generator.GenerateLadder(media: media, profileCodec: VideoCodecType.H264, autoConfig: config);
 
-        rungs.Where(r => r.Height <= 480).Should().AllSatisfy(r => r.Framerate.Should().Be(30.0));
-        rungs.Where(r => r.Height > 480).Should().AllSatisfy(r => r.Framerate.Should().Be(60.0));
+        rungs.Where(predicate: r => r.Height <= 480).Should().AllSatisfy(expected: r => r.Framerate.Should().Be(expected: 30.0));
+        rungs.Where(predicate: r => r.Height > 480).Should().AllSatisfy(expected: r => r.Framerate.Should().Be(expected: 60.0));
     }
 
     // ── Test 8 ───────────────────────────────────────────────────────────────
@@ -386,10 +386,10 @@ public class AbrLadderGeneratorAutoConfigTests
             MinTierGapPercent = 0,
         };
 
-        LadderRung[] rungs = _generator.GenerateLadder(media, VideoCodecType.H264, config);
+        LadderRung[] rungs = _generator.GenerateLadder(media: media, profileCodec: VideoCodecType.H264, autoConfig: config);
 
-        rungs.Should().HaveCount(3);
-        rungs.Select(r => r.Height).Should().BeEquivalentTo([2160, 1440, 1080]);
+        rungs.Should().HaveCount(expected: 3);
+        rungs.Select(selector: r => r.Height).Should().BeEquivalentTo(expectation: [2160, 1440, 1080]);
     }
 
     // ── Test 9 ───────────────────────────────────────────────────────────────
@@ -400,8 +400,8 @@ public class AbrLadderGeneratorAutoConfigTests
         // Use a custom tier set where two rungs are within 50% of each other.
         LadderTier[] closeTiers =
         [
-            new(1920, 1080, "1080p-a", 5500, null, null),
-            new(1920, 1080, "1080p-b", 6000, null, null),
+            new(Width: 1920, Height: 1080, Label: "1080p-a", RecommendedBitrateH264Kbps: 5500, RecommendedBitrateHevcKbps: null, RecommendedBitrateAv1Kbps: null),
+            new(Width: 1920, Height: 1080, Label: "1080p-b", RecommendedBitrateH264Kbps: 6000, RecommendedBitrateHevcKbps: null, RecommendedBitrateAv1Kbps: null),
         ];
 
         MediaInfo media = Build1080pMedia(bitRateKbps: 20000);
@@ -415,10 +415,10 @@ public class AbrLadderGeneratorAutoConfigTests
             MaxRungs = 10,
         };
 
-        LadderRung[] rungs = _generator.GenerateLadder(media, VideoCodecType.H264, config);
+        LadderRung[] rungs = _generator.GenerateLadder(media: media, profileCodec: VideoCodecType.H264, autoConfig: config);
 
         // The two 1080p tiers are within 50% → collapsed to 1 rung.
-        rungs.Should().HaveCount(1);
+        rungs.Should().HaveCount(expected: 1);
     }
 
     // ── Test 10 ──────────────────────────────────────────────────────────────
@@ -438,10 +438,10 @@ public class AbrLadderGeneratorAutoConfigTests
             MinTierGapPercent = 0,
         };
 
-        LadderRung[] rungs = _generator.GenerateLadder(media, VideoCodecType.H264, config);
+        LadderRung[] rungs = _generator.GenerateLadder(media: media, profileCodec: VideoCodecType.H264, autoConfig: config);
 
         // Should not throw; should emit whatever passed (1 rung).
-        rungs.Should().HaveCount(1);
+        rungs.Should().HaveCount(expected: 1);
     }
 
     // ── Test 11 ──────────────────────────────────────────────────────────────
@@ -455,7 +455,7 @@ public class AbrLadderGeneratorAutoConfigTests
             BitrateStrategy = BitrateStrategy.AppleHlsRecommended,
         };
 
-        Action act = () => _generator.GenerateLadder(media, VideoCodecType.H264, config);
+        Action act = () => _generator.GenerateLadder(media: media, profileCodec: VideoCodecType.H264, autoConfig: config);
 
         act.Should().Throw<InvalidOperationException>();
     }
@@ -463,14 +463,14 @@ public class AbrLadderGeneratorAutoConfigTests
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static MediaInfo Build4KMedia(double frameRate = 24.0) =>
-        BuildMedia(3840, 2160, 50000, frameRate);
+        BuildMedia(width: 3840, height: 2160, bitRateKbps: 50000, frameRate: frameRate);
 
-    private static MediaInfo Build720pMedia() => BuildMedia(1280, 720, 3000);
+    private static MediaInfo Build720pMedia() => BuildMedia(width: 1280, height: 720, bitRateKbps: 3000);
 
     private static MediaInfo Build1080pMedia(long bitRateKbps = 6000) =>
-        BuildMedia(1920, 1080, bitRateKbps);
+        BuildMedia(width: 1920, height: 1080, bitRateKbps: bitRateKbps);
 
-    private static MediaInfo Build360pMedia() => BuildMedia(640, 360, 500);
+    private static MediaInfo Build360pMedia() => BuildMedia(width: 640, height: 360, bitRateKbps: 500);
 
     private static MediaInfo BuildMedia(
         int width,
@@ -481,7 +481,7 @@ public class AbrLadderGeneratorAutoConfigTests
         new(
             FilePath: "/video.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(90),
+            Duration: TimeSpan.FromMinutes(minutes: 90),
             OverallBitRateKbps: bitRateKbps + 500,
             FileSizeBytes: 4_000_000_000,
             VideoStreams:

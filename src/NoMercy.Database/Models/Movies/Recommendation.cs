@@ -16,53 +16,53 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.Movies;
 
-[PrimaryKey(nameof(Id))]
-[Index(nameof(MediaId), nameof(TvFromId), IsUnique = true)]
-[Index(nameof(MediaId), nameof(MovieFromId), IsUnique = true)]
+[PrimaryKey(propertyName: nameof(Id))]
+[Index(propertyName: nameof(MediaId), additionalPropertyNames: nameof(TvFromId), IsUnique = true)]
+[Index(propertyName: nameof(MediaId), additionalPropertyNames: nameof(MovieFromId), IsUnique = true)]
 public class Recommendation : ColorPaletteTimeStamps
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    [JsonProperty("id")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.Identity)]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("backdrop")]
+    [JsonProperty(propertyName: "backdrop")]
     public string? Backdrop { get; set; }
 
-    [MaxLength(4096)]
-    [JsonProperty("overview")]
+    [MaxLength(length: 4096)]
+    [JsonProperty(propertyName: "overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty("poster")]
+    [JsonProperty(propertyName: "poster")]
     public string? Poster { get; set; }
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string? Title { get; set; }
 
-    [JsonProperty("titleSort")]
+    [JsonProperty(propertyName: "titleSort")]
     public string? TitleSort { get; set; }
 
-    [JsonProperty("mediaId")]
+    [JsonProperty(propertyName: "mediaId")]
     public int MediaId { get; set; }
 
-    [ForeignKey("TvFromId")]
+    [ForeignKey(name: "TvFromId")]
     public int? TvFromId { get; set; }
 
     [JsonIgnore]
     public Tv? TvFrom { get; set; }
 
-    [ForeignKey("TvToId")]
+    [ForeignKey(name: "TvToId")]
     public int? TvToId { get; set; }
 
     [JsonIgnore]
     public Tv? TvTo { get; set; }
 
-    [ForeignKey("RecommendationFrom")]
+    [ForeignKey(name: "RecommendationFrom")]
     public int? MovieFromId { get; set; }
 
     [JsonIgnore]
     public Movie? MovieFrom { get; set; }
 
-    [ForeignKey("RecommendationTo")]
+    [ForeignKey(name: "RecommendationTo")]
     public int? MovieToId { get; set; }
 
     [JsonIgnore]

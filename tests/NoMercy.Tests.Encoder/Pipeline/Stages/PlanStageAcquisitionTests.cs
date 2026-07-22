@@ -41,15 +41,15 @@ public class PlanStageAcquisitionTests
         PlanStage stage = BuildStage(acquisitionService: svc.Object);
 
         EncodingProfile profile = BuildProfile(
-            new() { Enabled = false, Languages = ["en"] }
+            acquisition: new() { Enabled = false, Languages = ["en"] }
         );
 
-        OutputPlan plan = await RunPlan(stage, profile);
+        OutputPlan plan = await RunPlan(stage: stage, profile: profile);
 
         plan.AcquiredSubtitles.Should().BeEmpty();
         svc.Verify(
-            s => s.AcquireAsync(It.IsAny<AcquisitionRequest>(), It.IsAny<CancellationToken>()),
-            Times.Never
+            expression: s => s.AcquireAsync(It.IsAny<AcquisitionRequest>(), It.IsAny<CancellationToken>()),
+            times: Times.Never
         );
     }
 
@@ -68,14 +68,14 @@ public class PlanStageAcquisitionTests
         );
 
         Mock<ISubtitleAcquisitionService> svc = new();
-        svc.Setup(s =>
+        svc.Setup(expression: s =>
                 s.AcquireAsync(It.IsAny<AcquisitionRequest>(), It.IsAny<CancellationToken>())
             )
-            .ReturnsAsync([acquired]);
+            .ReturnsAsync(value: [acquired]);
 
         PlanStage stage = BuildStage(acquisitionService: svc.Object);
         EncodingProfile profile = BuildProfile(
-            new()
+            acquisition: new()
             {
                 Enabled = true,
                 Languages = ["en"],
@@ -83,14 +83,14 @@ public class PlanStageAcquisitionTests
             }
         );
 
-        OutputPlan plan = await RunPlan(stage, profile);
+        OutputPlan plan = await RunPlan(stage: stage, profile: profile);
 
-        plan.AcquiredSubtitles.Should().HaveCount(1);
-        plan.AcquiredSubtitles[0].Language.Should().Be("en");
-        plan.AcquiredSubtitles[0].IsExactMatch.Should().BeTrue();
+        plan.AcquiredSubtitles.Should().HaveCount(expected: 1);
+        plan.AcquiredSubtitles[index: 0].Language.Should().Be(expected: "en");
+        plan.AcquiredSubtitles[index: 0].IsExactMatch.Should().BeTrue();
         svc.Verify(
-            s => s.AcquireAsync(It.IsAny<AcquisitionRequest>(), It.IsAny<CancellationToken>()),
-            Times.Once
+            expression: s => s.AcquireAsync(It.IsAny<AcquisitionRequest>(), It.IsAny<CancellationToken>()),
+            times: Times.Once
         );
     }
 
@@ -99,14 +99,14 @@ public class PlanStageAcquisitionTests
     public async Task ServiceThrows_PlanSucceeds_AcquiredSubtitlesEmpty()
     {
         Mock<ISubtitleAcquisitionService> svc = new();
-        svc.Setup(s =>
+        svc.Setup(expression: s =>
                 s.AcquireAsync(It.IsAny<AcquisitionRequest>(), It.IsAny<CancellationToken>())
             )
-            .ThrowsAsync(new InvalidOperationException("provider down"));
+            .ThrowsAsync(exception: new InvalidOperationException(message: "provider down"));
 
         PlanStage stage = BuildStage(acquisitionService: svc.Object);
         EncodingProfile profile = BuildProfile(
-            new()
+            acquisition: new()
             {
                 Enabled = true,
                 Languages = ["en"],
@@ -114,7 +114,7 @@ public class PlanStageAcquisitionTests
             }
         );
 
-        StageResult result = await RunPlanRaw(stage, profile);
+        StageResult result = await RunPlanRaw(stage: stage, profile: profile);
 
         result.Should().BeOfType<StageSuccess<ExecutionPlan>>();
         StageSuccess<ExecutionPlan> success = (StageSuccess<ExecutionPlan>)result;
@@ -124,15 +124,15 @@ public class PlanStageAcquisitionTests
     private static PlanStage BuildStage(ISubtitleAcquisitionService? acquisitionService = null)
     {
         Mock<IHardwareCapabilities> hardware = new();
-        hardware.Setup(h => h.HasGpu).Returns(false);
-        hardware.Setup(h => h.CpuCores).Returns(8);
-        hardware.Setup(h => h.Gpus).Returns([]);
-        hardware.Setup(h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(false);
-        hardware.Setup(h => h.GetGpuForCodec(It.IsAny<VideoCodecType>())).Returns((GpuDevice?)null);
+        hardware.Setup(expression: h => h.HasGpu).Returns(value: false);
+        hardware.Setup(expression: h => h.CpuCores).Returns(value: 8);
+        hardware.Setup(expression: h => h.Gpus).Returns(value: []);
+        hardware.Setup(expression: h => h.SupportsHardwareEncoding(It.IsAny<VideoCodecType>())).Returns(value: false);
+        hardware.Setup(expression: h => h.GetGpuForCodec(It.IsAny<VideoCodecType>())).Returns(value: (GpuDevice?)null);
 
         Mock<ICodecResolver> codecResolver = new();
         codecResolver
-            .Setup(r =>
+            .Setup(expression: r =>
                 r.Resolve(
                     It.IsAny<VideoCodecType>(),
                     It.IsAny<IHardwareCapabilities>(),
@@ -140,7 +140,7 @@ public class PlanStageAcquisitionTests
                 )
             )
             .Returns(
-                new ResolvedCodec(
+                value: new ResolvedCodec(
                     FfmpegEncoderName: "libx264",
                     EncoderInfo: new(
                         FfmpegName: "libx264",
@@ -148,7 +148,7 @@ public class PlanStageAcquisitionTests
                         Presets: ["medium"],
                         Profiles: ["high"],
                         Levels: ["4.1"],
-                        QualityRange: new(0, 51, 23),
+                        QualityRange: new(Min: 0, Max: 51, Default: 23),
                         SupportedRateControl: [EncoderRateControlMode.Crf],
                         Supports10Bit: false,
                         SupportsHdr: false,
@@ -162,39 +162,39 @@ public class PlanStageAcquisitionTests
             );
 
         return new(
-            new(),
-            new(),
-            new(),
-            codecResolver.Object,
-            hardware.Object,
-            new TonemapSelector(),
-            new Mock<IFfmpegCapabilities>().Object,
-            new AbrLadderGenerator(),
-            new Mock<ICropDetector>().Object,
-            NullLogger<PlanStage>.Instance,
+            graphBuilder: new(),
+            groupingStrategy: new(),
+            costEstimator: new(),
+            codecResolver: codecResolver.Object,
+            hardware: hardware.Object,
+            tonemapSelector: new TonemapSelector(),
+            ffmpegCapabilities: new Mock<IFfmpegCapabilities>().Object,
+            abrLadderGenerator: new AbrLadderGenerator(),
+            cropDetector: new Mock<ICropDetector>().Object,
+            logger: NullLogger<PlanStage>.Instance,
             subtitleAcquisitionService: acquisitionService
         );
     }
 
     private static async Task<OutputPlan> RunPlan(PlanStage stage, EncodingProfile profile)
     {
-        StageResult result = await RunPlanRaw(stage, profile);
-        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(result);
+        StageResult result = await RunPlanRaw(stage: stage, profile: profile);
+        StageSuccess<ExecutionPlan> success = Assert.IsType<StageSuccess<ExecutionPlan>>(@object: result);
         return success.Value.OutputPlan;
     }
 
     private static async Task<StageResult> RunPlanRaw(PlanStage stage, EncodingProfile profile)
     {
-        ValidateInput input = new(BuildMedia(), profile);
+        ValidateInput input = new(Media: BuildMedia(), Profile: profile);
         EncodingContext context = EncodingContext.Create();
-        return await stage.ExecuteAsync(input, context, CancellationToken.None);
+        return await stage.ExecuteAsync(input: input, context: context, ct: CancellationToken.None);
     }
 
     private static MediaInfo BuildMedia() =>
         new(
             FilePath: "/media/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromMinutes(90),
+            Duration: TimeSpan.FromMinutes(minutes: 90),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 4_000_000_000,
             VideoStreams:

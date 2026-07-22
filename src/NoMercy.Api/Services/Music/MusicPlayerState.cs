@@ -17,22 +17,22 @@ namespace NoMercy.Api.Services.Music;
 
 public class MusicPlayerState
 {
-    [JsonProperty("actions")]
+    [JsonProperty(propertyName: "actions")]
     public Actions Actions { get; set; } = new();
 
-    [JsonProperty("device_id")]
+    [JsonProperty(propertyName: "device_id")]
     public string? DeviceId { get; set; }
 
-    [JsonProperty("is_playing")]
+    [JsonProperty(propertyName: "is_playing")]
     public bool PlayState { get; set; }
 
-    [JsonProperty("item")]
+    [JsonProperty(propertyName: "item")]
     public PlaylistTrackDto? CurrentItem { get; set; }
 
-    [JsonProperty("playlist")]
+    [JsonProperty(propertyName: "playlist")]
     public List<PlaylistTrackDto> Playlist { get; set; } = [];
 
-    [JsonProperty("backlog")]
+    [JsonProperty(propertyName: "backlog")]
     public List<PlaylistTrackDto> Backlog { get; set; } = [];
 
     // [JsonProperty("playlist")]
@@ -49,25 +49,25 @@ public class MusicPlayerState
     //     set;
     // } = [];
 
-    [JsonProperty("current_list")]
+    [JsonProperty(propertyName: "current_list")]
     public Uri CurrentList { get; set; } = null!;
 
-    [JsonProperty("progress_ms")]
+    [JsonProperty(propertyName: "progress_ms")]
     public int Time { get; set; }
 
-    [JsonProperty("duration_ms")]
+    [JsonProperty(propertyName: "duration_ms")]
     public int Duration { get; set; }
 
-    [JsonProperty("repeat_state")]
+    [JsonProperty(propertyName: "repeat_state")]
     public string Repeat { get; set; } = "off";
 
-    [JsonProperty("shuffle_state")]
+    [JsonProperty(propertyName: "shuffle_state")]
     public bool Shuffle { get; set; }
 
-    [JsonProperty("muted_state")]
+    [JsonProperty(propertyName: "muted_state")]
     public bool Muted { get; set; }
 
-    [JsonProperty("timestamp")]
+    [JsonProperty(propertyName: "timestamp")]
     public long Timestamp { get; set; }
 
     // Epoch ms the server clock read at the instant this broadcast left
@@ -76,7 +76,7 @@ public class MusicPlayerState
     // purposes): this is the reference instant for GetServerTime-style clock-
     // offset math, letting every device compute the shared server clock and
     // therefore the same playback position regardless of its own wall-clock skew.
-    [JsonProperty("server_time_ms")]
+    [JsonProperty(propertyName: "server_time_ms")]
     public long ServerTimeMs { get; set; }
 
     // Epoch ms the server clock read at the instant Time was last authored —
@@ -86,7 +86,7 @@ public class MusicPlayerState
     // with Time and ServerTimeMs, a client derives the live position via
     // Time + (serverNow - PositionCapturedAtMs) without waiting on its own
     // report cadence. Old clients that ignore this field are unaffected.
-    [JsonProperty("position_captured_at_ms")]
+    [JsonProperty(propertyName: "position_captured_at_ms")]
     public long PositionCapturedAtMs { get; set; }
 
     // Per-user monotonic, clock-anchored broadcast sequence — assigned once per
@@ -97,21 +97,21 @@ public class MusicPlayerState
     // greater than the last one it applied, instead of racing position/
     // play-state fields against each other. New additive field: old clients
     // that don't read it are unaffected.
-    [JsonProperty("seq")]
+    [JsonProperty(propertyName: "seq")]
     public long Seq { get; set; }
 
-    [JsonProperty("volume_percentage")]
+    [JsonProperty(propertyName: "volume_percentage")]
     public int VolumePercentage { get; set; }
 
     // Case-insensitive: device ids are compared OrdinalIgnoreCase everywhere else in
     // MusicHub, and this map is keyed by the same ids (ResolveTransferVolume,
     // ApplyDeviceVolume). A case-sensitive map would silently miss a remembered
     // volume the moment a caller's casing didn't match the one that first wrote it.
-    [JsonProperty("device_volumes")]
+    [JsonProperty(propertyName: "device_volumes")]
     public Dictionary<string, int> DeviceVolumes { get; set; } =
-        new(StringComparer.OrdinalIgnoreCase);
+        new(comparer: StringComparer.OrdinalIgnoreCase);
 
-    [JsonProperty("seek_offset")]
+    [JsonProperty(propertyName: "seek_offset")]
     public int SeekOffset { get; set; }
 
     [JsonIgnore]
@@ -202,8 +202,8 @@ public class MusicPlayerState
     public MusicPlayerState CloneForBroadcast()
     {
         MusicPlayerState copy = (MusicPlayerState)MemberwiseClone();
-        copy.Playlist = Playlist.Take(BroadcastPlaylistWindow).Select(StripQueueEntry).ToList();
-        copy.Backlog = Backlog.TakeLast(BroadcastBacklogWindow).Select(StripQueueEntry).ToList();
+        copy.Playlist = Playlist.Take(count: BroadcastPlaylistWindow).Select(selector: StripQueueEntry).ToList();
+        copy.Backlog = Backlog.TakeLast(count: BroadcastBacklogWindow).Select(selector: StripQueueEntry).ToList();
         return copy;
     }
 
@@ -212,7 +212,7 @@ public class MusicPlayerState
         {
             Lyrics = null,
             ColorPalette = null,
-            Album = track.Album.Select(album => album.ForBroadcastQueueEntry()).ToList(),
-            Artist = track.Artist.Select(artist => artist.ForBroadcastQueueEntry()).ToList(),
+            Album = track.Album.Select(selector: album => album.ForBroadcastQueueEntry()).ToList(),
+            Artist = track.Artist.Select(selector: artist => artist.ForBroadcastQueueEntry()).ToList(),
         };
 }

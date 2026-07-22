@@ -34,12 +34,12 @@ public class VideoPlayerStateFactory
     {
         await using MediaContext context = await contextFactory.CreateDbContextAsync();
 
-        ArgumentNullException.ThrowIfNull(listId);
+        ArgumentNullException.ThrowIfNull(argument: listId);
 
         string id = listId.ToString();
 
         // parse id once and safely
-        TryParse(id, out int parsedId);
+        TryParse(s: id, result: out int parsedId);
 
         // Cast/remote-control needs the current item's structured chapter/audio/
         // caption/quality lists (parsed chapter times, ordered track lists) which
@@ -47,8 +47,8 @@ public class VideoPlayerStateFactory
         // item so the state carries them for the VideoHub command handlers.
         VideoFile? currentVideoFile = await context
             .VideoFiles.AsNoTracking()
-            .Include(videoFile => videoFile.Metadata)
-            .FirstOrDefaultAsync(videoFile => videoFile.Id == item.VideoId);
+            .Include(navigationPropertyPath: videoFile => videoFile.Metadata)
+            .FirstOrDefaultAsync(predicate: videoFile => videoFile.Id == item.VideoId);
         Metadata? metadata = currentVideoFile?.Metadata;
         List<IChapter> chapters = metadata?.Chapters ?? [];
         List<IAudio> audioTracks = metadata?.Audio ?? [];
@@ -57,13 +57,13 @@ public class VideoPlayerStateFactory
 
         // Include playback preferences and their Library collections to ensure data available for matching
         User? userPreference = await context
-            .Users.Include(u => u.PlaybackPreferences)
-                .ThenInclude(playbackPreference => playbackPreference.Library)
-                    .ThenInclude(library => library!.LibraryTvs)
-            .Include(u => u.PlaybackPreferences)
-                .ThenInclude(playbackPreference => playbackPreference.Library)
-                    .ThenInclude(library => library!.LibraryMovies)
-            .FirstOrDefaultAsync(u => u.Id == user.Id);
+            .Users.Include(navigationPropertyPath: u => u.PlaybackPreferences)
+                .ThenInclude(navigationPropertyPath: playbackPreference => playbackPreference.Library)
+                    .ThenInclude(navigationPropertyPath: library => library!.LibraryTvs)
+            .Include(navigationPropertyPath: u => u.PlaybackPreferences)
+                .ThenInclude(navigationPropertyPath: playbackPreference => playbackPreference.Library)
+                    .ThenInclude(navigationPropertyPath: library => library!.LibraryMovies)
+            .FirstOrDefaultAsync(predicate: u => u.Id == user.Id);
 
         if (userPreference is null)
         {
@@ -84,7 +84,7 @@ public class VideoPlayerStateFactory
                 PlayState = true,
                 Time = (item.Progress?.Time ?? 0) * 1000,
                 Duration = item.Duration.ToMilliSeconds(),
-                CurrentList = new($"/{type}/{listId}/watch", UriKind.Relative),
+                CurrentList = new(uriString: $"/{type}/{listId}/watch", uriKind: UriKind.Relative),
                 Actions = new()
                 {
                     Disallows = new()
@@ -94,23 +94,23 @@ public class VideoPlayerStateFactory
                         Muting = false,
                         Pausing = false,
                         Resuming = true,
-                        Previous = playlist.IndexOf(item) == 0,
-                        Next = playlist.IndexOf(item) == playlist.Count - 1,
+                        Previous = playlist.IndexOf(item: item) == 0,
+                        Next = playlist.IndexOf(item: item) == playlist.Count - 1,
                     },
                 },
             };
         }
 
         PlaybackPreference? playbackPreference = FindPlaybackPreference(
-            userPreference,
-            id,
-            parsedId,
-            type
+            userPreference: userPreference,
+            id: id,
+            parsedId: parsedId,
+            type: type
         );
 
         if (playbackPreference is null)
         {
-            playbackPreference = CreateDefaultPlaybackPreference(qualities, audioTracks, captions);
+            playbackPreference = CreateDefaultPlaybackPreference(qualities: qualities, audio: audioTracks, captions: captions);
         }
 
         return new()
@@ -129,7 +129,7 @@ public class VideoPlayerStateFactory
             PlayState = true,
             Time = (item.Progress?.Time ?? 0) * 1000,
             Duration = item.Duration.ToMilliSeconds(),
-            CurrentList = new($"/{type}/{listId}/watch", UriKind.Relative),
+            CurrentList = new(uriString: $"/{type}/{listId}/watch", uriKind: UriKind.Relative),
             Actions = new()
             {
                 Disallows = new()
@@ -139,8 +139,8 @@ public class VideoPlayerStateFactory
                     Muting = false,
                     Pausing = false,
                     Resuming = true,
-                    Previous = playlist.IndexOf(item) == 0,
-                    Next = playlist.IndexOf(item) == playlist.Count - 1,
+                    Previous = playlist.IndexOf(item: item) == 0,
+                    Next = playlist.IndexOf(item: item) == playlist.Count - 1,
                 },
             },
         };
@@ -153,7 +153,7 @@ public class VideoPlayerStateFactory
         string type
     )
     {
-        PlaybackPreference? byIds = userPreference.PlaybackPreferences.FirstOrDefault(p =>
+        PlaybackPreference? byIds = userPreference.PlaybackPreferences.FirstOrDefault(predicate: p =>
             (
                 p.MovieId is not null
                 && p.MovieId.ToString() == id
@@ -175,17 +175,17 @@ public class VideoPlayerStateFactory
         if (byIds is not null)
             return byIds;
 
-        return userPreference.PlaybackPreferences.FirstOrDefault(p =>
+        return userPreference.PlaybackPreferences.FirstOrDefault(predicate: p =>
             p.Library != null
             && (
                 p.Library.Type == type
                 || (
                     type == MediaTypes.TvMediaType
-                    && p.Library.LibraryTvs.Any(t => t.TvId == parsedId)
+                    && p.Library.LibraryTvs.Any(predicate: t => t.TvId == parsedId)
                 )
                 || (
                     type == MediaTypes.MovieMediaType
-                    && p.Library.LibraryMovies.Any(m => m.MovieId == parsedId)
+                    && p.Library.LibraryMovies.Any(predicate: m => m.MovieId == parsedId)
                 )
             )
         );
@@ -197,8 +197,8 @@ public class VideoPlayerStateFactory
         List<ISubtitle> captions
     )
     {
-        int? width = qualities.Select(q => q.Width).FirstOrDefault();
-        string? audioLanguage = audio.Select(a => a.Language).FirstOrDefault();
+        int? width = qualities.Select(selector: q => q.Width).FirstOrDefault();
+        string? audioLanguage = audio.Select(selector: a => a.Language).FirstOrDefault();
         string? subtitleLanguage = captions.FirstOrDefault()?.Language;
         string? subtitleType = captions.FirstOrDefault()?.Type;
         string? subtitleCodec = captions.FirstOrDefault()?.Codec;

@@ -16,32 +16,32 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models.TvShows;
 
-[Index(nameof(Name))]
+[Index(propertyName: nameof(Name))]
 public class Network : Timestamps
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.None)]
-    [JsonProperty("id")]
+    [DatabaseGenerated(databaseGeneratedOption: DatabaseGeneratedOption.None)]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("logo")]
+    [JsonProperty(propertyName: "logo")]
     public string? Logo { get; set; }
 
-    [JsonProperty("origin_country")]
+    [JsonProperty(propertyName: "origin_country")]
     public string? OriginCountry { get; set; }
 
-    [MaxLength(4096)]
-    [JsonProperty("description")]
+    [MaxLength(length: 4096)]
+    [JsonProperty(propertyName: "description")]
     public string? Description { get; set; }
 
-    [JsonProperty("headquarters")]
+    [JsonProperty(propertyName: "headquarters")]
     public string? Headquarters { get; set; }
 
-    [JsonProperty("homepage")]
+    [JsonProperty(propertyName: "homepage")]
     public Uri? Homepage { get; set; }
 
-    [JsonProperty("network_tv")]
+    [JsonProperty(propertyName: "network_tv")]
     public ICollection<NetworkTv> NetworkTv { get; set; } = new HashSet<NetworkTv>();
 }

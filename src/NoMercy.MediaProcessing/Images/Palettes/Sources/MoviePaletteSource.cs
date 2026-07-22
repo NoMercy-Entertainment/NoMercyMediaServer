@@ -25,11 +25,11 @@ public class MoviePaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(entityId);
+        int id = int.Parse(s: entityId);
         return await db
-            .Movies.Where(m => m.Id == id)
-            .Select(m => m._colorPalette)
-            .FirstOrDefaultAsync(ct);
+            .Movies.Where(predicate: m => m.Id == id)
+            .Select(selector: m => m._colorPalette)
+            .FirstOrDefaultAsync(cancellationToken: ct);
     }
 
     public async Task<PaletteResult> GenerateAsync(
@@ -38,20 +38,21 @@ public class MoviePaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(entityId);
-        Movie? movie = await db.Movies.FirstOrDefaultAsync(m => m.Id == id, ct);
+        int id = int.Parse(s: entityId);
+        Movie? movie = await db.Movies.FirstOrDefaultAsync(predicate: m => m.Id == id, cancellationToken: ct);
         if (movie is null)
             return PaletteResult.NoImage();
         if (movie.Poster is null && movie.Backdrop is null)
             return PaletteResult.NoImage();
 
-        string json = await MovieDbImageManager.MultiColorPalette([
-            new("poster", movie.Poster),
-            new("backdrop", movie.Backdrop),
+        string json = await MovieDbImageManager.MultiColorPalette(items:
+        [
+            new(key: "poster", path: movie.Poster),
+            new(key: "backdrop", path: movie.Backdrop),
         ]);
-        return string.IsNullOrWhiteSpace(json)
+        return string.IsNullOrWhiteSpace(value: json)
             ? PaletteResult.NoImage()
-            : PaletteResult.Success(json);
+            : PaletteResult.Success(json: json);
     }
 
     public async Task PersistAsync(
@@ -61,9 +62,9 @@ public class MoviePaletteSource : IPaletteSource
         CancellationToken ct
     )
     {
-        int id = int.Parse(entityId);
+        int id = int.Parse(s: entityId);
         await db
-            .Movies.Where(m => m.Id == id)
-            .ExecuteUpdateAsync(s => s.SetProperty(m => m._colorPalette, json), ct);
+            .Movies.Where(predicate: m => m.Id == id)
+            .ExecuteUpdateAsync(setPropertyCalls: s => s.SetProperty(propertyExpression: m => m._colorPalette, valueExpression: json), cancellationToken: ct);
     }
 }

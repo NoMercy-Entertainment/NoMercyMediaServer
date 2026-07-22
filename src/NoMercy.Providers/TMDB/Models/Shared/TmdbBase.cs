@@ -15,27 +15,27 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbBase
 {
-    [JsonProperty("backdrop_path")]
+    [JsonProperty(propertyName: "backdrop_path")]
     public string? BackdropPath { get; set; } = string.Empty;
 
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("original_language")]
+    [JsonProperty(propertyName: "original_language")]
     public string OriginalLanguage { get; set; } = string.Empty;
 
-    [JsonProperty("overview")]
+    [JsonProperty(propertyName: "overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty("popularity")]
+    [JsonProperty(propertyName: "popularity")]
     public double Popularity { get; set; }
 
-    [JsonProperty("poster_path")]
+    [JsonProperty(propertyName: "poster_path")]
     public string? PosterPath { get; set; }
 
-    [JsonProperty("vote_average")]
+    [JsonProperty(propertyName: "vote_average")]
     public double VoteAverage { get; set; }
 
-    [JsonProperty("vote_count")]
+    [JsonProperty(propertyName: "vote_count")]
     public int VoteCount { get; set; }
 }

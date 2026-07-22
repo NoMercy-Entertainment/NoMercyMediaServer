@@ -46,13 +46,13 @@ public class CustomLogger<T> : ILogger<T>
 
     public CustomLogger(NoMercyLoggerProvider provider)
     {
-        _inner = provider.CreateLogger(typeof(T).FullName ?? typeof(T).Name);
+        _inner = provider.CreateLogger(categoryName: typeof(T).FullName ?? typeof(T).Name);
     }
 
     public IDisposable? BeginScope<TState>(TState state)
-        where TState : notnull => _inner.BeginScope(state);
+        where TState : notnull => _inner.BeginScope(state: state);
 
-    public bool IsEnabled(LogLevel logLevel) => _inner.IsEnabled(logLevel);
+    public bool IsEnabled(LogLevel logLevel) => _inner.IsEnabled(logLevel: logLevel);
 
     public void Log<TState>(
         LogLevel logLevel,
@@ -62,18 +62,18 @@ public class CustomLogger<T> : ILogger<T>
         Func<TState, Exception?, string> formatter
     )
     {
-        if (!IsEnabled(logLevel))
+        if (!IsEnabled(logLevel: logLevel))
             return;
 
         // Errors bypass phrase filtering: "Microsoft" matches framework frames in
         // an exception's rendered stack, which was silently dropping 500 stacks.
         if (logLevel < LogLevel.Error)
         {
-            string message = formatter(state, exception);
-            if (FilteredPhrases.Any(message.Contains))
+            string message = formatter(arg1: state, arg2: exception);
+            if (FilteredPhrases.Any(predicate: message.Contains))
                 return;
         }
 
-        _inner.Log(logLevel, eventId, state, exception, formatter);
+        _inner.Log(logLevel: logLevel, eventId: eventId, state: state, exception: exception, formatter: formatter);
     }
 }

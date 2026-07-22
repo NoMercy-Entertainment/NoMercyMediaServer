@@ -15,9 +15,9 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbSharedTranslations
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("translations")]
+    [JsonProperty(propertyName: "translations")]
     public TmdbSharedTranslation[] Translations { get; set; } = [];
 }

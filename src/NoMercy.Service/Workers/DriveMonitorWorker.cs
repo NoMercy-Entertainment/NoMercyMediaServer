@@ -26,7 +26,7 @@ public class DriveMonitorWorker(IDriveMonitor driveMonitor, ILogger<DriveMonitor
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        logger.LogInformation("DriveMonitorWorker started");
+        logger.LogInformation(message: "DriveMonitorWorker started");
 
         // BackgroundServiceExceptionBehavior defaults to StopHost since .NET 6
         // — letting MonitorAsync throw would tear the whole server down. Wrap
@@ -38,8 +38,8 @@ public class DriveMonitorWorker(IDriveMonitor driveMonitor, ILogger<DriveMonitor
             {
                 await foreach (
                     DriveEvent evt in driveMonitor
-                        .MonitorAsync(stoppingToken)
-                        .WithCancellation(stoppingToken)
+                        .MonitorAsync(ct: stoppingToken)
+                        .WithCancellation(cancellationToken: stoppingToken)
                 )
                 {
                     if (!EventBusProvider.IsConfigured)
@@ -55,7 +55,7 @@ public class DriveMonitorWorker(IDriveMonitor driveMonitor, ILogger<DriveMonitor
                     };
 
                     _ = EventBusProvider.Current.PublishAsync(
-                        new DriveStateChangedEvent
+                        @event: new DriveStateChangedEvent
                         {
                             DriveStateData = new(
                                 Method: methodName,
@@ -66,7 +66,7 @@ public class DriveMonitorWorker(IDriveMonitor driveMonitor, ILogger<DriveMonitor
                                 Timestamp: DateTime.UtcNow
                             ),
                         },
-                        stoppingToken
+                        ct: stoppingToken
                     );
                 }
                 break;
@@ -77,10 +77,10 @@ public class DriveMonitorWorker(IDriveMonitor driveMonitor, ILogger<DriveMonitor
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "DriveMonitorWorker iteration failed; retrying in 5s");
+                logger.LogWarning(exception: ex, message: "DriveMonitorWorker iteration failed; retrying in 5s");
                 try
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                    await Task.Delay(delay: TimeSpan.FromSeconds(seconds: 5), cancellationToken: stoppingToken);
                 }
                 catch (OperationCanceledException)
                 {
@@ -89,6 +89,6 @@ public class DriveMonitorWorker(IDriveMonitor driveMonitor, ILogger<DriveMonitor
             }
         }
 
-        logger.LogInformation("DriveMonitorWorker stopped");
+        logger.LogInformation(message: "DriveMonitorWorker stopped");
     }
 }

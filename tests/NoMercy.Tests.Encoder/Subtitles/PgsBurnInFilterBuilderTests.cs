@@ -29,7 +29,7 @@ public class PgsBurnInFilterBuilderTests
     {
         PgsBurnInFilterChain result = _builder.Build(videoStreamIndex: 0, subtitleStreamIndex: 0);
 
-        result.FilterComplex.Should().Be("[0:v:0][0:s:0]overlay=format=auto[burned]");
+        result.FilterComplex.Should().Be(expected: "[0:v:0][0:s:0]overlay=format=auto[burned]");
     }
 
     [Fact]
@@ -37,7 +37,7 @@ public class PgsBurnInFilterBuilderTests
     {
         PgsBurnInFilterChain result = _builder.Build(videoStreamIndex: 0, subtitleStreamIndex: 1);
 
-        result.FilterComplex.Should().Be("[0:v:0][0:s:1]overlay=format=auto[burned]");
+        result.FilterComplex.Should().Be(expected: "[0:v:0][0:s:1]overlay=format=auto[burned]");
     }
 
     [Fact]
@@ -45,7 +45,7 @@ public class PgsBurnInFilterBuilderTests
     {
         PgsBurnInFilterChain result = _builder.Build(videoStreamIndex: 1, subtitleStreamIndex: 0);
 
-        result.FilterComplex.Should().Be("[0:v:1][0:s:0]overlay=format=auto[burned]");
+        result.FilterComplex.Should().Be(expected: "[0:v:1][0:s:0]overlay=format=auto[burned]");
     }
 
     // ── Multi-consumer split (regression: one pad cannot feed many -maps) ───
@@ -62,9 +62,9 @@ public class PgsBurnInFilterBuilderTests
             includeThumbnails: false
         );
 
-        result.FilterComplex.Should().Contain("overlay=format=auto,split=2");
-        result.VideoLabels.Should().Equal("[burned0]", "[burned1]");
-        result.FilterComplex.Should().Contain("[burned0][burned1]");
+        result.FilterComplex.Should().Contain(expected: "overlay=format=auto,split=2");
+        result.VideoLabels.Should().Equal(expected: ["[burned0]", "[burned1]"]);
+        result.FilterComplex.Should().Contain(expected: "[burned0][burned1]");
         result.VideoLabels.Should().OnlyHaveUniqueItems();
         result.ThumbnailLabel.Should().BeNull();
     }
@@ -82,11 +82,11 @@ public class PgsBurnInFilterBuilderTests
             includeThumbnails: true
         );
 
-        result.FilterComplex.Should().Contain("split=2");
+        result.FilterComplex.Should().Contain(expected: "split=2");
         result.ThumbnailLabel.Should().NotBeNull();
-        result.FilterComplex.Should().Contain(result.ThumbnailLabel!);
-        result.VideoLabels.Should().HaveCount(1);
-        result.VideoLabels[0].Should().NotBe(result.ThumbnailLabel);
+        result.FilterComplex.Should().Contain(expected: result.ThumbnailLabel!);
+        result.VideoLabels.Should().HaveCount(expected: 1);
+        result.VideoLabels[index: 0].Should().NotBe(unexpected: result.ThumbnailLabel);
     }
 
     [Fact]
@@ -99,10 +99,10 @@ public class PgsBurnInFilterBuilderTests
             includeThumbnails: true
         );
 
-        result.FilterComplex.Should().Contain("split=4");
-        result.VideoLabels.Should().HaveCount(3);
+        result.FilterComplex.Should().Contain(expected: "split=4");
+        result.VideoLabels.Should().HaveCount(expected: 3);
         List<string> allPads = [.. result.VideoLabels, result.ThumbnailLabel!];
-        allPads.Should().OnlyHaveUniqueItems("every consumer needs its own pad");
+        allPads.Should().OnlyHaveUniqueItems(because: "every consumer needs its own pad");
     }
 
     [Fact]
@@ -115,26 +115,26 @@ public class PgsBurnInFilterBuilderTests
             includeThumbnails: false
         );
 
-        result.FilterComplex.Should().NotContain("split");
-        result.FilterComplex.Should().EndWith("[burned]");
-        result.VideoLabels.Should().Equal("[burned]");
+        result.FilterComplex.Should().NotContain(unexpected: "split");
+        result.FilterComplex.Should().EndWith(expected: "[burned]");
+        result.VideoLabels.Should().Equal(expected: "[burned]");
     }
 
     // ── Multiple stream indices ────────────────────────────────────────────
 
     [Theory]
-    [InlineData(0, 0, "[0:v:0][0:s:0]overlay=format=auto[burned]")]
-    [InlineData(0, 2, "[0:v:0][0:s:2]overlay=format=auto[burned]")]
-    [InlineData(1, 0, "[0:v:1][0:s:0]overlay=format=auto[burned]")]
-    [InlineData(2, 3, "[0:v:2][0:s:3]overlay=format=auto[burned]")]
+    [InlineData(data: [0, 0, "[0:v:0][0:s:0]overlay=format=auto[burned]"])]
+    [InlineData(data: [0, 2, "[0:v:0][0:s:2]overlay=format=auto[burned]"])]
+    [InlineData(data: [1, 0, "[0:v:1][0:s:0]overlay=format=auto[burned]"])]
+    [InlineData(data: [2, 3, "[0:v:2][0:s:3]overlay=format=auto[burned]"])]
     public void Build_VaryingIndices_ProducesCorrectFilterComplex(
         int videoIdx,
         int subtitleIdx,
         string expectedFilter
     )
     {
-        PgsBurnInFilterChain result = _builder.Build(videoIdx, subtitleIdx);
-        result.FilterComplex.Should().Be(expectedFilter);
+        PgsBurnInFilterChain result = _builder.Build(videoStreamIndex: videoIdx, subtitleStreamIndex: subtitleIdx);
+        result.FilterComplex.Should().Be(expected: expectedFilter);
     }
 
     // ── Map label ───────────────────────────────────────────────────────────
@@ -142,11 +142,11 @@ public class PgsBurnInFilterBuilderTests
     [Fact]
     public void Build_AlwaysEmitsBurned_AsOutputLabel()
     {
-        PgsBurnInFilterChain result1 = _builder.Build(0, 0);
-        PgsBurnInFilterChain result2 = _builder.Build(1, 2);
+        PgsBurnInFilterChain result1 = _builder.Build(videoStreamIndex: 0, subtitleStreamIndex: 0);
+        PgsBurnInFilterChain result2 = _builder.Build(videoStreamIndex: 1, subtitleStreamIndex: 2);
 
-        result1.MapLabel.Should().Be("[burned]");
-        result2.MapLabel.Should().Be("[burned]");
+        result1.MapLabel.Should().Be(expected: "[burned]");
+        result2.MapLabel.Should().Be(expected: "[burned]");
     }
 
     // ── Overlay filter format parameter ────────────────────────────────────
@@ -154,9 +154,9 @@ public class PgsBurnInFilterBuilderTests
     [Fact]
     public void Build_FilterComplex_ContainsOverlayWithFormatAuto()
     {
-        PgsBurnInFilterChain result = _builder.Build(0, 0);
+        PgsBurnInFilterChain result = _builder.Build(videoStreamIndex: 0, subtitleStreamIndex: 0);
 
-        result.FilterComplex.Should().Contain("overlay=format=auto");
+        result.FilterComplex.Should().Contain(expected: "overlay=format=auto");
     }
 
     [Fact]
@@ -164,7 +164,7 @@ public class PgsBurnInFilterBuilderTests
     {
         PgsBurnInFilterChain result = _builder.Build(videoStreamIndex: 5, subtitleStreamIndex: 10);
 
-        result.FilterComplex.Should().Contain("overlay=format=auto");
+        result.FilterComplex.Should().Contain(expected: "overlay=format=auto");
     }
 
     // ── Stream selector format validation ───────────────────────────────────
@@ -172,25 +172,25 @@ public class PgsBurnInFilterBuilderTests
     [Fact]
     public void Build_FilterComplex_UsesInput0Notation()
     {
-        PgsBurnInFilterChain result = _builder.Build(0, 0);
+        PgsBurnInFilterChain result = _builder.Build(videoStreamIndex: 0, subtitleStreamIndex: 0);
 
         // Filter always references input 0 (first input file)
-        result.FilterComplex.Should().StartWith("[0:v:");
-        result.FilterComplex.Should().Contain("[0:s:");
+        result.FilterComplex.Should().StartWith(expected: "[0:v:");
+        result.FilterComplex.Should().Contain(expected: "[0:s:");
     }
 
     [Theory]
-    [InlineData(0, 0)]
-    [InlineData(3, 5)]
-    [InlineData(10, 20)]
+    [InlineData(data: [0, 0])]
+    [InlineData(data: [3, 5])]
+    [InlineData(data: [10, 20])]
     public void Build_Always_ReferencesInput0(int videoIdx, int subtitleIdx)
     {
-        PgsBurnInFilterChain result = _builder.Build(videoIdx, subtitleIdx);
+        PgsBurnInFilterChain result = _builder.Build(videoStreamIndex: videoIdx, subtitleStreamIndex: subtitleIdx);
 
         // Even with higher indices, filter always references input 0
-        result.FilterComplex.Should().StartWith("[0:v:");
-        result.FilterComplex.Should().Contain("[0:s:");
-        result.FilterComplex.Should().Contain("overlay=format=auto");
+        result.FilterComplex.Should().StartWith(expected: "[0:v:");
+        result.FilterComplex.Should().Contain(expected: "[0:s:");
+        result.FilterComplex.Should().Contain(expected: "overlay=format=auto");
     }
 
     // ── Edge case: zero-indexed streams ────────────────────────────────────
@@ -209,22 +209,22 @@ public class PgsBurnInFilterBuilderTests
     [Fact]
     public void Build_MapLabel_IsValidForFfmpegMapOption()
     {
-        PgsBurnInFilterChain result = _builder.Build(0, 1);
+        PgsBurnInFilterChain result = _builder.Build(videoStreamIndex: 0, subtitleStreamIndex: 1);
 
         // The MapLabel must be a bracketed label suitable for -map [burned]
-        result.MapLabel.Should().StartWith("[");
-        result.MapLabel.Should().EndWith("]");
+        result.MapLabel.Should().StartWith(expected: "[");
+        result.MapLabel.Should().EndWith(expected: "]");
     }
 
     [Fact]
     public void Build_SeveralStreams_AllHaveSameMapLabel()
     {
-        PgsBurnInFilterChain result1 = _builder.Build(0, 0);
-        PgsBurnInFilterChain result2 = _builder.Build(1, 2);
-        PgsBurnInFilterChain result3 = _builder.Build(5, 10);
+        PgsBurnInFilterChain result1 = _builder.Build(videoStreamIndex: 0, subtitleStreamIndex: 0);
+        PgsBurnInFilterChain result2 = _builder.Build(videoStreamIndex: 1, subtitleStreamIndex: 2);
+        PgsBurnInFilterChain result3 = _builder.Build(videoStreamIndex: 5, subtitleStreamIndex: 10);
 
-        result1.MapLabel.Should().Be(result2.MapLabel);
-        result2.MapLabel.Should().Be(result3.MapLabel);
+        result1.MapLabel.Should().Be(expected: result2.MapLabel);
+        result2.MapLabel.Should().Be(expected: result3.MapLabel);
     }
 
     // ── Typical encoder integration scenario ────────────────────────────────
@@ -238,10 +238,10 @@ public class PgsBurnInFilterBuilderTests
         string filterArg = pgs.FilterComplex;
         string mapArg = pgs.MapLabel;
 
-        filterArg.Should().Contain("[0:v:0][0:s:2]overlay=format=auto");
-        mapArg.Should().Be("[burned]");
+        filterArg.Should().Contain(expected: "[0:v:0][0:s:2]overlay=format=auto");
+        mapArg.Should().Be(expected: "[burned]");
 
         // Verify the chain is valid: filter defines the output, map uses it
-        filterArg.Should().EndWith("[burned]");
+        filterArg.Should().EndWith(expected: "[burned]");
     }
 }

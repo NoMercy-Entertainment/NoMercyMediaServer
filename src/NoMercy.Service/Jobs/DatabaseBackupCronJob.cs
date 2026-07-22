@@ -29,7 +29,7 @@ public class DatabaseBackupCronJob : ICronJobExecutor
     private readonly ILogger<DatabaseBackupCronJob> _logger;
     private readonly string[] _dbPaths;
 
-    public string CronExpression => new CronExpressionBuilder().Daily(4);
+    public string CronExpression => new CronExpressionBuilder().Daily(hour: 4);
     public string JobName => "Daily Database Backup";
 
     public DatabaseBackupCronJob(ILogger<DatabaseBackupCronJob> logger, string[]? dbPaths = null)
@@ -43,13 +43,11 @@ public class DatabaseBackupCronJob : ICronJobExecutor
     {
         int backedUp = 0;
         foreach (string dbPath in _dbPaths)
-            if (DatabaseBackupService.BackupNow(dbPath, "daily scheduled backup"))
+            if (DatabaseBackupService.BackupNow(dbPath: dbPath, reason: "daily scheduled backup"))
                 backedUp++;
 
         _logger.LogInformation(
-            "Daily database backup complete: {BackedUp}/{Total} databases backed up",
-            backedUp,
-            _dbPaths.Length
+            message: "Daily database backup complete: {BackedUp}/{Total} databases backed up", args: [backedUp, _dbPaths.Length]
         );
 
         return Task.CompletedTask;

@@ -17,13 +17,14 @@ namespace NoMercy.Tests.Encoder.Pipeline.Stages;
 internal static class OutputStrategyFactoryTestHelper
 {
     public static OutputStrategyFactory Create() =>
-        new([
-            new HlsOutputStrategy(TestStorageFactory.CreateLocal()),
-            new MkvOutputStrategy(TestStorageFactory.CreateLocal()),
-            new Mp4OutputStrategy(TestStorageFactory.CreateLocal()),
-            new DashOutputStrategy(TestStorageFactory.CreateLocal()),
-            new Mp3OutputStrategy(TestStorageFactory.CreateLocal()),
-            new FlacOutputStrategy(TestStorageFactory.CreateLocal()),
-            new OggOutputStrategy(TestStorageFactory.CreateLocal()),
+        new(strategies:
+        [
+            new HlsOutputStrategy(storage: TestStorageFactory.CreateLocal()),
+            new MkvOutputStrategy(storage: TestStorageFactory.CreateLocal()),
+            new Mp4OutputStrategy(storage: TestStorageFactory.CreateLocal()),
+            new DashOutputStrategy(storage: TestStorageFactory.CreateLocal()),
+            new Mp3OutputStrategy(storage: TestStorageFactory.CreateLocal()),
+            new FlacOutputStrategy(storage: TestStorageFactory.CreateLocal()),
+            new OggOutputStrategy(storage: TestStorageFactory.CreateLocal()),
         ]);
 }

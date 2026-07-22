@@ -28,28 +28,28 @@ public static class CredentialManager
     {
         public T Deserialize<T>(SecureBuffer serialized)
         {
-            string decoded = Encoding.UTF8.GetString(serialized.Buffer);
-            return JsonConvert.DeserializeObject<T>(decoded)
+            string decoded = Encoding.UTF8.GetString(bytes: serialized.Buffer);
+            return JsonConvert.DeserializeObject<T>(value: decoded)
                 ?? throw new InvalidOperationException();
         }
 
         SecureBuffer ISecretSerializer.Serialize<T>(T input)
         {
-            string serialized = JsonConvert.SerializeObject(input);
-            return new(Encoding.UTF8.GetBytes(serialized));
+            string serialized = JsonConvert.SerializeObject(value: input);
+            return new(insecure: Encoding.UTF8.GetBytes(s: serialized));
         }
     }
 
     public static UserPass? Credential(string target)
     {
-        if (!_driver.FileExists(AppFiles.SecretsStore))
+        if (!_driver.FileExists(path: AppFiles.SecretsStore))
             return null;
 
-        using SecretsManager secretsManager = SecretsManager.LoadStore(AppFiles.SecretsStore);
+        using SecretsManager secretsManager = SecretsManager.LoadStore(path: AppFiles.SecretsStore);
         secretsManager.DefaultSerializer = new SecretSerializer();
-        secretsManager.LoadKeyFromFile(AppFiles.SecretsKey);
+        secretsManager.LoadKeyFromFile(path: AppFiles.SecretsKey);
 
-        if (secretsManager.TryGetValue(target, out UserPass? output))
+        if (secretsManager.TryGetValue(key: target, value: out UserPass? output))
             return output;
 
         return null;
@@ -62,50 +62,50 @@ public static class CredentialManager
         string apiKey
     )
     {
-        bool exists = _driver.FileExists(AppFiles.SecretsStore);
+        bool exists = _driver.FileExists(path: AppFiles.SecretsStore);
 
         using SecretsManager secretsManager = exists
-            ? SecretsManager.LoadStore(AppFiles.SecretsStore)
+            ? SecretsManager.LoadStore(path: AppFiles.SecretsStore)
             : SecretsManager.CreateStore();
         secretsManager.DefaultSerializer = new SecretSerializer();
         if (!exists)
         {
             secretsManager.GenerateKey();
-            secretsManager.ExportKey(AppFiles.SecretsKey);
+            secretsManager.ExportKey(path: AppFiles.SecretsKey);
         }
         else
         {
-            secretsManager.LoadKeyFromFile(AppFiles.SecretsKey);
+            secretsManager.LoadKeyFromFile(path: AppFiles.SecretsKey);
         }
 
-        secretsManager.Set(target, new UserPass(username, password, apiKey));
+        secretsManager.Set(key: target, value: new UserPass(username: username, password: password, apiKey: apiKey));
 
-        secretsManager.SaveStore(AppFiles.SecretsStore);
+        secretsManager.SaveStore(path: AppFiles.SecretsStore);
     }
 
     public static bool RemoveCredentials(string target)
     {
-        if (!_driver.FileExists(AppFiles.SecretsStore))
+        if (!_driver.FileExists(path: AppFiles.SecretsStore))
             return false;
 
-        using SecretsManager secretsManager = SecretsManager.LoadStore(AppFiles.SecretsStore);
-        secretsManager.LoadKeyFromFile(AppFiles.SecretsKey);
+        using SecretsManager secretsManager = SecretsManager.LoadStore(path: AppFiles.SecretsStore);
+        secretsManager.LoadKeyFromFile(path: AppFiles.SecretsKey);
 
-        bool deleted = secretsManager.Delete(target);
+        bool deleted = secretsManager.Delete(key: target);
         if (deleted)
-            secretsManager.SaveStore(AppFiles.SecretsStore);
+            secretsManager.SaveStore(path: AppFiles.SecretsStore);
 
         return deleted;
     }
 
     public static SecureString ConvertToSecureString(string password)
     {
-        ArgumentNullException.ThrowIfNull(password);
+        ArgumentNullException.ThrowIfNull(argument: password);
 
         SecureString securePassword = new();
 
         foreach (char c in password)
-            securePassword.AppendChar(c);
+            securePassword.AppendChar(c: c);
 
         securePassword.MakeReadOnly();
         return securePassword;

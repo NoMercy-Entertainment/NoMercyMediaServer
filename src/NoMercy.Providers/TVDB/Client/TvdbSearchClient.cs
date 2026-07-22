@@ -16,7 +16,7 @@ namespace NoMercy.Providers.TVDB.Client;
 public class TvdbSearchClient : TvdbBaseClient
 {
     public TvdbSearchClient(string language = "eng")
-        : base(0, language) { }
+        : base(id: 0, language: language) { }
 
     public Task<TvdbSearchResponse?> Search(
         string query,
@@ -33,26 +33,26 @@ public class TvdbSearchClient : TvdbBaseClient
         bool? priority = false
     )
     {
-        Dictionary<string, string?> q = new() { ["query"] = query };
-        if (!string.IsNullOrEmpty(type))
-            q["type"] = type;
+        Dictionary<string, string?> q = new() { [key: "query"] = query };
+        if (!string.IsNullOrEmpty(value: type))
+            q[key: "type"] = type;
         if (year is not null)
-            q["year"] = year.Value.ToString();
-        if (!string.IsNullOrEmpty(language))
-            q["language"] = language;
-        if (!string.IsNullOrEmpty(country))
-            q["country"] = country;
+            q[key: "year"] = year.Value.ToString();
+        if (!string.IsNullOrEmpty(value: language))
+            q[key: "language"] = language;
+        if (!string.IsNullOrEmpty(value: country))
+            q[key: "country"] = country;
         if (company is not null)
-            q["company"] = company.Value.ToString();
+            q[key: "company"] = company.Value.ToString();
         if (primaryType is not null)
-            q["primaryType"] = primaryType.Value.ToString();
-        if (!string.IsNullOrEmpty(network))
-            q["network"] = network;
+            q[key: "primaryType"] = primaryType.Value.ToString();
+        if (!string.IsNullOrEmpty(value: network))
+            q[key: "network"] = network;
         if (remoteId is not null)
-            q["remote_id"] = remoteId.Value.ToString();
-        q["offset"] = offset.ToString();
-        q["limit"] = limit.ToString();
-        return Get<TvdbSearchResponse>("search", q, priority);
+            q[key: "remote_id"] = remoteId.Value.ToString();
+        q[key: "offset"] = offset.ToString();
+        q[key: "limit"] = limit.ToString();
+        return Get<TvdbSearchResponse>(url: "search", query: q, priority: priority);
     }
 
     public Task<TvdbSearchResponse?> Series(
@@ -62,7 +62,7 @@ public class TvdbSearchClient : TvdbBaseClient
         bool? priority = false
     )
     {
-        return Search(query, "series", year, language, priority: priority);
+        return Search(query: query, type: "series", year: year, language: language, priority: priority);
     }
 
     public Task<TvdbSearchResponse?> Movie(
@@ -72,7 +72,7 @@ public class TvdbSearchClient : TvdbBaseClient
         bool? priority = false
     )
     {
-        return Search(query, "movie", year, language, priority: priority);
+        return Search(query: query, type: "movie", year: year, language: language, priority: priority);
     }
 
     public Task<TvdbSearchResponse?> Person(
@@ -81,7 +81,7 @@ public class TvdbSearchClient : TvdbBaseClient
         bool? priority = false
     )
     {
-        return Search(query, "person", language: language, priority: priority);
+        return Search(query: query, type: "person", language: language, priority: priority);
     }
 
     public Task<TvdbSearchResponse?> Company(
@@ -90,11 +90,11 @@ public class TvdbSearchClient : TvdbBaseClient
         bool? priority = false
     )
     {
-        return Search(query, "company", language: language, priority: priority);
+        return Search(query: query, type: "company", language: language, priority: priority);
     }
 
     public Task<TvdbSearchResponse?> ByRemoteId(string remoteId, bool? priority = false)
     {
-        return Get<TvdbSearchResponse>("search/remoteid/" + remoteId, priority: priority);
+        return Get<TvdbSearchResponse>(url: "search/remoteid/" + remoteId, priority: priority);
     }
 }

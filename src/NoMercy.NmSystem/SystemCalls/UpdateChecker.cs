@@ -33,8 +33,8 @@ public class UpdateChecker(IUpdateStatus updateStatus) : IUpdateChecker
     static UpdateChecker()
     {
         HttpClient.DefaultRequestHeaders.Add(
-            "User-Agent",
-            ExternalServicesConfig.Current.UserAgent
+            name: "User-Agent",
+            value: ExternalServicesConfig.Current.UserAgent
         );
     }
 
@@ -42,16 +42,16 @@ public class UpdateChecker(IUpdateStatus updateStatus) : IUpdateChecker
     {
         try
         {
-            using HttpResponseMessage response = await HttpClient.GetAsync(GithubReleasesUrl);
+            using HttpResponseMessage response = await HttpClient.GetAsync(requestUri: GithubReleasesUrl);
             response.EnsureSuccessStatusCode();
 
             string json = await response.Content.ReadAsStringAsync();
-            LatestReleaseInfo? release = JsonConvert.DeserializeObject<LatestReleaseInfo>(json);
+            LatestReleaseInfo? release = JsonConvert.DeserializeObject<LatestReleaseInfo>(value: json);
 
-            if (release is null || string.IsNullOrEmpty(release.TagName))
+            if (release is null || string.IsNullOrEmpty(value: release.TagName))
                 return false;
 
-            string latestVersion = release.TagName.StartsWith("v")
+            string latestVersion = release.TagName.StartsWith(value: "v")
                 ? release.TagName[1..]
                 : release.TagName;
 
@@ -59,7 +59,7 @@ public class UpdateChecker(IUpdateStatus updateStatus) : IUpdateChecker
 
             updateStatus.LatestVersion = latestVersion;
 
-            if (string.Equals(latestVersion, currentVersion, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(a: latestVersion, b: currentVersion, comparisonType: StringComparison.OrdinalIgnoreCase))
             {
                 updateStatus.RestartNeeded = false;
                 updateStatus.UpdateAvailable = false;
@@ -69,36 +69,36 @@ public class UpdateChecker(IUpdateStatus updateStatus) : IUpdateChecker
 
             // LOCAL-ONLY: UpdateChecker lives in NmSystem; no reference to NoMercy.Providers.
             string? onDiskVersion = Software.GetFileVersion(
-                new LocalStorageDriver(),
-                AppFiles.ServerExePath
+                driver: new LocalStorageDriver(),
+                exePath: AppFiles.ServerExePath
             );
 
             // Also check the installed binary (e.g. Program Files) if available
             if (
                 onDiskVersion is null
-                || !string.Equals(latestVersion, onDiskVersion, StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(a: latestVersion, b: onDiskVersion, comparisonType: StringComparison.OrdinalIgnoreCase)
             )
             {
-                string? installDir = Environment.GetEnvironmentVariable("NOMERCY_INSTALL_DIR");
+                string? installDir = Environment.GetEnvironmentVariable(variable: "NOMERCY_INSTALL_DIR");
 
-                if (!string.IsNullOrEmpty(installDir))
+                if (!string.IsNullOrEmpty(value: installDir))
                 {
                     string installedExe = Path.Combine(
-                        installDir,
-                        "NoMercyMediaServer" + Info.ExecSuffix
+                        path1: installDir,
+                        path2: "NoMercyMediaServer" + Info.ExecSuffix
                     );
 
                     string? installedVersion = Software.GetFileVersion(
-                        new LocalStorageDriver(),
-                        installedExe
+                        driver: new LocalStorageDriver(),
+                        exePath: installedExe
                     );
 
                     if (
                         installedVersion is not null
                         && string.Equals(
-                            latestVersion,
-                            installedVersion,
-                            StringComparison.OrdinalIgnoreCase
+                            a: latestVersion,
+                            b: installedVersion,
+                            comparisonType: StringComparison.OrdinalIgnoreCase
                         )
                     )
                     {
@@ -109,13 +109,13 @@ public class UpdateChecker(IUpdateStatus updateStatus) : IUpdateChecker
 
             updateStatus.RestartNeeded =
                 onDiskVersion is not null
-                && string.Equals(latestVersion, onDiskVersion, StringComparison.OrdinalIgnoreCase);
+                && string.Equals(a: latestVersion, b: onDiskVersion, comparisonType: StringComparison.OrdinalIgnoreCase);
 
             bool updateAvailable;
 
             if (
-                Version.TryParse(latestVersion, out Version? latest)
-                && Version.TryParse(currentVersion, out Version? current)
+                Version.TryParse(input: latestVersion, result: out Version? latest)
+                && Version.TryParse(input: currentVersion, result: out Version? current)
             )
             {
                 updateAvailable = latest > current;
@@ -123,9 +123,9 @@ public class UpdateChecker(IUpdateStatus updateStatus) : IUpdateChecker
             else
             {
                 updateAvailable = !string.Equals(
-                    latestVersion,
-                    currentVersion,
-                    StringComparison.OrdinalIgnoreCase
+                    a: latestVersion,
+                    b: currentVersion,
+                    comparisonType: StringComparison.OrdinalIgnoreCase
                 );
             }
 
@@ -135,7 +135,7 @@ public class UpdateChecker(IUpdateStatus updateStatus) : IUpdateChecker
         }
         catch (Exception e)
         {
-            Logger.Setup($"Update check failed: {e.Message}", LogEventLevel.Debug);
+            Logger.Setup(message: $"Update check failed: {e.Message}", level: LogEventLevel.Debug);
 
             return false;
         }
@@ -143,7 +143,7 @@ public class UpdateChecker(IUpdateStatus updateStatus) : IUpdateChecker
 
     private class LatestReleaseInfo
     {
-        [JsonProperty("tag_name")]
+        [JsonProperty(propertyName: "tag_name")]
         public string TagName { get; set; } = string.Empty;
     }
 }

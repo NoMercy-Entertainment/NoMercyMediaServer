@@ -14,7 +14,7 @@ using System.Runtime.Versioning;
 
 namespace NoMercy.NmSystem.Wallpaper;
 
-[SupportedOSPlatform("linux")]
+[SupportedOSPlatform(platformName: "linux")]
 public class LinuxWallpaperService : IWallpaperService
 {
     private string? _previousWallpaper;
@@ -24,8 +24,8 @@ public class LinuxWallpaperService : IWallpaperService
     {
         get
         {
-            string? display = Environment.GetEnvironmentVariable("DISPLAY");
-            string? wayland = Environment.GetEnvironmentVariable("WAYLAND_DISPLAY");
+            string? display = Environment.GetEnvironmentVariable(variable: "DISPLAY");
+            string? wayland = Environment.GetEnvironmentVariable(variable: "WAYLAND_DISPLAY");
             return display is not null || wayland is not null;
         }
     }
@@ -36,13 +36,13 @@ public class LinuxWallpaperService : IWallpaperService
             return;
 
         SaveCurrentWallpaper();
-        ApplyColor(hexColor);
-        ApplyWallpaper(imagePath, style);
+        ApplyColor(hexColor: hexColor);
+        ApplyWallpaper(imagePath: imagePath, style: style);
     }
 
     public void SetSilent(string imagePath, WallpaperStyle style, string hexColor)
     {
-        Set(imagePath, style, hexColor);
+        Set(imagePath: imagePath, style: style, hexColor: hexColor);
     }
 
     public void Restore()
@@ -51,10 +51,10 @@ public class LinuxWallpaperService : IWallpaperService
             return;
 
         if (_previousWallpaper is not null)
-            ApplyWallpaper(_previousWallpaper, WallpaperStyle.Fill);
+            ApplyWallpaper(imagePath: _previousWallpaper, style: WallpaperStyle.Fill);
 
         if (_previousColor is not null)
-            ApplyColor(_previousColor);
+            ApplyColor(hexColor: _previousColor);
 
         _previousWallpaper = null;
         _previousColor = null;
@@ -66,17 +66,17 @@ public class LinuxWallpaperService : IWallpaperService
         if (de == DesktopEnvironment.Gnome)
         {
             _previousWallpaper = RunCommand(
-                "gsettings",
-                "get org.gnome.desktop.background picture-uri"
+                command: "gsettings",
+                arguments: "get org.gnome.desktop.background picture-uri"
             )
                 ?.Trim()
-                .Trim('\'');
+                .Trim(trimChar: '\'');
             _previousColor = RunCommand(
-                "gsettings",
-                "get org.gnome.desktop.background primary-color"
+                command: "gsettings",
+                arguments: "get org.gnome.desktop.background primary-color"
             )
                 ?.Trim()
-                .Trim('\'');
+                .Trim(trimChar: '\'');
         }
     }
 
@@ -87,18 +87,18 @@ public class LinuxWallpaperService : IWallpaperService
         switch (de)
         {
             case DesktopEnvironment.Gnome:
-                string gnomeStyle = MapStyleToGnome(style);
+                string gnomeStyle = MapStyleToGnome(style: style);
                 RunCommand(
-                    "gsettings",
-                    $"set org.gnome.desktop.background picture-options '{gnomeStyle}'"
+                    command: "gsettings",
+                    arguments: $"set org.gnome.desktop.background picture-options '{gnomeStyle}'"
                 );
                 RunCommand(
-                    "gsettings",
-                    $"set org.gnome.desktop.background picture-uri 'file://{imagePath}'"
+                    command: "gsettings",
+                    arguments: $"set org.gnome.desktop.background picture-uri 'file://{imagePath}'"
                 );
                 RunCommand(
-                    "gsettings",
-                    $"set org.gnome.desktop.background picture-uri-dark 'file://{imagePath}'"
+                    command: "gsettings",
+                    arguments: $"set org.gnome.desktop.background picture-uri-dark 'file://{imagePath}'"
                 );
                 break;
 
@@ -112,20 +112,20 @@ public class LinuxWallpaperService : IWallpaperService
                     + $"  d.writeConfig('Image', 'file://{imagePath}');"
                     + "}";
                 RunCommand(
-                    "qdbus",
-                    $"org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript \"{kdeScript}\""
+                    command: "qdbus",
+                    arguments: $"org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript \"{kdeScript}\""
                 );
                 break;
 
             case DesktopEnvironment.Xfce:
                 RunCommand(
-                    "xfconf-query",
-                    $"-c xfce4-desktop -p /backdrop/screen0/monitor0/workspace0/last-image -s \"{imagePath}\""
+                    command: "xfconf-query",
+                    arguments: $"-c xfce4-desktop -p /backdrop/screen0/monitor0/workspace0/last-image -s \"{imagePath}\""
                 );
                 break;
 
             case DesktopEnvironment.Fallback:
-                RunCommand("feh", $"--bg-fill \"{imagePath}\"");
+                RunCommand(command: "feh", arguments: $"--bg-fill \"{imagePath}\"");
                 break;
         }
     }
@@ -136,23 +136,23 @@ public class LinuxWallpaperService : IWallpaperService
 
         if (de == DesktopEnvironment.Gnome)
         {
-            RunCommand("gsettings", $"set org.gnome.desktop.background primary-color '{hexColor}'");
+            RunCommand(command: "gsettings", arguments: $"set org.gnome.desktop.background primary-color '{hexColor}'");
         }
     }
 
     public static DesktopEnvironment DetectDesktopEnvironment()
     {
         string? xdgDesktop = Environment
-            .GetEnvironmentVariable("XDG_CURRENT_DESKTOP")
+            .GetEnvironmentVariable(variable: "XDG_CURRENT_DESKTOP")
             ?.ToUpperInvariant();
 
         if (xdgDesktop is not null)
         {
-            if (xdgDesktop.Contains("GNOME") || xdgDesktop.Contains("UNITY"))
+            if (xdgDesktop.Contains(value: "GNOME") || xdgDesktop.Contains(value: "UNITY"))
                 return DesktopEnvironment.Gnome;
-            if (xdgDesktop.Contains("KDE"))
+            if (xdgDesktop.Contains(value: "KDE"))
                 return DesktopEnvironment.Kde;
-            if (xdgDesktop.Contains("XFCE"))
+            if (xdgDesktop.Contains(value: "XFCE"))
                 return DesktopEnvironment.Xfce;
         }
 
@@ -190,7 +190,7 @@ public class LinuxWallpaperService : IWallpaperService
 
             process.Start();
             string output = process.StandardOutput.ReadToEnd();
-            process.WaitForExit(5000);
+            process.WaitForExit(milliseconds: 5000);
 
             return output;
         }

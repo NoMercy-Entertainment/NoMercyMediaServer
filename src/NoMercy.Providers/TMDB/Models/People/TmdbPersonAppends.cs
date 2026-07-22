@@ -15,21 +15,21 @@ namespace NoMercy.Providers.TMDB.Models.People;
 
 public class TmdbPersonAppends : TmdbPersonDetails
 {
-    [JsonProperty("movie_credits")]
+    [JsonProperty(propertyName: "movie_credits")]
     public TmdbPersonCredits MovieCredits { get; set; } = new();
 
-    [JsonProperty("credits")]
+    [JsonProperty(propertyName: "credits")]
     public TmdbPersonCredits Credits { get; set; } = new();
 
-    [JsonProperty("combined_credits")]
+    [JsonProperty(propertyName: "combined_credits")]
     public TmdbPersonCredits CombinedCredits { get; set; } = new();
 
-    [JsonProperty("tv_credits")]
+    [JsonProperty(propertyName: "tv_credits")]
     public TmdbPersonCredits TvCredits { get; set; } = new();
 
-    [JsonProperty("images")]
+    [JsonProperty(propertyName: "images")]
     public TmdbPersonImages Images { get; set; } = new();
 
-    [JsonProperty("translations")]
+    [JsonProperty(propertyName: "translations")]
     public TmdbPersonTranslations Translations { get; set; } = new();
 }

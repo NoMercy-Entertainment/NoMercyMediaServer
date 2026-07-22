@@ -27,7 +27,7 @@ namespace NoMercy.Tests.Encoder.Orchestration;
 /// through the request's <see cref="EncodingRequest.SourceStorage"/> and publishing
 /// through <see cref="EncodingRequest.DestinationStorage"/> when the two storages differ.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class StorageRoutingTests
 {
     private readonly Mock<IStrategyResolver> _resolver = new();
@@ -36,19 +36,19 @@ public class StorageRoutingTests
     private static Mock<IStorage> BuildStorageMock(string stagingPath)
     {
         Mock<IStorage> mock = new();
-        mock.Setup(s => s.Driver).Returns(new LocalStorageDriver());
-        mock.Setup(s => s.AcquireLocalPathAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string _, CancellationToken _) => new(stagingPath));
+        mock.Setup(expression: s => s.Driver).Returns(value: new LocalStorageDriver());
+        mock.Setup(expression: s => s.AcquireLocalPathAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(valueFunction: (string _, CancellationToken _) => new(path: stagingPath));
         return mock;
     }
 
     private Mock<IEncodingStrategy> BuildSuccessStrategy()
     {
         Mock<IEncodingStrategy> strategy = new();
-        strategy.Setup(s => s.Format).Returns(OutputFormat.Mp4);
-        strategy.Setup(s => s.EncodeMode).Returns(EncodeMode.SinglePass);
+        strategy.Setup(expression: s => s.Format).Returns(value: OutputFormat.Mp4);
+        strategy.Setup(expression: s => s.EncodeMode).Returns(value: EncodeMode.SinglePass);
         strategy
-            .Setup(s =>
+            .Setup(expression: s =>
                 s.EncodeAsync(
                     It.IsAny<EncodingRequest>(),
                     It.IsAny<IProgressObserver?>(),
@@ -56,18 +56,18 @@ public class StorageRoutingTests
                 )
             )
             .ReturnsAsync(
-                new EncodingResult(
+                value: new EncodingResult(
                     Success: true,
                     OutputPath: "/out/file.mp4",
                     Duration: TimeSpan.Zero,
                     Error: null,
-                    Metrics: new(0, 0, 0, "libx264", null)
+                    Metrics: new(OutputSizeBytes: 0, AverageSpeed: 0, AverageFps: 0, EncoderUsed: "libx264", GpuUsed: null)
                 )
             );
 
         _resolver
-            .Setup(r => r.Resolve(OutputFormat.Mp4, EncodeMode.SinglePass))
-            .Returns(strategy.Object);
+            .Setup(expression: r => r.Resolve(OutputFormat.Mp4, EncodeMode.SinglePass))
+            .Returns(value: strategy.Object);
 
         return strategy;
     }
@@ -75,9 +75,9 @@ public class StorageRoutingTests
     [Fact]
     public async Task EncodeAsync_UsesSeparateSourceStorageForStaging()
     {
-        Mock<IStorage> sourceStorage = BuildStorageMock("/tmp/staged-input.mkv");
-        Mock<IStorage> destStorage = BuildStorageMock("/tmp/staged-output");
-        destStorage.Setup(s => s.Driver).Returns(new LocalStorageDriver());
+        Mock<IStorage> sourceStorage = BuildStorageMock(stagingPath: "/tmp/staged-input.mkv");
+        Mock<IStorage> destStorage = BuildStorageMock(stagingPath: "/tmp/staged-output");
+        destStorage.Setup(expression: s => s.Driver).Returns(value: new LocalStorageDriver());
 
         BuildSuccessStrategy();
 
@@ -98,32 +98,32 @@ public class StorageRoutingTests
         );
 
         EncodingOrchestrator orchestrator = new(
-            _resolver.Object,
-            sourceStorage.Object,
-            _encoder.Object,
-            NullLogger<EncodingOrchestrator>.Instance
+            resolver: _resolver.Object,
+            storage: sourceStorage.Object,
+            encoder: _encoder.Object,
+            logger: NullLogger<EncodingOrchestrator>.Instance
         );
 
-        await orchestrator.EncodeAsync(request);
+        await orchestrator.EncodeAsync(request: request);
 
         sourceStorage.Verify(
-            s => s.AcquireLocalPathAsync("remote/show/episode.mkv", It.IsAny<CancellationToken>()),
-            Times.Once,
-            "source staging must use SourceStorage"
+            expression: s => s.AcquireLocalPathAsync("remote/show/episode.mkv", It.IsAny<CancellationToken>()),
+            times: Times.Once,
+            failMessage: "source staging must use SourceStorage"
         );
 
         destStorage.Verify(
-            s => s.AcquireLocalPathAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never,
-            "destination storage must not be used for staging"
+            expression: s => s.AcquireLocalPathAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            times: Times.Never,
+            failMessage: "destination storage must not be used for staging"
         );
     }
 
     [Fact]
     public async Task EncodeAsync_NullSourceStorage_FallsBackToDiStorage()
     {
-        Mock<IStorage> diStorage = BuildStorageMock("/tmp/staged.mkv");
-        diStorage.Setup(s => s.Driver).Returns(new LocalStorageDriver());
+        Mock<IStorage> diStorage = BuildStorageMock(stagingPath: "/tmp/staged.mkv");
+        diStorage.Setup(expression: s => s.Driver).Returns(value: new LocalStorageDriver());
 
         BuildSuccessStrategy();
 
@@ -144,26 +144,26 @@ public class StorageRoutingTests
         );
 
         EncodingOrchestrator orchestrator = new(
-            _resolver.Object,
-            diStorage.Object,
-            _encoder.Object,
-            NullLogger<EncodingOrchestrator>.Instance
+            resolver: _resolver.Object,
+            storage: diStorage.Object,
+            encoder: _encoder.Object,
+            logger: NullLogger<EncodingOrchestrator>.Instance
         );
 
-        await orchestrator.EncodeAsync(request);
+        await orchestrator.EncodeAsync(request: request);
 
         diStorage.Verify(
-            s => s.AcquireLocalPathAsync("local/show/episode.mkv", It.IsAny<CancellationToken>()),
-            Times.Once,
-            "when SourceStorage is null the DI singleton is used for staging"
+            expression: s => s.AcquireLocalPathAsync("local/show/episode.mkv", It.IsAny<CancellationToken>()),
+            times: Times.Once,
+            failMessage: "when SourceStorage is null the DI singleton is used for staging"
         );
     }
 
     [Fact]
     public async Task EncodeAsync_SameStorageForSourceAndDest_OnlyOneAcquireCall()
     {
-        Mock<IStorage> sharedStorage = BuildStorageMock("/tmp/staged.mkv");
-        sharedStorage.Setup(s => s.Driver).Returns(new LocalStorageDriver());
+        Mock<IStorage> sharedStorage = BuildStorageMock(stagingPath: "/tmp/staged.mkv");
+        sharedStorage.Setup(expression: s => s.Driver).Returns(value: new LocalStorageDriver());
 
         BuildSuccessStrategy();
 
@@ -184,18 +184,18 @@ public class StorageRoutingTests
         );
 
         EncodingOrchestrator orchestrator = new(
-            _resolver.Object,
-            sharedStorage.Object,
-            _encoder.Object,
-            NullLogger<EncodingOrchestrator>.Instance
+            resolver: _resolver.Object,
+            storage: sharedStorage.Object,
+            encoder: _encoder.Object,
+            logger: NullLogger<EncodingOrchestrator>.Instance
         );
 
-        await orchestrator.EncodeAsync(request);
+        await orchestrator.EncodeAsync(request: request);
 
         sharedStorage.Verify(
-            s => s.AcquireLocalPathAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Once,
-            "same-backend encode: exactly one AcquireLocalPathAsync call for the source"
+            expression: s => s.AcquireLocalPathAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            times: Times.Once,
+            failMessage: "same-backend encode: exactly one AcquireLocalPathAsync call for the source"
         );
     }
 }

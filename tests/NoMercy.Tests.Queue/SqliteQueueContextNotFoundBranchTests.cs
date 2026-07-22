@@ -41,7 +41,7 @@ namespace NoMercy.Tests.Queue;
 /// <c>SqliteQueueContext</c> is not reachable from the running server today.
 /// Flagged for a follow-up fix rather than silently asserted as correct.</para>
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class SqliteQueueContextNotFoundBranchTests : IDisposable
 {
     private readonly string _dbPath;
@@ -49,8 +49,8 @@ public class SqliteQueueContextNotFoundBranchTests : IDisposable
 
     public SqliteQueueContextNotFoundBranchTests()
     {
-        _dbPath = Path.Combine(Path.GetTempPath(), $"queue_notfound_{Guid.NewGuid()}.db");
-        _context = SqliteQueueContextFactory.Create(_dbPath);
+        _dbPath = Path.Combine(path1: Path.GetTempPath(), path2: $"queue_notfound_{Guid.NewGuid()}.db");
+        _context = SqliteQueueContextFactory.Create(databasePath: _dbPath);
     }
 
     public void Dispose()
@@ -59,18 +59,18 @@ public class SqliteQueueContextNotFoundBranchTests : IDisposable
         GC.Collect();
         GC.WaitForPendingFinalizers();
         SqliteConnection.ClearAllPools();
-        if (File.Exists(_dbPath))
+        if (File.Exists(path: _dbPath))
         {
             for (int attempt = 1; attempt <= 30; attempt++)
             {
                 try
                 {
-                    File.Delete(_dbPath);
+                    File.Delete(path: _dbPath);
                     break;
                 }
                 catch (IOException) when (attempt < 30)
                 {
-                    Thread.Sleep(200);
+                    Thread.Sleep(millisecondsTimeout: 200);
                 }
             }
         }
@@ -87,16 +87,16 @@ public class SqliteQueueContextNotFoundBranchTests : IDisposable
             Priority = 9,
         };
 
-        Action act = () => _context.UpdateJob(ghost);
+        Action act = () => _context.UpdateJob(job: ghost);
 
         act.Should().NotThrow();
-        _context.FindJob(424242).Should().BeNull();
+        _context.FindJob(id: 424242).Should().BeNull();
     }
 
     [Fact]
     public void UpdateJobPayload_UnknownId_IsNoOp_DoesNotThrow()
     {
-        Action act = () => _context.UpdateJobPayload(424242, "{\"new\":true}", DateTime.UtcNow);
+        Action act = () => _context.UpdateJobPayload(jobId: 424242, newPayload: "{\"new\":true}", availableAt: DateTime.UtcNow);
 
         act.Should().NotThrow();
     }
@@ -112,7 +112,7 @@ public class SqliteQueueContextNotFoundBranchTests : IDisposable
             Exception = "n/a",
         };
 
-        Action act = () => _context.RemoveFailedJob(ghost);
+        Action act = () => _context.RemoveFailedJob(failedJob: ghost);
 
         act.Should().NotThrow();
     }
@@ -128,10 +128,10 @@ public class SqliteQueueContextNotFoundBranchTests : IDisposable
             JobType = "Ghost",
         };
 
-        Action act = () => _context.UpdateCronJob(ghost);
+        Action act = () => _context.UpdateCronJob(cronJob: ghost);
 
         act.Should().NotThrow();
-        _context.FindCronJobByName("ghost-cron").Should().BeNull();
+        _context.FindCronJobByName(name: "ghost-cron").Should().BeNull();
     }
 
     [Fact]
@@ -145,7 +145,7 @@ public class SqliteQueueContextNotFoundBranchTests : IDisposable
             JobType = "Ghost",
         };
 
-        Action act = () => _context.RemoveCronJob(ghost);
+        Action act = () => _context.RemoveCronJob(cronJob: ghost);
 
         act.Should().NotThrow();
     }

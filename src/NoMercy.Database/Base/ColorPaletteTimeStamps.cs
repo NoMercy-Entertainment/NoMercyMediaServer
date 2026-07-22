@@ -17,9 +17,9 @@ namespace NoMercy.Database;
 
 public class ColorPaletteTimeStamps : Timestamps
 {
-    [Column("ColorPalette")]
-    [StringLength(1024)]
-    [JsonProperty("color_palette")]
+    [Column(name: "ColorPalette")]
+    [StringLength(maximumLength: 1024)]
+    [JsonProperty(propertyName: "color_palette")]
     [JsonIgnore]
     // ReSharper disable once InconsistentNaming
     public string? _colorPalette { get; set; } = "";
@@ -27,7 +27,7 @@ public class ColorPaletteTimeStamps : Timestamps
     [NotMapped]
     public ColorPalette? ColorPalette
     {
-        get => ColorPalette.FromJsonOrNull(_colorPalette);
-        set => _colorPalette = JsonConvert.SerializeObject(value);
+        get => ColorPalette.FromJsonOrNull(json: _colorPalette);
+        set => _colorPalette = JsonConvert.SerializeObject(value: value);
     }
 }

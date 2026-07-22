@@ -15,10 +15,10 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public record MovieOrEpisode
 {
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public dynamic Id { get; set; } = string.Empty;
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string Title { get; set; } = string.Empty;
 
     /// <summary>
@@ -29,21 +29,21 @@ public record MovieOrEpisode
     [JsonIgnore]
     public string? ShowName { get; set; }
 
-    [JsonProperty("duration")]
+    [JsonProperty(propertyName: "duration")]
     public TimeSpan? Duration { get; set; }
 
-    [JsonProperty("adult")]
+    [JsonProperty(propertyName: "adult")]
     public bool Adult { get; set; }
 
-    [JsonProperty("overview")]
+    [JsonProperty(propertyName: "overview")]
     public string? Overview { get; set; }
 
-    [JsonProperty("episode_number")]
+    [JsonProperty(propertyName: "episode_number")]
     public int EpisodeNumber { get; set; }
 
-    [JsonProperty("season_number")]
+    [JsonProperty(propertyName: "season_number")]
     public int SeasonNumber { get; set; }
 
-    [JsonProperty("still")]
+    [JsonProperty(propertyName: "still")]
     public string? Still { get; set; }
 }

@@ -15,6 +15,6 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record ScreensaverDto
 {
-    [JsonProperty("data")]
+    [JsonProperty(propertyName: "data")]
     public IEnumerable<ScreensaverDataDto> Data { get; set; } = [];
 }

@@ -49,7 +49,7 @@ public class LibraryManager(
 
     public async Task ProcessLibrary(Ulid id)
     {
-        _library = await libraryRepository.GetLibraryWithFolders(id);
+        _library = await libraryRepository.GetLibraryWithFolders(id: id);
         if (_library is null)
             return;
 
@@ -62,7 +62,7 @@ public class LibraryManager(
         if (bus is not null)
         {
             await bus.PublishAsync(
-                new LibraryScanStartedEvent
+                @event: new LibraryScanStartedEvent
                 {
                     LibraryId = _library.Id,
                     LibraryName = _library.Title,
@@ -76,28 +76,28 @@ public class LibraryManager(
         // driver — remote folders returned 0 results silently.
         List<Folder> targets =
         [
-            .. _library.FolderLibraries.Select(folderLibrary => folderLibrary.Folder),
+            .. _library.FolderLibraries.Select(selector: folderLibrary => folderLibrary.Folder),
         ];
 
         int depth = GetDepth();
 
         await Parallel.ForEachAsync(
-            targets,
-            SystemParallelism.Options,
-            async (folder, _) =>
+            source: targets,
+            parallelOptions: SystemParallelism.Options,
+            body: async (folder, _) =>
             {
-                logger.LogInformation("Scanning {Path}", folder.Path);
+                logger.LogInformation(message: "Scanning {Path}", args: folder.Path);
                 switch (_library.Type)
                 {
                     case MediaTypes.MusicMediaType:
-                        int audioCount = await ScanAudioFolder(folder, depth);
-                        Interlocked.Add(ref itemsFound, audioCount);
+                        int audioCount = await ScanAudioFolder(folder: folder, depth: depth);
+                        Interlocked.Add(location1: ref itemsFound, value: audioCount);
                         break;
                     case MediaTypes.AnimeMediaType:
                     case MediaTypes.TvMediaType:
                     case MediaTypes.MovieMediaType:
-                        int videoCount = await ScanVideoFolder(folder, depth);
-                        Interlocked.Add(ref itemsFound, videoCount);
+                        int videoCount = await ScanVideoFolder(folder: folder, depth: depth);
+                        Interlocked.Add(location1: ref itemsFound, value: videoCount);
                         break;
                 }
             }
@@ -108,7 +108,7 @@ public class LibraryManager(
         if (bus is not null)
         {
             await bus.PublishAsync(
-                new LibraryScanCompletedEvent
+                @event: new LibraryScanCompletedEvent
                 {
                     LibraryId = _library.Id,
                     LibraryName = _library.Title,
@@ -118,12 +118,12 @@ public class LibraryManager(
             );
         }
 
-        logger.LogInformation("Scanning done");
+        logger.LogInformation(message: "Scanning done");
     }
 
     public async Task ProcessNewLibraryItems(Ulid id)
     {
-        _library = await libraryRepository.GetLibraryWithFolders(id);
+        _library = await libraryRepository.GetLibraryWithFolders(id: id);
         if (_library is null)
             return;
 
@@ -136,7 +136,7 @@ public class LibraryManager(
         if (bus is not null)
         {
             await bus.PublishAsync(
-                new LibraryScanStartedEvent
+                @event: new LibraryScanStartedEvent
                 {
                     LibraryId = _library.Id,
                     LibraryName = _library.Title,
@@ -145,36 +145,36 @@ public class LibraryManager(
         }
 
         HashSet<string> existingFolders = await libraryRepository.GetExistingFolderNamesAsync(
-            id,
-            _library.Type
+            libraryId: id,
+            libraryType: _library.Type
         );
 
         // See comment in ProcessLibrary — pass the Folder so the scan
         // resolves the right driver per folder.
         List<Folder> targets =
         [
-            .. _library.FolderLibraries.Select(folderLibrary => folderLibrary.Folder),
+            .. _library.FolderLibraries.Select(selector: folderLibrary => folderLibrary.Folder),
         ];
 
         int depth = GetDepth();
 
         await Parallel.ForEachAsync(
-            targets,
-            SystemParallelism.Options,
-            async (folder, _) =>
+            source: targets,
+            parallelOptions: SystemParallelism.Options,
+            body: async (folder, _) =>
             {
-                logger.LogInformation("Scanning for new items in {Path}", folder.Path);
+                logger.LogInformation(message: "Scanning for new items in {Path}", args: folder.Path);
                 switch (_library.Type)
                 {
                     case MediaTypes.MusicMediaType:
-                        int audioCount = await ScanNewAudioFolder(folder, depth, existingFolders);
-                        Interlocked.Add(ref itemsFound, audioCount);
+                        int audioCount = await ScanNewAudioFolder(folder: folder, depth: depth, existingFolders: existingFolders);
+                        Interlocked.Add(location1: ref itemsFound, value: audioCount);
                         break;
                     case MediaTypes.AnimeMediaType:
                     case MediaTypes.TvMediaType:
                     case MediaTypes.MovieMediaType:
-                        int videoCount = await ScanNewVideoFolder(folder, depth, existingFolders);
-                        Interlocked.Add(ref itemsFound, videoCount);
+                        int videoCount = await ScanNewVideoFolder(folder: folder, depth: depth, existingFolders: existingFolders);
+                        Interlocked.Add(location1: ref itemsFound, value: videoCount);
                         break;
                 }
             }
@@ -185,7 +185,7 @@ public class LibraryManager(
         if (bus is not null)
         {
             await bus.PublishAsync(
-                new LibraryScanCompletedEvent
+                @event: new LibraryScanCompletedEvent
                 {
                     LibraryId = _library.Id,
                     LibraryName = _library.Title,
@@ -195,7 +195,7 @@ public class LibraryManager(
             );
         }
 
-        logger.LogInformation("Scan for new items done — {ItemsFound} new items found", itemsFound);
+        logger.LogInformation(message: "Scan for new items done — {ItemsFound} new items found", args: itemsFound);
     }
 
     // The IStorage facade's GetFullPath joins the configured backend root:
@@ -210,11 +210,11 @@ public class LibraryManager(
     {
         try
         {
-            return storage.GetFullPath(folderPath);
+            return storage.GetFullPath(path: folderPath);
         }
         catch (NotSupportedException)
         {
-            return storage.Driver.GetFullPath(folderPath);
+            return storage.Driver.GetFullPath(path: folderPath);
         }
     }
 
@@ -225,19 +225,19 @@ public class LibraryManager(
     )
     {
         // Mount at configured root; MediaScan walks via absolute paths.
-        IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
-        await using MediaScan mediaScan = new(folderStorage.Driver);
+        IStorage folderStorage = storageFactory.For(folderId: folder.Id, driverId: folder.DriverId, subPath: string.Empty);
+        await using MediaScan mediaScan = new(driver: folderStorage.Driver);
         // Resolve the scan root through the facade so a LOCAL folder joins its
         // configured driver rootPath. The local driver is a shared, root-less
         // singleton (the root lives in the facade's guard), so driver.GetFullPath
         // canonicalizes a relative folder path against the process CWD -> a path
         // that does not exist -> "0 subfolders". ResolveScanRoot falls back to the
         // driver only for remote backends, whose driver embeds its own export.
-        string scanRoot = ResolveScanRoot(folderStorage, folder.Path);
-        ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan.Process(scanRoot, depth);
+        string scanRoot = ResolveScanRoot(storage: folderStorage, folderPath: folder.Path);
+        ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan.Process(rootFolder: scanRoot, depth: depth);
 
         List<MediaFolderExtend> newFolders = rootFolders
-            .Where(f => !existingFolders.Contains(f.Name.NormalizeForComparison()))
+            .Where(predicate: f => !existingFolders.Contains(item: f.Name.NormalizeForComparison()))
             .ToList();
 
         IEventBus? bus =
@@ -248,7 +248,7 @@ public class LibraryManager(
             foreach (MediaFolderExtend mediaFolder in newFolders)
             {
                 await bus.PublishAsync(
-                    new MediaDiscoveredEvent
+                    @event: new MediaDiscoveredEvent
                     {
                         FilePath = mediaFolder.Path,
                         LibraryId = _library.Id,
@@ -259,18 +259,16 @@ public class LibraryManager(
         }
 
         await Parallel.ForEachAsync(
-            newFolders.OrderBy(f => f.Path),
-            SystemParallelism.Options,
-            async (rootFolder, _) =>
+            source: newFolders.OrderBy(keySelector: f => f.Path),
+            parallelOptions: SystemParallelism.Options,
+            body: async (rootFolder, _) =>
             {
-                await ProcessVideoFolder(rootFolder);
+                await ProcessVideoFolder(path: rootFolder);
             }
         );
 
         logger.LogInformation(
-            "Found {Count} new subfolders (skipped {Count2} existing)",
-            newFolders.Count,
-            rootFolders.Count - newFolders.Count
+            message: "Found {Count} new subfolders (skipped {Count2} existing)", args: [newFolders.Count, rootFolders.Count - newFolders.Count]
         );
         return newFolders.Count;
     }
@@ -282,23 +280,23 @@ public class LibraryManager(
     )
     {
         // Mount at configured root; MediaScan walks via absolute paths.
-        IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
-        await using MediaScan mediaScan = new(folderStorage.Driver);
+        IStorage folderStorage = storageFactory.For(folderId: folder.Id, driverId: folder.DriverId, subPath: string.Empty);
+        await using MediaScan mediaScan = new(driver: folderStorage.Driver);
         // Resolve the scan root through the facade so a LOCAL folder joins its
         // configured driver rootPath. The local driver is a shared, root-less
         // singleton (the root lives in the facade's guard), so driver.GetFullPath
         // canonicalizes a relative folder path against the process CWD -> a path
         // that does not exist -> "0 subfolders". ResolveScanRoot falls back to the
         // driver only for remote backends, whose driver embeds its own export.
-        string scanRoot = ResolveScanRoot(folderStorage, folder.Path);
+        string scanRoot = ResolveScanRoot(storage: folderStorage, folderPath: folder.Path);
         List<MediaFolderExtend> rootFolders = (
-            await mediaScan.DisableRegexFilter().Process(scanRoot, depth)
+            await mediaScan.DisableRegexFilter().Process(rootFolder: scanRoot, depth: depth)
         )
-            .SelectMany(r => r.SubFolders ?? [])
+            .SelectMany(selector: r => r.SubFolders ?? [])
             .ToList();
 
         List<MediaFolderExtend> newFolders = rootFolders
-            .Where(f => !existingFolders.Contains(f.Name.NormalizeForComparison()))
+            .Where(predicate: f => !existingFolders.Contains(item: f.Name.NormalizeForComparison()))
             .ToList();
 
         IEventBus? bus =
@@ -309,7 +307,7 @@ public class LibraryManager(
             foreach (MediaFolderExtend mediaFolder in newFolders)
             {
                 await bus.PublishAsync(
-                    new MediaDiscoveredEvent
+                    @event: new MediaDiscoveredEvent
                     {
                         FilePath = mediaFolder.Path,
                         LibraryId = _library.Id,
@@ -320,18 +318,16 @@ public class LibraryManager(
         }
 
         Parallel.ForEach(
-            newFolders.OrderBy(f => f.Path),
-            SystemParallelism.Options,
-            (rootFolder, _) =>
+            source: newFolders.OrderBy(keySelector: f => f.Path),
+            parallelOptions: SystemParallelism.Options,
+            body: (rootFolder, _) =>
             {
-                ProcessMusicFolder(rootFolder);
+                ProcessMusicFolder(baseFolderExtend: rootFolder);
             }
         );
 
         logger.LogInformation(
-            "Found {Count} new subfolders (skipped {Count2} existing)",
-            newFolders.Count,
-            rootFolders.Count - newFolders.Count
+            message: "Found {Count} new subfolders (skipped {Count2} existing)", args: [newFolders.Count, rootFolders.Count - newFolders.Count]
         );
         return newFolders.Count;
     }
@@ -339,16 +335,16 @@ public class LibraryManager(
     private async Task<int> ScanVideoFolder(Folder folder, int depth)
     {
         // Mount at configured root; MediaScan walks via absolute paths.
-        IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
-        await using MediaScan mediaScan = new(folderStorage.Driver);
+        IStorage folderStorage = storageFactory.For(folderId: folder.Id, driverId: folder.DriverId, subPath: string.Empty);
+        await using MediaScan mediaScan = new(driver: folderStorage.Driver);
         // Resolve the scan root through the facade so a LOCAL folder joins its
         // configured driver rootPath. The local driver is a shared, root-less
         // singleton (the root lives in the facade's guard), so driver.GetFullPath
         // canonicalizes a relative folder path against the process CWD -> a path
         // that does not exist -> "0 subfolders". ResolveScanRoot falls back to the
         // driver only for remote backends, whose driver embeds its own export.
-        string scanRoot = ResolveScanRoot(folderStorage, folder.Path);
-        ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan.Process(scanRoot, depth);
+        string scanRoot = ResolveScanRoot(storage: folderStorage, folderPath: folder.Path);
+        ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan.Process(rootFolder: scanRoot, depth: depth);
 
         IEventBus? bus =
             eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
@@ -358,7 +354,7 @@ public class LibraryManager(
             foreach (MediaFolderExtend mediaFolder in rootFolders)
             {
                 await bus.PublishAsync(
-                    new MediaDiscoveredEvent
+                    @event: new MediaDiscoveredEvent
                     {
                         FilePath = mediaFolder.Path,
                         LibraryId = _library.Id,
@@ -369,34 +365,34 @@ public class LibraryManager(
         }
 
         await Parallel.ForEachAsync(
-            rootFolders.OrderBy(f => f.Path),
-            SystemParallelism.Options,
-            async (rootFolder, _) =>
+            source: rootFolders.OrderBy(keySelector: f => f.Path),
+            parallelOptions: SystemParallelism.Options,
+            body: async (rootFolder, _) =>
             {
-                await ProcessVideoFolder(rootFolder);
+                await ProcessVideoFolder(path: rootFolder);
             }
         );
 
-        logger.LogInformation("Found {Count} subfolders", rootFolders.Count);
+        logger.LogInformation(message: "Found {Count} subfolders", args: rootFolders.Count);
         return rootFolders.Count;
     }
 
     private async Task<int> ScanAudioFolder(Folder folder, int depth)
     {
         // Mount at configured root; MediaScan walks via absolute paths.
-        IStorage folderStorage = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
-        await using MediaScan mediaScan = new(folderStorage.Driver);
+        IStorage folderStorage = storageFactory.For(folderId: folder.Id, driverId: folder.DriverId, subPath: string.Empty);
+        await using MediaScan mediaScan = new(driver: folderStorage.Driver);
         // Resolve the scan root through the facade so a LOCAL folder joins its
         // configured driver rootPath. The local driver is a shared, root-less
         // singleton (the root lives in the facade's guard), so driver.GetFullPath
         // canonicalizes a relative folder path against the process CWD -> a path
         // that does not exist -> "0 subfolders". ResolveScanRoot falls back to the
         // driver only for remote backends, whose driver embeds its own export.
-        string scanRoot = ResolveScanRoot(folderStorage, folder.Path);
+        string scanRoot = ResolveScanRoot(storage: folderStorage, folderPath: folder.Path);
         List<MediaFolderExtend> rootFolders = (
-            await mediaScan.DisableRegexFilter().Process(scanRoot, depth)
+            await mediaScan.DisableRegexFilter().Process(rootFolder: scanRoot, depth: depth)
         )
-            .SelectMany(r => r.SubFolders ?? [])
+            .SelectMany(selector: r => r.SubFolders ?? [])
             .ToList();
 
         IEventBus? bus =
@@ -407,7 +403,7 @@ public class LibraryManager(
             foreach (MediaFolderExtend mediaFolder in rootFolders)
             {
                 await bus.PublishAsync(
-                    new MediaDiscoveredEvent
+                    @event: new MediaDiscoveredEvent
                     {
                         FilePath = mediaFolder.Path,
                         LibraryId = _library.Id,
@@ -418,15 +414,15 @@ public class LibraryManager(
         }
 
         Parallel.ForEach(
-            rootFolders.OrderBy(f => f.Path),
-            SystemParallelism.Options,
-            (rootFolder, _) =>
+            source: rootFolders.OrderBy(keySelector: f => f.Path),
+            parallelOptions: SystemParallelism.Options,
+            body: (rootFolder, _) =>
             {
-                ProcessMusicFolder(rootFolder);
+                ProcessMusicFolder(baseFolderExtend: rootFolder);
             }
         );
 
-        logger.LogInformation("Found {Count} subfolders", rootFolders.Count);
+        logger.LogInformation(message: "Found {Count} subfolders", args: rootFolders.Count);
         return rootFolders.Count;
     }
 
@@ -438,13 +434,13 @@ public class LibraryManager(
         {
             case MediaTypes.MovieMediaType:
             {
-                await ProcessMovieFolder(path);
+                await ProcessMovieFolder(folderExtend: path);
                 break;
             }
             case MediaTypes.AnimeMediaType:
             case MediaTypes.TvMediaType:
             {
-                await ProcessTvFolder(path);
+                await ProcessTvFolder(folderExtend: path);
                 break;
             }
         }
@@ -455,12 +451,12 @@ public class LibraryManager(
         if (_library is null)
             return;
 
-        logger.LogInformation("Processing movie folder {Path}", folderExtend.Path);
+        logger.LogInformation(message: "Processing movie folder {Path}", args: folderExtend.Path);
 
         using TmdbSearchClient tmdbSearchClient = new();
         TmdbPaginatedResponse<TmdbMovie>? paginatedMovieResponse = await tmdbSearchClient.Movie(
-            folderExtend.Parsed.Title!,
-            folderExtend.Parsed.Year
+            query: folderExtend.Parsed.Title!,
+            year: folderExtend.Parsed.Year
         );
 
         if (paginatedMovieResponse?.Results.Count <= 0)
@@ -471,7 +467,7 @@ public class LibraryManager(
         if (res.Count() is 0)
             return;
 
-        jobDispatcher.DispatchJob<MovieImportJob>(res.First().Id, _library);
+        jobDispatcher.DispatchJob<MovieImportJob>(id: res.First().Id, library: _library);
     }
 
     private async Task ProcessTvFolder(MediaFolderExtend folderExtend)
@@ -479,12 +475,12 @@ public class LibraryManager(
         if (_library is null)
             return;
 
-        logger.LogInformation("Processing tv folder {Path}", folderExtend.Path);
+        logger.LogInformation(message: "Processing tv folder {Path}", args: folderExtend.Path);
 
         using TmdbSearchClient tmdbSearchClient = new();
         TmdbPaginatedResponse<TmdbTvShow>? paginatedTvShowResponse = await tmdbSearchClient.TvShow(
-            folderExtend.Parsed.Title!,
-            folderExtend.Parsed.Year
+            query: folderExtend.Parsed.Title!,
+            year: folderExtend.Parsed.Year
         );
 
         if (paginatedTvShowResponse?.Results.Count <= 0)
@@ -495,7 +491,7 @@ public class LibraryManager(
         if (!res.Any())
             return;
 
-        jobDispatcher.DispatchJob<ShowImportJob>(res.First().Id, _library);
+        jobDispatcher.DispatchJob<ShowImportJob>(id: res.First().Id, library: _library);
     }
 
     private void ProcessMusicFolder(MediaFolderExtend baseFolderExtend)
@@ -503,7 +499,7 @@ public class LibraryManager(
         if (_library is null)
             return;
 
-        jobDispatcher.DispatchJob<ReleaseImportJob>(baseFolderExtend.Path, _library.Id);
+        jobDispatcher.DispatchJob<ReleaseImportJob>(baseFolderPath: baseFolderExtend.Path, libraryId: _library.Id);
     }
 
     private int GetDepth()
@@ -531,17 +527,17 @@ public class LibraryManager(
 
     public async Task<Library?> RescanFiles(Ulid libraryId, int id)
     {
-        Library? library = await libraryRepository.GetLibraryByIdWithFolders(libraryId);
+        Library? library = await libraryRepository.GetLibraryByIdWithFolders(libraryId: libraryId);
         if (library is null)
         {
-            logger.LogWarning("Library with ID {LibraryId} not found", libraryId);
+            logger.LogWarning(message: "Library with ID {LibraryId} not found", args: libraryId);
             return null;
         }
 
-        FileRepository fileRepository = new(mediaContext, storageDriver);
-        FileManager fileManager = new(fileRepository, storageFactory, storageDriver, mediaAnalyzer);
+        FileRepository fileRepository = new(context: mediaContext, storageDriver: storageDriver);
+        FileManager fileManager = new(fileRepository: fileRepository, storageFactory: storageFactory, storageDriver: storageDriver, mediaAnalyzer: mediaAnalyzer);
 
-        _ = await fileManager.FindFiles(id, library);
+        _ = await fileManager.FindFiles(id: id, library: library);
 
         return library;
     }

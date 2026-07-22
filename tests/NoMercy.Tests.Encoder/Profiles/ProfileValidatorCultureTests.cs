@@ -44,18 +44,18 @@ public class ProfileValidatorCultureTests
         );
 
     [Theory]
-    [InlineData("de-DE")]
-    [InlineData("nl-NL")]
-    [InlineData("fr-FR")]
+    [InlineData(data: "de-DE")]
+    [InlineData(data: "nl-NL")]
+    [InlineData(data: "fr-FR")]
     public void SourcePercentageError_StaysPeriodDecimalUnderCommaCulture(string culture)
     {
         CultureInfo previous = Thread.CurrentThread.CurrentCulture;
         try
         {
-            Thread.CurrentThread.CurrentCulture = new(culture);
+            Thread.CurrentThread.CurrentCulture = new(name: culture);
 
             EncodingProfile profile = ProfileWithAutoLadder(
-                new()
+                config: new()
                 {
                     Tiers = LadderTiers.AppleHlsRecommended,
                     BitrateStrategy = BitrateStrategy.PercentOfSource,
@@ -63,10 +63,10 @@ public class ProfileValidatorCultureTests
                 }
             );
 
-            ProfileValidationResult result = ProfileValidator.Validate(profile);
+            ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-            result.Errors.Should().Contain(e => e.Contains("250.5"));
-            result.Errors.Should().NotContain(e => e.Contains("250,5"));
+            result.Errors.Should().Contain(predicate: e => e.Contains("250.5"));
+            result.Errors.Should().NotContain(predicate: e => e.Contains("250,5"));
         }
         finally
         {
@@ -75,24 +75,24 @@ public class ProfileValidatorCultureTests
     }
 
     [Theory]
-    [InlineData("de-DE")]
-    [InlineData("nl-NL")]
-    [InlineData("fr-FR")]
+    [InlineData(data: "de-DE")]
+    [InlineData(data: "nl-NL")]
+    [InlineData(data: "fr-FR")]
     public void LowTierFramerateMultiplierError_StaysPeriodDecimalUnderCommaCulture(string culture)
     {
         CultureInfo previous = Thread.CurrentThread.CurrentCulture;
         try
         {
-            Thread.CurrentThread.CurrentCulture = new(culture);
+            Thread.CurrentThread.CurrentCulture = new(name: culture);
 
             EncodingProfile profile = ProfileWithAutoLadder(
-                new() { Tiers = LadderTiers.AppleHlsRecommended, LowTierFramerateMultiplier = 1.5 }
+                config: new() { Tiers = LadderTiers.AppleHlsRecommended, LowTierFramerateMultiplier = 1.5 }
             );
 
-            ProfileValidationResult result = ProfileValidator.Validate(profile);
+            ProfileValidationResult result = ProfileValidator.Validate(profile: profile);
 
-            result.Errors.Should().Contain(e => e.Contains("1.5"));
-            result.Errors.Should().NotContain(e => e.Contains("1,5"));
+            result.Errors.Should().Contain(predicate: e => e.Contains("1.5"));
+            result.Errors.Should().NotContain(predicate: e => e.Contains("1,5"));
         }
         finally
         {
@@ -101,26 +101,26 @@ public class ProfileValidatorCultureTests
     }
 
     [Theory]
-    [InlineData("de-DE")]
-    [InlineData("nl-NL")]
-    [InlineData("fr-FR")]
+    [InlineData(data: "de-DE")]
+    [InlineData(data: "nl-NL")]
+    [InlineData(data: "fr-FR")]
     public void LevelCapExceededError_LumaSamplesUseInvariantGrouping(string culture)
     {
         CultureInfo previous = Thread.CurrentThread.CurrentCulture;
         try
         {
-            Thread.CurrentThread.CurrentCulture = new(culture);
+            Thread.CurrentThread.CurrentCulture = new(name: culture);
 
             // 1920 x 1080 x 240 = 497,664,000 luma samples/sec — H.264 Level 4.2
             // caps at 133,693,440, far below.
             MediaInfo source = Source(width: 1920, height: 1080, fps: 240.0);
             EncodingProfile profile = TranscodeProfile(codec: VideoCodecType.H264, level: "4.2");
 
-            ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile, source);
+            ProfileValidationResult result = ProfileValidator.ValidateWithSource(profile: profile, source: source);
 
             result.IsValid.Should().BeFalse();
-            result.Errors.Should().Contain(e => e.Contains("497,664,000"));
-            result.Errors.Should().NotContain(e => e.Contains("497.664.000"));
+            result.Errors.Should().Contain(predicate: e => e.Contains("497,664,000"));
+            result.Errors.Should().NotContain(predicate: e => e.Contains("497.664.000"));
         }
         finally
         {
@@ -132,7 +132,7 @@ public class ProfileValidatorCultureTests
         new(
             FilePath: "/media/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromHours(2),
+            Duration: TimeSpan.FromHours(hours: 2),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 7_200_000_000,
             VideoStreams:

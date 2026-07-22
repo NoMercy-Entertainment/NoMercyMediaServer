@@ -26,7 +26,7 @@ namespace NoMercy.Tests.Queue;
 /// hang every future caller forever. The 300s hard-timeout fallback is real
 /// wall-clock and is not exercised here; see the class doc for why it exists.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class ServerReadinessGateTests
 {
     /// <summary>
@@ -57,15 +57,15 @@ public class ServerReadinessGateTests
     public async Task WaitForReadyAsync_ResolvesOnceHostStartedSignalCompletes()
     {
         FakeLifetime lifetime = new();
-        ServerReadinessGate gate = new(lifetime, NullLogger<ServerReadinessGate>.Instance);
+        ServerReadinessGate gate = new(lifetime: lifetime, logger: NullLogger<ServerReadinessGate>.Instance);
 
-        Task waiter = gate.WaitForReadyAsync(CancellationToken.None);
-        await Task.Delay(50);
-        waiter.IsCompleted.Should().BeFalse("no signal has resolved yet");
+        Task waiter = gate.WaitForReadyAsync(ct: CancellationToken.None);
+        await Task.Delay(millisecondsDelay: 50);
+        waiter.IsCompleted.Should().BeFalse(because: "no signal has resolved yet");
 
         lifetime.FireStarted();
 
-        await waiter.WaitAsync(TimeSpan.FromSeconds(5));
+        await waiter.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 5));
         waiter.IsCompletedSuccessfully.Should().BeTrue();
     }
 
@@ -73,21 +73,21 @@ public class ServerReadinessGateTests
     public async Task AddSignal_BeforeSeal_IsIncludedAndGateWaitsForIt()
     {
         FakeLifetime lifetime = new();
-        ServerReadinessGate gate = new(lifetime, NullLogger<ServerReadinessGate>.Instance);
+        ServerReadinessGate gate = new(lifetime: lifetime, logger: NullLogger<ServerReadinessGate>.Instance);
         TaskCompletionSource extraSignal = new();
-        gate.AddSignal("extra", extraSignal.Task);
+        gate.AddSignal(name: "extra", signal: extraSignal.Task);
 
         lifetime.FireStarted();
-        Task waiter = gate.WaitForReadyAsync(CancellationToken.None);
+        Task waiter = gate.WaitForReadyAsync(ct: CancellationToken.None);
 
-        await Task.Delay(100);
+        await Task.Delay(millisecondsDelay: 100);
         waiter
             .IsCompleted.Should()
-            .BeFalse("the extra signal registered before seal must block resolution");
+            .BeFalse(because: "the extra signal registered before seal must block resolution");
 
         extraSignal.SetResult();
 
-        await waiter.WaitAsync(TimeSpan.FromSeconds(5));
+        await waiter.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 5));
         waiter.IsCompletedSuccessfully.Should().BeTrue();
     }
 
@@ -95,44 +95,44 @@ public class ServerReadinessGateTests
     public async Task AddSignal_AfterGateSealed_IsIgnored_DoesNotBlockResolution()
     {
         FakeLifetime lifetime = new();
-        ServerReadinessGate gate = new(lifetime, NullLogger<ServerReadinessGate>.Instance);
+        ServerReadinessGate gate = new(lifetime: lifetime, logger: NullLogger<ServerReadinessGate>.Instance);
 
         lifetime.FireStarted();
         // Seal fires one async tick after ApplicationStarted (Task.Run in the
         // ctor's callback) — give it a moment to actually seal before the late
         // AddSignal, otherwise this would race the ctor's own registration
         // window instead of testing the "too late" path.
-        await Task.Delay(150);
+        await Task.Delay(millisecondsDelay: 150);
 
         TaskCompletionSource neverResolves = new();
-        gate.AddSignal("too-late", neverResolves.Task);
+        gate.AddSignal(name: "too-late", signal: neverResolves.Task);
 
-        Task waiter = gate.WaitForReadyAsync(CancellationToken.None);
+        Task waiter = gate.WaitForReadyAsync(ct: CancellationToken.None);
 
-        await waiter.WaitAsync(TimeSpan.FromSeconds(5));
+        await waiter.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 5));
         waiter
             .IsCompletedSuccessfully.Should()
-            .BeTrue("a signal added after sealing must be ignored, not awaited");
+            .BeTrue(because: "a signal added after sealing must be ignored, not awaited");
     }
 
     [Fact]
     public async Task AddSignal_AfterGateFullyResolved_IsIgnored()
     {
         FakeLifetime lifetime = new();
-        ServerReadinessGate gate = new(lifetime, NullLogger<ServerReadinessGate>.Instance);
+        ServerReadinessGate gate = new(lifetime: lifetime, logger: NullLogger<ServerReadinessGate>.Instance);
 
         lifetime.FireStarted();
-        await gate.WaitForReadyAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
+        await gate.WaitForReadyAsync(ct: CancellationToken.None).WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 5));
 
         // Gate is now fully resolved. A signal added at this point must be a
         // silent no-op — no exception, and it must not reopen resolution for
         // a second waiter.
         TaskCompletionSource lateSignal = new();
-        Action act = () => gate.AddSignal("very-late", lateSignal.Task);
+        Action act = () => gate.AddSignal(name: "very-late", signal: lateSignal.Task);
         act.Should().NotThrow();
 
-        Task secondWaiter = gate.WaitForReadyAsync(CancellationToken.None);
-        await secondWaiter.WaitAsync(TimeSpan.FromSeconds(5));
+        Task secondWaiter = gate.WaitForReadyAsync(ct: CancellationToken.None);
+        await secondWaiter.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 5));
         secondWaiter.IsCompletedSuccessfully.Should().BeTrue();
     }
 
@@ -140,21 +140,21 @@ public class ServerReadinessGateTests
     public async Task MultipleWaiters_AllUnblockTogetherOnceSignalsComplete()
     {
         FakeLifetime lifetime = new();
-        ServerReadinessGate gate = new(lifetime, NullLogger<ServerReadinessGate>.Instance);
+        ServerReadinessGate gate = new(lifetime: lifetime, logger: NullLogger<ServerReadinessGate>.Instance);
         TaskCompletionSource extraSignal = new();
-        gate.AddSignal("extra", extraSignal.Task);
+        gate.AddSignal(name: "extra", signal: extraSignal.Task);
         lifetime.FireStarted();
 
-        Task waiterA = gate.WaitForReadyAsync(CancellationToken.None);
-        Task waiterB = gate.WaitForReadyAsync(CancellationToken.None);
+        Task waiterA = gate.WaitForReadyAsync(ct: CancellationToken.None);
+        Task waiterB = gate.WaitForReadyAsync(ct: CancellationToken.None);
 
-        await Task.Delay(100);
+        await Task.Delay(millisecondsDelay: 100);
         waiterA.IsCompleted.Should().BeFalse();
         waiterB.IsCompleted.Should().BeFalse();
 
         extraSignal.SetResult();
 
-        await Task.WhenAll(waiterA, waiterB).WaitAsync(TimeSpan.FromSeconds(5));
+        await Task.WhenAll(tasks: [waiterA, waiterB]).WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 5));
         waiterA.IsCompletedSuccessfully.Should().BeTrue();
         waiterB.IsCompletedSuccessfully.Should().BeTrue();
     }
@@ -167,11 +167,11 @@ public class ServerReadinessGateTests
         // ctor's IsCancellationRequested branch must seal on the spot rather
         // than wait for an ApplicationStarted event that already happened.
         FakeLifetime lifetime = new(alreadyStarted: true);
-        ServerReadinessGate gate = new(lifetime, NullLogger<ServerReadinessGate>.Instance);
+        ServerReadinessGate gate = new(lifetime: lifetime, logger: NullLogger<ServerReadinessGate>.Instance);
 
-        Task waiter = gate.WaitForReadyAsync(CancellationToken.None);
+        Task waiter = gate.WaitForReadyAsync(ct: CancellationToken.None);
 
-        await waiter.WaitAsync(TimeSpan.FromSeconds(5));
+        await waiter.WaitAsync(timeout: TimeSpan.FromSeconds(seconds: 5));
         waiter.IsCompletedSuccessfully.Should().BeTrue();
     }
 }

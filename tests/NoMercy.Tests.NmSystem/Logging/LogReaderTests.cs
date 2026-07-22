@@ -27,22 +27,22 @@ namespace NoMercy.Tests.NmSystem;
 /// the CLI's <c>manage/logs</c> — it must read and filter both formats, and must
 /// not double-count an entry the legacy bridge mirrors into both.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class LogReaderTests
 {
     private static IStorage BuildStorage(string root)
     {
         LocalStorageDriver driver = new();
-        return new LocalStorage(driver, new([], driver));
+        return new LocalStorage(driver: driver, guard: new(allowedRoots: [], driver: driver));
     }
 
     private static string WriteLegacyTextLine(string dir, string type, string level, string message)
     {
-        Directory.CreateDirectory(dir);
-        string path = Path.Combine(dir, "log20260101.txt");
+        Directory.CreateDirectory(path: dir);
+        string path = Path.Combine(path1: dir, path2: "log20260101.txt");
         string line =
             $$"""{"@t":"2026-01-01T10:00:00.0000000Z","Type":"{{type}}","Level":"{{level}}","Message":"{{message}}","ThreadId":1}""";
-        File.AppendAllText(path, line + Environment.NewLine);
+        File.AppendAllText(path: path, contents: line + Environment.NewLine);
         return path;
     }
 
@@ -54,30 +54,30 @@ public class LogReaderTests
         string timestamp = "2026-01-01T11:00:00.0000000Z"
     )
     {
-        Directory.CreateDirectory(dir);
-        string path = Path.Combine(dir, "run-20260101-110000-1.jsonl");
+        Directory.CreateDirectory(path: dir);
+        string path = Path.Combine(path1: dir, path2: "run-20260101-110000-1.jsonl");
         string line =
             $$"""{"@t":"{{timestamp}}","Type":"{{type}}","Category":"Cat","Group":"Grp","Level":"{{level}}","LevelValue":2,"Color":"#fff","Message":"{{message}}","Scope":null,"Source":"{{type}}","ThreadId":1,"Exception":null}""";
-        File.AppendAllText(path, line + Environment.NewLine);
+        File.AppendAllText(path: path, contents: line + Environment.NewLine);
         return path;
     }
 
     [Fact]
     public async Task GetLogsAsync_ReadsEntriesFromLegacyTextFiles()
     {
-        string dir = Path.Combine(Path.GetTempPath(), $"nm-logreader-{Guid.NewGuid():N}");
+        string dir = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-logreader-{Guid.NewGuid():N}");
         try
         {
-            WriteLegacyTextLine(dir, "app", "Information", "hello from legacy log.txt");
+            WriteLegacyTextLine(dir: dir, type: "app", level: "Information", message: "hello from legacy log.txt");
 
-            List<LogEntry> logs = await LogReader.GetLogsAsync(BuildStorage(dir), dir);
+            List<LogEntry> logs = await LogReader.GetLogsAsync(storage: BuildStorage(root: dir), logDirectoryPath: dir);
 
-            logs.Should().ContainSingle(e => e.Message == "hello from legacy log.txt");
+            logs.Should().ContainSingle(predicate: e => e.Message == "hello from legacy log.txt");
         }
         finally
         {
-            if (Directory.Exists(dir))
-                Directory.Delete(dir, true);
+            if (Directory.Exists(path: dir))
+                Directory.Delete(path: dir, recursive: true);
         }
     }
 
@@ -86,44 +86,44 @@ public class LogReaderTests
     {
         // This is the actual bug: before the fix, GetLogsAsync only globbed
         // "*.txt" and never saw anything written through the ILogger<T> sink.
-        string dir = Path.Combine(Path.GetTempPath(), $"nm-logreader-{Guid.NewGuid():N}");
+        string dir = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-logreader-{Guid.NewGuid():N}");
         try
         {
-            WriteRunJsonlLine(dir, "access", "Information", "user fillz authenticated");
+            WriteRunJsonlLine(dir: dir, type: "access", level: "Information", message: "user fillz authenticated");
 
-            List<LogEntry> logs = await LogReader.GetLogsAsync(BuildStorage(dir), dir);
+            List<LogEntry> logs = await LogReader.GetLogsAsync(storage: BuildStorage(root: dir), logDirectoryPath: dir);
 
-            logs.Should().ContainSingle(e => e.Message == "user fillz authenticated");
+            logs.Should().ContainSingle(predicate: e => e.Message == "user fillz authenticated");
         }
         finally
         {
-            if (Directory.Exists(dir))
-                Directory.Delete(dir, true);
+            if (Directory.Exists(path: dir))
+                Directory.Delete(path: dir, recursive: true);
         }
     }
 
     [Fact]
     public async Task GetLogsAsync_FilterMatchesRenderedMessage_AcrossBothFormats()
     {
-        string dir = Path.Combine(Path.GetTempPath(), $"nm-logreader-{Guid.NewGuid():N}");
+        string dir = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-logreader-{Guid.NewGuid():N}");
         try
         {
-            WriteLegacyTextLine(dir, "app", "Information", "nothing interesting here");
-            WriteRunJsonlLine(dir, "access", "Information", "stoney signed in from a new device");
+            WriteLegacyTextLine(dir: dir, type: "app", level: "Information", message: "nothing interesting here");
+            WriteRunJsonlLine(dir: dir, type: "access", level: "Information", message: "stoney signed in from a new device");
 
             List<LogEntry> matches = await LogReader.GetLogsAsync(
-                BuildStorage(dir),
-                dir,
-                entry => entry.Message.Contains("stoney", StringComparison.OrdinalIgnoreCase)
+                storage: BuildStorage(root: dir),
+                logDirectoryPath: dir,
+                filter: entry => entry.Message.Contains(value: "stoney", comparisonType: StringComparison.OrdinalIgnoreCase)
             );
 
             matches.Should().ContainSingle();
-            matches[0].Message.Should().Be("stoney signed in from a new device");
+            matches[index: 0].Message.Should().Be(expected: "stoney signed in from a new device");
         }
         finally
         {
-            if (Directory.Exists(dir))
-                Directory.Delete(dir, true);
+            if (Directory.Exists(path: dir))
+                Directory.Delete(path: dir, recursive: true);
         }
     }
 
@@ -135,46 +135,46 @@ public class LogReaderTests
         // Serilog sink) and the current run's jsonl file. Without dedup this
         // shows up twice in the dashboard for every legacy Logger.* call made
         // while a run file is bridged.
-        string dir = Path.Combine(Path.GetTempPath(), $"nm-logreader-{Guid.NewGuid():N}");
+        string dir = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-logreader-{Guid.NewGuid():N}");
         try
         {
-            WriteLegacyTextLine(dir, "app", "Information", "bridged message");
+            WriteLegacyTextLine(dir: dir, type: "app", level: "Information", message: "bridged message");
             WriteRunJsonlLine(
-                dir,
-                "app",
-                "Information",
-                "bridged message",
+                dir: dir,
+                type: "app",
+                level: "Information",
+                message: "bridged message",
                 timestamp: "2026-01-01T10:00:00.1234567Z"
             );
 
-            List<LogEntry> logs = await LogReader.GetLogsAsync(BuildStorage(dir), dir);
+            List<LogEntry> logs = await LogReader.GetLogsAsync(storage: BuildStorage(root: dir), logDirectoryPath: dir);
 
-            logs.Should().ContainSingle(e => e.Message == "bridged message");
+            logs.Should().ContainSingle(predicate: e => e.Message == "bridged message");
         }
         finally
         {
-            if (Directory.Exists(dir))
-                Directory.Delete(dir, true);
+            if (Directory.Exists(path: dir))
+                Directory.Delete(path: dir, recursive: true);
         }
     }
 
     [Fact]
     public async Task GetLogsAsync_KeepsDistinctEntriesWithDifferentMessages()
     {
-        string dir = Path.Combine(Path.GetTempPath(), $"nm-logreader-{Guid.NewGuid():N}");
+        string dir = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-logreader-{Guid.NewGuid():N}");
         try
         {
-            WriteLegacyTextLine(dir, "app", "Information", "first message");
-            WriteRunJsonlLine(dir, "access", "Information", "second message");
+            WriteLegacyTextLine(dir: dir, type: "app", level: "Information", message: "first message");
+            WriteRunJsonlLine(dir: dir, type: "access", level: "Information", message: "second message");
 
-            List<LogEntry> logs = await LogReader.GetLogsAsync(BuildStorage(dir), dir);
+            List<LogEntry> logs = await LogReader.GetLogsAsync(storage: BuildStorage(root: dir), logDirectoryPath: dir);
 
-            logs.Select(e => e.Message).Should().BeEquivalentTo("first message", "second message");
+            logs.Select(selector: e => e.Message).Should().BeEquivalentTo(expectation: ["first message", "second message"]);
         }
         finally
         {
-            if (Directory.Exists(dir))
-                Directory.Delete(dir, true);
+            if (Directory.Exists(path: dir))
+                Directory.Delete(path: dir, recursive: true);
         }
     }
 }

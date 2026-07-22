@@ -14,7 +14,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api;
 
-[Trait("Category", "Integration")]
+[Trait(name: "Category", value: "Integration")]
 public class MiddlewareOrderingTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;
@@ -32,34 +32,34 @@ public class MiddlewareOrderingTests : IClassFixture<NoMercyApiFactory>
         HttpClient client = _factory.CreateClient().AsAuthenticated();
 
         HttpResponseMessage response = await client.GetAsync(
-            "/api/v1/nonexistent-endpoint-for-testing"
+            requestUri: "/api/v1/nonexistent-endpoint-for-testing"
         );
 
         // In non-dev mode, we should get a standard HTTP error, not an HTML exception page
         string content = await response.Content.ReadAsStringAsync();
-        Assert.DoesNotContain("DeveloperExceptionPage", content);
-        Assert.DoesNotContain("<html", content.ToLowerInvariant());
+        Assert.DoesNotContain(expectedSubstring: "DeveloperExceptionPage", actualString: content);
+        Assert.DoesNotContain(expectedSubstring: "<html", actualString: content.ToLowerInvariant());
     }
 
     [Fact]
     public async Task Compression_AppliedToResponses_WhenClientAcceptsGzip()
     {
         // Create a client that does NOT auto-decompress so we can inspect Content-Encoding
-        HttpClient client = new(_factory.Server.CreateHandler())
+        HttpClient client = new(handler: _factory.Server.CreateHandler())
         {
-            BaseAddress = new("http://localhost"),
+            BaseAddress = new(uriString: "http://localhost"),
         };
         client = client.AsAuthenticated();
 
-        HttpRequestMessage request = new(HttpMethod.Get, "/api/v1/setup/permissions");
-        request.Headers.AcceptEncoding.Add(new("gzip"));
-        request.Headers.AcceptEncoding.Add(new("br"));
+        HttpRequestMessage request = new(method: HttpMethod.Get, requestUri: "/api/v1/setup/permissions");
+        request.Headers.AcceptEncoding.Add(item: new(value: "gzip"));
+        request.Headers.AcceptEncoding.Add(item: new(value: "br"));
 
-        HttpResponseMessage response = await client.SendAsync(request);
+        HttpResponseMessage response = await client.SendAsync(request: request);
 
         // Response should be compressed when client accepts it
         // The Content-Encoding header indicates compression was applied
-        bool isCompressed = response.Content.Headers.ContentEncoding.Any(e =>
+        bool isCompressed = response.Content.Headers.ContentEncoding.Any(predicate: e =>
             e == "gzip" || e == "br"
         );
 
@@ -68,37 +68,37 @@ public class MiddlewareOrderingTests : IClassFixture<NoMercyApiFactory>
         // that compression wouldn't help
         long contentLength = response.Content.Headers.ContentLength ?? 0;
         Assert.True(
-            isCompressed || contentLength < 100,
-            $"Expected compressed response or small body. "
-                + $"Content-Encoding: [{string.Join(", ", response.Content.Headers.ContentEncoding)}], "
-                + $"Content-Length: {contentLength}"
+            condition: isCompressed || contentLength < 100,
+            userMessage: $"Expected compressed response or small body. "
+                         + $"Content-Encoding: [{string.Join(separator: ", ", values: response.Content.Headers.ContentEncoding)}], "
+                         + $"Content-Length: {contentLength}"
         );
     }
 
     [Theory]
-    [InlineData("https://nomercy.tv")]
-    [InlineData("http://localhost:7625")]
+    [InlineData(data: "https://nomercy.tv")]
+    [InlineData(data: "http://localhost:7625")]
     public async Task CorsPreFlight_ReturnsSuccess_ForAllowedOrigin(string origin)
     {
         HttpClient client = _factory.CreateClient();
 
-        HttpRequestMessage request = new(HttpMethod.Options, "/api/v1/setup/permissions");
-        request.Headers.Add("Origin", origin);
-        request.Headers.Add("Access-Control-Request-Method", "GET");
-        request.Headers.Add("Access-Control-Request-Headers", "Authorization");
+        HttpRequestMessage request = new(method: HttpMethod.Options, requestUri: "/api/v1/setup/permissions");
+        request.Headers.Add(name: "Origin", value: origin);
+        request.Headers.Add(name: "Access-Control-Request-Method", value: "GET");
+        request.Headers.Add(name: "Access-Control-Request-Headers", value: "Authorization");
 
-        HttpResponseMessage response = await client.SendAsync(request);
+        HttpResponseMessage response = await client.SendAsync(request: request);
 
         // Pre-flight should succeed (2xx or 204)
         Assert.True(
-            (int)response.StatusCode >= 200 && (int)response.StatusCode < 300,
-            $"CORS pre-flight expected 2xx for {origin}, got {(int)response.StatusCode}"
+            condition: (int)response.StatusCode >= 200 && (int)response.StatusCode < 300,
+            userMessage: $"CORS pre-flight expected 2xx for {origin}, got {(int)response.StatusCode}"
         );
 
         // Should include CORS headers
         Assert.True(
-            response.Headers.Contains("Access-Control-Allow-Origin"),
-            $"Response should contain Access-Control-Allow-Origin header for {origin}"
+            condition: response.Headers.Contains(name: "Access-Control-Allow-Origin"),
+            userMessage: $"Response should contain Access-Control-Allow-Origin header for {origin}"
         );
     }
 
@@ -107,50 +107,50 @@ public class MiddlewareOrderingTests : IClassFixture<NoMercyApiFactory>
     {
         HttpClient client = _factory.CreateClient();
 
-        HttpRequestMessage request = new(HttpMethod.Options, "/api/v1/setup/permissions");
-        request.Headers.Add("Origin", "https://malicious-site.example.com");
-        request.Headers.Add("Access-Control-Request-Method", "GET");
+        HttpRequestMessage request = new(method: HttpMethod.Options, requestUri: "/api/v1/setup/permissions");
+        request.Headers.Add(name: "Origin", value: "https://malicious-site.example.com");
+        request.Headers.Add(name: "Access-Control-Request-Method", value: "GET");
 
-        HttpResponseMessage response = await client.SendAsync(request);
+        HttpResponseMessage response = await client.SendAsync(request: request);
 
         // Should not include the disallowed origin in Access-Control-Allow-Origin
         if (
             response.Headers.TryGetValues(
-                "Access-Control-Allow-Origin",
-                out IEnumerable<string>? values
+                name: "Access-Control-Allow-Origin",
+                values: out IEnumerable<string>? values
             )
         )
         {
-            Assert.DoesNotContain("malicious-site.example.com", values);
+            Assert.DoesNotContain(expected: "malicious-site.example.com", collection: values);
         }
     }
 
     [Theory]
-    [InlineData("http://192.168.2.201:5501")]
-    [InlineData("http://192.168.2.201:5502")]
-    [InlineData("http://192.168.2.201:5503")]
-    [InlineData("http://localhost")]
-    [InlineData("https://localhost")]
+    [InlineData(data: "http://192.168.2.201:5501")]
+    [InlineData(data: "http://192.168.2.201:5502")]
+    [InlineData(data: "http://192.168.2.201:5503")]
+    [InlineData(data: "http://localhost")]
+    [InlineData(data: "https://localhost")]
     public async Task CorsPreFlight_DevOrigins_NotAllowed_InNonDevMode(string devOrigin)
     {
         // Config.IsDev is false in tests — dev-only origins should be rejected
         HttpClient client = _factory.CreateClient();
 
-        HttpRequestMessage request = new(HttpMethod.Options, "/api/v1/setup/permissions");
-        request.Headers.Add("Origin", devOrigin);
-        request.Headers.Add("Access-Control-Request-Method", "GET");
+        HttpRequestMessage request = new(method: HttpMethod.Options, requestUri: "/api/v1/setup/permissions");
+        request.Headers.Add(name: "Origin", value: devOrigin);
+        request.Headers.Add(name: "Access-Control-Request-Method", value: "GET");
 
-        HttpResponseMessage response = await client.SendAsync(request);
+        HttpResponseMessage response = await client.SendAsync(request: request);
 
         // Should not include the dev origin in Access-Control-Allow-Origin
         if (
             response.Headers.TryGetValues(
-                "Access-Control-Allow-Origin",
-                out IEnumerable<string>? values
+                name: "Access-Control-Allow-Origin",
+                values: out IEnumerable<string>? values
             )
         )
         {
-            Assert.DoesNotContain(devOrigin, values);
+            Assert.DoesNotContain(expected: devOrigin, collection: values);
         }
     }
 }
@@ -162,6 +162,6 @@ internal static class HttpRequestMessageExtensions
         HttpClient client
     )
     {
-        return await client.SendAsync(request);
+        return await client.SendAsync(request: request);
     }
 }

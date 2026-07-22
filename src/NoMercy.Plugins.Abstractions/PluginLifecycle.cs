@@ -16,27 +16,27 @@ public static class PluginLifecycle
     private static readonly Dictionary<PluginStatus, HashSet<PluginStatus>> AllowedTransitions =
         new()
         {
-            [PluginStatus.Active] =
+            [key: PluginStatus.Active] =
             [
                 PluginStatus.Disabled,
                 PluginStatus.Malfunctioned,
                 PluginStatus.Deleted,
             ],
-            [PluginStatus.Disabled] = [PluginStatus.Active, PluginStatus.Deleted],
-            [PluginStatus.Malfunctioned] =
+            [key: PluginStatus.Disabled] = [PluginStatus.Active, PluginStatus.Deleted],
+            [key: PluginStatus.Malfunctioned] =
             [
                 PluginStatus.Active,
                 PluginStatus.Disabled,
                 PluginStatus.Deleted,
             ],
-            [PluginStatus.Deleted] = [],
+            [key: PluginStatus.Deleted] = [],
         };
 
     public static bool CanTransition(PluginStatus from, PluginStatus to)
     {
-        if (AllowedTransitions.TryGetValue(from, out HashSet<PluginStatus>? allowed))
+        if (AllowedTransitions.TryGetValue(key: from, value: out HashSet<PluginStatus>? allowed))
         {
-            return allowed.Contains(to);
+            return allowed.Contains(item: to);
         }
 
         return false;
@@ -44,12 +44,12 @@ public static class PluginLifecycle
 
     public static void Transition(PluginInfo info, PluginStatus newStatus)
     {
-        ArgumentNullException.ThrowIfNull(info);
+        ArgumentNullException.ThrowIfNull(argument: info);
 
-        if (!CanTransition(info.Status, newStatus))
+        if (!CanTransition(from: info.Status, to: newStatus))
         {
             throw new InvalidOperationException(
-                $"Cannot transition plugin '{info.Name}' from {info.Status} to {newStatus}."
+                message: $"Cannot transition plugin '{info.Name}' from {info.Status} to {newStatus}."
             );
         }
 

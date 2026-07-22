@@ -36,14 +36,14 @@ internal sealed class BoundedLineBuffer(int maxBytes)
 
     public void AppendLine(string line)
     {
-        _lines.Enqueue(line);
+        _lines.Enqueue(item: line);
         // +1 for the implicit '\n' separator added by string.Join below.
         _byteCount += line.Length + 1;
         while (_byteCount > MaxBytes && _lines.Count > 1)
             _byteCount -= _lines.Dequeue().Length + 1;
     }
 
-    public override string ToString() => string.Join('\n', _lines);
+    public override string ToString() => string.Join(separator: '\n', values: _lines);
 }
 
 public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
@@ -61,7 +61,7 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         CancellationToken cancellationToken = default
     )
     {
-        return RunAsync(executable, arguments, null, null, workingDirectory, cancellationToken);
+        return RunAsync(executable: executable, arguments: arguments, onStdOut: null, onStdErr: null, workingDirectory: workingDirectory, cancellationToken: cancellationToken);
     }
 
     public Task<ProcessResult> RunAsync(
@@ -74,12 +74,12 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
     )
     {
         return RunCoreAsync(
-            executable,
-            arguments,
-            onStdOut,
-            onStdErr,
-            workingDirectory,
-            cancellationToken,
+            executable: executable,
+            arguments: arguments,
+            onStdOut: onStdOut,
+            onStdErr: onStdErr,
+            workingDirectory: workingDirectory,
+            cancellationToken: cancellationToken,
             killSignal: default
         );
     }
@@ -96,14 +96,14 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
     )
     {
         return RunCoreAsync(
-            executable,
-            arguments,
-            onStdOut,
-            onStdErr,
-            workingDirectory,
-            cancellationToken,
-            killSignal,
-            onProcessStarted
+            executable: executable,
+            arguments: arguments,
+            onStdOut: onStdOut,
+            onStdErr: onStdErr,
+            workingDirectory: workingDirectory,
+            cancellationToken: cancellationToken,
+            killSignal: killSignal,
+            onProcessStarted: onProcessStarted
         );
     }
 
@@ -116,12 +116,12 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
     )
     {
         return RunCoreAsync(
-            executable,
-            arguments,
+            executable: executable,
+            arguments: arguments,
             onStdOut: null,
             onStdErr: null,
-            workingDirectory,
-            cancellationToken,
+            workingDirectory: workingDirectory,
+            cancellationToken: cancellationToken,
             killSignal: default,
             onProcessStarted: null,
             extraEnv: extraEnv
@@ -142,7 +142,7 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
     {
         Stopwatch stopwatch = Stopwatch.StartNew();
         StringBuilder stdOutBuilder = new();
-        BoundedLineBuffer stdErrBuilder = new(StdErrMaxBytes);
+        BoundedLineBuffer stdErrBuilder = new(maxBytes: StdErrMaxBytes);
 
         // Working directories on Windows must exist before Process.Start —
         // otherwise the API surfaces Win32 error 2 (ERROR_FILE_NOT_FOUND)
@@ -150,13 +150,13 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         // message that points at the executable instead of the missing dir.
         // Defensive create avoids spurious failures from upstream cleanup races.
         string resolvedWorkingDirectory = workingDirectory ?? Environment.CurrentDirectory;
-        if (!string.IsNullOrEmpty(workingDirectory) && !Directory.Exists(workingDirectory))
+        if (!string.IsNullOrEmpty(value: workingDirectory) && !Directory.Exists(path: workingDirectory))
         {
             logger.LogWarning(
-                "Working directory {Dir} missing at Process.Start; creating",
-                workingDirectory
+                message: "Working directory {Dir} missing at Process.Start; creating",
+                args: workingDirectory
             );
-            Directory.CreateDirectory(workingDirectory);
+            Directory.CreateDirectory(path: workingDirectory);
         }
 
         ProcessStartInfo startInfo = new()
@@ -172,18 +172,16 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         if (extraEnv is { Count: > 0 })
         {
             foreach (KeyValuePair<string, string> kv in extraEnv)
-                startInfo.Environment[kv.Key] = kv.Value;
+                startInfo.Environment[key: kv.Key] = kv.Value;
         }
 
         foreach (string arg in arguments)
         {
-            startInfo.ArgumentList.Add(arg);
+            startInfo.ArgumentList.Add(item: arg);
         }
 
         logger.LogDebug(
-            "Starting process: {Executable} {Arguments}",
-            executable,
-            string.Join(" ", arguments)
+            message: "Starting process: {Executable} {Arguments}", args: [executable, string.Join(separator: " ", value: arguments)]
         );
 
         using Process process = new() { StartInfo = startInfo };
@@ -192,16 +190,16 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         {
             if (e.Data is null)
                 return;
-            stdOutBuilder.AppendLine(e.Data);
-            onStdOut?.Invoke(e.Data);
+            stdOutBuilder.AppendLine(value: e.Data);
+            onStdOut?.Invoke(obj: e.Data);
         };
 
         process.ErrorDataReceived += (_, e) =>
         {
             if (e.Data is null)
                 return;
-            stdErrBuilder.AppendLine(e.Data);
-            onStdErr?.Invoke(e.Data);
+            stdErrBuilder.AppendLine(line: e.Data);
+            onStdErr?.Invoke(obj: e.Data);
         };
 
         // When killSignal fires, terminate the process tree.
@@ -210,7 +208,7 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         CancellationTokenRegistration killRegistration = default;
         if (killSignal.CanBeCanceled)
         {
-            killRegistration = killSignal.Register(() =>
+            killRegistration = killSignal.Register(callback: () =>
             {
                 killedBySignal = true;
                 try
@@ -218,8 +216,8 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
                     if (!process.HasExited)
                     {
                         logger.LogDebug(
-                            "Kill signal received — terminating process: {Executable}",
-                            executable
+                            message: "Kill signal received — terminating process: {Executable}",
+                            args: executable
                         );
                         process.Kill(entireProcessTree: true);
                     }
@@ -233,15 +231,15 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         // Bind the child to the server's kill-on-close job object so a hard
         // crash/kill of the server (where the graceful cancellation path never
         // runs) can't leave an orphaned ffmpeg. No-op fallback off Windows.
-        Shell.ProcessHelper.AttachToParentLifetime(process);
+        Shell.ProcessHelper.AttachToParentLifetime(process: process);
 
-        onProcessStarted?.Invoke(process.Id);
+        onProcessStarted?.Invoke(obj: process.Id);
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
         try
         {
-            await process.WaitForExitAsync(cancellationToken);
+            await process.WaitForExitAsync(cancellationToken: cancellationToken);
         }
         catch (OperationCanceledException)
             when (killedBySignal && !cancellationToken.IsCancellationRequested)
@@ -250,8 +248,8 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
             // Wait briefly for the kill to finalize.
             try
             {
-                using CancellationTokenSource finalizeCts = new(TimeSpan.FromSeconds(5));
-                await process.WaitForExitAsync(finalizeCts.Token);
+                using CancellationTokenSource finalizeCts = new(delay: TimeSpan.FromSeconds(seconds: 5));
+                await process.WaitForExitAsync(cancellationToken: finalizeCts.Token);
             }
             catch (Exception)
             {
@@ -264,7 +262,7 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         {
             // User-initiated cancellation: attempt a graceful shutdown first,
             // then force-kill if FFmpeg does not exit within the grace period.
-            await KillGracefullyAsync(process, executable, logger);
+            await KillGracefullyAsync(process: process, executable: executable, logger: logger);
             throw;
         }
         finally
@@ -294,11 +292,7 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         );
 
         logger.LogDebug(
-            "Process exited: {Executable} ExitCode={ExitCode} Duration={Duration}ms{KillNote}",
-            executable,
-            result.ExitCode,
-            result.Duration.TotalMilliseconds,
-            killedBySignal ? " (killed by signal)" : ""
+            message: "Process exited: {Executable} ExitCode={ExitCode} Duration={Duration}ms{KillNote}", args: [executable, result.ExitCode, result.Duration.TotalMilliseconds, killedBySignal ? " (killed by signal)" : ""]
         );
 
         return result;
@@ -343,11 +337,11 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
         // Wait up to 5 s for graceful exit.
         try
         {
-            using CancellationTokenSource graceCts = new(TimeSpan.FromSeconds(5));
-            await process.WaitForExitAsync(graceCts.Token);
+            using CancellationTokenSource graceCts = new(delay: TimeSpan.FromSeconds(seconds: 5));
+            await process.WaitForExitAsync(cancellationToken: graceCts.Token);
             logger.LogDebug(
-                "Process exited gracefully after cancel signal: {Executable}",
-                executable
+                message: "Process exited gracefully after cancel signal: {Executable}",
+                args: executable
             );
             return;
         }
@@ -362,8 +356,8 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
             if (!process.HasExited)
             {
                 logger.LogDebug(
-                    "Grace period expired — force-killing process tree: {Executable}",
-                    executable
+                    message: "Grace period expired — force-killing process tree: {Executable}",
+                    args: executable
                 );
                 process.Kill(entireProcessTree: true);
             }

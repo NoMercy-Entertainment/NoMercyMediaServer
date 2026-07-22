@@ -36,9 +36,9 @@ public sealed class LoopbackHttpServer : IDisposable
     /// Defaults to a 404 so an un-configured server fails loudly instead of hanging.
     /// </summary>
     public Func<LoopbackRequest, LoopbackResponse> Handler { get; set; } =
-        _ => new(404, "not found");
+        _ => new(StatusCode: 404, Body: "not found");
 
-    public int RequestCount => Volatile.Read(ref _requestCount);
+    public int RequestCount => Volatile.Read(location: ref _requestCount);
 
     /// <summary>Base URL including trailing slash, e.g. "http://127.0.0.1:54321/".</summary>
     public string BaseUrl { get; }
@@ -49,10 +49,10 @@ public sealed class LoopbackHttpServer : IDisposable
         BaseUrl = $"http://127.0.0.1:{port}/";
 
         _listener = new();
-        _listener.Prefixes.Add(BaseUrl);
+        _listener.Prefixes.Add(uriPrefix: BaseUrl);
         _listener.Start();
 
-        _acceptLoop = Task.Run(AcceptLoopAsync);
+        _acceptLoop = Task.Run(function: AcceptLoopAsync);
     }
 
     private async Task AcceptLoopAsync()
@@ -62,7 +62,7 @@ public sealed class LoopbackHttpServer : IDisposable
             HttpListenerContext context;
             try
             {
-                context = await _listener.GetContextAsync().WaitAsync(_cts.Token);
+                context = await _listener.GetContextAsync().WaitAsync(cancellationToken: _cts.Token);
             }
             catch (Exception)
             {
@@ -70,22 +70,22 @@ public sealed class LoopbackHttpServer : IDisposable
                 return;
             }
 
-            Interlocked.Increment(ref _requestCount);
+            Interlocked.Increment(location: ref _requestCount);
 
             try
             {
                 string body;
-                using (StreamReader reader = new(context.Request.InputStream, Encoding.UTF8))
+                using (StreamReader reader = new(stream: context.Request.InputStream, encoding: Encoding.UTF8))
                     body = await reader.ReadToEndAsync();
 
                 LoopbackRequest request = new(
-                    context.Request.HttpMethod,
-                    context.Request.Url?.AbsolutePath ?? "/",
-                    context.Request.QueryString,
-                    body
+                    Method: context.Request.HttpMethod,
+                    Path: context.Request.Url?.AbsolutePath ?? "/",
+                    Query: context.Request.QueryString,
+                    Body: body
                 );
 
-                LoopbackResponse response = Handler(request);
+                LoopbackResponse response = Handler(arg: request);
 
                 if (response.Abort)
                 {
@@ -98,9 +98,9 @@ public sealed class LoopbackHttpServer : IDisposable
 
                 context.Response.StatusCode = response.StatusCode;
                 context.Response.ContentType = response.ContentType;
-                byte[] bytes = Encoding.UTF8.GetBytes(response.Body);
+                byte[] bytes = Encoding.UTF8.GetBytes(s: response.Body);
                 context.Response.ContentLength64 = bytes.Length;
-                await context.Response.OutputStream.WriteAsync(bytes);
+                await context.Response.OutputStream.WriteAsync(buffer: bytes);
                 context.Response.OutputStream.Close();
             }
             catch (Exception)
@@ -120,7 +120,7 @@ public sealed class LoopbackHttpServer : IDisposable
 
     private static int GetFreeLoopbackPort()
     {
-        TcpListener probe = new(IPAddress.Loopback, 0);
+        TcpListener probe = new(localaddr: IPAddress.Loopback, port: 0);
         probe.Start();
         int port = ((IPEndPoint)probe.LocalEndpoint).Port;
         probe.Stop();
@@ -141,7 +141,7 @@ public sealed class LoopbackHttpServer : IDisposable
         _listener.Close();
         try
         {
-            _acceptLoop.Wait(TimeSpan.FromSeconds(2));
+            _acceptLoop.Wait(timeout: TimeSpan.FromSeconds(seconds: 2));
         }
         catch (Exception)
         {
@@ -174,5 +174,5 @@ public sealed record LoopbackResponse(
     /// </summary>
     public bool Abort { get; init; }
 
-    public static LoopbackResponse Aborted() => new(0, string.Empty) { Abort = true };
+    public static LoopbackResponse Aborted() => new(StatusCode: 0, Body: string.Empty) { Abort = true };
 }

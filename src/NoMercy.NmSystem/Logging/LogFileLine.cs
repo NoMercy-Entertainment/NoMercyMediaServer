@@ -22,39 +22,39 @@ namespace NoMercy.NmSystem.Logging;
 /// </summary>
 internal sealed class LogFileLine
 {
-    [JsonPropertyName("@t")]
+    [JsonPropertyName(name: "@t")]
     public string Timestamp { get; set; } = string.Empty;
 
-    [JsonPropertyName("Type")]
+    [JsonPropertyName(name: "Type")]
     public string Type { get; set; } = string.Empty;
 
-    [JsonPropertyName("Category")]
+    [JsonPropertyName(name: "Category")]
     public string Category { get; set; } = string.Empty;
 
-    [JsonPropertyName("Group")]
+    [JsonPropertyName(name: "Group")]
     public string Group { get; set; } = string.Empty;
 
-    [JsonPropertyName("Level")]
+    [JsonPropertyName(name: "Level")]
     public string Level { get; set; } = string.Empty;
 
-    [JsonPropertyName("LevelValue")]
+    [JsonPropertyName(name: "LevelValue")]
     public int LevelValue { get; set; }
 
-    [JsonPropertyName("Color")]
+    [JsonPropertyName(name: "Color")]
     public string Color { get; set; } = string.Empty;
 
-    [JsonPropertyName("Message")]
+    [JsonPropertyName(name: "Message")]
     public string Message { get; set; } = string.Empty;
 
-    [JsonPropertyName("Scope")]
+    [JsonPropertyName(name: "Scope")]
     public string? Scope { get; set; }
 
-    [JsonPropertyName("Source")]
+    [JsonPropertyName(name: "Source")]
     public string Source { get; set; } = string.Empty;
 
-    [JsonPropertyName("ThreadId")]
+    [JsonPropertyName(name: "ThreadId")]
     public int ThreadId { get; set; }
 
-    [JsonPropertyName("Exception")]
+    [JsonPropertyName(name: "Exception")]
     public string? Exception { get; set; }
 }

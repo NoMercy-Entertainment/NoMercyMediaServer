@@ -19,16 +19,16 @@ public class Image
     // ReSharper disable once InconsistentNaming
     private Uri __url { get; set; } = null!;
 
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("url")]
+    [JsonProperty(propertyName: "url")]
     public Uri Url
     {
         get => __url.ToHttps();
         init => __url = value;
     }
 
-    [JsonProperty("likes")]
+    [JsonProperty(propertyName: "likes")]
     public int Likes { get; set; }
 }

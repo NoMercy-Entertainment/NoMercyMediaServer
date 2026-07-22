@@ -22,18 +22,18 @@ namespace NoMercy.Tests.Providers.MusixMatch.Models;
 /// would throw a JsonReaderException or silently produce 0.
 /// The fix: Change to public string? AlbumName { get; set; }
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class MusixMatchMusixMatchTrackTests
 {
     [Fact]
     public void AlbumName_PropertyType_IsNullableString()
     {
         PropertyInfo? property = typeof(MusixMatchMusixMatchTrack).GetProperty(
-            nameof(MusixMatchMusixMatchTrack.AlbumName)
+            name: nameof(MusixMatchMusixMatchTrack.AlbumName)
         );
 
-        Assert.NotNull(property);
-        Assert.Equal(typeof(string), property.PropertyType);
+        Assert.NotNull(@object: property);
+        Assert.Equal(expected: typeof(string), actual: property.PropertyType);
     }
 
     [Fact]
@@ -42,10 +42,10 @@ public class MusixMatchMusixMatchTrackTests
         string json = """{"album_name": "Abbey Road"}""";
 
         MusixMatchMusixMatchTrack track = JsonConvert.DeserializeObject<MusixMatchMusixMatchTrack>(
-            json
+            value: json
         )!;
 
-        Assert.Equal("Abbey Road", track.AlbumName);
+        Assert.Equal(expected: "Abbey Road", actual: track.AlbumName);
     }
 
     [Fact]
@@ -54,10 +54,10 @@ public class MusixMatchMusixMatchTrackTests
         string json = """{"album_name": null}""";
 
         MusixMatchMusixMatchTrack track = JsonConvert.DeserializeObject<MusixMatchMusixMatchTrack>(
-            json
+            value: json
         )!;
 
-        Assert.Null(track.AlbumName);
+        Assert.Null(@object: track.AlbumName);
     }
 
     [Fact]
@@ -66,10 +66,10 @@ public class MusixMatchMusixMatchTrackTests
         string json = """{"album_name": ""}""";
 
         MusixMatchMusixMatchTrack track = JsonConvert.DeserializeObject<MusixMatchMusixMatchTrack>(
-            json
+            value: json
         )!;
 
-        Assert.Equal("", track.AlbumName);
+        Assert.Equal(expected: "", actual: track.AlbumName);
     }
 
     [Fact]
@@ -77,22 +77,22 @@ public class MusixMatchMusixMatchTrackTests
     {
         MusixMatchMusixMatchTrack track = new();
 
-        Assert.Null(track.AlbumName);
+        Assert.Null(@object: track.AlbumName);
     }
 
     [Fact]
     public void AlbumName_HasJsonPropertyAttribute_WithCorrectName()
     {
         PropertyInfo? property = typeof(MusixMatchMusixMatchTrack).GetProperty(
-            nameof(MusixMatchMusixMatchTrack.AlbumName)
+            name: nameof(MusixMatchMusixMatchTrack.AlbumName)
         );
 
-        Assert.NotNull(property);
+        Assert.NotNull(@object: property);
 
         JsonPropertyAttribute? attr = property.GetCustomAttribute<JsonPropertyAttribute>();
 
-        Assert.NotNull(attr);
-        Assert.Equal("album_name", attr.PropertyName);
+        Assert.NotNull(@object: attr);
+        Assert.Equal(expected: "album_name", actual: attr.PropertyName);
     }
 
     [Fact]
@@ -100,10 +100,10 @@ public class MusixMatchMusixMatchTrackTests
     {
         MusixMatchMusixMatchTrack track = new() { AlbumName = "The Dark Side of the Moon" };
 
-        string json = JsonConvert.SerializeObject(track);
+        string json = JsonConvert.SerializeObject(value: track);
         MusixMatchMusixMatchTrack deserialized =
-            JsonConvert.DeserializeObject<MusixMatchMusixMatchTrack>(json)!;
+            JsonConvert.DeserializeObject<MusixMatchMusixMatchTrack>(value: json)!;
 
-        Assert.Equal("The Dark Side of the Moon", deserialized.AlbumName);
+        Assert.Equal(expected: "The Dark Side of the Moon", actual: deserialized.AlbumName);
     }
 }

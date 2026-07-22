@@ -15,6 +15,6 @@ namespace NoMercy.Providers.TMDB.Models.Certifications;
 
 public class TmdbMovieCertifications
 {
-    [JsonProperty("certifications")]
+    [JsonProperty(propertyName: "certifications")]
     public Dictionary<string, TmdbMovieCertification[]> Certifications { get; set; } = new();
 }

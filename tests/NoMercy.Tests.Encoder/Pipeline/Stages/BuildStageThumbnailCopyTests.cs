@@ -40,13 +40,13 @@ public class BuildStageThumbnailCopyTests
     {
         EncoderOptions options = new() { FfmpegPathOverride = "ffmpeg" };
         _stage = new(
-            options,
-            new FontExtractor(TestStorageFactory.CreateLocal()),
-            new SubtitleExtractor(),
-            OutputStrategyFactoryTestHelper.Create(),
-            [],
-            NullLogger<BuildStage>.Instance,
-            TestStorageFactory.CreateLocal()
+            options: options,
+            fontExtractor: new FontExtractor(storage: TestStorageFactory.CreateLocal()),
+            subtitleExtractor: new SubtitleExtractor(),
+            outputStrategyFactory: OutputStrategyFactoryTestHelper.Create(),
+            drmProcessors: [],
+            logger: NullLogger<BuildStage>.Instance,
+            storage: TestStorageFactory.CreateLocal()
         );
     }
 
@@ -56,7 +56,7 @@ public class BuildStageThumbnailCopyTests
             [
                 new(
                     GroupId: "group_0",
-                    Nodes: [new("decode_0", OperationType.Decode, [], new())],
+                    Nodes: [new(Id: "decode_0", Operation: OperationType.Decode, DependsOn: [], Parameters: new())],
                     DeviceId: null,
                     GpuSlotsRequired: 0,
                     CpuThreadsRequired: 4,
@@ -64,7 +64,7 @@ public class BuildStageThumbnailCopyTests
                     Priority: 1
                 ),
             ],
-            EstimatedTotalDuration: TimeSpan.FromMinutes(90),
+            EstimatedTotalDuration: TimeSpan.FromMinutes(minutes: 90),
             OutputPlan: outputPlan
         );
 
@@ -72,7 +72,7 @@ public class BuildStageThumbnailCopyTests
         new(
             FilePath: "/movies/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromHours(2),
+            Duration: TimeSpan.FromHours(hours: 2),
             OverallBitRateKbps: 8000,
             FileSizeBytes: 7_200_000_000,
             VideoStreams:
@@ -101,7 +101,7 @@ public class BuildStageThumbnailCopyTests
         new(
             FilePath: "/movies/test.mkv",
             Format: "matroska",
-            Duration: TimeSpan.FromHours(2),
+            Duration: TimeSpan.FromHours(hours: 2),
             OverallBitRateKbps: 20000,
             FileSizeBytes: 18_000_000_000,
             VideoStreams:
@@ -177,14 +177,14 @@ public class BuildStageThumbnailCopyTests
             VideoOutputs: [BuildCopyVideoOutput()],
             AudioOutputs: [BuildAudioOutput()],
             SubtitleOutputs: [],
-            Thumbnails: new(160, 90, 10)
+            Thumbnails: new(Width: 160, Height: 90, IntervalSeconds: 10)
         );
 
-        ExecutionPlan plan = BuildPlan(outputPlan);
-        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
-        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildMediaInfo());
+        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
+        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
+        EncodingContext context = new(CorrelationId: EncodingContext.Create().CorrelationId, MediaInfo: BuildMediaInfo());
 
-        StageResult result = await _stage.ExecuteAsync(input, context, default);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
@@ -192,8 +192,8 @@ public class BuildStageThumbnailCopyTests
         FfmpegCommand mainCommand = commands[0];
         mainCommand
             .Arguments.Should()
-            .NotContain("[thumbs]", "a copy video has no filtergraph pad");
-        mainCommand.Arguments.Should().NotContain("-filter_complex");
+            .NotContain(unexpected: "[thumbs]", because: "a copy video has no filtergraph pad");
+        mainCommand.Arguments.Should().NotContain(unexpected: "-filter_complex");
     }
 
     [Fact]
@@ -204,41 +204,41 @@ public class BuildStageThumbnailCopyTests
             VideoOutputs: [BuildCopyVideoOutput()],
             AudioOutputs: [BuildAudioOutput()],
             SubtitleOutputs: [],
-            Thumbnails: new(160, 90, 10)
+            Thumbnails: new(Width: 160, Height: 90, IntervalSeconds: 10)
         );
 
-        ExecutionPlan plan = BuildPlan(outputPlan);
-        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
-        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildMediaInfo());
+        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
+        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
+        EncodingContext context = new(CorrelationId: EncodingContext.Create().CorrelationId, MediaInfo: BuildMediaInfo());
 
-        StageResult result = await _stage.ExecuteAsync(input, context, default);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
 
-        FfmpegCommand? spriteCommand = commands.FirstOrDefault(c =>
-            c.Arguments.Contains("spritevtt")
+        FfmpegCommand? spriteCommand = commands.FirstOrDefault(predicate: c =>
+            c.Arguments.Contains(value: "spritevtt")
         );
 
-        spriteCommand.Should().NotBeNull("a copy-video plan must still produce the sprite command");
-        spriteCommand!.Arguments.Should().Contain("/movies/test.mkv");
-        spriteCommand.Arguments.Should().Contain("thumbs_160x90.webp");
-        spriteCommand.Arguments.Should().Contain("thumbs_160x90.vtt");
+        spriteCommand.Should().NotBeNull(because: "a copy-video plan must still produce the sprite command");
+        spriteCommand!.Arguments.Should().Contain(expected: "/movies/test.mkv");
+        spriteCommand.Arguments.Should().Contain(expected: "thumbs_160x90.webp");
+        spriteCommand.Arguments.Should().Contain(expected: "thumbs_160x90.vtt");
 
-        int vfIdx = Array.IndexOf(spriteCommand.Arguments, "-vf");
+        int vfIdx = Array.IndexOf(array: spriteCommand.Arguments, value: "-vf");
         vfIdx
             .Should()
-            .BeGreaterThan(-1, "the sprite is scaled/sampled via a plain -vf on direct input");
-        spriteCommand.Arguments[vfIdx + 1].Should().Contain("fps=1/10");
-        spriteCommand.Arguments[vfIdx + 1].Should().Contain("scale=160:-2");
+            .BeGreaterThan(expected: -1, because: "the sprite is scaled/sampled via a plain -vf on direct input");
+        spriteCommand.Arguments[vfIdx + 1].Should().Contain(expected: "fps=1/10");
+        spriteCommand.Arguments[vfIdx + 1].Should().Contain(expected: "scale=160:-2");
 
-        spriteCommand.Arguments.Should().NotContain("-filter_complex");
+        spriteCommand.Arguments.Should().NotContain(unexpected: "-filter_complex");
     }
 
     [Fact]
     public async Task CopyVideoPlan_SpriteFilenamesMatchInlineTranscodePathNaming()
     {
-        ThumbnailOutputPlan thumbs = new(160, 90, 10);
+        ThumbnailOutputPlan thumbs = new(Width: 160, Height: 90, IntervalSeconds: 10);
 
         OutputPlan copyPlan = new(
             Format: OutputFormat.Hls,
@@ -255,33 +255,33 @@ public class BuildStageThumbnailCopyTests
             Thumbnails: thumbs
         );
 
-        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildMediaInfo());
+        EncodingContext context = new(CorrelationId: EncodingContext.Create().CorrelationId, MediaInfo: BuildMediaInfo());
 
         StageResult copyResult = await _stage.ExecuteAsync(
-            new(BuildPlan(copyPlan), "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy"),
-            context,
-            default
+            input: new(Plan: BuildPlan(outputPlan: copyPlan), InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy"),
+            context: context,
+            ct: default
         );
         StageResult transcodeResult = await _stage.ExecuteAsync(
-            new(
-                BuildPlan(transcodePlan),
-                "/movies/test.mkv",
-                "/tmp/nmtest-output/test",
-                "Test.NoMercy"
+            input: new(
+                Plan: BuildPlan(outputPlan: transcodePlan),
+                InputPath: "/movies/test.mkv",
+                OutputDirectory: "/tmp/nmtest-output/test",
+                MediaTitle: "Test.NoMercy"
             ),
-            context,
-            default
+            context: context,
+            ct: default
         );
 
-        FfmpegCommand copySprite = ((StageSuccess<FfmpegCommand[]>)copyResult).Value.First(c =>
-            c.Arguments.Contains("spritevtt")
+        FfmpegCommand copySprite = ((StageSuccess<FfmpegCommand[]>)copyResult).Value.First(predicate: c =>
+            c.Arguments.Contains(value: "spritevtt")
         );
         FfmpegCommand transcodeMain = ((StageSuccess<FfmpegCommand[]>)transcodeResult).Value[0];
 
-        copySprite.Arguments.Should().Contain("thumbs_160x90.webp");
-        copySprite.Arguments.Should().Contain("thumbs_160x90.vtt");
-        transcodeMain.Arguments.Should().Contain("thumbs_160x90.webp");
-        transcodeMain.Arguments.Should().Contain("thumbs_160x90.vtt");
+        copySprite.Arguments.Should().Contain(expected: "thumbs_160x90.webp");
+        copySprite.Arguments.Should().Contain(expected: "thumbs_160x90.vtt");
+        transcodeMain.Arguments.Should().Contain(expected: "thumbs_160x90.webp");
+        transcodeMain.Arguments.Should().Contain(expected: "thumbs_160x90.vtt");
     }
 
     [Fact]
@@ -292,26 +292,26 @@ public class BuildStageThumbnailCopyTests
             VideoOutputs: [BuildTranscodeVideoOutput()],
             AudioOutputs: [BuildAudioOutput()],
             SubtitleOutputs: [],
-            Thumbnails: new(160, 90, 10)
+            Thumbnails: new(Width: 160, Height: 90, IntervalSeconds: 10)
         );
 
-        ExecutionPlan plan = BuildPlan(outputPlan);
-        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
-        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildMediaInfo());
+        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
+        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
+        EncodingContext context = new(CorrelationId: EncodingContext.Create().CorrelationId, MediaInfo: BuildMediaInfo());
 
-        StageResult result = await _stage.ExecuteAsync(input, context, default);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
         FfmpegCommand mainCommand = commands[0];
 
-        int filterComplexIdx = Array.IndexOf(mainCommand.Arguments, "-filter_complex");
-        filterComplexIdx.Should().BeGreaterThan(-1);
-        mainCommand.Arguments[filterComplexIdx + 1].Should().Contain("thumbs");
+        int filterComplexIdx = Array.IndexOf(array: mainCommand.Arguments, value: "-filter_complex");
+        filterComplexIdx.Should().BeGreaterThan(expected: -1);
+        mainCommand.Arguments[filterComplexIdx + 1].Should().Contain(expected: "thumbs");
 
-        mainCommand.Arguments.Should().Contain("[thumbs]");
+        mainCommand.Arguments.Should().Contain(expected: "[thumbs]");
 
-        commands.Should().NotContain(c => c.Arguments.Contains("spritevtt") && c != mainCommand);
+        commands.Should().NotContain(predicate: c => c.Arguments.Contains("spritevtt") && c != mainCommand);
     }
 
     // ── Decomposed bundle with no video output ───────────────────────────────
@@ -330,14 +330,14 @@ public class BuildStageThumbnailCopyTests
             VideoOutputs: [],
             AudioOutputs: [BuildAudioOutput()],
             SubtitleOutputs: [],
-            Thumbnails: new(160, 90, 10)
+            Thumbnails: new(Width: 160, Height: 90, IntervalSeconds: 10)
         );
 
-        ExecutionPlan plan = BuildPlan(outputPlan);
-        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
-        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildMediaInfo());
+        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
+        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
+        EncodingContext context = new(CorrelationId: EncodingContext.Create().CorrelationId, MediaInfo: BuildMediaInfo());
 
-        StageResult result = await _stage.ExecuteAsync(input, context, default);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
@@ -345,8 +345,8 @@ public class BuildStageThumbnailCopyTests
         commands[0]
             .Arguments.Should()
             .NotContain(
-                "[thumbs]",
-                "a bundle with no video output defines no filtergraph pad to map"
+                unexpected: "[thumbs]",
+                because: "a bundle with no video output defines no filtergraph pad to map"
             );
     }
 
@@ -358,23 +358,23 @@ public class BuildStageThumbnailCopyTests
             VideoOutputs: [],
             AudioOutputs: [BuildAudioOutput()],
             SubtitleOutputs: [],
-            Thumbnails: new(160, 90, 10)
+            Thumbnails: new(Width: 160, Height: 90, IntervalSeconds: 10)
         );
 
-        ExecutionPlan plan = BuildPlan(outputPlan);
-        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
-        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildMediaInfo());
+        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
+        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
+        EncodingContext context = new(CorrelationId: EncodingContext.Create().CorrelationId, MediaInfo: BuildMediaInfo());
 
-        StageResult result = await _stage.ExecuteAsync(input, context, default);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
 
-        FfmpegCommand sprite = commands.Single(c => c.Arguments.Contains("spritevtt"));
+        FfmpegCommand sprite = commands.Single(predicate: c => c.Arguments.Contains(value: "spritevtt"));
 
         // Reads the source's own video rather than a pad from the main command.
-        sprite.Arguments.Should().Contain("0:v:0");
-        sprite.Arguments.Should().NotContain("[thumbs]");
+        sprite.Arguments.Should().Contain(expected: "0:v:0");
+        sprite.Arguments.Should().NotContain(unexpected: "[thumbs]");
     }
 
     [Fact]
@@ -389,23 +389,23 @@ public class BuildStageThumbnailCopyTests
             VideoOutputs: [],
             AudioOutputs: [],
             SubtitleOutputs: [],
-            Thumbnails: new(160, 90, 10)
+            Thumbnails: new(Width: 160, Height: 90, IntervalSeconds: 10)
         );
 
-        ExecutionPlan plan = BuildPlan(outputPlan);
-        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
-        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildMediaInfo());
+        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
+        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
+        EncodingContext context = new(CorrelationId: EncodingContext.Create().CorrelationId, MediaInfo: BuildMediaInfo());
 
-        StageResult result = await _stage.ExecuteAsync(input, context, default);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
 
         result.Should().BeOfType<StageSuccess<FfmpegCommand[]>>();
         FfmpegCommand[] commands = ((StageSuccess<FfmpegCommand[]>)result).Value;
 
         commands
             .Should()
-            .ContainSingle("only the sprite command has anything to write")
+            .ContainSingle(because: "only the sprite command has anything to write")
             .Which.Arguments.Should()
-            .Contain("spritevtt");
+            .Contain(expected: "spritevtt");
     }
 
     // ── Standalone sprite color pipeline (HDR vs SDR source) ─────────────────
@@ -423,30 +423,30 @@ public class BuildStageThumbnailCopyTests
             VideoOutputs: [BuildCopyVideoOutput()],
             AudioOutputs: [BuildAudioOutput()],
             SubtitleOutputs: [],
-            Thumbnails: new(160, 90, 10)
+            Thumbnails: new(Width: 160, Height: 90, IntervalSeconds: 10)
         );
 
-        ExecutionPlan plan = BuildPlan(outputPlan);
-        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
-        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildHdrMediaInfo());
+        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
+        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
+        EncodingContext context = new(CorrelationId: EncodingContext.Create().CorrelationId, MediaInfo: BuildHdrMediaInfo());
 
-        StageResult result = await _stage.ExecuteAsync(input, context, default);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
 
-        FfmpegCommand sprite = ((StageSuccess<FfmpegCommand[]>)result).Value.Single(c =>
-            c.Arguments.Contains("spritevtt")
+        FfmpegCommand sprite = ((StageSuccess<FfmpegCommand[]>)result).Value.Single(predicate: c =>
+            c.Arguments.Contains(value: "spritevtt")
         );
 
-        int vfIdx = Array.IndexOf(sprite.Arguments, "-vf");
-        vfIdx.Should().BeGreaterThan(-1);
+        int vfIdx = Array.IndexOf(array: sprite.Arguments, value: "-vf");
+        vfIdx.Should().BeGreaterThan(expected: -1);
         sprite
             .Arguments[vfIdx + 1]
             .Should()
             .Contain(
-                "tonemap",
-                "an HDR source sampled without tonemap produces crushed, wrong-coloured thumbnails"
+                expected: "tonemap",
+                because: "an HDR source sampled without tonemap produces crushed, wrong-coloured thumbnails"
             );
-        sprite.Arguments[vfIdx + 1].Should().Contain("fps=1/10");
-        sprite.Arguments[vfIdx + 1].Should().Contain("scale=160:-2");
+        sprite.Arguments[vfIdx + 1].Should().Contain(expected: "fps=1/10");
+        sprite.Arguments[vfIdx + 1].Should().Contain(expected: "scale=160:-2");
     }
 
     [Fact]
@@ -457,24 +457,24 @@ public class BuildStageThumbnailCopyTests
             VideoOutputs: [BuildCopyVideoOutput()],
             AudioOutputs: [BuildAudioOutput()],
             SubtitleOutputs: [],
-            Thumbnails: new(160, 90, 10)
+            Thumbnails: new(Width: 160, Height: 90, IntervalSeconds: 10)
         );
 
-        ExecutionPlan plan = BuildPlan(outputPlan);
-        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
-        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildMediaInfo());
+        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
+        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
+        EncodingContext context = new(CorrelationId: EncodingContext.Create().CorrelationId, MediaInfo: BuildMediaInfo());
 
-        StageResult result = await _stage.ExecuteAsync(input, context, default);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
 
-        FfmpegCommand sprite = ((StageSuccess<FfmpegCommand[]>)result).Value.Single(c =>
-            c.Arguments.Contains("spritevtt")
+        FfmpegCommand sprite = ((StageSuccess<FfmpegCommand[]>)result).Value.Single(predicate: c =>
+            c.Arguments.Contains(value: "spritevtt")
         );
 
-        int vfIdx = Array.IndexOf(sprite.Arguments, "-vf");
+        int vfIdx = Array.IndexOf(array: sprite.Arguments, value: "-vf");
         sprite
             .Arguments[vfIdx + 1]
             .Should()
-            .NotContain("tonemap", "an SDR source needs no HDR→SDR conversion");
+            .NotContain(unexpected: "tonemap", because: "an SDR source needs no HDR→SDR conversion");
     }
 
     [Fact]
@@ -488,21 +488,21 @@ public class BuildStageThumbnailCopyTests
             VideoOutputs: [],
             AudioOutputs: [BuildAudioOutput()],
             SubtitleOutputs: [],
-            Thumbnails: new(160, 90, 10)
+            Thumbnails: new(Width: 160, Height: 90, IntervalSeconds: 10)
         );
 
-        ExecutionPlan plan = BuildPlan(outputPlan);
-        BuildInput input = new(plan, "/movies/test.mkv", "/tmp/nmtest-output/test", "Test.NoMercy");
-        EncodingContext context = new(EncodingContext.Create().CorrelationId, BuildHdrMediaInfo());
+        ExecutionPlan plan = BuildPlan(outputPlan: outputPlan);
+        BuildInput input = new(Plan: plan, InputPath: "/movies/test.mkv", OutputDirectory: "/tmp/nmtest-output/test", MediaTitle: "Test.NoMercy");
+        EncodingContext context = new(CorrelationId: EncodingContext.Create().CorrelationId, MediaInfo: BuildHdrMediaInfo());
 
-        StageResult result = await _stage.ExecuteAsync(input, context, default);
+        StageResult result = await _stage.ExecuteAsync(input: input, context: context, ct: default);
 
-        FfmpegCommand sprite = ((StageSuccess<FfmpegCommand[]>)result).Value.Single(c =>
-            c.Arguments.Contains("spritevtt")
+        FfmpegCommand sprite = ((StageSuccess<FfmpegCommand[]>)result).Value.Single(predicate: c =>
+            c.Arguments.Contains(value: "spritevtt")
         );
 
-        int vfIdx = Array.IndexOf(sprite.Arguments, "-vf");
-        vfIdx.Should().BeGreaterThan(-1);
-        sprite.Arguments[vfIdx + 1].Should().Contain("tonemap");
+        int vfIdx = Array.IndexOf(array: sprite.Arguments, value: "-vf");
+        vfIdx.Should().BeGreaterThan(expected: -1);
+        sprite.Arguments[vfIdx + 1].Should().Contain(expected: "tonemap");
     }
 }

@@ -19,7 +19,7 @@ using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;
 
-[Trait("Category", "Characterization")]
+[Trait(name: "Category", value: "Characterization")]
 public class ImageRepositoryTests : IDisposable
 {
     private readonly MediaContext _context;
@@ -29,8 +29,8 @@ public class ImageRepositoryTests : IDisposable
     public ImageRepositoryTests()
     {
         _context = TestMediaContextFactory.CreateSeededContext();
-        _repository = new(_context);
-        _connection = new("Data Source=:memory:");
+        _repository = new(context: _context);
+        _connection = new(connectionString: "Data Source=:memory:");
     }
 
     [Fact]
@@ -43,20 +43,20 @@ public class ImageRepositoryTests : IDisposable
             Type = "poster",
             Iso6391 = "en",
         };
-        _context.Images.Add(image);
+        _context.Images.Add(entity: image);
         await _context.SaveChangesAsync();
 
-        Image? result = await _repository.GetImageByFilePathAsync("/images/test_image.jpg");
+        Image? result = await _repository.GetImageByFilePathAsync(filePath: "/images/test_image.jpg");
 
         result.Should().NotBeNull();
-        result!.FilePath.Should().Be("/images/test_image.jpg");
-        result.Id.Should().Be(image.Id);
+        result!.FilePath.Should().Be(expected: "/images/test_image.jpg");
+        result.Id.Should().Be(expected: image.Id);
     }
 
     [Fact]
     public async Task GetImageByFilePathAsync_ReturnsNull_WhenFilePathDoesNotExist()
     {
-        Image? result = await _repository.GetImageByFilePathAsync("/nonexistent/path.jpg");
+        Image? result = await _repository.GetImageByFilePathAsync(filePath: "/nonexistent/path.jpg");
 
         result.Should().BeNull();
     }
@@ -78,14 +78,14 @@ public class ImageRepositoryTests : IDisposable
             Type = "backdrop",
             Iso6391 = "en",
         };
-        _context.Images.AddRange(image1, image2);
+        _context.Images.AddRange(entities: [image1, image2]);
         await _context.SaveChangesAsync();
 
-        Image? result = await _repository.GetImageByFilePathAsync("/images/image_one.jpg");
+        Image? result = await _repository.GetImageByFilePathAsync(filePath: "/images/image_one.jpg");
 
         result.Should().NotBeNull();
-        result!.Id.Should().Be(image1.Id);
-        result.Id.Should().NotBe(image2.Id);
+        result!.Id.Should().Be(expected: image1.Id);
+        result.Id.Should().NotBe(unexpected: image2.Id);
     }
 
     [Fact]
@@ -98,10 +98,10 @@ public class ImageRepositoryTests : IDisposable
             Type = "poster",
             Iso6391 = "en",
         };
-        _context.Images.Add(image);
+        _context.Images.Add(entity: image);
         await _context.SaveChangesAsync();
 
-        Image? result = await _repository.GetImageByFilePathAsync("/images/testimage.jpg");
+        Image? result = await _repository.GetImageByFilePathAsync(filePath: "/images/testimage.jpg");
 
         result.Should().BeNull();
     }
@@ -117,15 +117,15 @@ public class ImageRepositoryTests : IDisposable
             Iso6391 = "fr",
             VoteAverage = 8.5,
         };
-        _context.Images.Add(image);
+        _context.Images.Add(entity: image);
         await _context.SaveChangesAsync();
 
-        Image? result = await _repository.GetImageByFilePathAsync("/images/complete_image.jpg");
+        Image? result = await _repository.GetImageByFilePathAsync(filePath: "/images/complete_image.jpg");
 
         result.Should().NotBeNull();
-        result!.Type.Should().Be("logo");
-        result.Iso6391.Should().Be("fr");
-        result.VoteAverage.Should().Be(8.5);
+        result!.Type.Should().Be(expected: "logo");
+        result.Iso6391.Should().Be(expected: "fr");
+        result.VoteAverage.Should().Be(expected: 8.5);
     }
 
     public void Dispose()

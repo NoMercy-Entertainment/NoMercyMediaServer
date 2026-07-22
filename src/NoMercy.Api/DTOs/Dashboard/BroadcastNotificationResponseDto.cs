@@ -15,15 +15,15 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record BroadcastNotificationResponseDto
 {
-    [JsonProperty("notified_users")]
+    [JsonProperty(propertyName: "notified_users")]
     public int NotifiedUsers { get; set; }
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string Title { get; set; } = string.Empty;
 
-    [JsonProperty("body")]
+    [JsonProperty(propertyName: "body")]
     public string Body { get; set; } = string.Empty;
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string Type { get; set; } = string.Empty;
 }

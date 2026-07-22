@@ -33,12 +33,12 @@ public static class TwoPassCommandBuilder
     {
         VideoOutputPlan[] updated = plan
             .VideoOutputs.Select(
-                (v, index) =>
+                selector: (v, index) =>
                 {
-                    Dictionary<string, string> flags = new(v.ExtraFlags)
+                    Dictionary<string, string> flags = new(dictionary: v.ExtraFlags)
                     {
-                        ["-pass"] = "2",
-                        ["-passlogfile"] = VariantStatsPath(statsFilePath, index),
+                        [key: "-pass"] = "2",
+                        [key: "-passlogfile"] = VariantStatsPath(basePath: statsFilePath, variantIndex: index),
                     };
                     return v with { ExtraFlags = flags };
                 }
@@ -78,7 +78,7 @@ public static class TwoPassCommandBuilder
         VideoOutputPlan video = plan.VideoOutputs[variantIndex];
 
         FfmpegCommandBuilder builder = new();
-        builder.AddInput(new(inputPath));
+        builder.AddInput(input: new(FilePath: inputPath));
 
         // Pass 1 analyzes the single target variant — strip the other variants,
         // audio, subtitles, and thumbnails so the filter graph only produces
@@ -93,26 +93,26 @@ public static class TwoPassCommandBuilder
         };
         // Pass 1 never burns subtitles — no builder needed.
         string? filterGraph = FilterGraphAssembler.BuildFilterGraph(
-            videoOnly,
-            mediaInfo,
-            inputPath,
+            plan: videoOnly,
+            mediaInfo: mediaInfo,
+            inputPath: inputPath,
             assBurnInFilterBuilder: null
         );
         if (filterGraph is not null)
-            builder.WithFilterComplex(filterGraph);
+            builder.WithFilterComplex(filterGraph: filterGraph);
 
         // Pass 1 output: video encoder settings + -pass 1 + null sink.
-        Dictionary<string, string> extraFlags = new(video.ExtraFlags)
+        Dictionary<string, string> extraFlags = new(dictionary: video.ExtraFlags)
         {
-            ["-pass"] = "1",
-            ["-passlogfile"] = statsFilePath,
-            ["-an"] = string.Empty,
-            ["-sn"] = string.Empty,
-            ["-f"] = "null",
+            [key: "-pass"] = "1",
+            [key: "-passlogfile"] = statsFilePath,
+            [key: "-an"] = string.Empty,
+            [key: "-sn"] = string.Empty,
+            [key: "-f"] = "null",
         };
 
         builder.AddOutput(
-            new(
+            output: new(
                 FilePath: "-",
                 VideoCodec: video.EncoderName,
                 VideoBitrateKbps: video.BitrateKbps > 0 ? video.BitrateKbps : null,
@@ -125,6 +125,6 @@ public static class TwoPassCommandBuilder
             )
         );
 
-        return builder.Build(ffmpegPath, outputDirectory);
+        return builder.Build(ffmpegPath: ffmpegPath, workingDirectory: outputDirectory);
     }
 }

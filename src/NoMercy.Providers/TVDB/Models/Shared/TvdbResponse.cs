@@ -15,42 +15,42 @@ namespace NoMercy.Providers.TVDB.Models.Shared;
 
 public class TvdbResponse<T>
 {
-    [JsonProperty("status")]
+    [JsonProperty(propertyName: "status")]
     public string Status { get; set; } = string.Empty;
 
-    [JsonProperty("data")]
+    [JsonProperty(propertyName: "data")]
     public T Data { get; set; } = default!;
 
-    [JsonProperty("links")]
+    [JsonProperty(propertyName: "links")]
     public TvdbLinks? Links { get; set; }
 }
 
 public class TvdbPaginatedResponse<T>
 {
-    [JsonProperty("status")]
+    [JsonProperty(propertyName: "status")]
     public string Status { get; set; } = string.Empty;
 
-    [JsonProperty("data")]
+    [JsonProperty(propertyName: "data")]
     public List<T> Data { get; set; } = [];
 
-    [JsonProperty("links")]
+    [JsonProperty(propertyName: "links")]
     public TvdbLinks? Links { get; set; }
 }
 
 public class TvdbLinks
 {
-    [JsonProperty("prev")]
+    [JsonProperty(propertyName: "prev")]
     public string? Prev { get; set; }
 
-    [JsonProperty("self")]
+    [JsonProperty(propertyName: "self")]
     public string? Self { get; set; }
 
-    [JsonProperty("next")]
+    [JsonProperty(propertyName: "next")]
     public string? Next { get; set; }
 
-    [JsonProperty("total_items")]
+    [JsonProperty(propertyName: "total_items")]
     public int TotalItems { get; set; }
 
-    [JsonProperty("page_size")]
+    [JsonProperty(propertyName: "page_size")]
     public int PageSize { get; set; }
 }

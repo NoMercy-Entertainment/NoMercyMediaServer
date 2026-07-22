@@ -32,7 +32,7 @@ namespace NoMercy.Tests.Queue;
 /// Core interceptor (not a reimplementation of the adapter's logic) and
 /// assert the persisted OUTCOME.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait(name: "Category", value: "Unit")]
 public class FailJobAtomicityTests
 {
     private sealed class ThrowOnNthSaveInterceptor(int throwOnCallNumber) : SaveChangesInterceptor
@@ -47,18 +47,18 @@ public class FailJobAtomicityTests
             _callCount++;
             if (_callCount == throwOnCallNumber)
                 throw new InvalidOperationException(
-                    $"Injected failure on SaveChanges call #{throwOnCallNumber}"
+                    message: $"Injected failure on SaveChanges call #{throwOnCallNumber}"
                 );
-            return base.SavingChanges(eventData, result);
+            return base.SavingChanges(eventData: eventData, result: result);
         }
     }
 
     private static int SeedJob(string dbName, byte attempts)
     {
         DbContextOptions<QueueContext> seedOptions = new DbContextOptionsBuilder<QueueContext>()
-            .UseInMemoryDatabase(dbName)
+            .UseInMemoryDatabase(databaseName: dbName)
             .Options;
-        using TestQueueContext seedContext = new(seedOptions);
+        using TestQueueContext seedContext = new(options: seedOptions);
         seedContext.Database.EnsureCreated();
         QueueJob seedJob = new()
         {
@@ -67,7 +67,7 @@ public class FailJobAtomicityTests
             AvailableAt = DateTime.UtcNow,
             Attempts = attempts,
         };
-        seedContext.QueueJobs.Add(seedJob);
+        seedContext.QueueJobs.Add(entity: seedJob);
         seedContext.SaveChanges();
         return seedJob.Id;
     }
@@ -76,14 +76,14 @@ public class FailJobAtomicityTests
     public void AddFailedJobAndRemoveJob_SaveChangesFails_NeitherChangeIsPersisted()
     {
         string dbName = $"AtomicityTest_{Guid.NewGuid()}";
-        int jobId = SeedJob(dbName, attempts: 3);
+        int jobId = SeedJob(dbName: dbName, attempts: 3);
 
         DbContextOptions<QueueContext> throwingOptions = new DbContextOptionsBuilder<QueueContext>()
-            .UseInMemoryDatabase(dbName)
-            .AddInterceptors(new ThrowOnNthSaveInterceptor(1))
+            .UseInMemoryDatabase(databaseName: dbName)
+            .AddInterceptors(interceptors: new ThrowOnNthSaveInterceptor(throwOnCallNumber: 1))
             .Options;
-        using TestQueueContext throwingContext = new(throwingOptions);
-        EfQueueContextAdapter adapter = new(throwingContext);
+        using TestQueueContext throwingContext = new(options: throwingOptions);
+        EfQueueContextAdapter adapter = new(context: throwingContext);
 
         FailedJobModel failedJob = new()
         {
@@ -102,30 +102,30 @@ public class FailJobAtomicityTests
             Attempts = 3,
         };
 
-        Assert.Throws<InvalidOperationException>(() =>
-            adapter.AddFailedJobAndRemoveJob(failedJob, queueJob)
+        Assert.Throws<InvalidOperationException>(testCode: () =>
+            adapter.AddFailedJobAndRemoveJob(failedJob: failedJob, job: queueJob)
         );
 
         DbContextOptions<QueueContext> verifyOptions = new DbContextOptionsBuilder<QueueContext>()
-            .UseInMemoryDatabase(dbName)
+            .UseInMemoryDatabase(databaseName: dbName)
             .Options;
-        using TestQueueContext verifyContext = new(verifyOptions);
-        Assert.Single(verifyContext.QueueJobs);
-        Assert.Empty(verifyContext.FailedJobs);
+        using TestQueueContext verifyContext = new(options: verifyOptions);
+        Assert.Single(collection: verifyContext.QueueJobs);
+        Assert.Empty(collection: verifyContext.FailedJobs);
     }
 
     [Fact]
     public void SeparateAddThenRemoveCalls_SecondCallFails_LeavesJobCountedInBothTables()
     {
         string dbName = $"AtomicityContrast_{Guid.NewGuid()}";
-        int jobId = SeedJob(dbName, attempts: 3);
+        int jobId = SeedJob(dbName: dbName, attempts: 3);
 
         DbContextOptions<QueueContext> throwingOptions = new DbContextOptionsBuilder<QueueContext>()
-            .UseInMemoryDatabase(dbName)
-            .AddInterceptors(new ThrowOnNthSaveInterceptor(2))
+            .UseInMemoryDatabase(databaseName: dbName)
+            .AddInterceptors(interceptors: new ThrowOnNthSaveInterceptor(throwOnCallNumber: 2))
             .Options;
-        using TestQueueContext throwingContext = new(throwingOptions);
-        EfQueueContextAdapter adapter = new(throwingContext);
+        using TestQueueContext throwingContext = new(options: throwingOptions);
+        EfQueueContextAdapter adapter = new(context: throwingContext);
 
         FailedJobModel failedJob = new()
         {
@@ -144,14 +144,14 @@ public class FailJobAtomicityTests
             Attempts = 3,
         };
 
-        adapter.AddFailedJob(failedJob);
-        Assert.Throws<InvalidOperationException>(() => adapter.RemoveJob(queueJob));
+        adapter.AddFailedJob(failedJob: failedJob);
+        Assert.Throws<InvalidOperationException>(testCode: () => adapter.RemoveJob(job: queueJob));
 
         DbContextOptions<QueueContext> verifyOptions = new DbContextOptionsBuilder<QueueContext>()
-            .UseInMemoryDatabase(dbName)
+            .UseInMemoryDatabase(databaseName: dbName)
             .Options;
-        using TestQueueContext verifyContext = new(verifyOptions);
-        Assert.Single(verifyContext.QueueJobs);
-        Assert.Single(verifyContext.FailedJobs);
+        using TestQueueContext verifyContext = new(options: verifyOptions);
+        Assert.Single(collection: verifyContext.QueueJobs);
+        Assert.Single(collection: verifyContext.FailedJobs);
     }
 }

@@ -39,17 +39,17 @@ public class ResourceMonitorService(
             _cancellationTokenSource = new();
         }
 
-        logger.LogInformation("Starting resource monitoring broadcast");
+        logger.LogInformation(message: "Starting resource monitoring broadcast");
         CancellationToken token = _cancellationTokenSource.Token;
-        _ = Task.Run(async () =>
+        _ = Task.Run(function: async () =>
         {
             try
             {
-                await BroadcastLoop(token);
+                await BroadcastLoop(cancellationToken: token);
             }
             catch (Exception ex)
             {
-                logger.LogError("Resource monitor broadcast loop crashed: {Message}", ex.Message);
+                logger.LogError(message: "Resource monitor broadcast loop crashed: {Message}", args: ex.Message);
             }
         });
     }
@@ -63,7 +63,7 @@ public class ResourceMonitorService(
             _broadcasting = false;
         }
 
-        logger.LogInformation("Stopping resource monitoring broadcast");
+        logger.LogInformation(message: "Stopping resource monitoring broadcast");
         try
         {
             _cancellationTokenSource?.Cancel();
@@ -83,7 +83,7 @@ public class ResourceMonitorService(
             try
             {
                 Resource resourceData = resourceMonitor.Monitor();
-                await clientMessenger.SendToAll("ResourceUpdate", "dashboardHub", resourceData);
+                await clientMessenger.SendToAll(name: "ResourceUpdate", endpoint: "dashboardHub", data: resourceData);
             }
             catch (OperationCanceledException)
             {
@@ -91,7 +91,7 @@ public class ResourceMonitorService(
             }
             catch (Exception e)
             {
-                logger.LogError("Error broadcasting resource data: {Message}", e.Message);
+                logger.LogError(message: "Error broadcasting resource data: {Message}", args: e.Message);
                 failed = true;
             }
 
@@ -99,15 +99,15 @@ public class ResourceMonitorService(
             // the try, so a persistent Monitor()/send failure skipped it and the
             // loop respun at CPU speed, pegging a core while a socket stayed wedged.
             int delay = NextDelayMs(
-                failed,
-                (int)(DateTime.Now - time).TotalMilliseconds,
-                BroadcastIntervalMs
+                failed: failed,
+                elapsedMs: (int)(DateTime.Now - time).TotalMilliseconds,
+                intervalMs: BroadcastIntervalMs
             );
             if (delay > 0)
             {
                 try
                 {
-                    await Task.Delay(delay, cancellationToken);
+                    await Task.Delay(millisecondsDelay: delay, cancellationToken: cancellationToken);
                 }
                 catch (OperationCanceledException)
                 {

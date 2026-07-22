@@ -15,9 +15,9 @@ namespace NoMercy.Providers.TMDB.Models.Movies;
 
 public class TmdbChanges
 {
-    [JsonProperty("key")]
+    [JsonProperty(propertyName: "key")]
     public string Key { get; set; } = string.Empty;
 
-    [JsonProperty("items")]
+    [JsonProperty(propertyName: "items")]
     public TmdbChange[] Items { get; set; } = [];
 }

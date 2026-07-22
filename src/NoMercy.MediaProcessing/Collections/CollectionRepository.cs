@@ -23,10 +23,10 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
     public Task Store(Collection collection)
     {
         return context
-            .Collections.Upsert(collection)
-            .On(v => new { v.Id })
+            .Collections.Upsert(entity: collection)
+            .On(match: v => new { v.Id })
             .WhenMatched(
-                (ts, ti) =>
+                updater: (ts, ti) =>
                     new()
                     {
                         Id = ti.Id,
@@ -55,14 +55,14 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
 
         try
         {
-            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF");
+            await context.Database.ExecuteSqlRawAsync(sql: "PRAGMA foreign_keys = OFF");
             try
             {
-                await context.Collections.Where(c => c.Id == id).ExecuteDeleteAsync();
+                await context.Collections.Where(predicate: c => c.Id == id).ExecuteDeleteAsync();
             }
             finally
             {
-                await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON");
+                await context.Database.ExecuteSqlRawAsync(sql: "PRAGMA foreign_keys = ON");
             }
         }
         finally
@@ -76,14 +76,14 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
     {
         return context
             .CollectionMovie.UpsertRange(
-                collection.Parts.Select(movie => new CollectionMovie
+                entities: collection.Parts.Select(selector: movie => new CollectionMovie
                 {
                     MovieId = movie.Id,
                     CollectionId = collection.Id,
                 })
             )
-            .On(v => new { v.MovieId, v.CollectionId })
-            .WhenMatched((ts, ti) => new() { MovieId = ti.MovieId, CollectionId = ti.CollectionId })
+            .On(match: v => new { v.MovieId, v.CollectionId })
+            .WhenMatched(updater: (ts, ti) => new() { MovieId = ti.MovieId, CollectionId = ti.CollectionId })
             .RunAsync();
     }
 
@@ -91,11 +91,11 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
     {
         return context
             .CollectionLibrary.Upsert(
-                new() { LibraryId = library.Id, CollectionId = collection.Id }
+                entity: new() { LibraryId = library.Id, CollectionId = collection.Id }
             )
-            .On(v => new { v.LibraryId, v.CollectionId })
+            .On(match: v => new { v.LibraryId, v.CollectionId })
             .WhenMatched(
-                (ts, ti) => new() { LibraryId = ti.LibraryId, CollectionId = ti.CollectionId }
+                updater: (ts, ti) => new() { LibraryId = ti.LibraryId, CollectionId = ti.CollectionId }
             )
             .RunAsync();
     }
@@ -119,18 +119,18 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
     {
         return context
             .Translations.UpsertRange(
-                translations.Where(translation =>
+                entities: translations.Where(predicate: translation =>
                     translation.Title != null || translation.Overview != ""
                 )
             )
-            .On(t => new
+            .On(match: t => new
             {
                 t.Iso31661,
                 t.Iso6391,
                 t.CollectionId,
             })
             .WhenMatched(
-                (ts, ti) =>
+                updater: (ts, ti) =>
                     new()
                     {
                         Iso31661 = ti.Iso31661,
@@ -153,10 +153,10 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
     public Task StoreImages(IEnumerable<Image> images)
     {
         return context
-            .Images.UpsertRange(images)
-            .On(v => new { v.FilePath, v.CollectionId })
+            .Images.UpsertRange(entities: images)
+            .On(match: v => new { v.FilePath, v.CollectionId })
             .WhenMatched(
-                (ts, ti) =>
+                updater: (ts, ti) =>
                     new()
                     {
                         AspectRatio = ti.AspectRatio,

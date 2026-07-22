@@ -31,19 +31,19 @@ internal sealed class NoMercySerializationBinder : DefaultSerializationBinder
     public override Type BindToType(string? assemblyName, string typeName)
     {
         // Strip generic arguments before prefix check (e.g. "System.Collections.Generic.List`1")
-        string rootTypeName = typeName.Contains('[') ? typeName[..typeName.IndexOf('[')] : typeName;
+        string rootTypeName = typeName.Contains(value: '[') ? typeName[..typeName.IndexOf(value: '[')] : typeName;
 
-        bool isAllowed = AllowedNamespacePrefixes.Any(prefix =>
-            rootTypeName.StartsWith(prefix, StringComparison.Ordinal)
+        bool isAllowed = AllowedNamespacePrefixes.Any(predicate: prefix =>
+            rootTypeName.StartsWith(value: prefix, comparisonType: StringComparison.Ordinal)
         );
 
         if (!isAllowed)
             throw new JsonSerializationException(
-                $"Deserialization of type '{typeName}' is not allowed. "
-                    + "Only NoMercy.* and NoMercyQueue.* types are permitted."
+                message: $"Deserialization of type '{typeName}' is not allowed. "
+                         + "Only NoMercy.* and NoMercyQueue.* types are permitted."
             );
 
-        return base.BindToType(assemblyName, typeName);
+        return base.BindToType(assemblyName: assemblyName, typeName: typeName);
     }
 }
 
@@ -65,7 +65,7 @@ public static class SerializationHelper
             },
         };
 
-        return JsonConvert.SerializeObject(obj, settings);
+        return JsonConvert.SerializeObject(value: obj, settings: settings);
     }
 
     public static T Deserialize<T>(string data)
@@ -82,7 +82,7 @@ public static class SerializationHelper
             },
         };
 
-        return JsonConvert.DeserializeObject<T>(data, settings)!;
+        return JsonConvert.DeserializeObject<T>(value: data, settings: settings)!;
     }
 
     /// <summary>
@@ -103,6 +103,6 @@ public static class SerializationHelper
                 NamingStrategy = new CamelCaseNamingStrategy(),
             },
         };
-        JsonConvert.PopulateObject(data, target, settings);
+        JsonConvert.PopulateObject(value: data, target: target, settings: settings);
     }
 }

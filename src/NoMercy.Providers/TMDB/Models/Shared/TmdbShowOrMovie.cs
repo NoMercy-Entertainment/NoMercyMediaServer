@@ -17,43 +17,43 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbShowOrMovie : TmdbBase
 {
-    [JsonProperty("adult")]
+    [JsonProperty(propertyName: "adult")]
     public bool? Adult { get; set; }
 
-    [JsonProperty("genres")]
+    [JsonProperty(propertyName: "genres")]
     public int[]? GenresIds { get; set; } = [];
 
-    [JsonProperty("original_title")]
+    [JsonProperty(propertyName: "original_title")]
     public string? OriginalTitle { get; set; }
 
-    [JsonProperty("tagline")]
+    [JsonProperty(propertyName: "tagline")]
     public string? Tagline { get; set; }
 
-    [JsonProperty("title")]
+    [JsonProperty(propertyName: "title")]
     public string? Title { get; set; }
 
-    [JsonProperty("release_date")]
+    [JsonProperty(propertyName: "release_date")]
     public DateTime? ReleaseDate { get; set; }
 
-    [JsonProperty("video")]
+    [JsonProperty(propertyName: "video")]
     public bool? Video { get; set; }
 
-    [JsonProperty("first_air_date")]
+    [JsonProperty(propertyName: "first_air_date")]
     public DateTime? FirstAirDate { get; set; }
 
-    [JsonProperty("genre_ids")]
+    [JsonProperty(propertyName: "genre_ids")]
     public int?[] GenreIds { get; set; } = [];
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string? Name { get; set; } = string.Empty;
 
-    [JsonProperty("origin_country")]
+    [JsonProperty(propertyName: "origin_country")]
     public string?[] OriginCountry { get; set; } = [];
 
-    [JsonProperty("original_name")]
+    [JsonProperty(propertyName: "original_name")]
     public string? OriginalName { get; set; } = string.Empty;
 
-    [JsonProperty("type")]
+    [JsonProperty(propertyName: "type")]
     public string? MediaType { get; set; } = string.Empty;
 
     public TmdbShowOrMovie(TmdbMovie movie)

@@ -22,29 +22,11 @@ namespace NoMercy.Tests.MediaProcessing.Parsing;
 public class MusicPathParserTests
 {
     [Theory]
-    [InlineData("/data/Music/A/Adele/[2015] 25", 2015, "25", "Adele", null)]
-    [InlineData(
-        "/data/Music/[Albums]/Daft Punk/[2013] Random Access Memories",
-        2013,
-        "Random Access Memories",
-        "Daft Punk",
-        null
-    )]
-    [InlineData(@"D:\Music\R\Radiohead\[1997] OK Computer", 1997, "OK Computer", "Radiohead", null)]
-    [InlineData(
-        "/m/Music/T/Taylor Swift/[Singles] Cardigan",
-        0,
-        "Cardigan",
-        "Taylor Swift",
-        "Singles"
-    )]
-    [InlineData(
-        "/srv/Music/M/Miles Davis/[1959] Kind of Blue",
-        1959,
-        "Kind of Blue",
-        "Miles Davis",
-        null
-    )]
+    [InlineData(data: ["/data/Music/A/Adele/[2015] 25", 2015, "25", "Adele", null])]
+    [InlineData(data: ["/data/Music/[Albums]/Daft Punk/[2013] Random Access Memories", 2013, "Random Access Memories", "Daft Punk", null])]
+    [InlineData(data: [@"D:\Music\R\Radiohead\[1997] OK Computer", 1997, "OK Computer", "Radiohead", null])]
+    [InlineData(data: ["/m/Music/T/Taylor Swift/[Singles] Cardigan", 0, "Cardigan", "Taylor Swift", "Singles"])]
+    [InlineData(data: ["/srv/Music/M/Miles Davis/[1959] Kind of Blue", 1959, "Kind of Blue", "Miles Davis", null])]
     public void Parses_album_layouts(
         string path,
         int year,
@@ -53,22 +35,22 @@ public class MusicPathParserTests
         string? releaseType
     )
     {
-        MusicPathParser.MusicAlbumInfo info = MusicPathParser.Parse(path, "ignored");
-        info.Year.Should().Be(year);
-        info.AlbumName.Should().Be(album);
-        info.Artist.Should().Be(artist);
-        info.ReleaseType.Should().Be(releaseType);
+        MusicPathParser.MusicAlbumInfo info = MusicPathParser.Parse(directoryPath: path, folderName: "ignored");
+        info.Year.Should().Be(expected: year);
+        info.AlbumName.Should().Be(expected: album);
+        info.Artist.Should().Be(expected: artist);
+        info.ReleaseType.Should().Be(expected: releaseType);
     }
 
     [Theory]
     // unmatched path -> album falls back to the folder name (minus a [year] tag)
-    [InlineData("/m/Music/Adele", "Adele", "Adele")]
-    [InlineData("not-a-library-path", "[2020] Best Of", "Best Of")]
-    [InlineData("flat", "[1991] Nevermind", "Nevermind")]
+    [InlineData(data: ["/m/Music/Adele", "Adele", "Adele"])]
+    [InlineData(data: ["not-a-library-path", "[2020] Best Of", "Best Of"])]
+    [InlineData(data: ["flat", "[1991] Nevermind", "Nevermind"])]
     public void Falls_back_to_folder_name(string path, string folder, string expectedAlbum)
     {
-        MusicPathParser.MusicAlbumInfo info = MusicPathParser.Parse(path, folder);
-        info.Year.Should().Be(0);
-        info.AlbumName.Should().Be(expectedAlbum);
+        MusicPathParser.MusicAlbumInfo info = MusicPathParser.Parse(directoryPath: path, folderName: folder);
+        info.Year.Should().Be(expected: 0);
+        info.AlbumName.Should().Be(expected: expectedAlbum);
     }
 }

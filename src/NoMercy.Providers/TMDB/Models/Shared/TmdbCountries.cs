@@ -15,141 +15,141 @@ namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbCountries<T>
 {
-    [JsonProperty("AR")]
+    [JsonProperty(propertyName: "AR")]
     public T? Ar { get; set; }
 
-    [JsonProperty("AT")]
+    [JsonProperty(propertyName: "AT")]
     public T? At { get; set; }
 
-    [JsonProperty("AU")]
+    [JsonProperty(propertyName: "AU")]
     public T? Au { get; set; }
 
-    [JsonProperty("BE")]
+    [JsonProperty(propertyName: "BE")]
     public T? Be { get; set; }
 
-    [JsonProperty("BR")]
+    [JsonProperty(propertyName: "BR")]
     public T? Br { get; set; }
 
-    [JsonProperty("CA")]
+    [JsonProperty(propertyName: "CA")]
     public T? Ca { get; set; }
 
-    [JsonProperty("CH")]
+    [JsonProperty(propertyName: "CH")]
     public T? Ch { get; set; }
 
-    [JsonProperty("CL")]
+    [JsonProperty(propertyName: "CL")]
     public T? Cl { get; set; }
 
-    [JsonProperty("CO")]
+    [JsonProperty(propertyName: "CO")]
     public T? Co { get; set; }
 
-    [JsonProperty("CZ")]
+    [JsonProperty(propertyName: "CZ")]
     public T? Cz { get; set; }
 
-    [JsonProperty("DE")]
+    [JsonProperty(propertyName: "DE")]
     public T? De { get; set; }
 
-    [JsonProperty("DK")]
+    [JsonProperty(propertyName: "DK")]
     public T? Dk { get; set; }
 
-    [JsonProperty("EC")]
+    [JsonProperty(propertyName: "EC")]
     public T? Ec { get; set; }
 
-    [JsonProperty("EE")]
+    [JsonProperty(propertyName: "EE")]
     public T? Ee { get; set; }
 
-    [JsonProperty("ES")]
+    [JsonProperty(propertyName: "ES")]
     public T? Es { get; set; }
 
-    [JsonProperty("FI")]
+    [JsonProperty(propertyName: "FI")]
     public T? Fi { get; set; }
 
-    [JsonProperty("FR")]
+    [JsonProperty(propertyName: "FR")]
     public T? Fr { get; set; }
 
-    [JsonProperty("GB")]
+    [JsonProperty(propertyName: "GB")]
     public T? Gb { get; set; }
 
-    [JsonProperty("GR")]
+    [JsonProperty(propertyName: "GR")]
     public T? Gr { get; set; }
 
-    [JsonProperty("HU")]
+    [JsonProperty(propertyName: "HU")]
     public T? Hu { get; set; }
 
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public T? Id { get; set; }
 
-    [JsonProperty("IE")]
+    [JsonProperty(propertyName: "IE")]
     public T? Ie { get; set; }
 
-    [JsonProperty("IN")]
+    [JsonProperty(propertyName: "IN")]
     public T? In { get; set; }
 
-    [JsonProperty("IT")]
+    [JsonProperty(propertyName: "IT")]
     public T? It { get; set; }
 
-    [JsonProperty("JP")]
+    [JsonProperty(propertyName: "JP")]
     public T? Jp { get; set; }
 
-    [JsonProperty("KR")]
+    [JsonProperty(propertyName: "KR")]
     public T? Kr { get; set; }
 
-    [JsonProperty("LT")]
+    [JsonProperty(propertyName: "LT")]
     public T? Lt { get; set; }
 
-    [JsonProperty("LV")]
+    [JsonProperty(propertyName: "LV")]
     public T? Lv { get; set; }
 
-    [JsonProperty("MX")]
+    [JsonProperty(propertyName: "MX")]
     public T? Mx { get; set; }
 
-    [JsonProperty("MY")]
+    [JsonProperty(propertyName: "MY")]
     public T? My { get; set; }
 
-    [JsonProperty("NL")]
+    [JsonProperty(propertyName: "NL")]
     public T? Nl { get; set; }
 
-    [JsonProperty("NO")]
+    [JsonProperty(propertyName: "NO")]
     public T? No { get; set; }
 
-    [JsonProperty("NZ")]
+    [JsonProperty(propertyName: "NZ")]
     public T? Nz { get; set; }
 
-    [JsonProperty("PE")]
+    [JsonProperty(propertyName: "PE")]
     public T? Pe { get; set; }
 
-    [JsonProperty("PH")]
+    [JsonProperty(propertyName: "PH")]
     public T? Ph { get; set; }
 
-    [JsonProperty("PL")]
+    [JsonProperty(propertyName: "PL")]
     public T? Pl { get; set; }
 
-    [JsonProperty("PT")]
+    [JsonProperty(propertyName: "PT")]
     public T? Pt { get; set; }
 
-    [JsonProperty("RO")]
+    [JsonProperty(propertyName: "RO")]
     public T? Ro { get; set; }
 
-    [JsonProperty("RU")]
+    [JsonProperty(propertyName: "RU")]
     public T? Ru { get; set; }
 
-    [JsonProperty("SE")]
+    [JsonProperty(propertyName: "SE")]
     public T? Se { get; set; }
 
-    [JsonProperty("SG")]
+    [JsonProperty(propertyName: "SG")]
     public T? Sg { get; set; }
 
-    [JsonProperty("TH")]
+    [JsonProperty(propertyName: "TH")]
     public T? Th { get; set; }
 
-    [JsonProperty("TR")]
+    [JsonProperty(propertyName: "TR")]
     public T? Tr { get; set; }
 
-    [JsonProperty("US")]
+    [JsonProperty(propertyName: "US")]
     public T? Us { get; set; }
 
-    [JsonProperty("VE")]
+    [JsonProperty(propertyName: "VE")]
     public T? Ve { get; set; }
 
-    [JsonProperty("ZA")]
+    [JsonProperty(propertyName: "ZA")]
     public T? Za { get; set; }
 }

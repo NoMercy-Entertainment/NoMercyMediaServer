@@ -21,7 +21,7 @@ using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;
 
-[Trait("Category", "Characterization")]
+[Trait(name: "Category", value: "Characterization")]
 public class UserDataRepositoryTests : IDisposable
 {
     private readonly IDbContextFactory<MediaContext> _factory;
@@ -31,36 +31,36 @@ public class UserDataRepositoryTests : IDisposable
     public UserDataRepositoryTests()
     {
         (_factory, _connection) = TestMediaContextFactory.CreateSeededFactory();
-        _repository = new(_factory);
+        _repository = new(contextFactory: _factory);
     }
 
     [Fact]
     public async Task GetUserDataAsync_ReturnsMovieUserData_ForMovieType()
     {
         List<UserData> result = await _repository.GetUserDataAsync(
-            SeedConstants.UserId,
-            MediaTypes.MovieMediaType,
-            129,
-            null
+            userId: SeedConstants.UserId,
+            type: MediaTypes.MovieMediaType,
+            intId: 129,
+            ulidId: null
         );
 
         result.Should().NotBeEmpty();
-        result.Should().AllSatisfy(ud => ud.MovieId.Should().Be(129));
-        result.Should().AllSatisfy(ud => ud.UserId.Should().Be(SeedConstants.UserId));
+        result.Should().AllSatisfy(expected: ud => ud.MovieId.Should().Be(expected: 129));
+        result.Should().AllSatisfy(expected: ud => ud.UserId.Should().Be(expected: SeedConstants.UserId));
     }
 
     [Fact]
     public async Task GetUserDataAsync_ReturnsTvUserData_ForTvType()
     {
         List<UserData> result = await _repository.GetUserDataAsync(
-            SeedConstants.UserId,
-            MediaTypes.TvMediaType,
-            1399,
-            null
+            userId: SeedConstants.UserId,
+            type: MediaTypes.TvMediaType,
+            intId: 1399,
+            ulidId: null
         );
 
         result.Should().NotBeEmpty();
-        result.Should().AllSatisfy(ud => ud.TvId.Should().Be(1399));
+        result.Should().AllSatisfy(expected: ud => ud.TvId.Should().Be(expected: 1399));
     }
 
     [Fact]
@@ -69,10 +69,10 @@ public class UserDataRepositoryTests : IDisposable
         Guid otherUserId = Guid.NewGuid();
 
         List<UserData> result = await _repository.GetUserDataAsync(
-            otherUserId,
-            MediaTypes.MovieMediaType,
-            129,
-            null
+            userId: otherUserId,
+            type: MediaTypes.MovieMediaType,
+            intId: 129,
+            ulidId: null
         );
 
         result.Should().BeEmpty();
@@ -82,10 +82,10 @@ public class UserDataRepositoryTests : IDisposable
     public async Task GetUserDataAsync_ReturnsEmpty_ForUnknownMediaType()
     {
         List<UserData> result = await _repository.GetUserDataAsync(
-            SeedConstants.UserId,
-            "unknown_type",
-            999,
-            null
+            userId: SeedConstants.UserId,
+            type: "unknown_type",
+            intId: 999,
+            ulidId: null
         );
 
         result.Should().BeEmpty();
@@ -95,15 +95,15 @@ public class UserDataRepositoryTests : IDisposable
     public async Task GetUserDataSingleAsync_ReturnsFirstUserData_ForMovieType()
     {
         UserData? result = await _repository.GetUserDataSingleAsync(
-            SeedConstants.UserId,
-            MediaTypes.MovieMediaType,
-            129,
-            null
+            userId: SeedConstants.UserId,
+            type: MediaTypes.MovieMediaType,
+            intId: 129,
+            ulidId: null
         );
 
         result.Should().NotBeNull();
-        result!.MovieId.Should().Be(129);
-        result.UserId.Should().Be(SeedConstants.UserId);
+        result!.MovieId.Should().Be(expected: 129);
+        result.UserId.Should().Be(expected: SeedConstants.UserId);
     }
 
     [Fact]
@@ -112,10 +112,10 @@ public class UserDataRepositoryTests : IDisposable
         Guid otherUserId = Guid.NewGuid();
 
         UserData? result = await _repository.GetUserDataSingleAsync(
-            otherUserId,
-            MediaTypes.MovieMediaType,
-            129,
-            null
+            userId: otherUserId,
+            type: MediaTypes.MovieMediaType,
+            intId: 129,
+            ulidId: null
         );
 
         result.Should().BeNull();
@@ -125,10 +125,10 @@ public class UserDataRepositoryTests : IDisposable
     public async Task GetUserDataSingleAsync_ReturnsNull_ForUnknownMediaType()
     {
         UserData? result = await _repository.GetUserDataSingleAsync(
-            SeedConstants.UserId,
-            "invalid_type",
-            129,
-            null
+            userId: SeedConstants.UserId,
+            type: "invalid_type",
+            intId: 129,
+            ulidId: null
         );
 
         result.Should().BeNull();
@@ -138,14 +138,14 @@ public class UserDataRepositoryTests : IDisposable
     public async Task GetUserDataSingleAsync_ReturnsTvData()
     {
         UserData? result = await _repository.GetUserDataSingleAsync(
-            SeedConstants.UserId,
-            MediaTypes.TvMediaType,
-            1399,
-            null
+            userId: SeedConstants.UserId,
+            type: MediaTypes.TvMediaType,
+            intId: 1399,
+            ulidId: null
         );
 
         result.Should().NotBeNull();
-        result!.TvId.Should().Be(1399);
+        result!.TvId.Should().Be(expected: 1399);
     }
 
     [Fact]
@@ -155,10 +155,10 @@ public class UserDataRepositoryTests : IDisposable
         List<UserData> userData = await context.UserData.ToListAsync();
         if (userData.Any())
         {
-            await _repository.DeleteUserDataAsync(new() { userData[0] });
+            await _repository.DeleteUserDataAsync(userData: new() { userData[index: 0] });
 
             await using MediaContext verify = await _factory.CreateDbContextAsync();
-            UserData? deleted = await verify.UserData.FirstOrDefaultAsync(ud =>
+            UserData? deleted = await verify.UserData.FirstOrDefaultAsync(predicate: ud =>
                 ud.Id == userData[0].Id
             );
 
@@ -170,28 +170,28 @@ public class UserDataRepositoryTests : IDisposable
     public async Task HideFromContinueWatchingAsync_SetsFlag_WithoutDeletingRow()
     {
         await using MediaContext context = await _factory.CreateDbContextAsync();
-        UserData target = await context.UserData.FirstAsync(ud => ud.MovieId == 129);
+        UserData target = await context.UserData.FirstAsync(predicate: ud => ud.MovieId == 129);
 
-        int affected = await _repository.HideFromContinueWatchingAsync(new[] { target });
+        int affected = await _repository.HideFromContinueWatchingAsync(userData: new[] { target });
 
-        affected.Should().Be(1);
+        affected.Should().Be(expected: 1);
 
         await using MediaContext verify = await _factory.CreateDbContextAsync();
-        UserData? hidden = await verify.UserData.FirstOrDefaultAsync(ud => ud.Id == target.Id);
+        UserData? hidden = await verify.UserData.FirstOrDefaultAsync(predicate: ud => ud.Id == target.Id);
 
         // The row must survive — recommendations still read Time/Rating from it.
         hidden.Should().NotBeNull();
         hidden!.RemovedFromContinueWatching.Should().BeTrue();
-        hidden.Time.Should().Be(target.Time);
-        hidden.LastPlayedDate.Should().Be(target.LastPlayedDate);
+        hidden.Time.Should().Be(expected: target.Time);
+        hidden.LastPlayedDate.Should().Be(expected: target.LastPlayedDate);
     }
 
     [Fact]
     public async Task HideFromContinueWatchingAsync_ReturnsZero_WhenGivenNoRows()
     {
-        int affected = await _repository.HideFromContinueWatchingAsync([]);
+        int affected = await _repository.HideFromContinueWatchingAsync(userData: []);
 
-        affected.Should().Be(0);
+        affected.Should().Be(expected: 0);
     }
 
     public void Dispose()

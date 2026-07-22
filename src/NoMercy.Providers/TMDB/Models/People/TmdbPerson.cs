@@ -15,42 +15,42 @@ namespace NoMercy.Providers.TMDB.Models.People;
 
 public class TmdbPerson
 {
-    [JsonProperty("birthday")]
+    [JsonProperty(propertyName: "birthday")]
     public DateTime? BirthDay { get; set; }
 
-    [JsonProperty("known_for_department")]
+    [JsonProperty(propertyName: "known_for_department")]
     public string? KnownForDepartment { get; set; }
 
-    [JsonProperty("id")]
+    [JsonProperty(propertyName: "id")]
     public int Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonProperty(propertyName: "name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("also_known_as")]
+    [JsonProperty(propertyName: "also_known_as")]
     public string[] AlsoKnownAs { get; set; } = [];
 
-    [JsonProperty("gender")]
+    [JsonProperty(propertyName: "gender")]
     public TmdbGender TmdbGender { get; set; } = TmdbGender.Unknown;
 
-    [JsonProperty("biography")]
+    [JsonProperty(propertyName: "biography")]
     public string? Biography { get; set; }
 
-    [JsonProperty("popularity")]
+    [JsonProperty(propertyName: "popularity")]
     public double Popularity { get; set; }
 
-    [JsonProperty("place_of_birth")]
+    [JsonProperty(propertyName: "place_of_birth")]
     public string? PlaceOfBirth { get; set; }
 
-    [JsonProperty("profile_path")]
+    [JsonProperty(propertyName: "profile_path")]
     public string? ProfilePath { get; set; }
 
-    [JsonProperty("adult")]
+    [JsonProperty(propertyName: "adult")]
     public bool Adult { get; set; }
 
-    [JsonProperty("imdb_id")]
+    [JsonProperty(propertyName: "imdb_id")]
     public string? ImdbId { get; set; }
 
-    [JsonProperty("external_ids")]
+    [JsonProperty(propertyName: "external_ids")]
     public Database.Models.People.TmdbPersonExternalIds? ExternalIds { get; set; }
 }

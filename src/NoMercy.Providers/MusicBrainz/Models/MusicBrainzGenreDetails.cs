@@ -15,6 +15,6 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 
 public class MusicBrainzGenreDetails : MusicBrainzGenre
 {
-    [JsonProperty("count")]
+    [JsonProperty(propertyName: "count")]
     public long Count { get; set; }
 }
