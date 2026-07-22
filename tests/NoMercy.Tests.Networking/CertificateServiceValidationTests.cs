@@ -48,7 +48,10 @@ public sealed class CertificateServiceValidationTests : IDisposable
 
     private static CertificateService BuildService(IHttpClientFactory? factory = null)
     {
-        return new(logger: NullLogger<CertificateService>.Instance, httpClientFactory: factory ?? new NullHttpClientFactory());
+        return new(
+            logger: NullLogger<CertificateService>.Instance,
+            httpClientFactory: factory ?? new NullHttpClientFactory()
+        );
     }
 
     /// <summary>
@@ -62,7 +65,10 @@ public sealed class CertificateServiceValidationTests : IDisposable
     }
 
     private sealed class NoDelayCertificateService(IHttpClientFactory factory)
-        : CertificateService(logger: NullLogger<CertificateService>.Instance, httpClientFactory: factory)
+        : CertificateService(
+            logger: NullLogger<CertificateService>.Instance,
+            httpClientFactory: factory
+        )
     {
         protected override Task DelayBetweenAttemptsAsync(TimeSpan delay, CancellationToken ct) =>
             Task.CompletedTask;
@@ -77,7 +83,10 @@ public sealed class CertificateServiceValidationTests : IDisposable
             hashAlgorithm: HashAlgorithmName.SHA256,
             padding: RSASignaturePadding.Pkcs1
         );
-        return req.CreateSelfSigned(notBefore: DateTimeOffset.UtcNow.AddDays(days: -1), notAfter: notAfter);
+        return req.CreateSelfSigned(
+            notBefore: DateTimeOffset.UtcNow.AddDays(days: -1),
+            notAfter: notAfter
+        );
     }
 
     private static void InjectCachedCertificate(CertificateService service, X509Certificate2? cert)
@@ -100,7 +109,10 @@ public sealed class CertificateServiceValidationTests : IDisposable
         File.WriteAllText(path: certPath, contents: cert.ExportCertificatePem());
 
         using RSA? rsa = cert.GetRSAPrivateKey();
-        File.WriteAllText(path: keyPath, contents: rsa is null ? string.Empty : rsa.ExportRSAPrivateKeyPem());
+        File.WriteAllText(
+            path: keyPath,
+            contents: rsa is null ? string.Empty : rsa.ExportRSAPrivateKeyPem()
+        );
     }
 
     /// <summary>
@@ -148,7 +160,9 @@ public sealed class CertificateServiceValidationTests : IDisposable
     public void HasValidCertificate_ReturnsFalse_WhenCachedCertIsExpired()
     {
         CertificateService service = BuildService();
-        using X509Certificate2 expired = CreateSelfSignedCert(notAfter: DateTimeOffset.UtcNow.AddSeconds(seconds: -1));
+        using X509Certificate2 expired = CreateSelfSignedCert(
+            notAfter: DateTimeOffset.UtcNow.AddSeconds(seconds: -1)
+        );
         InjectCachedCertificate(service: service, cert: expired);
 
         bool result = service.HasValidCertificate();
@@ -160,7 +174,9 @@ public sealed class CertificateServiceValidationTests : IDisposable
     public void HasValidCertificate_ReturnsTrue_WhenCachedCertIsValid()
     {
         CertificateService service = BuildService();
-        using X509Certificate2 valid = CreateSelfSignedCert(notAfter: DateTimeOffset.UtcNow.AddDays(days: 30));
+        using X509Certificate2 valid = CreateSelfSignedCert(
+            notAfter: DateTimeOffset.UtcNow.AddDays(days: 30)
+        );
         InjectCachedCertificate(service: service, cert: valid);
 
         bool result = service.HasValidCertificate();
@@ -172,7 +188,9 @@ public sealed class CertificateServiceValidationTests : IDisposable
     public void HasValidCertificate_ReturnsFalse_WhenOnlyCertFileExists_KeyFileMissing()
     {
         CertificateService service = BuildService();
-        using X509Certificate2 cert = CreateSelfSignedCert(notAfter: DateTimeOffset.UtcNow.AddDays(days: 30));
+        using X509Certificate2 cert = CreateSelfSignedCert(
+            notAfter: DateTimeOffset.UtcNow.AddDays(days: 30)
+        );
 #pragma warning disable CS0618
         File.WriteAllText(path: AppFiles.CertFile, contents: cert.ExportCertificatePem());
 #pragma warning restore CS0618
@@ -186,7 +204,9 @@ public sealed class CertificateServiceValidationTests : IDisposable
     public void HasValidCertificate_ReturnsTrue_WhenBothLegacyPemFilesExist()
     {
         CertificateService service = BuildService();
-        using X509Certificate2 cert = CreateSelfSignedCert(notAfter: DateTimeOffset.UtcNow.AddDays(days: 30));
+        using X509Certificate2 cert = CreateSelfSignedCert(
+            notAfter: DateTimeOffset.UtcNow.AddDays(days: 30)
+        );
         WritePemFiles(certDir: _certDir, cert: cert);
 
         bool result = service.HasValidCertificate();
@@ -210,7 +230,9 @@ public sealed class CertificateServiceValidationTests : IDisposable
     [Fact]
     public void HasValidCertificate_ReturnsFalse_WhenDbCertIsExpired()
     {
-        using X509Certificate2 expired = CreateSelfSignedCert(notAfter: DateTimeOffset.UtcNow.AddSeconds(seconds: -1));
+        using X509Certificate2 expired = CreateSelfSignedCert(
+            notAfter: DateTimeOffset.UtcNow.AddSeconds(seconds: -1)
+        );
         string certPem = expired.ExportCertificatePem();
         StubCertificateService service = new(certPem: certPem);
 
@@ -222,7 +244,9 @@ public sealed class CertificateServiceValidationTests : IDisposable
     [Fact]
     public void HasValidCertificate_ReturnsTrue_WhenDbCertIsValid()
     {
-        using X509Certificate2 valid = CreateSelfSignedCert(notAfter: DateTimeOffset.UtcNow.AddDays(days: 30));
+        using X509Certificate2 valid = CreateSelfSignedCert(
+            notAfter: DateTimeOffset.UtcNow.AddDays(days: 30)
+        );
         string certPem = valid.ExportCertificatePem();
         StubCertificateService service = new(certPem: certPem);
 
@@ -257,7 +281,9 @@ public sealed class CertificateServiceValidationTests : IDisposable
             return new(statusCode: HttpStatusCode.OK);
         });
         CertificateService service = BuildService(factory: factory);
-        using X509Certificate2 valid = CreateSelfSignedCert(notAfter: DateTimeOffset.UtcNow.AddDays(days: 14));
+        using X509Certificate2 valid = CreateSelfSignedCert(
+            notAfter: DateTimeOffset.UtcNow.AddDays(days: 14)
+        );
         InjectCachedCertificate(service: service, cert: valid);
 
         await service.RenewSslCertificate(accessToken: "test-token", maxRetries: 1);
@@ -275,7 +301,9 @@ public sealed class CertificateServiceValidationTests : IDisposable
             return new(statusCode: HttpStatusCode.Accepted);
         });
         CertificateService service = BuildFastRetryService(factory: factory);
-        using X509Certificate2 nearExpiry = CreateSelfSignedCert(notAfter: DateTimeOffset.UtcNow.AddDays(days: 12));
+        using X509Certificate2 nearExpiry = CreateSelfSignedCert(
+            notAfter: DateTimeOffset.UtcNow.AddDays(days: 12)
+        );
         InjectCachedCertificate(service: service, cert: nearExpiry);
 
         await service.RenewSslCertificate(accessToken: "test-token", maxRetries: 1);
@@ -293,7 +321,9 @@ public sealed class CertificateServiceValidationTests : IDisposable
             return new(statusCode: HttpStatusCode.Accepted);
         });
         CertificateService service = BuildFastRetryService(factory: factory);
-        using X509Certificate2 expired = CreateSelfSignedCert(notAfter: DateTimeOffset.UtcNow.AddSeconds(seconds: -1));
+        using X509Certificate2 expired = CreateSelfSignedCert(
+            notAfter: DateTimeOffset.UtcNow.AddSeconds(seconds: -1)
+        );
         InjectCachedCertificate(service: service, cert: expired);
 
         await service.RenewSslCertificate(accessToken: "test-token", maxRetries: 1);
@@ -361,7 +391,10 @@ public sealed class CertificateServiceValidationTests : IDisposable
         StubHttpClientFactory factory = new(handler: _ =>
         {
             callCount++;
-            return new(statusCode: HttpStatusCode.BadRequest) { Content = new StringContent(content: string.Empty) };
+            return new(statusCode: HttpStatusCode.BadRequest)
+            {
+                Content = new StringContent(content: string.Empty),
+            };
         });
         CertificateService service = BuildService(factory: factory);
 
@@ -431,25 +464,37 @@ public sealed class CertificateServiceValidationTests : IDisposable
         );
         string source = File.ReadAllText(path: sourceFile);
 
-        Assert.Contains(expectedSubstring: "_cachedCertificate.NotAfter > DateTime.Now", actualString: source);
+        Assert.Contains(
+            expectedSubstring: "_cachedCertificate.NotAfter > DateTime.Now",
+            actualString: source
+        );
 
         // DB branch must load + check NotAfter, not just assert row presence.
         Assert.Contains(expectedSubstring: "ReadCertificatePemFromDb", actualString: source);
         Assert.Contains(expectedSubstring: "dbCert.NotAfter > DateTime.Now", actualString: source);
 
         Assert.Contains(
-            expectedSubstring: "_driver.FileExists(AppFiles.CertFile) && _driver.FileExists(AppFiles.KeyFile)",
+            expectedSubstring: "_driver.FileExists(path: AppFiles.CertFile) && _driver.FileExists(path: AppFiles.KeyFile)",
             actualString: source
         );
 
         Assert.Contains(expectedSubstring: "_cachedCertificate is null", actualString: source);
 
-        Assert.Contains(expectedSubstring: "_cachedCertificate.NotAfter <= DateTime.Now", actualString: source);
+        Assert.Contains(
+            expectedSubstring: "_cachedCertificate.NotAfter <= DateTime.Now",
+            actualString: source
+        );
 
         Assert.Contains(expectedSubstring: "RenewalThresholdDays", actualString: source);
-        Assert.Contains(expectedSubstring: "private const int RenewalThresholdDays = 13", actualString: source);
+        Assert.Contains(
+            expectedSubstring: "private const int RenewalThresholdDays = 13",
+            actualString: source
+        );
 
-        Assert.Contains(expectedSubstring: "string.IsNullOrEmpty(token)", actualString: source);
+        Assert.Contains(
+            expectedSubstring: "string.IsNullOrEmpty(value: token)",
+            actualString: source
+        );
 
         Assert.Contains(expectedSubstring: "HttpStatusCode.Accepted", actualString: source);
 
@@ -457,7 +502,10 @@ public sealed class CertificateServiceValidationTests : IDisposable
 
         Assert.Contains(expectedSubstring: "CertificateNotDueException", actualString: source);
 
-        Assert.Contains(expectedSubstring: "string.IsNullOrWhiteSpace(body)", actualString: source);
+        Assert.Contains(
+            expectedSubstring: "string.IsNullOrWhiteSpace(value: body)",
+            actualString: source
+        );
         Assert.Contains(expectedSubstring: "parsed?.Message", actualString: source);
 
         Assert.Contains(expectedSubstring: "HttpProtocols.Http1", actualString: source);
@@ -472,7 +520,9 @@ public sealed class CertificateServiceValidationTests : IDisposable
             if (File.Exists(path: candidate))
                 return candidate;
 
-            string repoCandidate = Path.Combine(paths: [dir, "..", "..", "..", "..", "..", relativePath]);
+            string repoCandidate = Path.Combine(
+                paths: [dir, "..", "..", "..", "..", "..", relativePath]
+            );
             string resolved = Path.GetFullPath(path: repoCandidate);
             if (File.Exists(path: resolved))
                 return resolved;

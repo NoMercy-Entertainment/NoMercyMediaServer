@@ -42,7 +42,12 @@ public class ProcessRunnerTests
     [Fact]
     public void ProcessResult_IsSuccess_FalseForNonZeroExit()
     {
-        ProcessResult result = new(ExitCode: 1, StdOut: "", StdErr: "error", Duration: TimeSpan.Zero);
+        ProcessResult result = new(
+            ExitCode: 1,
+            StdOut: "",
+            StdErr: "error",
+            Duration: TimeSpan.Zero
+        );
         result.IsSuccess.Should().BeFalse();
     }
 
@@ -50,7 +55,12 @@ public class ProcessRunnerTests
     public async Task ProcessRunner_RunsSimpleCommand()
     {
         ProcessRunner runner = new(logger: NullLogger<ProcessRunner>.Instance);
-        ProcessResult result = await runner.RunAsync(executable: "dotnet", arguments: ["--version"], workingDirectory: (string?)null);
+        ProcessResult result = await runner.RunAsync(
+            "dotnet",
+            ["--version"],
+            (string?)null,
+            CancellationToken.None
+        );
 
         result.IsSuccess.Should().BeTrue();
         result.StdOut.Should().NotBeNullOrWhiteSpace();
@@ -62,9 +72,10 @@ public class ProcessRunnerTests
         ProcessRunner runner = new(logger: NullLogger<ProcessRunner>.Instance);
         // dotnet with an unknown command returns non-zero
         ProcessResult result = await runner.RunAsync(
-            executable: "dotnet",
-            arguments: ["nonexistent-command-xyz"],
-            workingDirectory: (string?)null
+            "dotnet",
+            ["nonexistent-command-xyz"],
+            (string?)null,
+            CancellationToken.None
         );
 
         result.IsSuccess.Should().BeFalse();
@@ -74,10 +85,18 @@ public class ProcessRunnerTests
     public async Task ProcessRunner_RespectsTimeout()
     {
         ProcessRunner runner = new(logger: NullLogger<ProcessRunner>.Instance);
-        using CancellationTokenSource cts = new(delay: TimeSpan.FromMilliseconds(milliseconds: 100));
+        using CancellationTokenSource cts = new(
+            delay: TimeSpan.FromMilliseconds(milliseconds: 100)
+        );
 
         // 'dotnet --info' takes a moment — should be cancelled
-        Func<Task> act = () => runner.RunAsync(executable: "dotnet", arguments: ["--info"], workingDirectory: null, cancellationToken: cts.Token);
+        Func<Task> act = () =>
+            runner.RunAsync(
+                executable: "dotnet",
+                arguments: ["--info"],
+                workingDirectory: null,
+                cancellationToken: cts.Token
+            );
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
@@ -89,7 +108,12 @@ public class ProcessRunnerTests
     {
         ProcessRunner runner = new(logger: NullLogger<ProcessRunner>.Instance);
 
-        ProcessResult result = await runner.RunAsync(executable: "dotnet", arguments: ["--version"], workingDirectory: (string?)null);
+        ProcessResult result = await runner.RunAsync(
+            "dotnet",
+            ["--version"],
+            (string?)null,
+            CancellationToken.None
+        );
 
         result.StdOut.Should().NotBeNullOrWhiteSpace();
         result.IsSuccess.Should().BeTrue();
@@ -148,7 +172,10 @@ public class ProcessRunnerTests
     public async Task ProcessRunner_RespectsCustomWorkingDirectory()
     {
         ProcessRunner runner = new(logger: NullLogger<ProcessRunner>.Instance);
-        string tempDir = Path.Combine(path1: Path.GetTempPath(), path2: $"pr-cwd-{Guid.NewGuid():N}");
+        string tempDir = Path.Combine(
+            path1: Path.GetTempPath(),
+            path2: $"pr-cwd-{Guid.NewGuid():N}"
+        );
         Directory.CreateDirectory(path: tempDir);
 
         try
@@ -175,8 +202,14 @@ public class ProcessRunnerTests
         // letting Process.Start throw a misleading "could not start process"
         // Win32 error. Regression for an actual production race.
         ProcessRunner runner = new(logger: NullLogger<ProcessRunner>.Instance);
-        string missingDir = Path.Combine(path1: Path.GetTempPath(), path2: $"pr-missing-{Guid.NewGuid():N}");
-        Directory.Exists(path: missingDir).Should().BeFalse(because: "the dir must not exist beforehand");
+        string missingDir = Path.Combine(
+            path1: Path.GetTempPath(),
+            path2: $"pr-missing-{Guid.NewGuid():N}"
+        );
+        Directory
+            .Exists(path: missingDir)
+            .Should()
+            .BeFalse(because: "the dir must not exist beforehand");
 
         try
         {
@@ -188,7 +221,10 @@ public class ProcessRunnerTests
             );
 
             result.IsSuccess.Should().BeTrue();
-            Directory.Exists(path: missingDir).Should().BeTrue(because: "the runner must have created it");
+            Directory
+                .Exists(path: missingDir)
+                .Should()
+                .BeTrue(because: "the runner must have created it");
         }
         finally
         {

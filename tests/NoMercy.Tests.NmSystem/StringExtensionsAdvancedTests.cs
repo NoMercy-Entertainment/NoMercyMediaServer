@@ -283,7 +283,14 @@ public class StringExtensionsAdvancedTests
     public void PathName_NormalizesForwardSlashes()
     {
         string result = "path/to/file".PathName();
-        result.Should().NotContain(unexpected: "/");
+        result
+            .Should()
+            .Be(
+                expected: string.Join(
+                    separator: Path.DirectorySeparatorChar,
+                    values: ["path", "to", "file"]
+                )
+            );
     }
 
     [Theory]
@@ -367,7 +374,9 @@ public class StringExtensionsAdvancedTests
     }
 
     [Theory]
-    [InlineData(data: ["550e8400-e29b-41d4-a716-446655440000", "550e8400-e29b-41d4-a716-446655440000"])]
+    [InlineData(
+        data: ["550e8400-e29b-41d4-a716-446655440000", "550e8400-e29b-41d4-a716-446655440000"]
+    )]
     [InlineData(data: ["invalid-guid", "00000000-0000-0000-0000-000000000000"])]
     [InlineData(data: ["", "00000000-0000-0000-0000-000000000000"])]
     [InlineData(data: [null, "00000000-0000-0000-0000-000000000000"])]
@@ -420,7 +429,6 @@ public class StringExtensionsAdvancedTests
         result.Should().Contain(expected: "C");
     }
 
-
     [Theory]
     [InlineData(data: ["café naïve", "cafe naive"])]
     [InlineData(data: ["résumé", "resume"])]
@@ -435,7 +443,11 @@ public class StringExtensionsAdvancedTests
     [InlineData(data: ["Café", "café", true])]
     [InlineData(data: ["HELLO World", "hello world", true])]
     [InlineData(data: ["one", "two", false])]
-    public void ContainsSanitized_ComparesNormalizedStrings(string haystack, string needle, bool expected)
+    public void ContainsSanitized_ComparesNormalizedStrings(
+        string haystack,
+        string needle,
+        bool expected
+    )
     {
         bool result = haystack.ContainsSanitized(value: needle);
         result.Should().Be(expected: expected);
@@ -477,11 +489,13 @@ public class StringExtensionsAdvancedTests
     [Fact]
     public void ToQueryUri_AppendsQueryParameters()
     {
-        string result = "http://example.com".ToQueryUri(parameters: new Dictionary<string, string>
-        {
-            [key: "key1"] = "value1",
-            [key: "key2"] = "value2"
-        });
+        string result = "http://example.com".ToQueryUri(
+            parameters: new Dictionary<string, string>
+            {
+                [key: "key1"] = "value1",
+                [key: "key2"] = "value2",
+            }
+        );
         result.Should().Contain(expected: "?");
         result.Should().Contain(expected: "key1=value1");
     }
@@ -570,7 +584,10 @@ public class StringExtensionsAdvancedTests
     [InlineData(data: ["Hello שלום", StringExtensions.TextDirection.RTL])]
     [InlineData(data: ["مرحبا Hello", StringExtensions.TextDirection.RTL])]
     [InlineData(data: ["Hello World", StringExtensions.TextDirection.LTR])]
-    public void GetTextDirection_IdentifiesTextDirection(string input, StringExtensions.TextDirection expected)
+    public void GetTextDirection_IdentifiesTextDirection(
+        string input,
+        StringExtensions.TextDirection expected
+    )
     {
         StringExtensions.TextDirection result = input.GetTextDirection();
         result.Should().Be(expected: expected);

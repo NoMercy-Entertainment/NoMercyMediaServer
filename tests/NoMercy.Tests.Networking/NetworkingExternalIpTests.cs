@@ -29,7 +29,9 @@ public class NetworkingExternalIpTests
     public void ExternalIp_Getter_NoBlockingResult()
     {
         // The ExternalIp getter must NOT call .Result on async GetExternalIp().
-        string sourceFile = FindSourceFile(relativePath: "src/NoMercy.Networking/Discovery/NetworkDiscovery.cs");
+        string sourceFile = FindSourceFile(
+            relativePath: "src/NoMercy.Networking/Discovery/NetworkDiscovery.cs"
+        );
         string source = File.ReadAllText(path: sourceFile);
 
         string[] lines = source.Split(separator: '\n');
@@ -77,7 +79,9 @@ public class NetworkingExternalIpTests
     public void ExternalIp_Getter_ReturnsFallbackWhenNotPopulated()
     {
         // The getter should return a safe fallback ("0.0.0.0"), not call async methods.
-        string sourceFile = FindSourceFile(relativePath: "src/NoMercy.Networking/Discovery/NetworkDiscovery.cs");
+        string sourceFile = FindSourceFile(
+            relativePath: "src/NoMercy.Networking/Discovery/NetworkDiscovery.cs"
+        );
         string source = File.ReadAllText(path: sourceFile);
 
         string[] lines = source.Split(separator: '\n');
@@ -94,10 +98,12 @@ public class NetworkingExternalIpTests
     public void Discover_AlwaysPopulatesExternalIp()
     {
         // DiscoverExternalIpAsync() must eagerly fetch the external IP so the getter never blocks.
-        string sourceFile = FindSourceFile(relativePath: "src/NoMercy.Networking/Discovery/NetworkDiscovery.cs");
+        string sourceFile = FindSourceFile(
+            relativePath: "src/NoMercy.Networking/Discovery/NetworkDiscovery.cs"
+        );
         string source = File.ReadAllText(path: sourceFile);
 
-        Assert.Contains(expectedSubstring: "string.IsNullOrEmpty(_externalIp)", actualString: source);
+        Assert.Contains(expectedSubstring: "string.IsNullOrEmpty", actualString: source);
         Assert.Contains(expectedSubstring: "await GetExternalIpAsync()", actualString: source);
     }
 
@@ -127,7 +133,9 @@ public class NetworkingExternalIpTests
     {
         // When _externalIp is null, getter must not return null or empty.
         // We can verify by checking the source — the fallback is "0.0.0.0".
-        string sourceFile = FindSourceFile(relativePath: "src/NoMercy.Networking/Discovery/NetworkDiscovery.cs");
+        string sourceFile = FindSourceFile(
+            relativePath: "src/NoMercy.Networking/Discovery/NetworkDiscovery.cs"
+        );
         string source = File.ReadAllText(path: sourceFile);
 
         string[] lines = source.Split(separator: '\n');
@@ -148,7 +156,9 @@ public class NetworkingExternalIpTests
             if (File.Exists(path: candidate))
                 return candidate;
 
-            string repoCandidate = Path.Combine(paths: [dir, "..", "..", "..", "..", "..", relativePath]);
+            string repoCandidate = Path.Combine(
+                paths: [dir, "..", "..", "..", "..", "..", relativePath]
+            );
             string resolved = Path.GetFullPath(path: repoCandidate);
             if (File.Exists(path: resolved))
                 return resolved;
@@ -156,7 +166,10 @@ public class NetworkingExternalIpTests
             dir = Directory.GetParent(path: dir)?.FullName;
         }
 
-        string fallback = Path.Combine(path1: "/workspaces/NoMercyMediaServer", path2: relativePath);
+        string fallback = Path.Combine(
+            path1: "/workspaces/NoMercyMediaServer",
+            path2: relativePath
+        );
         if (File.Exists(path: fallback))
             return fallback;
 

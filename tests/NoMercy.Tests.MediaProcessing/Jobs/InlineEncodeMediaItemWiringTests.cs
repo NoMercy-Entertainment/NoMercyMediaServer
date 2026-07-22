@@ -61,7 +61,9 @@ public class InlineEncodeMediaItemWiringTests
             dir = Directory.GetParent(path: dir)?.FullName;
         }
 
-        throw new FileNotFoundException(message: "VideoEncodeJob.cs not found under any src/ ancestor");
+        throw new FileNotFoundException(
+            message: "VideoEncodeJob.cs not found under any src/ ancestor"
+        );
     }
 
     private static string ExtractMethodWindow(string source, int methodStart, int maxChars = 2000)
@@ -115,9 +117,15 @@ public class InlineEncodeMediaItemWiringTests
             value: "private async Task RunSinglePresetEncodeAsync",
             comparisonType: StringComparison.Ordinal
         );
-        methodStart.Should().BeGreaterThan(expected: 0, because: "RunSinglePresetEncodeAsync must exist");
+        methodStart
+            .Should()
+            .BeGreaterThan(expected: 0, because: "RunSinglePresetEncodeAsync must exist");
 
-        string window = ExtractMethodWindow(source: source, methodStart: methodStart, maxChars: 8000);
+        string window = ExtractMethodWindow(
+            source: source,
+            methodStart: methodStart,
+            maxChars: source.Length - methodStart
+        );
 
         int requestStart = window.IndexOf(
             value: "EncodingRequest request = new(",
@@ -125,22 +133,32 @@ public class InlineEncodeMediaItemWiringTests
         );
         requestStart
             .Should()
-            .BeGreaterThan(expected: 0, because: "RunSinglePresetEncodeAsync must build an EncodingRequest");
+            .BeGreaterThan(
+                expected: 0,
+                because: "RunSinglePresetEncodeAsync must build an EncodingRequest"
+            );
 
         // Isolate just the request-construction call so a MediaItem: mention
         // anywhere later in the (long) method can't produce a false pass.
-        int requestEnd = window.IndexOf(value: ");", startIndex: requestStart, comparisonType: StringComparison.Ordinal);
+        int requestEnd = window.IndexOf(
+            value: ");",
+            startIndex: requestStart,
+            comparisonType: StringComparison.Ordinal
+        );
         requestEnd.Should().BeGreaterThan(expected: requestStart);
 
-        string requestConstruction = window.Substring(startIndex: requestStart, length: requestEnd - requestStart);
+        string requestConstruction = window.Substring(
+            startIndex: requestStart,
+            length: requestEnd - requestStart
+        );
 
         requestConstruction
             .Should()
             .Contain(
                 expected: "MediaItem:",
                 because: "the request that reaches RunInlineAsync (and DecomposeAsync) must carry "
-                         + "MediaItem so the inline Whole-task path resolves a BundleLayout and "
-                         + "writes manifest.json/reconstruction.json"
+                    + "MediaItem so the inline Whole-task path resolves a BundleLayout and "
+                    + "writes manifest.json/reconstruction.json"
             );
 
         requestConstruction
@@ -148,7 +166,7 @@ public class InlineEncodeMediaItemWiringTests
             .NotContain(
                 unexpected: "Options:",
                 because: "this request must NOT set EncodingOptions.EnableMetadataInjection — "
-                         + "attaching MediaItem here must never change the emitted ffmpeg command"
+                    + "attaching MediaItem here must never change the emitted ffmpeg command"
             );
     }
 
@@ -168,24 +186,41 @@ public class InlineEncodeMediaItemWiringTests
         );
         methodStart.Should().BeGreaterThan(expected: 0, because: "RunMergedEncodeAsync must exist");
 
-        string window = ExtractMethodWindow(source: source, methodStart: methodStart, maxChars: 4000);
+        string window = ExtractMethodWindow(
+            source: source,
+            methodStart: methodStart,
+            maxChars: 4000
+        );
 
-        int requestStart = window.IndexOf(value: "new EncodingRequest(", comparisonType: StringComparison.Ordinal);
+        int requestStart = window.IndexOf(
+            value: "new EncodingRequest(",
+            comparisonType: StringComparison.Ordinal
+        );
         requestStart
             .Should()
-            .BeGreaterThan(expected: 0, because: "RunMergedEncodeAsync must build an EncodingRequest per preset");
+            .BeGreaterThan(
+                expected: 0,
+                because: "RunMergedEncodeAsync must build an EncodingRequest per preset"
+            );
 
-        int requestEnd = window.IndexOf(value: "))", startIndex: requestStart, comparisonType: StringComparison.Ordinal);
+        int requestEnd = window.IndexOf(
+            value: "))",
+            startIndex: requestStart,
+            comparisonType: StringComparison.Ordinal
+        );
         requestEnd.Should().BeGreaterThan(expected: requestStart);
 
-        string requestConstruction = window.Substring(startIndex: requestStart, length: requestEnd - requestStart);
+        string requestConstruction = window.Substring(
+            startIndex: requestStart,
+            length: requestEnd - requestStart
+        );
 
         requestConstruction
             .Should()
             .Contain(
                 expected: "MediaItem:",
                 because: "every request in a merged run must carry MediaItem so DecomposeMergedAsync's "
-                         + "plans resolve a BundleLayout the same way a single-preset run does"
+                    + "plans resolve a BundleLayout the same way a single-preset run does"
             );
     }
 
@@ -203,7 +238,11 @@ public class InlineEncodeMediaItemWiringTests
         );
         methodStart.Should().BeGreaterThan(expected: 0, because: "HandleFinalizeAsync must exist");
 
-        string window = ExtractMethodWindow(source: source, methodStart: methodStart, maxChars: 8000);
+        string window = ExtractMethodWindow(
+            source: source,
+            methodStart: methodStart,
+            maxChars: source.Length - methodStart
+        );
 
         window
             .Should()
