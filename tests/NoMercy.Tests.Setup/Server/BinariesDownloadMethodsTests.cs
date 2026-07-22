@@ -51,7 +51,10 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         _originalInstallDir = Environment.GetEnvironmentVariable(variable: "NOMERCY_INSTALL_DIR");
         _originalSoftwareVersion = NoMercy.NmSystem.Information.Software.Version;
 
-        _tempAppPath = Path.Combine(path1: Path.GetTempPath(), path2: $"nm-binmethods-{Guid.NewGuid():N}");
+        _tempAppPath = Path.Combine(
+            path1: Path.GetTempPath(),
+            path2: $"nm-binmethods-{Guid.NewGuid():N}"
+        );
         Directory.CreateDirectory(path: _tempAppPath);
         Environment.SetEnvironmentVariable(variable: "NOMERCY_APP_PATH", value: _tempAppPath);
         Environment.SetEnvironmentVariable(variable: "NOMERCY_INSTALL_DIR", value: null);
@@ -60,7 +63,10 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
     public void Dispose()
     {
         Environment.SetEnvironmentVariable(variable: "NOMERCY_APP_PATH", value: _originalAppPath);
-        Environment.SetEnvironmentVariable(variable: "NOMERCY_INSTALL_DIR", value: _originalInstallDir);
+        Environment.SetEnvironmentVariable(
+            variable: "NOMERCY_INSTALL_DIR",
+            value: _originalInstallDir
+        );
         NoMercy.NmSystem.Information.Software.Version = _originalSoftwareVersion;
         try
         {
@@ -81,7 +87,11 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
     }
 
     private static GithubReleaseResponse ReleaseWithAssets(params Asset[] assets) =>
-        ReleaseWithAssets(publishedAt: DateTimeOffset.UtcNow.AddDays(days: -1), tagName: "v1.0.0", assets: assets);
+        ReleaseWithAssets(
+            publishedAt: DateTimeOffset.UtcNow.AddDays(days: -1),
+            tagName: "v1.0.0",
+            assets: assets
+        );
 
     private static GithubReleaseResponse ReleaseWithAssets(
         DateTimeOffset publishedAt,
@@ -103,7 +113,10 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
             Size = 1,
             Digest = digestOf is null
                 ? string.Empty
-                : "sha256:" + Convert.ToHexString(inArray: SHA256.HashData(source: digestOf)).ToLowerInvariant(),
+                : "sha256:"
+                    + Convert
+                        .ToHexString(inArray: SHA256.HashData(source: digestOf))
+                        .ToLowerInvariant(),
         };
 
     // -------------------------------------------------------------------------
@@ -152,13 +165,15 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         // different branch/asset-name on each — there is no separate per-OS CI leg).
         handler.RegisterReleaseInfo(
             apiUrl: "https://api.github.com/repos/NoMercy-Entertainment/nomercy-media-server/releases/latest",
-            release: ReleaseWithAssets(assets:
-            [
-                MakeAsset(name: "NoMercyApp-windows-x64.exe", url: assetUrl, digestOf: payload),
-                MakeAsset(name: "NoMercyApp-linux-x64", url: assetUrl, digestOf: payload),
-                MakeAsset(name: "NoMercyApp-linux-arm64", url: assetUrl, digestOf: payload),
-                MakeAsset(name: "NoMercyApp-macos-x64.dmg", url: assetUrl, digestOf: payload),
-            ])
+            release: ReleaseWithAssets(
+                assets:
+                [
+                    MakeAsset(name: "NoMercyApp-windows-x64.exe", url: assetUrl, digestOf: payload),
+                    MakeAsset(name: "NoMercyApp-linux-x64", url: assetUrl, digestOf: payload),
+                    MakeAsset(name: "NoMercyApp-linux-arm64", url: assetUrl, digestOf: payload),
+                    MakeAsset(name: "NoMercyApp-macos-x64.dmg", url: assetUrl, digestOf: payload),
+                ]
+            )
         );
 
         Binaries binaries = BuildBinaries(handler: handler);
@@ -166,7 +181,10 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         await binaries.DownloadApp();
 
         Assert.True(condition: File.Exists(path: AppFiles.AppExePath));
-        Assert.Equal(expected: payload, actual: await File.ReadAllBytesAsync(path: AppFiles.AppExePath));
+        Assert.Equal(
+            expected: payload,
+            actual: await File.ReadAllBytesAsync(path: AppFiles.AppExePath)
+        );
     }
 
     [Fact]
@@ -184,7 +202,10 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
             release: ReleaseWithAssets(
                 publishedAt: DateTimeOffset.UtcNow.AddDays(days: -10),
                 tagName: "v1.0.0",
-                assets: MakeAsset(name: "NoMercyApp-windows-x64.exe", url: "https://example.com/should-not-be-fetched")
+                assets: MakeAsset(
+                    name: "NoMercyApp-windows-x64.exe",
+                    url: "https://example.com/should-not-be-fetched"
+                )
             )
         );
 
@@ -193,7 +214,10 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
 
         await binaries.DownloadApp();
 
-        Assert.Equal(expected: originalContent, actual: await File.ReadAllTextAsync(path: AppFiles.AppExePath));
+        Assert.Equal(
+            expected: originalContent,
+            actual: await File.ReadAllTextAsync(path: AppFiles.AppExePath)
+        );
     }
 
     [Fact]
@@ -202,7 +226,10 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         string installDir = Path.Combine(path1: _tempAppPath, path2: "installer-dir");
         Directory.CreateDirectory(path: installDir);
         await File.WriteAllTextAsync(
-            path: Path.Combine(path1: installDir, path2: "NoMercyApp" + NoMercy.NmSystem.Information.Info.ExecSuffix),
+            path: Path.Combine(
+                path1: installDir,
+                path2: "NoMercyApp" + NoMercy.NmSystem.Information.Info.ExecSuffix
+            ),
             contents: "installed-app"
         );
         Environment.SetEnvironmentVariable(variable: "NOMERCY_INSTALL_DIR", value: installDir);
@@ -228,13 +255,23 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         handler.Register(url: assetUrl, body: payload);
         handler.RegisterReleaseInfo(
             apiUrl: "https://api.github.com/repos/NoMercy-Entertainment/nomercy-media-server/releases/latest",
-            release: ReleaseWithAssets(assets:
-            [
-                MakeAsset(name: "NoMercyLauncher-windows-x64.exe", url: assetUrl, digestOf: payload),
-                MakeAsset(name: "NoMercyLauncher-linux-x64", url: assetUrl, digestOf: payload),
-                MakeAsset(name: "NoMercyLauncher-linux-arm64", url: assetUrl, digestOf: payload),
-                MakeAsset(name: "NoMercyLauncher-macos-x64", url: assetUrl, digestOf: payload),
-            ])
+            release: ReleaseWithAssets(
+                assets:
+                [
+                    MakeAsset(
+                        name: "NoMercyLauncher-windows-x64.exe",
+                        url: assetUrl,
+                        digestOf: payload
+                    ),
+                    MakeAsset(name: "NoMercyLauncher-linux-x64", url: assetUrl, digestOf: payload),
+                    MakeAsset(
+                        name: "NoMercyLauncher-linux-arm64",
+                        url: assetUrl,
+                        digestOf: payload
+                    ),
+                    MakeAsset(name: "NoMercyLauncher-macos-x64", url: assetUrl, digestOf: payload),
+                ]
+            )
         );
 
         Binaries binaries = BuildBinaries(handler: handler);
@@ -263,13 +300,15 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         handler.Register(url: assetUrl, body: payload);
         handler.RegisterReleaseInfo(
             apiUrl: "https://api.github.com/repos/NoMercy-Entertainment/nomercy-media-server/releases/latest",
-            release: ReleaseWithAssets(assets:
-            [
-                MakeAsset(name: "nomercy-windows-x64.exe", url: assetUrl, digestOf: payload),
-                MakeAsset(name: "nomercy-linux-x64", url: assetUrl, digestOf: payload),
-                MakeAsset(name: "nomercy-linux-arm64", url: assetUrl, digestOf: payload),
-                MakeAsset(name: "nomercy-macos-x64", url: assetUrl, digestOf: payload),
-            ])
+            release: ReleaseWithAssets(
+                assets:
+                [
+                    MakeAsset(name: "nomercy-windows-x64.exe", url: assetUrl, digestOf: payload),
+                    MakeAsset(name: "nomercy-linux-x64", url: assetUrl, digestOf: payload),
+                    MakeAsset(name: "nomercy-linux-arm64", url: assetUrl, digestOf: payload),
+                    MakeAsset(name: "nomercy-macos-x64", url: assetUrl, digestOf: payload),
+                ]
+            )
         );
 
         Binaries binaries = BuildBinaries(handler: handler);
@@ -284,7 +323,10 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         string installDir = Path.Combine(path1: _tempAppPath, path2: "installer-dir-cli");
         Directory.CreateDirectory(path: installDir);
         await File.WriteAllTextAsync(
-            path: Path.Combine(path1: installDir, path2: "nomercy" + NoMercy.NmSystem.Information.Info.ExecSuffix),
+            path: Path.Combine(
+                path1: installDir,
+                path2: "nomercy" + NoMercy.NmSystem.Information.Info.ExecSuffix
+            ),
             contents: "installed-cli"
         );
         Environment.SetEnvironmentVariable(variable: "NOMERCY_INSTALL_DIR", value: installDir);
@@ -305,7 +347,9 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
     public async Task DownloadYtdlp_ReleaseOldEnough_DownloadsAndVerifiesAgainstUpstreamSums()
     {
         byte[] payload = "yt-dlp-binary"u8.ToArray();
-        string sha256 = Convert.ToHexString(inArray: SHA256.HashData(source: payload)).ToLowerInvariant();
+        string sha256 = Convert
+            .ToHexString(inArray: SHA256.HashData(source: payload))
+            .ToLowerInvariant();
         string assetUrl = "https://example.com/yt-dlp_x86.exe";
         string sumsUrl = "https://example.com/SHA2-256SUMS";
 
@@ -324,7 +368,8 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
 
         GithubReleaseResponse release = ReleaseWithAssets(
             publishedAt: DateTimeOffset.UtcNow.AddDays(days: -30),
-            tagName: "v1.0.0", assets:
+            tagName: "v1.0.0",
+            assets:
             [
                 MakeAsset(name: "yt-dlp_x86.exe", url: assetUrl),
                 MakeAsset(name: "yt-dlp_linux", url: assetUrl),
@@ -365,7 +410,10 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         Binaries binaries = BuildBinaries(handler: handler);
         await binaries.DownloadYtdlp();
 
-        Assert.Equal(expected: "existing-ytdlp", actual: await File.ReadAllTextAsync(path: AppFiles.YtdlpPath));
+        Assert.Equal(
+            expected: "existing-ytdlp",
+            actual: await File.ReadAllTextAsync(path: AppFiles.YtdlpPath)
+        );
     }
 
     [Fact]
@@ -397,7 +445,9 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         // FFmpeg is the one dependency the encoder cannot run without at all — an
         // empty release AND nothing on disk must fail loudly (retried by
         // DegradedModeRecovery), not silently leave the server encoder-less.
-        await Assert.ThrowsAsync<InvalidOperationException>(testCode: () => binaries.DownloadFfmpeg());
+        await Assert.ThrowsAsync<InvalidOperationException>(testCode: () =>
+            binaries.DownloadFfmpeg()
+        );
     }
 
     [Fact]
@@ -411,7 +461,10 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
 
         await binaries.DownloadFfmpeg();
 
-        Assert.Equal(expected: "existing-ffmpeg", actual: await File.ReadAllTextAsync(path: AppFiles.FfmpegPath));
+        Assert.Equal(
+            expected: "existing-ffmpeg",
+            actual: await File.ReadAllTextAsync(path: AppFiles.FfmpegPath)
+        );
     }
 
     [Fact]
@@ -427,14 +480,20 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
             release: ReleaseWithAssets(
                 publishedAt: DateTimeOffset.UtcNow.AddDays(days: -10),
                 tagName: "v1.0.0",
-                assets: MakeAsset(name: "ffmpeg-windows-x64.zip", url: "https://example.com/should-not-fetch")
+                assets: MakeAsset(
+                    name: "ffmpeg-windows-x64.zip",
+                    url: "https://example.com/should-not-fetch"
+                )
             )
         );
 
         Binaries binaries = BuildBinaries(handler: handler);
         await binaries.DownloadFfmpeg();
 
-        Assert.Equal(expected: "existing-ffmpeg", actual: await File.ReadAllTextAsync(path: AppFiles.FfmpegPath));
+        Assert.Equal(
+            expected: "existing-ffmpeg",
+            actual: await File.ReadAllTextAsync(path: AppFiles.FfmpegPath)
+        );
     }
 
     [Fact]
@@ -446,13 +505,21 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         FakeHttpHandler handler = new();
         handler.RegisterReleaseInfo(
             apiUrl: "https://api.github.com/repos/NoMercy-Entertainment/nomercy-ffmpeg/releases/latest",
-            release: ReleaseWithAssets(assets: MakeAsset(name: "ffmpeg-linux-only.tar.gz", url: "https://example.com/linux"))
+            release: ReleaseWithAssets(
+                assets: MakeAsset(
+                    name: "ffmpeg-linux-only.tar.gz",
+                    url: "https://example.com/linux"
+                )
+            )
         );
 
         Binaries binaries = BuildBinaries(handler: handler);
         await binaries.DownloadFfmpeg();
 
-        Assert.Equal(expected: "existing-ffmpeg", actual: await File.ReadAllTextAsync(path: AppFiles.FfmpegPath));
+        Assert.Equal(
+            expected: "existing-ffmpeg",
+            actual: await File.ReadAllTextAsync(path: AppFiles.FfmpegPath)
+        );
     }
 
     [Fact]
@@ -469,11 +536,13 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         // ubuntu-latest CI runner as well as a dev's Windows machine.
         handler.RegisterReleaseInfo(
             apiUrl: "https://api.github.com/repos/NoMercy-Entertainment/nomercy-ffmpeg/releases/latest",
-            release: ReleaseWithAssets(assets:
-            [
-                MakeAsset(name: "ffmpeg-windows-x64.zip", url: assetUrl, digestOf: zipBytes),
-                MakeAsset(name: "ffmpeg-linux-x86_64.zip", url: assetUrl, digestOf: zipBytes),
-            ])
+            release: ReleaseWithAssets(
+                assets:
+                [
+                    MakeAsset(name: "ffmpeg-windows-x64.zip", url: assetUrl, digestOf: zipBytes),
+                    MakeAsset(name: "ffmpeg-linux-x86_64.zip", url: assetUrl, digestOf: zipBytes),
+                ]
+            )
         );
 
         Binaries binaries = BuildBinaries(handler: handler);
@@ -483,8 +552,8 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         Assert.True(condition: File.Exists(path: AppFiles.FfProbePath));
     }
 
-    /// <summary>Builds a minimal real .zip archive containing the three executables
-    /// DownloadFfmpeg's Windows branch expects to find after extraction.</summary>
+    /// <summary>Builds a minimal real .zip archive containing both the Windows and
+    /// Unix executable names DownloadFfmpeg can expect after extraction.</summary>
     private static byte[] BuildFfmpegZip()
     {
         using MemoryStream stream = new();
@@ -496,7 +565,17 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
             )
         )
         {
-            foreach (string name in new[] { "ffmpeg.exe", "ffprobe.exe", "ffplay.exe" })
+            foreach (
+                string name in new[]
+                {
+                    "ffmpeg",
+                    "ffprobe",
+                    "ffplay",
+                    "ffmpeg.exe",
+                    "ffprobe.exe",
+                    "ffplay.exe",
+                }
+            )
             {
                 System.IO.Compression.ZipArchiveEntry entry = archive.CreateEntry(entryName: name);
                 using Stream entryStream = entry.Open();
@@ -567,7 +646,10 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         GithubReleaseResponse release = ReleaseWithAssets(
             publishedAt: DateTimeOffset.UtcNow.AddDays(days: -30),
             tagName: "v1.0.0",
-            assets: MakeAsset(name: "cloudflared-linux-arm64", url: "https://example.com/should-not-fetch")
+            assets: MakeAsset(
+                name: "cloudflared-linux-arm64",
+                url: "https://example.com/should-not-fetch"
+            )
         );
         handler.RegisterReleaseList(
             listUrl: "https://api.github.com/repos/cloudflare/cloudflared/releases?per_page=30",
@@ -606,7 +688,9 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         handler.Register(url: assetUrl, body: payload);
         handler.RegisterReleaseInfo(
             apiUrl: "https://api.github.com/repos/NoMercy-Entertainment/nomercy-whisper-models/releases/latest",
-            release: ReleaseWithAssets(assets: MakeAsset(name: "ggml-large-v3.bin", url: assetUrl, digestOf: payload))
+            release: ReleaseWithAssets(
+                assets: MakeAsset(name: "ggml-large-v3.bin", url: assetUrl, digestOf: payload)
+            )
         );
 
         Binaries binaries = BuildBinaries(handler: handler);
@@ -615,7 +699,10 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         // Single-part downloads land directly at DependenciesPath/{assetName} —
         // ConcatenateModelParts (and its FfmpegFolder destination) only runs when
         // there is more than one part to merge (see the MultiPart test below).
-        string destination = Path.Combine(path1: AppFiles.DependenciesPath, path2: "ggml-large-v3.bin");
+        string destination = Path.Combine(
+            path1: AppFiles.DependenciesPath,
+            path2: "ggml-large-v3.bin"
+        );
         Assert.True(condition: File.Exists(path: destination));
         Assert.Equal(expected: payload, actual: await File.ReadAllBytesAsync(path: destination));
     }
@@ -633,7 +720,12 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         handler.Register(url: url2, body: part2);
         handler.RegisterReleaseInfo(
             apiUrl: "https://api.github.com/repos/NoMercy-Entertainment/nomercy-whisper-models/releases/latest",
-            release: ReleaseWithAssets(assets: [MakeAsset(name: "ggml-large-v3.bin.part1", url: url1, digestOf: part1), MakeAsset(name: "ggml-large-v3.bin.part2", url: url2, digestOf: part2)]
+            release: ReleaseWithAssets(
+                assets:
+                [
+                    MakeAsset(name: "ggml-large-v3.bin.part1", url: url1, digestOf: part1),
+                    MakeAsset(name: "ggml-large-v3.bin.part2", url: url2, digestOf: part2),
+                ]
             )
         );
 
@@ -643,14 +735,27 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         string destination = Path.Combine(path1: AppFiles.FfmpegFolder, path2: "ggml-large-v3.bin");
         Assert.True(condition: File.Exists(path: destination));
         byte[] concatenated = await File.ReadAllBytesAsync(path: destination);
-        Assert.Equal(expected: Encoding.UTF8.GetBytes(s: "PART-ONE-PART-TWO"), actual: concatenated);
+        Assert.Equal(
+            expected: Encoding.UTF8.GetBytes(s: "PART-ONE-PART-TWO"),
+            actual: concatenated
+        );
 
         // Parts must be cleaned up once concatenated into the final model file.
         Assert.False(
-            condition: File.Exists(path: Path.Combine(path1: AppFiles.DependenciesPath, path2: "ggml-large-v3.bin.part1"))
+            condition: File.Exists(
+                path: Path.Combine(
+                    path1: AppFiles.DependenciesPath,
+                    path2: "ggml-large-v3.bin.part1"
+                )
+            )
         );
         Assert.False(
-            condition: File.Exists(path: Path.Combine(path1: AppFiles.DependenciesPath, path2: "ggml-large-v3.bin.part2"))
+            condition: File.Exists(
+                path: Path.Combine(
+                    path1: AppFiles.DependenciesPath,
+                    path2: "ggml-large-v3.bin.part2"
+                )
+            )
         );
     }
 
@@ -660,7 +765,9 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         FakeHttpHandler handler = new();
         handler.RegisterReleaseInfo(
             apiUrl: "https://api.github.com/repos/NoMercy-Entertainment/nomercy-whisper-models/releases/latest",
-            release: ReleaseWithAssets(assets: MakeAsset(name: "unrelated-file.bin", url: "https://example.com/unrelated"))
+            release: ReleaseWithAssets(
+                assets: MakeAsset(name: "unrelated-file.bin", url: "https://example.com/unrelated")
+            )
         );
 
         Binaries binaries = BuildBinaries(handler: handler);
@@ -684,7 +791,9 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         handler.Register(url: engUrl, body: engPayload);
         handler.RegisterReleaseInfo(
             apiUrl: "https://api.github.com/repos/NoMercy-Entertainment/nomercy-tesseract/releases/latest",
-            release: ReleaseWithAssets(assets: MakeAsset(name: "eng.traineddata", url: engUrl, digestOf: engPayload))
+            release: ReleaseWithAssets(
+                assets: MakeAsset(name: "eng.traineddata", url: engUrl, digestOf: engPayload)
+            )
         );
 
         Binaries binaries = BuildBinaries(handler: handler);
@@ -692,8 +801,16 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         // "jpn" has no matching asset in the release — must be skipped, not thrown.
         await binaries.DownloadTesseractData(languages: ["eng", "jpn"]);
 
-        Assert.True(condition: File.Exists(path: Path.Combine(path1: AppFiles.TesseractModelsFolder, path2: "eng.traineddata")));
-        Assert.False(condition: File.Exists(path: Path.Combine(path1: AppFiles.TesseractModelsFolder, path2: "jpn.traineddata")));
+        Assert.True(
+            condition: File.Exists(
+                path: Path.Combine(path1: AppFiles.TesseractModelsFolder, path2: "eng.traineddata")
+            )
+        );
+        Assert.False(
+            condition: File.Exists(
+                path: Path.Combine(path1: AppFiles.TesseractModelsFolder, path2: "jpn.traineddata")
+            )
+        );
     }
 
     [Fact]
@@ -704,7 +821,11 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
 
         await binaries.DownloadTesseractData(languages: ["eng"]);
 
-        Assert.False(condition: File.Exists(path: Path.Combine(path1: AppFiles.TesseractModelsFolder, path2: "eng.traineddata")));
+        Assert.False(
+            condition: File.Exists(
+                path: Path.Combine(path1: AppFiles.TesseractModelsFolder, path2: "eng.traineddata")
+            )
+        );
     }
 
     // -------------------------------------------------------------------------
@@ -717,7 +838,9 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         FakeHttpHandler handler = new();
         Binaries binaries = BuildBinaries(handler: handler);
 
-        bool result = binaries.ExistsInInstalledDirectory(executableName: "definitely-not-a-real-executable.exe");
+        bool result = binaries.ExistsInInstalledDirectory(
+            executableName: "definitely-not-a-real-executable.exe"
+        );
 
         Assert.False(condition: result);
     }
@@ -766,9 +889,16 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
 
         FakeHttpHandler handler = new();
         Binaries binaries = BuildBinaries(handler: handler);
-        GithubReleaseResponse release = ReleaseWithAssets(publishedAt: DateTimeOffset.UtcNow, tagName: "v3.0.0");
+        GithubReleaseResponse release = ReleaseWithAssets(
+            publishedAt: DateTimeOffset.UtcNow,
+            tagName: "v3.0.0"
+        );
 
-        bool result = binaries.CheckLocalVersion(releaseInfo: release, destination: path, version: out string version);
+        bool result = binaries.CheckLocalVersion(
+            releaseInfo: release,
+            destination: path,
+            version: out string version
+        );
 
         Assert.False(condition: result);
         Assert.Equal(expected: "3.0.0", actual: version);
@@ -946,7 +1076,20 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
             apiUrl: "https://api.github.com/repos/NoMercy-Entertainment/nomercy-media-server/releases/latest",
             release: ReleaseWithAssets(
                 publishedAt: publishedAt,
-                tagName: "v1.0.0", assets: [MakeAsset(name: "NoMercyApp-windows-x64.exe", url: "https://example.com/app"), MakeAsset(name: "NoMercyLauncher-windows-x64.exe", url: "https://example.com/launcher"), MakeAsset(name: "nomercy-windows-x64.exe", url: "https://example.com/cli"), MakeAsset(name: "NoMercyMediaServer-windows-x64.exe", url: "https://example.com/server")]
+                tagName: "v1.0.0",
+                assets:
+                [
+                    MakeAsset(name: "NoMercyApp-windows-x64.exe", url: "https://example.com/app"),
+                    MakeAsset(
+                        name: "NoMercyLauncher-windows-x64.exe",
+                        url: "https://example.com/launcher"
+                    ),
+                    MakeAsset(name: "nomercy-windows-x64.exe", url: "https://example.com/cli"),
+                    MakeAsset(
+                        name: "NoMercyMediaServer-windows-x64.exe",
+                        url: "https://example.com/server"
+                    ),
+                ]
             )
         );
         handler.RegisterReleaseInfo(
@@ -975,9 +1118,18 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
 
         await binaries.DownloadAll();
 
-        Assert.Equal(expected: "already-current", actual: await File.ReadAllTextAsync(path: AppFiles.AppExePath));
-        Assert.Equal(expected: "already-current", actual: await File.ReadAllTextAsync(path: AppFiles.LauncherExePath));
-        Assert.Equal(expected: "already-current", actual: await File.ReadAllTextAsync(path: AppFiles.CliExePath));
+        Assert.Equal(
+            expected: "already-current",
+            actual: await File.ReadAllTextAsync(path: AppFiles.AppExePath)
+        );
+        Assert.Equal(
+            expected: "already-current",
+            actual: await File.ReadAllTextAsync(path: AppFiles.LauncherExePath)
+        );
+        Assert.Equal(
+            expected: "already-current",
+            actual: await File.ReadAllTextAsync(path: AppFiles.CliExePath)
+        );
     }
 }
 
@@ -993,15 +1145,23 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
 /// </summary>
 internal sealed class FakeHttpHandler : HttpMessageHandler
 {
-    private readonly Dictionary<string, byte[]> _responses = new(comparer: StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, byte[]> _responses = new(
+        comparer: StringComparer.OrdinalIgnoreCase
+    );
 
     public void Register(string url, byte[] body) => _responses[key: url] = body;
 
     public void RegisterReleaseInfo(string apiUrl, GithubReleaseResponse release) =>
-        Register(url: apiUrl, body: Encoding.UTF8.GetBytes(s: JsonConvert.SerializeObject(value: release)));
+        Register(
+            url: apiUrl,
+            body: Encoding.UTF8.GetBytes(s: JsonConvert.SerializeObject(value: release))
+        );
 
     public void RegisterReleaseList(string listUrl, GithubReleaseResponse[] releases) =>
-        Register(url: listUrl, body: Encoding.UTF8.GetBytes(s: JsonConvert.SerializeObject(value: releases)));
+        Register(
+            url: listUrl,
+            body: Encoding.UTF8.GetBytes(s: JsonConvert.SerializeObject(value: releases))
+        );
 
     protected override Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request,
@@ -1018,6 +1178,8 @@ internal sealed class FakeHttpHandler : HttpMessageHandler
             return Task.FromResult(result: ok);
         }
 
-        return Task.FromResult(result: new HttpResponseMessage(statusCode: HttpStatusCode.NotFound));
+        return Task.FromResult(
+            result: new HttpResponseMessage(statusCode: HttpStatusCode.NotFound)
+        );
     }
 }
