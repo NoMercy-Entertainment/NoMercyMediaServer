@@ -810,6 +810,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
                                 c.Certification.Iso31661 == "US"
                                 || c.Certification.Iso31661 == country
                             )
+                            .OrderBy(c => c.CertificationId)
                             .Take(1)
                     )
                         .ThenInclude(c => c.Certification)
@@ -837,7 +838,13 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
                     .ThenInclude(m => m!.Translations.Where(t => t.Iso6391 == language))
             .Include(special => special.Items)
                 .ThenInclude(item => item.Movie)
-                    .ThenInclude(m => m!.Images.Where(i => i.Type == "logo").Take(1))
+                    .ThenInclude(m =>
+                        m!
+                            .Images.Where(i => i.Type == "logo")
+                            .OrderByDescending(i => i.VoteAverage)
+                            .ThenBy(i => i.Id)
+                            .Take(1)
+                    )
             .Include(special => special.Items)
                 .ThenInclude(item => item.Movie)
                     .ThenInclude(m => m!.VideoFiles.Where(v => v.Folder != null))
@@ -859,6 +866,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
                                 c.Certification.Iso31661 == "US"
                                 || c.Certification.Iso31661 == country
                             )
+                            .OrderBy(c => c.CertificationId)
                             .Take(1)
                     )
                         .ThenInclude(c => c.Certification)
@@ -870,7 +878,13 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
                     .ThenInclude(e => e!.Translations.Where(t => t.Iso6391 == language))
             .Include(special => special.Items)
                 .ThenInclude(item => item.Episode)
-                    .ThenInclude(e => e!.Images.Where(i => i.Type == "logo").Take(1))
+                    .ThenInclude(e =>
+                        e!
+                            .Images.Where(i => i.Type == "logo")
+                            .OrderByDescending(i => i.VoteAverage)
+                            .ThenBy(i => i.Id)
+                            .Take(1)
+                    )
             .Include(special => special.Items)
                 .ThenInclude(item => item.Episode)
                     .ThenInclude(e => e!.VideoFiles.Where(v => v.Folder != null))
@@ -886,7 +900,12 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
             .Include(special => special.Items)
                 .ThenInclude(item => item.Episode)
                     .ThenInclude(e => e!.Tv)
-                        .ThenInclude(tv => tv.Images.Where(i => i.Type == "logo").Take(1))
+                        .ThenInclude(tv =>
+                            tv.Images.Where(i => i.Type == "logo")
+                                .OrderByDescending(i => i.VoteAverage)
+                                .ThenBy(i => i.Id)
+                                .Take(1)
+                        )
             .Include(special => special.Items)
                 .ThenInclude(item => item.Episode)
                     .ThenInclude(e => e!.Tv)
@@ -899,6 +918,7 @@ public class SpecialRepository(MediaContext context, IDbContextFactory<MediaCont
                                     c.Certification.Iso31661 == "US"
                                     || c.Certification.Iso31661 == country
                                 )
+                                .OrderBy(c => c.CertificationId)
                                 .Take(1)
                         )
                             .ThenInclude(c => c.Certification)

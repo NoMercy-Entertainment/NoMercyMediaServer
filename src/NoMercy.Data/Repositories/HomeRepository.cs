@@ -299,6 +299,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
                         .CertificationMovies.Where(c =>
                             c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country
                         )
+                        .OrderBy(c => c.CertificationId)
                         .Take(1)
                 )
                     .ThenInclude(c => c.Certification)
@@ -320,6 +321,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
                         .CertificationTvs.Where(c =>
                             c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country
                         )
+                        .OrderBy(c => c.CertificationId)
                         .Take(1)
                 )
                     .ThenInclude(c => c.Certification)
@@ -344,6 +346,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
                                     cert.Certification.Iso31661 == "US"
                                     || cert.Certification.Iso31661 == country
                                 )
+                                .OrderBy(cert => cert.CertificationId)
                                 .Take(1)
                         )
                             .ThenInclude(c => c.Certification)
@@ -361,6 +364,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
                                     c.Certification.Iso31661 == "US"
                                     || c.Certification.Iso31661 == country
                                 )
+                                .OrderBy(c => c.CertificationId)
                                 .Take(1)
                         )
                             .ThenInclude(c => c.Certification)
@@ -377,6 +381,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
                                         c.Certification.Iso31661 == "US"
                                         || c.Certification.Iso31661 == country
                                     )
+                                    .OrderBy(c => c.CertificationId)
                                     .Take(1)
                             )
                                 .ThenInclude(c => c.Certification)
@@ -420,6 +425,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
                     .CertificationMovies.Where(c =>
                         c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country
                     )
+                    .OrderBy(c => c.CertificationId)
                     .Take(1)
             )
                 .ThenInclude(c => c.Certification)
@@ -441,6 +447,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
                 tv.CertificationTvs.Where(c =>
                         c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country
                     )
+                    .OrderBy(c => c.CertificationId)
                     .Take(1)
             )
                 .ThenInclude(c => c.Certification)
@@ -453,6 +460,8 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
             .Include(collection =>
                 collection
                     .Images.Where(image => image.Type == "logo" && image.Iso6391 == "en")
+                    .OrderByDescending(image => image.VoteAverage)
+                    .ThenBy(image => image.Id)
                     .Take(1)
             )
             .Include(collection => collection.CollectionMovies)
@@ -466,6 +475,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
                                 c.Certification.Iso31661 == "US"
                                 || c.Certification.Iso31661 == country
                             )
+                            .OrderBy(c => c.CertificationId)
                             .Take(1)
                     )
                         .ThenInclude(c => c.Certification)
@@ -486,6 +496,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
                                 c.Certification.Iso31661 == "US"
                                 || c.Certification.Iso31661 == country
                             )
+                            .OrderBy(c => c.CertificationId)
                             .Take(1)
                     )
                         .ThenInclude(c => c.Certification)

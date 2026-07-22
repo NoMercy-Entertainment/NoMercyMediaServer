@@ -651,6 +651,7 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory) :
                     .CertificationMovies.Where(c =>
                         c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country
                     )
+                    .OrderBy(c => c.CertificationId)
                     .Take(1)
             )
                 .ThenInclude(c => c.Certification)
@@ -729,6 +730,7 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory) :
                 tv.CertificationTvs.Where(c =>
                         c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country
                     )
+                    .OrderBy(c => c.CertificationId)
                     .Take(1)
             )
                 .ThenInclude(c => c.Certification)
