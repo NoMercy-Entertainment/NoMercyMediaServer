@@ -665,7 +665,7 @@ public partial class MusicLogic : IAsyncDisposable
                     .Replace("\\" + mediaFile.Name, "")
                 ?? string.Empty;
 
-            insert.Filename = "/" + StoragePathHelpers.GetName(file);
+            insert.Filename = "/" + StoragePathHelpers.GetName(file.Replace('\\', '/'));
             insert.Quality = (int)Math.Floor(ffProbeData.Format.BitRate / 1000.0);
             insert.Duration = HmsRegex().Replace(ffProbeData.Duration.ToString(@"hh\:mm\:ss"), "");
 

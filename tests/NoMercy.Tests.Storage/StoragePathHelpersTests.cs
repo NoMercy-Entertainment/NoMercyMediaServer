@@ -42,6 +42,21 @@ public class StoragePathHelpersTests
         StoragePathHelpers.GetName(input!).Should().Be(string.Empty);
     }
 
+    [Fact]
+    public void GetName_BackslashOnlyPath_RequiresCallerToNormalizeFirst()
+    {
+        // Rule 2: GetName splits on '/' only, by design. A raw UNC/Windows
+        // path handed in without normalizing separators first returns the
+        // whole string unchanged instead of the trailing segment — this is
+        // exactly what let Track.Filename get stored as
+        // "/\\192.168.2.120\mnt\vault\Media\...\track.mp3" instead of
+        // "/track.mp3" (RecordingManager.Store, MusicLogic.StoreTrack) before
+        // those call sites normalized backslashes to '/' first.
+        string uncPath = "\\\\192.168.2.120\\mnt\\vault\\Media\\track.mp3";
+        StoragePathHelpers.GetName(uncPath).Should().Be(uncPath);
+        StoragePathHelpers.GetName(uncPath.Replace('\\', '/')).Should().Be("track.mp3");
+    }
+
     // ── GetParent ──────────────────────────────────────────────────────────
 
     [Theory]
