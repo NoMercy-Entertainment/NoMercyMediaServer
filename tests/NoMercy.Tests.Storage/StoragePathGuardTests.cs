@@ -18,7 +18,7 @@ public class StoragePathGuardTests
     private static Mock<IStorageDriver> NewBackend()
     {
         Mock<IStorageDriver> m = new(MockBehavior.Strict);
-        m.Setup(b => b.GetFullPath(It.IsAny<string>())).Returns<string>(p => Path.GetFullPath(p));
+        m.Setup(b => b.GetFullPath(It.IsAny<string>())).Returns<string>(Path.GetFullPath);
         m.Setup(b => b.ResolveLinkTarget(It.IsAny<string>())).Returns((string?)null);
         return m;
     }

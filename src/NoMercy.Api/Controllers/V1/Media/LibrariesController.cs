@@ -63,7 +63,7 @@ public class LibrariesController(
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
             return await new LibraryRepository(contextFactory).GetLibrariesLite(userId, ct);
-        });
+        }, ct);
         Task<Dictionary<Ulid, int>> countsTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
@@ -71,7 +71,7 @@ public class LibrariesController(
                 userId,
                 ct
             );
-        });
+        }, ct);
         Task<List<CollectionListDto>> collectionsTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
@@ -83,7 +83,7 @@ public class LibrariesController(
                 0,
                 ct
             );
-        });
+        }, ct);
         Task<List<SpecialCardDto>> specialsTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
@@ -95,7 +95,7 @@ public class LibrariesController(
                 0,
                 ct
             );
-        });
+        }, ct);
         Task<HomeTvCardDto?> randomTvTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
@@ -105,7 +105,7 @@ public class LibrariesController(
                 country,
                 ct
             );
-        });
+        }, ct);
         Task<HomeMovieCardDto?> randomMovieTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
@@ -115,7 +115,7 @@ public class LibrariesController(
                 country,
                 ct
             );
-        });
+        }, ct);
         Task<FavoritesData> favoritesTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
@@ -125,7 +125,7 @@ public class LibrariesController(
                 country,
                 ct
             );
-        });
+        }, ct);
         Task<List<UserPlaylistSummary>> myListsTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
@@ -133,7 +133,7 @@ public class LibrariesController(
                 userId,
                 ct
             );
-        });
+        }, ct);
 
         await Task.WhenAll(
             librariesTask,

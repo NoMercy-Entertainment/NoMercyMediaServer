@@ -11,12 +11,13 @@
 
 using System;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 
-namespace NoMercy.Storage.Analyzers;
+namespace NoMercy.Analyzers;
 
 /// <summary>
 /// NMS001 — flags <c>System.IO.Path.Combine</c> calls in files that reference
@@ -25,6 +26,7 @@ namespace NoMercy.Storage.Analyzers;
 /// operate against the OS filesystem.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
+[SuppressMessage(category: "MicrosoftCodeAnalysisCorrectness", checkId: "RS1038")]
 public sealed class PathCombineAnalyzer : DiagnosticAnalyzer
 {
     public const string DiagnosticId = "NMS001";
@@ -60,7 +62,13 @@ public sealed class PathCombineAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        if (!string.Equals(invokedName.Identifier.Text, "Combine", StringComparison.Ordinal))
+        if (
+            !string.Equals(
+                a: invokedName.Identifier.Text,
+                b: "Combine",
+                comparisonType: StringComparison.Ordinal
+            )
+        )
         {
             return;
         }

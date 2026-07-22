@@ -350,7 +350,7 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
         string message = entry.Message;
 
         // Strip surrounding quotes from double-serialization
-        if (message.Length >= 2 && message[0] == '"' && message[^1] == '"')
+        if (message is ['"', _, ..] && message[^1] == '"')
         {
             message = message[1..^1];
         }

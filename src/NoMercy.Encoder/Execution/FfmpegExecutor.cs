@@ -65,7 +65,7 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
                 return;
 
             // Collect metrics on every snapshot (not throttled)
-            if (!snapshot.IsEnd && snapshot.Speed > 0)
+            if (snapshot is { IsEnd: false, Speed: > 0 })
             {
                 speedSum += snapshot.Speed;
                 fpsSum += snapshot.Fps;

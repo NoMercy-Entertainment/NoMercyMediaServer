@@ -518,7 +518,7 @@ public static class ProfileRuleValidator
 
         foreach (
             SubtitleOutput subtitle in (profile.Subtitles ?? []).Where(s =>
-                s.Codec == SubtitleCodecType.Ass && s.Policy == SubtitlePolicy.Extract
+                s is { Codec: SubtitleCodecType.Ass, Policy: SubtitlePolicy.Extract }
             )
         )
         {

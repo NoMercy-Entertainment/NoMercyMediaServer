@@ -300,7 +300,7 @@ public class FileListService(
         // filename-derived value so the absolute-index fallback stays available.
         int? folderSeason = directoryName.TryGetFolderSeason();
 
-        if (!airDate.HasValue && parsed.Episode.HasValue && !parsed.Season.HasValue)
+        if (!airDate.HasValue && parsed is { Episode: not null, Season: null })
             parsed.Season = folderSeason ?? 1;
 
         if (!airDate.HasValue && !parsed.Season.HasValue && !parsed.Episode.HasValue)
@@ -442,7 +442,7 @@ public class FileListService(
         // filename-derived value so the absolute-index fallback stays available.
         int? folderSeason = file.DirectoryName.TryGetFolderSeason();
 
-        if (!airDate.HasValue && parsed.Episode.HasValue && !parsed.Season.HasValue)
+        if (!airDate.HasValue && parsed is { Episode: not null, Season: null })
             parsed.Season = folderSeason ?? 1;
 
         if (!airDate.HasValue && !parsed.Season.HasValue && !parsed.Episode.HasValue)
@@ -515,7 +515,7 @@ public class FileListService(
         cleaned = StringExtensions.RemoveParenthesizedString().Replace(cleaned, string.Empty);
 
         Match seasonTag = StringExtensions.MatchSeasonTag().Match(cleaned);
-        if (seasonTag.Success && seasonTag.Index > 0)
+        if (seasonTag is { Success: true, Index: > 0 })
             cleaned = cleaned[..seasonTag.Index];
 
         string folderTitle = cleaned

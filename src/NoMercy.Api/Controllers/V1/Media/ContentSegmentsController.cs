@@ -89,7 +89,7 @@ public class ContentSegmentsController(IContentSegmentRepository repository) : B
         if (!request.EpisodeId.HasValue && !request.MovieId.HasValue)
             return BadRequestResponse("Either episode_id or movie_id must be set");
 
-        if (request.EpisodeId.HasValue && request.MovieId.HasValue)
+        if (request is { EpisodeId: not null, MovieId: not null })
             return BadRequestResponse("Provide exactly one of episode_id / movie_id, not both");
 
         ContentSegment segment = new()

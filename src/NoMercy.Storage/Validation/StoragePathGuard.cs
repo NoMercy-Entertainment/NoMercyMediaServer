@@ -105,7 +105,7 @@ public sealed partial class StoragePathGuard
                 "absolute paths are not allowed as scope-relative keys"
             );
 
-        if (path.Length >= 2 && path[1] == ':' && char.IsLetter(path[0]))
+        if (path is [_, ':', ..] && char.IsLetter(path[0]))
             throw new StoragePathNotAllowedException(
                 path,
                 "absolute paths are not allowed as scope-relative keys"

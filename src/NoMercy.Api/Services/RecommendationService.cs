@@ -163,10 +163,9 @@ public class RecommendationService
 
             bool isHighSignal =
                 src.IsFavorited
-                || (src.Rating.HasValue && src.Rating.Value >= 6)
+                || src.Rating is >= 6
                 || (
-                    src.TimeWatched is > 0
-                    && src.Duration is > 0
+                    src is { TimeWatched: > 0, Duration: > 0 }
                     && (double)src.TimeWatched / src.Duration.Value > 0.5
                 );
             if (!isHighSignal)
@@ -669,7 +668,7 @@ public class RecommendationService
             .Select(id =>
             {
                 UserAffinitySourceDto src = profile.SourceItems[id];
-                if (src.TimeWatched is > 0 && src.Duration is > 0)
+                if (src is { TimeWatched: > 0, Duration: > 0 })
                     return Math.Min((double)src.TimeWatched / src.Duration.Value, 1.0);
                 return 0.0;
             })
@@ -858,8 +857,7 @@ public class RecommendationService
             if (src.Rating.HasValue)
                 weight += (src.Rating.Value - 5) / 5.0;
             if (
-                src.TimeWatched is > 0
-                && src.Duration is > 0
+                src is { TimeWatched: > 0, Duration: > 0 }
                 && (double)src.TimeWatched / src.Duration.Value > 0.8
             )
                 weight += 0.5;

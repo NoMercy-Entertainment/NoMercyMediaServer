@@ -12,20 +12,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!--
-      Ship the analyzer alongside the library so every project that references
-      NoMercy.Storage gets NMS001/NMS002 automatically, with no per-project wiring.
-      OutputItemType="Analyzer" + ReferenceOutputAssembly="false" is the standard
-      "analyzer-as-companion" pattern from the Roslyn docs.
-    -->
-    <ProjectReference
-      Include="$(MSBuildThisFileDirectory)..\NoMercy.Storage.Analyzers\NoMercy.Storage.Analyzers.csproj"
-      OutputItemType="Analyzer"
-      ReferenceOutputAssembly="false"
-    />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="AWSSDK.S3" />
     <PackageReference Include="WebDav.Client" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />

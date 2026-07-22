@@ -145,7 +145,7 @@ public class WebhookNotificationDispatcherTests
         // Good URL gets at least one request even though bad URL is failing.
         Assert.Contains(
             handler.Requests,
-            r => r.url == "https://good.example/hook" && r.statusCode == HttpStatusCode.OK
+            r => r is { url: "https://good.example/hook", statusCode: HttpStatusCode.OK }
         );
     }
 

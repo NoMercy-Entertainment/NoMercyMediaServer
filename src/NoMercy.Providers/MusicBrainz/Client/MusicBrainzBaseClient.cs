@@ -29,19 +29,7 @@ public class MusicBrainzBaseClient : ExternalApiClient
     protected override Uri BaseUrl => new("https://musicbrainz.org/ws/2/");
 
     // MusicBrainz asks clients to stay at roughly one request per second.
-    protected override int RequestIntervalMs => 1100;
-
-    // MusicBrainz rejects anonymous user-agents with a 403. The factory-
-    // registered UA only takes effect once HttpClientProvider is initialized;
-    // early seed callers fall back to a bare client, so set it defensively.
-    protected override void ConfigureClient(HttpClient client)
-    {
-        if (client.DefaultRequestHeaders.UserAgent.Count == 0)
-            client.DefaultRequestHeaders.TryAddWithoutValidation(
-                "User-Agent",
-                ExternalServicesConfig.Current.UserAgent
-            );
-    }
+    protected override int RequestIntervalMs => 1500;
 
     protected override void LogRequest(string url) =>
         Logger.MusicBrainz(url, LogEventLevel.Verbose);

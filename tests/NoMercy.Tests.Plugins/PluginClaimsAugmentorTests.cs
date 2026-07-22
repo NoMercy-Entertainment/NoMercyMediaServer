@@ -29,7 +29,7 @@ public class PluginClaimsAugmentorTests
 
         IReadOnlyList<Claim> claims = await augmentor.CollectAdditionalClaimsAsync("tok", default);
 
-        Assert.Contains(claims, c => c.Type == "plan" && c.Value == "pro");
+        Assert.Contains(claims, c => c is { Type: "plan", Value: "pro" });
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public class PluginClaimsAugmentorTests
         IReadOnlyList<Claim> claims = await augmentor.CollectAdditionalClaimsAsync("tok", default);
 
         Assert.Single(claims);
-        Assert.Contains(claims, c => c.Type == "plan" && c.Value == "pro");
+        Assert.Contains(claims, c => c is { Type: "plan", Value: "pro" });
         Assert.DoesNotContain(claims, c => c.Type == ClaimTypes.Role);
         Assert.DoesNotContain(claims, c => c.Type == "sub");
     }

@@ -224,7 +224,7 @@ public partial class HlsOnDiskPlanReconstructor(
         // run) — correctly contributes nothing to the master.
         foreach (
             BlueprintTrack track in blueprintTracks.Where(track =>
-                track.Kind == "audio" && track.Files.Count > 0
+                track is { Kind: "audio", Files.Count: > 0 }
             )
         )
         {

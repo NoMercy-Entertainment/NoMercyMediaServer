@@ -154,14 +154,11 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
         {
             // Reject if the collection is non-empty.
             PropfindResponse listing = _client
-                .Propfind(
-                    uri,
-                    new() { ApplyTo = ApplyTo.Propfind.ResourceAndChildren }
-                )
+                .Propfind(uri, new() { ApplyTo = ApplyTo.Propfind.ResourceAndChildren })
                 .GetAwaiter()
                 .GetResult();
 
-            if (listing.IsSuccessful && listing.Resources.Count > 1)
+            if (listing is { IsSuccessful: true, Resources.Count: > 1 })
                 throw new IOException(
                     $"Cannot delete non-empty directory '{path}' with recursive=false."
                 );
@@ -294,10 +291,7 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
     {
         string uri = ToCollectionUri(directory);
         PropfindResponse response = _client
-            .Propfind(
-                uri,
-                new() { ApplyTo = ApplyTo.Propfind.ResourceAndChildren }
-            )
+            .Propfind(uri, new() { ApplyTo = ApplyTo.Propfind.ResourceAndChildren })
             .GetAwaiter()
             .GetResult();
 
@@ -314,11 +308,16 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
         // Resources[0] is the directory itself — skip it.
         foreach (WebDavResource resource in response.Resources.Skip(1))
         {
-            string entryName = ExtractName(resource.Uri);
+            string resourceUri =
+                resource.Uri
+                ?? throw new IOException(
+                    $"WebDAV PROPFIND '{uri}' returned a resource with no URI."
+                );
+            string entryName = ExtractName(resourceUri);
 
             if (resource.IsCollection)
             {
-                string relPath = MakeRelative(resource.Uri).TrimEnd('/');
+                string relPath = MakeRelative(resourceUri).TrimEnd('/');
                 if (StoragePatternMatcher.Matches(entryName, searchPattern))
                     yield return new(
                         relPath,
@@ -344,7 +343,7 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
             {
                 if (StoragePatternMatcher.Matches(entryName, searchPattern))
                     yield return new(
-                        MakeRelative(resource.Uri),
+                        MakeRelative(resourceUri),
                         IsDirectory: false,
                         Size: resource.ContentLength ?? 0L,
                         LastWriteUtc: resource.LastModifiedDate?.ToUniversalTime()
@@ -468,10 +467,7 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
     {
         string uri = ToCollectionUri(directory);
         PropfindResponse response = _client
-            .Propfind(
-                uri,
-                new() { ApplyTo = ApplyTo.Propfind.ResourceAndChildren }
-            )
+            .Propfind(uri, new() { ApplyTo = ApplyTo.Propfind.ResourceAndChildren })
             .GetAwaiter()
             .GetResult();
 
@@ -498,12 +494,17 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
         // Resources[0] is the directory itself — skip it.
         foreach (WebDavResource resource in response.Resources.Skip(1))
         {
-            string entryName = ExtractName(resource.Uri);
+            string resourceUri =
+                resource.Uri
+                ?? throw new IOException(
+                    $"WebDAV PROPFIND '{uri}' returned a resource with no URI."
+                );
+            string entryName = ExtractName(resourceUri);
 
             if (resource.IsCollection)
             {
                 // Strip trailing slash so consumers get a consistent basename via LastIndexOf('/').
-                string relPath = MakeRelative(resource.Uri).TrimEnd('/');
+                string relPath = MakeRelative(resourceUri).TrimEnd('/');
                 if (StoragePatternMatcher.Matches(entryName, searchPattern))
                     yield return relPath;
 
@@ -516,7 +517,7 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
             else
             {
                 if (StoragePatternMatcher.Matches(entryName, searchPattern))
-                    yield return MakeRelative(resource.Uri);
+                    yield return MakeRelative(resourceUri);
             }
         }
     }

@@ -183,7 +183,7 @@ public class LibraryFileWatcher
             fileChangeGroup.FullPath = e.FullPath;
             fileChangeGroup.ChangeType = e.ChangeType;
 
-            if (e.ChangeType == WatcherChangeTypes.Renamed && e.OldFullPath is not null)
+            if (e is { ChangeType: WatcherChangeTypes.Renamed, OldFullPath: not null })
                 fileChangeGroup.OldFullPath = e.OldFullPath;
 
             fileChangeGroup.Timer?.Dispose();

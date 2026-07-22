@@ -140,8 +140,19 @@ public static class DisplayWidth
                     currentWidth = 0;
                 }
 
-                foreach (string piece in HardSplit(word, width))
-                    lines.Add(piece);
+                // Hard-splitting a URL inserts a gutter/newline mid-string, which
+                // breaks terminal hyperlink auto-detection and corrupts copy-paste.
+                // Let it overflow the column as one unbroken line instead — the
+                // terminal soft-wraps it visually without touching the real text.
+                if (LooksLikeUrl(word))
+                {
+                    lines.Add(word);
+                }
+                else
+                {
+                    foreach (string piece in HardSplit(word, width))
+                        lines.Add(piece);
+                }
                 continue;
             }
 
@@ -168,6 +179,10 @@ public static class DisplayWidth
 
         return lines;
     }
+
+    private static bool LooksLikeUrl(string word) =>
+        word.StartsWith("http://", StringComparison.Ordinal)
+        || word.StartsWith("https://", StringComparison.Ordinal);
 
     private static IEnumerable<string> HardSplit(string word, int width)
     {
@@ -231,7 +246,7 @@ public static class DisplayWidth
         int value = rune.Value;
         if (value == 0)
             return 0;
-        if (value < 0x20 || (value >= 0x7f && value < 0xa0))
+        if (value < 0x20 || value is >= 0x7f and < 0xa0)
             return 0;
 
         UnicodeCategory category = Rune.GetUnicodeCategory(rune);
@@ -247,31 +262,31 @@ public static class DisplayWidth
 
     private static bool IsWide(int value)
     {
-        return (value >= 0x1100 && value <= 0x115f)
+        return value is >= 0x1100 and <= 0x115f
             || value == 0x2329
             || value == 0x232a
-            || (value >= 0x2e80 && value <= 0x303e)
-            || (value >= 0x3041 && value <= 0x33ff)
-            || (value >= 0x3400 && value <= 0x4dbf)
-            || (value >= 0x4e00 && value <= 0x9fff)
-            || (value >= 0xa000 && value <= 0xa4cf)
-            || (value >= 0xa960 && value <= 0xa97f)
-            || (value >= 0xac00 && value <= 0xd7a3)
-            || (value >= 0xf900 && value <= 0xfaff)
-            || (value >= 0xfe10 && value <= 0xfe19)
-            || (value >= 0xfe30 && value <= 0xfe6f)
-            || (value >= 0xff00 && value <= 0xff60)
-            || (value >= 0xffe0 && value <= 0xffe6)
-            || (value >= 0x1b000 && value <= 0x1b16f)
-            || (value >= 0x1f004 && value <= 0x1f004)
-            || (value >= 0x1f0cf && value <= 0x1f0cf)
-            || (value >= 0x1f18e && value <= 0x1f18e)
-            || (value >= 0x1f191 && value <= 0x1f19a)
-            || (value >= 0x1f200 && value <= 0x1f251)
-            || (value >= 0x1f300 && value <= 0x1f64f)
-            || (value >= 0x1f680 && value <= 0x1f6ff)
-            || (value >= 0x1f900 && value <= 0x1f9ff)
-            || (value >= 0x1fa70 && value <= 0x1faff)
-            || (value >= 0x20000 && value <= 0x3fffd);
+            || value is >= 0x2e80 and <= 0x303e
+            || value is >= 0x3041 and <= 0x33ff
+            || value is >= 0x3400 and <= 0x4dbf
+            || value is >= 0x4e00 and <= 0x9fff
+            || value is >= 0xa000 and <= 0xa4cf
+            || value is >= 0xa960 and <= 0xa97f
+            || value is >= 0xac00 and <= 0xd7a3
+            || value is >= 0xf900 and <= 0xfaff
+            || value is >= 0xfe10 and <= 0xfe19
+            || value is >= 0xfe30 and <= 0xfe6f
+            || value is >= 0xff00 and <= 0xff60
+            || value is >= 0xffe0 and <= 0xffe6
+            || value is >= 0x1b000 and <= 0x1b16f
+            || value is >= 0x1f004 and <= 0x1f004
+            || value is >= 0x1f0cf and <= 0x1f0cf
+            || value is >= 0x1f18e and <= 0x1f18e
+            || value is >= 0x1f191 and <= 0x1f19a
+            || value is >= 0x1f200 and <= 0x1f251
+            || value is >= 0x1f300 and <= 0x1f64f
+            || value is >= 0x1f680 and <= 0x1f6ff
+            || value is >= 0x1f900 and <= 0x1f9ff
+            || value is >= 0x1fa70 and <= 0x1faff
+            || value is >= 0x20000 and <= 0x3fffd;
     }
 }

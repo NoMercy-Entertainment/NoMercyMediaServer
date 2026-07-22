@@ -1126,8 +1126,7 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
                 StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
             );
             if (
-                parts.Length >= 2
-                && parts[0].Length == 6
+                parts is [{ Length: 6 }, _, ..]
                 && parts[0].All(c => c is 'V' or 'A' or 'S' or 'F' or 'X' or 'B' or 'D' or '.')
             )
                 encoders.Add(parts[1]);

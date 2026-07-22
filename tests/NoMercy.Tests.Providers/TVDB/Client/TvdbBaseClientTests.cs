@@ -76,9 +76,7 @@ public class TvdbBaseClientTests
                     continue;
 
                 if (
-                    method.Name == "get_Result"
-                    && method.DeclaringType is not null
-                    && method.DeclaringType.FullName is not null
+                    method is { Name: "get_Result", DeclaringType.FullName: not null }
                     && method.DeclaringType.FullName.Contains("Task")
                 )
                 {
@@ -168,9 +166,7 @@ public class TvdbBaseClientTests
                     continue;
 
                 if (
-                    method.Name == "GetResult"
-                    && method.DeclaringType is not null
-                    && method.DeclaringType.FullName is not null
+                    method is { Name: "GetResult", DeclaringType.FullName: not null }
                     && method.DeclaringType.FullName.Contains("TaskAwaiter")
                 )
                 {

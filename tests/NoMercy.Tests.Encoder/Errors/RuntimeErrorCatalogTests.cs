@@ -29,13 +29,13 @@ public class RuntimeErrorCatalogTests
 {
     private static readonly string[] RuntimeErrorIds = typeof(EncoderRuntimeErrorId)
         .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-        .Where(f => f.IsLiteral && !f.IsInitOnly)
+        .Where(f => f is { IsLiteral: true, IsInitOnly: false })
         .Select(f => (string)f.GetValue(null)!)
         .ToArray();
 
     private static readonly string[] AllRuleIds = typeof(EncoderRuleId)
         .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-        .Where(f => f.IsLiteral && !f.IsInitOnly)
+        .Where(f => f is { IsLiteral: true, IsInitOnly: false })
         .Select(f => (string)f.GetValue(null)!)
         .ToArray();
 

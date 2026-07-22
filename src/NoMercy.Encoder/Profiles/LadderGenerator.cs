@@ -159,7 +159,7 @@ public class LadderGenerator : ILadderGenerator
             t.Width == source.Width && t.Height == source.Height
         );
 
-        if (!sourceMatchesTable && source.Width > 0 && source.Height > 0)
+        if (!sourceMatchesTable && source is { Width: > 0, Height: > 0 })
         {
             int nativeBitrate = InterpolateNativeBitrate(reference.Codec, source);
             candidates.Insert(

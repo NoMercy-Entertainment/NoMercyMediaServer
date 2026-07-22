@@ -176,7 +176,7 @@ public class InstallerUpdater(ServerConnection serverConnection)
             await fileStream.WriteAsync(buffer.AsMemory(0, read), ct);
             bytesRead += read;
 
-            if (progress is not null && total.HasValue && total.Value > 0)
+            if (progress is not null && total is > 0)
                 progress.Report((double)bytesRead / total.Value);
         }
 

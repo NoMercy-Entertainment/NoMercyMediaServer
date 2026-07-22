@@ -101,7 +101,7 @@ public class MusixMatchMusixMatchTrack
     public long ArtistId { get; set; }
 
     [JsonProperty("artist_mbid")]
-    public Guid ArtistMbid { get; set; }
+    public Guid? ArtistMbid { get; set; }
 
     [JsonProperty("artist_name")]
     public string ArtistName { get; set; } = string.Empty;

@@ -681,7 +681,7 @@ public class MusicPlaybackService
         if (state.Playlist.Count > 0)
             return state.Playlist.First();
 
-        if (state.Repeat == "all" && state.Backlog.Count > 0)
+        if (state is { Repeat: "all", Backlog.Count: > 0 })
             return state.Backlog.First(); // Will loop around
 
         return null; // No next track (playback will stop)

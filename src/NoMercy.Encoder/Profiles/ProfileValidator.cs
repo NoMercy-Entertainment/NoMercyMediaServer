@@ -277,8 +277,7 @@ public static class ProfileValidator
 
         // Rule 5 — ExactMatchOnly + TitleOnly: warn, never embed
         if (
-            acq.EmbedPolicy == SubtitleEmbedPolicy.ExactMatchOnly
-            && acq.Strategy == SubtitleMatchStrategy.TitleOnly
+            acq is { EmbedPolicy: SubtitleEmbedPolicy.ExactMatchOnly, Strategy: SubtitleMatchStrategy.TitleOnly }
         )
             warnings.Add(
                 "TitleOnly + ExactMatchOnly will never embed; titles can't satisfy exact-match. Acquisition will run sidecar-only."

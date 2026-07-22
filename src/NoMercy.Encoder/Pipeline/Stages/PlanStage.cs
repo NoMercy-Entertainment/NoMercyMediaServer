@@ -829,7 +829,7 @@ public class PlanStage(
                             // fight the quality target), so the bitrate must NOT reach the
                             // output plan as a target bitrate.
                             int outputBitrateKbps = v.BitrateKbps;
-                            if (v.Crf > 0 && v.BitrateKbps > 0)
+                            if (v is { Crf: > 0, BitrateKbps: > 0 })
                             {
                                 int bufKbps = v.BitrateKbps * 2;
                                 extraFlags["-maxrate"] = $"{v.BitrateKbps}k";
@@ -840,7 +840,7 @@ public class PlanStage(
                             // HDR→HDR passthrough: preserve color metadata when source is HDR
                             // and the output keeps 10-bit without tonemapping.
                             bool preservesHdr =
-                                sourceIsHdr && v.BitDepth >= 10 && !v.ConvertHdrToSdr;
+                                sourceIsHdr && v is { BitDepth: >= 10, ConvertHdrToSdr: false };
                             if (preservesHdr)
                             {
                                 VideoStreamInfo src = media.VideoStreams[0];
@@ -1057,7 +1057,7 @@ public class PlanStage(
         );
 
         // Merge DV container flags into the first video output's ExtraFlags.
-        if (dvDecision.Preserved && dvDecision.ExtraFlags.Count > 0 && videoPlan.Length > 0)
+        if (dvDecision is { Preserved: true, ExtraFlags.Count: > 0 } && videoPlan.Length > 0)
         {
             foreach ((string key, string value) in dvDecision.ExtraFlags)
                 videoPlan[0].ExtraFlags[key] = value;

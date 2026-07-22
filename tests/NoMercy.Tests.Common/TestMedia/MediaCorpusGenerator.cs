@@ -113,7 +113,7 @@ public static class MediaCorpusGenerator
                 _ => throw new ArgumentOutOfRangeException(nameof(entry)),
             }
         );
-        if (entry.Hdr && entry.VideoCodec == MediaVideoCodec.H265)
+        if (entry is { Hdr: true, VideoCodec: MediaVideoCodec.H265 })
             args.AddRange([
                 "-x265-params",
                 "hdr10=1:colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc",

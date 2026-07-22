@@ -197,7 +197,7 @@ public class ProfileRuleCompletenessTests
     {
         IEnumerable<string> allRuleIds = typeof(EncoderRuleId)
             .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-            .Where(f => f.IsLiteral && !f.IsInitOnly)
+            .Where(f => f is { IsLiteral: true, IsInitOnly: false })
             .Select(f => (string)f.GetValue(null)!);
 
         List<string> uncategorised = [];
@@ -227,7 +227,7 @@ public class ProfileRuleCompletenessTests
     {
         IReadOnlySet<string> allRuleIds = typeof(EncoderRuleId)
             .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-            .Where(f => f.IsLiteral && !f.IsInitOnly)
+            .Where(f => f is { IsLiteral: true, IsInitOnly: false })
             .Select(f => (string)f.GetValue(null)!)
             .ToHashSet();
 
@@ -249,7 +249,7 @@ public class ProfileRuleCompletenessTests
     {
         IReadOnlySet<string> allRuleIds = typeof(EncoderRuleId)
             .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-            .Where(f => f.IsLiteral && !f.IsInitOnly)
+            .Where(f => f is { IsLiteral: true, IsInitOnly: false })
             .Select(f => (string)f.GetValue(null)!)
             .ToHashSet();
 
@@ -796,7 +796,7 @@ public class ProfileRuleCompletenessTests
     {
         int count = typeof(EncoderRuleId)
             .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-            .Count(f => f.IsLiteral && !f.IsInitOnly);
+            .Count(f => f is { IsLiteral: true, IsInitOnly: false });
 
         count
             .Should()

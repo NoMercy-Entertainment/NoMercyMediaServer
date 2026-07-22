@@ -283,7 +283,7 @@ public class PluginManager : IPluginManager, IDisposable
         where T : IPlugin
     {
         return _registry
-            .Values.Where(lp => lp.Instance is T && lp.Info.Status == PluginStatus.Active)
+            .Values.Where(lp => lp is { Instance: T, Info.Status: PluginStatus.Active })
             .Select(lp => (T)lp.Instance!)
             .ToList();
     }
@@ -292,7 +292,7 @@ public class PluginManager : IPluginManager, IDisposable
     {
         return _registry
             .Values.Where(lp =>
-                lp.Instance is IPluginServiceRegistrator && lp.Info.Status == PluginStatus.Active
+                lp is { Instance: IPluginServiceRegistrator, Info.Status: PluginStatus.Active }
             )
             .Select(lp => (IPluginServiceRegistrator)lp.Instance!)
             .ToList();

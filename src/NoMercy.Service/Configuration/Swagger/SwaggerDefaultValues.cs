@@ -54,8 +54,7 @@ public class SwaggerDefaultValues : IOperationFilter
             parameter.Description ??= description.ModelMetadata.Description;
 
             if (
-                parameter.Schema is OpenApiSchema schema
-                && schema.Default == null
+                parameter.Schema is OpenApiSchema { Default: null } schema
                 && description.DefaultValue != null
                 && description.DefaultValue is not DBNull
                 && description.ModelMetadata is { } modelMetadata

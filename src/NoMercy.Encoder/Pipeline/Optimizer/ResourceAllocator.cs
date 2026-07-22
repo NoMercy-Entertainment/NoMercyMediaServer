@@ -38,7 +38,7 @@ public class ResourceAllocator(IHardwareCapabilities hardware, IResourceMonitor 
                 continue;
             }
 
-            if (!group.RequiresGpu && group.CpuThreadsRequired == 0)
+            if (group is { RequiresGpu: false, CpuThreadsRequired: 0 })
             {
                 groups[groupIndex] = group with { CpuThreadsRequired = softwareThreadBudget };
             }

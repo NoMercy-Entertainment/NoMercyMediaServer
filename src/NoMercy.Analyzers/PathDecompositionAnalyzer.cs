@@ -11,12 +11,13 @@
 
 using System;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 
-namespace NoMercy.Storage.Analyzers;
+namespace NoMercy.Analyzers;
 
 /// <summary>
 /// NMS002 — flags <c>System.IO.Path.GetDirectoryName</c>,
@@ -26,6 +27,7 @@ namespace NoMercy.Storage.Analyzers;
 /// paths using OS conventions which break on storage-relative forward-slash paths on Windows.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
+[SuppressMessage(category: "MicrosoftCodeAnalysisCorrectness", checkId: "RS1038")]
 public sealed class PathDecompositionAnalyzer : DiagnosticAnalyzer
 {
     public const string DiagnosticId = "NMS002";

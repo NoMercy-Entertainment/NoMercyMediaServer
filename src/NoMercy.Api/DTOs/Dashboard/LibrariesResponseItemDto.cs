@@ -77,6 +77,7 @@ public record LibrariesResponseItemDto
 
     public LibrariesResponseItemDto(Library library)
     {
+        bool shouldPaginate = library.LibraryMovies.Count + library.LibraryTvs.Count > 500;
         Id = library.Id;
         AutoRefreshInterval = library.AutoRefreshInterval;
         Image = library.Image;
@@ -89,12 +90,10 @@ public record LibrariesResponseItemDto
         Type = library.Type;
         Order = library.Order;
         CreatedAt = library.CreatedAt;
-        Pagination =
-            library.LibraryMovies.Count + library.LibraryTvs.Count > 500 ? "letter" : "auto";
-        Link =
-            library.LibraryMovies.Count + library.LibraryTvs.Count > 500
-                ? new($"/libraries/{Id}/letter/A", UriKind.Relative)
-                : new($"/libraries/{Id}", UriKind.Relative);
+        Pagination = shouldPaginate ? "letter" : "auto";
+        Link = shouldPaginate
+            ? new($"/libraries/{Id}/letter/A", UriKind.Relative)
+            : new($"/libraries/{Id}", UriKind.Relative);
         Subtitles = library
             .LanguageLibraries.Select(languageLibrary => languageLibrary.Language.Iso6391)
             .ToArray();

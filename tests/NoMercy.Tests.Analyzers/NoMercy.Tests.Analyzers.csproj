@@ -4,7 +4,7 @@
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>NoMercy.Tests.Storage.Analyzers</RootNamespace>
+    <RootNamespace>NoMercy.Tests.Analyzers</RootNamespace>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
@@ -31,6 +31,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\NoMercy.Storage.Analyzers\NoMercy.Storage.Analyzers.csproj" />
+    <ProjectReference Include="..\..\src\NoMercy.Analyzers\NoMercy.Analyzers.csproj" />
   </ItemGroup>
 </Project>

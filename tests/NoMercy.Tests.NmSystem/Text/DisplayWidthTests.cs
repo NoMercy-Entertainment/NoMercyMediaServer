@@ -189,6 +189,23 @@ public class DisplayWidthTests
         lines.Should().OnlyContain(line => DisplayWidth.Of(line) <= 6);
     }
 
+    [Theory]
+    [InlineData("http://example.com/a/b/c?d=e&f=g")]
+    [InlineData("https://example.com/a/b/c?d=e&f=g")]
+    public void Wrap_WithLongUrl_KeepsItOnOneUnbrokenLine(string url)
+    {
+        IReadOnlyList<string> lines = DisplayWidth.Wrap(url, 10);
+        lines.Should().ContainSingle().Which.Should().Be(url);
+    }
+
+    [Fact]
+    public void Wrap_WithLongUrlAmongWords_DoesNotSplitTheUrl()
+    {
+        string url = "https://example.com/very/long/path?query=value&other=thing";
+        IReadOnlyList<string> lines = DisplayWidth.Wrap($"see {url} for details", 10);
+        lines.Should().ContainSingle(line => line == url);
+    }
+
     [Fact]
     public void PadRight_WithNull_ReturnsSpaces()
     {

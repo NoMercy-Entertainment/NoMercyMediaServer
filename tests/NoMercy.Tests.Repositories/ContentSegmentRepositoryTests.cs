@@ -173,25 +173,21 @@ public class ContentSegmentRepositoryTests : IDisposable
         // Manual intro 0-30 must still be there.
         Assert.Contains(
             after,
-            s => s.Source == "manual" && s.StartSeconds == 0 && s.EndSeconds == 30
+            s => s is { Source: "manual", StartSeconds: 0, EndSeconds: 30 }
         );
         // New detector rows from the replacement.
         Assert.Contains(
             after,
             s =>
-                s.Source == "detector"
-                && s.SegmentType == ContentSegmentType.Intro
-                && s.StartSeconds == 10
+                s is { Source: "detector", SegmentType: ContentSegmentType.Intro, StartSeconds: 10 }
         );
         Assert.Contains(
             after,
             s =>
-                s.Source == "detector"
-                && s.SegmentType == ContentSegmentType.Outro
-                && s.StartSeconds == 1800
+                s is { Source: "detector", SegmentType: ContentSegmentType.Outro, StartSeconds: 1800 }
         );
         // Old detector row should be gone.
-        Assert.DoesNotContain(after, s => s.Source == "detector" && s.StartSeconds == 1700);
+        Assert.DoesNotContain(after, s => s is { Source: "detector", StartSeconds: 1700 });
     }
 
     public void Dispose()

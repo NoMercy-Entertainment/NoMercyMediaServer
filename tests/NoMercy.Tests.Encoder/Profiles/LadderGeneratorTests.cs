@@ -165,7 +165,7 @@ public class LadderGeneratorTests
 
         outputs.Should().Contain(o => o.Width == 3840 && o.Height == 2160);
         outputs
-            .Count(o => o.Width == 3840 && o.Height == 2160)
+            .Count(o => o is { Width: 3840, Height: 2160 })
             .Should()
             .Be(1, "native rung must not be duplicated when source matches the table exactly");
     }

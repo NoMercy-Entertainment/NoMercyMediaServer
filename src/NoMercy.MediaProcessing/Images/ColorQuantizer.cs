@@ -54,7 +54,7 @@ internal static class ColorQuantizer
 
     private static Image<Rgba32> DownsampleImage(Image<Rgba32> image)
     {
-        if (image.Width <= MaxDimension && image.Height <= MaxDimension)
+        if (image is { Width: <= MaxDimension, Height: <= MaxDimension })
         {
             return image.Clone();
         }

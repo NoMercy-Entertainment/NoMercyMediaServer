@@ -163,24 +163,27 @@ public static class WebHostFactory
                 );
             }
 
-            // Health check endpoint — HTTP only, localhost only (for Docker HEALTHCHECK)
+            // Health check endpoint — HTTP only, localhost only (for Docker HEALTHCHECK).
+            // No TLS is configured here, so Http3 can never negotiate — requesting it
+            // just makes Kestrel log a "HTTP/3 is not enabled" warning every startup.
             kestrelOptions.Listen(
                 IPAddress.Loopback,
                 RuntimeServerSettings.Current.InternalServerPort + 1,
                 listenOptions =>
                 {
-                    listenOptions.Protocols = HttpProtocols.Http1 | HttpProtocols.Http3;
+                    listenOptions.Protocols = HttpProtocols.Http1;
                 }
             );
 
-            // IPC transport — named pipe (Windows) or Unix socket (Linux/macOS)
+            // IPC transport — named pipe (Windows) or Unix socket (Linux/macOS).
+            // Neither transport supports QUIC, so Http3 is unreachable here too.
             if (Software.IsWindows)
             {
                 kestrelOptions.ListenNamedPipe(
                     Config.ManagementPipeName,
                     listenOptions =>
                     {
-                        listenOptions.Protocols = HttpProtocols.Http1 | HttpProtocols.Http3;
+                        listenOptions.Protocols = HttpProtocols.Http1;
                     }
                 );
 
@@ -198,7 +201,7 @@ public static class WebHostFactory
                     socketPath,
                     listenOptions =>
                     {
-                        listenOptions.Protocols = HttpProtocols.Http1 | HttpProtocols.Http3;
+                        listenOptions.Protocols = HttpProtocols.Http1;
                     }
                 );
 

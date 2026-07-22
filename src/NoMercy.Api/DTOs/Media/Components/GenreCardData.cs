@@ -87,8 +87,7 @@ public record GenreCardData
                     || e.Tv.Episodes.Any(o =>
                         o.SeasonNumber == e.SeasonNumber
                         && o.VideoFiles.Any(w =>
-                            w.Folder != null
-                            && w.LastEpisodeNumber != null
+                            w is { Folder: not null, LastEpisodeNumber: not null }
                             && o.EpisodeNumber <= e.EpisodeNumber
                             && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)))
                 ))

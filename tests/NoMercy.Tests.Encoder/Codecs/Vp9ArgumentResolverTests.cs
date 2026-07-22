@@ -65,7 +65,7 @@ public class Vp9ArgumentResolverTests
     {
         EncoderInfo[] hwEncoders = Registry
             .EnumerateVideoEncoders()
-            .Where(t => t.CodecType == VideoCodecType.Vp9 && t.Encoder.RequiredVendor is not null)
+            .Where(t => t is { CodecType: VideoCodecType.Vp9, Encoder.RequiredVendor: not null })
             .Select(t => t.Encoder)
             .ToArray();
 

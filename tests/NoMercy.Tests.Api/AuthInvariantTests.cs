@@ -128,9 +128,9 @@ public sealed class AuthInvariantTests
             identity.Claims,
             c => c.Type == ClaimTypes.NameIdentifier && c.Value == originalClaim.Value
         );
-        Assert.Contains(identity.Claims, c => c.Type == "plan" && c.Value == "pro");
+        Assert.Contains(identity.Claims, c => c is { Type: "plan", Value: "pro" });
         Assert.DoesNotContain(identity.Claims, c => c.Type == ClaimTypes.Role);
-        Assert.DoesNotContain(identity.Claims, c => c.Type == "sub" && c.Value == "attacker");
+        Assert.DoesNotContain(identity.Claims, c => c is { Type: "sub", Value: "attacker" });
     }
 
     private static string UnsignedJwt() =>

@@ -126,7 +126,7 @@ public class DegradedModeRecovery : IDegradedModeRecovery
                 }
             }
 
-            if (!tasks.Authenticated && tasks.ApiKeysLoaded)
+            if (tasks is { Authenticated: false, ApiKeysLoaded: true })
             {
                 string? token = _authTokenStore.AccessToken;
                 if (string.IsNullOrEmpty(token))
@@ -161,7 +161,7 @@ public class DegradedModeRecovery : IDegradedModeRecovery
                 }
             }
 
-            if (!tasks.Registered && tasks.Authenticated && tasks.NetworkDiscovered)
+            if (tasks is { Registered: false, Authenticated: true, NetworkDiscovered: true })
             {
                 try
                 {
@@ -214,12 +214,7 @@ public class DegradedModeRecovery : IDegradedModeRecovery
             }
 
             if (
-                tasks.ApiKeysLoaded
-                && tasks.Authenticated
-                && tasks.NetworkDiscovered
-                && tasks.SeedsRun
-                && tasks.Registered
-                && tasks.BinariesReady
+                tasks is { ApiKeysLoaded: true, Authenticated: true, NetworkDiscovered: true, SeedsRun: true, Registered: true, BinariesReady: true }
             )
             {
                 tasks.AllCompleted = true;

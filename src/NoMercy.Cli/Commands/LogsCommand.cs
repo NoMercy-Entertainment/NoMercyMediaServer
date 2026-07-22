@@ -201,7 +201,7 @@ internal static partial class LogsCommand
     private static string CleanMessage(string message)
     {
         // Strip surrounding quotes from double-serialization
-        if (message.Length >= 2 && message[0] == '"' && message[^1] == '"')
+        if (message is ['"', _, ..] && message[^1] == '"')
             message = message[1..^1];
 
         // Strip ANSI escape codes

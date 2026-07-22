@@ -80,11 +80,26 @@ public class VideoPlaylistResponseDto
     [JsonProperty("sources")]
     public SourceDto[] Sources { get; set; } = [];
 
+    [JsonProperty("fonts")]
+    public List<IFont> Fonts { get; set; } = [];
+
+    [JsonProperty("chapters")]
+    public List<IChapter> Chapters { get; set; } = [];
+
     [JsonProperty("tracks")]
     public List<VideoTrack> Tracks { get; set; } = [];
 
     [JsonProperty("rating")]
     public RatingClass? ContentRating { get; set; }
+
+    [JsonProperty("audio")]
+    public List<IAudio> Audio { get; set; } = [];
+
+    [JsonProperty("captions")]
+    public List<ISubtitle> Captions { get; set; } = [];
+
+    [JsonProperty("qualities")]
+    public List<IVideo> Qualities { get; set; } = [];
 
     [JsonProperty("season")]
     public int? Season { get; set; }
@@ -172,8 +187,17 @@ public class VideoPlaylistResponseDto
             },
         ];
 
-        Tracks = NormalizePreviewTracks(videoFile.Tracks)
-            .Select(t => new VideoTrack
+        List<VideoTrack> fontsTrack = videoFile.Metadata?.Fonts is { Count: > 0 }
+            ? [new() { File = $"{baseFolder}/fonts.json", Kind = "fonts" }]
+            : [];
+
+        List<VideoTrack> chaptersTrack = videoFile.Metadata?.ChapterFile
+            is { FileSize: > 0 } chaptersFile
+            ? [new() { File = $"{baseFolder}{chaptersFile.FileName}", Kind = "chapters" }]
+            : [];
+
+        Tracks = videoFile
+            .Tracks.Select(t => new VideoTrack
             {
                 Label = t.Label,
                 File = $"{baseFolder}{t.File}",
@@ -181,6 +205,8 @@ public class VideoPlaylistResponseDto
                 Kind = t.Kind,
             })
             .Concat(subs.TextTracks)
+            .Concat(fontsTrack)
+            .Concat(chaptersTrack)
             .OrderBy(track => track.Language)
             .ToList();
 
@@ -188,6 +214,21 @@ public class VideoPlaylistResponseDto
         Episode = index ?? episode.EpisodeNumber;
         SeasonName = episode.Season.Title;
         EpisodeId = episode.Id;
+        Chapters = videoFile.Metadata?.Chapters ?? [];
+        Fonts =
+            videoFile
+                .Metadata?.Fonts?.Select(font => new IFont
+                {
+                    FileName = $"{baseFolder}{font.FileName}",
+                    FileHash = font.FileHash,
+                    FileSize = font.FileSize,
+                })
+                .ToList()
+            ?? [];
+
+        Audio = videoFile.Metadata?.Audio ?? [];
+        Captions = videoFile.Metadata?.Subtitles ?? [];
+        Qualities = videoFile.Metadata?.Video ?? [];
 
         ContentRating = episode
             .Tv.CertificationTvs.Where(certificationMovie =>
@@ -267,8 +308,17 @@ public class VideoPlaylistResponseDto
             },
         ];
 
-        Tracks = NormalizePreviewTracks(videoFile.Tracks)
-            .Select(t => new VideoTrack
+        List<VideoTrack> fontsTrack = videoFile.Metadata?.Fonts is { Count: > 0 }
+            ? [new() { File = $"{baseFolder}/fonts.json", Kind = "fonts" }]
+            : [];
+
+        List<VideoTrack> chaptersTrack = videoFile.Metadata?.ChapterFile
+            is { FileSize: > 0 } chaptersFile
+            ? [new() { File = $"{baseFolder}{chaptersFile.FileName}", Kind = "chapters" }]
+            : [];
+
+        Tracks = videoFile
+            .Tracks.Select(t => new VideoTrack
             {
                 Label = t.Label,
                 File = $"{baseFolder}{t.File}",
@@ -276,8 +326,26 @@ public class VideoPlaylistResponseDto
                 Kind = t.Kind,
             })
             .Concat(subs.TextTracks)
+            .Concat(fontsTrack)
+            .Concat(chaptersTrack)
             .OrderBy(track => track.Language)
             .ToList();
+
+        Chapters = videoFile.Metadata?.Chapters ?? [];
+        Fonts =
+            videoFile
+                .Metadata?.Fonts?.Select(font => new IFont
+                {
+                    FileName = $"{baseFolder}{font.FileName}",
+                    FileHash = font.FileHash,
+                    FileSize = font.FileSize,
+                })
+                .ToList()
+            ?? [];
+
+        Audio = videoFile.Metadata?.Audio ?? [];
+        Captions = videoFile.Metadata?.Subtitles ?? [];
+        Qualities = videoFile.Metadata?.Video ?? [];
 
         ContentRating = movie
             .CertificationMovies.Where(certificationMovie =>
@@ -317,42 +385,6 @@ public class VideoPlaylistResponseDto
 
         [JsonProperty("ext")]
         public string Ext { get; set; } = "vtt";
-    }
-
-    // The scan writer registers the sprite sheet itself under kind "sprite"
-    // (webp) and, only when a matching vtt exists, a separate "thumbnails"
-    // entry; the player exclusively reads kind === "thumbnails". Relabel the
-    // "sprite" entry so items that never got a paired vtt at least surface a
-    // track the player recognizes, and drop it when a real vtt already has
-    // that kind — the webp itself isn't a parseable preview-thumbnails file.
-    private static List<VideoTrack> NormalizePreviewTracks(IEnumerable<VideoTrack> tracks)
-    {
-        List<VideoTrack> normalized = tracks
-            .Select(track =>
-                track.Kind == "sprite"
-                    ? new VideoTrack
-                    {
-                        File = track.File,
-                        Kind = "thumbnails",
-                        Label = track.Label,
-                        Language = track.Language,
-                    }
-                    : track
-            )
-            .ToList();
-
-        List<VideoTrack> thumbnailTracks = normalized
-            .Where(track => track.Kind == "thumbnails")
-            .ToList();
-        if (thumbnailTracks.Count < 2)
-            return normalized;
-
-        VideoTrack keep =
-            thumbnailTracks.FirstOrDefault(track =>
-                track.File.EndsWith(".vtt", StringComparison.OrdinalIgnoreCase)
-            ) ?? thumbnailTracks[0];
-
-        return normalized.Where(track => track.Kind != "thumbnails" || track == keep).ToList();
     }
 
     private static Subs Subtitles(VideoFile videoFile)

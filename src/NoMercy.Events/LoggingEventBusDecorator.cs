@@ -34,9 +34,9 @@ public class LoggingEventBusDecorator : IEventBus
         string eventTypeName = typeof(TEvent).Name;
         if (!_excluded.Contains(eventTypeName))
         {
-            _log(
-                $"[Event] {eventTypeName} | Source={@event.Source} | EventId={@event.EventId} | Timestamp={@event.Timestamp:O}"
-            );
+            // _log(
+            //     $"[Event] {eventTypeName} | Source={@event.Source} | EventId={@event.EventId} | Timestamp={@event.Timestamp:O}"
+            // );
         }
 
         await _inner.PublishAsync(@event, ct);

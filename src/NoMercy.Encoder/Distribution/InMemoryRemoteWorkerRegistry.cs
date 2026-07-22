@@ -81,7 +81,7 @@ public class InMemoryRemoteWorkerRegistry : IRemoteWorkerRegistry
 
         if (success)
         {
-            if (existing.ConsecutiveFailures == 0 && existing.CooldownUntilUtc is null)
+            if (existing is { ConsecutiveFailures: 0, CooldownUntilUtc: null })
                 return; // Already healthy — avoid needless dictionary write.
 
             _workers[workerId] = existing with { ConsecutiveFailures = 0, CooldownUntilUtc = null };

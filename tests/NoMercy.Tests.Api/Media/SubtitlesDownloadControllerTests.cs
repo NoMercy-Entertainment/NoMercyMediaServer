@@ -270,7 +270,7 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
         );
 
         subtitles.Should().NotBeNull();
-        subtitles!.Count(s => s.Language == "eng" && s.Type == "full").Should().Be(1);
+        subtitles!.Count(s => s is { Language: "eng", Type: "full" }).Should().Be(1);
     }
 
     // =========================================================================

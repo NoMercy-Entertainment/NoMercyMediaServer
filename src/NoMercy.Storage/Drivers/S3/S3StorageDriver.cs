@@ -302,7 +302,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
             .GetObjectMetadataAsync(request)
             .GetAwaiter()
             .GetResult();
-        return response.LastModified.ToUniversalTime();
+        return response.LastModified?.ToUniversalTime() ?? DateTime.UtcNow;
     }
 
     // S3 does not expose ctime or atime.
@@ -706,7 +706,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                     new(
                         relPath,
                         IsDirectory: false,
-                        Size: obj.Size,
+                        Size: obj.Size ?? 0L,
                         LastWriteUtc: obj.LastModified is DateTime lm
                             ? lm.ToUniversalTime()
                             : DateTime.UtcNow
@@ -725,12 +725,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
 
                     if (StoragePatternMatcher.Matches(dirName, searchPattern))
                         results.Add(
-                            new(
-                                relPath,
-                                IsDirectory: true,
-                                Size: 0L,
-                                LastWriteUtc: DateTime.UtcNow
-                            )
+                            new(relPath, IsDirectory: true, Size: 0L, LastWriteUtc: DateTime.UtcNow)
                         );
                 }
             }
@@ -767,12 +762,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                     : relPath;
                 if (StoragePatternMatcher.Matches(fileName, searchPattern))
                     results.Add(
-                        new(
-                            relPath,
-                            IsDirectory: false,
-                            Size: size,
-                            LastWriteUtc: lastModified
-                        )
+                        new(relPath, IsDirectory: false, Size: size, LastWriteUtc: lastModified)
                     );
             }
 
@@ -786,12 +776,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                         : relPath;
                     if (StoragePatternMatcher.Matches(dirName, searchPattern))
                         results.Add(
-                            new(
-                                relPath,
-                                IsDirectory: true,
-                                Size: 0L,
-                                LastWriteUtc: DateTime.UtcNow
-                            )
+                            new(relPath, IsDirectory: true, Size: 0L, LastWriteUtc: DateTime.UtcNow)
                         );
                 }
             }

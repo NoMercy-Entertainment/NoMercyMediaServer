@@ -291,14 +291,14 @@ public class DegradedModeStartupPhasingTests
 
         // Verify all tasks ran
         List<(string Name, int Phase)> logList = executionLog.ToList();
-        Assert.Contains(logList, e => e.Name == "CreateFolders" && e.Phase == 1);
-        Assert.Contains(logList, e => e.Name == "ApiInfo" && e.Phase == 1);
-        Assert.Contains(logList, e => e.Name == "Auth" && e.Phase == 2);
-        Assert.Contains(logList, e => e.Name == "Binaries" && e.Phase == 2);
-        Assert.Contains(logList, e => e.Name == "Networking" && e.Phase == 3);
-        Assert.Contains(logList, e => e.Name == "DatabaseSeeder" && e.Phase == 3);
-        Assert.Contains(logList, e => e.Name == "ChromeCast" && e.Phase == 3);
-        Assert.Contains(logList, e => e.Name == "Register" && e.Phase == 4);
+        Assert.Contains(logList, e => e is { Name: "CreateFolders", Phase: 1 });
+        Assert.Contains(logList, e => e is { Name: "ApiInfo", Phase: 1 });
+        Assert.Contains(logList, e => e is { Name: "Auth", Phase: 2 });
+        Assert.Contains(logList, e => e is { Name: "Binaries", Phase: 2 });
+        Assert.Contains(logList, e => e is { Name: "Networking", Phase: 3 });
+        Assert.Contains(logList, e => e is { Name: "DatabaseSeeder", Phase: 3 });
+        Assert.Contains(logList, e => e is { Name: "ChromeCast", Phase: 3 });
+        Assert.Contains(logList, e => e is { Name: "Register", Phase: 4 });
     }
 
     [Fact]

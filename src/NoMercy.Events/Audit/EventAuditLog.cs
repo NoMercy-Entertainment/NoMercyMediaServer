@@ -58,12 +58,12 @@ public sealed class EventAuditLog
 
     public IReadOnlyList<EventAuditEntry> GetEntries(string eventType)
     {
-        return _entries.Where(e => e.EventType == eventType).ToArray();
+        return _entries.Where(entry => entry.EventType == eventType).ToArray();
     }
 
     public IReadOnlyList<EventAuditEntry> GetEntries(DateTime from, DateTime to)
     {
-        return _entries.Where(e => e.Timestamp >= from && e.Timestamp <= to).ToArray();
+        return _entries.Where(entry => entry.Timestamp >= from && entry.Timestamp <= to).ToArray();
     }
 
     public void Clear()
@@ -87,9 +87,9 @@ public sealed class EventAuditLog
         try
         {
             return JsonSerializer.Serialize(
-                @event,
-                @event.GetType(),
-                new JsonSerializerOptions { WriteIndented = false }
+                value: @event,
+                inputType: @event.GetType(),
+                options: new JsonSerializerOptions { WriteIndented = false }
             );
         }
         catch
