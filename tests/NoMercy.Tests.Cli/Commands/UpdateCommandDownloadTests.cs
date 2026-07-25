@@ -13,6 +13,7 @@ using System.CommandLine;
 using NoMercy.Cli;
 using NoMercy.Cli.Commands;
 using NoMercy.Tests.Cli.Support;
+using NoMercy.Tests.Common.Ipc;
 using Xunit;
 
 namespace NoMercy.Tests.Cli.Commands;
@@ -81,22 +82,21 @@ public sealed class UpdateCommandDownloadTests
     {
         FakeManagementPipeServer server = new();
         Task<List<string>> requestsTask = server.RunSequenceAsync([
-                stream =>
-                    FakeManagementPipeServer.WriteResponseAsync(
-                        stream,
-                        200,
-                        "OK",
-                        """{"status":"ok","message":"Downloaded 120MB"}"""
-                    ),
-                stream => FakeManagementPipeServer.WriteResponseAsync(stream, 200, "OK", "true"), // The run continues past stop into the wait-for-exit poll once the
-                // two responders above are exhausted. Accepting that third
-                // connection and dropping it immediately (no response written)
-                // makes the client observe a fast connection failure instead of
-                // burning the real ~3s named-pipe connect timeout on a pipe name
-                // nothing is listening on.
-                _ => Task.CompletedTask
-            ]
-        );
+            stream =>
+                FakeManagementPipeServer.WriteResponseAsync(
+                    stream,
+                    200,
+                    "OK",
+                    """{"status":"ok","message":"Downloaded 120MB"}"""
+                ),
+            stream => FakeManagementPipeServer.WriteResponseAsync(stream, 200, "OK", "true"), // The run continues past stop into the wait-for-exit poll once the
+            // two responders above are exhausted. Accepting that third
+            // connection and dropping it immediately (no response written)
+            // makes the client observe a fast connection failure instead of
+            // burning the real ~3s named-pipe connect timeout on a pipe name
+            // nothing is listening on.
+            _ => Task.CompletedTask,
+        ]);
 
         using ConsoleCapture console = new();
         // This test only asserts the download step's own console output and

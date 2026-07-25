@@ -11,7 +11,7 @@
 
 using NoMercy.Launcher.Services;
 using NoMercy.Launcher.ViewModels;
-using NoMercy.Tests.Launcher.Support;
+using NoMercy.Tests.Common.Ipc;
 using Xunit;
 
 namespace NoMercy.Tests.Launcher.ViewModels;
@@ -50,21 +50,21 @@ public sealed class SettingsViewModelTests
             200,
             "OK",
             """
-                  {
-                      "internal_port": 7626,
-                      "external_port": 7627,
-                      "server_name": "nomercy-test",
-                      "library_workers": 1,
-                      "import_workers": 2,
-                      "extras_workers": 15,
-                      "encoder_workers": 1,
-                      "cron_workers": 1,
-                      "image_workers": 10,
-                      "file_workers": 4,
-                      "music_workers": 2,
-                      "swagger": false
-                  }
-                  """
+            {
+                "internal_port": 7626,
+                "external_port": 7627,
+                "server_name": "nomercy-test",
+                "library_workers": 1,
+                "import_workers": 2,
+                "extras_workers": 15,
+                "encoder_workers": 1,
+                "cron_workers": 1,
+                "image_workers": 10,
+                "file_workers": 4,
+                "music_workers": 2,
+                "swagger": false
+            }
+            """
         );
 
         await viewModel.LoadConfigAsync();

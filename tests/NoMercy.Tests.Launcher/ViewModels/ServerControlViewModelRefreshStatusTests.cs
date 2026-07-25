@@ -11,7 +11,7 @@
 
 using NoMercy.Launcher.Services;
 using NoMercy.Launcher.ViewModels;
-using NoMercy.Tests.Launcher.Support;
+using NoMercy.Tests.Common.Ipc;
 using Xunit;
 
 namespace NoMercy.Tests.Launcher.ViewModels;
@@ -54,19 +54,19 @@ public sealed class ServerControlViewModelRefreshStatusTests
             200,
             "OK",
             """
-                  {
-                      "status": "running",
-                      "server_name": "nomercy-test",
-                      "version": "2.1.0",
-                      "platform": "Windows",
-                      "architecture": "X64",
-                      "uptime_seconds": 3725,
-                      "auto_start": true,
-                      "update_available": true,
-                      "restart_needed": false,
-                      "latest_version": "2.2.0"
-                  }
-                  """
+            {
+                "status": "running",
+                "server_name": "nomercy-test",
+                "version": "2.1.0",
+                "platform": "Windows",
+                "architecture": "X64",
+                "uptime_seconds": 3725,
+                "auto_start": true,
+                "update_available": true,
+                "restart_needed": false,
+                "latest_version": "2.2.0"
+            }
+            """
         );
 
         await viewModel.RefreshStatusAsync();

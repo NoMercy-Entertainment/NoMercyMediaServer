@@ -29,5 +29,6 @@
     <ProjectReference Include="..\..\src\NoMercy.Cli\NoMercy.Cli.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Networking\NoMercy.Networking.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
+    <ProjectReference Include="..\NoMercy.Tests.Common\NoMercy.Tests.Common.csproj" />
   </ItemGroup>
 </Project>

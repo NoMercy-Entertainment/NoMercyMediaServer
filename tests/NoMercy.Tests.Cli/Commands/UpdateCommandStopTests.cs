@@ -13,6 +13,7 @@ using System.CommandLine;
 using NoMercy.Cli;
 using NoMercy.Cli.Commands;
 using NoMercy.Tests.Cli.Support;
+using NoMercy.Tests.Common.Ipc;
 using Xunit;
 
 namespace NoMercy.Tests.Cli.Commands;
@@ -31,22 +32,21 @@ public sealed class UpdateCommandStopTests
     {
         FakeManagementPipeServer server = new();
         Task<List<string>> requestsTask = server.RunSequenceAsync([
-                stream =>
-                    FakeManagementPipeServer.WriteResponseAsync(
-                        stream,
-                        200,
-                        "OK",
-                        """{"status":"ok","message":"Downloaded"}"""
-                    ),
-                stream =>
-                    FakeManagementPipeServer.WriteResponseAsync(
-                        stream,
-                        500,
-                        "Internal Server Error",
-                        ""
-                    )
-            ]
-        );
+            stream =>
+                FakeManagementPipeServer.WriteResponseAsync(
+                    stream,
+                    200,
+                    "OK",
+                    """{"status":"ok","message":"Downloaded"}"""
+                ),
+            stream =>
+                FakeManagementPipeServer.WriteResponseAsync(
+                    stream,
+                    500,
+                    "Internal Server Error",
+                    ""
+                ),
+        ]);
 
         Option<string?> pipeOption = new("--pipe", "-p");
         RootCommand root = new("test");

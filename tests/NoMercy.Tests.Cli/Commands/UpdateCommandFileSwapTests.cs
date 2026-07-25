@@ -14,6 +14,7 @@ using NoMercy.Cli;
 using NoMercy.Cli.Commands;
 using NoMercy.NmSystem.Information;
 using NoMercy.Tests.Cli.Support;
+using NoMercy.Tests.Common.Ipc;
 using Xunit;
 
 namespace NoMercy.Tests.Cli.Commands;
@@ -68,16 +69,16 @@ public sealed class UpdateCommandFileSwapTests : IDisposable
     {
         FakeManagementPipeServer server = new();
         Task<List<string>> requestsTask = server.RunSequenceAsync([
-                stream =>
-                    FakeManagementPipeServer.WriteResponseAsync(
-                        stream,
-                        200,
-                        "OK",
-                        """{"status":"ok","message":"Downloaded"}"""
-                    ),
-                stream => FakeManagementPipeServer.WriteResponseAsync(stream, 200, "OK", "true"), _ => Task.CompletedTask
-            ]
-        );
+            stream =>
+                FakeManagementPipeServer.WriteResponseAsync(
+                    stream,
+                    200,
+                    "OK",
+                    """{"status":"ok","message":"Downloaded"}"""
+                ),
+            stream => FakeManagementPipeServer.WriteResponseAsync(stream, 200, "OK", "true"),
+            _ => Task.CompletedTask,
+        ]);
 
         Option<string?> pipeOption = new("--pipe", "-p");
         RootCommand root = new("test");

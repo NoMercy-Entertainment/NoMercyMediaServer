@@ -13,6 +13,7 @@ using System.CommandLine;
 using NoMercy.Cli;
 using NoMercy.Cli.Commands;
 using NoMercy.Tests.Cli.Support;
+using NoMercy.Tests.Common.Ipc;
 using Xunit;
 
 namespace NoMercy.Tests.Cli.Commands;

@@ -79,7 +79,8 @@ public sealed class StartCommandTests
 
         bool? result = await PrivateReflection.InvokeStaticAsync<bool>(
             typeof(StartCommand),
-            "IsServerRunning", [factory.Object, null, CancellationToken.None]
+            "IsServerRunning",
+            [factory.Object, null, CancellationToken.None]
         );
 
         result.Should().BeTrue();
@@ -98,7 +99,8 @@ public sealed class StartCommandTests
 
         bool? result = await PrivateReflection.InvokeStaticAsync<bool>(
             typeof(StartCommand),
-            "IsServerRunning", [factory.Object, null, CancellationToken.None]
+            "IsServerRunning",
+            [factory.Object, null, CancellationToken.None]
         );
 
         result.Should().BeFalse();
@@ -117,7 +119,8 @@ public sealed class StartCommandTests
 
         bool? result = await PrivateReflection.InvokeStaticAsync<bool>(
             typeof(StartCommand),
-            "IsServerRunning", [factory.Object, null, CancellationToken.None]
+            "IsServerRunning",
+            [factory.Object, null, CancellationToken.None]
         );
 
         result.Should().BeFalse();

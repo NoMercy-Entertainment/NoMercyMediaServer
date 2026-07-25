@@ -37,7 +37,8 @@ public sealed class UpdateCommandWaitForExitTests
     private static Task<bool> HasStoppedAsync(ICliClient client, CancellationToken ct) =>
         PrivateReflection.InvokeStaticAsync<bool>(
             typeof(UpdateCommand),
-            "HasServerStoppedRespondingAsync", [client, ct]
+            "HasServerStoppedRespondingAsync",
+            [client, ct]
         );
 
     private static Task<bool> WaitForExitAsync(
@@ -47,7 +48,8 @@ public sealed class UpdateCommandWaitForExitTests
     ) =>
         PrivateReflection.InvokeStaticAsync<bool>(
             typeof(UpdateCommand),
-            "WaitForServerExitAsync", [client, timeout, ct]
+            "WaitForServerExitAsync",
+            [client, timeout, ct]
         );
 
     [Fact]

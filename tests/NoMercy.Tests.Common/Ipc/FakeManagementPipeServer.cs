@@ -14,28 +14,33 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace NoMercy.Tests.Cli.Support;
+namespace NoMercy.Tests.Common.Ipc;
 
 /// <summary>
-/// A minimal stand-in for the management IPC server that <c>NoMercy.Cli</c> talks
-/// to. This is the real transport <see cref="NoMercy.Networking.Discovery.IpcClient"/>
-/// uses (see its <c>ConnectCallback</c>) — every test that uses this class is
-/// exercising the genuine IPC + raw-HTTP wire format, not a mock of
-/// <c>CliClient</c>/<c>IpcClient</c> themselves. Each instance binds a unique,
-/// GUID-suffixed name so parallel or repeated test runs never collide with each
-/// other or with a real, running management server.
+/// A minimal stand-in for the management IPC server that <c>NoMercy.Cli</c> and the
+/// launcher's <c>ServerConnection</c> both talk to. This is the real transport
+/// <c>IpcClient</c> uses (see its <c>ConnectCallback</c>) — every test that uses this
+/// class is exercising the genuine IPC + raw-HTTP wire format, not a mock of
+/// <c>CliClient</c>/<c>ServerConnection</c>/<c>IpcClient</c> themselves. Each instance
+/// binds a unique, GUID-suffixed name so parallel or repeated test runs never collide
+/// with each other or with a real, running management server.
 /// </summary>
 /// <remarks>
+/// It lives here rather than beside either suite because both need exactly the same
+/// fixture, and two copies drift: the launcher's copy was still pipe-only long after
+/// the CLI's grew a Unix branch, so it bound nothing the Linux runner could reach and
+/// parked the test host until the blame collector took a hang dump and aborted the run.
+///
 /// The transport has to be chosen the same way <c>IpcClient</c> chooses it, per
 /// platform: a named pipe on Windows, a Unix domain socket everywhere else. A
 /// <see cref="NamedPipeServerStream"/> on Linux is served from
 /// <c>/tmp/CoreFxPipe_&lt;name&gt;</c>, while <c>IpcClient</c>'s non-Windows branch
 /// connects to the string it is given as a literal socket path — so a pipe-only
-/// fixture can never be reached on the Linux CI runner, and every test here fails
-/// with "Cannot assign requested address" as the client falls back to resolving
+/// fixture can never be reached on the Linux CI runner, and every test against it
+/// fails with "Cannot assign requested address" as the client falls back to resolving
 /// the base address over TCP.
 /// </remarks>
-internal sealed class FakeManagementPipeServer : IDisposable
+public sealed class FakeManagementPipeServer : IDisposable
 {
     private static bool IsWindows => RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
@@ -173,9 +178,8 @@ internal sealed class FakeManagementPipeServer : IDisposable
     /// and in order. A real HTTP/1.1 client tears the connection down after any
     /// "Connection: close" response (every scenario here sends one) and opens
     /// a fresh connection for its next request — so a multi-step command like
-    /// <c>update</c> (download, then stop, then poll) needs a fresh
-    /// <see cref="NamedPipeServerStream"/> instance per step, exactly like a
-    /// real server would create.
+    /// <c>update</c> (download, then stop, then poll) needs a fresh accept per
+    /// step, exactly like a real server would handle.
     /// </summary>
     public async Task<List<string>> RunSequenceAsync(params Func<Stream, Task>[] responders)
     {

@@ -11,7 +11,7 @@
 
 using NoMercy.Launcher.Models;
 using NoMercy.Launcher.Services;
-using NoMercy.Tests.Launcher.Support;
+using NoMercy.Tests.Common.Ipc;
 using Xunit;
 
 namespace NoMercy.Tests.Launcher.Services;
