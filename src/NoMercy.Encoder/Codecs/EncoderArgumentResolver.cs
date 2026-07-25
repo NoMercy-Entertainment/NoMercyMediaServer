@@ -121,7 +121,7 @@ public static class EncoderArgumentResolver
     /// form so a 10-bit output never gets an 8-bit-only profile string.
     /// </summary>
     public static string? ResolveProfile(string? profileValue, EncoderInfo encoder) =>
-        ResolveProfile(profileValue, encoder, 8);
+        ResolveProfile(profileValue, encoder, finalBitDepth: 8);
 
     /// <summary>
     /// True when the requested profile names an 8-bit-only H.264/HEVC tier that

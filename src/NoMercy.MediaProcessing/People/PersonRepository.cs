@@ -11,11 +11,11 @@
 
 using FlexLabs.EntityFrameworkCore.Upsert;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.People;
 using NoMercy.Database.Models.TvShows;
+using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.People;
 
 public class PersonRepository(MediaContext context, ILogger<PersonRepository> logger) : IPersonRepository
@@ -265,7 +265,8 @@ public class PersonRepository(MediaContext context, ILogger<PersonRepository> lo
             };
 
             await query
-                .WhenMatched((cs, ci) =>
+                .WhenMatched(
+                    (cs, ci) =>
                         new()
                         {
                             CreditId = ci.CreditId,

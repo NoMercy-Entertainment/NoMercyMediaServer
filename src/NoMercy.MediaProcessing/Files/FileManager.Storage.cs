@@ -127,7 +127,7 @@ public partial class FileManager
         IStorage storage = StorageFor(folder);
         string fileName = "/" + storage.GetName(itemPath);
         string hostFolder = itemPath.Replace(fileName, "");
-        string showName = (Movie?.Folder ?? Show?.Folder).OrEmpty().Trim(['/', '\\']);
+        string showName = (Movie?.Folder ?? Show?.Folder).OrEmpty().Trim('/', '\\');
         int showIdx = string.IsNullOrEmpty(showName)
             ? -1
             : itemPath.IndexOf(showName, StringComparison.OrdinalIgnoreCase);
@@ -234,7 +234,7 @@ public partial class FileManager
 
         IReadOnlyList<OrphanedBitmapSubtitle> orphans = SelectOrphanedBitmapSubtitles(
             storage
-                .List(subtitleFolder, null, false)
+                .List(subtitleFolder, null, recursive: false)
                 .Where(candidate => !candidate.IsDirectory)
                 .Select(candidate => storage.GetName(candidate.Path))
         );
@@ -512,7 +512,7 @@ public partial class FileManager
 
         foreach (
             StorageEntry dir in storage
-                .List(hostFolder, "audio_*", false)
+                .List(hostFolder, "audio_*", recursive: false)
                 .Where(entry => entry.IsDirectory)
         )
         {
@@ -527,14 +527,14 @@ public partial class FileManager
 
         foreach (
             StorageEntry languageDir in storage
-                .List(subtitleFolder, "*", false)
+                .List(subtitleFolder, "*", recursive: false)
                 .Where(entry => entry.IsDirectory)
         )
         {
             string language = storage.GetName(languageDir.Path);
             foreach (
                 StorageEntry track in storage
-                    .List(languageDir.Path, "*", false)
+                    .List(languageDir.Path, "*", recursive: false)
                     .Where(entry => !entry.IsDirectory)
             )
             {

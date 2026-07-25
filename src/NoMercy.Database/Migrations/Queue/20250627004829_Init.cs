@@ -22,22 +22,22 @@ namespace NoMercy.Database.Migrations.Queue
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                "FailedJobs",
+                name: "FailedJobs",
                 columns: table => new
                 {
                     Id = table
-                        .Column<long>("INTEGER", nullable: false)
+                        .Column<long>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    Uuid = table.Column<Guid>("TEXT", nullable: false),
+                    Uuid = table.Column<Guid>(type: "TEXT", nullable: false),
                     Connection = table.Column<string>(
-                        "TEXT",
+                        type: "TEXT",
                         maxLength: 256,
                         nullable: false
                     ),
-                    Queue = table.Column<string>("TEXT", maxLength: 256, nullable: false),
-                    Payload = table.Column<string>("TEXT", maxLength: 256, nullable: false),
-                    Exception = table.Column<string>("TEXT", maxLength: 256, nullable: false),
-                    FailedAt = table.Column<DateTime>("TEXT", nullable: false),
+                    Queue = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
+                    Payload = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
+                    Exception = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
+                    FailedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                 },
                 constraints: table =>
                 {
@@ -46,20 +46,20 @@ namespace NoMercy.Database.Migrations.Queue
             );
 
             migrationBuilder.CreateTable(
-                "QueueJobs",
+                name: "QueueJobs",
                 columns: table => new
                 {
                     Id = table
-                        .Column<int>("INTEGER", nullable: false)
+                        .Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    Priority = table.Column<int>("INTEGER", nullable: false),
-                    Queue = table.Column<string>("TEXT", maxLength: 256, nullable: false),
-                    Payload = table.Column<string>("TEXT", maxLength: 256, nullable: false),
-                    Attempts = table.Column<byte>("INTEGER", nullable: false),
-                    ReservedAt = table.Column<DateTime>("TEXT", nullable: true),
-                    AvailableAt = table.Column<DateTime>("TEXT", nullable: false),
+                    Priority = table.Column<int>(type: "INTEGER", nullable: false),
+                    Queue = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
+                    Payload = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
+                    Attempts = table.Column<byte>(type: "INTEGER", nullable: false),
+                    ReservedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    AvailableAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     CreatedAt = table.Column<DateTime>(
-                        "TEXT",
+                        type: "TEXT",
                         nullable: false,
                         defaultValueSql: "CURRENT_TIMESTAMP"
                     ),
@@ -74,9 +74,9 @@ namespace NoMercy.Database.Migrations.Queue
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable("FailedJobs");
+            migrationBuilder.DropTable(name: "FailedJobs");
 
-            migrationBuilder.DropTable("QueueJobs");
+            migrationBuilder.DropTable(name: "QueueJobs");
         }
     }
 }

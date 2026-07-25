@@ -13,9 +13,9 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
+using NoMercyQueue.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 

@@ -35,15 +35,15 @@ public class StowageWatcherEventArgs : EventArgs
         return new(
             null,
             new(
-                ChangeType switch
+                changeType: ChangeType switch
                 {
                     StowageChangeType.Created => WatcherChangeTypes.Created,
                     StowageChangeType.Changed => WatcherChangeTypes.Changed,
                     StowageChangeType.Deleted => WatcherChangeTypes.Deleted,
                     _ => throw new ArgumentOutOfRangeException(),
                 },
-                System.IO.Path.GetDirectoryName(Path).OrEmpty(),
-                System.IO.Path.GetFileName(Path)
+                directory: System.IO.Path.GetDirectoryName(Path).OrEmpty(),
+                name: System.IO.Path.GetFileName(Path)
             )
         );
     }
@@ -105,7 +105,7 @@ internal class StowageWatcher : IDisposable
         {
             try
             {
-                await Scan(true);
+                await Scan(initial: true);
                 seeded = true;
             }
             catch (Exception ex)
@@ -120,7 +120,7 @@ internal class StowageWatcher : IDisposable
         {
             try
             {
-                await Scan(false);
+                await Scan(initial: false);
             }
             catch (Exception ex)
             {
@@ -131,7 +131,7 @@ internal class StowageWatcher : IDisposable
 
     private async Task Scan(bool initial)
     {
-        IReadOnlyCollection<IOEntry> entries = await _storage.Ls(_path, true);
+        IReadOnlyCollection<IOEntry> entries = await _storage.Ls(_path, recurse: true);
         List<IOEntry> files = entries.Where(e => !e.Path.IsFolder).ToList();
 
         ConcurrentBag<string> foundPaths = [];

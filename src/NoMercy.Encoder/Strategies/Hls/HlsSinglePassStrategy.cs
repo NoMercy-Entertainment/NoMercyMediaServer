@@ -59,7 +59,7 @@ public class HlsSinglePassStrategy(
 
             tasks.Add(
                 new(
-                    $"{groupTag}-video-{i}",
+                    TaskId: $"{groupTag}-video-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Video,
@@ -80,7 +80,7 @@ public class HlsSinglePassStrategy(
 
             tasks.Add(
                 new(
-                    $"{groupTag}-audio-{i}",
+                    TaskId: $"{groupTag}-audio-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Audio,
@@ -99,7 +99,7 @@ public class HlsSinglePassStrategy(
 
             tasks.Add(
                 new(
-                    $"{groupTag}-sub-{i}",
+                    TaskId: $"{groupTag}-sub-{i}",
                     ParentJobId: 0,
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Subtitle,
@@ -115,7 +115,7 @@ public class HlsSinglePassStrategy(
         {
             tasks.Add(
                 new(
-                    $"{groupTag}-thumbs",
+                    TaskId: $"{groupTag}-thumbs",
                     ParentJobId: 0,
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Thumbnails,
@@ -135,7 +135,7 @@ public class HlsSinglePassStrategy(
                 ChapterInfo chapter = plan.Chapters[i];
                 tasks.Add(
                     new(
-                        $"{groupTag}-chapter-{i}",
+                        TaskId: $"{groupTag}-chapter-{i}",
                         ParentJobId: 0,
                         GroupTag: groupTag,
                         Kind: EncodeTaskKind.Chapters,

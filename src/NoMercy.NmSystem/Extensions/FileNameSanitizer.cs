@@ -155,7 +155,7 @@ public static class FileNameSanitizer
         if (boundary >= maxLength / 2)
             head = head[..boundary];
 
-        return head.Trim(['.', ' ', '-', '_']);
+        return head.Trim('.', ' ', '-', '_');
     }
 
     public static string NormalizeForComparison(this string name)

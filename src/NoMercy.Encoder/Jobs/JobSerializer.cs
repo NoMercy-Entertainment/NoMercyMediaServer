@@ -21,7 +21,7 @@ public class JobSerializer : IJobSerializer
 
     public string Serialize(EncodingJob job, byte[] signingKey)
     {
-        SignedPayload payload = new(job, DateTime.UtcNow);
+        SignedPayload payload = new(Job: job, TimestampUtc: DateTime.UtcNow);
 
         string json = JsonConvert.SerializeObject(payload);
         string signature = ComputeHmac(json, signingKey);

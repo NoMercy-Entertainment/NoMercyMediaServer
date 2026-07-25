@@ -141,9 +141,9 @@ public class WorkerSourceController(
         // partial downloads.
         return PhysicalFile(
             path,
-            "application/octet-stream",
-            Path.GetFileName(path),
-            true
+            contentType: "application/octet-stream",
+            fileDownloadName: Path.GetFileName(path),
+            enableRangeProcessing: true
         );
     }
 }

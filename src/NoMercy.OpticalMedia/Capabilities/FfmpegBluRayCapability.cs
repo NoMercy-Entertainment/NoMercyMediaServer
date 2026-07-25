@@ -78,8 +78,8 @@ public class FfmpegBluRayCapability(
         ProcessResult result = await processRunner.RunAsync(
             options.FfmpegPath,
             ["-hide_banner", "-protocols"],
-            null,
-            ct
+            workingDirectory: null,
+            cancellationToken: ct
         );
 
         // ffmpeg -protocols writes to stdout; result is exit 0.

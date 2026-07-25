@@ -10,8 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Music;
@@ -19,6 +17,8 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.MusicBrainz.Models;
 using NoMercy.Providers.Tadb.Client;
 using NoMercy.Providers.Tadb.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 [Serializable]
@@ -91,7 +91,8 @@ public class MusicMetadataJob : AbstractMusicDescriptionJob
             await context
                 .Translations.UpsertRange(translations)
                 .On(x => new { x.ArtistId, x.Iso31661 })
-                .WhenMatched((s, i) =>
+                .WhenMatched(
+                    (s, i) =>
                         new()
                         {
                             ArtistId = s.ArtistId,
@@ -150,7 +151,8 @@ public class MusicMetadataJob : AbstractMusicDescriptionJob
             await context
                 .Translations.UpsertRange(translations)
                 .On(x => new { x.ReleaseGroupId, x.Iso31661 })
-                .WhenMatched((s, i) =>
+                .WhenMatched(
+                    (s, i) =>
                         new()
                         {
                             ReleaseGroupId = s.ReleaseGroupId,

@@ -24,7 +24,7 @@ public class PluginLoadContext : AssemblyLoadContext
     private readonly IReadOnlySet<string> _sharedAssemblies;
 
     public PluginLoadContext(string pluginPath, IReadOnlySet<string>? sharedAssemblies = null)
-        : base(true)
+        : base(isCollectible: true)
     {
         _resolver = new(pluginPath);
         _sharedAssemblies = sharedAssemblies ?? PluginHostOptions.DefaultSharedAssemblies;

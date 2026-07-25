@@ -104,7 +104,7 @@ public sealed record SmbDriverConfig(string Host, string Share, int Port, int Ti
         };
     }
 
-    private static string NormalizeShare(string share) => share.Trim().Trim(['/', '\\']);
+    private static string NormalizeShare(string share) => share.Trim().Trim('/', '\\');
 
     private static string NormalizePath(string? path) =>
         string.IsNullOrWhiteSpace(path) ? string.Empty : path.Replace('\\', '/').Trim('/');

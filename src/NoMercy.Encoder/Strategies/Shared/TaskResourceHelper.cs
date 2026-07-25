@@ -29,14 +29,14 @@ internal static class TaskResourceHelper
     public static ResourceRequirement ForVideoOutput(VideoOutputPlan video)
     {
         if (IsGpuEncoder(video.EncoderName))
-            return new(video.EncoderName, 1, 2);
+            return new(video.EncoderName, GpuSlots: 1, CpuThreads: 2);
 
         int cpuThreads = Math.Max(1, Environment.ProcessorCount / 2);
-        return new(null, 0, cpuThreads);
+        return new(null, GpuSlots: 0, CpuThreads: cpuThreads);
     }
 
     public static ResourceRequirement CpuOnly(int cpuThreads = 1) =>
-        new(null, 0, cpuThreads);
+        new(null, GpuSlots: 0, CpuThreads: cpuThreads);
 
     private static bool IsGpuEncoder(string encoderName)
     {

@@ -122,7 +122,7 @@ public class StartupTaskRunner
 
                     throw new InvalidOperationException(
                         $"Required startup task '{task.Name}' cannot run — "
-                                 + $"dependencies not met: {string.Join(", ", GetUnmetDependencies(task))}"
+                            + $"dependencies not met: {string.Join(", ", GetUnmetDependencies(task))}"
                     );
                 }
 

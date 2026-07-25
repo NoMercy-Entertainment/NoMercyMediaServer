@@ -114,13 +114,13 @@ public class FontExtractor(IStorage storage) : IFontExtractor
             return 0;
 
         IReadOnlyList<StorageEntry> allDumped = storage
-            .List(fontDir, "*", false)
+            .List(fontDir, "*", recursive: false)
             .Where(e => !e.IsDirectory)
             .ToList();
 
         if (allDumped.Count == 0)
         {
-            storage.DeleteDirectory(fontDir, false);
+            storage.DeleteDirectory(fontDir, recursive: false);
             return 0;
         }
 
@@ -138,16 +138,16 @@ public class FontExtractor(IStorage storage) : IFontExtractor
         {
             if (
                 !storage.Exists(fontDir)
-                || storage.List(fontDir, "*", false).All(e => e.IsDirectory)
+                || storage.List(fontDir, "*", recursive: false).All(e => e.IsDirectory)
             )
-                storage.DeleteDirectory(fontDir, false);
+                storage.DeleteDirectory(fontDir, recursive: false);
             return 0;
         }
 
         List<AssetEntry> entries = fontFiles
             .Select(f => new AssetEntry(
-                $"fonts/{storage.GetName(f.Path)}",
-                GetFontMimeType(storage.GetName(f.Path))
+                File: $"fonts/{storage.GetName(f.Path)}",
+                MimeType: GetFontMimeType(storage.GetName(f.Path))
             ))
             .ToList();
 
@@ -222,7 +222,7 @@ public class FontExtractor(IStorage storage) : IFontExtractor
             await storage.WriteAsync(destination, data, ct);
             storage.Delete(lutFile.Path);
 
-            lutEntries.Add(new($"luts/{fileName}", "application/octet-stream"));
+            lutEntries.Add(new(File: $"luts/{fileName}", MimeType: "application/octet-stream"));
         }
 
         string lutsJson = JsonConvert.SerializeObject(lutEntries, Formatting.Indented);

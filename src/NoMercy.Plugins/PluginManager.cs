@@ -90,7 +90,7 @@ public class PluginManager : IPluginManager, IDisposable
 
     public Task InstallPluginAsync(string packagePath, CancellationToken ct = default)
     {
-        return InstallPluginAsync(packagePath, null, ct);
+        return InstallPluginAsync(packagePath, expectedChecksum: null, ct);
     }
 
     public async Task InstallPluginAsync(
@@ -149,7 +149,7 @@ public class PluginManager : IPluginManager, IDisposable
         }
 
         string destPath = Path.Combine(pluginDir, Path.GetFileName(fullPath));
-        _driver.CopyFile(fullPath, destPath, true);
+        _driver.CopyFile(fullPath, destPath, overwrite: true);
 
         await LoadPluginAssemblyAsync(destPath, ct);
     }
@@ -176,7 +176,7 @@ public class PluginManager : IPluginManager, IDisposable
             return;
         }
 
-        IReadOnlyList<StorageEntry> entries = _storage.List(_pluginsPath, null, false);
+        IReadOnlyList<StorageEntry> entries = _storage.List(_pluginsPath, null, recursive: false);
         foreach (StorageEntry entry in entries)
         {
             if (!entry.IsDirectory)
@@ -203,7 +203,7 @@ public class PluginManager : IPluginManager, IDisposable
                 IReadOnlyList<StorageEntry> dllEntries = _storage.List(
                     pluginDir,
                     "*.dll",
-                    false
+                    recursive: false
                 );
                 foreach (StorageEntry dllEntry in dllEntries)
                 {

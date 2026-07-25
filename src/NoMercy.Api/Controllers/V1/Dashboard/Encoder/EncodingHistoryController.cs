@@ -48,31 +48,31 @@ public class EncodingHistoryController(IEncodingHistoryRepository historyReposit
 
         List<EncodingHistoryEntryDto> data = entries
             .Select(e => new EncodingHistoryEntryDto(
-                e.Id.ToString(),
-                e.InputPath,
-                e.OutputPath,
-                e.ProfileId?.ToString(),
-                e.ProfileName,
-                e.EncoderUsed,
-                e.GpuUsed,
-                e.DurationSeconds,
-                e.InputSizeBytes,
-                e.OutputSizeBytes,
-                e.CompressionRatio,
-                e.AverageSpeed,
-                e.AverageFps,
-                e.CreatedAt
+                Id: e.Id.ToString(),
+                InputPath: e.InputPath,
+                OutputPath: e.OutputPath,
+                ProfileId: e.ProfileId?.ToString(),
+                ProfileName: e.ProfileName,
+                EncoderUsed: e.EncoderUsed,
+                GpuUsed: e.GpuUsed,
+                DurationSeconds: e.DurationSeconds,
+                InputSizeBytes: e.InputSizeBytes,
+                OutputSizeBytes: e.OutputSizeBytes,
+                CompressionRatio: e.CompressionRatio,
+                AverageSpeed: e.AverageSpeed,
+                AverageFps: e.AverageFps,
+                CreatedAt: e.CreatedAt
             ))
             .ToList();
 
         return Ok(
             new HistoryListResponse(
-                data,
-                new(
-                    total,
-                    pageSize,
-                    pageIndex,
-                    (int)Math.Ceiling((double)total / pageSize)
+                Data: data,
+                Meta: new(
+                    Total: total,
+                    PageSize: pageSize,
+                    PageIndex: pageIndex,
+                    TotalPages: (int)Math.Ceiling((double)total / pageSize)
                 )
             )
         );

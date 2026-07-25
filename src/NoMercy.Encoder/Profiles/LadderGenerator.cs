@@ -52,12 +52,12 @@ public class LadderGenerator : ILadderGenerator
     // Order: descending by height (widest first) so top-rung logic is natural.
     private static readonly TableRung[] DefaultTable =
     [
-        new(3840, 2160, 15000),
-        new(2560, 1440, 8000),
-        new(1920, 1080, 5000),
-        new(1280, 720, 3000),
-        new(854, 480, 1500),
-        new(640, 360, 800),
+        new(Width: 3840, Height: 2160, H264BitrateKbps: 15000),
+        new(Width: 2560, Height: 1440, H264BitrateKbps: 8000),
+        new(Width: 1920, Height: 1080, H264BitrateKbps: 5000),
+        new(Width: 1280, Height: 720, H264BitrateKbps: 3000),
+        new(Width: 854, Height: 480, H264BitrateKbps: 1500),
+        new(Width: 640, Height: 360, H264BitrateKbps: 800),
     ];
 
     public IReadOnlyList<VideoOutput> Generate(
@@ -73,9 +73,9 @@ public class LadderGenerator : ILadderGenerator
         {
             decisions.Add(
                 new(
-                    "plan",
-                    "plan.ladder_user_supplied",
-                    $"Using {userRungs.Length} user-supplied rung(s); default table skipped."
+                    Stage: "plan",
+                    Key: "plan.ladder_user_supplied",
+                    Message: $"Using {userRungs.Length} user-supplied rung(s); default table skipped."
                 )
             );
             return userRungs
@@ -96,9 +96,9 @@ public class LadderGenerator : ILadderGenerator
         {
             decisions.Add(
                 new(
-                    "plan",
-                    "plan.ladder_complexity_unknown",
-                    "Complexity is Auto — defaulted to live-action table. "
+                    Stage: "plan",
+                    Key: "plan.ladder_complexity_unknown",
+                    Message: "Complexity is Auto — defaulted to live-action table. "
                         + "A scene-analysis probe will refine this in a later phase."
                 )
             );
@@ -116,9 +116,9 @@ public class LadderGenerator : ILadderGenerator
             {
                 decisions.Add(
                     new(
-                        "plan",
-                        "plan.ladder_rung_skipped_above_source",
-                        $"Rung {rung.Width}x{rung.Height} skipped — exceeds source "
+                        Stage: "plan",
+                        Key: "plan.ladder_rung_skipped_above_source",
+                        Message: $"Rung {rung.Width}x{rung.Height} skipped — exceeds source "
                             + $"{source.Width}x{source.Height} (no upscaling)."
                     )
                 );
@@ -134,9 +134,9 @@ public class LadderGenerator : ILadderGenerator
             candidates = candidates.Where((_, i) => i % 2 == 0).ToList();
             decisions.Add(
                 new(
-                    "plan",
-                    "plan.ladder_animated_thinned",
-                    $"Animated complexity — thinned to every-other rung "
+                    Stage: "plan",
+                    Key: "plan.ladder_animated_thinned",
+                    Message: $"Animated complexity — thinned to every-other rung "
                         + $"({candidates.Count} rung(s)). Flat colour compresses well with fewer bitrate steps."
                 )
             );
@@ -146,9 +146,9 @@ public class LadderGenerator : ILadderGenerator
             // Keep all — grain requires denser bitrate exploration.
             decisions.Add(
                 new(
-                    "plan",
-                    "plan.ladder_grainy_full",
-                    $"Grainy complexity — retaining all {candidates.Count} fitting rung(s). "
+                    Stage: "plan",
+                    Key: "plan.ladder_grainy_full",
+                    Message: $"Grainy complexity — retaining all {candidates.Count} fitting rung(s). "
                         + "Grain forces denser bitrate exploration."
                 )
             );
@@ -165,9 +165,9 @@ public class LadderGenerator : ILadderGenerator
             candidates.Insert(
                 0,
                 new(
-                    source.Width,
-                    source.Height,
-                    nativeBitrate
+                    Width: source.Width,
+                    Height: source.Height,
+                    H264BitrateKbps: nativeBitrate
                 )
             );
         }

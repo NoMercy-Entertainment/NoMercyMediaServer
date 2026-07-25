@@ -97,5 +97,5 @@ public record EncodingContext(
     public IDecisionLogSink DecisionsOrNoOp => Decisions ?? NullDecisionLogSink.Instance;
 
     public static EncodingContext Create() =>
-        new(Ulid.NewUlid().ToString(), Decisions: new ScopedDecisionLog());
+        new(CorrelationId: Ulid.NewUlid().ToString(), Decisions: new ScopedDecisionLog());
 }

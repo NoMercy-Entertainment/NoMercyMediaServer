@@ -248,7 +248,7 @@ public class HomeService(IHomeRepository homeRepository, ILibraryRepository libr
             })
             .ToList();
 
-        await Task.WhenAll([tvsAndMoviesTask, Task.WhenAll(libraryTasks)]);
+        await Task.WhenAll(tvsAndMoviesTask, Task.WhenAll(libraryTasks));
 
         HomeTvsAndMoviesData tvsAndMovies = tvsAndMoviesTask.Result;
         List<HomeTvCardDto> tvData = tvsAndMovies.TvData;
@@ -653,7 +653,7 @@ public class HomeService(IHomeRepository homeRepository, ILibraryRepository libr
                             tvsAndMovies.TvData,
                             tvsAndMovies.MovieData,
                             country,
-                            false
+                            watch: false
                         )
                     )
                     .Where(c => c != null)

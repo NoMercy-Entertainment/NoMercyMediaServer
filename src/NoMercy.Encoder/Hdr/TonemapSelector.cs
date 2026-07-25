@@ -120,10 +120,10 @@ public class TonemapSelector : ITonemapSelector
                 );
 
                 return new(
-                    algorithm,
-                    peakNits,
-                    lutFilter,
-                    lutFilter
+                    Algorithm: algorithm,
+                    PeakNits: peakNits,
+                    LutFilterChain: lutFilter,
+                    FilterStringFragment: lutFilter
                 );
             }
             catch (StoragePathNotAllowedException ex)
@@ -164,10 +164,10 @@ public class TonemapSelector : ITonemapSelector
         );
 
         return new(
-            algorithm,
-            peakNits,
-            null,
-            fragment
+            Algorithm: algorithm,
+            PeakNits: peakNits,
+            LutFilterChain: null,
+            FilterStringFragment: fragment
         );
     }
 }

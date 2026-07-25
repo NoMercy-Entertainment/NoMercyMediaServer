@@ -86,7 +86,7 @@ public class EncoderContentAnalysisController(
             CropResult result = await cropDetector.DetectAsync(
                 path,
                 sourceVideoFileId,
-                null,
+                sourceIsHdr: null,
                 ct
             );
             return Ok(
@@ -394,7 +394,7 @@ public class EncoderContentAnalysisController(
         if (
             !Enum.TryParse(
                 body.Model ?? "LargeV3",
-                true,
+                ignoreCase: true,
                 out WhisperModelSize modelSize
             )
         )
@@ -413,9 +413,9 @@ public class EncoderContentAnalysisController(
             return NotFoundResponse($"Source file missing on disk: {path}");
 
         WhisperOptions options = new(
-            string.Empty,
-            modelSize,
-            body.TranslateToEnglish
+            ModelPath: string.Empty,
+            ModelSize: modelSize,
+            TranslateToEnglish: body.TranslateToEnglish
         );
 
         SignalRProgressObserver observer = new(hubContext, videoFileId);
@@ -424,11 +424,11 @@ public class EncoderContentAnalysisController(
         {
             SubtitleTrack track = await whisperTranscriber.TranscribeAsync(
                 path,
-                body.AudioStreamIndex,
-                body.Language,
-                options,
-                observer,
-                ct
+                audioStreamIndex: body.AudioStreamIndex,
+                language: body.Language,
+                options: options,
+                progress: observer,
+                ct: ct
             );
             return Ok(
                 new

@@ -28,7 +28,7 @@ public sealed class NfsDriverBuilder : IStorageDriverBuilder
         if (string.IsNullOrWhiteSpace(driverConfigJson))
             throw new ArgumentException(
                 $"driver_config is required for 'nfs' (folder {folderId}). "
-                         + "Supply at minimum: server and export.",
+                    + "Supply at minimum: server and export.",
                 nameof(driverConfigJson)
             );
 

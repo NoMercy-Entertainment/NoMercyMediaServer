@@ -60,7 +60,7 @@ public sealed class IpcClient : IDisposable
                         CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                     timeoutCts.CancelAfter(TimeSpan.FromSeconds(3));
                     await socket.ConnectAsync(endpoint, timeoutCts.Token);
-                    return new NetworkStream(socket, true);
+                    return new NetworkStream(socket, ownsSocket: true);
                 }
             },
         };

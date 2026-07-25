@@ -68,7 +68,7 @@ public static class Locking
                 // own retry/defer logic handle the file staying locked.
                 Logger.System(
                     $"{process.ProcessName} (pid {process.Id}) holds {filePath} — "
-                             + "skipping cleanup to avoid killing an in-flight process.",
+                        + "skipping cleanup to avoid killing an in-flight process.",
                     LogEventLevel.Warning
                 );
 

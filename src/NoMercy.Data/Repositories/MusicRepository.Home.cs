@@ -359,7 +359,7 @@ public partial class MusicRepository
                 ct
             );
 
-        await Task.WhenAll([topTask, favoritesTask, latestTask]);
+        await Task.WhenAll(topTask, favoritesTask, latestTask);
 
         (TopMusicItemDto? topArtist, TopMusicItemDto? topAlbum, TopMusicItemDto? topPlaylist) =
             topTask.Result;

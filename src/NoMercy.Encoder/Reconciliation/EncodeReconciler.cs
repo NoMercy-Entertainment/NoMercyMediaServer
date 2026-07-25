@@ -117,7 +117,7 @@ public class EncodeReconciler : IEncodeReconciler
         {
             string dirPrefix = trimmedRoot + "/";
             foreach (
-                StorageEntry entry in destinationStorage.List(trimmedRoot, "*", true)
+                StorageEntry entry in destinationStorage.List(trimmedRoot, "*", recursive: true)
             )
             {
                 if (entry.IsDirectory)

@@ -109,7 +109,7 @@ public sealed class ServerBootstrapper
                 .HasValidCertificate();
         }
 
-        WebApplication app = WebHostFactory.Create(options, !hasCert);
+        WebApplication app = WebHostFactory.Create(options, forceHttp: !hasCert);
 
         // Resolve the cert service once so its boot handle (Start.Certificate) is set
         // before any runtime consumer (ServerRunner, SetupEndpoints) needs it.
@@ -171,7 +171,7 @@ public sealed class ServerBootstrapper
                 "Setup required but host is HTTPS-bound — rebuilding as HTTP-only for setup flow"
             );
             await app.DisposeAsync();
-            app = WebHostFactory.Create(options, true);
+            app = WebHostFactory.Create(options, forceHttp: true);
             diStorage = app.Services.GetRequiredService<IStorage>();
             orchestrator = app.Services.GetRequiredService<BootOrchestrator>();
 
@@ -221,7 +221,7 @@ public sealed class ServerBootstrapper
             // new container's SetupState to Complete to match the reality the
             // orchestrator already established.
             app.Services.GetRequiredService<SetupState>()
-                .DetermineInitialPhase(true, true);
+                .DetermineInitialPhase(hasValidToken: true, isRegistered: true);
         }
 
         // Auth completed — seed auth-dependent data (users, library assignment, claims)
@@ -298,7 +298,7 @@ public sealed class ServerBootstrapper
             Stopwatch retryStopWatch = new();
             retryStopWatch.Start();
 
-            WebApplication retryHost = WebHostFactory.Create(options, needsSetupMode);
+            WebApplication retryHost = WebHostFactory.Create(options, forceHttp: needsSetupMode);
             HostLifecycleHooks.Register(retryHost, retryStopWatch);
 
             IServerRunner retryServerRunner =

@@ -80,9 +80,9 @@ internal static class LibNfs
 
                 string[] candidates =
                 [
-                    Path.Combine([assemblyDir, "runtimes", rid, "native", fileName]),
+                    Path.Combine(assemblyDir, "runtimes", rid, "native", fileName),
                     Path.Combine(assemblyDir, fileName),
-                    Path.Combine([AppContext.BaseDirectory, "runtimes", rid, "native", fileName]),
+                    Path.Combine(AppContext.BaseDirectory, "runtimes", rid, "native", fileName),
                     Path.Combine(AppContext.BaseDirectory, fileName),
                 ];
 

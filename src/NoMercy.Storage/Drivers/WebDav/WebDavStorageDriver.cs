@@ -52,7 +52,7 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
         if (credentials is not null)
             handler.Credentials = credentials;
 
-        HttpClient httpClient = new(handler, true)
+        HttpClient httpClient = new(handler, disposeHandler: true)
         {
             Timeout = TimeSpan.FromSeconds(config.TimeoutSeconds),
         };
@@ -301,7 +301,7 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
                 yield break;
             throw new IOException(
                 $"WebDAV PROPFIND '{uri}' failed: HTTP {response.StatusCode} — "
-                         + $"{response.Description ?? "(no description)"}"
+                    + $"{response.Description ?? "(no description)"}"
             );
         }
 
@@ -321,9 +321,9 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
                 if (StoragePatternMatcher.Matches(entryName, searchPattern))
                     yield return new(
                         relPath,
-                        true,
-                        0L,
-                        resource.LastModifiedDate?.ToUniversalTime()
+                        IsDirectory: true,
+                        Size: 0L,
+                        LastWriteUtc: resource.LastModifiedDate?.ToUniversalTime()
                             ?? DateTime.UtcNow
                     );
 
@@ -344,9 +344,9 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
                 if (StoragePatternMatcher.Matches(entryName, searchPattern))
                     yield return new(
                         MakeRelative(resourceUri),
-                        false,
-                        resource.ContentLength ?? 0L,
-                        resource.LastModifiedDate?.ToUniversalTime()
+                        IsDirectory: false,
+                        Size: resource.ContentLength ?? 0L,
+                        LastWriteUtc: resource.LastModifiedDate?.ToUniversalTime()
                             ?? DateTime.UtcNow
                     );
             }
@@ -482,12 +482,12 @@ public sealed class WebDavStorageDriver : IStorageDriver, IDisposable
 
             throw new IOException(
                 $"WebDAV PROPFIND '{uri}' failed: HTTP {response.StatusCode} — "
-                         + $"{response.Description ?? "(no description)"}. "
-                         + (
-                             response.StatusCode == 401 || response.StatusCode == 403
-                                 ? "Check the driver credentials in the dashboard."
-                                 : "Check the driver URL and that the server speaks WebDAV at this path."
-                         )
+                    + $"{response.Description ?? "(no description)"}. "
+                    + (
+                        response.StatusCode == 401 || response.StatusCode == 403
+                            ? "Check the driver credentials in the dashboard."
+                            : "Check the driver URL and that the server speaks WebDAV at this path."
+                    )
             );
         }
 

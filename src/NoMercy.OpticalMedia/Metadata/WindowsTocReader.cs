@@ -217,7 +217,7 @@ public sealed class WindowsTocReader : ITocReader
 
     private static char ResolveDriveLetter(string drivePath)
     {
-        string trimmed = drivePath.TrimEnd(['\\', '/']);
+        string trimmed = drivePath.TrimEnd('\\', '/');
         if (trimmed is [_, ':', ..] && char.IsLetter(trimmed[0]))
             return char.ToUpperInvariant(trimmed[0]);
 

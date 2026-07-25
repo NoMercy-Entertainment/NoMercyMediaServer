@@ -123,7 +123,7 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
 
             builder.AddOutput(
                 new(
-                    playlistPath,
+                    FilePath: playlistPath,
                     VideoCodec: video.EncoderName,
                     Crf: video.Crf > 0 ? video.Crf : null,
                     VideoBitrateKbps: video.BitrateKbps > 0 ? video.BitrateKbps : null,
@@ -205,7 +205,7 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
 
                 builder.AddOutput(
                     new(
-                        playlistPath,
+                        FilePath: playlistPath,
                         AudioCodec: audioCodec,
                         AudioBitrateKbps: audio.Action == StreamAction.Transcode
                             ? audio.BitrateKbps
@@ -305,9 +305,9 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
 
             throw new InvalidOperationException(
                 "Master playlist would list zero variants — no variant playlist produced "
-                         + $"measurable segments. Output dir: {outputDirectory}. "
-                         + $"Missing: {string.Join(", ", missing)}. "
-                         + $"Empty/Invalid: {string.Join(", ", empty)}."
+                    + $"measurable segments. Output dir: {outputDirectory}. "
+                    + $"Missing: {string.Join(", ", missing)}. "
+                    + $"Empty/Invalid: {string.Join(", ", empty)}."
             );
         }
 
@@ -377,7 +377,7 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
             return;
 
         string[] vttFiles = storage
-            .List(subtitlesDir, "*.vtt", false)
+            .List(subtitlesDir, "*.vtt", recursive: false)
             .Where(e => !e.IsDirectory)
             .Select(e => e.Path)
             .ToArray();

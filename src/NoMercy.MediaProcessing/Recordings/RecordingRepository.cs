@@ -24,7 +24,8 @@ public class RecordingRepository(MediaContext context) : IRecordingRepository
             return context
                 .Tracks.Upsert(recording)
                 .On(e => new { e.Id })
-                .WhenMatched((ts, ti) =>
+                .WhenMatched(
+                    (ts, ti) =>
                         new()
                         {
                             Id = ti.Id,

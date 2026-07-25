@@ -158,7 +158,7 @@ public partial class FileLogic(
         );
         string fileName = "/" + StoragePathHelpers.GetName(itemPath);
         string hostFolder = itemPath.Replace(fileName, "");
-        string showName = (Movie?.Folder ?? Show?.Folder).OrEmpty().Trim(['/', '\\']);
+        string showName = (Movie?.Folder ?? Show?.Folder).OrEmpty().Trim('/', '\\');
         int showIdx = string.IsNullOrEmpty(showName)
             ? -1
             : itemPath.IndexOf(showName, StringComparison.OrdinalIgnoreCase);
@@ -234,7 +234,8 @@ public partial class FileLogic(
             await mediaContext
                 .VideoFiles.Upsert(videoFile)
                 .On(vf => vf.Filename)
-                .WhenMatched((vs, vi) =>
+                .WhenMatched(
+                    (vs, vi) =>
                         new()
                         {
                             Id = vi.Id,

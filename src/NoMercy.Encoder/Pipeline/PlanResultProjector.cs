@@ -42,7 +42,7 @@ public class PlanResultProjector : IPlanResultProjector
 
         List<VariantPlan> variants = BuildVariants(output);
         List<SubtitlePlan> subtitles = BuildSubtitles(output);
-        HardwareBindings hardware = new(null, null);
+        HardwareBindings hardware = new(PrimaryGpu: null, DecoderHandle: null);
         IReadOnlyList<DecisionLog> decisions = context.DecisionsOrNoOp.Snapshot();
 
         return new(strategy, variants, subtitles, hardware, decisions);
@@ -76,17 +76,17 @@ public class PlanResultProjector : IPlanResultProjector
             RateControl rateControl = ResolveRateControl(v);
 
             VideoTarget video = new(
-                v.EncoderName,
-                v.EncoderName,
-                null,
-                v.Width,
-                v.Height,
-                rateControl,
-                v.Preset ?? string.Empty,
-                v.Profile ?? string.Empty,
-                v.Level ?? string.Empty,
-                v.PixelFormat,
-                []
+                Codec: v.EncoderName,
+                EncoderHandle: v.EncoderName,
+                GpuIndex: null,
+                Width: v.Width,
+                Height: v.Height,
+                RateControl: rateControl,
+                Preset: v.Preset ?? string.Empty,
+                Profile: v.Profile ?? string.Empty,
+                Level: v.Level ?? string.Empty,
+                PixelFormat: v.PixelFormat,
+                FilterChain: []
             );
 
             // Associate audio outputs that share this variant index by round-robin.
@@ -99,22 +99,22 @@ public class PlanResultProjector : IPlanResultProjector
                 AudioOutputPlan a = output.AudioOutputs[ai];
                 audio.Add(
                     new(
-                        ai,
-                        a.EncoderName,
-                        a.Channels,
-                        a.BitrateKbps,
-                        a.Language
+                        SourceIndex: ai,
+                        Codec: a.EncoderName,
+                        Channels: a.Channels,
+                        BitrateKbps: a.BitrateKbps,
+                        Language: a.Language
                     )
                 );
             }
 
             variants.Add(
                 new(
-                    variantId,
-                    video,
-                    audio,
-                    output.SegmentDurationSeconds,
-                    output.SegmentDurationSeconds
+                    VariantId: variantId,
+                    Video: video,
+                    Audio: audio,
+                    SegmentDurationSeconds: output.SegmentDurationSeconds,
+                    KeyframeIntervalSeconds: output.SegmentDurationSeconds
                 )
             );
         }
@@ -132,7 +132,7 @@ public class PlanResultProjector : IPlanResultProjector
             // CRF quality target with a hard bitrate ceiling.
             int maxKbps = v.BitrateKbps;
             int bufKbps = maxKbps * 2;
-            return new RateControl.CrfCapped(v.Crf, maxKbps, bufKbps);
+            return new RateControl.CrfCapped(CrfValue: v.Crf, MaxKbps: maxKbps, BufKbps: bufKbps);
         }
 
         if (hasCrf)
@@ -160,10 +160,10 @@ public class PlanResultProjector : IPlanResultProjector
 
             subtitles.Add(
                 new(
-                    s.SourceIndex,
-                    s.OutputCodec.ToString(),
-                    s.Language,
-                    action
+                    SourceIndex: s.SourceIndex,
+                    Codec: s.OutputCodec.ToString(),
+                    Language: s.Language,
+                    Action: action
                 )
             );
         }

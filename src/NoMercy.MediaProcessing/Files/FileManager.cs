@@ -77,7 +77,7 @@ public partial class FileManager(
 
         Logger.App(
             $"[FindFiles] {Type} id={id}: scan resolved {rawFileCount} file(s), "
-                     + $"{(hasCandidates ? "has" : "no")} parseable candidates across {Folders.Count} folder(s)",
+                + $"{(hasCandidates ? "has" : "no")} parseable candidates across {Folders.Count} folder(s)",
             LogEventLevel.Information
         );
 
@@ -110,7 +110,7 @@ public partial class FileManager(
         {
             Logger.App(
                 $"[FindFiles] {Type} id={id}: scan found no parseable files — preserving existing "
-                         + "records instead of deleting (rescan is non-destructive on an empty result)",
+                    + "records instead of deleting (rescan is non-destructive on an empty result)",
                 LogEventLevel.Warning
             );
         }

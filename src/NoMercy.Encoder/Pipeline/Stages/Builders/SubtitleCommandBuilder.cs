@@ -74,7 +74,7 @@ public static class SubtitleCommandBuilder
             // FFmpeg gets the relative path (CWD = output directory)
             builder.AddOutput(
                 new(
-                    info.OutputPath,
+                    FilePath: info.OutputPath,
                     SubtitleCodec: info.FfmpegCodec,
                     MapStreams: [$"0:s:{info.SourceIndex}"]
                 )

@@ -103,8 +103,8 @@ public class EncoderProfileService(
         await TryLogConfigAsync(
             userId,
             $"encoder.profile.{saved.Id}",
-            null,
-            new
+            oldValue: null,
+            newValue: new
             {
                 id = saved.Id.ToString(),
                 name = saved.Name,
@@ -388,8 +388,8 @@ public class EncoderProfileService(
         await TryLogConfigAsync(
             userId,
             $"encoder.profile.{saved.Id}",
-            null,
-            new
+            oldValue: null,
+            newValue: new
             {
                 id = saved.Id.ToString(),
                 name = saved.Name,
@@ -415,9 +415,9 @@ public class EncoderProfileService(
     )
     {
         return new(
-            id,
-            sourcePath ?? string.Empty,
-            new(
+            ProfileId: id,
+            SourceVideoFileId: sourcePath ?? string.Empty,
+            SourceAnalysis: new(
                 string.Empty,
                 0,
                 0,
@@ -432,13 +432,14 @@ public class EncoderProfileService(
                 null,
                 null
             ),
-            new([], [], []),
+            PerStreamPlan: new([], [], []),
+            SourceWarnings:
             [
                 new(ruleId, EncoderRuleSeverity.Error, field, message, suggestion),
             ],
-            0,
-            0,
-            "auto"
+            EstimatedFps: 0,
+            EstimatedDurationSeconds: 0,
+            EncoderHandle: "auto"
         );
     }
 
@@ -450,8 +451,8 @@ public class EncoderProfileService(
                 "failure.config_save",
                 userId,
                 Ulid.Empty,
-                errorCode,
-                message
+                errorCode: errorCode,
+                message: message
             );
         }
         catch (Exception ex)
@@ -473,9 +474,9 @@ public class EncoderProfileService(
                 "config.encoder_default_changed",
                 userId,
                 Ulid.Empty,
-                configKey,
-                oldValue,
-                newValue
+                configKey: configKey,
+                oldValue: oldValue,
+                newValue: newValue
             );
         }
         catch (Exception ex)

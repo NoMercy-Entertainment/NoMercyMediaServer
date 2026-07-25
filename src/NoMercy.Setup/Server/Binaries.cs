@@ -258,7 +258,7 @@ public class Binaries
             // glitch) worth surfacing loudly.
             Logger.Setup(
                 $"Release manifest signature for {label} did not verify against the embedded NoMercy key — "
-                         + "falling back to GitHub asset-digest integrity. Investigate the signing key if this persists.",
+                    + "falling back to GitHub asset-digest integrity. Investigate the signing key if this persists.",
                 LogEventLevel.Error
             );
         }
@@ -359,7 +359,7 @@ public class Binaries
             response.EnsureSuccessStatusCode();
 
             await using Stream contentStream = await response.Content.ReadAsStreamAsync();
-            await using Stream fileStream = _driver.OpenWrite(tempPath, true);
+            await using Stream fileStream = _driver.OpenWrite(tempPath, overwrite: true);
             await contentStream.CopyToAsync(fileStream);
             await fileStream.FlushAsync();
         }
@@ -653,7 +653,7 @@ public class Binaries
         {
             Logger.Setup(
                 $"GitHub API rate limited for {apiUrl} — serving cached release metadata "
-                         + $"instead of waiting {waitTime.TotalSeconds:F0}s for the reset.",
+                    + $"instead of waiting {waitTime.TotalSeconds:F0}s for the reset.",
                 LogEventLevel.Information
             );
             return cached;
@@ -950,7 +950,7 @@ public class Binaries
             AppFiles.AppExePath,
             releaseInfo,
             assetName,
-            true
+            enforceSignedManifest: true
         );
 
         await FileAttributes.SetCreatedAttribute(path, releaseInfo.PublishedAt);
@@ -1046,7 +1046,7 @@ public class Binaries
             AppFiles.LauncherExePath,
             releaseInfo,
             assetName,
-            true
+            enforceSignedManifest: true
         );
 
         await FileAttributes.SetCreatedAttribute(path, releaseInfo.PublishedAt);
@@ -1142,7 +1142,7 @@ public class Binaries
             AppFiles.CliExePath,
             releaseInfo,
             assetName,
-            true
+            enforceSignedManifest: true
         );
 
         await FileAttributes.SetCreatedAttribute(path, releaseInfo.PublishedAt);
@@ -1269,7 +1269,7 @@ public class Binaries
             AppFiles.ServerTempExePath,
             releaseInfo,
             assetName,
-            true
+            enforceSignedManifest: true
         );
 
         // Wait for the file to become available (antivirus scanning can briefly lock/quarantine it)
@@ -1415,7 +1415,7 @@ public class Binaries
             archiveDestPath,
             releaseInfo,
             selectedAsset.Name,
-            true
+            enforceSignedManifest: true
         );
 
         // Re-check the lock right before extraction — the encoder worker may have
@@ -1428,7 +1428,7 @@ public class Binaries
         {
             Logger.Setup(
                 "FFmpeg binary became locked by a running encode while the update downloaded — "
-                         + "deferring extraction to next boot.",
+                    + "deferring extraction to next boot.",
                 LogEventLevel.Information
             );
             return;
@@ -1551,8 +1551,8 @@ public class Binaries
             AppFiles.YtdlpPath,
             releaseInfo,
             assetName,
-            false,
-            expectedSha256
+            enforceSignedManifest: false,
+            expectedSha256Override: expectedSha256
         );
 
         await FileAttributes.SetCreatedAttribute(outputPath, releaseInfo.PublishedAt);
@@ -1621,7 +1621,7 @@ public class Binaries
             AppFiles.ShakaPackagerPath,
             releaseInfo,
             assetName,
-            false
+            enforceSignedManifest: false
         );
 
         await FileAttributes.SetCreatedAttribute(outputPath, releaseInfo.PublishedAt);
@@ -1796,7 +1796,7 @@ public class Binaries
                     partDestPath,
                     releaseInfo,
                     asset.Name,
-                    true
+                    enforceSignedManifest: true
                 )
             );
         }
@@ -1834,7 +1834,7 @@ public class Binaries
         if (!_driver.DirectoryExists(AppFiles.FfmpegFolder))
             _storage.CreateDirectory(AppFiles.FfmpegFolder);
 
-        await using Stream destinationStream = _driver.OpenWrite(destinationPath, true);
+        await using Stream destinationStream = _driver.OpenWrite(destinationPath, overwrite: true);
 
         // Concatenate the exact local files DownloadWithVerificationAsync already
         // hash-verified — never re-derive paths from URLs.
@@ -1896,7 +1896,7 @@ public class Binaries
                 destinationPath,
                 releaseInfo,
                 assetName,
-                true
+                enforceSignedManifest: true
             );
 
             await FileAttributes.SetCreatedAttribute(path, releaseInfo.PublishedAt);

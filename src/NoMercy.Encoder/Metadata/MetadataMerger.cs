@@ -64,12 +64,12 @@ public class MetadataMerger : IMetadataMerger
                 // Source-only: no DB row — emit source values, default dispositions false.
                 result.Add(
                     new(
-                        src!.OutputIndex,
-                        src.Kind,
-                        src.Language,
-                        src.Title,
-                        src.IsDefault,
-                        src.IsForced
+                        OutputIndex: src!.OutputIndex,
+                        Kind: src.Kind,
+                        Language: src.Language,
+                        Title: src.Title,
+                        IsDefault: src.IsDefault,
+                        IsForced: src.IsForced
                     )
                 );
                 continue;
@@ -94,12 +94,12 @@ public class MetadataMerger : IMetadataMerger
 
             result.Add(
                 new(
-                    idx,
-                    db.Kind,
-                    mergedLanguage,
-                    mergedTitle,
-                    mergedIsDefault,
-                    mergedIsForced
+                    OutputIndex: idx,
+                    Kind: db.Kind,
+                    Language: mergedLanguage,
+                    Title: mergedTitle,
+                    IsDefault: mergedIsDefault,
+                    IsForced: mergedIsForced
                 )
             );
         }

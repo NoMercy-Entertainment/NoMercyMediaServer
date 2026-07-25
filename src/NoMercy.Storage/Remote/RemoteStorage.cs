@@ -60,7 +60,7 @@ public sealed class RemoteStorage : IStorage
 
     public async Task WriteAsync(string path, byte[] bytes, CancellationToken ct)
     {
-        await using Stream stream = _driver.OpenWrite(V(path), true);
+        await using Stream stream = _driver.OpenWrite(V(path), overwrite: true);
         await stream.WriteAsync(bytes.AsMemory(), ct);
     }
 
@@ -98,7 +98,7 @@ public sealed class RemoteStorage : IStorage
 
     public Task CopyAsync(string from, string to, CancellationToken ct)
     {
-        _driver.CopyFile(V(from), V(to), true);
+        _driver.CopyFile(V(from), V(to), overwrite: true);
         return Task.CompletedTask;
     }
 
@@ -177,7 +177,7 @@ public sealed class RemoteStorage : IStorage
             FileAccess.Write,
             FileShare.None,
             65536,
-            true
+            useAsync: true
         );
         await src.CopyToAsync(dst, ct);
 
@@ -238,13 +238,13 @@ public sealed class RemoteStorage : IStorage
 
     public void Write(string path, byte[] bytes)
     {
-        using Stream stream = _driver.OpenWrite(V(path), true);
+        using Stream stream = _driver.OpenWrite(V(path), overwrite: true);
         stream.Write(bytes, 0, bytes.Length);
     }
 
     public void Move(string from, string to) => _driver.MoveFile(V(from), V(to));
 
-    public void Copy(string from, string to) => _driver.CopyFile(V(from), V(to), true);
+    public void Copy(string from, string to) => _driver.CopyFile(V(from), V(to), overwrite: true);
 
     public IReadOnlyList<StorageEntry> List(string path, string? pattern, bool recursive)
     {
@@ -308,7 +308,7 @@ public sealed class RemoteStorage : IStorage
 
     public async Task WriteAllTextAsync(string path, string contents, CancellationToken ct)
     {
-        await using StreamWriter writer = new(_driver.OpenWrite(V(path), true));
+        await using StreamWriter writer = new(_driver.OpenWrite(V(path), overwrite: true));
         await writer.WriteAsync(contents.AsMemory(), ct);
         await writer.FlushAsync(ct);
     }

@@ -45,7 +45,7 @@ public class LiveTranscodeOrphanSweeper(
         try
         {
             orphans = storage
-                .List(cacheRoot, "lts-*", false)
+                .List(cacheRoot, "lts-*", recursive: false)
                 .Where(e => e.IsDirectory)
                 .ToList();
         }
@@ -63,7 +63,7 @@ public class LiveTranscodeOrphanSweeper(
         {
             try
             {
-                storage.DeleteDirectory(entry.Path, true);
+                storage.DeleteDirectory(entry.Path, recursive: true);
                 logger.LogInformation(
                     "LiveTranscodeOrphanSweeper: deleted orphan {Dir}",
                     entry.Path

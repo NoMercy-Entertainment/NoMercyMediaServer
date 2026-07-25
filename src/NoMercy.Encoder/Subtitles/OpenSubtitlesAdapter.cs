@@ -156,18 +156,18 @@ public class OpenSubtitlesAdapter(
 
             candidates.Add(
                 new(
-                    ProviderName,
-                    r.Language,
-                    rating,
-                    downloads,
-                    isTrusted,
-                    fps,
-                    r.SubDownloadLink ?? string.Empty,
-                    NormalizeFormat(r.SubFormat),
-                    r.SubFileName,
-                    r.MovieReleaseName,
-                    r.SubHearingImpaired == "1",
-                    r.UserNickName
+                    Provider: ProviderName,
+                    Language: r.Language,
+                    Rating: rating,
+                    Downloads: downloads,
+                    IsTrustedUploader: isTrusted,
+                    Fps: fps,
+                    DownloadUrl: r.SubDownloadLink ?? string.Empty,
+                    Format: NormalizeFormat(r.SubFormat),
+                    FileName: r.SubFileName,
+                    ReleaseName: r.MovieReleaseName,
+                    HearingImpaired: r.SubHearingImpaired == "1",
+                    Uploader: r.UserNickName
                 )
             );
         }

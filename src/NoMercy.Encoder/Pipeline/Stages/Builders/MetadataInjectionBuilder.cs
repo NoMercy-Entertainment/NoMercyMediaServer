@@ -58,7 +58,7 @@ public static class MetadataInjectionBuilder
             isCopyMode
         );
 
-        MetadataInjectionContext ctx = new(mediaItem, tracks, []);
+        MetadataInjectionContext ctx = new(Media: mediaItem, Tracks: tracks, AttachmentPaths: []);
 
         IReadOnlyList<string> metaArgs = metadataInjector.BuildArgs(ctx);
         if (metaArgs.Count == 0)

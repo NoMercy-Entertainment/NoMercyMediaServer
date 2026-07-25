@@ -42,7 +42,7 @@ public static class RuntimeErrors
             EncoderRuleId.GpuCapacityExhausted,
             $"All NVENC sessions on '{gpu}' are in use ({sessions} active). New encode held until a slot frees.",
             suggestion
-                        ?? "Set hardware_preference=force_software for this profile to encode on CPU instead, or wait for a slot to free.",
+                ?? "Set hardware_preference=force_software for this profile to encode on CPU instead, or wait for a slot to free.",
             new GpuCapacityDetails(gpu, sessions)
         );
         return new(shape, 409);

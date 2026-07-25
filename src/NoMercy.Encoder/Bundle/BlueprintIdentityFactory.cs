@@ -26,22 +26,22 @@ public static class BlueprintIdentityFactory
         media switch
         {
             MovieMediaRef movie => new(
-                "movie",
-                movie.Id,
-                null,
-                null,
-                null,
-                movie.Title,
-                movie.Year
+                Type: "movie",
+                TmdbId: movie.Id,
+                Show: null,
+                Season: null,
+                Episode: null,
+                Title: movie.Title,
+                Year: movie.Year
             ),
             EpisodeMediaRef episode => new(
-                "episode",
-                episode.Id,
-                new(episode.ShowTmdbId, episode.ShowTitle),
-                episode.SeasonNumber,
-                episode.EpisodeNumber,
-                episode.Title,
-                episode.Year
+                Type: "episode",
+                TmdbId: episode.Id,
+                Show: new(TmdbId: episode.ShowTmdbId, Title: episode.ShowTitle),
+                Season: episode.SeasonNumber,
+                Episode: episode.EpisodeNumber,
+                Title: episode.Title,
+                Year: episode.Year
             ),
             _ => throw new ArgumentOutOfRangeException(
                 nameof(media),

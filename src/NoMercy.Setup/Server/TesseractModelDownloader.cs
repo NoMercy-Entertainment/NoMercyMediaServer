@@ -66,7 +66,7 @@ public class TesseractModelDownloader(
         {
             throw new InvalidOperationException(
                 $"No signed release manifest is available for nomercy-tesseract — refusing to "
-                         + $"install an unverified model for '{language}'."
+                    + $"install an unverified model for '{language}'."
             );
         }
 
@@ -74,7 +74,7 @@ public class TesseractModelDownloader(
         {
             throw new InvalidOperationException(
                 $"nomercy-tesseract release manifest signature could not be verified — refusing "
-                         + $"to install an unverified model for '{language}'."
+                    + $"to install an unverified model for '{language}'."
             );
         }
 
@@ -118,7 +118,7 @@ public class TesseractModelDownloader(
             await payloadStream.DisposeAsync();
             throw new InvalidDataException(
                 $"SHA-256 mismatch for '{assetName}': the downloaded model does not match the "
-                         + "signed nomercy-tesseract manifest."
+                    + "signed nomercy-tesseract manifest."
             );
         }
 

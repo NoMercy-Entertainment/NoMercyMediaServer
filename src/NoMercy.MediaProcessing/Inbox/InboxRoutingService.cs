@@ -283,7 +283,7 @@ public class InboxRoutingService
 
     private static string GetFileName(string path)
     {
-        string trimmed = path.TrimEnd(['/', '\\']);
+        string trimmed = path.TrimEnd('/', '\\');
         int slashIdx = trimmed.LastIndexOf('/');
         int backslashIdx = trimmed.LastIndexOf('\\');
         int idx = Math.Max(slashIdx, backslashIdx);

@@ -80,8 +80,8 @@ public static class BinaryVerification
             FileMode.Open,
             FileAccess.Read,
             FileShare.Read,
-            81920,
-            true
+            bufferSize: 81920,
+            useAsync: true
         );
         return await VerifyStreamSha256Async(fs, expectedHex, ct);
     }

@@ -99,7 +99,7 @@ public class FilesystemRepository(IStorageDriver driver)
             if (!drive.IsReady)
                 return null;
 
-            DirectoryTree entry = Build(drive.RootDirectory.ToString(), "", false);
+            DirectoryTree entry = Build(drive.RootDirectory.ToString(), "", withEmpty: false);
 
             try
             {
@@ -192,7 +192,7 @@ public class FilesystemRepository(IStorageDriver driver)
         try
         {
             return Path.GetDirectoryName(
-                folder.TrimEnd([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar])
+                folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
             );
         }
         catch

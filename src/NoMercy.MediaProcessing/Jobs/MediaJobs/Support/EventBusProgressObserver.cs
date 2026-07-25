@@ -113,7 +113,7 @@ public class EventBusProgressObserver : IProgressObserver
 
     public void OnStageStarted(string stageName)
     {
-        Publish("encoding", $"Stage: {stageName}");
+        Publish(status: "encoding", message: $"Stage: {stageName}");
     }
 
     public void OnProgress(EncodingProgress progress)
@@ -178,8 +178,8 @@ public class EventBusProgressObserver : IProgressObserver
         // This message rides the same SignalR "ProgressData" payload as the raw
         // numeric fields below — keep it period-decimal regardless of host locale.
         Publish(
-            "encoding",
-            $"Completed: {stageName} ({duration.TotalSeconds.ToString("F1", CultureInfo.InvariantCulture)}s)"
+            status: "encoding",
+            message: $"Completed: {stageName} ({duration.TotalSeconds.ToString("F1", CultureInfo.InvariantCulture)}s)"
         );
     }
 
@@ -190,13 +190,13 @@ public class EventBusProgressObserver : IProgressObserver
         // visible while VideoEncodeJob runs the post-processing phases
         // (history insert, OCR, library refresh). The card is removed by
         // the EncodingCompletedEvent emitted at the very end of the job.
-        Publish("encoding", "Finalizing");
+        Publish(status: "encoding", message: "Finalizing");
     }
 
     public void OnError(EncodingError error)
     {
         _registry?.UnregisterJob(_jobId);
-        Publish("failed", error.Message);
+        Publish(status: "failed", message: error.Message);
     }
 
     private void Publish(string status, string message)

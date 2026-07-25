@@ -21,7 +21,7 @@ public class TaskSerializer : ITaskSerializer
 
     public string Serialize(EncodeTask task, byte[] signingKey)
     {
-        SignedPayload payload = new(task, DateTime.UtcNow);
+        SignedPayload payload = new(Task: task, TimestampUtc: DateTime.UtcNow);
         return SignAndWrap(payload, signingKey);
     }
 
@@ -39,7 +39,7 @@ public class TaskSerializer : ITaskSerializer
 
     public string SerializeResult(DispatchResult result, byte[] signingKey)
     {
-        SignedResultPayload payload = new(result, DateTime.UtcNow);
+        SignedResultPayload payload = new(Result: result, TimestampUtc: DateTime.UtcNow);
         return SignAndWrap(payload, signingKey);
     }
 

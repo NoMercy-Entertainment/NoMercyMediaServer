@@ -51,7 +51,7 @@ public class LiveIngestKeyStore : ILiveIngestKeyStore
             .Replace('/', '_')
             .TrimEnd('=');
 
-        _byKey[key] = new(prefix, DateTime.UtcNow.Add(AbsoluteLifetime), null);
+        _byKey[key] = new(prefix, DateTime.UtcNow.Add(AbsoluteLifetime), SessionId: null);
         return key;
     }
 

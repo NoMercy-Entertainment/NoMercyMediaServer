@@ -73,13 +73,13 @@ public class ProgressParser
             case "progress":
                 bool isEnd = value == "end";
                 FfmpegProgressSnapshot snapshot = new(
-                    _frame,
-                    _fps,
-                    _bitrateKbps,
-                    _totalSizeBytes,
-                    _outTime,
-                    _speed,
-                    isEnd
+                    Frame: _frame,
+                    Fps: _fps,
+                    BitrateKbps: _bitrateKbps,
+                    TotalSizeBytes: _totalSizeBytes,
+                    OutTime: _outTime,
+                    Speed: _speed,
+                    IsEnd: isEnd
                 );
                 return snapshot;
         }

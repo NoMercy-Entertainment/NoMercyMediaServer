@@ -54,7 +54,7 @@ public sealed partial class SpecialsAdapter : IFilenameParseAdapter
             .CleanedFileName[..match.Index]
             .Replace('.', ' ')
             .Replace('_', ' ')
-            .TrimEnd(['-', ' '])
+            .TrimEnd('-', ' ')
             .Trim()
             .CleanSeriesTitle();
 

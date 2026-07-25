@@ -31,7 +31,7 @@ using NoMercy.Storage;
 namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 
 [ApiController]
-[Tags("Dashboard Specials")]
+[Tags(tags: "Dashboard Specials")]
 [ApiVersion(1.0)]
 [Authorize(Policy = "Moderator")]
 [Route("api/v{version:apiVersion}/dashboard/specials", Order = 11)]
@@ -318,10 +318,10 @@ public class SpecialsController(
         if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
             return Ok(Array.Empty<SpecialSearchResultDto>());
 
-        Task<List<Movie>> moviesTask = specialRepository.SearchMoviesAsync(q, 25, ct);
-        Task<List<Episode>> episodesTask = specialRepository.SearchEpisodesAsync(q, 25, ct);
+        Task<List<Movie>> moviesTask = specialRepository.SearchMoviesAsync(q, take: 25, ct);
+        Task<List<Episode>> episodesTask = specialRepository.SearchEpisodesAsync(q, take: 25, ct);
 
-        await Task.WhenAll([moviesTask, episodesTask]);
+        await Task.WhenAll(moviesTask, episodesTask);
 
         List<SpecialSearchResultDto> results =
         [

@@ -223,12 +223,12 @@ public partial class MusicHub
                     apkOnline,
                     () =>
                         _castTokenService.MintAsync(
-                            user.Id,
-                            serverIdString,
-                            serverUrl,
-                            targetUlid,
-                            intent,
-                            locale
+                            userId: user.Id,
+                            serverId: serverIdString,
+                            serverUrl: serverUrl,
+                            deviceId: targetUlid,
+                            intent: intent,
+                            clientLocale: locale
                         )
                 )
             );

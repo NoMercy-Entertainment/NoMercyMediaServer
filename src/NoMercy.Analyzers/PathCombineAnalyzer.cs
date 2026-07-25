@@ -26,19 +26,19 @@ namespace NoMercy.Analyzers;
 /// operate against the OS filesystem.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
-[SuppressMessage("MicrosoftCodeAnalysisCorrectness", "RS1038")]
+[SuppressMessage(category: "MicrosoftCodeAnalysisCorrectness", checkId: "RS1038")]
 public sealed class PathCombineAnalyzer : DiagnosticAnalyzer
 {
     public const string DiagnosticId = "NMS001";
 
     private static readonly DiagnosticDescriptor Rule = new(
-        DiagnosticId,
-        "Use IStorage.CombinePath instead of System.IO.Path.Combine for storage paths",
-        "Replace Path.Combine with storage.CombinePath. Path.Combine uses the OS separator which violates the IStorage path contract (Rule 2: forward-slash separators only).",
-        "NoMercy.Storage",
-        DiagnosticSeverity.Warning,
-        true,
-        "IStorage.CombinePath is driver-aware and always produces forward-slash-separated paths. Path.Combine on Windows produces backslash paths that violate the IStorage path contract. Use #pragma warning disable NMS001 to suppress this for paths that are not storage-bound."
+        id: DiagnosticId,
+        title: "Use IStorage.CombinePath instead of System.IO.Path.Combine for storage paths",
+        messageFormat: "Replace Path.Combine with storage.CombinePath. Path.Combine uses the OS separator which violates the IStorage path contract (Rule 2: forward-slash separators only).",
+        category: "NoMercy.Storage",
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "IStorage.CombinePath is driver-aware and always produces forward-slash-separated paths. Path.Combine on Windows produces backslash paths that violate the IStorage path contract. Use #pragma warning disable NMS001 to suppress this for paths that are not storage-bound."
     );
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
@@ -64,9 +64,9 @@ public sealed class PathCombineAnalyzer : DiagnosticAnalyzer
 
         if (
             !string.Equals(
-                invokedName.Identifier.Text,
-                "Combine",
-                StringComparison.Ordinal
+                a: invokedName.Identifier.Text,
+                b: "Combine",
+                comparisonType: StringComparison.Ordinal
             )
         )
         {

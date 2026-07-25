@@ -150,7 +150,8 @@ public class ConnectionHub : Hub
             await mediaContext
                 .Devices.Upsert(client)
                 .On(x => x.DeviceId)
-                .WhenMatched((ds, di) =>
+                .WhenMatched(
+                    (ds, di) =>
                         new()
                         {
                             Browser = di.Browser,

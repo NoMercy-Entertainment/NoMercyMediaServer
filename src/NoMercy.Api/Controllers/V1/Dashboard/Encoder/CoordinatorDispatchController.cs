@@ -58,14 +58,14 @@ public class CoordinatorDispatchController(
 
         EncodeTask[] tasks = request
             .Tasks.Select(t => new EncodeTask(
-                t.TaskId ?? Guid.NewGuid().ToString("N"),
-                new(
-                    "ffmpeg",
-                    t.Arguments?.ToArray() ?? [],
-                    null
+                TaskId: t.TaskId ?? Guid.NewGuid().ToString("N"),
+                Command: new(
+                    Executable: "ffmpeg",
+                    Arguments: t.Arguments?.ToArray() ?? [],
+                    WorkingDirectory: null
                 ),
-                t.OutputPath,
-                t.TaskType
+                OutputPath: t.OutputPath,
+                Type: t.TaskType
             ))
             .ToArray();
 

@@ -16,6 +16,7 @@ using NoMercy.Database;
 using NoMercy.Events;
 using NoMercy.MediaProcessing.EventHandlers;
 using NoMercy.MediaProcessing.Inbox;
+using NoMercy.MediaProcessing.Jobs;
 using NoMercy.Networking.Messaging;
 using NoMercy.Storage;
 

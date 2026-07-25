@@ -32,7 +32,7 @@ public class CodecResolver(CodecRegistry registry) : ICodecResolver
         if (codec == VideoCodecType.Copy)
         {
             EncoderInfo copyEncoder = definition.Encoders[0];
-            return new(copyEncoder.FfmpegName, copyEncoder, null, RateControlMode.Crf);
+            return new(copyEncoder.FfmpegName, copyEncoder, Device: null, RateControlMode.Crf);
         }
 
         return preference switch

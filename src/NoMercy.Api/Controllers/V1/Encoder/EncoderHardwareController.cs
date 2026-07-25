@@ -61,7 +61,7 @@ public class EncoderHardwareController(
         {
             foreach (string name in rawCodecs)
             {
-                if (!Enum.TryParse(name, true, out VideoCodecType parsed))
+                if (!Enum.TryParse(name, ignoreCase: true, out VideoCodecType parsed))
                 {
                     return UnprocessableEntity(
                         new
@@ -120,11 +120,11 @@ public class EncoderHardwareController(
     public async Task<IActionResult> GetUtilization()
     {
         UtilizationSnapshot snap = new(
-            monitor.GetCpuUsagePercent(),
-            monitor.GetAvailableMemoryMb(),
-            await monitor.SampleGpuAsync(),
-            registry.CountConcurrentNvencSessions(),
-            hardware.Gpus
+            CpuUsagePercent: monitor.GetCpuUsagePercent(),
+            AvailableMemoryMb: monitor.GetAvailableMemoryMb(),
+            GpuSamples: await monitor.SampleGpuAsync(),
+            ConcurrentNvencSessions: registry.CountConcurrentNvencSessions(),
+            Gpus: hardware.Gpus
         );
 
         return Ok(snap);

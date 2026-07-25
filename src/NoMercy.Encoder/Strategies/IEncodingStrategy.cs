@@ -102,7 +102,7 @@ public interface IEncodingStrategy : IStageOverrides
     /// </summary>
     static DecomposedTask WholeTask(string groupTag) =>
         new(
-            $"{groupTag}-whole",
+            TaskId: $"{groupTag}-whole",
             ParentJobId: 0,
             GroupTag: groupTag,
             Kind: EncodeTaskKind.Whole,

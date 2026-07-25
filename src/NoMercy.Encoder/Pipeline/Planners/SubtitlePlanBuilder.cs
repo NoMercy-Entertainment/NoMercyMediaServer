@@ -58,17 +58,17 @@ public static class SubtitlePlanBuilder
                 claimedStreams.Add(si);
                 subtitlePlans.Add(
                     new(
-                        subProfile.Codec,
-                        subProfile.Policy == SubtitlePolicy.BurnIn
+                        OutputCodec: subProfile.Codec,
+                        Action: subProfile.Policy == SubtitlePolicy.BurnIn
                             ? StreamAction.Transcode
                             : StreamAction.Extract,
-                        streamLang,
-                        si,
-                        $"0:s:{si}",
-                        subProfile.PlaylistNameTemplate,
-                        subProfile.Policy,
-                        subtitleVariants[si],
-                        subProfile.CustomArguments is not null
+                        Language: streamLang,
+                        SourceIndex: si,
+                        MapLabel: $"0:s:{si}",
+                        PlaylistNameTemplate: subProfile.PlaylistNameTemplate,
+                        Policy: subProfile.Policy,
+                        Variant: subtitleVariants[si],
+                        ExtraFlags: subProfile.CustomArguments is not null
                             ? new Dictionary<string, string>(subProfile.CustomArguments)
                             : null
                     )

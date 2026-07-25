@@ -54,7 +54,7 @@ public sealed class LocalStorage : IStorage
     {
         string safe = ValidateScoped(path);
         EnsureParentDirectory(safe);
-        await using Stream stream = _driver.OpenWrite(safe, true);
+        await using Stream stream = _driver.OpenWrite(safe, overwrite: true);
         await stream.WriteAsync(bytes.AsMemory(), ct);
     }
 
@@ -108,7 +108,7 @@ public sealed class LocalStorage : IStorage
         string safeFrom = ValidateScoped(from);
         string safeTo = ValidateScoped(to);
         EnsureParentDirectory(safeTo);
-        _driver.CopyFile(safeFrom, safeTo, true);
+        _driver.CopyFile(safeFrom, safeTo, overwrite: true);
         return Task.CompletedTask;
     }
 
@@ -247,7 +247,7 @@ public sealed class LocalStorage : IStorage
     {
         string safe = ValidateScoped(path);
         EnsureParentDirectory(safe);
-        using Stream stream = _driver.OpenWrite(safe, true);
+        using Stream stream = _driver.OpenWrite(safe, overwrite: true);
         stream.Write(bytes, 0, bytes.Length);
     }
 
@@ -264,7 +264,7 @@ public sealed class LocalStorage : IStorage
         string safeFrom = ValidateScoped(from);
         string safeTo = ValidateScoped(to);
         EnsureParentDirectory(safeTo);
-        _driver.CopyFile(safeFrom, safeTo, true);
+        _driver.CopyFile(safeFrom, safeTo, overwrite: true);
     }
 
     public IReadOnlyList<StorageEntry> List(string path, string? pattern, bool recursive)
@@ -393,7 +393,7 @@ public sealed class LocalStorage : IStorage
     {
         string safe = ValidateScoped(path);
         EnsureParentDirectory(safe);
-        await using StreamWriter writer = new(_driver.OpenWrite(safe, true));
+        await using StreamWriter writer = new(_driver.OpenWrite(safe, overwrite: true));
         await writer.WriteAsync(contents.AsMemory(), ct);
         await writer.FlushAsync(ct);
     }

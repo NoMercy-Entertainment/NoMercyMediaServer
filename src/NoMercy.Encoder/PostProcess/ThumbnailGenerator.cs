@@ -34,7 +34,7 @@ public class ThumbnailGenerator(IStorage storage) : IThumbnailGenerator
             .AddInput(new(inputPath))
             .AddOutput(
                 new(
-                    Path.Combine(thumbDir, "thumb_%04d.jpg"),
+                    FilePath: Path.Combine(thumbDir, "thumb_%04d.jpg"),
                     MapStreams: ["0:v:0"],
                     ExtraFlags: new()
                     {
@@ -71,7 +71,7 @@ public class ThumbnailGenerator(IStorage storage) : IThumbnailGenerator
             .AddInput(new(Path.Combine(thumbDir, "thumb_%04d.jpg")))
             .AddOutput(
                 new(
-                    spriteFile,
+                    FilePath: spriteFile,
                     ExtraFlags: new() { ["-filter_complex"] = $"tile={gridWidth}x{gridHeight}" }
                 )
             )
@@ -124,7 +124,7 @@ public class ThumbnailGenerator(IStorage storage) : IThumbnailGenerator
         string thumbDir = Path.Combine(outputDirectory, $"thumbs_{plan.Width}");
 
         if (storage.Exists(thumbDir))
-            storage.DeleteDirectory(thumbDir, true);
+            storage.DeleteDirectory(thumbDir, recursive: true);
     }
 
     public static (int Width, int Height) ComputeGrid(int imageCount)

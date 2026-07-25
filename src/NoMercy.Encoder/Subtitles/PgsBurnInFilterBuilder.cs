@@ -75,7 +75,7 @@ public sealed class PgsBurnInFilterBuilder
     /// stream in <c>-map</c>.
     /// </returns>
     public PgsBurnInFilterChain Build(int videoStreamIndex, int subtitleStreamIndex) =>
-        Build(videoStreamIndex, subtitleStreamIndex, 1, false);
+        Build(videoStreamIndex, subtitleStreamIndex, videoOutputCount: 1, includeThumbnails: false);
 
     /// <summary>
     /// Builds the PGS overlay chain, splitting the composited output into one
@@ -100,10 +100,10 @@ public sealed class PgsBurnInFilterBuilder
         if (consumers == 1)
         {
             return new(
-                $"{overlay}[burned]",
-                "[burned]",
-                ["[burned]"],
-                null
+                FilterComplex: $"{overlay}[burned]",
+                MapLabel: "[burned]",
+                VideoLabels: ["[burned]"],
+                ThumbnailLabel: null
             );
         }
 
@@ -121,10 +121,10 @@ public sealed class PgsBurnInFilterBuilder
         string filterComplex = $"{overlay},split={consumers}{splitTargets}";
 
         return new(
-            filterComplex,
-            videoLabels[0],
-            videoLabels,
-            thumbnailLabel
+            FilterComplex: filterComplex,
+            MapLabel: videoLabels[0],
+            VideoLabels: videoLabels,
+            ThumbnailLabel: thumbnailLabel
         );
     }
 }

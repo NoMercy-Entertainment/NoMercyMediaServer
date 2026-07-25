@@ -97,12 +97,12 @@ public class EncodingHistoryRepository(MediaContext context) : IEncodingHistoryR
         return raw is null
             ? new(0, 0, 0, 0, 0, 0)
             : new EncodingHistoryStats(
-                raw.TotalEncodes,
-                raw.TotalInputBytes,
-                raw.TotalOutputBytes,
-                raw.AverageSpeed,
-                raw.AverageCompressionRatio,
-                raw.AverageFps
+                TotalEncodes: raw.TotalEncodes,
+                TotalInputBytes: raw.TotalInputBytes,
+                TotalOutputBytes: raw.TotalOutputBytes,
+                AverageSpeed: raw.AverageSpeed,
+                AverageCompressionRatio: raw.AverageCompressionRatio,
+                AverageFps: raw.AverageFps
             );
     }
 }

@@ -51,7 +51,7 @@ public class TmdbSeasonClient : TmdbBaseClient, IDisposable
         return Get<TmdbSeasonAppends>(
             "tv/" + Id + "/season/" + _seasonNumber,
             queryParams,
-            priority
+            priority: priority
         );
     }
 
@@ -98,7 +98,7 @@ public class TmdbSeasonClient : TmdbBaseClient, IDisposable
         return await Get<TmdbSeasonChanges>(
             "tv/season/" + seasonDetails.Id + "/changes",
             queryParams,
-            priority
+            priority: priority
         );
     }
 

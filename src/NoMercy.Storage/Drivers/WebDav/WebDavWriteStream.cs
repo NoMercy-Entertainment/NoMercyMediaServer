@@ -43,7 +43,7 @@ internal sealed class WebDavWriteStream : Stream
             FileMode.CreateNew,
             FileAccess.ReadWrite,
             FileShare.None,
-            81920,
+            bufferSize: 81920,
             FileOptions.DeleteOnClose | FileOptions.Asynchronous
         );
     }

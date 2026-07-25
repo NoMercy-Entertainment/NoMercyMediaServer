@@ -94,11 +94,11 @@ public class TokenParamAuthMiddleware(
             logger.LogInformation("Unauthorized request, no jwt: {Url}", url);
             await WriteProblemAsync(
                 context,
-                (int)HttpStatusCode.Unauthorized,
-                "https://nomercy.tv/problems/no-token",
-                "Authentication required",
-                "No bearer token was provided. Include a valid JWT in the Authorization header or as an access_token query parameter.",
-                "NO_TOKEN"
+                statusCode: (int)HttpStatusCode.Unauthorized,
+                type: "https://nomercy.tv/problems/no-token",
+                title: "Authentication required",
+                detail: "No bearer token was provided. Include a valid JWT in the Authorization header or as an access_token query parameter.",
+                authError: "NO_TOKEN"
             );
             return;
         }
@@ -108,11 +108,11 @@ public class TokenParamAuthMiddleware(
             logger.LogInformation("Unauthorized request, guid malformed or empty: {Url}", url);
             await WriteProblemAsync(
                 context,
-                (int)HttpStatusCode.Forbidden,
-                "https://nomercy.tv/problems/invalid-token",
-                "Invalid token",
-                "The token subject (sub) is not a valid GUID. The token may be malformed.",
-                "INVALID_TOKEN"
+                statusCode: (int)HttpStatusCode.Forbidden,
+                type: "https://nomercy.tv/problems/invalid-token",
+                title: "Invalid token",
+                detail: "The token subject (sub) is not a valid GUID. The token may be malformed.",
+                authError: "INVALID_TOKEN"
             );
             return;
         }
@@ -124,11 +124,11 @@ public class TokenParamAuthMiddleware(
             logger.LogInformation("Unauthorized request, user not found: {Url}", url);
             await WriteProblemAsync(
                 context,
-                (int)HttpStatusCode.Forbidden,
-                "https://nomercy.tv/problems/user-not-found",
-                "User not found",
-                "The authenticated user is not registered on this server. Ask the server owner to add your account.",
-                "USER_NOT_FOUND"
+                statusCode: (int)HttpStatusCode.Forbidden,
+                type: "https://nomercy.tv/problems/user-not-found",
+                title: "User not found",
+                detail: "The authenticated user is not registered on this server. Ask the server owner to add your account.",
+                authError: "USER_NOT_FOUND"
             );
             return;
         }

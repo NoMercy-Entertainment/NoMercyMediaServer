@@ -215,14 +215,14 @@ public class UsersController(IUserRepository userRepository) : BaseController
         bool? manage = AuthPolicy.IsOwner(User) ? request.Manage : null;
 
         await userRepository.UpdatePermissionsAsync(
-            id,
-            userId,
-            request.Allowed,
-            request.AudioTranscoding,
-            request.VideoTranscoding,
-            request.NoTranscoding,
-            manage,
-            request.Libraries
+            targetUserId: id,
+            actingUserId: userId,
+            allowed: request.Allowed,
+            audioTranscoding: request.AudioTranscoding,
+            videoTranscoding: request.VideoTranscoding,
+            noTranscoding: request.NoTranscoding,
+            manage: manage,
+            libraryIds: request.Libraries
         );
 
         User? updatedUser = await userRepository.GetByIdWithLibrariesAsync(id);

@@ -96,7 +96,7 @@ public static class TwoPassCommandBuilder
             videoOnly,
             mediaInfo,
             inputPath,
-            null
+            assBurnInFilterBuilder: null
         );
         if (filterGraph is not null)
             builder.WithFilterComplex(filterGraph);
@@ -113,7 +113,7 @@ public static class TwoPassCommandBuilder
 
         builder.AddOutput(
             new(
-                "-",
+                FilePath: "-",
                 VideoCodec: video.EncoderName,
                 VideoBitrateKbps: video.BitrateKbps > 0 ? video.BitrateKbps : null,
                 Preset: video.Preset,

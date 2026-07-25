@@ -133,10 +133,10 @@ public class MediaAnalyzer(IProcessRunner processRunner, IStorage storage, Encod
                 case "attachment":
                     attachments.Add(
                         new(
-                            stream.Value<int>("index"),
-                            stream.Value<string>("codec_name") ?? "unknown",
-                            stream["tags"]?.Value<string>("filename"),
-                            stream["tags"]?.Value<string>("mimetype")
+                            Index: stream.Value<int>("index"),
+                            Codec: stream.Value<string>("codec_name") ?? "unknown",
+                            Filename: stream["tags"]?.Value<string>("filename"),
+                            MimeType: stream["tags"]?.Value<string>("mimetype")
                         )
                     );
                     break;
@@ -148,9 +148,9 @@ public class MediaAnalyzer(IProcessRunner processRunner, IStorage storage, Encod
         {
             chapterList.Add(
                 new(
-                    TimeSpan.FromSeconds(chapter.Value<double>("start_time")),
-                    TimeSpan.FromSeconds(chapter.Value<double>("end_time")),
-                    chapter["tags"]?.Value<string>("title")
+                    Start: TimeSpan.FromSeconds(chapter.Value<double>("start_time")),
+                    End: TimeSpan.FromSeconds(chapter.Value<double>("end_time")),
+                    Title: chapter["tags"]?.Value<string>("title")
                 )
             );
         }
@@ -165,7 +165,7 @@ public class MediaAnalyzer(IProcessRunner processRunner, IStorage storage, Encod
         string? sphericalProjection = ParseSphericalProjection(streams);
 
         return new(
-            filePath,
+            FilePath: filePath,
             Format: formatName,
             Duration: TimeSpan.FromSeconds(durationSeconds),
             OverallBitRateKbps: bitRate / 1000,
@@ -259,7 +259,7 @@ public class MediaAnalyzer(IProcessRunner processRunner, IStorage storage, Encod
         double? realFrameRate = ParseNullableFrameRate(stream.Value<string>("r_frame_rate"));
 
         return new(
-            stream.Value<int>("index"),
+            Index: stream.Value<int>("index"),
             Codec: stream.Value<string>("codec_name") ?? "unknown",
             Width: stream.Value<int>("width"),
             Height: stream.Value<int>("height"),
@@ -334,26 +334,26 @@ public class MediaAnalyzer(IProcessRunner processRunner, IStorage storage, Encod
     private static AudioStreamInfo ParseAudioStream(JToken stream)
     {
         return new(
-            stream.Value<int>("index"),
-            stream.Value<string>("codec_name") ?? "unknown",
-            stream.Value<int>("channels"),
-            stream.Value<int>("sample_rate"),
-            ParseLong(stream, "bit_rate") / 1000,
-            stream["tags"]?.Value<string>("language"),
-            stream["disposition"]?.Value<int>("default") == 1,
-            stream["disposition"]?.Value<int>("forced") == 1
+            Index: stream.Value<int>("index"),
+            Codec: stream.Value<string>("codec_name") ?? "unknown",
+            Channels: stream.Value<int>("channels"),
+            SampleRate: stream.Value<int>("sample_rate"),
+            BitRateKbps: ParseLong(stream, "bit_rate") / 1000,
+            Language: stream["tags"]?.Value<string>("language"),
+            IsDefault: stream["disposition"]?.Value<int>("default") == 1,
+            IsForced: stream["disposition"]?.Value<int>("forced") == 1
         );
     }
 
     private static SubtitleStreamInfo ParseSubtitleStream(JToken stream)
     {
         return new(
-            stream.Value<int>("index"),
-            stream.Value<string>("codec_name") ?? "unknown",
-            stream["tags"]?.Value<string>("language"),
-            stream["disposition"]?.Value<int>("default") == 1,
-            stream["disposition"]?.Value<int>("forced") == 1,
-            stream["tags"]?.Value<string>("title")
+            Index: stream.Value<int>("index"),
+            Codec: stream.Value<string>("codec_name") ?? "unknown",
+            Language: stream["tags"]?.Value<string>("language"),
+            IsDefault: stream["disposition"]?.Value<int>("default") == 1,
+            IsForced: stream["disposition"]?.Value<int>("forced") == 1,
+            Title: stream["tags"]?.Value<string>("title")
         );
     }
 

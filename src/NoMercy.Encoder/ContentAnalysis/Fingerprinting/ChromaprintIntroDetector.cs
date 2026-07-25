@@ -38,10 +38,10 @@ public class ChromaprintIntroDetector : IIntroDetector
     }
 
     public IntroMarker? DetectIntro(IReadOnlyList<AudioFingerprint> episodeFingerprints) =>
-        Detect(episodeFingerprints, false);
+        Detect(episodeFingerprints, fromTail: false);
 
     public IntroMarker? DetectOutro(IReadOnlyList<AudioFingerprint> episodeFingerprints) =>
-        Detect(episodeFingerprints, true);
+        Detect(episodeFingerprints, fromTail: true);
 
     private IntroMarker? Detect(IReadOnlyList<AudioFingerprint> prints, bool fromTail)
     {

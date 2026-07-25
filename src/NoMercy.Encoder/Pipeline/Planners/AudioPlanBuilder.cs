@@ -67,21 +67,21 @@ public static class AudioPlanBuilder
 
                 audioPlans.Add(
                     new(
-                        encoderName,
-                        audioProfile.BitrateKbps,
-                        audioProfile.Channels,
-                        audioProfile.SampleRateHz,
-                        action,
-                        streamLang,
-                        $"0:a:{si}",
-                        audioProfile.SegmentNameTemplate,
-                        audioProfile.PlaylistNameTemplate,
-                        audioFilter,
-                        audioProfile.CustomArguments is not null
+                        EncoderName: encoderName,
+                        BitrateKbps: audioProfile.BitrateKbps,
+                        Channels: audioProfile.Channels,
+                        SampleRate: audioProfile.SampleRateHz,
+                        Action: action,
+                        Language: streamLang,
+                        MapLabel: $"0:a:{si}",
+                        SegmentNameTemplate: audioProfile.SegmentNameTemplate,
+                        PlaylistNameTemplate: audioProfile.PlaylistNameTemplate,
+                        AudioFilter: audioFilter,
+                        ExtraFlags: audioProfile.CustomArguments is not null
                             ? new Dictionary<string, string>(audioProfile.CustomArguments)
                             : null,
-                        stream.Codec.ToLowerInvariant(),
-                        stream.Index
+                        SourceCodecName: stream.Codec.ToLowerInvariant(),
+                        SourceStreamIndex: stream.Index
                     )
                 );
             }

@@ -13,11 +13,12 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Providers.AcoustId;
 using NoMercy.Storage;
 using NoMercyQueue.Core.Interfaces;
+
+using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------

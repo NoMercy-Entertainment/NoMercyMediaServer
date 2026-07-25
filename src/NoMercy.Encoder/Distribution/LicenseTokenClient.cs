@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using Newtonsoft.Json;
@@ -138,7 +139,7 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
         try
         {
             HttpRequestMessage request = BuildRequest(HttpMethod.Post, TokenEndpoint);
-            request.Content = JsonContent.Create(new TokenRequestBody(_certPem));
+            request.Content = JsonContent.Create(new TokenRequestBody(CertPem: _certPem));
 
             using HttpResponseMessage response = await _http
                 .SendAsync(request, ct)
@@ -194,7 +195,7 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
         try
         {
             HttpRequestMessage request = BuildRequest(HttpMethod.Post, IntrospectEndpoint);
-            request.Content = JsonContent.Create(new IntrospectRequestBody(token));
+            request.Content = JsonContent.Create(new IntrospectRequestBody(Token: token));
 
             using HttpResponseMessage response = await _http
                 .SendAsync(request, ct)
@@ -204,20 +205,20 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
             {
                 TokenIntrospectResponse? body =
                     await response.Content.ReadFromJsonAsync<TokenIntrospectResponse>(
-                        ct
+                        cancellationToken: ct
                     );
                 result = new(
-                    body?.Active ?? false,
-                    body?.Scopes ?? [],
-                    null
+                    Active: body?.Active ?? false,
+                    Scopes: body?.Scopes ?? [],
+                    Message: null
                 );
             }
             else
             {
                 result = new(
-                    false,
-                    [],
-                    $"Introspect returned {(int)response.StatusCode}"
+                    Active: false,
+                    Scopes: [],
+                    Message: $"Introspect returned {(int)response.StatusCode}"
                 );
             }
         }
@@ -227,7 +228,7 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
         }
         catch (Exception ex)
         {
-            result = new(false, [], ex.Message);
+            result = new(Active: false, Scopes: [], Message: ex.Message);
         }
 
         lock (_cacheLock)
@@ -282,7 +283,7 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
     )
     {
         TokenResponse? body = await response
-            .Content.ReadFromJsonAsync<TokenResponse>(ct)
+            .Content.ReadFromJsonAsync<TokenResponse>(cancellationToken: ct)
             .ConfigureAwait(false);
 
         if (body is null || string.IsNullOrWhiteSpace(body.Secret))
@@ -293,9 +294,9 @@ public sealed class LicenseTokenClient : ILicenseTokenClient
             );
 
         ClusterToken token = new(
-            body.Secret,
-            body.ExpiresAt,
-            body.Scopes ?? []
+            Secret: body.Secret,
+            ExpiresAt: body.ExpiresAt,
+            Scopes: body.Scopes ?? []
         );
         return new(token, null, null);
     }

@@ -63,13 +63,13 @@ public class GroupingStrategy
                 List<ExecutionNode> mainNodes = [.. videoChain, .. audioNodes];
                 groups.Add(
                     new(
-                        $"group_{groupId++}",
-                        mainNodes.ToArray(),
-                        hardware.HasGpu ? hardware.Gpus[0].Name : null,
-                        hardware.HasGpu ? encodeCount : 0,
-                        hardware.HasGpu ? 0 : 4,
-                        hardware.HasGpu,
-                        1
+                        GroupId: $"group_{groupId++}",
+                        Nodes: mainNodes.ToArray(),
+                        DeviceId: hardware.HasGpu ? hardware.Gpus[0].Name : null,
+                        GpuSlotsRequired: hardware.HasGpu ? encodeCount : 0,
+                        CpuThreadsRequired: hardware.HasGpu ? 0 : 4,
+                        RequiresGpu: hardware.HasGpu,
+                        Priority: 1
                     )
                 );
             }
@@ -92,13 +92,13 @@ public class GroupingStrategy
 
                     groups.Add(
                         new(
-                            $"group_{groupId++}",
-                            groupNodes.ToArray(),
-                            hardware.HasGpu ? hardware.Gpus[0].Name : null,
-                            batch.Count,
-                            0,
-                            hardware.HasGpu,
-                            1
+                            GroupId: $"group_{groupId++}",
+                            Nodes: groupNodes.ToArray(),
+                            DeviceId: hardware.HasGpu ? hardware.Gpus[0].Name : null,
+                            GpuSlotsRequired: batch.Count,
+                            CpuThreadsRequired: 0,
+                            RequiresGpu: hardware.HasGpu,
+                            Priority: 1
                         )
                     );
                 }
@@ -110,13 +110,13 @@ public class GroupingStrategy
         {
             groups.Add(
                 new(
-                    $"group_{groupId++}",
-                    subtitleNodes.ToArray(),
-                    null,
-                    0,
-                    1,
-                    false,
-                    0
+                    GroupId: $"group_{groupId++}",
+                    Nodes: subtitleNodes.ToArray(),
+                    DeviceId: null,
+                    GpuSlotsRequired: 0,
+                    CpuThreadsRequired: 1,
+                    RequiresGpu: false,
+                    Priority: 0
                 )
             );
         }
@@ -125,13 +125,13 @@ public class GroupingStrategy
         {
             groups.Add(
                 new(
-                    $"group_{groupId++}",
-                    chapterNodes.ToArray(),
-                    null,
-                    0,
-                    1,
-                    false,
-                    0
+                    GroupId: $"group_{groupId++}",
+                    Nodes: chapterNodes.ToArray(),
+                    DeviceId: null,
+                    GpuSlotsRequired: 0,
+                    CpuThreadsRequired: 1,
+                    RequiresGpu: false,
+                    Priority: 0
                 )
             );
         }
@@ -140,13 +140,13 @@ public class GroupingStrategy
         {
             groups.Add(
                 new(
-                    $"group_{groupId++}",
-                    thumbnailNodes.ToArray(),
-                    null,
-                    0,
-                    1,
-                    false,
-                    2
+                    GroupId: $"group_{groupId++}",
+                    Nodes: thumbnailNodes.ToArray(),
+                    DeviceId: null,
+                    GpuSlotsRequired: 0,
+                    CpuThreadsRequired: 1,
+                    RequiresGpu: false,
+                    Priority: 2
                 )
             );
         }

@@ -109,7 +109,7 @@ public static class DatabaseBackupService
         {
             Logger.Setup(
                 $"WARNING: Could not back up database '{Path.GetFileName(dbPath)}' — {ex.Message}. "
-                         + "If this coincides with an upgrade, restore from a manual backup.",
+                    + "If this coincides with an upgrade, restore from a manual backup.",
                 LogEventLevel.Warning
             );
             return false;

@@ -51,7 +51,7 @@ public sealed partial class EpisodeShortFormAdapter : IFilenameParseAdapter
             .CleanedFileName[..match.Index]
             .Replace('.', ' ')
             .Replace('_', ' ')
-            .TrimEnd(['-', ' '])
+            .TrimEnd('-', ' ')
             .Trim()
             .CleanSeriesTitle();
 

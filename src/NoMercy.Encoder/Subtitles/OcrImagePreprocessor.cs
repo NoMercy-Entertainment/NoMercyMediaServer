@@ -55,7 +55,7 @@ public static class OcrImagePreprocessor
         if (rgbaImage.Length != expectedLength)
             throw new ArgumentException(
                 $"Expected RGBA buffer of {expectedLength} bytes for {width}x{height} frame, "
-                         + $"got {rgbaImage.Length}.",
+                    + $"got {rgbaImage.Length}.",
                 nameof(rgbaImage)
             );
 

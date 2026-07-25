@@ -62,7 +62,7 @@ public class Mp4OutputStrategy(IStorage storage, IFfmpegExecutor? ffmpegExecutor
 
         builder.AddOutput(
             new(
-                outputPath,
+                FilePath: outputPath,
                 VideoCodec: primaryVideo?.EncoderName,
                 AudioCodec: primaryAudio?.Action == StreamAction.Copy
                     ? "copy"
@@ -150,7 +150,8 @@ public class Mp4OutputStrategy(IStorage storage, IFfmpegExecutor? ffmpegExecutor
 
         // Re-mux: copy all streams + inject chapter metadata from ffmeta file
         FfmpegCommand remuxCmd = new(
-            "ffmpeg",
+            Executable: "ffmpeg",
+            Arguments:
             [
                 "-y",
                 "-i",
@@ -165,10 +166,10 @@ public class Mp4OutputStrategy(IStorage storage, IFfmpegExecutor? ffmpegExecutor
                 "copy",
                 tempPath,
             ],
-            outputDirectory
+            WorkingDirectory: outputDirectory
         );
 
-        await ffmpegExecutor!.ExecuteAsync(remuxCmd, inputDuration: TimeSpan.Zero, ct: ct);
+        await ffmpegExecutor!.ExecuteAsync(remuxCmd, TimeSpan.Zero, ct: ct);
 
         // Swap temp → final
         if (storage.Exists(tempPath))

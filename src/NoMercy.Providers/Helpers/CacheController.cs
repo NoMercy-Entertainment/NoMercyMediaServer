@@ -218,7 +218,7 @@ public static class CacheController
         IReadOnlyList<StorageEntry> entries;
         try
         {
-            entries = storage.List(cachePath, null, false);
+            entries = storage.List(cachePath, pattern: null, recursive: false);
         }
         catch (DirectoryNotFoundException)
         {

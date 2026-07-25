@@ -11,9 +11,9 @@
 
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Middleware;
-using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.Authorization;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -64,7 +64,8 @@ public static class LibrariesSeed
             await dbContext
                 .Libraries.UpsertRange(libraries)
                 .On(v => new { v.Id })
-                .WhenMatched((vs, vi) =>
+                .WhenMatched(
+                    (vs, vi) =>
                         new()
                         {
                             Id = vi.Id,

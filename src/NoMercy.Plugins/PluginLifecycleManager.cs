@@ -156,7 +156,7 @@ internal sealed class PluginLifecycleManager(
             {
                 try
                 {
-                    _storage.DeleteDirectory(pluginDir, true);
+                    _storage.DeleteDirectory(pluginDir, recursive: true);
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {

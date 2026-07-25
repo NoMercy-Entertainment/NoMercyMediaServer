@@ -87,7 +87,7 @@ public static class Culture
         if (string.IsNullOrWhiteSpace(code))
             return code;
 
-        string bare = code.Trim().Split(['-', '_'])[0].ToLowerInvariant();
+        string bare = code.Trim().Split('-', '_')[0].ToLowerInvariant();
 
         string iso3 =
             bare.Length == 2 && Iso3ByIso2.TryGetValue(bare, out string? mapped) ? mapped : bare;

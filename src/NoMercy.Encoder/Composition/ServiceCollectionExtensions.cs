@@ -433,13 +433,13 @@ public static class ServiceCollectionExtensions
             {
                 string persistPath = encoderOpts.WorkerRegistryPath;
                 return new JsonRemoteWorkerRegistry(
-                    sp.GetRequiredService<InMemoryRemoteWorkerRegistry>(),
-                    persistPath,
-                    sp.GetRequiredService<IHttpClientFactory>(),
-                    sp.GetRequiredService<ITaskSerializer>(),
-                    encoderOpts.GetDistributedEncodingSigningKey(),
-                    sp.GetRequiredService<ILogger<JsonRemoteWorkerRegistry>>(),
-                    sp.GetRequiredService<IStorage>()
+                    inner: sp.GetRequiredService<InMemoryRemoteWorkerRegistry>(),
+                    filePath: persistPath,
+                    httpClientFactory: sp.GetRequiredService<IHttpClientFactory>(),
+                    serializer: sp.GetRequiredService<ITaskSerializer>(),
+                    signingKey: encoderOpts.GetDistributedEncodingSigningKey(),
+                    logger: sp.GetRequiredService<ILogger<JsonRemoteWorkerRegistry>>(),
+                    storage: sp.GetRequiredService<IStorage>()
                 );
             }
 

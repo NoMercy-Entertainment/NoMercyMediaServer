@@ -64,11 +64,11 @@ public class CencDrmProcessor(
         // Return an empty sentinel so BuildStage's DRM wiring is a no-op.
         return Task.FromResult(
             new DrmArtifact(
-                string.Empty,
-                string.Empty,
-                config.KeyUri,
-                [],
-                []
+                KeyInfoFilePath: string.Empty,
+                KeyFilePath: string.Empty,
+                KeyUri: config.KeyUri,
+                Key: [],
+                Iv: []
             )
         );
     }
@@ -131,16 +131,16 @@ public class CencDrmProcessor(
             .RunAsync(
                 packagerPath,
                 [.. args],
-                outputDirectory,
-                ct
+                workingDirectory: outputDirectory,
+                cancellationToken: ct
             )
             .ConfigureAwait(false);
 
         if (result.ExitCode != 0)
             throw new InvalidOperationException(
                 $"shaka-packager exited with code {result.ExitCode}. "
-                         + "Check logs for details. "
-                         + $"stderr: {result.StdErr}"
+                    + "Check logs for details. "
+                    + $"stderr: {result.StdErr}"
             );
 
         if (!storage.Exists(mpdOutputPath))

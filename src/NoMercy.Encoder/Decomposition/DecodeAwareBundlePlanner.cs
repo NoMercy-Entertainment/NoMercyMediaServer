@@ -107,9 +107,9 @@ public static class DecodeAwareBundlePlanner
 
         List<DecodeGroup> groups = new();
         if (copyIndexes.Count > 0)
-            groups.Add(new(DecodeClass.Copy, null, copyIndexes));
+            groups.Add(new(DecodeClass.Copy, TonemapChain: null, copyIndexes));
         if (transcodeIndexes.Count > 0)
-            groups.Add(new(DecodeClass.Transcode, null, transcodeIndexes));
+            groups.Add(new(DecodeClass.Transcode, TonemapChain: null, transcodeIndexes));
         foreach (string chain in tonemapChainOrder)
             groups.Add(new(DecodeClass.Tonemap, chain, tonemapByChain[chain]));
 
@@ -239,7 +239,7 @@ public static class DecodeAwareBundlePlanner
                         copyVideoIndexes,
                         audioIndexes,
                         subIndexes,
-                        false,
+                        thumbsForBundle: false,
                         chapterIndexes,
                         parentJobId,
                         groupTag,
@@ -261,11 +261,11 @@ public static class DecodeAwareBundlePlanner
                 bundles.Add(
                     BuildBundleTask(
                         stamped,
-                        [],
-                        [],
-                        [],
-                        true,
-                        [],
+                        videoIndexes: [],
+                        audioIndexes: [],
+                        subIndexes: [],
+                        thumbsForBundle: true,
+                        chapterIndexes: [],
                         parentJobId,
                         groupTag,
                         bundleIndex++,
@@ -374,7 +374,7 @@ public static class DecodeAwareBundlePlanner
         DecomposedTask[] bundleTasks = containedTaskIndexes.Select(idx => allTasks[idx]).ToArray();
 
         return new(
-            $"{groupTag}-bundle-{bundleIndex}",
+            TaskId: $"{groupTag}-bundle-{bundleIndex}",
             ParentJobId: parentJobId,
             GroupTag: groupTag,
             Kind: EncodeTaskKind.Whole,

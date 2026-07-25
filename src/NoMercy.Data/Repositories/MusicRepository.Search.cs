@@ -308,7 +308,7 @@ public partial class MusicRepository
             ct
         );
 
-        await Task.WhenAll([artistsTask, albumsTask, playlistsTask, tracksTask]);
+        await Task.WhenAll(artistsTask, albumsTask, playlistsTask, tracksTask);
 
         return new(artistsTask.Result, albumsTask.Result, playlistsTask.Result, tracksTask.Result);
     }

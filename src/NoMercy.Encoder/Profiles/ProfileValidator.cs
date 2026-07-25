@@ -175,7 +175,7 @@ public static class ProfileValidator
             if (config.SourcePercentage <= 0 || config.SourcePercentage > 200)
                 errors.Add(
                     "AutoLadder.SourcePercentage must be in (0, 200] "
-                          + $"(got {config.SourcePercentage.ToString(CultureInfo.InvariantCulture)})."
+                        + $"(got {config.SourcePercentage.ToString(CultureInfo.InvariantCulture)})."
                 );
         }
 
@@ -192,7 +192,7 @@ public static class ProfileValidator
         if (config.LowTierFramerateMultiplier <= 0 || config.LowTierFramerateMultiplier > 1.0)
             errors.Add(
                 "AutoLadder.LowTierFramerateMultiplier must be in (0, 1.0] "
-                      + $"(got {config.LowTierFramerateMultiplier.ToString(CultureInfo.InvariantCulture)})."
+                    + $"(got {config.LowTierFramerateMultiplier.ToString(CultureInfo.InvariantCulture)})."
             );
     }
 
@@ -351,9 +351,9 @@ public static class ProfileValidator
 
         errors.Add(
             $"Level {video.Level} cap exceeded: "
-                  + $"{lumaSamplesPerSec.ToString("N0", CultureInfo.InvariantCulture)} luma samples/sec required "
-                  + $"but level {video.Level} allows "
-                  + $"{cap.MaxLumaSamplesPerSec.ToString("N0", CultureInfo.InvariantCulture)}. {fix}"
+                + $"{lumaSamplesPerSec.ToString("N0", CultureInfo.InvariantCulture)} luma samples/sec required "
+                + $"but level {video.Level} allows "
+                + $"{cap.MaxLumaSamplesPerSec.ToString("N0", CultureInfo.InvariantCulture)}. {fix}"
         );
     }
 
@@ -371,8 +371,8 @@ public static class ProfileValidator
 
         errors.Add(
             $"3D source detected (stereo_mode={source.StereoMode}). "
-                  + "NoMercy does not support 3D re-encode. "
-                  + "Switch the video output policy to Copy to preserve the source."
+                + "NoMercy does not support 3D re-encode. "
+                + "Switch the video output policy to Copy to preserve the source."
         );
     }
 
@@ -390,7 +390,7 @@ public static class ProfileValidator
 
         warnings.Add(
             $"VR projection metadata ({source.SphericalProjection}) will be stripped on re-encode. "
-                  + "Use a stream-copy video output to preserve it."
+                + "Use a stream-copy video output to preserve it."
         );
     }
 

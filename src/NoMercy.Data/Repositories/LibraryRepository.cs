@@ -975,7 +975,7 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory) :
             ct
         );
 
-        await Task.WhenAll([tvsTask, moviesTask]);
+        await Task.WhenAll(tvsTask, moviesTask);
 
         return new(tvsTask.Result, moviesTask.Result);
     }
@@ -1393,7 +1393,8 @@ public class LibraryRepository(IDbContextFactory<MediaContext> contextFactory) :
             int result = await context
                 .EncodingPresetFolders.UpsertRange(encodingPresetFolders)
                 .On(link => new { link.FolderId, link.PresetId })
-                .WhenMatched((links, linki) => new() { FolderId = linki.FolderId, PresetId = linki.PresetId }
+                .WhenMatched(
+                    (links, linki) => new() { FolderId = linki.FolderId, PresetId = linki.PresetId }
                 )
                 .RunAsync();
 

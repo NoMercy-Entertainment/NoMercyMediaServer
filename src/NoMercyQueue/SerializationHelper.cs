@@ -40,7 +40,7 @@ internal sealed class NoMercySerializationBinder : DefaultSerializationBinder
         if (!isAllowed)
             throw new JsonSerializationException(
                 $"Deserialization of type '{typeName}' is not allowed. "
-                         + "Only NoMercy.* and NoMercyQueue.* types are permitted."
+                    + "Only NoMercy.* and NoMercyQueue.* types are permitted."
             );
 
         return base.BindToType(assemblyName, typeName);

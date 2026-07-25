@@ -58,12 +58,12 @@ public class DriveMonitorWorker(IDriveMonitor driveMonitor, ILogger<DriveMonitor
                         new DriveStateChangedEvent
                         {
                             DriveStateData = new(
-                                methodName,
-                                evt.Drive.Path,
-                                evt.Drive.Label,
-                                evt.Drive.HasDisc,
-                                evt.Drive.DiscType.ToString().ToLowerInvariant(),
-                                DateTime.UtcNow
+                                Method: methodName,
+                                Drive: evt.Drive.Path,
+                                VolumeLabel: evt.Drive.Label,
+                                HasDisc: evt.Drive.HasDisc,
+                                DiscType: evt.Drive.DiscType.ToString().ToLowerInvariant(),
+                                Timestamp: DateTime.UtcNow
                             ),
                         },
                         stoppingToken

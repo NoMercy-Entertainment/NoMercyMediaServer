@@ -83,6 +83,6 @@ public class HlsVariantAnalyzer(IStorage storage) : IHlsVariantAnalyzer
 
         int averageBandwidth = totalDuration > 0 ? (int)(totalBytes * 8.0 / totalDuration) : 0;
 
-        return new((int)peakBitrate, averageBandwidth);
+        return new(PeakBandwidth: (int)peakBitrate, AverageBandwidth: averageBandwidth);
     }
 }

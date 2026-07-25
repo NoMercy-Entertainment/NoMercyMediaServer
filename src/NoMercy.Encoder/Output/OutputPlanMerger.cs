@@ -53,7 +53,7 @@ public static class OutputPlanMerger
         if (plans.Any(plan => plan.Format != primary.Format))
             throw new InvalidOperationException(
                 "Cannot merge output plans with different formats — "
-                         + $"expected every plan to be {primary.Format}."
+                    + $"expected every plan to be {primary.Format}."
             );
 
         VideoOutputPlan[] mergedVideo = PlanStageDisambiguation.DisambiguateVideo(

@@ -14,7 +14,6 @@
 // ---------------------------------------------------------------------------------------------------------------------
 
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.MediaProcessing.Jobs.Dto;
 using NoMercy.NmSystem.Dto;
@@ -22,6 +21,8 @@ using NoMercy.Providers.MusicBrainz.Models;
 using NoMercy.Storage;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
+
+using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------

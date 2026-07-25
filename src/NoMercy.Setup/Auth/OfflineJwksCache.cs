@@ -49,8 +49,8 @@ public static class OfflineJwksCache
     {
         try
         {
-            using Stream stream = Backend.OpenWrite(AppFiles.AuthKeysFile, true);
-            using StreamWriter writer = new(stream, encoding: Encoding.UTF8, leaveOpen: true);
+            using Stream stream = Backend.OpenWrite(AppFiles.AuthKeysFile, overwrite: true);
+            using StreamWriter writer = new(stream, Encoding.UTF8, leaveOpen: true);
             writer.Write(publicKeyBase64);
             CachedSigningKey = CreateSecurityKeyFromBase64(publicKeyBase64);
             Logger.Auth("Cached auth public key for offline use");

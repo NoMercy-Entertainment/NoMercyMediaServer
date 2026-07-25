@@ -210,7 +210,7 @@ public static partial class StringExtensions
         int cut = EarliestReleaseTag(normalized, out _, out _);
         string title = cut >= 0 ? normalized[..cut] : normalized;
 
-        title = title.TrimEnd([' ', '-', '_', '.']);
+        title = title.TrimEnd(' ', '-', '_', '.');
         return Regex.Replace(title, @"\s+", " ").Trim();
     }
 
@@ -229,7 +229,7 @@ public static partial class StringExtensions
         if (year is { Success: true, Index: > 0 })
             title = title[..year.Index];
 
-        return title.TrimEnd(['-', '.', '_', ' ']).Trim();
+        return title.TrimEnd('-', '.', '_', ' ').Trim();
     }
 
     /// <summary>Matches a "Season N" / "Series N" (and common localized) folder name.</summary>
@@ -253,7 +253,7 @@ public static partial class StringExtensions
         if (string.IsNullOrWhiteSpace(directory))
             return null;
 
-        string folder = Path.GetFileName(directory.TrimEnd(['/', '\\']));
+        string folder = Path.GetFileName(directory.TrimEnd('/', '\\'));
         if (string.IsNullOrEmpty(folder))
             folder = directory;
 
@@ -622,7 +622,7 @@ public static partial class StringExtensions
         value = Regex.Replace(value, @"[^a-z0-9\s-_]", "", RegexOptions.Compiled);
 
         //Trim dashes from end
-        value = value.Trim(['-', '_']);
+        value = value.Trim('-', '_');
 
         //Replace double occurences of - or _
         value = Regex.Replace(value, @"([-_]){2,}", "$1", RegexOptions.Compiled);

@@ -487,7 +487,7 @@ public class FfProbeService : IFfProbeService
             {
                 try
                 {
-                    process.Kill(true);
+                    process.Kill(entireProcessTree: true);
                 }
                 catch (InvalidOperationException) { }
                 throw new OperationCanceledException("ffprobe did not exit within timeout");
@@ -624,7 +624,7 @@ public class FfProbeService : IFfProbeService
             {
                 try
                 {
-                    process.Kill(true);
+                    process.Kill(entireProcessTree: true);
                 }
                 catch (InvalidOperationException) { }
                 throw new OperationCanceledException("ffprobe did not exit within timeout");

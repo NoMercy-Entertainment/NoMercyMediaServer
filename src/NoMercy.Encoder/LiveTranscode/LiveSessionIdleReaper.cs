@@ -117,7 +117,7 @@ public class LiveSessionIdleReaper(
         if (transport is null)
             return;
 
-        SessionEndedMessage message = new(reason);
+        SessionEndedMessage message = new(Reason: reason);
 
         try
         {

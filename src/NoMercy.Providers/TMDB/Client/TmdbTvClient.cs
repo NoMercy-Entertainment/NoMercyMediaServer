@@ -89,7 +89,7 @@ public class TmdbTvClient : TmdbBaseClient
             ["end_date"] = endDate,
         };
 
-        return Get<TmdbTvChanges>("tv/" + Id + "/changes", queryParams, priority);
+        return Get<TmdbTvChanges>("tv/" + Id + "/changes", queryParams, priority: priority);
     }
 
     public Task<TmdbTvContentRatings?> ContentRatings(bool? priority = false)
@@ -203,7 +203,7 @@ public class TmdbTvClient : TmdbBaseClient
     {
         Dictionary<string, string?> queryParams = new() { ["language"] = language };
 
-        return Get<TmdbGenreTv>("genre/tv/list", queryParams, priority);
+        return Get<TmdbGenreTv>("genre/tv/list", queryParams, priority: priority);
     }
 
     public Task<TmdbTmdbNetworkDetails?> NetworkDetails(int id, bool? priority = false)

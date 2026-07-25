@@ -305,7 +305,7 @@ public static class Shell
                 try
                 {
                     if (!process.HasExited)
-                        process.Kill(true);
+                        process.Kill(entireProcessTree: true);
                 }
                 catch
                 { /* swallow exceptions */

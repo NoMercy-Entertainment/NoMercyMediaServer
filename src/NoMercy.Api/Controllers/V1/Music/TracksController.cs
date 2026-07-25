@@ -27,7 +27,7 @@ using NoMercy.NmSystem.Extensions;
 namespace NoMercy.Api.Controllers.V1.Music;
 
 [ApiController]
-[Tags("Music Tracks")]
+[Tags(tags: "Music Tracks")]
 [Authorize(Policy = "MediaAccess")]
 [Route("api/v{version:apiVersion}/music/tracks")]
 public class TracksController : BaseController

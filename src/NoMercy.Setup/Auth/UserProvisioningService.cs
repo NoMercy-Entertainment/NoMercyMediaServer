@@ -10,9 +10,9 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
-using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
+using NoMercy.Authorization;
 
 namespace NoMercy.Setup.Auth;
 

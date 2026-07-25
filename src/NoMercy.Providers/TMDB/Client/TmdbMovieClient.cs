@@ -199,7 +199,7 @@ public class TmdbMovieClient : TmdbBaseClient, ITmdbMovieClient
         return Get<TmdbGenreMovies>(
             "genre/movie/list",
             new Dictionary<string, string?> { ["language"] = language },
-            priority
+            priority: priority
         );
     }
 }

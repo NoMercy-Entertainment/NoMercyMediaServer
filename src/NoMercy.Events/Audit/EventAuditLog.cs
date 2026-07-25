@@ -87,9 +87,9 @@ public sealed class EventAuditLog
         try
         {
             return JsonSerializer.Serialize(
-                @event,
-                @event.GetType(),
-                new JsonSerializerOptions { WriteIndented = false }
+                value: @event,
+                inputType: @event.GetType(),
+                options: new JsonSerializerOptions { WriteIndented = false }
             );
         }
         catch

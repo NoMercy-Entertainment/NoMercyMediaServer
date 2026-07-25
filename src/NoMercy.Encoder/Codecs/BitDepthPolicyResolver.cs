@@ -58,11 +58,11 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
                 )
             );
             return new(
-                8,
-                "yuv420p",
-                null,
-                [],
-                null
+                FinalBitDepth: 8,
+                PixelFormat: "yuv420p",
+                SwitchedToEncoder: null,
+                Warnings: [],
+                Failure: null
             );
         }
 
@@ -83,11 +83,11 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
             );
 
             return new(
-                10,
-                pf,
-                null,
-                [],
-                null
+                FinalBitDepth: 10,
+                PixelFormat: pf,
+                SwitchedToEncoder: null,
+                Warnings: [],
+                Failure: null
             );
         }
 
@@ -127,27 +127,27 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
         // BitDepthAutoDowngrade: what was done in response (8-bit fallback applied).
         // Both surface so the dashboard can show the cause and the consequence.
         EncoderRule noHwSupport = new(
-            EncoderRuleId.BitDepthNoHardwareSupport,
-            EncoderRuleSeverity.Warning,
-            "video_outputs[…].bit_depth",
-            $"Encoder '{encoderHandle}' does not support 10-bit output.",
-            "Switch hardware_preference to prefer_software (or force_software) to use a software encoder that supports 10-bit, or change bit_depth_policy to PreferSoftware."
+            Id: EncoderRuleId.BitDepthNoHardwareSupport,
+            Severity: EncoderRuleSeverity.Warning,
+            Field: "video_outputs[…].bit_depth",
+            Message: $"Encoder '{encoderHandle}' does not support 10-bit output.",
+            Fix: "Switch hardware_preference to prefer_software (or force_software) to use a software encoder that supports 10-bit, or change bit_depth_policy to PreferSoftware."
         );
 
         EncoderRule autoDowngrade = new(
-            EncoderRuleId.BitDepthAutoDowngrade,
-            EncoderRuleSeverity.Warning,
-            "video_outputs[…].bit_depth",
-            $"Encoder '{encoderHandle}' does not support 10-bit — output will be 8-bit.",
-            "Set bit_depth_policy = PreferSoftware to swap to libx264/libx265 instead, or accept 8-bit."
+            Id: EncoderRuleId.BitDepthAutoDowngrade,
+            Severity: EncoderRuleSeverity.Warning,
+            Field: "video_outputs[…].bit_depth",
+            Message: $"Encoder '{encoderHandle}' does not support 10-bit — output will be 8-bit.",
+            Fix: "Set bit_depth_policy = PreferSoftware to swap to libx264/libx265 instead, or accept 8-bit."
         );
 
         return new(
-            8,
-            "yuv420p",
-            null,
-            [noHwSupport, autoDowngrade],
-            null
+            FinalBitDepth: 8,
+            PixelFormat: "yuv420p",
+            SwitchedToEncoder: null,
+            Warnings: [noHwSupport, autoDowngrade],
+            Failure: null
         );
     }
 
@@ -167,20 +167,20 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
 
         EncoderRuntimeException failure = new(
             new(
-                EncoderRuleId.BitDepthStrictViolation,
-                $"Encoder '{encoderHandle}' does not support 10-bit and bit_depth_policy = Strict forbids downgrade.",
-                "Switch the profile to PreferSoftware or remove the 10-bit requirement.",
-                new { handle = encoderHandle }
+                Id: EncoderRuleId.BitDepthStrictViolation,
+                Message: $"Encoder '{encoderHandle}' does not support 10-bit and bit_depth_policy = Strict forbids downgrade.",
+                Suggestion: "Switch the profile to PreferSoftware or remove the 10-bit requirement.",
+                Details: new { handle = encoderHandle }
             ),
             422
         );
 
         return new(
-            0,
-            null,
-            null,
-            [],
-            failure
+            FinalBitDepth: 0,
+            PixelFormat: null,
+            SwitchedToEncoder: null,
+            Warnings: [],
+            Failure: failure
         );
     }
 
@@ -213,11 +213,11 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
         );
 
         return new(
-            10,
-            pf,
-            toHandle,
-            [],
-            null
+            FinalBitDepth: 10,
+            PixelFormat: pf,
+            SwitchedToEncoder: toHandle,
+            Warnings: [],
+            Failure: null
         );
     }
 
@@ -233,11 +233,11 @@ public sealed class BitDepthPolicyResolver : IBitDepthPolicyResolver
         );
 
         return new(
-            8,
-            "yuv420p",
-            null,
-            [],
-            null
+            FinalBitDepth: 8,
+            PixelFormat: "yuv420p",
+            SwitchedToEncoder: null,
+            Warnings: [],
+            Failure: null
         );
     }
 }

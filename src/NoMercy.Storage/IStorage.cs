@@ -290,6 +290,6 @@ public interface IStorage
     string GetFullPath(string path) =>
         throw new NotSupportedException(
             $"{GetType().Name} does not support GetFullPath. "
-                     + "This method is only valid for LocalStorage."
+                + "This method is only valid for LocalStorage."
         );
 }

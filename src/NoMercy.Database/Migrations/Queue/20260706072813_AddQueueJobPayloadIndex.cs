@@ -11,17 +11,17 @@ namespace NoMercy.Database.Migrations.Queue
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateIndex(
-                "IX_QueueJobs_Payload",
-                "QueueJobs",
-                "Payload");
+                name: "IX_QueueJobs_Payload",
+                table: "QueueJobs",
+                column: "Payload");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropIndex(
-                "IX_QueueJobs_Payload",
-                "QueueJobs");
+                name: "IX_QueueJobs_Payload",
+                table: "QueueJobs");
         }
     }
 }

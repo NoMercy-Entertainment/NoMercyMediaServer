@@ -37,7 +37,7 @@ public class EncoderController(
     public async Task<IActionResult> Index()
     {
         List<EncodingPreset> encodingPresets = await encodingPresetRepository.ListAsync(
-            int.MaxValue
+            pageSize: int.MaxValue
         );
 
         return Ok(new { data = encodingPresets });

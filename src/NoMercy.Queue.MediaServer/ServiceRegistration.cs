@@ -42,9 +42,9 @@ public static class ServiceRegistration
             >().Value;
 
             return new ResourceBudgetOptions(
-                resources.EncoderCpuHeadroomPercent,
-                resources.EncoderGpuHeadroomPercent,
-                resources.EncoderMinFreeMemoryMb
+                CpuHeadroomPercent: resources.EncoderCpuHeadroomPercent,
+                GpuHeadroomPercent: resources.EncoderGpuHeadroomPercent,
+                MinFreeMemoryMb: resources.EncoderMinFreeMemoryMb
             );
         });
         services.AddSingleton<QueueRunner>(sp =>

@@ -59,7 +59,7 @@ public class AcoustIdFingerprintClient : AcoustIdBaseClient
         {
             throw new InvalidOperationException(
                 "AcoustIdFingerprintClient was constructed without an IAudioFingerprinter; "
-                         + "fingerprint lookup by file requires one."
+                    + "fingerprint lookup by file requires one."
             );
         }
 

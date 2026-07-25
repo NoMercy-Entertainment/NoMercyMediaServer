@@ -22,55 +22,55 @@ public static class LadderTiers
             640,
             360,
             "360p",
-            365,
-            200,
-            150,
-            237
+            RecommendedBitrateH264Kbps: 365,
+            RecommendedBitrateHevcKbps: 200,
+            RecommendedBitrateAv1Kbps: 150,
+            RecommendedBitrateVp9Kbps: 237
         ),
         new(
             960,
             540,
             "540p",
-            2000,
-            800,
-            600,
-            1300
+            RecommendedBitrateH264Kbps: 2000,
+            RecommendedBitrateHevcKbps: 800,
+            RecommendedBitrateAv1Kbps: 600,
+            RecommendedBitrateVp9Kbps: 1300
         ),
         new(
             1280,
             720,
             "720p",
-            3000,
-            1600,
-            1200,
-            1950
+            RecommendedBitrateH264Kbps: 3000,
+            RecommendedBitrateHevcKbps: 1600,
+            RecommendedBitrateAv1Kbps: 1200,
+            RecommendedBitrateVp9Kbps: 1950
         ),
         new(
             1920,
             1080,
             "1080p",
-            6000,
-            3400,
-            2500,
-            3900
+            RecommendedBitrateH264Kbps: 6000,
+            RecommendedBitrateHevcKbps: 3400,
+            RecommendedBitrateAv1Kbps: 2500,
+            RecommendedBitrateVp9Kbps: 3900
         ),
         new(
             2560,
             1440,
             "1440p",
-            12000,
-            6000,
-            4500,
-            7800
+            RecommendedBitrateH264Kbps: 12000,
+            RecommendedBitrateHevcKbps: 6000,
+            RecommendedBitrateAv1Kbps: 4500,
+            RecommendedBitrateVp9Kbps: 7800
         ),
         new(
             3840,
             2160,
             "2160p",
-            24000,
-            11600,
-            8000,
-            15600
+            RecommendedBitrateH264Kbps: 24000,
+            RecommendedBitrateHevcKbps: 11600,
+            RecommendedBitrateAv1Kbps: 8000,
+            RecommendedBitrateVp9Kbps: 15600
         ),
     ];
 
@@ -80,28 +80,28 @@ public static class LadderTiers
             854,
             480,
             "480p",
-            1500,
-            null,
-            null,
-            null
+            RecommendedBitrateH264Kbps: 1500,
+            RecommendedBitrateHevcKbps: null,
+            RecommendedBitrateAv1Kbps: null,
+            RecommendedBitrateVp9Kbps: null
         ),
         new(
             1280,
             720,
             "720p",
-            3000,
-            null,
-            null,
-            null
+            RecommendedBitrateH264Kbps: 3000,
+            RecommendedBitrateHevcKbps: null,
+            RecommendedBitrateAv1Kbps: null,
+            RecommendedBitrateVp9Kbps: null
         ),
         new(
             1920,
             1080,
             "1080p",
-            6000,
-            null,
-            null,
-            null
+            RecommendedBitrateH264Kbps: 6000,
+            RecommendedBitrateHevcKbps: null,
+            RecommendedBitrateAv1Kbps: null,
+            RecommendedBitrateVp9Kbps: null
         ),
     ];
     public static readonly LadderTier[] YouTube =

@@ -42,13 +42,13 @@ public class MediaPlaybackActivityGate : IWorkerActivityGate
     private const int DeferIntervalSeconds = 2;
 
     private static readonly TimeSpan DeferIntervalValue = TimeSpan.FromSeconds(
-        DeferIntervalSeconds
+        seconds: DeferIntervalSeconds
     );
 
-    private static readonly TimeSpan MaxDeferIntervalDefault = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan MaxDeferIntervalDefault = TimeSpan.FromSeconds(seconds: 30);
 
     private static readonly HashSet<string> NasReadHeavyQueues = new(
-        StringComparer.Ordinal
+        comparer: StringComparer.Ordinal
     )
     {
         "library",
@@ -59,11 +59,11 @@ public class MediaPlaybackActivityGate : IWorkerActivityGate
     private readonly TimeSpan _maxDeferInterval;
     private readonly Func<DateTime> _utcNow;
     private readonly ConcurrentDictionary<string, DateTime> _lastAllowedUtc = new(
-        StringComparer.Ordinal
+        comparer: StringComparer.Ordinal
     );
 
     public MediaPlaybackActivityGate(MediaActivityMonitor monitor)
-        : this(monitor, null, null) { }
+        : this(monitor, maxDeferInterval: null, utcNow: null) { }
 
     /// <summary>
     /// Test-only seam: lets tests shrink <paramref name="maxDeferInterval"/>
@@ -82,7 +82,7 @@ public class MediaPlaybackActivityGate : IWorkerActivityGate
 
     public bool ShouldDefer(string queueName)
     {
-        if (!_monitor.IsActive || !NasReadHeavyQueues.Contains(queueName))
+        if (!_monitor.IsActive || !NasReadHeavyQueues.Contains(item: queueName))
             return false;
 
         DateTime now = _utcNow();

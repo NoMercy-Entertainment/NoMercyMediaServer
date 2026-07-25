@@ -37,7 +37,7 @@ public record PathAllowlist(string[] AllowedInputPaths, string[] AllowedOutputPa
         foreach (string allowed in allowedRoots)
         {
             string root = Path.GetFullPath(allowed)
-                .TrimEnd([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]);
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
             // Exact match: the path is the root itself.
             if (normalized.Equals(root, StringComparison.OrdinalIgnoreCase))

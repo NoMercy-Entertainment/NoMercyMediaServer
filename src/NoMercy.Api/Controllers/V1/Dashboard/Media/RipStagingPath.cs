@@ -36,7 +36,7 @@ public static class RipStagingPath
         try
         {
             root = Path.GetFullPath(stagingRoot)
-                .TrimEnd([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]);
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             candidate = Path.GetFullPath(ripOutputPath);
         }
         catch

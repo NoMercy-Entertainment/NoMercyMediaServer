@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Net;
+using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Abstractions;
 using NoMercy.Providers.Helpers;

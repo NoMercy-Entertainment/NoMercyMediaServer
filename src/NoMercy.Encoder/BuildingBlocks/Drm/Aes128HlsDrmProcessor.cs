@@ -100,11 +100,11 @@ public class Aes128HlsDrmProcessor(IStorage storage) : IDrmProcessor
             .ConfigureAwait(false);
 
         return new(
-            keyInfoPath,
-            keyFilePath,
-            config.KeyUri,
-            key,
-            iv
+            KeyInfoFilePath: keyInfoPath,
+            KeyFilePath: keyFilePath,
+            KeyUri: config.KeyUri,
+            Key: key,
+            Iv: iv
         );
     }
 }

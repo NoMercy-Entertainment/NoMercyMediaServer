@@ -88,13 +88,13 @@ public class SubtitleExtractor : ISubtitleExtractor
         string outputPath = $"{resolved}.{extension}";
 
         return new(
-            outputPath,
-            ffmpegCodec,
-            extension,
-            language,
-            variant,
-            isBitmap,
-            plan.SourceIndex
+            OutputPath: outputPath,
+            FfmpegCodec: ffmpegCodec,
+            Extension: extension,
+            Language: language,
+            Variant: variant,
+            IsBitmap: isBitmap,
+            SourceIndex: plan.SourceIndex
         );
     }
 

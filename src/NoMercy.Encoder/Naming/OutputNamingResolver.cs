@@ -51,9 +51,9 @@ public class OutputNamingResolver(IMediaKeyResolver mediaKeys) : IOutputNamingRe
             manifestPath,
             reconstructionPath,
             singleName,
-            profile.Id.ToString(),
-            profile.Name,
-            ContainerToString(profile.Container)
+            PresetId: profile.Id.ToString(),
+            PresetName: profile.Name,
+            ContainerString: ContainerToString(profile.Container)
         );
     }
 

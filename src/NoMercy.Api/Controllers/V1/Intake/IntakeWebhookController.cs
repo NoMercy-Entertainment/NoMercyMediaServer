@@ -128,7 +128,7 @@ public class IntakeWebhookController(
     private static bool IsPathUnderRoot(string candidatePath, string rootPath)
     {
         string fullRoot = Path.GetFullPath(rootPath)
-            .TrimEnd([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]);
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         string fullCandidate = Path.GetFullPath(candidatePath);
         string rootWithSeparator = fullRoot + Path.DirectorySeparatorChar;
 

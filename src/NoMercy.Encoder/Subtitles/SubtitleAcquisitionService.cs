@@ -125,7 +125,7 @@ public class SubtitleAcquisitionService(
             if (hash is null)
                 logger.LogWarning(
                     "Could not read {SourcePath} to compute a moviehash — skipping the hash "
-                             + "strategy for this source",
+                        + "strategy for this source",
                     request.SourcePath
                 );
 
@@ -253,13 +253,13 @@ public class SubtitleAcquisitionService(
             bool isExactMatch = ComputeExactMatch(candidate, request, wasHashStrategy);
 
             return new(
-                candidate.Language,
-                localPath,
-                candidate.Provider,
-                isExactMatch,
-                candidate.Rating,
-                candidate.Downloads,
-                candidate.Format
+                Language: candidate.Language,
+                LocalPath: localPath,
+                Provider: candidate.Provider,
+                IsExactMatch: isExactMatch,
+                Rating: candidate.Rating,
+                Downloads: candidate.Downloads,
+                Format: candidate.Format
             );
         }
         catch (Exception ex)

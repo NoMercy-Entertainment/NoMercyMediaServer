@@ -45,7 +45,7 @@ public static class HttpClientExtensions
                     );
                     IDnsQueryResponse? result = await dnsClient.QueryAsync(
                         context.DnsEndPoint.Host,
-                        queryType: QueryType.A,
+                        QueryType.A,
                         cancellationToken: token
                     );
                     IPAddress? address = result.Answers.ARecords().FirstOrDefault()?.Address;

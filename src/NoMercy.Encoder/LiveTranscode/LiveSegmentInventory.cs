@@ -27,7 +27,7 @@ public class LiveSegmentInventory(IStorage storage, ILogger<LiveSegmentInventory
         IReadOnlyList<StorageEntry> entries;
         try
         {
-            entries = storage.List(scratchDirectory, SegmentGlob, false);
+            entries = storage.List(scratchDirectory, SegmentGlob, recursive: false);
         }
         catch (Exception ex)
         {
@@ -57,7 +57,7 @@ public class LiveSegmentInventory(IStorage storage, ILogger<LiveSegmentInventory
         IReadOnlyList<StorageEntry> entries;
         try
         {
-            entries = storage.List(scratchDirectory, SegmentGlob, false);
+            entries = storage.List(scratchDirectory, SegmentGlob, recursive: false);
         }
         catch (Exception ex)
         {

@@ -24,7 +24,7 @@ using NoMercy.Providers.TMDB.Models.People;
 namespace NoMercy.Api.Controllers.V1.Media;
 
 [ApiController]
-[Tags("Media People")]
+[Tags(tags: "Media People")]
 [ApiVersion(1.0)]
 [Authorize(Policy = "MediaAccess")]
 public class PeopleController(

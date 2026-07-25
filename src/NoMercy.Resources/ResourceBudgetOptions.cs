@@ -35,5 +35,5 @@ public sealed record ResourceBudgetOptions(
     /// model live host load.
     /// </summary>
     public static ResourceBudgetOptions Disabled { get; } =
-        new(0, 0, 0);
+        new(CpuHeadroomPercent: 0, GpuHeadroomPercent: 0, MinFreeMemoryMb: 0);
 }

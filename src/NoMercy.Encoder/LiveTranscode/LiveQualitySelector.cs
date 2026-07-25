@@ -112,16 +112,16 @@ public class LiveQualitySelector(ICodecResolver codecResolver, IHardwareCapabili
         string label = $"{tierHeight}p";
 
         return new(
-            qualityId,
-            label,
-            tierWidth,
-            tierHeight,
-            targetCodec,
-            bitrateKbps,
-            resolved.FfmpegEncoderName,
-            isHardwareAccelerated,
-            speedMultiplier,
-            canRealtime
+            Id: qualityId,
+            Label: label,
+            Width: tierWidth,
+            Height: tierHeight,
+            Codec: targetCodec,
+            BitrateKbps: bitrateKbps,
+            Encoder: resolved.FfmpegEncoderName,
+            IsHardwareAccelerated: isHardwareAccelerated,
+            ExpectedSpeed: speedMultiplier,
+            CanRealtime: canRealtime
         );
     }
 

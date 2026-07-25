@@ -70,7 +70,7 @@ public abstract class SingleFileAudioOutputStrategy(IStorage storage) : IOutputS
 
         builder.AddOutput(
             new(
-                outputPath,
+                FilePath: outputPath,
                 AudioCodec: audioCodec,
                 AudioBitrateKbps: audio?.Action == StreamAction.Transcode
                     ? audio.BitrateKbps

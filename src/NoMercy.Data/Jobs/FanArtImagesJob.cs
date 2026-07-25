@@ -10,18 +10,19 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Music;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.FanArt.Models;
 using NoMercy.Providers.MusicBrainz.Models;
-using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 using Image = NoMercy.Database.Models.Media.Image;
+
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using NoMercyQueue;
 namespace NoMercy.Data.Jobs;
 
 [Serializable]
@@ -174,7 +175,8 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
             await mediaContext
                 .Images.UpsertRange(images)
                 .On(v => new { v.FilePath, v.ArtistId })
-                .WhenMatched((s, i) =>
+                .WhenMatched(
+                    (s, i) =>
                         new()
                         {
                             AspectRatio = i.AspectRatio,
@@ -263,7 +265,8 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
             await mediaContext
                 .Images.UpsertRange(images)
                 .On(v => new { v.FilePath, v.AlbumId })
-                .WhenMatched((s, i) =>
+                .WhenMatched(
+                    (s, i) =>
                         new()
                         {
                             AspectRatio = i.AspectRatio,

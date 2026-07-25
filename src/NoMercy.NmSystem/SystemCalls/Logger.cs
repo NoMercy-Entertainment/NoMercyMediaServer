@@ -21,6 +21,7 @@ using NoMercy.NmSystem.Logging.Rendering;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Validation;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
@@ -157,7 +158,7 @@ public static class Logger
             .Enrich.With<FileMessageEnricher>()
             .WriteTo.File(
                 new CompactJsonFormatter(),
-                path: filePath,
+                filePath,
                 rollingInterval: RollingInterval.Day,
                 // Without shared:true the Serilog file sink takes an exclusive
                 // FileShare.Read lock. Two processes pointing at the same log
@@ -536,7 +537,7 @@ public static class Logger
         List<LogEntry> logs = await LogReader.GetLogsAsync(
             storage,
             logDirectoryPath,
-            filter
+            filter: filter
         );
 
         return logs.OrderByDescending(entry => entry.Time)

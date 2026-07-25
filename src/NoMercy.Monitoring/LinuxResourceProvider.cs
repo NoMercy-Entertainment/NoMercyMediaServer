@@ -135,15 +135,15 @@ internal sealed class LinuxResourceProvider : IResourceProvider
 
                 snapshots.Add(
                     new(
-                        parts[0],
-                        ParseLong(parts, 1),
-                        ParseLong(parts, 2),
-                        ParseLong(parts, 3),
-                        ParseLong(parts, 4),
-                        ParseLong(parts, 5),
-                        ParseLong(parts, 6),
-                        ParseLong(parts, 7),
-                        ParseLong(parts, 8)
+                        Label: parts[0],
+                        User: ParseLong(parts, 1),
+                        Nice: ParseLong(parts, 2),
+                        System: ParseLong(parts, 3),
+                        Idle: ParseLong(parts, 4),
+                        IoWait: ParseLong(parts, 5),
+                        Irq: ParseLong(parts, 6),
+                        SoftIrq: ParseLong(parts, 7),
+                        Steal: ParseLong(parts, 8)
                     )
                 );
             }

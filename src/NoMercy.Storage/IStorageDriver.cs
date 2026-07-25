@@ -175,8 +175,8 @@ public interface IStorageDriver
             return parent;
         if (string.IsNullOrEmpty(parent))
             return child;
-        string trimmedParent = parent.TrimEnd(['/', '\\']);
-        string trimmedChild = child.TrimStart(['/', '\\']);
+        string trimmedParent = parent.TrimEnd('/', '\\');
+        string trimmedChild = child.TrimStart('/', '\\');
         return $"{trimmedParent}{sep}{trimmedChild}";
     }
 }

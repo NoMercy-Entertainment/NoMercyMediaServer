@@ -111,8 +111,8 @@ public static class DesktopIconCreator
             end tell";
 
             string scriptPath = "/tmp/CreateShortcut.scpt";
-            using (Stream scriptStream = _driver.OpenWrite(scriptPath, true))
-            using (StreamWriter scriptWriter = new(scriptStream, encoding: Encoding.UTF8, leaveOpen: true))
+            using (Stream scriptStream = _driver.OpenWrite(scriptPath, overwrite: true))
+            using (StreamWriter scriptWriter = new(scriptStream, Encoding.UTF8, leaveOpen: true))
                 scriptWriter.Write(script);
             using (Process? osascriptProc = Process.Start("osascript", scriptPath))
                 osascriptProc.WaitForExit();
@@ -120,7 +120,7 @@ public static class DesktopIconCreator
             if (!string.IsNullOrEmpty(iconPath) && _driver.FileExists(iconPath))
             {
                 string iconDest = Path.Combine(aliasPath, "Icon.icns");
-                _driver.CopyFile(iconPath, iconDest, true);
+                _driver.CopyFile(iconPath, iconDest, overwrite: true);
 
                 using (
                     Process? shProc = Process.Start(
@@ -160,9 +160,9 @@ public static class DesktopIconCreator
                 Type=Application
                 Terminal=false";
 
-            using (Stream shortcutStream = _driver.OpenWrite(shortcutPath, true))
+            using (Stream shortcutStream = _driver.OpenWrite(shortcutPath, overwrite: true))
             using (
-                StreamWriter shortcutWriter = new(shortcutStream, encoding: Encoding.UTF8, leaveOpen: true)
+                StreamWriter shortcutWriter = new(shortcutStream, Encoding.UTF8, leaveOpen: true)
             )
                 shortcutWriter.Write(content);
             using (Process? chmodProc = Process.Start("chmod", $"+x \"{shortcutPath}\""))

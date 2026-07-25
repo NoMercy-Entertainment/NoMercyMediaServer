@@ -52,7 +52,7 @@ public class TmdbEpisodeClient : TmdbBaseClient
         return Get<TmdbEpisodeAppends>(
             "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber,
             queryParams,
-            priority
+            priority: priority
         );
     }
 
@@ -60,7 +60,7 @@ public class TmdbEpisodeClient : TmdbBaseClient
     {
         return WithAppends(
             ["changes", "credits", "external_ids", "images", "translations", "videos"],
-            priority
+            priority: priority
         );
     }
 
@@ -79,7 +79,7 @@ public class TmdbEpisodeClient : TmdbBaseClient
         return Get<TmdbEpisodeChanges>(
             "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber + "/changes",
             queryParams,
-            priority
+            priority: priority
         );
     }
 
@@ -95,12 +95,12 @@ public class TmdbEpisodeClient : TmdbBaseClient
     {
         return Get<TmdbEpisodeExternalIds>(
             "tv/"
-                 + Id
-                 + "/season/"
-                 + _seasonNumber
-                 + "/episode/"
-                 + _episodeNumber
-                 + "/external_ids",
+                + Id
+                + "/season/"
+                + _seasonNumber
+                + "/episode/"
+                + _episodeNumber
+                + "/external_ids",
             priority: priority
         );
     }
@@ -117,12 +117,12 @@ public class TmdbEpisodeClient : TmdbBaseClient
     {
         return Get<TmdbSharedTranslations>(
             "tv/"
-                 + Id
-                 + "/season/"
-                 + _seasonNumber
-                 + "/episode/"
-                 + _episodeNumber
-                 + "/translations",
+                + Id
+                + "/season/"
+                + _seasonNumber
+                + "/episode/"
+                + _episodeNumber
+                + "/translations",
             priority: priority
         );
     }

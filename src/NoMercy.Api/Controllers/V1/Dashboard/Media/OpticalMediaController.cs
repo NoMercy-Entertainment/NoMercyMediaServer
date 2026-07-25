@@ -192,7 +192,7 @@ public class OpticalMediaController(
                 drive,
                 titleIndex,
                 TimeSpan.Zero,
-                null,
+                preferredQuality: null,
                 ct
             );
         }
@@ -387,31 +387,31 @@ public class OpticalMediaController(
         CustomMetadata meta =
             request.MediaType == "tv"
                 ? new(
-                    request.Title ?? string.Empty,
-                    request.Year,
-                    MediaType.TvShow,
-                    request.PosterUrl,
-                    request.SeasonNumber ?? 1,
-                    request.EpisodeNumber ?? 1
+                    Title: request.Title ?? string.Empty,
+                    Year: request.Year,
+                    Type: MediaType.TvShow,
+                    PosterUrl: request.PosterUrl,
+                    SeasonNumber: request.SeasonNumber ?? 1,
+                    EpisodeStartNumber: request.EpisodeNumber ?? 1
                 )
                 : new CustomMetadata(
-                    request.Title ?? string.Empty,
-                    request.Year,
-                    MediaType.Movie,
-                    request.PosterUrl
+                    Title: request.Title ?? string.Empty,
+                    Year: request.Year,
+                    Type: MediaType.Movie,
+                    PosterUrl: request.PosterUrl
                 );
 
         RipRequest syntheticRequest = new(
-            drivePath,
-            [0],
-            request.TmdbId,
-            meta,
-            request.LibraryId,
-            request.FolderId,
-            null,
-            [],
-            [],
-            RipMode.RipAndEncode
+            DrivePath: drivePath,
+            SelectedTitleIndices: [0],
+            MetadataId: request.TmdbId,
+            Custom: meta,
+            LibraryId: request.LibraryId,
+            FolderId: request.FolderId,
+            EncodingProfileId: null,
+            AudioTracks: [],
+            Subtitles: [],
+            Mode: RipMode.RipAndEncode
         );
 
         string folderRelative = BuildOutputPath(syntheticRequest, targetLibrary.Type, 0, 0);
@@ -428,7 +428,7 @@ public class OpticalMediaController(
 
         await using (FileStream src = new(request.RipOutputPath, FileMode.Open, FileAccess.Read))
         await using (
-            Stream dst = await folderStorage.OpenWriteAsync(folderRelative, true, ct)
+            Stream dst = await folderStorage.OpenWriteAsync(folderRelative, overwrite: true, ct)
         )
         {
             await src.CopyToAsync(dst, ct);
@@ -515,8 +515,8 @@ public class OpticalMediaController(
             if (targetFolder is null)
                 return BadRequestResponse(
                     $"FolderId {request.FolderId} does not match any library folder. "
-                            + "RipAndEncode needs a real folder so the rip output lands somewhere "
-                            + "the encoder can read it via the folder's driver."
+                        + "RipAndEncode needs a real folder so the rip output lands somewhere "
+                        + "the encoder can read it via the folder's driver."
                 );
             targetLibrary = await libraryRepository.GetLibraryByIdWithFolders(request.LibraryId);
             if (targetLibrary is null)

@@ -156,8 +156,8 @@ public abstract class ConsoleMessages
 
         Console.WriteLine(
             $"{_()}{Repeat(" ", 63)}{letters["y"][10].Pastel(Colors[2])}"
-                   + CreateQuote(Quote, 4)
-                   + $"{letters["║"][0].Pastel(Colors[0])}"
+                + CreateQuote(Quote, 4)
+                + $"{letters["║"][0].Pastel(Colors[0])}"
         );
         // Console.WriteLine($"{_()}" + CreateQuote(Quote, totalWidth, 4) + $"{(isXmas() ? ConsoleLetters.ColossalXmas : ConsoleLetters.Colossal)["║"][0].Pastel(Colors[0])}");
         Console.WriteLine($"{("╚" + Repeat("═", magicSpacer) + "╝").Pastel(Colors[0])}");
@@ -171,17 +171,17 @@ public abstract class ConsoleMessages
         Console.WriteLine(("╔" + Repeat("═", 46) + "╗").Pastel("#00a10d"));
         Console.WriteLine(
             $"{_("#00a10d")}".Pastel("#00a10d")
-                   + @"     "
-                   + "Welcome to NoMercy MediaServer".Pastel("#5ffa71")
-                   + "     ".Pastel("#ffffff")
-                   + $"{_("#00a10d")}".Pastel("#00a10d")
+                + @"     "
+                + "Welcome to NoMercy MediaServer".Pastel("#5ffa71")
+                + "     ".Pastel("#ffffff")
+                + $"{_("#00a10d")}".Pastel("#00a10d")
         );
         Console.WriteLine(
             $"{_("#00a10d")}".Pastel("#00a10d")
-                   + @"      "
-                   + "Version:".Pastel("#cccccc")
-                   + "  1.0.0      ".Pastel("#ffffff")
-                   + $"{_("#00a10d")}".Pastel("#00a10d")
+                + @"      "
+                + "Version:".Pastel("#cccccc")
+                + "  1.0.0      ".Pastel("#ffffff")
+                + $"{_("#00a10d")}".Pastel("#00a10d")
         );
         Console.WriteLine(("╚" + Repeat("═", 46) + "╝").Pastel("#00a10d"));
 

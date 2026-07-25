@@ -62,7 +62,7 @@ internal static class UpdateCommand
                 {
                     await Console.Error.WriteLineAsync(
                         "Warning: the server did not confirm it had stopped within 30s; "
-                               + "applying the update anyway."
+                            + "applying the update anyway."
                     );
                 }
 

@@ -52,12 +52,12 @@ public static class MusicBrainzDiscId
         {
             throw new ArgumentException(
                 $"TrackOffsetsSectors length ({toc.TrackOffsetsSectors.Length}) "
-                         + $"does not match LastTrack - FirstTrack + 1 ({trackCount}).",
+                    + $"does not match LastTrack - FirstTrack + 1 ({trackCount}).",
                 nameof(toc)
             );
         }
 
-        StringBuilder sb = new(4 + 8 + TocSlots * 8);
+        StringBuilder sb = new(capacity: 4 + 8 + TocSlots * 8);
 
         sb.Append(toc.FirstTrack.ToString("X2", CultureInfo.InvariantCulture));
         sb.Append(toc.LastTrack.ToString("X2", CultureInfo.InvariantCulture));

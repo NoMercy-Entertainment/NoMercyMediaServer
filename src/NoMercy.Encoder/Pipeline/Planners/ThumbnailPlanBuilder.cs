@@ -51,8 +51,8 @@ public static class ThumbnailPlanBuilder
                 if (derivatives.GenerateSpriteVtt)
                 {
                     thumbConfig = new(
-                        derivatives.SpriteVttThumbnailWidth,
-                        derivatives.SpriteVttIntervalSeconds
+                        Width: derivatives.SpriteVttThumbnailWidth,
+                        IntervalSeconds: derivatives.SpriteVttIntervalSeconds
                     );
                 }
             }
@@ -63,9 +63,9 @@ public static class ThumbnailPlanBuilder
                     2
                     * Math.Round(
                         (double)thumbConfig.Width
-                           * media.VideoStreams[0].Height
-                           / media.VideoStreams[0].Width
-                           / 2
+                            * media.VideoStreams[0].Height
+                            / media.VideoStreams[0].Width
+                            / 2
                     )
                 );
 

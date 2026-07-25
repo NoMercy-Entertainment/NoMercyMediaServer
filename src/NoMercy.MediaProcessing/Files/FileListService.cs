@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
-using Microsoft.Extensions.Logging;
 using MovieFileLibrary;
 using NoMercy.MediaProcessing.Files.Parsing;
 using NoMercy.NmSystem;
@@ -19,6 +18,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.FFProbe;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Storage;
+using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Files;
 
 /// <summary>
@@ -145,8 +145,8 @@ public class FileListService(
     {
         IReadOnlyList<StorageEntry> allEntries = storage.List(
             directoryPath,
-            null,
-            false
+            pattern: null,
+            recursive: false
         );
 
         StorageEntry[] videoEntries = allEntries
@@ -521,13 +521,13 @@ public class FileListService(
         string folderTitle = cleaned
             .Replace('.', ' ')
             .Replace('_', ' ')
-            .TrimEnd(['-', '.', '_', ' '])
+            .TrimEnd('-', '.', '_', ' ')
             .Trim();
 
         // Strip trailing year from folder-derived title (year is captured separately by TryGetYear)
         Match yearInFolder = StringExtensions.MatchYearRegex().Match(folderTitle);
         if (yearInFolder.Success)
-            folderTitle = folderTitle[..yearInFolder.Index].TrimEnd(['-', '.', '_', ' ']);
+            folderTitle = folderTitle[..yearInFolder.Index].TrimEnd('-', '.', '_', ' ');
 
         return folderTitle;
     }

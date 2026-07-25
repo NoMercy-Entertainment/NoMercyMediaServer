@@ -157,10 +157,10 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
     private Uri ObjectUrl(string key) =>
         new(
             _endpoint!.TrimEnd('/')
-                       + "/"
-                       + Uri.EscapeDataString(_bucket)
-                       + "/"
-                       + S3SigV4.EscapeKey(key)
+                + "/"
+                + Uri.EscapeDataString(_bucket)
+                + "/"
+                + S3SigV4.EscapeKey(key)
         );
 
     private HttpRequestMessage SignedRequest(HttpMethod method, string key, string canonicalQs = "")
@@ -236,8 +236,8 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
             // "prefix/" marker object) needs a direct HEAD on the marker too.
             IEnumerable<(string key, bool isDir)> page = ListOnePage(
                 prefix,
-                "/",
-                1
+                delimiter: "/",
+                maxKeys: 1
             );
             if (page.Any())
                 return true;
@@ -348,16 +348,16 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
         if (_endpoint is null || _accessKey is null || _secretKey is null)
             throw new InvalidOperationException(
                 "S3WriteStream requires an explicit endpoint + accessKey + secretKey. "
-                         + "OpenWrite is currently not supported on the default-credential-chain path."
+                    + "OpenWrite is currently not supported on the default-credential-chain path."
             );
         return new S3WriteStream(
             _client!,
-            bucket: _bucket,
-            key: key,
-            endpoint: _endpoint,
-            region: _region!,
-            accessKey: _accessKey,
-            secretKey: _secretKey,
+            _bucket,
+            key,
+            _endpoint,
+            _region!,
+            _accessKey,
+            _secretKey,
             partSize: StreamPartSize
         );
     }
@@ -409,7 +409,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
         {
             IReadOnlyList<string> keys = ListPageKeys(
                 prefix,
-                null,
+                delimiter: null,
                 continuationToken,
                 out continuationToken
             );
@@ -487,7 +487,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
         {
             IReadOnlyList<string> keys = ListPageKeys(
                 srcPrefix,
-                null,
+                delimiter: null,
                 continuationToken,
                 out continuationToken
             );
@@ -548,7 +548,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
         {
             (List<string> files, List<string> dirs, string? next) = ListPageRaw(
                 prefix,
-                recursive ? null : "/",
+                delimiter: recursive ? null : "/",
                 continuationToken
             );
 
@@ -705,9 +705,9 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                 results.Add(
                     new(
                         relPath,
-                        false,
-                        obj.Size ?? 0L,
-                        obj.LastModified is DateTime lm
+                        IsDirectory: false,
+                        Size: obj.Size ?? 0L,
+                        LastWriteUtc: obj.LastModified is DateTime lm
                             ? lm.ToUniversalTime()
                             : DateTime.UtcNow
                     )
@@ -725,7 +725,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
 
                     if (StoragePatternMatcher.Matches(dirName, searchPattern))
                         results.Add(
-                            new(relPath, true, 0L, DateTime.UtcNow)
+                            new(relPath, IsDirectory: true, Size: 0L, LastWriteUtc: DateTime.UtcNow)
                         );
                 }
             }
@@ -752,7 +752,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                 List<(string Key, long Size, DateTime LastModified)> files,
                 List<string> dirs,
                 string? next
-            ) = ListPageRawWithMeta(prefix, recursive ? null : "/", continuationToken);
+            ) = ListPageRawWithMeta(prefix, delimiter: recursive ? null : "/", continuationToken);
 
             foreach ((string key, long size, DateTime lastModified) in files)
             {
@@ -762,7 +762,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                     : relPath;
                 if (StoragePatternMatcher.Matches(fileName, searchPattern))
                     results.Add(
-                        new(relPath, false, size, lastModified)
+                        new(relPath, IsDirectory: false, Size: size, LastWriteUtc: lastModified)
                     );
             }
 
@@ -776,7 +776,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                         : relPath;
                     if (StoragePatternMatcher.Matches(dirName, searchPattern))
                         results.Add(
-                            new(relPath, true, 0L, DateTime.UtcNow)
+                            new(relPath, IsDirectory: true, Size: 0L, LastWriteUtc: DateTime.UtcNow)
                         );
                 }
             }
@@ -1111,7 +1111,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                 e.Element(ns + "LastModified")?.Value,
                 System.Globalization.CultureInfo.InvariantCulture,
                 System.Globalization.DateTimeStyles.AssumeUniversal
-                        | System.Globalization.DateTimeStyles.AdjustToUniversal,
+                    | System.Globalization.DateTimeStyles.AdjustToUniversal,
                 out DateTime lm
             )
                 ? lm

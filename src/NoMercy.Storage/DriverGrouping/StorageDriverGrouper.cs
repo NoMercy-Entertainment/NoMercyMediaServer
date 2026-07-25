@@ -174,8 +174,8 @@ public static class StorageDriverGrouper
     )
     {
         char separator = kind == StorageEndpointKind.Smb ? '\\' : LocalSeparator(absolutePath);
-        string normalizedRoot = driverRoot.TrimEnd(['/', '\\']);
-        string normalizedPath = absolutePath.TrimEnd(['/', '\\']);
+        string normalizedRoot = driverRoot.TrimEnd('/', '\\');
+        string normalizedPath = absolutePath.TrimEnd('/', '\\');
 
         if (string.Equals(normalizedRoot, normalizedPath, StringComparison.OrdinalIgnoreCase))
             return string.Empty;

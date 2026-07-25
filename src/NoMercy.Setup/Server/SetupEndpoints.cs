@@ -460,7 +460,7 @@ public class SetupEndpoints
             context.Response.ContentType = "text/html; charset=utf-8";
             context.Response.StatusCode = StatusCodes.Status200OK;
             await context.Response.WriteAsync(
-                BuildCallbackHtml("Authorization Failed", displayMessage, true),
+                BuildCallbackHtml("Authorization Failed", displayMessage, isError: true),
                 Encoding.UTF8
             );
             return;

@@ -76,9 +76,9 @@ public static class DolbyVisionGate
         // --- Condition 0: no DV in source → silent no-op ---------------------
         if (source is null)
             return new(
-                false,
-                "source has no Dolby Vision metadata",
-                new()
+                Preserved: false,
+                Reason: "source has no Dolby Vision metadata",
+                ExtraFlags: new()
             );
 
         // --- Condition: AlwaysTonemap forces strip ----------------------------
@@ -88,7 +88,7 @@ public static class DolbyVisionGate
             decisions.Add(
                 new("plan", "plan.dv_stripped", reason, new { policy = "AlwaysTonemap" })
             );
-            return new(false, reason, new());
+            return new(Preserved: false, Reason: reason, ExtraFlags: new());
         }
 
         // --- Condition: RPU survives only a bitstream copy --------------------
@@ -103,7 +103,7 @@ public static class DolbyVisionGate
         {
             string reason = "output is re-encoded — Dolby Vision RPU survives only a stream copy";
             decisions.Add(new("plan", "plan.dv_stripped", reason, new { reEncoded = true }));
-            return new(false, reason, new());
+            return new(Preserved: false, Reason: reason, ExtraFlags: new());
         }
 
         // --- Condition 1: codec must be HEVC or AV1 --------------------------
@@ -114,7 +114,7 @@ public static class DolbyVisionGate
             decisions.Add(
                 new("plan", "plan.dv_stripped", reason, new { codec = outputCodec.ToString() })
             );
-            return new(false, reason, new());
+            return new(Preserved: false, Reason: reason, ExtraFlags: new());
         }
 
         // --- Condition 2: bit-depth >= 10 ------------------------------------
@@ -124,7 +124,7 @@ public static class DolbyVisionGate
             decisions.Add(
                 new("plan", "plan.dv_stripped", reason, new { bitDepth = outputBitDepth })
             );
-            return new(false, reason, new());
+            return new(Preserved: false, Reason: reason, ExtraFlags: new());
         }
 
         // --- Condition 3: container must support DV RPU ----------------------
@@ -134,7 +134,7 @@ public static class DolbyVisionGate
             decisions.Add(
                 new("plan", "plan.dv_stripped", reason, new { container = container.ToString() })
             );
-            return new(false, reason, new());
+            return new(Preserved: false, Reason: reason, ExtraFlags: new());
         }
 
         // --- All four conditions pass — build container-specific extra flags --
@@ -159,7 +159,7 @@ public static class DolbyVisionGate
                     new { container = "Hls", segmentType = "mpegts" }
                 )
             );
-            return new(false, reason, new());
+            return new(Preserved: false, Reason: reason, ExtraFlags: new());
         }
 
         string preserveReason = $"DV profile {source.Profile} level {source.Level} preserved";
@@ -180,7 +180,7 @@ public static class DolbyVisionGate
             )
         );
 
-        return new(true, preserveReason, extraFlags);
+        return new(Preserved: true, Reason: preserveReason, ExtraFlags: extraFlags);
     }
 
     private static Dictionary<string, string> BuildExtraFlags(

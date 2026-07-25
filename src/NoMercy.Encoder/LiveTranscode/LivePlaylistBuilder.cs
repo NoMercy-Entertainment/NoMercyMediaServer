@@ -177,7 +177,7 @@ public class LivePlaylistBuilder : ILivePlaylistBuilder
             string name = Culture.EnglishLanguageName(rendition.Language);
             sb.AppendLine(
                 $"#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"{AudioGroupId}\",LANGUAGE=\"{rendition.Language}\","
-                         + $"NAME=\"{name}\",AUTOSELECT=YES,DEFAULT={YesNo(rendition.IsDefault)},URI=\"{rendition.Uri}\""
+                    + $"NAME=\"{name}\",AUTOSELECT=YES,DEFAULT={YesNo(rendition.IsDefault)},URI=\"{rendition.Uri}\""
             );
         }
 
@@ -195,7 +195,7 @@ public class LivePlaylistBuilder : ILivePlaylistBuilder
 
         sb.AppendLine(
             $"#EXT-X-STREAM-INF:BANDWIDTH={bandwidth.ToString(CultureInfo.InvariantCulture)},"
-                     + $"RESOLUTION={request.Width}x{request.Height},VIDEO-RANGE=SDR{audioAttr}"
+                + $"RESOLUTION={request.Width}x{request.Height},VIDEO-RANGE=SDR{audioAttr}"
         );
         sb.AppendLine(request.VideoPlaylistUri);
 

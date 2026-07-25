@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Logging;
 using NoMercy.Authorization;
 
 namespace NoMercy.Service.Authorization;

@@ -79,7 +79,7 @@ public class EncoderOptions
 
         throw new InvalidOperationException(
             "shaka-packager binary not found. Bundle it alongside ffmpeg or set "
-                     + "ShakaPackagerPathOverride in AddNoMercyEncoder()."
+                + "ShakaPackagerPathOverride in AddNoMercyEncoder()."
         );
     }
 

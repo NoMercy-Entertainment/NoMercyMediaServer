@@ -28,10 +28,10 @@ public class CostEstimator
         {
             // Subtitle/chapter/thumbnail extraction is nearly instant
             return new(
-                TimeSpan.FromSeconds(10),
-                0,
-                0.1,
-                0
+                EstimatedDuration: TimeSpan.FromSeconds(10),
+                GpuUtilization: 0,
+                CpuUtilization: 0.1,
+                EstimatedOutputBytes: 0
             );
         }
 
@@ -46,10 +46,10 @@ public class CostEstimator
         double gpuUtil = group.RequiresGpu ? (double)group.GpuSlotsRequired / 12 : 0;
 
         return new(
-            estimated,
-            gpuUtil,
-            group.RequiresGpu ? 0.2 : 0.8,
-            0
+            EstimatedDuration: estimated,
+            GpuUtilization: gpuUtil,
+            CpuUtilization: group.RequiresGpu ? 0.2 : 0.8,
+            EstimatedOutputBytes: 0
         );
     }
 

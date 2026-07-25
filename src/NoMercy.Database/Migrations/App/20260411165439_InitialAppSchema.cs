@@ -22,24 +22,24 @@ namespace NoMercy.Database.Migrations.App
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                "Configuration",
+                name: "Configuration",
                 columns: table => new
                 {
                     Id = table
-                        .Column<int>("INTEGER", nullable: false)
+                        .Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    Key = table.Column<string>("TEXT", nullable: false),
-                    Value = table.Column<string>("TEXT", nullable: false),
-                    ModifiedBy = table.Column<Guid>("TEXT", nullable: true),
-                    SecureValue = table.Column<string>("TEXT", nullable: true),
+                    Key = table.Column<string>(type: "TEXT", nullable: false),
+                    Value = table.Column<string>(type: "TEXT", nullable: false),
+                    ModifiedBy = table.Column<Guid>(type: "TEXT", nullable: true),
+                    SecureValue = table.Column<string>(type: "TEXT", nullable: true),
                     CreatedAt = table.Column<DateTime>(
-                        "TEXT",
+                        type: "TEXT",
                         rowVersion: true,
                         nullable: false,
                         defaultValueSql: "CURRENT_TIMESTAMP"
                     ),
                     UpdatedAt = table.Column<DateTime>(
-                        "TEXT",
+                        type: "TEXT",
                         rowVersion: true,
                         nullable: false,
                         defaultValueSql: "CURRENT_TIMESTAMP"
@@ -52,7 +52,7 @@ namespace NoMercy.Database.Migrations.App
             );
 
             migrationBuilder.CreateIndex(
-                "IX_Configuration_Key",
+                name: "IX_Configuration_Key",
                 table: "Configuration",
                 column: "Key",
                 unique: true
@@ -62,7 +62,7 @@ namespace NoMercy.Database.Migrations.App
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable("Configuration");
+            migrationBuilder.DropTable(name: "Configuration");
         }
     }
 }

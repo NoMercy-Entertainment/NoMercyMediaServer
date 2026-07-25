@@ -84,7 +84,7 @@ public static class UserSettings
             // Surface the cause so operators can act.
             Logger.App(
                 $"UserSettings: failed to read Configuration table — using defaults this boot. "
-                         + $"{ex.GetType().Name}: {ex.Message}",
+                    + $"{ex.GetType().Name}: {ex.Message}",
                 LogEventLevel.Error
             );
             return false;

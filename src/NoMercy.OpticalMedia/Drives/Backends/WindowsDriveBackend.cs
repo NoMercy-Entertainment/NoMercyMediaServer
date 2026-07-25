@@ -39,8 +39,8 @@ public sealed class WindowsDriveBackend : IDriveBackend
 
         WqlEventQuery query = new(
             "SELECT * FROM __InstanceModificationEvent WITHIN 2 "
-                                   + "WHERE TargetInstance ISA 'Win32_LogicalDisk' "
-                                   + "AND TargetInstance.DriveType = 5"
+                + "WHERE TargetInstance ISA 'Win32_LogicalDisk' "
+                + "AND TargetInstance.DriveType = 5"
         );
         _watcher = new(query);
         _watcher.EventArrived += OnDriveChanged;

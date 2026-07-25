@@ -102,12 +102,12 @@ public partial class HlsOnDiskPlanReconstructor(
             blueprint?.Encodes.SelectMany(encode => encode.Tracks).ToList() ?? [];
 
         return new OutputPlan(
-            OutputFormat.Hls,
+            Format: OutputFormat.Hls,
             VideoOutputs: videoOutputs,
             AudioOutputs: ReconstructAudio(storage, outputDirectory, blueprintTracks),
             SubtitleOutputs: ReconstructSubtitles(storage, outputDirectory),
             Thumbnails: null,
-            HlsOptions: new HlsPlanOptions(anyFmp4 ? "fmp4" : "mpegts"),
+            HlsOptions: new HlsPlanOptions(SegmentType: anyFmp4 ? "fmp4" : "mpegts"),
             // Advertise the WebVTT subtitle renditions in the master. The master
             // generator drops WebVTT subs entirely unless this is true (they are
             // assumed un-chunked and unadvertisable otherwise), which silently
@@ -168,7 +168,7 @@ public partial class HlsOnDiskPlanReconstructor(
 
             outputs.Add(
                 new VideoOutputPlan(
-                    width,
+                    Width: width,
                     Height: height,
                     EncoderName: codec ?? "hevc",
                     Crf: 0,
@@ -242,7 +242,7 @@ public partial class HlsOnDiskPlanReconstructor(
 
             outputs.Add(
                 new AudioOutputPlan(
-                    codec,
+                    EncoderName: codec,
                     BitrateKbps: 0,
                     Channels: 2,
                     SampleRate: 48000,
@@ -301,7 +301,7 @@ public partial class HlsOnDiskPlanReconstructor(
 
             outputs.Add(
                 new AudioOutputPlan(
-                    codec,
+                    EncoderName: codec,
                     BitrateKbps: 0,
                     Channels: 2,
                     SampleRate: 48000,
@@ -328,7 +328,7 @@ public partial class HlsOnDiskPlanReconstructor(
         if (!storage.Exists(subtitlesRoot))
             return [];
 
-        foreach (StorageEntry languageEntry in storage.List(subtitlesRoot, "*", false))
+        foreach (StorageEntry languageEntry in storage.List(subtitlesRoot, "*", recursive: false))
         {
             if (!languageEntry.IsDirectory)
                 continue;
@@ -336,7 +336,7 @@ public partial class HlsOnDiskPlanReconstructor(
             string language = storage.GetName(languageEntry.Path);
 
             foreach (
-                StorageEntry trackEntry in storage.List(languageEntry.Path, "*", false)
+                StorageEntry trackEntry in storage.List(languageEntry.Path, "*", recursive: false)
             )
             {
                 if (trackEntry.IsDirectory)
@@ -349,7 +349,7 @@ public partial class HlsOnDiskPlanReconstructor(
 
                 outputs.Add(
                     new SubtitleOutputPlan(
-                        codecType.Value,
+                        OutputCodec: codecType.Value,
                         Action: StreamAction.Extract,
                         Language: language,
                         SourceIndex: 0,
@@ -383,7 +383,7 @@ public partial class HlsOnDiskPlanReconstructor(
         string pattern
     ) =>
         storage
-            .List(outputDirectory, pattern, false)
+            .List(outputDirectory, pattern, recursive: false)
             .Where(entry => entry.IsDirectory)
             .Select(entry => storage.GetName(entry.Path));
 
@@ -431,7 +431,7 @@ public partial class HlsOnDiskPlanReconstructor(
 
     private static string? FindFirstSegment(IStorage storage, string dir) =>
         storage
-            .List(dir, "*", false)
+            .List(dir, "*", recursive: false)
             .Where(entry =>
                 !entry.IsDirectory
                 && (

@@ -74,7 +74,7 @@ public class LiveTranscodeController(ILiveTranscodeService service) : BaseContro
             return MapResult(result);
 
         Response.Headers["Accept-Ranges"] = "bytes";
-        return File((Stream)result.Payload!, "video/mp2t", true);
+        return File((Stream)result.Payload!, "video/mp2t", enableRangeProcessing: true);
     }
 
     [HttpPost("sessions/{sessionId}/position")]

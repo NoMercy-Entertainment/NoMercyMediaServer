@@ -32,7 +32,7 @@ public sealed class SeasonEpisodeAdapter : IFilenameParseAdapter
             .CleanedFileName[..match.Index]
             .Replace('.', ' ')
             .Replace('_', ' ')
-            .TrimEnd(['-', ' '])
+            .TrimEnd('-', ' ')
             .Trim();
 
 

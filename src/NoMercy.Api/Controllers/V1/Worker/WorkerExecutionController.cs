@@ -52,7 +52,7 @@ public class WorkerExecutionController(
         if (!encoderOptions.IsDistributedEncodingEnabled)
             return ServiceUnavailableResponse(
                 "Distributed encoding is not enabled on this worker. "
-                        + "Set DistributedEncodingSigningKey in EncoderOptions and restart."
+                    + "Set DistributedEncodingSigningKey in EncoderOptions and restart."
             );
 
         // Read the raw body — the payload is a signed JSON envelope.
@@ -78,11 +78,11 @@ public class WorkerExecutionController(
         if (resolution.SourceFetchFailed)
         {
             DispatchResult failedFetch = new(
-                task.TaskId,
-                false,
-                task.OutputPath,
-                TimeSpan.Zero,
-                $"Source fetch failed: {resolution.SourceFetchError}"
+                TaskId: task.TaskId,
+                Success: false,
+                OutputPath: task.OutputPath,
+                Duration: TimeSpan.Zero,
+                Error: $"Source fetch failed: {resolution.SourceFetchError}"
             );
             return Content(serializer.SerializeResult(failedFetch, signingKey), "application/json");
         }
@@ -95,11 +95,11 @@ public class WorkerExecutionController(
                 results.Length > 0
                     ? results[0]
                     : new(
-                        task.TaskId,
-                        false,
-                        task.OutputPath,
-                        TimeSpan.Zero,
-                        "Local dispatcher returned no result"
+                        TaskId: task.TaskId,
+                        Success: false,
+                        OutputPath: task.OutputPath,
+                        Duration: TimeSpan.Zero,
+                        Error: "Local dispatcher returned no result"
                     );
             string signedResponse = serializer.SerializeResult(result, signingKey);
             return Content(signedResponse, "application/json");

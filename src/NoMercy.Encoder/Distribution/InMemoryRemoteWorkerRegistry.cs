@@ -61,10 +61,10 @@ public class InMemoryRemoteWorkerRegistry : IRemoteWorkerRegistry
     public void Register(IRemoteWorker worker)
     {
         _workers[worker.WorkerId] = new(
-            worker,
-            _clock(),
-            0,
-            null
+            Worker: worker,
+            LastSeenUtc: _clock(),
+            ConsecutiveFailures: 0,
+            CooldownUntilUtc: null
         );
     }
 
@@ -155,10 +155,10 @@ public class InMemoryRemoteWorkerRegistry : IRemoteWorkerRegistry
         DateTime now = _clock();
         return _workers
             .Values.Select(rw => new WorkerHealthSnapshot(
-                rw.Worker,
-                rw.LastSeenUtc,
-                rw.ConsecutiveFailures,
-                IsInCooldown(rw, now) ? rw.CooldownUntilUtc : null
+                Worker: rw.Worker,
+                LastSeenUtc: rw.LastSeenUtc,
+                ConsecutiveFailures: rw.ConsecutiveFailures,
+                CooldownUntilUtc: IsInCooldown(rw, now) ? rw.CooldownUntilUtc : null
             ))
             .ToArray();
     }

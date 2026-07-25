@@ -156,7 +156,7 @@ public static class BundleCapResolver
                 rung.Codec,
                 rung.EncoderName,
                 rung.Width,
-                null
+                deviceName: null
             );
             if (measurement is null)
                 continue;

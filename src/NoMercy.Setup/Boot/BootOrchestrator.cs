@@ -92,7 +92,7 @@ public class BootOrchestrator
             );
 
             bool isRegistered = _certificateService.HasValidCertificate();
-            _setupState.DetermineInitialPhase(true, isRegistered);
+            _setupState.DetermineInitialPhase(hasValidToken: true, isRegistered: isRegistered);
 
             if (isRegistered)
             {
@@ -260,8 +260,8 @@ public class BootOrchestrator
             {
                 Logger.Setup(
                     $"BOOT FAILURE: Keycloak unreachable at {ExternalServicesConfig.Current.AuthBaseUrl} and no cached JWKS key found. "
-                             + $"Cause: {ex.Message}. "
-                             + $"The server cannot validate JWTs. Complete setup at /setup or ensure Keycloak is reachable before restarting.",
+                        + $"Cause: {ex.Message}. "
+                        + $"The server cannot validate JWTs. Complete setup at /setup or ensure Keycloak is reachable before restarting.",
                     LogEventLevel.Error
                 );
             }

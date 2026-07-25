@@ -38,7 +38,7 @@ public sealed class CrossFormatAdapter : IFilenameParseAdapter
             .CleanedFileName[..match.Index]
             .Replace('.', ' ')
             .Replace('_', ' ')
-            .TrimEnd(['-', ' '])
+            .TrimEnd('-', ' ')
             .Trim();
 
         showTitle = showTitle.CleanSeriesTitle();

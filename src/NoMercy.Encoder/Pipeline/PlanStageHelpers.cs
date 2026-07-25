@@ -60,25 +60,25 @@ internal static class PlanStageHelpers
     /// </summary>
     internal static VideoOutput BuildSyntheticReference(LadderRung rung) =>
         new(
-            StreamPolicy.Transcode,
-            rung.Codec,
-            rung.Width,
-            rung.Height,
-            Profiles.RateControlMode.Crf,
-            23,
-            rung.BitrateKbps,
-            rung.MaxBitrateKbps > 0 ? rung.MaxBitrateKbps : null,
-            rung.BufferSizeKbps > 0 ? rung.BufferSizeKbps : null,
-            rung.Preset,
-            rung.CodecProfile,
-            null,
-            null,
-            rung.BitDepth,
-            rung.PixelFormat,
-            2,
-            false,
-            "video/{label}",
-            "video/{label}/playlist"
+            Policy: StreamPolicy.Transcode,
+            Codec: rung.Codec,
+            Width: rung.Width,
+            Height: rung.Height,
+            RateControl: Profiles.RateControlMode.Crf,
+            Crf: 23,
+            BitrateKbps: rung.BitrateKbps,
+            MaxBitrateKbps: rung.MaxBitrateKbps > 0 ? rung.MaxBitrateKbps : null,
+            BufferSizeKbps: rung.BufferSizeKbps > 0 ? rung.BufferSizeKbps : null,
+            Preset: rung.Preset,
+            CodecProfile: rung.CodecProfile,
+            Level: null,
+            Tune: null,
+            BitDepth: rung.BitDepth,
+            PixelFormat: rung.PixelFormat,
+            KeyframeIntervalSeconds: 2,
+            ConvertHdrToSdr: false,
+            SegmentNameTemplate: "video/{label}",
+            PlaylistNameTemplate: "video/{label}/playlist"
         );
 
     /// <summary>Materialise one <see cref="LadderRung"/> into a full VideoOutput.</summary>

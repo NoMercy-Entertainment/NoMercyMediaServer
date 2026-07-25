@@ -62,7 +62,7 @@ public static class Download
         long? expectedLength = result.Content.Headers.ContentLength;
 
         await using (Stream contentStream = await result.Content.ReadAsStreamAsync())
-        await using (Stream fileStream = storage.OpenWrite(filePath, true))
+        await using (Stream fileStream = storage.OpenWrite(filePath, overwrite: true))
         {
             await contentStream.CopyToAsync(fileStream);
             await fileStream.FlushAsync();

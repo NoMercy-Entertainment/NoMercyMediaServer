@@ -60,7 +60,7 @@ public static class EmbeddedStaticAssetsExtensions
 
         ManifestEmbeddedFileProvider embeddedProvider = new(assembly, embeddedResourceRoot);
 
-        app.UseMiddleware<EmbeddedStaticAssetsMiddleware>([embeddedProvider, options]);
+        app.UseMiddleware<EmbeddedStaticAssetsMiddleware>(embeddedProvider, options);
 
         return app;
     }

@@ -93,17 +93,17 @@ public class JsonSpeedIndexStore(
 
             DateTime now = DateTime.UtcNow;
             SpeedIndexDto dto = new(
-                now,
+                CalibratedAt: now,
                 SchemaVersion: HardwareBenchmark.BenchmarkSchemaVersion,
                 Entries: index
                     .Measurements.Select(kvp => new SpeedEntryDto(
-                        kvp.Key.Codec,
-                        kvp.Key.Encoder,
-                        kvp.Key.Width,
-                        kvp.Key.DeviceName,
-                        kvp.Value.Fps,
-                        kvp.Value.SpeedMultiplier,
-                        kvp.Value.MeasuredAt
+                        Codec: kvp.Key.Codec,
+                        Encoder: kvp.Key.Encoder,
+                        Width: kvp.Key.Width,
+                        DeviceName: kvp.Key.DeviceName,
+                        Fps: kvp.Value.Fps,
+                        SpeedMultiplier: kvp.Value.SpeedMultiplier,
+                        MeasuredAt: kvp.Value.MeasuredAt
                     ))
                     .ToArray()
             );

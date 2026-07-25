@@ -69,7 +69,7 @@ public sealed class HardwarePreferenceResolver : IHardwarePreferenceResolver
                     new { codec = codec.ToString() }
                 )
             );
-            return new("copy", null);
+            return new(EncoderHandle: "copy", Failure: null);
         }
 
         return preference switch

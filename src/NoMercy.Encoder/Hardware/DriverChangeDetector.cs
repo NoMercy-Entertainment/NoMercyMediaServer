@@ -21,10 +21,10 @@ public class DriverChangeDetector(IHardwareDetector hardwareDetector, IDriverFin
         List<GpuDriverInfo> driverInfos = gpus.Select(
                 (gpu, index) =>
                     new GpuDriverInfo(
-                        gpu.Vendor.ToString(),
-                        gpu.Name,
-                        gpu.DriverVersion ?? string.Empty,
-                        index
+                        Vendor: gpu.Vendor.ToString(),
+                        Model: gpu.Name,
+                        DriverVersion: gpu.DriverVersion ?? string.Empty,
+                        Index: index
                     )
             )
             .ToList();
@@ -39,10 +39,10 @@ public class DriverChangeDetector(IHardwareDetector hardwareDetector, IDriverFin
         bool changed = !isFirstBoot && previousHash != currentHash;
 
         return new(
-            currentHash,
-            previousHash,
-            changed,
-            isFirstBoot
+            CurrentHash: currentHash,
+            PreviousHash: previousHash,
+            Changed: changed,
+            IsFirstBoot: isFirstBoot
         );
     }
 }

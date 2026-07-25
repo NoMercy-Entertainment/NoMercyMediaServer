@@ -305,7 +305,7 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
             return 0;
         });
 
-    public void DeleteFile(string path) => Delete(ToSmbPath(path), false);
+    public void DeleteFile(string path) => Delete(ToSmbPath(path), directory: false);
 
     public void DeleteDirectory(string path, bool recursive)
     {
@@ -315,11 +315,11 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
             )
             {
                 if (DirectoryExists(child))
-                    DeleteDirectory(child, true);
+                    DeleteDirectory(child, recursive: true);
                 else
                     DeleteFile(child);
             }
-        Delete(ToSmbPath(path), true);
+        Delete(ToSmbPath(path), directory: true);
     }
 
     private void Delete(string smbPath, bool directory) =>
@@ -335,8 +335,8 @@ public sealed class SmbStorageDriver : IStorageDriver, IDisposable
                 // the delete-open must itself allow those to coexist, otherwise a
                 // delete-while-reading raises SHARING_VIOLATION.
                 ShareAccess.Read
-                             | ShareAccess.Write
-                             | ShareAccess.Delete,
+                    | ShareAccess.Write
+                    | ShareAccess.Delete,
                 CreateDisposition.FILE_OPEN,
                 directory
                     ? CreateOptions.FILE_DIRECTORY_FILE

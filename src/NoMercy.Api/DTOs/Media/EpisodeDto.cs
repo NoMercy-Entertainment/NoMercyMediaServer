@@ -87,7 +87,7 @@ public class EpisodeDto
                 ? (int)
                     Math.Round(
                         (double)(100 * (userData.Time ?? 0))
-                           / (videoFile.Duration?.ToSeconds() ?? 0)
+                            / (videoFile.Duration?.ToSeconds() ?? 0)
                     )
                 : null;
     }

@@ -207,7 +207,7 @@ public class ServerRunner : IServerRunner
         bool hasValidToken = await httpsAuthManager.InitializeAsync();
 
         SetupState httpsSetupState = httpsHost.Services.GetRequiredService<SetupState>();
-        httpsSetupState.DetermineInitialPhase(hasValidToken, true);
+        httpsSetupState.DetermineInitialPhase(hasValidToken: hasValidToken, isRegistered: true);
 
         httpsAuthManager.ScheduleBackgroundRefresh(httpsShutdownCoordinator.Token);
 

@@ -62,7 +62,7 @@ public class TvdbSearchClient : TvdbBaseClient
         bool? priority = false
     )
     {
-        return Search(query, type: "series", year: year, language: language, priority: priority);
+        return Search(query, "series", year, language, priority: priority);
     }
 
     public Task<TvdbSearchResponse?> Movie(
@@ -72,7 +72,7 @@ public class TvdbSearchClient : TvdbBaseClient
         bool? priority = false
     )
     {
-        return Search(query, type: "movie", year: year, language: language, priority: priority);
+        return Search(query, "movie", year, language, priority: priority);
     }
 
     public Task<TvdbSearchResponse?> Person(
@@ -81,7 +81,7 @@ public class TvdbSearchClient : TvdbBaseClient
         bool? priority = false
     )
     {
-        return Search(query, type: "person", language: language, priority: priority);
+        return Search(query, "person", language: language, priority: priority);
     }
 
     public Task<TvdbSearchResponse?> Company(
@@ -90,7 +90,7 @@ public class TvdbSearchClient : TvdbBaseClient
         bool? priority = false
     )
     {
-        return Search(query, type: "company", language: language, priority: priority);
+        return Search(query, "company", language: language, priority: priority);
     }
 
     public Task<TvdbSearchResponse?> ByRemoteId(string remoteId, bool? priority = false)

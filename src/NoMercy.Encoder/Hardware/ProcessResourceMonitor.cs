@@ -122,7 +122,7 @@ public class ProcessResourceMonitor : IResourceMonitor
             _gpuWarningLogged = true;
             _logger?.LogWarning(
                 "[{RuleId}] GPU process telemetry is not available on this platform. "
-                         + "Install a vendor-specific sampler (e.g. NvmlGpuSampler) to enable live GPU utilization.",
+                    + "Install a vendor-specific sampler (e.g. NvmlGpuSampler) to enable live GPU utilization.",
                 EncoderRuleId.HardwareGpuTelemetryUnsupported
             );
         }
@@ -310,7 +310,7 @@ public class ProcessResourceMonitor : IResourceMonitor
         _systemSamplerWarningLogged = true;
         _logger?.LogWarning(
             "System-wide CPU sampler unavailable ({Detail}); falling back to process-family sampler. "
-                     + "Encoder dispatch will still throttle on encoder load but won't react to unrelated host activity.",
+                + "Encoder dispatch will still throttle on encoder load but won't react to unrelated host activity.",
             detail
         );
     }

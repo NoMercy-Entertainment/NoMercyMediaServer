@@ -56,7 +56,7 @@ public sealed partial class AnimeAbsoluteAdapter : IFilenameParseAdapter
             .CleanedFileName[..episode.Index]
             .Replace('.', ' ')
             .Replace('_', ' ')
-            .TrimEnd(['-', ' '])
+            .TrimEnd('-', ' ')
             .Trim();
 
         showTitle = showTitle.CleanSeriesTitle();

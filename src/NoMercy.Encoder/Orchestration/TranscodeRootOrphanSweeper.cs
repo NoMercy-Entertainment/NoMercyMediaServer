@@ -87,7 +87,7 @@ public class TranscodeRootOrphanSweeper : IHostedService
         try
         {
             orphans = _storage
-                .List(_root, pattern, false)
+                .List(_root, pattern, recursive: false)
                 .Where(entry => entry.IsDirectory)
                 .ToList();
         }
@@ -101,7 +101,7 @@ public class TranscodeRootOrphanSweeper : IHostedService
         {
             try
             {
-                _storage.DeleteDirectory(entry.Path, true);
+                _storage.DeleteDirectory(entry.Path, recursive: true);
                 _logger.LogInformation(
                     "TranscodeRootOrphanSweeper: deleted orphan {Dir}",
                     entry.Path

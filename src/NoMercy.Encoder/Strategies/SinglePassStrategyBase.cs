@@ -67,7 +67,7 @@ public abstract class SinglePassStrategyBase(IEncoder encoder, ILogger logger, I
                 DeletePartialOutput(
                     request.OutputDirectory,
                     effectiveStorage,
-                    true
+                    preserveCheckpoint: true
                 );
             }
 
@@ -80,7 +80,7 @@ public abstract class SinglePassStrategyBase(IEncoder encoder, ILogger logger, I
                 DeletePartialOutput(
                     request.OutputDirectory,
                     effectiveStorage,
-                    false
+                    preserveCheckpoint: false
                 );
             }
             throw;
@@ -95,7 +95,7 @@ public abstract class SinglePassStrategyBase(IEncoder encoder, ILogger logger, I
                 return;
 
             foreach (
-                StorageEntry entry in stor.List(outputDirectory, "*", true)
+                StorageEntry entry in stor.List(outputDirectory, "*", recursive: true)
                     .Where(entry => !entry.IsDirectory)
                     .Where(entry =>
                         !preserveCheckpoint

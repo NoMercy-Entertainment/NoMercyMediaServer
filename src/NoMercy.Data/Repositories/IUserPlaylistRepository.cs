@@ -158,7 +158,7 @@ public readonly record struct PlaylistItemRef
     }
 
     public static PlaylistItemRef ForMovie(int movieId) =>
-        new(PlaylistItemKind.Movie, movieId);
+        new(PlaylistItemKind.Movie, movieId: movieId);
 
     public static PlaylistItemRef ForTv(int tvId) => new(PlaylistItemKind.Tv, tvId: tvId);
 

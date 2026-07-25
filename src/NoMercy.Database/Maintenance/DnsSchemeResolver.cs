@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.Database.Models.Common;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
@@ -60,11 +61,11 @@ public static class DnsSchemeResolver
 
         Logger.Setup(
             $"DNS scheme decided once: {(useSynthesizedDns ? "srv" : "apex")} "
-                     + (
-                         hasPriorRegistration
-                             ? "(existing server — pinned to apex to avoid a TLS mismatch for already-connected clients)"
-                             : "(fresh install — defaulting to the synthesized srv scheme)"
-                     ),
+                + (
+                    hasPriorRegistration
+                        ? "(existing server — pinned to apex to avoid a TLS mismatch for already-connected clients)"
+                        : "(fresh install — defaulting to the synthesized srv scheme)"
+                ),
             LogEventLevel.Information
         );
 

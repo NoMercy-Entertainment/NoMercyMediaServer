@@ -46,26 +46,26 @@ public static class DispatchResultExtensions
         if (!succeeded && dispatch.Error is not null)
         {
             enrichedError = new(
-                EncoderRuleId.EncoderInitFailed,
-                dispatch.Error,
-                null,
-                dispatch.WorkerId is null ? null : new { Worker = dispatch.WorkerId }
+                Id: EncoderRuleId.EncoderInitFailed,
+                Message: dispatch.Error,
+                Suggestion: null,
+                Details: dispatch.WorkerId is null ? null : new { Worker = dispatch.WorkerId }
             );
             legacyError = new(
-                EncodingErrorKind.Unknown,
-                dispatch.Error,
-                null,
-                dispatch.WorkerId ?? "remote",
-                false
+                Kind: EncodingErrorKind.Unknown,
+                Message: dispatch.Error,
+                FfmpegStderr: null,
+                StageName: dispatch.WorkerId ?? "remote",
+                Recoverable: false
             );
         }
 
         return new(
-            succeeded,
-            dispatch.OutputPath,
-            dispatch.Duration,
-            legacyError,
-            null
+            Success: succeeded,
+            OutputPath: dispatch.OutputPath,
+            Duration: dispatch.Duration,
+            Error: legacyError,
+            Metrics: null
         )
         {
             Status = status,
@@ -86,11 +86,11 @@ public static class DispatchResultExtensions
         string? workerId = null
     ) =>
         new(
-            taskId,
-            result.Success,
-            result.OutputPath,
-            result.Duration,
-            result.EnrichedError?.Message ?? result.Error?.Message,
-            workerId
+            TaskId: taskId,
+            Success: result.Success,
+            OutputPath: result.OutputPath,
+            Duration: result.Duration,
+            Error: result.EnrichedError?.Message ?? result.Error?.Message,
+            WorkerId: workerId
         );
 }

@@ -73,8 +73,8 @@ internal sealed record WebDavDriverConfig(string Url, bool IgnoreCertErrors, int
         {
             logger?.LogWarning(
                 "WebDAV folder {FolderId} driver_config contains deprecated fields "
-                         + "(username / passwordRef / bearerTokenRef). These fields are ignored. "
-                         + "Re-save the driver to migrate credentials to the unified credentials store.",
+                    + "(username / passwordRef / bearerTokenRef). These fields are ignored. "
+                    + "Re-save the driver to migrate credentials to the unified credentials store.",
                 folderId
             );
         }

@@ -43,11 +43,11 @@ public sealed class DiscIdentificationService(
                 disc.Type
             );
             return new(
-                MediaKind.Movie,
-                [],
-                0,
-                false,
-                true
+                Kind: MediaKind.Movie,
+                Candidates: [],
+                TopConfidence: 0,
+                AutoApply: false,
+                NeedsManualAssignment: true
             );
         }
 

@@ -34,7 +34,7 @@ public sealed class WebDavDriverBuilder : IStorageDriverBuilder
         if (string.IsNullOrWhiteSpace(driverConfigJson))
             throw new ArgumentException(
                 $"driver_config is required for 'webdav' (folder {folderId}). "
-                         + "Supply at minimum: url.",
+                    + "Supply at minimum: url.",
                 nameof(driverConfigJson)
             );
 

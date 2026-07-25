@@ -32,7 +32,7 @@ using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
 namespace NoMercy.Api.Controllers.V1.Media;
 
 [ApiController]
-[Tags("Media Movies")]
+[Tags(tags: "Media Movies")]
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/movie/{id:int}")] // match themoviedb.org API

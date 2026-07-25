@@ -172,7 +172,7 @@ public static class FilterGraphAssembler
                     scaleFilter,
                     only.Width,
                     only.Height,
-                    only.MapLabel.Trim(['[', ']'])
+                    only.MapLabel.Trim('[', ']')
                 );
             }
             else
@@ -187,7 +187,7 @@ public static class FilterGraphAssembler
                         scaleFilter,
                         rung.Width,
                         rung.Height,
-                        rung.MapLabel.Trim(['[', ']'])
+                        rung.MapLabel.Trim('[', ']')
                     );
                 }
             }
@@ -232,7 +232,7 @@ public static class FilterGraphAssembler
         {
             // Single video, no thumbnails — no split needed
             VideoOutputPlan single = videoOutputs[0];
-            string outputLabel = single.MapLabel.Trim(['[', ']']);
+            string outputLabel = single.MapLabel.Trim('[', ']');
             BuildBranchFilter(
                 fg,
                 baseLabel,
@@ -242,7 +242,7 @@ public static class FilterGraphAssembler
                 sourceHeight,
                 sourceIs10Bit,
                 burnInExpr,
-                false
+                tonemapAlreadyApplied: false
             );
         }
         else if (dedupeTonemap)
@@ -300,7 +300,7 @@ public static class FilterGraphAssembler
             for (int i = 0; i < videoOutputs.Length; i++)
             {
                 VideoOutputPlan video = videoOutputs[i];
-                string outputLabel = video.MapLabel.Trim(['[', ']']);
+                string outputLabel = video.MapLabel.Trim('[', ']');
                 string inputLabel;
                 bool tonemapApplied;
 
@@ -325,7 +325,7 @@ public static class FilterGraphAssembler
                     sourceHeight,
                     sourceIs10Bit,
                     burnInExpr,
-                    tonemapApplied
+                    tonemapAlreadyApplied: tonemapApplied
                 );
             }
 
@@ -354,7 +354,7 @@ public static class FilterGraphAssembler
             for (int i = 0; i < videoOutputs.Length; i++)
             {
                 VideoOutputPlan video = videoOutputs[i];
-                string outputLabel = video.MapLabel.Trim(['[', ']']);
+                string outputLabel = video.MapLabel.Trim('[', ']');
 
                 BuildBranchFilter(
                     fg,
@@ -365,7 +365,7 @@ public static class FilterGraphAssembler
                     sourceHeight,
                     sourceIs10Bit,
                     burnInExpr,
-                    false
+                    tonemapAlreadyApplied: false
                 );
             }
 

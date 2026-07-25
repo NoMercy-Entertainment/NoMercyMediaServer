@@ -54,7 +54,7 @@ public class MkvOutputStrategy(IStorage storage) : IOutputStrategy
 
         builder.AddOutput(
             new(
-                outputPath,
+                FilePath: outputPath,
                 VideoCodec: primaryVideo?.EncoderName,
                 AudioCodec: primaryAudio?.Action == StreamAction.Copy
                     ? "copy"

@@ -68,8 +68,8 @@ public sealed class NvmlGpuSampler : ProcessResourceMonitor
             ProcessResult result = await _processRunner.RunAsync(
                 "nvidia-smi",
                 ["--query-compute-apps=pid,used_gpu_memory", "--format=csv,noheader,nounits"],
-                null,
-                linkedCts.Token
+                workingDirectory: null,
+                cancellationToken: linkedCts.Token
             );
 
             if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.StdOut))
@@ -111,10 +111,10 @@ public sealed class NvmlGpuSampler : ProcessResourceMonitor
 
             samples.Add(
                 new(
-                    pid,
-                    0,
-                    0,
-                    memoryMb * 1024 * 1024
+                    Pid: pid,
+                    GpuIndex: 0,
+                    EncoderUtilizationPercent: 0,
+                    EncoderMemoryBytes: memoryMb * 1024 * 1024
                 )
             );
         }

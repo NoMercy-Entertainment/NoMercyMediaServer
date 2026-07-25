@@ -38,7 +38,7 @@ public sealed class SmbDriverBuilder : IStorageDriverBuilder
         if (string.IsNullOrWhiteSpace(driverConfigJson))
             throw new ArgumentException(
                 $"driver_config is required for 'smb' (folder {folderId}). "
-                         + "Supply at minimum: host, share.",
+                    + "Supply at minimum: host, share.",
                 nameof(driverConfigJson)
             );
 

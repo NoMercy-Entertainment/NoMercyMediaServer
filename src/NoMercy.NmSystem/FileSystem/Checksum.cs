@@ -22,8 +22,8 @@ public static class Checksum
             FileMode.Open,
             FileAccess.Read,
             FileShare.Read,
-            4096,
-            true
+            bufferSize: 4096,
+            useAsync: true
         );
         byte[] hashBytes = await SHA256.HashDataAsync(fileStream);
         return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();

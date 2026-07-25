@@ -260,7 +260,8 @@ public class ConfigurationController(
                     }
                 )
                 .On(configuration => configuration.Key)
-                .WhenMatched((o, configuration) =>
+                .WhenMatched(
+                    (o, configuration) =>
                         new()
                         {
                             Value = runtimeSettings.Swagger.ToString(),
@@ -285,7 +286,8 @@ public class ConfigurationController(
                     }
                 )
                 .On(configuration => configuration.Key)
-                .WhenMatched((o, configuration) =>
+                .WhenMatched(
+                    (o, configuration) =>
                         new()
                         {
                             Value = runtimeSettings.UseSynthesizedDns.ToString(),
@@ -334,7 +336,8 @@ public class ConfigurationController(
                     }
                 )
                 .On(configuration => configuration.Key)
-                .WhenMatched((o, configuration) => new()
+                .WhenMatched(
+                    (o, configuration) => new()
                     {
                         Value = request.ServerName, 
                         ModifiedBy = configuration.ModifiedBy
@@ -351,10 +354,10 @@ public class ConfigurationController(
                 await activityLogger.LogConfigurationAsync(
                     "config.server_changed",
                     userId,
-                    Ulid.Empty,
-                    key,
-                    oldVal,
-                    newVal
+                    deviceId: Ulid.Empty,
+                    configKey: key,
+                    oldValue: oldVal,
+                    newValue: newVal
                 );
             }
             catch (Exception ex)

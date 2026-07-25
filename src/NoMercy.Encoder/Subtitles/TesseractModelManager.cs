@@ -63,7 +63,7 @@ public class TesseractModelManager(
         try
         {
             await using Stream verified = await downloader.DownloadVerifiedAsync(language, ct);
-            await using (Stream file = await storage.OpenWriteAsync(tempPath, true, ct))
+            await using (Stream file = await storage.OpenWriteAsync(tempPath, overwrite: true, ct))
             {
                 await verified.CopyToAsync(file, ct);
             }
@@ -96,7 +96,7 @@ public class TesseractModelManager(
             return [];
 
         return storage
-            .List(ModelDirectory, "*.traineddata", false)
+            .List(ModelDirectory, "*.traineddata", recursive: false)
             .Where(e => !e.IsDirectory)
             .Select(e => Path.GetFileNameWithoutExtension(e.Path))
             .Where(name => !string.IsNullOrEmpty(name))

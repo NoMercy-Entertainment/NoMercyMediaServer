@@ -59,7 +59,7 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
                 + "-"
                 + Environment.ProcessId;
             string runFile = Path.Combine(options.LogDirectory, $"run-{runId}.jsonl");
-            _file = new(runFile, true) { AutoFlush = true };
+            _file = new(runFile, append: true) { AutoFlush = true };
             PruneRuns(options.LogDirectory, options.MaxRunFiles);
         }
 

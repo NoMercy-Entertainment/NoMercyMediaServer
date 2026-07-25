@@ -196,7 +196,7 @@ public class Tv : ColorPaletteTimeStamps, IHasLibrary
     public string CreateFolderName()
     {
         return "/"
-            + string.Concat([Title.CleanFileName().Shorten(), ".(", FirstAirDate.ParseYear(), ")"])
+            + string.Concat(Title.CleanFileName().Shorten(), ".(", FirstAirDate.ParseYear(), ")")
                 .CleanFileName();
     }
 }

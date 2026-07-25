@@ -51,7 +51,7 @@ public class DegradedModeRecovery : IDegradedModeRecovery
             apiKeyStore,
             serverRegistrationService,
             networkDiscovery,
-            null
+            delay: null
         ) { }
 
     /// <summary>

@@ -21,6 +21,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Logging;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
+using NoMercy.Storage.Validation;
 
 namespace NoMercy.Launcher.ViewModels;
 
@@ -276,13 +277,13 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
                         });
                     },
                     token,
-                    () =>
+                    onConnected: () =>
                     {
                         Dispatcher.UIThread.Post(() =>
                             StatusText = $"{FilteredEntries.Count} entries (streaming)"
                         );
                     },
-                    () =>
+                    onDisconnected: () =>
                     {
                         Dispatcher.UIThread.Post(() =>
                             StatusText = $"{FilteredEntries.Count} entries (reconnecting...)"

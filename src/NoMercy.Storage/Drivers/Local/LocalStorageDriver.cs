@@ -53,8 +53,8 @@ public sealed class LocalStorageDriver : IStorageDriver
             FileMode.Open,
             FileAccess.Read,
             FileShare.ReadWrite | FileShare.Delete,
-            64 * 1024,
-            true
+            bufferSize: 64 * 1024,
+            useAsync: true
         );
 
     public Stream OpenWrite(string path, bool overwrite) =>
@@ -64,7 +64,7 @@ public sealed class LocalStorageDriver : IStorageDriver
             FileAccess.Write,
             FileShare.None,
             4096,
-            true
+            useAsync: true
         );
 
     // Local files are already on local FS; no staging needed.
@@ -72,7 +72,7 @@ public sealed class LocalStorageDriver : IStorageDriver
         Task.FromResult(new LocalPathLease(path));
 
     public void MoveFile(string source, string destination) =>
-        File.Move(source, destination, false);
+        File.Move(source, destination, overwrite: false);
 
     public void CopyFile(string source, string destination, bool overwrite) =>
         File.Copy(source, destination, overwrite);
@@ -124,7 +124,7 @@ public sealed class LocalStorageDriver : IStorageDriver
                 : null;
             if (info?.LinkTarget is null)
                 return null;
-            FileSystemInfo? real = info.ResolveLinkTarget(true);
+            FileSystemInfo? real = info.ResolveLinkTarget(returnFinalTarget: true);
             return real is null ? null : Path.GetFullPath(real.FullName);
         }
         catch

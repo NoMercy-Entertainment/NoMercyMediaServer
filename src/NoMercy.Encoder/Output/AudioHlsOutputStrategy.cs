@@ -75,7 +75,7 @@ public class AudioHlsOutputStrategy : IOutputStrategy
 
         builder.AddOutput(
             new(
-                playlistPath,
+                FilePath: playlistPath,
                 AudioCodec: audioCodec,
                 AudioBitrateKbps: audio?.Action == StreamAction.Transcode
                     ? (audio.BitrateKbps > 0 ? audio.BitrateKbps : 128)

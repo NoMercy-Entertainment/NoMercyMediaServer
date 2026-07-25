@@ -46,7 +46,7 @@ internal static class AnalyzerSyntaxHelpers
     /// </summary>
     internal static bool IsNamespaceOrDescendant(string candidate, string target)
     {
-        if (string.Equals(candidate, target, StringComparison.Ordinal))
+        if (string.Equals(a: candidate, b: target, comparisonType: StringComparison.Ordinal))
         {
             return true;
         }

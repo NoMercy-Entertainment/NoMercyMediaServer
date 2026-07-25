@@ -432,7 +432,7 @@ public sealed partial class InboxClassifier
         // Strip year in parens at end
         name = Regex.Replace(name, @"\s*\((?:19|20)\d{2}\)\s*$", string.Empty).Trim();
 
-        return name.Trim(['.', ' ', '-', '_']);
+        return name.Trim('.', ' ', '-', '_');
     }
 
     private static int? ExtractYear(string path, MovieFile info)
@@ -445,7 +445,7 @@ public sealed partial class InboxClassifier
         if (!yearMatch.Success)
             return null;
 
-        string yearStr = yearMatch.Value.Trim(['(', ')']);
+        string yearStr = yearMatch.Value.Trim('(', ')');
         return int.TryParse(yearStr, out int parsedFromPath) ? parsedFromPath : null;
     }
 }

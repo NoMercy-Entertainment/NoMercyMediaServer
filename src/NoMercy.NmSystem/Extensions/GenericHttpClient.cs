@@ -49,7 +49,7 @@ public class GenericHttpClient
                     double seconds = Math.Min(Math.Pow(2, retryAttempt), 30);
                     return TimeSpan.FromSeconds(seconds);
                 },
-                (_, _, _, _) => Task.CompletedTask
+                onRetryAsync: (_, _, _, _) => Task.CompletedTask
             );
 
         _resiliencePolicy = Policy.WrapAsync(retryPolicy, timeoutPolicy);
